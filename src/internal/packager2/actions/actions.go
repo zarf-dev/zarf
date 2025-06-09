@@ -97,15 +97,10 @@ retryCmd:
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			stdout, stderr, err := actionRun(ctx, actionDefaults, cmd)
+			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
-				if !actionDefaults.Mute {
-					l.Warn("action failed", "cmd", cmdEscaped, "stdout", stdout, "stderr", stderr)
-				}
+				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
-			}
-			if !actionDefaults.Mute {
-				l.Info("action succeeded", "cmd", cmdEscaped, "stdout", stdout, "stderr", stderr)
 			}
 
 			outTrimmed := strings.TrimSpace(stdout)
@@ -292,8 +287,9 @@ func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cm
 	l.Debug("running command", "shell", shell, "cmd", cmd)
 
 	execCfg := exec.Config{
-		Env: cfg.Env,
-		Dir: cfg.Dir,
+		Env:   cfg.Env,
+		Dir:   cfg.Dir,
+		Print: !cfg.Mute,
 	}
 
 	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
