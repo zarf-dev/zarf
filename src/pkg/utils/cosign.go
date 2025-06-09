@@ -17,8 +17,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/fulcio"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	sigs "github.com/sigstore/cosign/v2/pkg/signature"
@@ -30,12 +28,6 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-)
-
-const (
-	cosignB64Enabled        = true
-	cosignOutputCertificate = ""
-	cosignTLogUpload        = false
 )
 
 // Sget performs a cosign signature verification on a given image using the specified public key.
@@ -164,52 +156,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	l.Info(verifyMsg)
 
 	return err
-}
-
-// CosignVerifyBlob verifies the zarf.yaml.sig was signed with the key provided by the flag
-func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) error {
-	keyOptions := options.KeyOpts{KeyRef: keyPath}
-	cmd := &verify.VerifyBlobCmd{
-		KeyOpts:    keyOptions,
-		SigRef:     sigRef,
-		IgnoreSCT:  true,
-		Offline:    true,
-		IgnoreTlog: true,
-	}
-	err := cmd.Exec(ctx, blobRef)
-	if err != nil {
-		return err
-	}
-
-	logger.From(ctx).Debug("package signature validated", "key", keyPath)
-	return nil
-}
-
-// CosignSignBlob signs the provide binary and returns the signature
-func CosignSignBlob(blobPath, outputSigPath, keyPath string, passFn cosign.PassFunc) ([]byte, error) {
-	rootOptions := &options.RootOptions{
-		Verbose: false,
-		Timeout: options.DefaultTimeout,
-	}
-
-	keyOptions := options.KeyOpts{
-		KeyRef:   keyPath,
-		PassFunc: passFn,
-	}
-
-	sig, err := sign.SignBlobCmd(
-		rootOptions,
-		keyOptions,
-		blobPath,
-		cosignB64Enabled,
-		outputSigPath,
-		cosignOutputCertificate,
-		cosignTLogUpload)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return sig, nil
 }
 
 // GetCosignArtifacts returns signatures and attestations for the given image
