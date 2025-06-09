@@ -9,25 +9,11 @@ import (
 	"io"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/pterm/pterm"
 )
 
-// LogLevel is the level of logging to display.
-type LogLevel int
-
 const (
-	// WarnLevel level. Non-critical entries that deserve eyes.
-	WarnLevel LogLevel = iota
-	// InfoLevel level. General operational entries about what's going on inside the
-	// application.
-	InfoLevel
-	// DebugLevel level. Usually only enabled when debugging. Very verbose logging.
-	DebugLevel
-	// TraceLevel level. Designates finer-grained informational events than the Debug.
-	TraceLevel
-
 	// TermWidth sets the width of full width elements like progressbars and headers
 	TermWidth = 100
 )
@@ -39,19 +25,7 @@ var (
 	RuleLine = strings.Repeat("━", TermWidth)
 	// OutputWriter provides a default writer to Stdout for user-focused output like tables and yaml
 	OutputWriter = os.Stdout
-	// logLevel holds the pterm compatible log level integer
-	logLevel = InfoLevel
-	// logFile acts as a buffer for logFile generation
-	logFile *PausableWriter
 )
-
-// DebugWriter represents a writer interface that writes to message.Debug
-type DebugWriter struct{}
-
-func (d *DebugWriter) Write(raw []byte) (int, error) {
-	debugPrinter(2, string(raw))
-	return len(raw), nil
-}
 
 func init() {
 	InitializePTerm(os.Stderr)
@@ -79,28 +53,6 @@ func InitializePTerm(w io.Writer) {
 // ColorEnabled returns true if color printing is enabled.
 func ColorEnabled() bool {
 	return pterm.PrintColor
-}
-
-// ZarfCommand prints a zarf terminal command.
-func ZarfCommand(format string, a ...any) {
-	Command("zarf "+format, a...)
-}
-
-// Command prints a zarf terminal command.
-func Command(format string, a ...any) {
-	style := pterm.NewStyle(pterm.FgWhite, pterm.BgBlack)
-	style.Printfln("$ "+format, a...)
-}
-
-// Debug prints a debug message.
-func Debug(payload ...any) {
-	debugPrinter(2, payload...)
-}
-
-// Debugf prints a debug message with a given format.
-func Debugf(format string, a ...any) {
-	message := fmt.Sprintf(format, a...)
-	debugPrinter(2, message)
 }
 
 // HorizontalRule prints a white horizontal rule to separate the terminal
@@ -144,23 +96,4 @@ func TableWithWriter(writer io.Writer, header []string, data [][]string) {
 		tPrinter.Writer = writer
 	}
 	_ = tPrinter.WithHasHeader().WithData(table).Render() //nolint:errcheck
-}
-
-func debugPrinter(offset int, a ...any) {
-	printer := pterm.Debug.WithShowLineNumber(logLevel > 2).WithLineNumberOffset(offset)
-	now := time.Now().Format(time.RFC3339)
-	// prepend to a
-	a = append([]any{now, " - "}, a...)
-
-	printer.Println(a...)
-
-	// Always write to the log file
-	if logFile != nil {
-		pterm.Debug.
-			WithShowLineNumber(true).
-			WithLineNumberOffset(offset).
-			WithDebugger(false).
-			WithWriter(logFile).
-			Println(a...)
-	}
 }

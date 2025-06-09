@@ -282,7 +282,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 			}
 		}
 	}
-	message.PrintConnectStringTable(connectStrings)
+	printConnectStringTable(connectStrings)
 	return nil
 }
 
