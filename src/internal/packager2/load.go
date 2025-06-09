@@ -131,6 +131,13 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		return nil, err
 	}
 
+	if opts.NamespaceOverride != "" {
+		err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	if opts.Output != "" {
 		filename, err := pkgLayout.FileName()
 		if err != nil {

@@ -249,6 +249,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		NamespaceOverride:       o.namespaceOverride,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
@@ -290,13 +291,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOptions) ([]state.DeployedComponent, error) {
-	// Update component namespaces here prior to confirmation when overriding
-	if opts.NamespaceOverride != "" {
-		err := packager2.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride)
-		if err != nil {
-			return nil, err
-		}
-	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err

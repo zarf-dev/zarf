@@ -77,13 +77,6 @@ type deployer struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	// Update component namespaces here prior to confirmation when overriding
-	if opts.NamespaceOverride != "" {
-		err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride)
-		if err != nil {
-			return nil, err
-		}
-	}
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
