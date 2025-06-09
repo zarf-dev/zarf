@@ -53,3 +53,11 @@ func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, var
 	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
 	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
 }
+
+func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error {
+	if count := pkg.GetUniqueNamespaceCount(); count > 1 {
+		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", count)
+	}
+	pkg.SetPackageNamespace(namespace)
+	return nil
+}

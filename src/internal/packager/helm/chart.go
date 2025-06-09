@@ -57,7 +57,7 @@ type InstallUpgradeOptions struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOptions) (types.ConnectStrings, string, error) {
+func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOptions) (state.ConnectStrings, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	source := zarfChart.URL

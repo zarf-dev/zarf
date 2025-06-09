@@ -89,5 +89,5 @@ func TestMultiNamespaceOverride(t *testing.T) {
 	// Attempt to deploy the bad package - should fail
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", multiPackage, "--namespace", "test4", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "cannot override namespace to test4")
+	require.Contains(t, stdErr, "cannot override namespace")
 }

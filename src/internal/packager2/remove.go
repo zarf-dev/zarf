@@ -25,8 +25,9 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster *cluster.Cluster
-	Timeout time.Duration
+	Cluster           *cluster.Cluster
+	Timeout           time.Duration
+	NamespaceOverride string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -50,7 +51,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
 		var err error
-		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}

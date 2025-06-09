@@ -39,7 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func newPackageCommand() *cobra.Command {
@@ -290,14 +289,13 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOptions) ([]types.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOptions) ([]state.DeployedComponent, error) {
 	// Update component namespaces here prior to confirmation when overriding
 	if opts.NamespaceOverride != "" {
-		nsCount := pkgLayout.Pkg.GetUniqueNamespaceCount()
-		if nsCount > 1 {
-			return nil, fmt.Errorf("package contains %d namespaces, cannot override namespace to %s", nsCount, opts.NamespaceOverride)
+		err := packager2.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride)
+		if err != nil {
+			return nil, err
 		}
-		pkgLayout.Pkg.SetPackageNamespace(opts.NamespaceOverride)
 	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
@@ -1128,7 +1126,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Filter:                  filter,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		NamespaceOverride:       o.namespace,
-		Timeout:                 config.ZarfDefaultTimeout,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
@@ -1137,8 +1134,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager2.RemoveOptions{
-		Cluster: c,
-		Timeout: config.ZarfDefaultTimeout,
+		Cluster:           c,
+		Timeout:           config.ZarfDefaultTimeout,
+		NamespaceOverride: o.namespace,
 	}
 	err = packager2.Remove(ctx, pkg, removeOpt)
 	if err != nil {

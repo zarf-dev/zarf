@@ -69,6 +69,8 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, op
 		opt(deployedPackage)
 	}
 
+	logger.From(ctx).Debug("Getting deployed package secret", "secret", deployedPackage.GetSecretName())
+
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, deployedPackage.GetSecretName(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
