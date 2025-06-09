@@ -22,7 +22,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
 	}

@@ -124,7 +124,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	opts := packager2.DeployOpts{
+	opts := packager2.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
 		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
 		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,

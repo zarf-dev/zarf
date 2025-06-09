@@ -18,39 +18,21 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
-	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster                 *cluster.Cluster
-	Filter                  filters.ComponentFilterStrategy
-	SkipSignatureValidation bool
-	PublicKeyPath           string
-	Architecture            string
-	Timeout                 time.Duration
-	RemoteOptions
+	Cluster *cluster.Cluster
+	Timeout time.Duration
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
-func Remove(ctx context.Context, source string, opts RemoveOptions) error {
+func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) error {
 	l := logger.From(ctx)
 
-	loadOpts := LoadOptions{
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Architecture:            config.GetArch(opts.Architecture),
-		Filter:                  opts.Filter,
-		PublicKeyPath:           opts.PublicKeyPath,
-		RemoteOptions:           opts.RemoteOptions,
-	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, opts.Cluster, source, loadOpts)
-	if err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
@@ -67,6 +49,7 @@ func Remove(ctx context.Context, source string, opts RemoveOptions) error {
 	// Get or build the secret for the deployed package
 	depPkg := &types.DeployedPackage{}
 	if requiresCluster {
+		var err error
 		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())

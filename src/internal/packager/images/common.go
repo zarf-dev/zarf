@@ -21,6 +21,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -52,6 +53,7 @@ type PushConfig struct {
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
+	Cluster               *cluster.Cluster
 	ResponseHeaderTimeout time.Duration
 }
 
