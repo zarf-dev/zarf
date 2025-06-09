@@ -379,7 +379,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 			l.Warn("unable to update Zarf Registry values", "error", err.Error())
 		}
 	}
@@ -393,7 +392,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
 			l.Warn("unable to update Zarf Agent TLS secrets", "error", err.Error())
 		}
 	}

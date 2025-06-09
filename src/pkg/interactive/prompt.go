@@ -11,7 +11,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 // PromptSigPassword prompts the user for the password to their private key
@@ -31,7 +30,6 @@ func PromptSigPassword() ([]byte, error) {
 // PromptVariable prompts the user for a value for a variable
 func PromptVariable(ctx context.Context, variable v1alpha1.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
-		message.Question(variable.Description)
 		logger.From(ctx).Info(variable.Description)
 	}
 

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/pterm/pterm"
 )
 
@@ -77,27 +76,6 @@ func InitializePTerm(w io.Writer) {
 	pterm.SetDefaultOutput(w)
 }
 
-// UseLogFile wraps a given file in a PausableWriter
-// and sets it as the log file used by the message package.
-func UseLogFile(f *os.File) (*PausableWriter, error) {
-	logFile = NewPausableWriter(f)
-
-	return logFile, nil
-}
-
-// SetLogLevel sets the log level.
-func SetLogLevel(lvl LogLevel) {
-	logLevel = lvl
-	if logLevel >= DebugLevel {
-		pterm.EnableDebugMessages()
-	}
-}
-
-// DisableColor disables color in output
-func DisableColor() {
-	pterm.DisableColor()
-}
-
 // ColorEnabled returns true if color printing is enabled.
 func ColorEnabled() bool {
 	return pterm.PrintColor
@@ -125,116 +103,10 @@ func Debugf(format string, a ...any) {
 	debugPrinter(2, message)
 }
 
-// Warn prints a warning message.
-func Warn(message string) {
-	Warnf("%s", message)
-}
-
-// Warnf prints a warning message with a given format.
-func Warnf(format string, a ...any) {
-	message := Paragraphn(TermWidth-10, format, a...)
-	pterm.Println()
-	pterm.Warning.Println(message)
-}
-
-// WarnErr prints an error message as a warning.
-func WarnErr(err any, message string) {
-	debugPrinter(2, err)
-	Warnf("%s", message)
-}
-
-// WarnErrf prints an error message as a warning with a given format.
-func WarnErrf(err any, format string, a ...any) {
-	debugPrinter(2, err)
-	Warnf(format, a...)
-}
-
-// Info prints an info message.
-func Info(message string) {
-	Infof("%s", message)
-}
-
-// Infof prints an info message with a given format.
-func Infof(format string, a ...any) {
-	if logLevel > 0 {
-		message := Paragraph(format, a...)
-		pterm.Info.Println(message)
-	}
-}
-
-// Question prints a user prompt description message.
-func Question(text string) {
-	Questionf("%s", text)
-}
-
-// Questionf prints a user prompt description message with a given format.
-func Questionf(format string, a ...any) {
-	message := Paragraph(format, a...)
-	pterm.Println()
-	pterm.FgLightGreen.Println(message)
-}
-
-// Note prints a note message.
-func Note(text string) {
-	Notef("%s", text)
-}
-
-// Notef prints a note message  with a given format.
-func Notef(format string, a ...any) {
-	message := Paragraphn(TermWidth-7, format, a...)
-	notePrefix := pterm.PrefixPrinter{
-		MessageStyle: &pterm.ThemeDefault.InfoMessageStyle,
-		Prefix: pterm.Prefix{
-			Style: &pterm.ThemeDefault.InfoPrefixStyle,
-			Text:  "NOTE",
-		},
-	}
-	pterm.Println()
-	notePrefix.Println(message)
-}
-
-// Title prints a title and an optional help description for that section
-func Title(title string, help string) {
-	titleFormatted := pterm.FgBlack.Sprint(pterm.BgWhite.Sprintf(" %s ", title))
-	helpFormatted := pterm.FgGray.Sprint(help)
-	pterm.Printfln("%s  %s", titleFormatted, helpFormatted)
-}
-
-// HeaderInfof prints a large header with a formatted message.
-func HeaderInfof(format string, a ...any) {
-	pterm.Println()
-	message := helpers.Truncate(fmt.Sprintf(format, a...), TermWidth, false)
-	// Ensure the text is consistent for the header width
-	padding := TermWidth - len(message)
-	pterm.DefaultHeader.
-		WithBackgroundStyle(pterm.NewStyle(pterm.BgDarkGray)).
-		WithTextStyle(pterm.NewStyle(pterm.FgLightWhite)).
-		WithMargin(2).
-		Println(message + strings.Repeat(" ", padding))
-}
-
 // HorizontalRule prints a white horizontal rule to separate the terminal
 func HorizontalRule() {
 	pterm.Println()
 	pterm.Println(RuleLine)
-}
-
-// Paragraph formats text into a paragraph matching the TermWidth
-func Paragraph(format string, a ...any) string {
-	return Paragraphn(TermWidth, format, a...)
-}
-
-// Paragraphn formats text into an n column paragraph
-func Paragraphn(n int, format string, a ...any) string {
-	// Split the text to keep pterm formatting but add newlines
-	lines := strings.Split(fmt.Sprintf(format, a...), "\n")
-
-	formattedLines := make([]string, len(lines))
-	for i, line := range lines {
-		formattedLines[i] = pterm.DefaultParagraph.WithMaxWidth(n).Sprint(line)
-	}
-
-	return strings.Join(formattedLines, "\n")
 }
 
 // Table prints a padded table containing the specified header and data
