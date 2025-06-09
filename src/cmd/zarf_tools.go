@@ -462,12 +462,11 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	message.Notef(lang.CmdToolsClearCacheDir, cachePath)
 	l.Info("clearing cache", "path", cachePath)
 	if err := os.RemoveAll(cachePath); err != nil {
 		return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
 	}
-	message.Successf(lang.CmdToolsClearCacheSuccess, cachePath)
+	l.Info("Successfully cleared the cache", "cachePath", cachePath)
 
 	return nil
 }
@@ -561,7 +560,6 @@ func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 		return err
 	}
-	message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
 	logger.From(cmd.Context()).Info("successfully created a chain of trust", "host", args[0])
 
 	return nil
@@ -645,7 +643,6 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
 		"private-key-path", prvKeyFileName,
 		"public-key-path", pubKeyFileName)
