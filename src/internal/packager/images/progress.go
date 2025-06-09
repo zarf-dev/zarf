@@ -7,18 +7,27 @@ package images
 import (
 	"context"
 	"io"
+	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"oras.land/oras-go/v2"
-
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"oras.land/oras-go/v2"
 )
 
 // ProgressReporter defines a function to report download progress
 type ProgressReporter func(bytesRead, totalBytes int64)
+
+// DefaultProgressReporter returns a default progress reporter that uses the message package
+func DefaultProgressReporter() ProgressReporter {
+	return func(bytesRead, totalBytes int64) {
+		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
+		formattedPercent := math.Floor(percentComplete*10) / 10
+		logger.Default().Info("Downloading image", "percent complete", formattedPercent)
+	}
+}
 
 // progressReadCloser wraps an io.ReadCloser to track bytes read
 type progressReadCloser struct {
@@ -79,7 +88,7 @@ func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, r
 }
 
 // startReporting starts the reporting goroutine if it hasn't been started already
-func (pt *ProgressTarget) startReporting() {
+func (pt *ProgressTarget) startReporting(ctx context.Context) {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
 
@@ -103,7 +112,7 @@ func (pt *ProgressTarget) startReporting() {
 			// First tick elapsed
 		case <-pt.stopReports:
 			return
-		case <-pt.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 
@@ -123,7 +132,7 @@ func (pt *ProgressTarget) startReporting() {
 					pt.reporter(current, pt.totalBytes)
 				}
 				return
-			case <-pt.ctx.Done():
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -133,7 +142,7 @@ func (pt *ProgressTarget) startReporting() {
 // Fetch overrides the Fetch method to track downloaded bytes
 func (pt *ProgressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
 	// Start the reporting goroutine if it hasn't been started yet
-	pt.startReporting()
+	pt.startReporting(ctx)
 
 	rc, err := pt.ReadOnlyTarget.Fetch(ctx, desc)
 	if err != nil {
@@ -163,17 +172,8 @@ func (pt *ProgressTarget) StopReporting() {
 	pt.mu.Lock()
 	if pt.reportingStarted {
 		close(pt.stopReports)
-		pt.cancel()
 		pt.reportingStarted = false
 	}
 	pt.mu.Unlock()
 	pt.wg.Wait()
-}
-
-// DefaultProgressReporter returns a default progress reporter that uses the message package
-func DefaultProgressReporter() ProgressReporter {
-	return func(bytesRead, totalBytes int64) {
-		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
-		logger.Default().Info("Downloading image", "percent complete", percentComplete)
-	}
 }

@@ -250,6 +250,8 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
+	time.Sleep(10 * time.Second)
+
 	return imagesWithManifests, nil
 }
 
@@ -441,11 +443,13 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)
 		}
 		pullSrc = orasCache.New(repo, localCache)
-		pullSrc = NewProgressTarget(pullSrc, imageInfo.byteSize, DefaultProgressReporter())
+		progressTracker := NewProgressTarget(pullSrc, imageInfo.byteSize, DefaultProgressReporter())
+		pullSrc = progressTracker
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, imageInfo.ref, copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
+		progressTracker.StopReporting()
 		if desc.Annotations == nil {
 			desc.Annotations = make(map[string]string)
 		}
