@@ -96,6 +96,17 @@ func (pt *ProgressTarget) startReporting() {
 		defer ticker.Stop()
 
 		lastReported := int64(0)
+
+		// Wait for the first tick before reporting anything
+		select {
+		case <-ticker.C:
+			// First tick elapsed
+		case <-pt.stopReports:
+			return
+		case <-pt.ctx.Done():
+			return
+		}
+
 		for {
 			select {
 			case <-ticker.C:
