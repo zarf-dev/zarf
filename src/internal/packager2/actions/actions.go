@@ -102,6 +102,7 @@ retryCmd:
 				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
 			}
+			l.Info("action succeeded", "cmd", cmdEscaped)
 
 			outTrimmed := strings.TrimSpace(stdout)
 
