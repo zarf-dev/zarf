@@ -44,6 +44,6 @@ jobs:
             )
 
             func main() {
-            	fmt.Println(packager.Packager{})
+            	fmt.Println(packager.RemoteOptions{})
             	fmt.Println(v1alpha1.ZarfComponent{})
             }
