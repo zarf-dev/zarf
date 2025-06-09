@@ -17,14 +17,11 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/internal/packager2/load"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -47,43 +44,16 @@ type Resource struct {
 
 // InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
-	Architecture            string
-	Components              string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	SetVariables            map[string]string
-	KubeVersion             string
-	// number of layers to pull in parallel
-	OCIConcurrency int
-	// Only applicable to OCI + HTTP
-	RemoteOptions
+	SetVariables map[string]string
+	KubeVersion  string
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
-func InspectPackageResources(ctx context.Context, source string, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
+func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayout, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
 	s, err := state.Default()
 	if err != nil {
 		return nil, err
 	}
-
-	loadOpts := LoadOptions{
-		Architecture:            opts.Architecture,
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		LayersSelector:          zoci.ComponentLayers,
-		Filter:                  filters.BySelectState(opts.Components),
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-	}
-
-	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
@@ -213,7 +183,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if err != nil {
 		return nil, err
 	}
-	loadOpts := load.DefinitionOpts{
+	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
 	}
@@ -283,117 +253,6 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	}
 
 	return resources, nil
-}
-
-// InspectPackageSbomsOptions are optional parameters to InspectPackageSboms
-type InspectPackageSbomsOptions struct {
-	Architecture            string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	OutputDir               string
-	OCIConcurrency          int
-	RemoteOptions
-}
-
-// InspectPackageSBOM retrieves the SBOM from the package if it exists and places it in the returned path
-func InspectPackageSBOM(ctx context.Context, source string, opts InspectPackageSbomsOptions) (string, error) {
-	loadOpts := LoadOptions{
-		Architecture:            opts.Architecture,
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		LayersSelector:          zoci.SbomLayers,
-		Filter:                  filters.Empty(),
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-	}
-	pkgLayout, err := LoadPackage(ctx, source, loadOpts)
-	if err != nil {
-		return "", fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
-	outputPath := filepath.Join(opts.OutputDir, pkgLayout.Pkg.Metadata.Name)
-	err = pkgLayout.GetSBOM(ctx, outputPath)
-	if err != nil {
-		return "", fmt.Errorf("could not get SBOM: %w", err)
-	}
-	return outputPath, nil
-}
-
-// InspectPackageDefinitionOptions are the options for InspectPackageDefinition
-type InspectPackageDefinitionOptions struct {
-	Architecture            string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	// [ALPHA] Optional namespace override
-	NamespaceOverride string
-	OCIConcurrency    int
-	RemoteOptions
-}
-
-// InspectPackageDefinition gets the package definition from the given source: local, remote, or in cluster
-func InspectPackageDefinition(ctx context.Context, source string, opts InspectPackageDefinitionOptions) (v1alpha1.ZarfPackage, error) {
-	cluster, _ := cluster.New(ctx) //nolint:errcheck
-
-	loadOpts := LoadOptions{
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Architecture:            config.GetArch(opts.Architecture),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           opts.PublicKeyPath,
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-		NamespaceOverride:       opts.NamespaceOverride,
-	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	return pkg, nil
-}
-
-// InspectPackageImagesOptions are optional parameters to InspectPackageImages
-type InspectPackageImagesOptions struct {
-	Architecture            string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	// [ALPHA] Optional namespace override
-	NamespaceOverride string
-	OCIConcurrency    int
-	RemoteOptions
-}
-
-// InspectPackageImages returns a list of the package images
-func InspectPackageImages(ctx context.Context, source string, opts InspectPackageImagesOptions) ([]string, error) {
-	cluster, _ := cluster.New(ctx) //nolint:errcheck
-
-	loadOpts := LoadOptions{
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Architecture:            config.GetArch(opts.Architecture),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           opts.PublicKeyPath,
-		LayersSelector:          zoci.MetadataLayers,
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-		NamespaceOverride:       opts.NamespaceOverride,
-	}
-	pkg, err := GetPackageFromSourceOrCluster(ctx, cluster, source, loadOpts)
-	if err != nil {
-		return nil, fmt.Errorf("unable to load the package: %w", err)
-	}
-
-	images := make([]string, 0)
-	for _, component := range pkg.Components {
-		images = append(images, component.Images...)
-	}
-	images = helpers.Unique(images)
-	if len(images) == 0 {
-		return nil, fmt.Errorf("no images found in package")
-	}
-
-	return images, nil
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {

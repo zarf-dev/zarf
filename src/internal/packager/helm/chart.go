@@ -39,8 +39,8 @@ import (
 // Use same default as Helm CLI does.
 const maxHelmHistory = 10
 
-// InstallUpgradeOpts provide options for the Helm install/upgrade operation
-type InstallUpgradeOpts struct {
+// InstallUpgradeOptions provide options for the Helm install/upgrade operation
+type InstallUpgradeOptions struct {
 	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool
 	// VariableConfig is used to template the variables in the chart
@@ -57,7 +57,7 @@ type InstallUpgradeOpts struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOpts) (state.ConnectStrings, string, error) {
+func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOptions) (types.ConnectStrings, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	source := zarfChart.URL
@@ -188,7 +188,7 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOpts) error {
+func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 	l.Debug("updating values for helm release", "name", chart.ReleaseName)
 

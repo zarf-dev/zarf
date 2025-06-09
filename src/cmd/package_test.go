@@ -201,7 +201,7 @@ func TestPackageInspectManifests(t *testing.T) {
 
 			// Inspect manifests
 			buf := new(bytes.Buffer)
-			opts := packageInspectManifestsOpts{
+			opts := packageInspectManifestsOptions{
 				outputWriter: buf,
 				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,
@@ -290,7 +290,7 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 
 			// Inspect values files
 			buf := new(bytes.Buffer)
-			opts := packageInspectValuesFilesOpts{
+			opts := packageInspectValuesFilesOptions{
 				outputWriter: buf,
 				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,

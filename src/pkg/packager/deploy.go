@@ -547,6 +547,7 @@ func (p *Packager) pushImagesToRegistry(ctx context.Context, componentImages []s
 
 	pushCfg := images.PushConfig{
 		OCIConcurrency:        config.CommonOptions.OCIConcurrency,
+		Cluster:               p.cluster,
 		SourceDirectory:       p.layout.Images.Base,
 		ImageList:             imageList,
 		RegistryInfo:          p.state.RegistryInfo,
@@ -679,7 +680,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 			return nil, err
 		}
 
-		helmOpts := helm.InstallUpgradeOpts{
+		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
 			VariableConfig:         p.variableConfig,
 			State:                  p.state,
@@ -726,7 +727,7 @@ func (p *Packager) installChartAndManifests(ctx context.Context, componentPaths 
 		if err != nil {
 			return nil, err
 		}
-		helmOpts := helm.InstallUpgradeOpts{
+		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: p.cfg.DeployOpts.AdoptExistingResources,
 			VariableConfig:         p.variableConfig,
 			State:                  p.state,

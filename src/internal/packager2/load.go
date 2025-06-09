@@ -5,14 +5,12 @@ package packager2
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -21,12 +19,12 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LoadOptions are the options for LoadPackage.
@@ -103,7 +101,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		if opts.Output == "" {
 			opts.Output = filepath.Dir(source)
 		}
-		err := assembleSplitTar(source, tmpPath)
+		err := split.ReassembleFile(source, tmpPath)
 		if err != nil {
 			return nil, err
 		}
@@ -182,73 +180,6 @@ func identifySource(src string) (string, error) {
 		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)
-}
-
-// assembleSplitTar reconstructs a split tarball into a single archive.
-func assembleSplitTar(src, dest string) (err error) {
-	pattern := strings.Replace(src, ".part000", ".part*", 1)
-	splitFiles, err := filepath.Glob(pattern)
-	if err != nil {
-		return fmt.Errorf("unable to find split tarball files: %w", err)
-	}
-	if len(splitFiles) == 0 {
-		return fmt.Errorf("no split files with pattern %s found", pattern)
-	}
-	slices.Sort(splitFiles)
-
-	out, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		err = errors.Join(err, out.Close())
-	}()
-
-	for i, part := range splitFiles {
-		if i == 0 {
-			// validate metadata
-			data, err := os.ReadFile(part)
-			if err != nil {
-				return err
-			}
-			var meta types.ZarfSplitPackageData
-			err = json.Unmarshal(data, &meta)
-			if err != nil {
-				return err
-			}
-			expected := len(splitFiles) - 1
-			if meta.Count != expected {
-				return fmt.Errorf("split parts mismatch: expected %d, got %d", expected, meta.Count)
-			}
-			continue
-		}
-
-		// Create a new scope for the file so the defer close happens during each loop rather than once the function completes
-		err := func() (err error) {
-			f, err := os.Open(part)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = errors.Join(err, f.Close())
-			}()
-
-			_, err = io.Copy(out, f)
-			return err
-		}()
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, file := range splitFiles {
-		err := os.Remove(file)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.

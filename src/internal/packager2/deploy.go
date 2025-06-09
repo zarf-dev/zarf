@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
@@ -28,7 +27,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"golang.org/x/sync/errgroup"
@@ -37,8 +35,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployOpts are optional parameters to packager2.Deploy
-type DeployOpts struct {
+// DeployOptions are optional parameters to packager2.Deploy
+type DeployOptions struct {
 	// Deploy time set variables
 	SetVariables map[string]string
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
@@ -77,7 +75,7 @@ type deployer struct {
 }
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
-func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]state.DeployedComponent, error) {
+func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
@@ -118,7 +116,7 @@ func (d *deployer) isConnectedToCluster() bool {
 	return d.c != nil
 }
 
-func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpts) ([]state.DeployedComponent, error) {
+func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
 	deployedComponents := []state.DeployedComponent{}
 	cwd, err := os.Getwd()
@@ -220,7 +218,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	return deployedComponents, nil
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) ([]state.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]types.InstalledChart, error) {
 	l := logger.From(ctx)
 	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -283,7 +281,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOpts) (_ []state.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []types.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -338,33 +336,25 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasImages {
-		refs := []transform.Image{}
-		for _, img := range component.Images {
-			ref, err := transform.ParseImageRef(img)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
-			}
-			refs = append(refs, ref)
+		imagePushOpts := ImagePushOptions{
+			Cluster:         d.c,
+			NoImageChecksum: noImgChecksum,
+			OCIConcurrency:  opts.OCIConcurrency,
+			Retries:         opts.Retries,
+			RemoteOptions:   opts.RemoteOptions,
 		}
-		pushConfig := images.PushConfig{
-			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
-			PlainHTTP:             opts.PlainHTTP,
-			NoChecksum:            noImgChecksum,
-			Arch:                  pkgLayout.Pkg.Build.Architecture,
-			Retries:               opts.Retries,
-			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-		}
-		err := images.Push(ctx, pushConfig)
+		err := PushImagesToRegistry(ctx, pkgLayout, d.s.RegistryInfo, imagePushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}
 
 	if hasRepos {
-		if err := pushReposToRepository(ctx, d.c, pkgLayout, d.s.GitServer, opts.Retries); err != nil {
+		repoPushOptions := RepoPushOptions{
+			Cluster: d.c,
+			Retries: opts.Retries,
+		}
+		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
@@ -424,8 +414,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []state.InstalledChart, err error) {
-	installedCharts := []state.InstalledChart{}
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []types.InstalledChart, err error) {
+	installedCharts := []types.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -465,7 +455,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			return nil, err
 		}
 
-		helmOpts := helm.InstallUpgradeOpts{
+		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
 			VariableConfig:         d.vc,
 			State:                  d.s,
@@ -489,7 +479,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOpts) (_ []state.InstalledChart, err error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []types.InstalledChart, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -529,7 +519,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		if err != nil {
 			return nil, err
 		}
-		helmOpts := helm.InstallUpgradeOpts{
+		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
 			VariableConfig:         d.vc,
 			State:                  d.s,
