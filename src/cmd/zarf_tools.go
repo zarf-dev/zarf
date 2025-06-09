@@ -114,7 +114,6 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
 		printComponentCredential(ctx, s, args[0], o.outputWriter)
-		message.PrintComponentCredential(s, args[0])
 		return nil
 	}
 	return printCredentialTable(s, o.outputFormat, o.outputWriter)
@@ -315,8 +314,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
 
-	// Printing both the pterm output and slogger for now
-	message.PrintCredentialUpdates(oldState, newState, args)
 	printCredentialUpdates(ctx, oldState, newState, args)
 
 	confirm := config.CommonOptions.Confirm
