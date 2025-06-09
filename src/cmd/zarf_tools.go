@@ -60,7 +60,7 @@ func newGetCredsOptions() *getCredsOptions {
 	return &getCredsOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
