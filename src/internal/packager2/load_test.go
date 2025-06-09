@@ -194,11 +194,11 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", LoadOptions{})
+	_, err := GetPackageFromSourceOrCluster(ctx, nil, "test", "", LoadOptions{})
 	require.EqualError(t, err, "cannot get Zarf package from Kubernetes without configuration")
 
 	pkgPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
-	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, LoadOptions{})
+	pkg, err := GetPackageFromSourceOrCluster(ctx, nil, pkgPath, "", LoadOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 
@@ -207,7 +207,7 @@ func TestPackageFromSourceOrCluster(t *testing.T) {
 	}
 	_, err = c.RecordPackageDeployment(ctx, pkg, nil, 1)
 	require.NoError(t, err)
-	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", LoadOptions{})
+	pkg, err = GetPackageFromSourceOrCluster(ctx, c, "test", "", LoadOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "test", pkg.Metadata.Name)
 }

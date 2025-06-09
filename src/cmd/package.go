@@ -249,7 +249,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
-		NamespaceOverride:       o.namespaceOverride,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
 	pkgLayout, err := packager2.LoadPackage(ctx, packageSource, loadOpt)
@@ -291,6 +290,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 }
 
 func deploy(ctx context.Context, pkgLayout *layout2.PackageLayout, opts packager2.DeployOptions) ([]state.DeployedComponent, error) {
+	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
+	if opts.NamespaceOverride != "" {
+		if err := packager2.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+			return nil, err
+		}
+	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err
@@ -888,9 +893,8 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
-		NamespaceOverride:       o.namespaceOverride,
 	}
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -952,9 +956,8 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
-		NamespaceOverride:       o.namespaceOverride,
 	}
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -1070,7 +1073,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 }
 
 type packageRemoveOptions struct {
-	namespace string
+	namespaceOverride string
 }
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
@@ -1090,7 +1093,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	_ = cmd.MarkFlagRequired("confirm")
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
-	cmd.Flags().StringVar(&o.namespace, "namespace", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -1119,18 +1122,17 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Architecture:            config.GetArch(),
 		Filter:                  filter,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		NamespaceOverride:       o.namespace,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 	}
-	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, packageSource, loadOpts)
+	pkg, err := packager2.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager2.RemoveOptions{
 		Cluster:           c,
 		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespace,
+		NamespaceOverride: o.namespaceOverride,
 	}
 	err = packager2.Remove(ctx, pkg, removeOpt)
 	if err != nil {

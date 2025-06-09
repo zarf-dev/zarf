@@ -47,10 +47,6 @@ type DeployOptions struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
-	// Whether to use plainHTTP when connecting to the registry
-	PlainHTTP bool
-	// Whether or not to skipTLSVerify when connecting to the registry
-	InsecureTLSSkipVerify bool
 	// Namespace is an optional namespace override for package deployment
 	NamespaceOverride string
 	// Remote Options for image pushes
@@ -79,6 +75,11 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+	if opts.NamespaceOverride != "" {
+		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+			return nil, err
+		}
+	}
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
 		return nil, err

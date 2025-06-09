@@ -72,7 +72,8 @@ func TestPackageList(t *testing.T) {
 					},
 				},
 				{
-					Name: "package2",
+					Name:              "package2",
+					NamespaceOverride: "test2",
 					Data: v1alpha1.ZarfPackage{
 						Metadata: v1alpha1.ZarfMetadata{
 							Version: "1.0.0",

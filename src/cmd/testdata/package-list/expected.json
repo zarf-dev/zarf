@@ -10,7 +10,7 @@
   },
   {
     "package": "package2",
-    "namespaceOverride": "",
+    "namespaceOverride": "test2",
     "version": "1.0.0",
     "components": [
       "component3",
