@@ -14,7 +14,7 @@ import (
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	layout2 "github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 // TestDeprecatedComponentScripts verifies that deprecated component scripts are still able to be executed after being internally migrated into zarf actions.
