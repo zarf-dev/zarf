@@ -54,6 +54,7 @@ func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, var
 	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
 }
 
+// OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace
 func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error {
 	if count := pkg.GetUniqueNamespaceCount(); count > 1 {
 		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", count)

@@ -18,7 +18,7 @@ zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 
 ```
   -h, --help                        help for definition
-      --namespace string            [Alpha] Override the namespace for package inspection. Requires the package to have been deployed using the namespace override.
+      --namespace string            [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace override flag.
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
 
