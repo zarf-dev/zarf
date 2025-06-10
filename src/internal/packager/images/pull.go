@@ -248,7 +248,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		return nil, fmt.Errorf("failed to save images: %w", err)
 	}
 
-	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
+	l.Info("completed image pulls", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
 
 	time.Sleep(10 * time.Second)
 
@@ -397,7 +397,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			}
 			imagesWithManifests[daemonImage.original] = manifest
 			size := getSizeOfImage(desc, manifest)
-			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
+			l.Info("saving image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
 			copyOpts := oras.DefaultCopyOptions
 			copyOpts.WithTargetPlatform(platform)
 			copyOpts.Concurrency = concurrency
@@ -437,7 +437,7 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.Concurrency = cfg.OCIConcurrency
 		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-		l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+		l.Info("pulling image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
 		localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
 		if err != nil {
 			return fmt.Errorf("failed to create oci formatted directory: %w", err)

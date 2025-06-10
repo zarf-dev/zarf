@@ -6,14 +6,15 @@ package images
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
 )
 
@@ -24,8 +25,8 @@ type ProgressReporter func(bytesRead, totalBytes int64)
 func DefaultProgressReporter() ProgressReporter {
 	return func(bytesRead, totalBytes int64) {
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
-		formattedPercent := math.Floor(percentComplete*10) / 10
-		logger.Default().Info("Downloading image", "percent complete", formattedPercent)
+		remaining := float64(totalBytes) - float64(bytesRead)
+		logger.Default().Info("image pull in progress", "complete", fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
 	}
 }
 
@@ -66,7 +67,7 @@ type ProgressTarget struct {
 
 // NewProgressTarget creates a new ProgressTarget with the given reporter
 func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) *ProgressTarget {
-	return NewProgressTargetWithPeriod(target, totalBytes, reporter, 1*time.Second)
+	return NewProgressTargetWithPeriod(target, totalBytes, reporter, 4*time.Second)
 }
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
