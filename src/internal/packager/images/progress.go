@@ -30,6 +30,8 @@ func DefaultProgressReporter() ProgressReporter {
 	}
 }
 
+const defaultProgressInterval = 5 * time.Second
+
 // progressReadCloser wraps an io.ReadCloser to track bytes read
 type progressReadCloser struct {
 	reader    io.ReadCloser
@@ -67,7 +69,7 @@ type ProgressTarget struct {
 
 // NewProgressTarget creates a new ProgressTarget with the given reporter
 func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) *ProgressTarget {
-	return NewProgressTargetWithPeriod(target, totalBytes, reporter, 4*time.Second)
+	return NewProgressTargetWithPeriod(target, totalBytes, reporter, defaultProgressInterval)
 }
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
