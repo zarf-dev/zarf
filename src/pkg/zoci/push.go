@@ -15,8 +15,8 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	layout2 "github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
