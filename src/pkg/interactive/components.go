@@ -19,14 +19,9 @@ func SelectOptionalComponent(component v1alpha1.ZarfComponent) (bool, error) {
 	message.HorizontalRule()
 
 	displayComponent := component
-	displayComponent.Description = ""
 	err := utils.ColorPrintYAML(displayComponent, nil, false)
 	if err != nil {
 		return false, err
-	}
-	if component.Description != "" {
-		// TODO (@austinabro321) once we move interactiveness to CLI level we should replace this with logger.Info
-		message.Question(component.Description)
 	}
 
 	prompt := &survey.Confirm{

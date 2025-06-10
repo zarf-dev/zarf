@@ -505,8 +505,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
-	CmdToolsClearCacheDir           = "Cache directory set to: %s"
-	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
@@ -522,7 +520,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
-	CmdToolsGenKeySuccess              = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

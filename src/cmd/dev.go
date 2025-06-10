@@ -30,7 +30,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -124,7 +123,7 @@ type devInspectManifestsOptions struct {
 
 func newDevInspectManifestsOptions() devInspectManifestsOptions {
 	return devInspectManifestsOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -196,7 +195,7 @@ type devInspectValuesFilesOptions struct {
 
 func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
 	return devInspectValuesFilesOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 

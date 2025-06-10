@@ -60,7 +60,7 @@ func newGetCredsOptions() *getCredsOptions {
 	return &getCredsOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -114,7 +114,6 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
 		printComponentCredential(ctx, s, args[0], o.outputWriter)
-		message.PrintComponentCredential(s, args[0])
 		return nil
 	}
 	return printCredentialTable(s, o.outputFormat, o.outputWriter)
@@ -315,8 +314,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
 
-	// Printing both the pterm output and slogger for now
-	message.PrintCredentialUpdates(oldState, newState, args)
 	printCredentialUpdates(ctx, oldState, newState, args)
 
 	confirm := config.CommonOptions.Confirm
@@ -382,7 +379,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 			l.Warn("unable to update Zarf Registry values", "error", err.Error())
 		}
 	}
@@ -396,7 +392,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
 			l.Warn("unable to update Zarf Agent TLS secrets", "error", err.Error())
 		}
 	}
@@ -465,12 +460,11 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	message.Notef(lang.CmdToolsClearCacheDir, cachePath)
 	l.Info("clearing cache", "path", cachePath)
 	if err := os.RemoveAll(cachePath); err != nil {
 		return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
 	}
-	message.Successf(lang.CmdToolsClearCacheSuccess, cachePath)
+	l.Info("Successfully cleared the cache", "cachePath", cachePath)
 
 	return nil
 }
@@ -564,7 +558,6 @@ func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 		return err
 	}
-	message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
 	logger.From(cmd.Context()).Info("successfully created a chain of trust", "host", args[0])
 
 	return nil
@@ -648,7 +641,6 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
 		"private-key-path", prvKeyFileName,
 		"public-key-path", pubKeyFileName)
