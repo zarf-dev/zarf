@@ -445,11 +445,15 @@ func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, d
 		pullSrc = orasCache.New(repo, localCache)
 		progressTracker := NewProgressTarget(pullSrc, imageInfo.byteSize, DefaultProgressReporter())
 		pullSrc = progressTracker
+		copyOpts.PostCopy = func(_ context.Context, _ ocispec.Descriptor) error {
+			progressTracker.StopReporting()
+			return nil
+		}
 		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, imageInfo.ref, copyOpts)
 		if err != nil {
 			return fmt.Errorf("failed to copy: %w", err)
 		}
-		progressTracker.StopReporting()
+
 		if desc.Annotations == nil {
 			desc.Annotations = make(map[string]string)
 		}
