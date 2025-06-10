@@ -52,10 +52,10 @@ func (pr *progressReadCloser) Close() error {
 // ProgressTarget wraps an oras.ReadOnlyTarget to track download progress
 type ProgressTarget struct {
 	oras.ReadOnlyTarget
-	reporter     ProgressReporter
-	reportPeriod time.Duration
-	bytesRead    *atomic.Int64
-	totalBytes   int64
+	reporter       ProgressReporter
+	reportInterval time.Duration
+	bytesRead      *atomic.Int64
+	totalBytes     int64
 
 	// Track whether the reporting goroutine is running
 	reportingStarted bool
@@ -70,11 +70,11 @@ func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter Pr
 }
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
-func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportPeriod time.Duration) *ProgressTarget {
+func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportInterval time.Duration) *ProgressTarget {
 	return &ProgressTarget{
 		ReadOnlyTarget:   target,
 		reporter:         reporter,
-		reportPeriod:     reportPeriod,
+		reportInterval:   reportInterval,
 		bytesRead:        &atomic.Int64{},
 		totalBytes:       totalBytes,
 		stopReports:      make(chan struct{}),
@@ -96,10 +96,8 @@ func (pt *ProgressTarget) startReporting(ctx context.Context) {
 
 	go func() {
 		defer pt.wg.Done()
-		ticker := time.NewTicker(pt.reportPeriod)
+		ticker := time.NewTicker(pt.reportInterval)
 		defer ticker.Stop()
-
-		lastReported := int64(0)
 
 		// Wait for the first tick before reporting anything
 		select {
@@ -114,12 +112,7 @@ func (pt *ProgressTarget) startReporting(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				current := pt.bytesRead.Load()
-				// Only report if there's been progress since the last report
-				if current > lastReported {
-					pt.reporter(current, pt.totalBytes)
-					lastReported = current
-				}
+				pt.reporter(pt.bytesRead.Load(), pt.totalBytes)
 			case <-pt.stopReports:
 				return
 			case <-ctx.Done():
