@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -204,27 +203,6 @@ func WithGlobalInsecureFlag() []crane.Option {
 	}
 	// passing a nil option will cause panic
 	return []crane.Option{NoopOpt}
-}
-
-// WithArchitecture sets the platform option for crane.
-//
-// This option is actually a slight mis-use of the platform option, as it is
-// setting the architecture only and hard coding the OS to linux.
-func WithArchitecture(arch string) crane.Option {
-	return crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
-}
-
-// CommonOpts returns a set of common options for crane under Zarf.
-func CommonOpts(arch string) []crane.Option {
-	opts := WithGlobalInsecureFlag()
-	opts = append(opts, WithArchitecture(arch))
-
-	opts = append(opts,
-		crane.WithUserAgent("zarf"),
-		crane.WithNoClobber(true),
-		crane.WithJobs(1),
-	)
-	return opts
 }
 
 // WithBasicAuth returns an option for crane that sets basic auth.

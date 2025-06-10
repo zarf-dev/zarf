@@ -282,7 +282,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 			}
 		}
 	}
-	message.PrintConnectStringTable(connectStrings)
+	printConnectStringTable(connectStrings)
 	return nil
 }
 
@@ -619,7 +619,7 @@ type packageInspectValuesFilesOptions struct {
 
 func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
 	return &packageInspectValuesFilesOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -700,7 +700,7 @@ type packageInspectManifestsOptions struct {
 
 func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 	return &packageInspectManifestsOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -966,7 +966,7 @@ func newPackageListOptions() *packageListOptions {
 	return &packageListOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 

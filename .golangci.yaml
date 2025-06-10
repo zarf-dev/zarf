@@ -79,8 +79,6 @@ linters:
       - legacy
     paths:
       - src/cmd/helm
-      - src/internal/packager/sbom
-      - src/pkg/packager
       - third_party$
       - builtin$
       - examples$
