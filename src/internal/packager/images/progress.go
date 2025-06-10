@@ -121,16 +121,6 @@ func (pt *progressTarget) startReporting(ctx context.Context) {
 		ticker := time.NewTicker(pt.reportInterval)
 		defer ticker.Stop()
 
-		// Wait for the first tick before reporting anything
-		select {
-		case <-ticker.C:
-			// First tick elapsed
-		case <-pt.stopReports:
-			return
-		case <-ctx.Done():
-			return
-		}
-
 		for {
 			select {
 			case <-ticker.C:
