@@ -62,8 +62,6 @@ type ProgressTarget struct {
 	mu               sync.Mutex
 	stopReports      chan struct{}
 	wg               sync.WaitGroup
-	ctx              context.Context
-	cancel           context.CancelFunc
 }
 
 // NewProgressTarget creates a new ProgressTarget with the given reporter
@@ -73,7 +71,6 @@ func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter Pr
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
 func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportPeriod time.Duration) *ProgressTarget {
-	ctx, cancel := context.WithCancel(context.Background())
 	return &ProgressTarget{
 		ReadOnlyTarget:   target,
 		reporter:         reporter,
@@ -82,8 +79,6 @@ func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, r
 		totalBytes:       totalBytes,
 		stopReports:      make(chan struct{}),
 		reportingStarted: false,
-		ctx:              ctx,
-		cancel:           cancel,
 	}
 }
 
@@ -126,11 +121,6 @@ func (pt *ProgressTarget) startReporting(ctx context.Context) {
 					lastReported = current
 				}
 			case <-pt.stopReports:
-				// Report final progress before exiting
-				current := pt.bytesRead.Load()
-				if current > lastReported {
-					pt.reporter(current, pt.totalBytes)
-				}
 				return
 			case <-ctx.Done():
 				return
