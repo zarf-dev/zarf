@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry"
 )
 
 // ProgressReporter defines a function to report download progress
@@ -52,8 +53,14 @@ func (pr *progressReadCloser) Close() error {
 	return pr.reader.Close()
 }
 
-// ProgressTarget wraps an oras.ReadOnlyTarget to track download progress
-type ProgressTarget struct {
+// ProgressTarget reports progress during pulls
+type ProgressTarget interface {
+	oras.ReadOnlyTarget
+	StopReporting()
+}
+
+// progressTarget wraps an oras.ReadOnlyTarget to track download progress
+type progressTarget struct {
 	oras.ReadOnlyTarget
 	reporter       ProgressReporter
 	reportInterval time.Duration
@@ -67,14 +74,19 @@ type ProgressTarget struct {
 	wg               sync.WaitGroup
 }
 
+type progressReferenceTarget struct {
+	*progressTarget
+	registry.ReferenceFetcher
+}
+
 // NewProgressTarget creates a new ProgressTarget with the given reporter
-func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) *ProgressTarget {
+func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) ProgressTarget {
 	return NewProgressTargetWithPeriod(target, totalBytes, reporter, defaultProgressInterval)
 }
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
-func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportInterval time.Duration) *ProgressTarget {
-	return &ProgressTarget{
+func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportInterval time.Duration) ProgressTarget {
+	pt := &progressTarget{
 		ReadOnlyTarget:   target,
 		reporter:         reporter,
 		reportInterval:   reportInterval,
@@ -83,10 +95,17 @@ func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, r
 		stopReports:      make(chan struct{}),
 		reportingStarted: false,
 	}
+	if refFetcher, ok := target.(registry.ReferenceFetcher); ok {
+		return &progressReferenceTarget{
+			progressTarget:   pt,
+			ReferenceFetcher: refFetcher,
+		}
+	}
+	return pt
 }
 
 // startReporting starts the reporting goroutine if it hasn't been started already
-func (pt *ProgressTarget) startReporting(ctx context.Context) {
+func (pt *progressTarget) startReporting(ctx context.Context) {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
 
@@ -125,8 +144,8 @@ func (pt *ProgressTarget) startReporting(ctx context.Context) {
 	}()
 }
 
-// Fetch overrides the Fetch method to track downloaded bytes
-func (pt *ProgressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
+// Fetch preforms the underlying Fetch method and tracks downloaded bytes
+func (pt *progressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
 	// Start the reporting goroutine if it hasn't been started yet
 	pt.startReporting(ctx)
 
@@ -143,23 +162,34 @@ func (pt *ProgressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 	return prc, nil
 }
 
-// Resolve overrides the Resolve method from the ReadOnlyTarget interface
-func (pt *ProgressTarget) Resolve(ctx context.Context, reference string) (ocispec.Descriptor, error) {
+// Resolve only executes the underlying ReadOnlyTarget Exists
+func (pt *progressTarget) Resolve(ctx context.Context, reference string) (ocispec.Descriptor, error) {
 	return pt.ReadOnlyTarget.Resolve(ctx, reference)
 }
 
-// Exists overrides the Exists method from the ReadOnlyTarget interface
-func (pt *ProgressTarget) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
+// Exists only executes the underlying ReadOnlyTarget Exists
+func (pt *progressTarget) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
 	return pt.ReadOnlyTarget.Exists(ctx, desc)
 }
 
 // StopReporting stops the reporting goroutine
-func (pt *ProgressTarget) StopReporting() {
-	pt.mu.Lock()
+func (pt *progressTarget) StopReporting() {
 	if pt.reportingStarted {
 		close(pt.stopReports)
 		pt.reportingStarted = false
 	}
-	pt.mu.Unlock()
 	pt.wg.Wait()
+}
+
+// FetchReference preforms the underlying FetchReference method and tracks downloaded bytes
+func (pft *progressReferenceTarget) FetchReference(ctx context.Context, reference string) (ocispec.Descriptor, io.ReadCloser, error) {
+	target, rc, err := pft.ReferenceFetcher.FetchReference(ctx, reference)
+	if err != nil {
+		return ocispec.Descriptor{}, nil, err
+	}
+	prc := &progressReadCloser{
+		reader:    rc,
+		bytesRead: pft.bytesRead,
+	}
+	return target, prc, nil
 }
