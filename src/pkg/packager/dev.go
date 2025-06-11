@@ -82,6 +82,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		RegistryOverrides: opts.RegistryOverrides,
 		SkipSBOM:          true,
 		OCIConcurrency:    opts.OCIConcurrency,
+		CachePath:         opts.CachePath,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
 	if err != nil {
