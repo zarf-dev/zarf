@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager2
+package packager
 
 import (
 	"context"
@@ -19,8 +19,8 @@ import (
 	"helm.sh/helm/v3/pkg/storage/driver"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager2/actions"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 )
 
 // RemoveOptions are the options for Remove.

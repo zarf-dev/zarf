@@ -1,4 +1,4 @@
-package packager2
+package packager
 
 import (
 	"testing"

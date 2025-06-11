@@ -6,7 +6,7 @@ package cmd
 
 import (
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 )
 
 // setBaseDirectory sets the base directory. This is a directory with a zarf.yaml.
@@ -17,8 +17,8 @@ func setBaseDirectory(args []string) string {
 	return "."
 }
 
-func defaultRemoteOptions() packager2.RemoteOptions {
-	return packager2.RemoteOptions{
+func defaultRemoteOptions() packager.RemoteOptions {
+	return packager.RemoteOptions{
 		PlainHTTP:             config.CommonOptions.PlainHTTP,
 		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 	}
