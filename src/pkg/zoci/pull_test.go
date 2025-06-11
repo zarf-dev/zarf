@@ -15,10 +15,10 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
-	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
@@ -42,13 +42,13 @@ func TestAssembleLayers(t *testing.T) {
 	tt := []struct {
 		name string
 		path string
-		opts packager2.PublishPackageOptions
+		opts packager.PublishPackageOptions
 	}{
 		{
 			name: "Assemble layers from a package",
 			path: "testdata/basic",
-			opts: packager2.PublishPackageOptions{
-				RemoteOptions: packager2.RemoteOptions{
+			opts: packager.PublishPackageOptions{
+				RemoteOptions: packager.RemoteOptions{
 					PlainHTTP: true,
 				},
 				Concurrency: 3,
@@ -64,10 +64,10 @@ func TestAssembleLayers(t *testing.T) {
 			config.CommonOptions.CachePath = tmpdir
 
 			// create the package
-			opt := packager2.CreateOptions{
+			opt := packager.CreateOptions{
 				OCIConcurrency: tc.opts.Concurrency,
 			}
-			err := packager2.Create(ctx, tc.path, tmpdir, opt)
+			err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
 			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", "amd64")
 
@@ -76,7 +76,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			err = packager2.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			err = packager.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name

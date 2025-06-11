@@ -13,8 +13,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
-
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 // TestDeprecatedComponentScripts verifies that deprecated component scripts are still able to be executed after being internally migrated into zarf actions.
@@ -73,7 +72,7 @@ func TestDeprecatedSetAndPackageVariables(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "package", "create", testPackageDirPath, "-o", outPath, "--confirm", "--set", "ECHO=Zarf-The-Axolotl")
 	require.NoError(t, err)
 
-	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	b, err := goyaml.Marshal(pkgLayout.Pkg.Components)
 	require.NoError(t, err)
