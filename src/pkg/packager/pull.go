@@ -41,7 +41,8 @@ type PullOptions struct {
 	PublicKeyPath string
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
-	CachePath      string
+	// CachePath is used to cache layers from OCI package pulls
+	CachePath string
 	RemoteOptions
 }
 

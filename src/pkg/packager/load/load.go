@@ -26,7 +26,8 @@ import (
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
-	CachePath    string
+	// CachePath is used to cache layers from skeleton package pulls
+	CachePath string
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.

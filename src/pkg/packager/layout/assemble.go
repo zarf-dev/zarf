@@ -52,7 +52,8 @@ type AssembleOptions struct {
 	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
 	DifferentialPackagePath string
 	OCIConcurrency          int
-	CachePath               string
+	// CachePath is the path to the Zarf cache, used to cache images
+	CachePath string
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected

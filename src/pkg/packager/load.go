@@ -38,7 +38,8 @@ type LoadOptions struct {
 	OCIConcurrency int
 	// Layers to pull during OCI pull
 	LayersSelector zoci.LayersSelector
-	CachePath      string
+	// CachePath is used to cache layers from OCI package pulls
+	CachePath string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
 }

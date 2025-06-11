@@ -117,7 +117,8 @@ type PublishSkeletonOptions struct {
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
-	CachePath          string
+	// CachePath is used to cache layers from skeleton package pulls
+	CachePath string
 	RemoteOptions
 }
 

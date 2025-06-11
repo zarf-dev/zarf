@@ -59,7 +59,7 @@ type FindImagesOptions struct {
 	Why string
 	// SkipCosign specifies whether to skip cosign artifact lookups
 	SkipCosign bool
-	// CachePath is the path to the Zarf cache, used for skeleton package pulls
+	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 }
 

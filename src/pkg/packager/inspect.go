@@ -175,7 +175,8 @@ type InspectDefinitionResourcesOptions struct {
 	DeploySetVariables map[string]string
 	Flavor             string
 	KubeVersion        string
-	CachePath          string
+	// CachePath is used to cache layers from skeleton package pulls
+	CachePath string
 }
 
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the zarf.yaml at the given path
