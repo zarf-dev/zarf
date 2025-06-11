@@ -12,6 +12,8 @@ import (
 func TestOverridePackageNamespace(t *testing.T) {
 	t.Parallel()
 
+	allow := false
+
 	tt := []struct {
 		name        string
 		pkg         v1alpha1.ZarfPackage
@@ -74,6 +76,27 @@ func TestOverridePackageNamespace(t *testing.T) {
 			},
 			namespace:   "test-override",
 			expectedErr: "package kind is not a ZarfPackageConfig, cannot override namespace",
+		},
+		{
+			name: "namespace override not allowed",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					AllowNamespaceOverride: &allow,
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+					},
+				},
+			},
+			namespace:   "test-override",
+			expectedErr: "cannot override package namespace, metadata.allowNamespaceOverride is false",
 		},
 	}
 
