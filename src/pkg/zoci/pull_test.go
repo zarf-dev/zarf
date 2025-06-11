@@ -51,7 +51,7 @@ func TestAssembleLayers(t *testing.T) {
 				RemoteOptions: packager.RemoteOptions{
 					PlainHTTP: true,
 				},
-				Concurrency: 3,
+				OCIConcurrency: 3,
 			},
 		},
 	}
@@ -65,7 +65,7 @@ func TestAssembleLayers(t *testing.T) {
 
 			// create the package
 			opt := packager.CreateOptions{
-				OCIConcurrency: tc.opts.Concurrency,
+				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 			err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)

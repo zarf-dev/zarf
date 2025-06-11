@@ -25,8 +25,8 @@ import (
 
 // PublishFromOCIOptions declares the parameters to publish a package.
 type PublishFromOCIOptions struct {
-	// Concurrency configures the amount of layers to push in parallel
-	Concurrency int
+	// OCIConcurrency configures the amount of layers to push in parallel
+	OCIConcurrency int
 	// Architecture is the architecture we are publishing to
 	Architecture string
 	RemoteOptions
@@ -69,7 +69,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	}
 
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.Concurrency)
+	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.OCIConcurrency)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
@@ -80,8 +80,8 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 // PublishPackageOptions declares the parameters to publish a package.
 type PublishPackageOptions struct {
-	// Concurrency configures the amount of layers to push in parallel
-	Concurrency int
+	// OCIConcurrency configures the amount of layers to push in parallel
+	OCIConcurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
@@ -106,13 +106,13 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return fmt.Errorf("unable to sign package: %w", err)
 	}
 
-	return pushToRemote(ctx, pkgLayout, dst, opts.Concurrency, opts.RemoteOptions)
+	return pushToRemote(ctx, pkgLayout, dst, opts.OCIConcurrency, opts.RemoteOptions)
 }
 
 // PublishSkeletonOptions declares the parameters to publish a skeleton package.
 type PublishSkeletonOptions struct {
-	// Concurrency configures the amount of layers to push in parallel
-	Concurrency int
+	// OCIConcurrency configures the amount of layers to push in parallel
+	OCIConcurrency int
 	// SigningKeyPath points to a signing key on the local disk.
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
@@ -149,7 +149,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return fmt.Errorf("unable to create skeleton: %w", err)
 	}
 
-	err = pushToRemote(ctx, pkgLayout, ref, opts.Concurrency, opts.RemoteOptions)
+	err = pushToRemote(ctx, pkgLayout, ref, opts.OCIConcurrency, opts.RemoteOptions)
 	if err != nil {
 		return err
 	}

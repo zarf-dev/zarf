@@ -340,8 +340,8 @@ func TestPublishCopySHA(t *testing.T) {
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions: defaultTestRemoteOptions(),
-				Concurrency:   3,
+				RemoteOptions:  defaultTestRemoteOptions(),
+				OCIConcurrency: 3,
 			},
 		},
 	}
@@ -378,9 +378,9 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOptions{
-				RemoteOptions: tc.opts.RemoteOptions,
-				Architecture:  layoutExpected.Pkg.Build.Architecture,
-				Concurrency:   tc.opts.Concurrency,
+				RemoteOptions:  tc.opts.RemoteOptions,
+				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
 			// Publish test package to the destination registry
@@ -411,8 +411,8 @@ func TestPublishCopyTag(t *testing.T) {
 			name:             "Publish package",
 			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions: defaultTestRemoteOptions(),
-				Concurrency:   3,
+				RemoteOptions:  defaultTestRemoteOptions(),
+				OCIConcurrency: 3,
 			},
 		},
 	}
@@ -440,9 +440,9 @@ func TestPublishCopyTag(t *testing.T) {
 			require.NoError(t, err)
 
 			opts := PublishFromOCIOptions{
-				RemoteOptions: tc.opts.RemoteOptions,
-				Architecture:  layoutExpected.Pkg.Build.Architecture,
-				Concurrency:   tc.opts.Concurrency,
+				RemoteOptions:  tc.opts.RemoteOptions,
+				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
 			// Publish test package

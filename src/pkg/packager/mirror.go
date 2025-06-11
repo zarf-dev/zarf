@@ -42,6 +42,9 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
 		for _, img := range component.Images {
@@ -84,6 +87,9 @@ type RepoPushOptions struct {
 func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, opts RepoPushOptions) (err error) {
 	if pkgLayout == nil {
 		return fmt.Errorf("package layout is required")
+	}
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
 	}
 	if gitInfo.Address == "" {
 		return fmt.Errorf("git server address must be specified")
