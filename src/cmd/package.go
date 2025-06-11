@@ -1346,6 +1346,10 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
 	packagePath, err := packager.Pull(cmd.Context(), srcURL, outputDir, packager.PullOptions{
 		SHASum:                  pkgConfig.PkgOpts.Shasum,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
@@ -1353,6 +1357,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	})
 	if err != nil {
 		return err
