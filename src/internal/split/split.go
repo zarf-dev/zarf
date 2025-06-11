@@ -30,7 +30,7 @@ type SplitFileMetadata struct {
 }
 
 // SplitFile splits a file into several parts and returns the path to part000
-// part000 always holds the splitFileData. The remaining parts hold a chunkSize number of bytes of the original file.
+// part000 always holds the splitFileMetadata. The remaining parts hold a chunkSize number of bytes of the original file.
 func SplitFile(ctx context.Context, srcPath string, chunkSize int) (_ string, err error) {
 	// Remove any existing split files
 	existingChunks, err := filepath.Glob(srcPath + ".part*")
