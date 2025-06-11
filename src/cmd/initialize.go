@@ -109,7 +109,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	absCachePath, err := config.GetAbsCachePath()
+	absCachePath, err := getCachePath(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -219,7 +219,7 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 		// Add the oci:// prefix
 		url = fmt.Sprintf("oci://%s", url)
 
-		cachePath, err := config.GetAbsCachePath()
+		cachePath, err := getCachePath(ctx)
 		if err != nil {
 			return err
 		}

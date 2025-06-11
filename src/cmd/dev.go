@@ -97,7 +97,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -316,7 +316,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -641,7 +641,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -766,10 +766,14 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-
-	err := packager.Lint(ctx, baseDir, packager.LintOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	err = packager.Lint(ctx, baseDir, packager.LintOptions{
 		Flavor:       pkgConfig.CreateOpts.Flavor,
 		SetVariables: pkgConfig.CreateOpts.SetVariables,
+		CachePath:    cachePath,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
