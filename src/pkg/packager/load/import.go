@@ -101,7 +101,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				return v1alpha1.ZarfPackage{}, err
 			}
 		} else if component.Import.URL != "" {
-			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
+			cacheModifier, err := zoci.GetOCICacheModifier(ctx, cachePath)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, err
+			}
+			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), cacheModifier)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
