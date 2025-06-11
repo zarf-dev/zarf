@@ -38,6 +38,7 @@ type LoadOptions struct {
 	OCIConcurrency int
 	// Layers to pull during OCI pull
 	LayersSelector zoci.LayersSelector
+	CachePath      string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
 }
@@ -82,6 +83,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			LayersSelector: opts.LayersSelector,
 			OCIConcurrency: opts.OCIConcurrency,
 			RemoteOptions:  opts.RemoteOptions,
+			CachePath:      opts.CachePath,
 		}
 
 		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)

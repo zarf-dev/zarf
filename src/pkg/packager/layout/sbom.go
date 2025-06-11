@@ -46,7 +46,7 @@ const componentPrefix = "zarf-component-"
 var viewerAssets embed.FS
 var transformRegex = regexp.MustCompile(`(?m)[^a-zA-Z0-9\.\-]`)
 
-func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image) (err error) {
+func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath string, images []transform.Image, cachePath string) (err error) {
 	l := logger.From(ctx)
 	outputPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -55,11 +55,6 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(outputPath))
 	}()
-
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
 
 	componentSBOMs := []string{}
 	for _, comp := range pkg.Components {

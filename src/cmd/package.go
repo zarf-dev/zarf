@@ -244,6 +244,11 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -252,6 +257,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -459,6 +465,11 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -467,6 +478,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpt)
 	if err != nil {
@@ -656,6 +668,11 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -664,6 +681,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		Filter:                  filters.BySelectState(o.components),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -736,6 +754,11 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -744,6 +767,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		Filter:                  filters.BySelectState(o.components),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -815,6 +839,12 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	if err != nil {
 		return err
 	}
+
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
@@ -823,6 +853,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Filter:                  filters.Empty(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1175,12 +1206,13 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
-		cachePath, err := config.GetAbsCachePath()
-		if err != nil {
-			return err
-		}
 		skeletonOpts := packager.PublishSkeletonOptions{
 			Concurrency:        config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
@@ -1224,12 +1256,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		defer func() {
 			err = errors.Join(err, os.RemoveAll(tmpdir))
 		}()
+
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
 			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 			Architecture:            config.GetArch(),
 			OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 			RemoteOptions:           defaultRemoteOptions(),
+			CachePath:               cachePath,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
@@ -1245,6 +1279,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

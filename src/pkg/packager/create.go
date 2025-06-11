@@ -59,6 +59,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		RegistryOverrides:       opts.RegistryOverrides,
 		SigningKeyPath:          opts.SigningKeyPath,
 		SigningKeyPassword:      opts.SigningKeyPassword,
+		CachePath:               opts.CachePath,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {

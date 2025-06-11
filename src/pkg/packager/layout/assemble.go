@@ -52,6 +52,7 @@ type AssembleOptions struct {
 	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
 	DifferentialPackagePath string
 	OCIConcurrency          int
+	CachePath               string
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -123,17 +124,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
-		cachePath, err := config.GetAbsCachePath()
-		if err != nil {
-			return nil, err
-		}
 		pullCfg := images.PullConfig{
 			OCIConcurrency:        opts.OCIConcurrency,
 			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
 			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
-			CacheDirectory:        filepath.Join(cachePath, ImagesDir),
+			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
@@ -159,7 +156,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
 		l.Info("generating SBOM")
-		err := generateSBOM(ctx, pkg, buildPath, sbomImageList)
+		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
 		}

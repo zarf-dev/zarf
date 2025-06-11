@@ -24,7 +24,6 @@ import (
 	ocistore "oras.land/oras-go/v2/content/oci"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -133,7 +132,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, packagePath)
+		importPath, err := fetchOCISkeleton(ctx, component, packagePath, cachePath)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
@@ -211,7 +210,7 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (string, error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -221,11 +220,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		name = component.Import.Name
 	}
 
-	absCachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return "", err
-	}
-	cache := filepath.Join(absCachePath, "oci")
+	cache := filepath.Join(cachePath, "oci")
 	if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
 		return "", err
 	}

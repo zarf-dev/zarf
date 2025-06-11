@@ -41,6 +41,7 @@ type PullOptions struct {
 	PublicKeyPath string
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
+	CachePath      string
 	RemoteOptions
 }
 
@@ -74,6 +75,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 		Output:                  destination,
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
+		CachePath:               opts.CachePath,
 	})
 	if err != nil {
 		return "", err

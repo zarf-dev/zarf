@@ -513,8 +513,14 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 		outputDirectory = wd
 	}
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	pullOptions := packager.PullOptions{
 		Architecture: config.GetArch(),
+		CachePath:    cachePath,
 	}
 
 	packagePath, err := packager.Pull(ctx, url, outputDirectory, pullOptions)
