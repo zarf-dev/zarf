@@ -455,8 +455,9 @@ func newClearCacheCommand() *cobra.Command {
 }
 
 func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
-	l := logger.From(cmd.Context())
-	cachePath, err := config.GetAbsCachePath()
+	ctx := cmd.Context()
+	l := logger.From(ctx)
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -513,7 +514,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 		outputDirectory = wd
 	}
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}

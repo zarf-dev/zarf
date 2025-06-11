@@ -159,7 +159,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -465,7 +465,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -668,7 +668,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -754,7 +754,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -840,7 +840,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		return err
 	}
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -909,7 +909,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -976,7 +976,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -1145,7 +1145,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -1223,7 +1223,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
@@ -1339,6 +1339,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	srcURL := args[0]
 	outputDir := pkgConfig.PullOpts.OutputDirectory
+	ctx := cmd.Context()
 	if outputDir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
@@ -1346,11 +1347,11 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		outputDir = wd
 	}
-	cachePath, err := config.GetAbsCachePath()
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	packagePath, err := packager.Pull(cmd.Context(), srcURL, outputDir, packager.PullOptions{
+	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
 		SHASum:                  pkgConfig.PkgOpts.Shasum,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
