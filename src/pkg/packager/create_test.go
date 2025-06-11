@@ -33,12 +33,13 @@ func TestPackageCreatePublishArch(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := createRegistry(ctx, t)
-			err := Create(ctx, tt.path, fmt.Sprintf("oci://%s", reg.String()), CreateOptions{
+			packageSource, err := Create(ctx, tt.path, fmt.Sprintf("oci://%s", reg.String()), CreateOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			})
 			require.NoError(t, err)
-			packageURL := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
-			layout := pullFromRemote(ctx, t, packageURL, tt.expectedArch, "", t.TempDir())
+			expectedSource := fmt.Sprintf("%s/%s:0.0.1", reg.String(), tt.packageName)
+			require.Equal(t, expectedSource, packageSource)
+			layout := pullFromRemote(ctx, t, expectedSource, tt.expectedArch, "", t.TempDir())
 			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
 		})
 	}

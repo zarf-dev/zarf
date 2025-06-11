@@ -177,7 +177,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
-	err = packager.Create(ctx, baseDir, o.output, opt)
+	_, err = packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

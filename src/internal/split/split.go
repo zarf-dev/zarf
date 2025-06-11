@@ -29,23 +29,23 @@ type SplitFileMetadata struct {
 	Count int
 }
 
-// SplitFile splits a file into several parts. part000 always holds the split.FileData.
-// The remaining parts hold a chunkSize number of bytes of the original file.
-func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
+// SplitFile splits a file into several parts and returns the path to part000
+// part000 always holds the split.FileData. The remaining parts hold a chunkSize number of bytes of the original file.
+func SplitFile(ctx context.Context, srcPath string, chunkSize int) (_ string, err error) {
 	// Remove any existing split files
 	existingChunks, err := filepath.Glob(srcPath + ".part*")
 	if err != nil {
-		return err
+		return "", err
 	}
 	for _, chunk := range existingChunks {
 		err := os.Remove(chunk)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	// Ensure we close our sourcefile, even if we error out.
 	defer func() {
@@ -58,7 +58,7 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 
 	fi, err := srcFile.Stat()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	hash := sha256.New()
@@ -69,7 +69,7 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
 		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
 		if err != nil {
-			return err
+			return "", err
 		}
 		defer func(dstFile *os.File) {
 			err2 := dstFile.Close()
@@ -81,16 +81,16 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
-			return err
+			return "", err
 		}
 
 		_, err = dstFile.Seek(0, io.SeekStart)
 		if err != nil {
-			return err
+			return "", err
 		}
 		_, err = io.Copy(hash, dstFile)
 		if err != nil {
-			return err
+			return "", err
 		}
 
 		// EOF error could be returned on 0 bytes written.
@@ -98,11 +98,11 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 			// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
 			err = dstFile.Close()
 			if err != nil {
-				return err
+				return "", err
 			}
 			err = os.Remove(path)
 			if err != nil {
-				return err
+				return "", err
 			}
 			break
 		}
@@ -117,11 +117,11 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	// NOTE(mkcp): We have to close the file before removing or windows can break with a file-in-use err.
 	err = srcFile.Close()
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = os.Remove(srcPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Write header file
@@ -132,14 +132,14 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (err error) {
 	}
 	b, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("unable to marshal the split package data: %w", err)
+		return "", fmt.Errorf("unable to marshal the split package data: %w", err)
 	}
 	path := fmt.Sprintf("%s.part000", srcPath)
 	if err := os.WriteFile(path, b, 0644); err != nil {
-		return fmt.Errorf("unable to write the file %s: %w", path, err)
+		return "", fmt.Errorf("unable to write the file %s: %w", path, err)
 	}
 	logger.From(ctx).Info("package split across files", "count", fileCount+1)
-	return nil
+	return path, nil
 }
 
 // ReassembleFile takes a directory containing split files, reassembles those files into the destination, then the split files.
