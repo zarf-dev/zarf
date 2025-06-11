@@ -56,6 +56,10 @@ func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, var
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace
 func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error {
+	// disallow override on init packages while account for future kinds
+	if pkg.Kind != v1alpha1.ZarfPackageConfig {
+		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
+	}
 	if count := pkg.GetUniqueNamespaceCount(); count > 1 {
 		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", count)
 	}
