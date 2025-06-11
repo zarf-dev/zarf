@@ -117,6 +117,7 @@ type PublishSkeletonOptions struct {
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
+	CachePath          string
 	RemoteOptions
 }
 
@@ -135,7 +136,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{})
+	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
+		CachePath: opts.CachePath,
+	})
 	if err != nil {
 		return err
 	}

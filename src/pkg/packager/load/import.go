@@ -35,7 +35,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -96,7 +96,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}

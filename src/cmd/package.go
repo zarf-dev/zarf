@@ -159,6 +159,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
 	opt := packager.CreateOptions{
 		Flavor:                  o.flavor,
 		RegistryOverrides:       o.registryOverrides,
@@ -171,8 +175,9 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
-	err := packager.Create(ctx, baseDir, o.output, opt)
+	err = packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -1172,11 +1177,16 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
+		cachePath, err := config.GetAbsCachePath()
+		if err != nil {
+			return err
+		}
 		skeletonOpts := packager.PublishSkeletonOptions{
 			Concurrency:        config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 			RemoteOptions:      defaultRemoteOptions(),
+			CachePath:          cachePath,
 		}
 		return packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 	}

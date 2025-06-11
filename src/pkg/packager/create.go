@@ -30,6 +30,7 @@ type CreateOptions struct {
 	SkipSBOM                bool
 	DifferentialPackagePath string
 	OCIConcurrency          int
+	CachePath               string
 	// applicable when output is an OCI registry
 	RemoteOptions
 }
@@ -43,6 +44,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

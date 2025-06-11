@@ -74,6 +74,15 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 	return &Remote{remote}, nil
 }
 
+// GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
+func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error) {
+	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(cachePath, ImageCacheDirectory))
+	if err != nil {
+		return nil, err
+	}
+	return oci.WithCache(ociCache), nil
+}
+
 // PlatformForSkeleton sets the target architecture for the remote to skeleton
 func PlatformForSkeleton() ocispec.Platform {
 	return ocispec.Platform{

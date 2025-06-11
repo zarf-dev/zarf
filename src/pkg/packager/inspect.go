@@ -175,6 +175,7 @@ type InspectDefinitionResourcesOptions struct {
 	DeploySetVariables map[string]string
 	Flavor             string
 	KubeVersion        string
+	CachePath          string
 }
 
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the zarf.yaml at the given path
@@ -186,6 +187,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

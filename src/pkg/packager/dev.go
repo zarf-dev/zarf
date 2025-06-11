@@ -40,6 +40,7 @@ type DevDeployOptions struct {
 	Retries int
 	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
 	OCIConcurrency int
+	CachePath      string
 	RemoteOptions
 }
 
@@ -52,6 +53,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
