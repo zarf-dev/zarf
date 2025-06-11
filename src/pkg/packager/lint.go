@@ -15,6 +15,7 @@ import (
 type LintOptions struct {
 	SetVariables map[string]string
 	Flavor       string
+	CachePath    string
 }
 
 // Lint lints the given Zarf package
@@ -25,6 +26,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

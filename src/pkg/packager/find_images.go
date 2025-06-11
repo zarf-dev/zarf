@@ -59,6 +59,8 @@ type FindImagesOptions struct {
 	Why string
 	// SkipCosign specifies whether to skip cosign artifact lookups
 	SkipCosign bool
+	// CachePath is used to cache layers from skeleton package pulls
+	CachePath string
 }
 
 // ComponentImageScan contains the results of FindImages for a component
@@ -82,6 +84,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
