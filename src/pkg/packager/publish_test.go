@@ -33,7 +33,7 @@ func defaultTestRemoteOptions() RemoteOptions {
 	}
 }
 
-func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string) *layout.PackageLayout {
+func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
 	// Generate tmpdir and pull published package from local registry
@@ -44,6 +44,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Architecture:  architecture,
 		Filter:        filters.Empty(),
 		RemoteOptions: defaultTestRemoteOptions(),
+		CachePath:     cachePath,
 	}
 	_, tarPath, err := pullOCI(context.Background(), pullOCIOpts)
 	require.NoError(t, err)
@@ -267,7 +268,7 @@ func TestPublishPackage(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", tc.publicKeyPath)
+			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", tc.publicKeyPath, t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SigningKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
@@ -395,7 +396,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefsha, layoutExpected.Pkg.Build.Architecture, "")
+			layoutActual := pullFromRemote(ctx, t, pkgRefsha, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -455,7 +456,7 @@ func TestPublishCopyTag(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef, layoutExpected.Pkg.Build.Architecture, "")
+			layoutActual := pullFromRemote(ctx, t, packageRef, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
