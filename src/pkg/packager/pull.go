@@ -41,6 +41,8 @@ type PullOptions struct {
 	PublicKeyPath string
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
+	// CachePath is used to cache layers from OCI package pulls
+	CachePath string
 	RemoteOptions
 }
 
@@ -74,6 +76,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 		Output:                  destination,
 		OCIConcurrency:          opts.OCIConcurrency,
 		RemoteOptions:           opts.RemoteOptions,
+		CachePath:               opts.CachePath,
 	})
 	if err != nil {
 		return "", err
@@ -95,6 +98,7 @@ type pullOCIOptions struct {
 	LayersSelector zoci.LayersSelector
 	Filter         filters.ComponentFilterStrategy
 	OCIConcurrency int
+	CachePath      string
 	RemoteOptions
 }
 
@@ -109,8 +113,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (_ bool, _ string, err er
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
+	cacheMod, err := zoci.GetOCICacheModifier(ctx, opts.CachePath)
+	if err != nil {
+		return false, "", err
+	}
 	platform := oci.PlatformForArch(opts.Architecture)
-	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
 	if err != nil {
 		return false, "", err
 	}

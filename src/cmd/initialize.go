@@ -109,12 +109,18 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		CachePath:               cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -162,7 +168,7 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	absCachePath, err := config.GetAbsCachePath()
+	absCachePath, err := getCachePath(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -213,12 +219,18 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 		// Add the oci:// prefix
 		url = fmt.Sprintf("oci://%s", url)
 
+		cachePath, err := getCachePath(ctx)
+		if err != nil {
+			return err
+		}
+
 		pullOptions := packager.PullOptions{
 			Architecture:   config.GetArch(),
 			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			CachePath:      cachePath,
 		}
 
-		_, err := packager.Pull(ctx, url, cacheDirectory, pullOptions)
+		_, err = packager.Pull(ctx, url, cacheDirectory, pullOptions)
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}

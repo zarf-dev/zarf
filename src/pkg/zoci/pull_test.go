@@ -14,7 +14,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -61,11 +60,11 @@ func TestAssembleLayers(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 			tmpdir := t.TempDir()
-			config.CommonOptions.CachePath = tmpdir
 
 			// create the package
 			opt := packager.CreateOptions{
 				OCIConcurrency: tc.opts.Concurrency,
+				CachePath:      tmpdir,
 			}
 			err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
@@ -85,8 +84,11 @@ func TestAssembleLayers(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
+			cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
+			require.NoError(t, err)
+
 			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
+			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
 			// get all layers

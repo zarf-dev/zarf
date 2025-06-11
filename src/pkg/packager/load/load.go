@@ -26,6 +26,8 @@ import (
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
+	// CachePath is used to cache layers from skeleton package pulls
+	CachePath string
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
@@ -47,7 +49,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{})
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
