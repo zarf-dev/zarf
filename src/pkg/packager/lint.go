@@ -15,6 +15,7 @@ import (
 type LintOptions struct {
 	SetVariables map[string]string
 	Flavor       string
+	CachePath    string
 }
 
 // Lint lints the given Zarf package

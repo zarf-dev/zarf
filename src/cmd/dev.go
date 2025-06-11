@@ -766,10 +766,14 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-
-	err := packager.Lint(ctx, baseDir, packager.LintOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	err = packager.Lint(ctx, baseDir, packager.LintOptions{
 		Flavor:       pkgConfig.CreateOpts.Flavor,
 		SetVariables: pkgConfig.CreateOpts.SetVariables,
+		CachePath:    cachePath,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
