@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package packager2
+package packager
 
 import (
 	"context"
 	"errors"
 
-	"github.com/zarf-dev/zarf/src/internal/packager2/load"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 )
 
 // LintOptions are the optional parameters to Lint

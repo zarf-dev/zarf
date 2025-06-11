@@ -26,10 +26,10 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -513,11 +513,11 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 		outputDirectory = wd
 	}
 
-	pullOptions := packager2.PullOptions{
+	pullOptions := packager.PullOptions{
 		Architecture: config.GetArch(),
 	}
 
-	packagePath, err := packager2.Pull(ctx, url, outputDirectory, pullOptions)
+	packagePath, err := packager.Pull(ctx, url, outputDirectory, pullOptions)
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
 	}

@@ -14,7 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	layout2 "github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestComposabilityExample(t *testing.T) {
