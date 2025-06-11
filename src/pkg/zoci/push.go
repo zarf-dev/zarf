@@ -16,7 +16,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	layout2 "github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
@@ -25,7 +25,7 @@ import (
 const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
-func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout2.PackageLayout, concurrency int) (err error) {
+func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, concurrency int) (err error) {
 	logger.From(ctx).Info("pushing package to registry",
 		"destination", r.OrasRemote.Repo().Reference.String(),
 		"architecture", pkgLayout.Pkg.Build.Architecture)
