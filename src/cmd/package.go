@@ -909,6 +909,11 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
@@ -917,6 +922,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
 	if err != nil {
@@ -970,6 +976,11 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
@@ -978,6 +989,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
 	if err != nil {
@@ -1133,6 +1145,10 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
 	)
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
@@ -1141,6 +1157,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, loadOpts)
 	if err != nil {
