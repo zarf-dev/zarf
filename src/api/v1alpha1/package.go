@@ -208,7 +208,7 @@ type ZarfMetadata struct {
 	// Users are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// AllowNamespaceOverride controls whether a package's namespace may be overridden.
-	// nil means "unspecified" → we'll default it to true.
+	// nil means unspecified and we'll default it to true.
 	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty" jsonschema:"default=true"`
 }
 
