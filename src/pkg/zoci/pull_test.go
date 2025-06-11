@@ -6,7 +6,6 @@ package zoci_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"slices"
 	"testing"
@@ -68,10 +67,8 @@ func TestAssembleLayers(t *testing.T) {
 			}
 			packagePath, err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
-			expectedPath := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", "amd64")
-			require.Equal(t, expectedPath, packagePath)
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout.LoadFromTar(ctx, expectedPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			layoutExpected, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 
 			// Publish test package

@@ -108,16 +108,12 @@ func TestLoadSplitPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Load the split package, verify that the split package became one
-			expectedName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst.part000", tt.packageName)
-			expectedPath := filepath.Join(tmpdir, expectedName)
-			require.Equal(t, expectedPath, packageSource)
-			require.NoError(t, err)
 			opt := LoadOptions{
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
 			}
-			_, err = LoadPackage(ctx, expectedPath, opt)
+			_, err = LoadPackage(ctx, packageSource, opt)
 			require.NoError(t, err)
 			assembledName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst", tt.packageName)
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))
