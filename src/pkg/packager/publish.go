@@ -30,6 +30,7 @@ type PublishFromOCIOptions struct {
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
+// src and dst are references to the full package ref, E.G. my-registry.com/my-namespace/my-package:0.0.1
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -86,7 +87,8 @@ type PublishPackageOptions struct {
 	RemoteOptions
 }
 
-// PublishPackage takes a package layout and pushes the package to the given registry. It returns the ref to the pushed package
+// PublishPackage takes a package layout and pushes the package to the given registry.
+// dst is the path to the registry namespace, E.G. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (string, error) {
 	l := logger.From(ctx)
 
@@ -129,7 +131,8 @@ type PublishSkeletonOptions struct {
 	RemoteOptions
 }
 
-// PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry. It returns a ref to the skeleton package.
+// PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
+// dst is the path to the registry namespace, E.G. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (string, error) {
 	l := logger.From(ctx)
 
