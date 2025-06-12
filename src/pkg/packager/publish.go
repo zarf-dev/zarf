@@ -33,6 +33,7 @@ type PublishFromOCIOptions struct {
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
+// src and dst are references to the full package ref, e.g. my-registry.com/my-namespace/my-package:0.0.1
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -89,24 +90,35 @@ type PublishPackageOptions struct {
 	RemoteOptions
 }
 
-// PublishPackage takes a Path to the location of the built package, a ref to a registry, and a PublishOpts and uploads to the target OCI registry.
-func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) error {
+// PublishPackage takes a package layout and pushes the package to the given registry.
+// dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
 	if err := dst.ValidateRegistry(); err != nil {
-		return fmt.Errorf("invalid registry: %w", err)
+		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
 	if pkgLayout == nil {
-		return fmt.Errorf("package layout must be specified")
+		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
 	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
-		return fmt.Errorf("unable to sign package: %w", err)
+		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
 	}
 
-	return pushToRemote(ctx, pkgLayout, dst, opts.OCIConcurrency, opts.RemoteOptions)
+	// Build Reference for remote from registry location and pkg
+	pkgRef, err := zoci.ReferenceFromMetadata(dst.String(), pkgLayout.Pkg)
+	if err != nil {
+		return registry.Reference{}, err
+	}
+
+	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions); err != nil {
+		return registry.Reference{}, err
+	}
+
+	return pkgRef, nil
 }
 
 // PublishSkeletonOptions declares the parameters to publish a skeleton package.
@@ -122,17 +134,18 @@ type PublishSkeletonOptions struct {
 	RemoteOptions
 }
 
-// PublishSkeleton takes a Path to the location of the build package, a ref to a registry, and a PublishOpts and uploads the skeleton package to the target OCI registry.
-func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) error {
+// PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
+// dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
+func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
 	if err := ref.ValidateRegistry(); err != nil {
-		return fmt.Errorf("invalid registry: %w", err)
+		return registry.Reference{}, fmt.Errorf("invalid registry: %w", err)
 	}
 	if path == "" {
-		return fmt.Errorf("path must be specified")
+		return registry.Reference{}, fmt.Errorf("path must be specified")
 	}
 
 	// Load package layout
@@ -141,7 +154,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		CachePath: opts.CachePath,
 	})
 	if err != nil {
-		return err
+		return registry.Reference{}, err
 	}
 	// Create skeleton buildpath
 	createOpts := layout.AssembleSkeletonOptions{
@@ -150,16 +163,16 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {
-		return fmt.Errorf("unable to create skeleton: %w", err)
+		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}
-
-	err = pushToRemote(ctx, pkgLayout, ref, opts.OCIConcurrency, opts.RemoteOptions)
+	// Build Reference for remote from registry location and pkg
+	pkgRef, err := zoci.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
 	if err != nil {
-		return err
+		return registry.Reference{}, err
 	}
-	packageRef, err := zoci.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
+	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions)
 	if err != nil {
-		return err
+		return registry.Reference{}, err
 	}
 	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
 	ex := []v1alpha1.ZarfComponent{}
@@ -168,31 +181,25 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 			Name: fmt.Sprintf("import-%s", c.Name),
 			Import: v1alpha1.ZarfComponentImport{
 				Name: c.Name,
-				URL:  helpers.OCIURLPrefix + packageRef,
+				URL:  helpers.OCIURLPrefix + pkgRef.String(),
 			},
 		})
 	}
-	err = utils.ColorPrintYAML(ex, nil, true)
+	err = utils.ColorPrintYAML(ex, nil, false)
 	if err != nil {
-		return err
+		return registry.Reference{}, err
 	}
 	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
-	return nil
+	return pkgRef, nil
 }
 
-// pushToRemote pushes a package to a remote at ref.
+// pushToRemote pushes a package to the given reference
 func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, remoteOpts RemoteOptions) error {
-	// Build Reference for remote from registry location and pkg
-	r, err := zoci.ReferenceFromMetadata(ref.String(), layout.Pkg)
-	if err != nil {
-		return err
-	}
-
 	arch := layout.Pkg.Metadata.Architecture
 	// Set platform
-	p := oci.PlatformForArch(arch)
+	platform := oci.PlatformForArch(arch)
 
-	remote, err := zoci.NewRemote(ctx, r, p, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
+	remote, err := zoci.NewRemote(ctx, ref.String(), platform, oci.WithPlainHTTP(remoteOpts.PlainHTTP), oci.WithInsecureSkipVerify(remoteOpts.InsecureSkipTLSVerify))
 	if err != nil {
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}

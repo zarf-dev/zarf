@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -37,8 +38,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 
 	layerSize := oci.SumDescsSize(layersToPull)
-	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
-	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
+	logger.From(ctx).Info("pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
 
 	dst, err := file.New(destinationDir)
 	if err != nil {

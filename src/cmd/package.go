@@ -1237,7 +1237,8 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 		}
-		return packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		return err
 	}
 
 	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
@@ -1313,7 +1314,8 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:      defaultRemoteOptions(),
 	}
 
-	return packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
+	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
+	return err
 }
 
 type packagePullOptions struct{}
