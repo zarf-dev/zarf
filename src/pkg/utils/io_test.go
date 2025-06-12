@@ -41,8 +41,8 @@ func TestGetFinalExecutableCommand(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		// Tests can't run in parallel since global state is being changed
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 			config.ActionsCommandZarfPrefix = tt.actionCommandZarfPrefix
 			config.ActionsUseSystemZarf = tt.actionUsesSystemZarf
 			cmd, err := GetFinalExecutableCommand()
