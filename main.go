@@ -20,6 +20,7 @@ import (
 var zarfSchema embed.FS
 
 func main() {
+	// This ensures `./zarf` actions call the current Zarf binary over the system Zarf binary
 	config.ActionsUseSystemZarf = false
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
