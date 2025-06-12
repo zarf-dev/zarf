@@ -9,10 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -168,6 +171,21 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return "", err
 	}
 	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions)
+	if err != nil {
+		return "", err
+	}
+	l.Info("skeleton packages contain metadata and local resources to allow for remote component imports")
+	ex := []v1alpha1.ZarfComponent{}
+	for _, c := range pkgLayout.Pkg.Components {
+		ex = append(ex, v1alpha1.ZarfComponent{
+			Name: fmt.Sprintf("import-%s", c.Name),
+			Import: v1alpha1.ZarfComponentImport{
+				Name: c.Name,
+				URL:  helpers.OCIURLPrefix + pkgRef,
+			},
+		})
+	}
+	err = utils.ColorPrintYAML(ex, nil, true)
 	if err != nil {
 		return "", err
 	}
