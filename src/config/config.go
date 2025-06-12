@@ -42,7 +42,7 @@ var (
 	CLIVersion = UnsetCLIVersion
 
 	// ActionsUseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
-	ActionsUseSystemZarf = false
+	ActionsUseSystemZarf = true
 
 	// ActionsCommandZarfPrefix sets a sub command prefix that Zarf commands are under in the current binary if Zarf is being used as a library (and use system Zarf is not specified)
 	ActionsCommandZarfPrefix = ""

@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/zarf-dev/zarf/src/cmd"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
@@ -19,6 +20,7 @@ import (
 var zarfSchema embed.FS
 
 func main() {
+	config.ActionsUseSystemZarf = false
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	signalCh := make(chan os.Signal, 1)
