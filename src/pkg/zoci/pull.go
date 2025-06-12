@@ -38,7 +38,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	}
 
 	layerSize := oci.SumDescsSize(layersToPull)
-	logger.From(ctx).Info("Pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
+	logger.From(ctx).Info("pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
