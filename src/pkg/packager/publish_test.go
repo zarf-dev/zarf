@@ -378,11 +378,8 @@ func TestPublishCopySHA(t *testing.T) {
 
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
-			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
-			require.NoError(t, err)
 
-			pkgRefSha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
+			pkgRefSha := fmt.Sprintf("%s@%s", dstRef.String(), indexDesc.Digest)
 
 			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
@@ -439,11 +436,8 @@ func TestPublishCopyTag(t *testing.T) {
 
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
-			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
-			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
