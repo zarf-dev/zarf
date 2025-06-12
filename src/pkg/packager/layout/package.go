@@ -188,22 +188,22 @@ func (p *PackageLayout) GetImageDirPath() string {
 	return filepath.Join(p.dirPath, ImagesDir)
 }
 
-// Archive creates a tarball from the package layout
-func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) error {
+// Archive creates a tarball from the package layout and returns the path to that tarball
+func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageSize int) (string, error) {
 	filename, err := p.FileName()
 	if err != nil {
-		return err
+		return "", err
 	}
 	tarballPath := filepath.Join(dirPath, filename)
 	err = os.Remove(tarballPath)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return err
+		return "", err
 	}
 
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
 	files, err := os.ReadDir(p.dirPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var filePaths []string
 	for _, file := range files {
@@ -211,25 +211,26 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	}
 	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
 	if err != nil {
-		return fmt.Errorf("unable to create package: %w", err)
+		return "", fmt.Errorf("unable to create package: %w", err)
 	}
 	fi, err := os.Stat(tarballPath)
 	if err != nil {
-		return fmt.Errorf("unable to read the package archive: %w", err)
+		return "", fmt.Errorf("unable to read the package archive: %w", err)
 	}
 	// Convert Megabytes to bytes.
 	chunkSize := maxPackageSize * 1000 * 1000
 	// If a chunk size was specified and the package is larger than the chunk size, split it into chunks.
 	if maxPackageSize > 0 && fi.Size() > int64(chunkSize) {
 		if fi.Size()/int64(chunkSize) > 999 {
-			return fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
+			return "", fmt.Errorf("unable to split the package archive into multiple files: must be less than 1,000 files")
 		}
-		err := split.SplitFile(ctx, tarballPath, chunkSize)
+		var err error
+		tarballPath, err = split.SplitFile(ctx, tarballPath, chunkSize)
 		if err != nil {
-			return fmt.Errorf("unable to split the package archive into multiple files: %w", err)
+			return "", fmt.Errorf("unable to split the package archive into multiple files: %w", err)
 		}
 	}
-	return nil
+	return tarballPath, nil
 }
 
 // Files returns a map of all the files in the package.

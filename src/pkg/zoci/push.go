@@ -30,6 +30,10 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"destination", r.OrasRemote.Repo().Reference.String(),
 		"architecture", pkgLayout.Pkg.Build.Architecture)
 
+	if concurrency == 0 {
+		concurrency = DefaultConcurrency
+	}
+
 	src, err := file.New("")
 	if err != nil {
 		return err
