@@ -6,7 +6,6 @@ package zoci_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"slices"
 	"testing"
@@ -50,7 +49,7 @@ func TestAssembleLayers(t *testing.T) {
 				RemoteOptions: packager.RemoteOptions{
 					PlainHTTP: true,
 				},
-				Concurrency: 3,
+				OCIConcurrency: 3,
 			},
 		},
 	}
@@ -63,32 +62,27 @@ func TestAssembleLayers(t *testing.T) {
 
 			// create the package
 			opt := packager.CreateOptions{
-				OCIConcurrency: tc.opts.Concurrency,
+				OCIConcurrency: tc.opts.OCIConcurrency,
 				CachePath:      tmpdir,
 			}
-			err := packager.Create(ctx, tc.path, tmpdir, opt)
+			packagePath, err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
-			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", "amd64")
-
 			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout.LoadFromTar(ctx, src, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			layoutExpected, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 			require.NoError(t, err)
 
 			// Publish test package
-			err = packager.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := packager.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
-			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), layoutExpected.Pkg)
-			require.NoError(t, err)
 
 			cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
 			require.NoError(t, err)
 
 			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
 			// get all layers

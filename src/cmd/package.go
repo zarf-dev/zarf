@@ -176,7 +176,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
-	err = packager.Create(ctx, baseDir, o.output, opt)
+	_, err = packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -1250,20 +1250,21 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
 		skeletonOpts := packager.PublishSkeletonOptions{
-			Concurrency:        config.CommonOptions.OCIConcurrency,
+			OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 		}
-		return packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
+		return err
 	}
 
 	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
 		ociOpts := packager.PublishFromOCIOptions{
-			Concurrency:   config.CommonOptions.OCIConcurrency,
-			Architecture:  config.GetArch(),
-			RemoteOptions: defaultRemoteOptions(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			Architecture:   config.GetArch(),
+			RemoteOptions:  defaultRemoteOptions(),
 		}
 
 		// source registry reference
@@ -1326,13 +1327,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	publishPackageOpts := packager.PublishPackageOptions{
-		Concurrency:        config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
 
-	return packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
+	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
+	return err
 }
 
 type packagePullOptions struct{}

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
@@ -212,7 +213,7 @@ func setDefaults() {
 	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values
-	v.SetDefault(VPkgOCIConcurrency, 6)
+	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
 	// Deploy opts that are non-zero values

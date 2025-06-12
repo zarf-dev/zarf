@@ -49,19 +49,20 @@ func GetFinalExecutablePath() (string, error) {
 // GetFinalExecutableCommand returns the final path to the Zarf executable including and library prefixes and overrides.
 func GetFinalExecutableCommand() (string, error) {
 	// In case the binary is symlinked somewhere else, get the final destination
-	zarfCommand, err := GetFinalExecutablePath()
+	executablePath, err := GetFinalExecutablePath()
 	if err != nil {
 		return "", err
 	}
 
+	// If ActionCommandZarfPrefix is set it takes priority
 	if config.ActionsCommandZarfPrefix != "" {
-		zarfCommand = fmt.Sprintf("%s %s", zarfCommand, config.ActionsCommandZarfPrefix)
+		return fmt.Sprintf("%s %s", executablePath, config.ActionsCommandZarfPrefix), nil
 	}
 
-	// If a library user has chosen to override config to use system Zarf instead, reset the binary path.
+	// If a library user is calling Zarf we default to using system Zarf otherwise main sets this to false for CLI users
 	if config.ActionsUseSystemZarf {
-		zarfCommand = "zarf"
+		return "zarf", nil
 	}
 
-	return zarfCommand, nil
+	return executablePath, nil
 }

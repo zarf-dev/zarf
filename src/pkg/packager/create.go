@@ -35,10 +35,10 @@ type CreateOptions struct {
 	RemoteOptions
 }
 
-// Create takes a path to a directory containing a ZarfPackageConfig and creates an archived Zarf package in the output directory
-func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (err error) {
+// Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
+func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
 	if opts.SkipSBOM && opts.SBOMOut != "" {
-		return fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
+		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
 	loadOpts := load.DefinitionOptions{
@@ -48,7 +48,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	assembleOpt := layout.AssembleOptions{
@@ -63,30 +63,32 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
+	var packageLocation string
 	if helpers.IsOCIURL(output) {
 		ref, err := zoci.ReferenceFromMetadata(output, pkgLayout.Pkg)
 		if err != nil {
-			return err
+			return "", err
 		}
-		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
+		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
 			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 		if err != nil {
-			return err
+			return "", err
 		}
 		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
 		if err != nil {
-			return err
+			return "", err
 		}
+		packageLocation = ref.String()
 	} else {
-		err = pkgLayout.Archive(ctx, output, opts.MaxPackageSizeMB)
+		packageLocation, err = pkgLayout.Archive(ctx, output, opts.MaxPackageSizeMB)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -95,12 +97,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {
-			logger.From(ctx).Error(fmt.Sprintf("cannot output sbom: %s", err.Error()))
-			return nil
+			logger.From(ctx).Error(fmt.Sprintf("SBOM not available in package: %s", err.Error()))
+			return packageLocation, nil
 		}
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	return nil
+	return packageLocation, nil
 }

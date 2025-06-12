@@ -15,9 +15,9 @@ import (
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (string, error) {
+func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (registry.Reference, error) {
 	if len(pkg.Metadata.Version) == 0 {
-		return "", errors.New("version is required for publishing")
+		return registry.Reference{}, errors.New("version is required for publishing")
 	}
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
@@ -31,9 +31,9 @@ func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (s
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse %s: %w", raw, err)
+		return registry.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
 	}
-	return ref.String(), nil
+	return ref, nil
 }
 
 // GetInitPackageURL returns the URL for the init package for the given version.

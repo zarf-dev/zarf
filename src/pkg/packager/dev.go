@@ -50,6 +50,13 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	start := time.Now()
 	config.CommonOptions.Confirm = true
 
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:       opts.Flavor,
 		SetVariables: opts.CreateSetVariables,

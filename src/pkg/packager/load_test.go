@@ -101,21 +101,19 @@ func TestLoadSplitPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Create the split package
-			err = Create(ctx, tt.packagePath, tmpdir, CreateOptions{
+			packageSource, err := Create(ctx, tt.packagePath, tmpdir, CreateOptions{
 				MaxPackageSizeMB: 1,
 				SkipSBOM:         true,
 			})
 			require.NoError(t, err)
 
 			// Load the split package, verify that the split package became one
-			splitName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst.part000", tt.packageName)
-			name := filepath.Join(tmpdir, splitName)
 			opt := LoadOptions{
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
 			}
-			_, err = LoadPackage(ctx, name, opt)
+			_, err = LoadPackage(ctx, packageSource, opt)
 			require.NoError(t, err)
 			assembledName := fmt.Sprintf("zarf-package-%s-amd64.tar.zst", tt.packageName)
 			require.FileExists(t, filepath.Join(tmpdir, assembledName))
