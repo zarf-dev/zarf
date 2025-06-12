@@ -258,10 +258,10 @@ func TestPublishPackage(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			ref, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, ref, "amd64", tc.publicKeyPath, t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", tc.publicKeyPath, t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SigningKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
@@ -295,12 +295,12 @@ func TestPublishPackageDeterministic(t *testing.T) {
 			require.NoError(t, err)
 
 			// Publish test package
-			ref, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			// Attempt to get the digest
 			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, ref, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
+			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
 			require.NoError(t, err)
 			desc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
