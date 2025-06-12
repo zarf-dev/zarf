@@ -6,7 +6,6 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,7 +15,7 @@ import (
 // GetFinalExecutableCommand returns the final path to the Zarf executable including and library prefixes and overrides.
 func TestGetFinalExecutableCommand(t *testing.T) {
 	t.Parallel()
-	binaryPath, err := os.Executable()
+	executablePath, err := GetFinalExecutablePath()
 	require.NoError(t, err)
 	tests := []struct {
 		name                    string
@@ -26,12 +25,12 @@ func TestGetFinalExecutableCommand(t *testing.T) {
 	}{
 		{
 			name:     "using current binary",
-			expected: binaryPath,
+			expected: executablePath,
 		},
 		{
 			name:                    "using prefix takes priority over actionUsesSystemZarf",
 			actionCommandZarfPrefix: "my-program",
-			expected:                fmt.Sprintf("%s %s", binaryPath, "my-program"),
+			expected:                fmt.Sprintf("%s %s", executablePath, "my-program"),
 			actionUsesSystemZarf:    true,
 		},
 		{
@@ -41,12 +40,14 @@ func TestGetFinalExecutableCommand(t *testing.T) {
 		},
 	}
 
-	// These test can't run in their own t.Run function, otherwise the binary path changes on windows
 	for _, tt := range tests {
-		config.ActionsCommandZarfPrefix = tt.actionCommandZarfPrefix
-		config.ActionsUseSystemZarf = tt.actionUsesSystemZarf
-		cmd, err := GetFinalExecutableCommand()
-		require.NoError(t, err)
-		require.Equal(t, tt.expected, cmd)
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			config.ActionsCommandZarfPrefix = tt.actionCommandZarfPrefix
+			config.ActionsUseSystemZarf = tt.actionUsesSystemZarf
+			cmd, err := GetFinalExecutableCommand()
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cmd)
+		})
 	}
 }
