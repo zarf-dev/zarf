@@ -358,7 +358,7 @@ func TestPublishCopySHA(t *testing.T) {
 			require.NoError(t, err)
 			indexDesc, err := oras.Resolve(ctx, localRepo, srcRef, oras.ResolveOptions{})
 			require.NoError(t, err)
-			src := fmt.Sprintf("%s/%s@%s", registryRef.String(), "test:0.0.1", indexDesc.Digest)
+			src := fmt.Sprintf("%s@%s", srcRef, indexDesc.Digest)
 			srcRefWithDigest, err := registry.ParseReference(src)
 			require.NoError(t, err)
 
@@ -382,9 +382,9 @@ func TestPublishCopySHA(t *testing.T) {
 			packageRef, err := zoci.ReferenceFromMetadata(dstRegistryRef.String(), layoutExpected.Pkg)
 			require.NoError(t, err)
 
-			pkgRefsha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
+			pkgRefSha := fmt.Sprintf("%s@%s", packageRef, indexDesc.Digest)
 
-			layoutActual := pullFromRemote(ctx, t, pkgRefsha, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, pkgRefSha, layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
@@ -415,14 +415,13 @@ func TestPublishCopyTag(t *testing.T) {
 			layoutExpected, err := layout.LoadFromTar(ctx, tc.packageToPublish, layout.PackageLayoutOptions{})
 			require.NoError(t, err)
 
-			// Publish test package FIXME potentially
-			_, err = PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			// Publish test package
+			srcRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
 			dstRegistryRef := createRegistry(ctx, t)
 
-			src := fmt.Sprintf("%s/%s", registryRef.String(), "test:0.0.1")
-			srcRegistry, err := registry.ParseReference(src)
+			srcRegistry, err := registry.ParseReference(srcRef)
 			require.NoError(t, err)
 			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
 			dstRegistry, err := registry.ParseReference(dst)
