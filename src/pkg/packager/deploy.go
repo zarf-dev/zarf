@@ -74,6 +74,14 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
 		return nil, err

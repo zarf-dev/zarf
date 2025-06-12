@@ -24,7 +24,7 @@ const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// DefaultConcurrency is the default concurrency used for operations
-	DefaultConcurrency = 3
+	DefaultConcurrency = 6
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
 	// AllLayers is the default selector for all layers

@@ -33,6 +33,10 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 		return nil, fmt.Errorf("no layers to pull")
 	}
 
+	if concurrency == 0 {
+		concurrency = DefaultConcurrency
+	}
+
 	layerSize := oci.SumDescsSize(layersToPull)
 	logger.From(ctx).Info("Pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
 
