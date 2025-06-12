@@ -185,10 +185,11 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 			},
 		})
 	}
-	err = utils.ColorPrintYAML(ex, nil, true)
+	err = utils.ColorPrintYAML(ex, nil, false)
 	if err != nil {
 		return registry.Reference{}, err
 	}
+	l.Info("find more info on skeleton packages at https://docs.zarf.dev/faq/#what-is-a-skeleton-zarf-package")
 	return pkgRef, nil
 }
 
