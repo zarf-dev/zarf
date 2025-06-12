@@ -203,7 +203,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, expectedPkg.Metadata.Name)
 
-			rmt, err := zoci.NewRemote(ctx, ref, zoci.PlatformForSkeleton(), oci.WithPlainHTTP(true))
+			rmt, err := zoci.NewRemote(ctx, ref.String(), zoci.PlatformForSkeleton(), oci.WithPlainHTTP(true))
 			require.NoError(t, err)
 
 			// Fetch from remote and compare
@@ -261,7 +261,7 @@ func TestPublishPackage(t *testing.T) {
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			layoutActual := pullFromRemote(ctx, t, packageRef, "amd64", tc.publicKeyPath, t.TempDir())
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SigningKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
@@ -300,7 +300,7 @@ func TestPublishPackageDeterministic(t *testing.T) {
 
 			// Attempt to get the digest
 			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP))
 			require.NoError(t, err)
 			desc, err := remote.ResolveRoot(ctx)
 			require.NoError(t, err)
@@ -354,9 +354,8 @@ func TestPublishCopySHA(t *testing.T) {
 
 			// This gets the test package digest from the first package publish
 			localRepo := &remote.Repository{PlainHTTP: true}
-			localRepo.Reference, err = registry.ParseReference(srcRef)
-			require.NoError(t, err)
-			indexDesc, err := oras.Resolve(ctx, localRepo, srcRef, oras.ResolveOptions{})
+			localRepo.Reference = srcRef
+			indexDesc, err := oras.Resolve(ctx, localRepo, srcRef.String(), oras.ResolveOptions{})
 			require.NoError(t, err)
 			src := fmt.Sprintf("%s@%s", srcRef, indexDesc.Digest)
 			srcRefWithDigest, err := registry.ParseReference(src)
@@ -418,8 +417,6 @@ func TestPublishCopyTag(t *testing.T) {
 
 			dstRegistryRef := createRegistry(ctx, t)
 
-			srcRegistry, err := registry.ParseReference(srcRef)
-			require.NoError(t, err)
 			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
 			dstRegistry, err := registry.ParseReference(dst)
 			require.NoError(t, err)
@@ -431,7 +428,7 @@ func TestPublishCopyTag(t *testing.T) {
 			}
 
 			// Publish test package
-			err = PublishFromOCI(ctx, srcRegistry, dstRegistry, opts)
+			err = PublishFromOCI(ctx, srcRef, dstRegistry, opts)
 			require.NoError(t, err)
 
 			// This verifies that publish deletes the manifest that is auto created by oras

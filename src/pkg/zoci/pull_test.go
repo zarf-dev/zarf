@@ -82,7 +82,7 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 
 			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
 			// get all layers

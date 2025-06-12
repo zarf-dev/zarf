@@ -75,7 +75,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		remote, err := zoci.NewRemote(ctx, ref, oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
+		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
 			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
 		if err != nil {
 			return "", err
@@ -84,7 +84,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		packageLocation = ref
+		packageLocation = ref.String()
 	} else {
 		packageLocation, err = pkgLayout.Archive(ctx, output, opts.MaxPackageSizeMB)
 		if err != nil {
