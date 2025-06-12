@@ -41,14 +41,12 @@ func TestGetFinalExecutableCommand(t *testing.T) {
 		},
 	}
 
+	// These test can't run in their own t.Run function, otherwise the binary path changes on windows
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			config.ActionsCommandZarfPrefix = tt.actionCommandZarfPrefix
-			config.ActionsUseSystemZarf = tt.actionUsesSystemZarf
-			cmd, err := GetFinalExecutableCommand()
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, cmd)
-		})
+		config.ActionsCommandZarfPrefix = tt.actionCommandZarfPrefix
+		config.ActionsUseSystemZarf = tt.actionUsesSystemZarf
+		cmd, err := GetFinalExecutableCommand()
+		require.NoError(t, err)
+		require.Equal(t, tt.expected, cmd)
 	}
 }
