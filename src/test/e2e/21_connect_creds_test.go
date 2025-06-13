@@ -58,7 +58,7 @@ func TestMetrics(t *testing.T) {
 	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 
-	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
+	tunnel, err := c.NewTunnel("localhost", "zarf", "svc", "agent-hook", "", 8888, 8443)
 	require.NoError(t, err)
 	_, err = tunnel.Connect(context.Background())
 	require.NoError(t, err)
