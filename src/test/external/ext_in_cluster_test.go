@@ -124,7 +124,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	ctx := testutil.TestContext(suite.T())
 
 	// Check that the registry contains the images we want
-	tunnelReg, err := c.NewTunnel("external-registry", "svc", "external-registry-docker-registry", "", 0, 5000)
+	tunnelReg, err := c.NewTunnel("localhost", "external-registry", "svc", "external-registry-docker-registry", "", 0, 5000)
 	suite.NoError(err)
 	_, err = tunnelReg.Connect(ctx)
 	suite.NoError(err)
@@ -141,7 +141,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 
 	// Check that the git server contains the repos we want (TODO VERIFY NAME AND PORT)
 
-	tunnelGit, err := c.NewTunnel("git-server", "svc", "gitea-http", "", 0, 3000)
+	tunnelGit, err := c.NewTunnel("localhost", "git-server", "svc", "gitea-http", "", 0, 3000)
 	suite.NoError(err)
 	_, err = tunnelGit.Connect(ctx)
 	suite.NoError(err)

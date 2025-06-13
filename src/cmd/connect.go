@@ -34,6 +34,7 @@ func newConnectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
+	cmd.Flags().StringVar(&o.zt.Address, "address", "localhost", "address to expose the tunnel on")
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
 	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
@@ -73,6 +74,8 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		if o.zt.LocalPort != 0 {
 			ti.LocalPort = o.zt.LocalPort
 		}
+		ti.Address = o.zt.Address
+
 		tunnel, err = c.ConnectTunnelInfo(ctx, ti)
 	}
 

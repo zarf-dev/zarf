@@ -129,7 +129,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 				if err != nil {
 					return retry.Unrecoverable(err)
 				}
-				tunnel, err := opts.Cluster.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+				tunnel, err := opts.Cluster.NewTunnel("localhost", namespace, cluster.SvcResource, name, "", 0, port)
 				if err != nil {
 					return err
 				}
