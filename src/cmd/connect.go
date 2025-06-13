@@ -111,7 +111,7 @@ func newConnectListCommand() *cobra.Command {
 	o := &connectListOptions{}
 	cmd := &cobra.Command{
 		Use:     "list",
-		Aliases: []string{"l"},
+		Aliases: []string{"l", "ls"},
 		Short:   lang.CmdConnectListShort,
 		RunE:    o.run,
 	}
