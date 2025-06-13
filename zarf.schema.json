@@ -1080,8 +1080,7 @@
         },
         "allowNamespaceOverride": {
           "type": "boolean",
-          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden.\nnil means unspecified and we'll default it to true.",
-          "default": true
+          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden."
         }
       },
       "additionalProperties": false,
