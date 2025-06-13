@@ -111,6 +111,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 			zt = ztNew
+			zt.Address = "localhost"
 		}
 		if zt.ResourceName == "" {
 			return TunnelInfo{}, fmt.Errorf("missing resource name")
