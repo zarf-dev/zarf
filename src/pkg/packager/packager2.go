@@ -63,9 +63,9 @@ func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error 
 	if pkg.Kind != v1alpha1.ZarfPackageConfig {
 		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
 	}
-	if count := pkg.GetUniqueNamespaceCount(); count > 1 {
+	if count := pkg.UniqueNamespaceCount(); count > 1 {
 		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", count)
 	}
-	pkg.SetPackageNamespace(namespace)
+	pkg.UpdateAllComponentNamespaces(namespace)
 	return nil
 }
