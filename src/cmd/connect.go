@@ -34,7 +34,7 @@ func newConnectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&o.zt.Address, "address", "localhost", "address to expose the tunnel on")
+	cmd.Flags().StringVar(&o.zt.Address, "address", "localhost", lang.CmdConnectFlagAddress)
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
 	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
