@@ -73,7 +73,10 @@ func (f *deploymentFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfCompo
 				// Ensure we have a local version of the component to point to (otherwise the pointer might change on us)
 				component := component
 
-				selectState, matchedRequest := includedOrExcluded(component.Name, f.requestedComponents)
+				selectState, matchedRequest, err := includedOrExcluded(component.Name, f.requestedComponents)
+				if err != nil {
+					return nil, err
+				}
 
 				if !component.IsRequired() {
 					if selectState == excluded {

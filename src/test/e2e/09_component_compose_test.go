@@ -13,8 +13,7 @@ import (
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
-
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestComposabilityExample(t *testing.T) {
@@ -31,7 +30,7 @@ func TestComposabilityExample(t *testing.T) {
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-composable-packages-%s.tar.zst", e2e.Arch))
-	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	require.Len(t, pkgLayout.Pkg.Components, 2)
@@ -87,7 +86,7 @@ func TestFullComposability(t *testing.T) {
 	require.NoError(t, err)
 
 	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-compose-package-%s-0.0.1.tar.zst", e2e.Arch))
-	pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	require.Len(t, pkgLayout.Pkg.Components, 1)

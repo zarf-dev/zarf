@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/config"
@@ -32,11 +33,9 @@ const (
 
 	// Root config, Logging
 
-	VLogLevel   = "log_level"
-	VLogFormat  = "log_format"
-	VNoLogFile  = "no_log_file"
-	VNoProgress = "no_progress"
-	VNoColor    = "no_color"
+	VLogLevel  = "log_level"
+	VLogFormat = "log_format"
+	VNoColor   = "no_color"
 
 	// Init config keys
 
@@ -213,7 +212,7 @@ func setDefaults() {
 	v.SetDefault(VLogFormat, string(logger.FormatConsole))
 
 	// Package defaults that are non-zero values
-	v.SetDefault(VPkgOCIConcurrency, 3)
+	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
 	// Deploy opts that are non-zero values

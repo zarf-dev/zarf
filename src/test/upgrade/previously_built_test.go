@@ -61,7 +61,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// [DEPRECATIONS] We expect any deprecated things to work from the old package
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.4")
-	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
+	require.Contains(t, stdOut, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.4)
 	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")
@@ -82,7 +82,7 @@ func TestPreviouslyBuiltZarfPackage(t *testing.T) {
 
 	// [DEPRECATIONS] We expect any deprecated things to work from the new package
 	require.Contains(t, stdErr, "Successfully deployed podinfo 6.3.5")
-	require.Contains(t, stdErr, "-----BEGIN PUBLIC KEY-----")
+	require.Contains(t, stdOut, "-----BEGIN PUBLIC KEY-----")
 
 	// Verify that podinfo-upgrade successfully deploys in the cluster (version 6.3.5)
 	kubectlOut, _, err = kubectl(t, "-n=podinfo-upgrade", "rollout", "status", "deployment/podinfo-upgrade")

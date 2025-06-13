@@ -792,16 +792,10 @@
           "description": "The name of the component to import from the referenced zarf.yaml."
         },
         "path": {
-          "not": {
-            "pattern": "###ZARF_PKG_TMPL_"
-          },
           "type": "string",
           "description": "The path to the directory containing the zarf.yaml to import."
         },
         "url": {
-          "not": {
-            "pattern": "###ZARF_PKG_TMPL_"
-          },
           "type": "string",
           "pattern": "^oci://.*$",
           "description": "[beta] The URL to a Zarf package to import via OCI."

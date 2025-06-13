@@ -7,6 +7,7 @@ package v1alpha1
 import (
 	"fmt"
 	"regexp"
+	"time"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -22,6 +23,9 @@ const (
 // IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
 // https://regex101.com/r/tfsEuZ/1
 var IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+
+// BuildTimestampFormat is the timestamp format used for ZarfBuildData.Timestamp
+const BuildTimestampFormat = time.RFC1123Z
 
 // Zarf looks for these strings in zarf.yaml to make dynamic changes
 const (
@@ -42,6 +46,9 @@ const (
 	// APIVersion the api version of this package.
 	APIVersion string = "zarf.dev/v1alpha1"
 )
+
+// SkeletonArch is a special architecture used for skeleton packages
+const SkeletonArch = "skeleton"
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {

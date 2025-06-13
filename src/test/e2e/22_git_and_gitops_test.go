@@ -17,12 +17,13 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestGit(t *testing.T) {
 	t.Log("E2E: Git")
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	tmpdir := t.TempDir()
 	buildPath := filepath.Join("src", "test", "packages", "22-git-data")
@@ -36,9 +37,8 @@ func TestGit(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=full-repo,specific-*", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)
@@ -71,18 +71,18 @@ func testGitServerConnect(t *testing.T, gitURL string) {
 func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadZarfState(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err)
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, state.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
 	// Get the repo as the readonly user
-	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s", state.GitServer.PushUsername, repoName), nil)
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s", s.GitServer.PushUsername, repoName), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 
@@ -106,19 +106,19 @@ func testGitServerReadOnly(ctx context.Context, t *testing.T, gitURL string) {
 func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	require.NoError(t, err)
 
 	// Init the state variable
-	state, err := c.LoadZarfState(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	giteaClient, err := gitea.NewClient(gitURL, types.ZarfGitReadUser, state.GitServer.PullPassword)
+	giteaClient, err := gitea.NewClient(gitURL, state.ZarfGitReadUser, s.GitServer.PullPassword)
 	require.NoError(t, err)
 	repoName := "zarf-public-test-2363058019"
 
 	// Make sure the pushed tag exists
 	repoTag := "v0.0.1"
-	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/tags/%s", types.ZarfGitPushUser, repoName, repoTag), nil)
+	b, statusCode, err := giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/tags/%s", state.ZarfGitPushUser, repoName, repoTag), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 	var tagMap map[string]interface{}
@@ -128,7 +128,7 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 
 	// Get the Zarf repo commit
 	repoHash := "01a23218923f24194133b5eb11268cf8d73ff1bb"
-	b, statusCode, err = giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/git/commits/%s", types.ZarfGitPushUser, repoName, repoHash), nil)
+	b, statusCode, err = giteaClient.DoRequest(ctx, http.MethodGet, fmt.Sprintf("/api/v1/repos/%s/%s/git/commits/%s", state.ZarfGitPushUser, repoName, repoHash), nil)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, statusCode)
 	require.NoError(t, err)
@@ -138,11 +138,11 @@ func testGitServerTagAndHash(ctx context.Context, t *testing.T, gitURL string) {
 func waitFluxPodInfoDeployment(t *testing.T) {
 	tmpdir := t.TempDir()
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
-	cluster, err := cluster.NewClusterWithWait(ctx)
+	c, err := cluster.NewWithWait(ctx)
 	require.NoError(t, err)
-	zarfState, err := cluster.LoadZarfState(ctx)
+	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo.Address)
+	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")
@@ -154,7 +154,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Tests the URL mutation for GitRepository CRD for Flux.
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "gitrepositories", "podinfo", "-n", "flux-system", "-o", "jsonpath={.spec.url}")
 	require.NoError(t, err, stdOut, stdErr)
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 
 	// Tests the URL mutation for HelmRepository CRD for Flux.
@@ -196,7 +196,7 @@ func waitArgoDeployment(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", types.ZarfInClusterGitServiceURL, types.ZarfGitPushUser)
+	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")

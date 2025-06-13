@@ -61,3 +61,42 @@ func TestServiceURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsLocalHost(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		URL      string
+		expected bool
+	}{{
+		URL:      "foo.svc.local:1234",
+		expected: true,
+	}, {
+		URL:      "127.0.0.1:1234",
+		expected: true,
+	}, {
+		URL:      "127.0.0.1",
+		expected: true,
+	}, {
+		URL:      "localhost:8080",
+		expected: true,
+	}, {
+		URL:      "gcr.io",
+		expected: false,
+	}, {
+		URL:      "index.docker.io",
+		expected: false,
+	}, {
+		URL:      "::1",
+		expected: true,
+	}, {
+		URL:      "10.2.3.4:5000",
+		expected: true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.URL, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, IsLocalhost(tt.URL))
+		})
+	}
+}

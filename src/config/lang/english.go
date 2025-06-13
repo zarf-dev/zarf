@@ -38,14 +38,11 @@ const (
 const (
 	// root zarf command
 	RootCmdShort = "DevSecOps for Airgap"
-	RootCmdLong  = "Zarf eliminates the complexity of air gap software delivery for Kubernetes clusters and cloud native workloads\n" +
+	RootCmdLong  = "Zarf eliminates the complexity of airgap software delivery for Kubernetes clusters and cloud native workloads\n" +
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
-	RootCmdFlagSkipLogFile           = "Disable log file creation"
-	RootCmdFlagNoProgress            = "Disable fancy UI progress bars, spinners, logos, etc"
-	RootCmdFlagNoColor               = "Disable colors in output"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagInsecure              = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
@@ -209,7 +206,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 	// zarf package
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency             = "Number of concurrent layer operations to perform when interacting with a remote package."
+	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
@@ -227,20 +224,26 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageMirrorLong  = "Unpacks resources and dependencies from a Zarf package archive and mirrors them into the specified\n" +
 		"image registries and git repositories within the target environment"
 	CmdPackageMirrorExample = `
-# Mirror resources to internal Zarf resources
-$ zarf package mirror-resources <your-package.tar.zst> \
-	--registry-url http://zarf-docker-registry.zarf.svc.cluster.local:5000 \
-	--registry-push-username zarf-push \
-	--registry-push-password <generated-registry-push-password> \
-	--git-url http://zarf-gitea-http.zarf.svc.cluster.local:3000 \
-	--git-push-username zarf-git-user \
-	--git-push-password <generated-git-push-password>
+# Mirror resources to internal Zarf resources - by default this will use Zarf state if available
+$ zarf package mirror-resources <your-package.tar.zst>
 
 # Mirror resources to external resources
 $ zarf package mirror-resources <your-package.tar.zst> \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password> \
+	--git-url https://git.enterprise.corp \
+	--git-push-username <git-push-username> \
+	--git-push-password <git-push-password>
+
+# Mirroring resources can be specified by artifact type - this will only mirror images
+$ zarf package mirror-resources <your-package.tar.zst> --images \
+	--registry-url registry.enterprise.corp \
+	--registry-push-username <registry-push-username> \
+	--registry-push-password <registry-push-password>
+
+# Mirroring for repositories can be specified by artifact type - this will only mirror git repositories
+$ zarf package mirror-resources <your-package.tar.zst> --repos \
 	--git-url https://git.enterprise.corp \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
@@ -416,6 +419,22 @@ $ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
+	CmdToolsRegistryManifestExample = `
+# Return an image manifest for an internal repo in Zarf
+$ zarf tools registry manifest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+# Return an image manifest from a repo hosted at ghcr.io
+$ zarf tools registry manifest ghcr.io/stefanprodan/podinfo:6.4.0
+`
+
+	CmdToolsRegistryExportExample = `
+# Write tarball to stdout from the internal repo in Zarf
+$ zarf tools registry export 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 -
+
+# Write tarball to file from the registry from a repo hosted at ghcr.io
+$ zarf tools registry export ghcr.io/stefanprodan/podinfo:6.4.0 podinfo.6.4.0.tar
+`
+
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
@@ -480,11 +499,9 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
 	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
-	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the air gap."
+	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
-	CmdToolsClearCacheDir           = "Cache directory set to: %s"
-	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
@@ -500,7 +517,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
-	CmdToolsGenKeySuccess              = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 
@@ -614,9 +630,4 @@ var (
 	ErrInitNotFound        = errors.New("this command requires a zarf-init package, but one was not found on the local system. Re-run the last command again without '--confirm' to download the package")
 	ErrUnableToCheckArch   = errors.New("unable to get the configured cluster's architecture")
 	ErrUnableToGetPackages = errors.New("unable to load the Zarf Package data from the cluster")
-)
-
-// Collection of reusable warn messages.
-var (
-	WarnSGetDeprecation = "Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead."
 )

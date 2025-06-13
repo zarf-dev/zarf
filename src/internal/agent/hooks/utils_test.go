@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,22 +30,22 @@ type admissionTest struct {
 	svc          *corev1.Service
 }
 
-func createTestClientWithZarfState(ctx context.Context, t *testing.T, state *types.ZarfState) *cluster.Cluster {
+func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.State) *cluster.Cluster {
 	t.Helper()
 	c := &cluster.Cluster{Clientset: fake.NewClientset()}
-	stateData, err := json.Marshal(state)
+	stateData, err := json.Marshal(s)
 	require.NoError(t, err)
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cluster.ZarfStateSecretName,
-			Namespace: cluster.ZarfNamespaceName,
+			Name:      state.ZarfStateSecretName,
+			Namespace: state.ZarfNamespaceName,
 		},
 		Data: map[string][]byte{
-			cluster.ZarfStateDataKey: stateData,
+			state.ZarfStateDataKey: stateData,
 		},
 	}
-	_, err = c.Clientset.CoreV1().Secrets(cluster.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
+	_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, secret, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return c
 }

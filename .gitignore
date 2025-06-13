@@ -27,3 +27,4 @@ __debug_bin
 .netlify
 !**/testdata/**
 coverage.out
+dist

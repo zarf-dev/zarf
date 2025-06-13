@@ -22,7 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -31,8 +31,8 @@ import (
 // Returns a list of DeployedPackage structs and a list of errors.
 func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, error) {
 	// Get the secrets that describe the deployed packages
-	listOpts := metav1.ListOptions{LabelSelector: ZarfPackageInfoLabel}
-	secrets, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).List(ctx, listOpts)
+	listOpts := metav1.ListOptions{LabelSelector: state.ZarfPackageInfoLabel}
+	secrets, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).List(ctx, listOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*types.DeployedPackage, error) {
-	secret, err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -83,10 +83,10 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 	if err != nil {
 		return err
 	}
-	packageSecret := v1ac.Secret(secretName, ZarfNamespaceName).
+	packageSecret := v1ac.Secret(secretName, state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel:   "zarf",
-			ZarfPackageInfoLabel: depPkg.Name,
+			state.ZarfManagedByLabel:   "zarf",
+			state.ZarfPackageInfoLabel: depPkg.Name,
 		}).WithData(map[string][]byte{
 		"data": packageSecretData,
 	}).WithType(corev1.SecretTypeOpaque)
@@ -100,7 +100,7 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 // DeleteDeployedPackage removes the metadata for the deployed package.
 func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string) error {
 	secretName := config.ZarfPackagePrefix + packageName
-	err := c.Clientset.CoreV1().Secrets(ZarfNamespaceName).Delete(ctx, secretName, metav1.DeleteOptions{})
+	err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -111,48 +111,40 @@ func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string)
 func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 	start := time.Now()
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Removing zarf metadata & secrets from existing namespaces not managed by Zarf")
-	defer spinner.Stop()
 	l.Info("removing zarf metadata & secrets from existing namespaces not managed by Zarf")
 
 	deleteOptions := metav1.DeleteOptions{}
 	listOptions := metav1.ListOptions{
-		LabelSelector: ZarfManagedByLabel + "=zarf",
+		LabelSelector: state.ZarfManagedByLabel + "=zarf",
 	}
 
 	// TODO(mkcp): Remove unnecessary nesting w/ else
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		spinner.Errorf(err, "Unable to get k8s namespaces")
 		l.Error("unable to get k8s namespaces", "error", err)
 	} else {
 		for _, namespace := range namespaceList.Items {
 			if _, ok := namespace.Labels[AgentLabel]; ok {
-				spinner.Updatef("Removing Zarf Agent label for namespace %s", namespace.Name)
 				l.Info("removing Zarf Agent label", "namespace", namespace.Name)
 				delete(namespace.Labels, AgentLabel)
 				namespaceCopy := namespace
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
 				if err != nil {
 					// This is not a hard failure, but we should log it
-					spinner.Errorf(err, "Unable to update the namespace labels for %s", namespace.Name)
 					l.Warn("unable to update the namespace labels", "namespace", namespace.Name, "error", err)
 				}
 			}
 
-			spinner.Updatef("Removing Zarf secrets for namespace %s", namespace.Name)
 			l.Info("removing Zarf secrets", "namespace", namespace.Name)
 			err := c.Clientset.CoreV1().
 				Secrets(namespace.Name).
 				DeleteCollection(ctx, deleteOptions, listOptions)
 			if err != nil {
-				spinner.Errorf(err, "Unable to delete secrets from namespace %s", namespace.Name)
 				l.Error("unable to delete secrets", "namespace", namespace.Name, "error", err)
 			}
 		}
 	}
 
-	spinner.Success()
 	l.Debug("done stripping zarf labels and secrets from namespaces", "duration", time.Since(start))
 }
 
@@ -185,10 +177,10 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	}
 
 	packageSecretName := fmt.Sprintf("%s%s", config.ZarfPackagePrefix, packageName)
-	deployedPackageSecret := v1ac.Secret(packageSecretName, ZarfNamespaceName).
+	deployedPackageSecret := v1ac.Secret(packageSecretName, state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel:   "zarf",
-			ZarfPackageInfoLabel: packageName,
+			state.ZarfManagedByLabel:   "zarf",
+			state.ZarfPackageInfoLabel: packageName,
 		}).WithType(corev1.SecretTypeOpaque).
 		WithData(map[string][]byte{
 			"data": packageData,
@@ -205,7 +197,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 
 // EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
 func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -220,7 +212,7 @@ func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
 
 // DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
 func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -251,8 +243,8 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 }
 
 // UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
-func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer types.GitServerInfo) (string, error) {
-	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return "", err
 	}
@@ -281,8 +273,8 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
-func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer types.GitServerInfo, newGitServer types.GitServerInfo) error {
-	tunnel, err := c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer state.GitServerInfo, newGitServer state.GitServerInfo) error {
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -315,7 +307,7 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 
 // InternalGitServerExists checks if the Zarf internal git server exists in the cluster.
 func (c *Cluster) InternalGitServerExists(ctx context.Context) (bool, error) {
-	_, err := c.Clientset.CoreV1().Services(ZarfNamespaceName).Get(ctx, ZarfGitServerName, metav1.GetOptions{})
+	_, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfGitServerName, metav1.GetOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return false, err
 	}

@@ -1,88 +1,108 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"os"
-	"time"
-
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
+	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/defenseunicorns/pkg/oci"
+
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
-// Create generates a Zarf package tarball for a given PackageConfig and optional base directory.
-func (p *Packager) Create(ctx context.Context) error {
-	l := logger.From(ctx)
-	l.Info("starting package create")
-	cStart := time.Now()
+// CreateOptions are the optional parameters to create
+type CreateOptions struct {
+	Flavor                  string
+	RegistryOverrides       map[string]string
+	SigningKeyPath          string
+	SigningKeyPassword      string
+	SetVariables            map[string]string
+	MaxPackageSizeMB        int
+	SBOMOut                 string
+	SkipSBOM                bool
+	DifferentialPackagePath string
+	OCIConcurrency          int
+	CachePath               string
+	// applicable when output is an OCI registry
+	RemoteOptions
+}
 
-	// Begin setup
-	cwd, err := os.Getwd()
+// Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
+func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
+	if opts.SkipSBOM && opts.SBOMOut != "" {
+		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
+	}
+
+	loadOpts := load.DefinitionOptions{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.SetVariables,
+		CachePath:    opts.CachePath,
+	}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
-		return err
-	}
-	cfg := p.cfg
-
-	// Set basedir
-	createOpts := cfg.CreateOpts
-	baseDir := createOpts.BaseDir
-	if err := os.Chdir(baseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", baseDir, err)
-	}
-	// TODO(mkcp): Remove message on logger release
-	message.Note(fmt.Sprintf("Using build directory %s", p.cfg.CreateOpts.BaseDir))
-	l.Info("using build directory", "baseDir", baseDir)
-
-	// Setup package creator
-	lo := p.layout
-	pc := creator.NewPackageCreator(createOpts, cwd)
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, lo.ZarfYAML); err != nil {
-		return err
+		return "", err
 	}
 
-	// Load package def
-	pkg, warnings, err := pc.LoadPackageDefinition(p.ctx, lo)
+	assembleOpt := layout.AssembleOptions{
+		SkipSBOM:                opts.SkipSBOM,
+		OCIConcurrency:          opts.OCIConcurrency,
+		DifferentialPackagePath: opts.DifferentialPackagePath,
+		Flavor:                  opts.Flavor,
+		RegistryOverrides:       opts.RegistryOverrides,
+		SigningKeyPath:          opts.SigningKeyPath,
+		SigningKeyPassword:      opts.SigningKeyPassword,
+		CachePath:               opts.CachePath,
+	}
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
-		return err
+		return "", err
 	}
-	//  Store on packager config
-	p.cfg.Pkg = pkg
-	l.Info("package loaded",
-		"kind", pkg.Kind,
-		"name", pkg.Metadata.Name,
-		"description", pkg.Metadata.Description,
-	)
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
 
-	// TODO(mkcp): Remove interactive on logger release
-	if !p.confirmAction(ctx, config.ZarfCreateStage, warnings, nil) {
-		return fmt.Errorf("package creation canceled")
-	}
-
-	aStart := time.Now()
-	l.Debug("starting package assembly", "kind", pkg.Kind)
-	if err := pc.Assemble(ctx, p.layout, pkg.Components, pkg.Metadata.Architecture); err != nil {
-		return err
-	}
-	l.Debug("done assembling package", "kind", pkg.Kind, "duration", time.Since(aStart))
-
-	// cd back for output
-	if err := os.Chdir(cwd); err != nil {
-		return err
-	}
-
-	if err = pc.Output(ctx, p.layout, &pkg); err != nil {
-		return err
+	var packageLocation string
+	if helpers.IsOCIURL(output) {
+		ref, err := zoci.ReferenceFromMetadata(output, pkgLayout.Pkg)
+		if err != nil {
+			return "", err
+		}
+		remote, err := zoci.NewRemote(ctx, ref.String(), oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture),
+			oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))
+		if err != nil {
+			return "", err
+		}
+		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
+		if err != nil {
+			return "", err
+		}
+		packageLocation = ref.String()
+	} else {
+		packageLocation, err = pkgLayout.Archive(ctx, output, opts.MaxPackageSizeMB)
+		if err != nil {
+			return "", err
+		}
 	}
 
-	l.Debug("done creating package", "kind", pkg.Kind, "duration", time.Since(cStart))
-	return nil
+	if opts.SBOMOut != "" {
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+		// Don't fail package create if the package doesn't have an sbom
+		var noSBOMErr *layout.NoSBOMAvailableError
+		if errors.As(err, &noSBOMErr) {
+			logger.From(ctx).Error(fmt.Sprintf("SBOM not available in package: %s", err.Error()))
+			return packageLocation, nil
+		}
+		if err != nil {
+			return "", err
+		}
+	}
+	return packageLocation, nil
 }

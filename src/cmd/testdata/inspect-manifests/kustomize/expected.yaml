@@ -1,0 +1,15 @@
+#type: manifest
+#source: kustomization-httpd-deployment-0.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpd-service
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: httpd
+  type: ClusterIP
+---

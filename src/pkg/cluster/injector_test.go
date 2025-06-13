@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -109,17 +110,17 @@ func TestInjector(t *testing.T) {
 		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil)
 		require.NoError(t, err)
 
-		podList, err := cs.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, podList.Items, 1)
 		require.Equal(t, "injector", podList.Items[0].Name)
 
-		svcList, err := cs.CoreV1().Services(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
 		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
 		require.NoError(t, err)
-		svc, err := cs.CoreV1().Services(ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
+		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
 		// Managed fields are auto-set and contain timestamps
 		svc.ManagedFields = nil
 		require.NoError(t, err)
@@ -127,10 +128,10 @@ func TestInjector(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 
-		cmList, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, cmList.Items, 2)
-		cm, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
+		cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 	}
@@ -138,13 +139,13 @@ func TestInjector(t *testing.T) {
 	err = c.StopInjection(ctx)
 	require.NoError(t, err)
 
-	podList, err := cs.CoreV1().Pods(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Empty(t, podList.Items)
-	svcList, err := cs.CoreV1().Services(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Empty(t, svcList.Items)
-	cmList, err := cs.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	require.NoError(t, err)
 	require.Empty(t, cmList.Items)
 }

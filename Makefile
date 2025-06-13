@@ -38,7 +38,7 @@ K8S_MODULES_PATCH_VER=$(word 3,$(K8S_MODULES_VER))
 K9S_VERSION=$(shell go list -f '{{.Version}}' -m github.com/derailed/k9s)
 CRANE_VERSION=$(shell go list -f '{{.Version}}' -m github.com/google/go-containerregistry)
 SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
-ARCHIVER_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archiver/v3)
+ARCHIVES_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archives)
 HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
 
 BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
@@ -49,7 +49,7 @@ BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_V
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archiverVersion=$(ARCHIVER_VERSION)
+BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archivesVersion=$(ARCHIVES_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
@@ -65,8 +65,9 @@ help: ## Display this help information
 		| sort | awk 'BEGIN {FS = ":.*?## "}; \
 		{printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-clean: ## Clean the build directory
+clean: ## Clean the build and dist directories
 	rm -rf build
+	rm -rf dist
 
 destroy: ## Run `zarf destroy` on the current cluster
 	$(ZARF_BIN) destroy --confirm --remove-components
@@ -106,9 +107,6 @@ docs-and-schema: ## Generate the Zarf Documentation and Schema
 
 init-package-with-agent: build build-local-agent-image init-package
 
-lint-packages-and-examples: build ## Recursively lint all zarf.yaml files in the repo except for those dedicated to tests
-	hack/lint-all-zarf-packages.sh $(ZARF_BIN) false
-
 # INTERNAL: a shim used to build the agent image only if needed on Windows using the `test` command
 init-package-local-agent:
 	@test "$(AGENT_IMAGE_TAG)" != "local" || $(MAKE) build-local-agent-image
@@ -130,6 +128,20 @@ init-package: ## Create the zarf init package (must `brew install coreutils` on 
 release-init-package:
 	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
 
+## Build the Zarf CLI for all platforms aligned with the release process
+## skipping validation here to allow for building with a dirty git state (IE development)
+goreleaser-build:
+	K8S_MODULES_VER="$(K8S_MODULES_VER)" \
+	K8S_MODULES_MAJOR_VER="$(K8S_MODULES_MAJOR_VER)" \
+	K8S_MODULES_MINOR_VER="$(K8S_MODULES_MINOR_VER)" \
+	K8S_MODULES_PATCH_VER="$(K8S_MODULES_PATCH_VER)" \
+	K9S_VERSION="$(K9S_VERSION)" \
+	CRANE_VERSION="$(CRANE_VERSION)" \
+	SYFT_VERSION="$(SYFT_VERSION)" \
+	ARCHIVES_VERSION="$(ARCHIVES_VERSION)" \
+	HELM_VERSION="$(HELM_VERSION)" \
+	goreleaser build --clean --skip=validate
+
 # INTERNAL: used to publish the init package
 publish-init-package:
 	$(ZARF_BIN) package publish build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst oci://$(REPOSITORY_URL)
@@ -143,8 +155,6 @@ build-examples: ## Build all of the example packages
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-component-actions-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-actions -o build -a $(ARCH) --confirm
-
-	@test -s ./build/zarf-package-component-choice-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/component-choice -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-variables-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/variables --set NGINX_VERSION=1.23.3 -o build -a $(ARCH) --confirm
 

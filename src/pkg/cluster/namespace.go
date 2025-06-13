@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
@@ -23,11 +23,9 @@ import (
 func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	start := time.Now()
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Deleting the zarf namespace from this cluster")
-	defer spinner.Stop()
 	l.Info("deleting the zarf namespace from this cluster")
 
-	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, ZarfNamespaceName, metav1.DeleteOptions{})
+	err := c.Clientset.CoreV1().Namespaces().Delete(ctx, state.ZarfNamespaceName, metav1.DeleteOptions{})
 	if kerrors.IsNotFound(err) {
 		return nil
 	}
@@ -35,7 +33,7 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 		return err
 	}
 	err = retry.Do(func() error {
-		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, ZarfNamespaceName, metav1.GetOptions{})
+		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
@@ -77,6 +75,6 @@ func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
-	labels[ZarfManagedByLabel] = "zarf"
+	labels[state.ZarfManagedByLabel] = "zarf"
 	return labels
 }

@@ -1,0 +1,37 @@
+#type: manifest
+#source: simple-httpd-deployment-0.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+spec:
+  selector:
+    matchLabels:
+      app: httpd
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      containers:
+      - name: httpd
+        image: httpd:alpine1.0.0
+        ports:
+        - containerPort: 80
+---
+#type: manifest
+#source: simple-svc-0.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-connect
+spec:
+  ports:
+  - port: 8080
+    name: http
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+---

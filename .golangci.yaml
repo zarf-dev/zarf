@@ -26,6 +26,7 @@ linters:
         - (*github.com/spf13/pflag.FlagSet).MarkDeprecated
         - fmt.Fprintln
         - fmt.Fprint
+        - fmt.Fprintf
     goheader:
       template: |-
         SPDX-License-Identifier: Apache-2.0
@@ -49,6 +50,8 @@ linters:
         - name: error-strings
         - name: error-naming
         - name: exported
+          arguments:
+            - "disableStutteringCheck"
         - name: if-return
         - name: increment-decrement
         - name: var-naming
@@ -76,9 +79,6 @@ linters:
       - legacy
     paths:
       - src/cmd/helm
-      - src/internal/packager
-      - src/pkg/packager
-      - src/internal/packager2
       - third_party$
       - builtin$
       - examples$

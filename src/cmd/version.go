@@ -18,7 +18,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 type versionOptions struct {
@@ -26,16 +25,22 @@ type versionOptions struct {
 	outputWriter io.Writer
 }
 
-func newVersionOptions() *versionOptions {
+// newVersionOptions provides a default versionOptions with an overridable outputWriter. An empty writer defaults
+// to OutputWriter.
+func newVersionOptions(writer io.Writer) *versionOptions {
+	w := io.Writer(OutputWriter)
+	if writer != nil {
+		w = writer
+	}
 	return &versionOptions{
 		outputFormat: "",
-		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		outputWriter: message.OutputWriter,
+		outputWriter: w,
 	}
 }
 
 func newVersionCommand() *cobra.Command {
-	o := newVersionOptions()
+	// TODO accept output writer as a parameter to the root Zarf command and pass it through here
+	o := newVersionOptions(nil)
 
 	cmd := &cobra.Command{
 		Use:     "version",

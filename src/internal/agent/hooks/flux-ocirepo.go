@@ -11,7 +11,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/fluxcd/pkg/apis/meta"
-	flux "github.com/fluxcd/source-controller/api/v1beta2"
+	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
@@ -59,7 +59,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		l.Warn("Detected a semver OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries", "ref", src.Spec.Reference.SemVer)
 	}
 
-	zarfState, err := cluster.LoadZarfState(ctx)
+	zarfState, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

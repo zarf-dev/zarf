@@ -21,11 +21,9 @@ Commands to get information about a Zarf package using a `zarf.yaml`
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --log-format string          [beta] Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev', 'legacy'. The legacy option will be removed in a coming release (default "console")
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable colors in output
-      --no-log-file                Disable log file creation
-      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
+      --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
@@ -35,4 +33,6 @@ Commands to get information about a Zarf package using a `zarf.yaml`
 
 * [zarf dev](/commands/zarf_dev/)	 - Commands useful for developing packages
 * [zarf dev inspect definition](/commands/zarf_dev_inspect_definition/)	 - Displays the fully rendered package definition
+* [zarf dev inspect manifests](/commands/zarf_dev_inspect_manifests/)	 - Template and output all manifests and charts referenced by the package definition
+* [zarf dev inspect values-files](/commands/zarf_dev_inspect_values-files/)	 - Creates, templates, and outputs the values-files to be sent to each chart
 

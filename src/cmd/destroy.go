@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 
 	"github.com/spf13/cobra"
@@ -52,7 +51,7 @@ func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
@@ -60,14 +59,13 @@ func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 	// NOTE: If 'zarf init' failed to deploy the k3s component (or if we're looking at the wrong kubeconfig)
 	//       there will be no zarf-state to load and the struct will be empty. In these cases, if we can find
 	//       the scripts to remove k3s, we will still try to remove a locally installed k3s cluster
-	state, err := c.LoadZarfState(ctx)
+	state, err := c.LoadState(ctx)
 	if err != nil {
-		message.WarnErr(err, err.Error())
 		l.Warn(err.Error())
 	}
 
 	// If Zarf deployed the cluster, burn it all down
-	if state.ZarfAppliance || (state.Distro == "") {
+	if state != nil && (state.ZarfAppliance || (state.Distro == "")) {
 		// Check if we have the scripts to destroy everything
 		fileInfo, err := os.Stat(config.ZarfCleanupScriptsPath)
 		if errors.Is(err, os.ErrNotExist) || !fileInfo.IsDir() {
@@ -85,7 +83,6 @@ func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 			// Run the matched script
 			err := exec.CmdWithPrint(script)
 			if errors.Is(err, os.ErrPermission) {
-				message.Warnf(lang.CmdDestroyErrScriptPermissionDenied, script)
 				l.Warn("received 'permission denied' when trying to execute script. Please double-check you have the correct kube-context.", "script", script)
 
 				// Don't remove scripts we can't execute so the user can try to manually run
@@ -97,7 +94,6 @@ func (o *destroyOptions) run(cmd *cobra.Command, _ []string) error {
 			// Try to remove the script, but ignore any errors and debug log them
 			err = os.Remove(script)
 			if err != nil {
-				message.WarnErr(err, fmt.Sprintf("Unable to remove script. script=%s", script))
 				l.Warn("unable to remove script", "script", script, "error", err.Error())
 			}
 		}
