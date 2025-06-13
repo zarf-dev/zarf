@@ -50,13 +50,13 @@ const (
 
 // TunnelInfo is a struct that contains the necessary info to create a new Tunnel
 type TunnelInfo struct {
-	LocalPort    int
-	RemotePort   int
-	Address      string
-	Namespace    string
-	ResourceType string
-	ResourceName string
-	urlSuffix    string
+	LocalPort     int
+	RemotePort    int
+	ListenAddress string
+	Namespace     string
+	ResourceType  string
+	ResourceName  string
+	urlSuffix     string
 }
 
 // ListConnections will return a list of all Zarf connect matches found in the cluster.
@@ -88,9 +88,9 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 // NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
 func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (TunnelInfo, error) {
 	zt := TunnelInfo{
-		Namespace:    state.ZarfNamespaceName,
-		ResourceType: SvcResource,
-		Address:      "localhost",
+		Namespace:     state.ZarfNamespaceName,
+		ResourceType:  SvcResource,
+		ListenAddress: "localhost",
 	}
 
 	switch strings.ToUpper(target) {
@@ -111,7 +111,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 			zt = ztNew
-			zt.Address = "localhost"
+			zt.ListenAddress = "localhost"
 		}
 		if zt.ResourceName == "" {
 			return TunnelInfo{}, fmt.Errorf("missing resource name")
@@ -134,7 +134,7 @@ func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
 
 // ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
 func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel, error) {
-	tunnel, err := c.NewTunnel(zt.Address, zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort)
+	tunnel, err := c.NewTunnel(zt.ListenAddress, zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort)
 	if err != nil {
 		return nil, err
 	}
