@@ -20,11 +20,9 @@ const (
 	FileVariableType VariableType = "file"
 )
 
-var (
-	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
-	// https://regex101.com/r/tfsEuZ/1
-	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
-)
+// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
+// https://regex101.com/r/tfsEuZ/1
+var IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
 
 // BuildTimestampFormat is the timestamp format used for ZarfBuildData.Timestamp
 const BuildTimestampFormat = time.RFC1123Z
