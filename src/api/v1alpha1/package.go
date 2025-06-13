@@ -122,6 +122,15 @@ func (pkg ZarfPackage) SetPackageNamespace(namespace string) {
 	}
 }
 
+// AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
+func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
+	if pkg.Metadata.AllowNamespaceOverride != nil {
+		return *pkg.Metadata.AllowNamespaceOverride
+	}
+	// defaulting to allowing package namespace to be overridden
+	return true
+}
+
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable
@@ -208,8 +217,7 @@ type ZarfMetadata struct {
 	// Users are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// AllowNamespaceOverride controls whether a package's namespace may be overridden.
-	// nil means unspecified and we'll default it to true.
-	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty" jsonschema:"default=true"`
+	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
