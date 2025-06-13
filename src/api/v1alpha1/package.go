@@ -95,6 +95,42 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 	return false
 }
 
+// UniqueNamespaceCount returns the number of unique namespaces in the package.
+func (pkg ZarfPackage) UniqueNamespaceCount() int {
+	uniqueNamespaces := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			uniqueNamespaces[chart.Namespace] = struct{}{}
+		}
+		for _, manifest := range component.Manifests {
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
+		}
+	}
+	return len(uniqueNamespaces)
+}
+
+// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
+func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
+	for i := range pkg.Components {
+		comp := pkg.Components[i]
+		for j := range comp.Charts {
+			comp.Charts[j].Namespace = namespace
+		}
+		for k := range comp.Manifests {
+			comp.Manifests[k].Namespace = namespace
+		}
+	}
+}
+
+// AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
+func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
+	if pkg.Metadata.AllowNamespaceOverride != nil {
+		return *pkg.Metadata.AllowNamespaceOverride
+	}
+	// defaulting to allowing package namespace to be overridden
+	return true
+}
+
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable
@@ -180,6 +216,8 @@ type ZarfMetadata struct {
 	// Annotations contains arbitrary metadata about the package.
 	// Users are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// AllowNamespaceOverride controls whether a package's namespace may be overridden.
+	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.

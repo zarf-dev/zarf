@@ -92,6 +92,7 @@ const (
 	VPkgDeployShasum     = "package.deploy.shasum"
 	VPkgDeploySget       = "package.deploy.sget"
 	VPkgDeployTimeout    = "package.deploy.timeout"
+	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
 
 	// Package publish config keys
