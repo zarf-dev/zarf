@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -204,16 +205,16 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
 	// Assume no platform to start as it can be nil in non container image situations
-	resolveOpts := oras.DefaultResolveOptions
-	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
+	fetchOpts := oras.DefaultFetchBytesOptions
+	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
 	// If an index is pulled we should try pulling with the default platform
 	if isIndex(desc.MediaType) {
-		resolveOpts.TargetPlatform = defaultPlatform
-		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
+		fetchOpts.TargetPlatform = defaultPlatform
+		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
 			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
 		}
@@ -223,9 +224,17 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
 	}
 
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		return err
+	}
+	size := getSizeOfImage(desc, manifest)
+
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)
+
+	remote = NewProgressPushTarget(remote, size, DefaultProgressReporter())
 	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)

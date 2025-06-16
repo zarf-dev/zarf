@@ -22,7 +22,7 @@ import (
 // ProgressReporter defines a function to report download progress
 type ProgressReporter func(bytesRead, totalBytes int64)
 
-// DefaultProgressReporter returns a default progress reporter that uses the message package
+// DefaultProgressReporter returns a default progress reporter
 func DefaultProgressReporter() ProgressReporter {
 	return func(bytesRead, totalBytes int64) {
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
@@ -31,7 +31,7 @@ func DefaultProgressReporter() ProgressReporter {
 	}
 }
 
-const defaultProgressInterval = 5 * time.Second
+const defaultProgressInterval = 1 * time.Second
 
 // progressReadCloser wraps an io.ReadCloser to track bytes read
 type progressReadCloser struct {
@@ -53,14 +53,14 @@ func (pr *progressReadCloser) Close() error {
 	return pr.reader.Close()
 }
 
-// ProgressTarget reports progress during pulls
-type ProgressTarget interface {
+// ProgressReadOnlyTarget reports progress during pulls
+type ProgressReadOnlyTarget interface {
 	oras.ReadOnlyTarget
 	StopReporting()
 }
 
-// progressTarget wraps an oras.ReadOnlyTarget to track download progress
-type progressTarget struct {
+// progressReadOnlyTarget wraps an oras.ReadOnlyTarget to track download progress
+type progressReadOnlyTarget struct {
 	oras.ReadOnlyTarget
 	reporter       ProgressReporter
 	reportInterval time.Duration
@@ -75,18 +75,18 @@ type progressTarget struct {
 }
 
 type progressReferenceTarget struct {
-	*progressTarget
+	*progressReadOnlyTarget
 	registry.ReferenceFetcher
 }
 
 // NewProgressTarget creates a new ProgressTarget with the given reporter
-func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) ProgressTarget {
+func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter) ProgressReadOnlyTarget {
 	return NewProgressTargetWithPeriod(target, totalBytes, reporter, defaultProgressInterval)
 }
 
 // NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
-func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportInterval time.Duration) ProgressTarget {
-	pt := &progressTarget{
+func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter ProgressReporter, reportInterval time.Duration) ProgressReadOnlyTarget {
+	pt := &progressReadOnlyTarget{
 		ReadOnlyTarget:   target,
 		reporter:         reporter,
 		reportInterval:   reportInterval,
@@ -97,15 +97,15 @@ func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, r
 	}
 	if refFetcher, ok := target.(registry.ReferenceFetcher); ok {
 		return &progressReferenceTarget{
-			progressTarget:   pt,
-			ReferenceFetcher: refFetcher,
+			progressReadOnlyTarget: pt,
+			ReferenceFetcher:       refFetcher,
 		}
 	}
 	return pt
 }
 
 // startReporting starts the reporting goroutine if it hasn't been started already
-func (pt *progressTarget) startReporting(ctx context.Context) {
+func (pt *progressReadOnlyTarget) startReporting(ctx context.Context) {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
 
@@ -135,7 +135,7 @@ func (pt *progressTarget) startReporting(ctx context.Context) {
 }
 
 // Fetch preforms the underlying Fetch method and tracks downloaded bytes
-func (pt *progressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
+func (pt *progressReadOnlyTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (io.ReadCloser, error) {
 	// Start the reporting goroutine if it hasn't been started yet
 	pt.startReporting(ctx)
 
@@ -152,18 +152,8 @@ func (pt *progressTarget) Fetch(ctx context.Context, desc ocispec.Descriptor) (i
 	return prc, nil
 }
 
-// Resolve only executes the underlying ReadOnlyTarget Exists
-func (pt *progressTarget) Resolve(ctx context.Context, reference string) (ocispec.Descriptor, error) {
-	return pt.ReadOnlyTarget.Resolve(ctx, reference)
-}
-
-// Exists only executes the underlying ReadOnlyTarget Exists
-func (pt *progressTarget) Exists(ctx context.Context, desc ocispec.Descriptor) (bool, error) {
-	return pt.ReadOnlyTarget.Exists(ctx, desc)
-}
-
 // StopReporting stops the reporting goroutine
-func (pt *progressTarget) StopReporting() {
+func (pt *progressReadOnlyTarget) StopReporting() {
 	if pt.reportingStarted {
 		close(pt.stopReports)
 		pt.reportingStarted = false
@@ -182,4 +172,105 @@ func (pft *progressReferenceTarget) FetchReference(ctx context.Context, referenc
 		bytesRead: pft.bytesRead,
 	}
 	return target, prc, nil
+}
+
+// progressReader wraps an io.ReadCloser to track bytes read
+type progressReader struct {
+	reader    io.Reader
+	bytesRead *atomic.Int64
+}
+
+// Read implements io.Reader interface
+func (pr *progressReader) Read(p []byte) (int, error) {
+	n, err := pr.reader.Read(p)
+	if n > 0 {
+		pr.bytesRead.Add(int64(n))
+	}
+	return n, err
+}
+
+// ProgressPushTarget reports progress during pulls
+type ProgressPushTarget interface {
+	oras.Target
+	StopReporting()
+}
+
+// progressTarget wraps an oras.ReadOnlyTarget to track download progress
+type progressPushTarget struct {
+	oras.Target
+	reporter       ProgressReporter
+	reportInterval time.Duration
+	bytesRead      *atomic.Int64
+	totalBytes     int64
+
+	// Track whether the reporting goroutine is running
+	reportingStarted bool
+	mu               sync.Mutex
+	stopReports      chan struct{}
+	wg               sync.WaitGroup
+}
+
+// NewProgressPushTarget creates a new ProgressPushTarget
+func NewProgressPushTarget(target oras.Target, totalBytes int64, reporter ProgressReporter) ProgressPushTarget {
+	pt := &progressPushTarget{
+		Target:           target,
+		reporter:         reporter,
+		reportInterval:   defaultProgressInterval,
+		bytesRead:        &atomic.Int64{},
+		totalBytes:       totalBytes,
+		stopReports:      make(chan struct{}),
+		reportingStarted: false,
+	}
+	return pt
+}
+
+func (pt *progressPushTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
+	// Start the reporting goroutine if it hasn't been started yet
+	pt.startReporting(ctx)
+
+	prc := &progressReader{
+		reader:    content,
+		bytesRead: pt.bytesRead,
+	}
+
+	return pt.Target.Push(ctx, desc, prc)
+}
+
+// startReporting starts the reporting goroutine if it hasn't been started already
+func (pt *progressPushTarget) startReporting(ctx context.Context) {
+	pt.mu.Lock()
+	defer pt.mu.Unlock()
+
+	if pt.reportingStarted {
+		return
+	}
+
+	pt.reportingStarted = true
+	pt.wg.Add(1)
+
+	go func() {
+		defer pt.wg.Done()
+		ticker := time.NewTicker(pt.reportInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				pt.reporter(pt.bytesRead.Load(), pt.totalBytes)
+			case <-pt.stopReports:
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// StopReporting stops the reporting goroutine
+func (pt *progressPushTarget) StopReporting() {
+	if pt.reportingStarted {
+		close(pt.stopReports)
+		pt.reportingStarted = false
+	}
+	pt.wg.Wait()
 }
