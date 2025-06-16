@@ -8,12 +8,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
@@ -22,12 +22,12 @@ import (
 // ProgressReporter defines a function to report download progress
 type ProgressReporter func(bytesRead, totalBytes int64)
 
-// DefaultProgressReporter returns a default progress reporter
-func DefaultProgressReporter() ProgressReporter {
+// Report returns a default progress reporter
+func Report(l *slog.Logger, msg string) ProgressReporter {
 	return func(bytesRead, totalBytes int64) {
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
 		remaining := float64(totalBytes) - float64(bytesRead)
-		logger.Default().Info("image pull in progress", "complete", fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
+		l.Info(msg, "complete", fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
 	}
 }
 
