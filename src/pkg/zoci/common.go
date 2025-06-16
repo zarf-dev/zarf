@@ -25,7 +25,7 @@ const (
 	// ZarfLayerMediaTypeBlob is the media type for all Zarf layers due to the range of possible content
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// DefaultConcurrency is the default concurrency used for operations
-	DefaultConcurrency = 3
+	DefaultConcurrency = 6
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
 	// AllLayers is the default selector for all layers
@@ -49,17 +49,6 @@ type Remote struct {
 // with zarf opination embedded
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
-	if config.CommonOptions.CachePath != "" {
-		absCachePath, err := config.GetAbsCachePath()
-		if err != nil {
-			return nil, err
-		}
-		ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(absCachePath, ImageCacheDirectory))
-		if err != nil {
-			return nil, err
-		}
-		mods = append(mods, oci.WithCache(ociCache))
-	}
 
 	modifiers := append([]oci.Modifier{
 		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
@@ -72,6 +61,15 @@ func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods 
 		return nil, err
 	}
 	return &Remote{remote}, nil
+}
+
+// GetOCICacheModifier takes in a Zarf cachePath and uses it to return an oci.WithCache modifier
+func GetOCICacheModifier(ctx context.Context, cachePath string) (oci.Modifier, error) {
+	ociCache, err := ociDirectory.NewWithContext(ctx, filepath.Join(cachePath, ImageCacheDirectory))
+	if err != nil {
+		return nil, err
+	}
+	return oci.WithCache(ociCache), nil
 }
 
 // PlatformForSkeleton sets the target architecture for the remote to skeleton

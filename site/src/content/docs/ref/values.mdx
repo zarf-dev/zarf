@@ -24,6 +24,12 @@ data:
   username: ###ZARF_VAR_DATABASE_USERNAME###
 ```
 
+:::tip
+
+To preview the effects of value templates on your manifests and charts without building or deploying your package, use `zarf dev inspect manifests` or `zarf package inspect manifests`, respectively.
+
+:::
+
 :::note
 
 Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated by Zarf

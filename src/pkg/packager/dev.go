@@ -1,122 +1,151 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package packager contains functions for interacting with, managing and deploying Zarf packages.
 package packager
 
 import (
 	"context"
-	"fmt"
-	"os"
+	"errors"
 	"runtime"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/creator"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+// DevDeployOptions are the optionalParameters to DevDeploy
+type DevDeployOptions struct {
+	// When true packs images and repos into the package and uses the cluster Zarf state
+	// When false deploys package without repos or images and uses the default Zarf state
+	AirgapMode bool
+	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
+	Flavor string
+	// RegistryURL allows for an override to the Zarf state registry URL when not in airgap mode. Important for setting the ###ZARF_REGISTRY### template
+	RegistryURL string
+	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry during package assembly
+	RegistryOverrides map[string]string
+	// CreateSetVariables are for package templates
+	CreateSetVariables map[string]string
+	// DeploySetVariables are for package variables
+	DeploySetVariables map[string]string
+	// OptionalComponents to be deployed
+	OptionalComponents string
+	// Timeout for Helm operations
+	Timeout time.Duration
+	// Retries to preform for operations like git and image pushes
+	Retries int
+	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
+	OCIConcurrency int
+	CachePath      string
+	RemoteOptions
+}
+
 // DevDeploy creates + deploys a package in one shot
-func (p *Packager) DevDeploy(ctx context.Context) error {
+func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	config.CommonOptions.Confirm = true
-	p.cfg.CreateOpts.SkipSBOM = !p.cfg.CreateOpts.NoYOLO
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
+	if opts.Timeout == 0 {
+		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	if err := os.Chdir(p.cfg.CreateOpts.BaseDir); err != nil {
-		return fmt.Errorf("unable to access directory %q: %w", p.cfg.CreateOpts.BaseDir, err)
+	loadOpts := load.DefinitionOptions{
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
-
-	pc := creator.NewPackageCreator(p.cfg.CreateOpts, cwd)
-
-	if err := helpers.CreatePathAndCopy(layout.ZarfYAML, p.layout.ZarfYAML); err != nil {
-		return err
-	}
-
-	p.cfg.Pkg, _, err = pc.LoadPackageDefinition(ctx, p.layout)
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(p.cfg.PkgOpts.OptionalComponents, false),
+		filters.ForDeploy(opts.OptionalComponents, false),
 	)
-	p.cfg.Pkg.Components, err = filter.Apply(p.cfg.Pkg)
+	pkg.Components, err = filter.Apply(pkg)
 	if err != nil {
 		return err
 	}
 
-	if err := creator.Validate(p.cfg.Pkg, p.cfg.CreateOpts.BaseDir, p.cfg.CreateOpts.SetVariables); err != nil {
-		return fmt.Errorf("package validation failed: %w", err)
-	}
-
-	if err := p.populatePackageVariableConfig(); err != nil {
-		return fmt.Errorf("unable to set the active variables: %w", err)
-	}
-
-	// If building in yolo mode, strip out all images and repos
-	if !p.cfg.CreateOpts.NoYOLO {
-		for idx := range p.cfg.Pkg.Components {
-			p.cfg.Pkg.Components[idx].Images = []string{}
-			p.cfg.Pkg.Components[idx].Repos = []string{}
+	// If not building for airgap, strip out all images and repos
+	if !opts.AirgapMode {
+		for idx := range pkg.Components {
+			pkg.Components[idx].Images = []string{}
+			pkg.Components[idx].Repos = []string{}
 		}
 	}
 
-	if err := pc.Assemble(ctx, p.layout, p.cfg.Pkg.Components, p.cfg.Pkg.Metadata.Architecture); err != nil {
+	createOpts := layout.AssembleOptions{
+		Flavor:            opts.Flavor,
+		RegistryOverrides: opts.RegistryOverrides,
+		SkipSBOM:          true,
+		OCIConcurrency:    opts.OCIConcurrency,
+		CachePath:         opts.CachePath,
+	}
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
+	if err != nil {
 		return err
 	}
 
-	l.Info("starting package deploy", "name", p.cfg.Pkg.Metadata.Name)
+	l.Info("starting package dev deploy", "name", pkgLayout.Pkg.Metadata.Name)
 
-	if !p.cfg.CreateOpts.NoYOLO {
-		p.cfg.Pkg.Metadata.YOLO = true
-
+	var d deployer
+	d.vc = variableConfig
+	if !opts.AirgapMode {
+		pkgLayout.Pkg.Metadata.YOLO = true
 		// Set default builtin values so they exist in case any helm charts rely on them
-		registryInfo := state.RegistryInfo{Address: p.cfg.DeployOpts.RegistryURL}
-		if err := registryInfo.FillInEmptyValues(); err != nil {
+		defaultState, err := state.Default()
+		if err != nil {
 			return err
 		}
-		gitServer := state.GitServerInfo{}
-		if err = gitServer.FillInEmptyValues(); err != nil {
-			return err
+		if opts.RegistryURL != "" {
+			defaultState.RegistryInfo.Address = opts.RegistryURL
 		}
-		artifactServer := state.ArtifactServerInfo{}
-		artifactServer.FillInEmptyValues()
-
-		p.state = &state.State{
-			RegistryInfo:   registryInfo,
-			GitServer:      gitServer,
-			ArtifactServer: artifactServer,
-		}
+		d.s = defaultState
 	} else {
-		p.hpaModified = false
+		d.hpaModified = false
 		// Reset registry HPA scale down whether an error occurs or not
-		defer p.resetRegistryHPA(ctx)
+		defer d.resetRegistryHPA(ctx)
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
-	deployedComponents, err := p.deployComponents(ctx)
+	deployedComponents, err := d.deployComponents(ctx, pkgLayout, DeployOptions{
+		SetVariables:   opts.DeploySetVariables,
+		Timeout:        opts.Timeout,
+		Retries:        opts.Retries,
+		OCIConcurrency: opts.OCIConcurrency,
+		RemoteOptions: RemoteOptions{
+			PlainHTTP:             config.CommonOptions.PlainHTTP,
+			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+		},
+	})
 	if err != nil {
 		return err
 	}
+
 	if len(deployedComponents) == 0 {
 		l.Warn("No components were selected for deployment.  Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 
 	// Notify all the things about the successful deployment
-	l.Debug("dev deployment complete", "package", p.cfg.Pkg.Metadata.Name, "duration", time.Since(start))
-	l.Info("consider `zarf package inspect PACKAGE`", "package", p.cfg.Pkg.Metadata.Name)
+	l.Debug("dev deployment complete", "package", pkgLayout.Pkg.Metadata.Name, "duration", time.Since(start))
 
-	// cd back
-	return os.Chdir(cwd)
+	return nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 type connectOptions struct {
@@ -123,6 +124,21 @@ func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	message.PrintConnectStringTable(connections)
+	printConnectStringTable(connections)
 	return nil
+}
+
+func printConnectStringTable(connectStrings types.ConnectStrings) {
+	if len(connectStrings) > 0 {
+		connectData := [][]string{}
+		// Loop over each connectStrings and convert to a string matrix
+		for name, connect := range connectStrings {
+			name = fmt.Sprintf("zarf connect %s", name)
+			connectData = append(connectData, []string{name, connect.Description})
+		}
+
+		// Create the table output with the data
+		header := []string{"Connect Command", "Description"}
+		message.TableWithWriter(OutputWriter, header, connectData)
+	}
 }

@@ -7,6 +7,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -22,14 +23,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
-	// TODO(mkcp): Remove interactive on logger release
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig); err != nil {
 			return err
 		}
 	}
@@ -37,7 +37,7 @@ func Run(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, a
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
@@ -81,6 +81,7 @@ func runAction(ctx context.Context, defaultCfg v1alpha1.ZarfComponentActionDefau
 	l.Info("running command", "cmd", cmdEscaped)
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
+	actionDefaults.Dir = filepath.Join(basePath, actionDefaults.Dir)
 
 	if cmd, err = actionCmdMutation(ctx, cmd, actionDefaults.Shell, runtime.GOOS); err != nil {
 		l.Error("error mutating command", "cmd", cmdEscaped, "err", err.Error())
@@ -96,16 +97,12 @@ retryCmd:
 		// Perform the action run.
 		tryCmd := func(ctx context.Context) error {
 			// Try running the command and continue the retry loop if it fails.
-			stdout, stderr, err := actionRun(ctx, actionDefaults, cmd)
+			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
-				if !actionDefaults.Mute {
-					l.Warn("action failed", "cmd", cmdEscaped, "stdout", stdout, "stderr", stderr)
-				}
+				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
 			}
-			if !actionDefaults.Mute {
-				l.Info("action succeeded", "cmd", cmdEscaped, "stdout", stdout, "stderr", stderr)
-			}
+			l.Info("action succeeded", "cmd", cmdEscaped)
 
 			outTrimmed := strings.TrimSpace(stdout)
 
@@ -117,7 +114,6 @@ retryCmd:
 				}
 			}
 
-			// If the action has a wait, change the spinner message to reflect that on success.
 			if action.Wait != nil {
 				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
 				return nil
@@ -140,7 +136,7 @@ retryCmd:
 		}
 
 		// Run the command on repeat until success or timeout.
-		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", actionDefaults.MaxTotalSeconds)
+		l.Info("waiting for action", "cmd", cmdEscaped, "timeout", fmt.Sprintf("%d seconds", actionDefaults.MaxTotalSeconds))
 		select {
 		// On timeout break the loop to abort.
 		case <-timeout:
@@ -234,7 +230,6 @@ func actionCmdMutation(ctx context.Context, cmd string, shellPref v1alpha1.Shell
 		newCmd := cmd
 		for _, get := range getFunctions {
 			newCmd = strings.ReplaceAll(newCmd, get("envIndicator"), fmt.Sprintf("$Env:%s", get("varName")))
-
 		}
 		if newCmd != cmd {
 			logger.From(ctx).Debug("converted command", "cmd", cmd, "newCmd", newCmd)
@@ -287,19 +282,21 @@ func actionGetCfg(_ context.Context, cfg v1alpha1.ZarfComponentActionDefaults, a
 
 func actionRun(ctx context.Context, cfg v1alpha1.ZarfComponentActionDefaults, cmd string) (string, string, error) {
 	l := logger.From(ctx)
+	start := time.Now()
 	shell, shellArgs := exec.GetOSShell(cfg.Shell)
 
 	l.Debug("running command", "shell", shell, "cmd", cmd)
 
 	execCfg := exec.Config{
-		Env: cfg.Env,
-		Dir: cfg.Dir,
+		Env:   cfg.Env,
+		Dir:   cfg.Dir,
+		Print: !cfg.Mute,
 	}
 
 	stdout, stderr, err := exec.CmdWithContext(ctx, execCfg, shell, append(shellArgs, cmd)...)
 	// Dump final complete output (respect mute to prevent sensitive values from hitting the logs).
 	if !cfg.Mute {
-		l.Debug("action complete", "cmd", cmd, "stdout", stdout, "stderr", stderr)
+		l.Debug("command complete", "stdout", stdout, "stderr", stderr, "duration", time.Since(start))
 	}
 	return stdout, stderr, err
 }
@@ -314,9 +311,7 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 	for _, match := range matches {
 		funcs = append(funcs, func(name string) string {
 			return match[regex.SubexpIndex(name)]
-
 		})
 	}
-
 	return funcs
 }
