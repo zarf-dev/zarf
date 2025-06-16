@@ -66,7 +66,7 @@ type progressTracker struct {
 }
 
 // startReporting starts the reporting goroutine
-func (pt *progressTracker) ReportProgress() {
+func (pt *progressTracker) StartReporting() {
 	pt.wg.Add(1)
 	go func() {
 		defer pt.wg.Done()
@@ -95,7 +95,7 @@ func (pt *progressTracker) StopReporting() {
 // ProgressReadOnlyTarget reports progress during pulls
 type ProgressReadOnlyTarget interface {
 	oras.ReadOnlyTarget
-	ReportProgress()
+	StartReporting()
 	StopReporting()
 }
 
@@ -111,16 +111,11 @@ type progressReadOnlyReferenceTarget struct {
 	registry.ReferenceFetcher
 }
 
-// NewProgressTarget creates a new ProgressTarget with the given reporter
-func NewProgressTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter Report) ProgressReadOnlyTarget {
-	return NewProgressTargetWithPeriod(target, totalBytes, reporter, defaultProgressInterval)
-}
-
-// NewProgressTargetWithPeriod creates a new ProgressTarget with a custom reporting period
-func NewProgressTargetWithPeriod(target oras.ReadOnlyTarget, totalBytes int64, reporter Report, reportInterval time.Duration) ProgressReadOnlyTarget {
+// NewProgressReadOnlyTarget creates a new ProgressTarget with the given reporter
+func NewProgressReadOnlyTarget(target oras.ReadOnlyTarget, totalBytes int64, reporter Report) ProgressReadOnlyTarget {
 	core := &progressTracker{
 		reporter:       reporter,
-		reportInterval: reportInterval,
+		reportInterval: defaultProgressInterval,
 		bytesRead:      &atomic.Int64{},
 		totalBytes:     totalBytes,
 		stopReports:    make(chan struct{}),
@@ -184,7 +179,7 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 // ProgressPushTarget reports progress during pushes
 type ProgressPushTarget interface {
 	oras.Target
-	ReportProgress()
+	StartReporting()
 	StopReporting()
 }
 

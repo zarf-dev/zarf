@@ -13,8 +13,10 @@ import (
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"oras.land/oras-go/v2"
@@ -91,7 +93,11 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
-	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.OrasRemote.Repo(), "", copyOpts)
+
+	trackedRemote := images.NewProgressPushTarget(r.OrasRemote.Repo(), oci.SumDescsSize(descs), images.DefaultReport(r.Log(), "package push in progress"))
+	trackedRemote.StartReporting()
+	defer trackedRemote.StopReporting()
+	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
 	if err != nil {
 		return err
 	}

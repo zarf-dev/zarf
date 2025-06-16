@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -52,7 +53,11 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 
-	err = r.CopyToTarget(ctx, layersToPull, dst, copyOpts)
+	trackedDst := images.NewProgressPushTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress"))
+	trackedDst.StartReporting()
+	defer trackedDst.StopReporting()
+
+	err = r.CopyToTarget(ctx, layersToPull, trackedDst, copyOpts)
 	if err != nil {
 		return nil, err
 	}
