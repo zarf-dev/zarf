@@ -30,8 +30,7 @@ func DefaultReport(l *slog.Logger, msg string) Report {
 	}
 }
 
-// FIXME: probably set to like 5 seconds, but it's easier to test this way
-const defaultProgressInterval = 1 * time.Second
+const defaultProgressInterval = 5 * time.Second
 
 // progressTracker holds the common logic for progress reporting
 type progressTracker struct {
@@ -103,14 +102,14 @@ func (pwr *progressWriterToReader) WriteTo(w io.Writer) (int64, error) {
 	return written, err
 }
 
-// ProgressPushTarget wraps an oras.Target to track progress
-type ProgressPushTarget struct {
+// ProgressTarget wraps an oras.Target to track progress
+type ProgressTarget struct {
 	oras.Target
 	*progressTracker
 }
 
-// NewProgressPushTarget creates a new ProgressPushTarget
-func NewProgressPushTarget(target oras.Target, totalBytes int64, reporter Report) *ProgressPushTarget {
+// NewProgressTarget creates a new ProgressPushTarget
+func NewProgressTarget(target oras.Target, totalBytes int64, reporter Report) *ProgressTarget {
 	core := &progressTracker{
 		reporter:       reporter,
 		reportInterval: defaultProgressInterval,
@@ -118,7 +117,7 @@ func NewProgressPushTarget(target oras.Target, totalBytes int64, reporter Report
 		totalBytes:     totalBytes,
 		stopReports:    make(chan struct{}),
 	}
-	pt := &ProgressPushTarget{
+	pt := &ProgressTarget{
 		Target:          target,
 		progressTracker: core,
 	}
@@ -127,7 +126,7 @@ func NewProgressPushTarget(target oras.Target, totalBytes int64, reporter Report
 
 // Push wraps the target push method with an appropriate progress reader.
 // It checks if the content reader implements io.WriterTo to select the optimal wrapper.
-func (pt *ProgressPushTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
+func (pt *ProgressTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
 	pReader := &progressReader{
 		reader:    content,
 		bytesRead: pt.bytesRead,
