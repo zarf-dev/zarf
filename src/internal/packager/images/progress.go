@@ -59,14 +59,13 @@ func (tt *TrackedTarget) StopReporting() {
 	tt.wg.Wait()
 }
 
-// trackedReader wraps an io.Reader to track bytes read incrementally.
-// It is used when the underlying reader does not implement io.WriterTo.
+// trackedReader wraps an io.Reader to track bytes read incrementally
 type trackedReader struct {
 	reader    io.Reader
 	bytesRead *atomic.Int64
 }
 
-// Read implements io.Reader interface
+// Read wraps the io.Reader interface to collect bytes read
 func (pr *trackedReader) Read(p []byte) (int, error) {
 	n, err := pr.reader.Read(p)
 	if n > 0 {
@@ -75,14 +74,13 @@ func (pr *trackedReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
-// trackedWriterToReader wraps an io.Reader that also implements io.WriterTo.
-// It tracks progress for both Read and WriteTo operations.
+// trackedWriterToReader wraps an io.Reader that implements io.WriterTo.
 type trackedWriterToReader struct {
 	*trackedReader
 	writerTo io.WriterTo
 }
 
-// WriteTo implements io.WriterTo, tracks progress in a single update after the operation.
+// WriteTo wraps the io.WriteTo interface to collect bytes read
 func (pwr *trackedWriterToReader) WriteTo(w io.Writer) (int64, error) {
 	written, err := pwr.writerTo.WriteTo(w)
 	if written > 0 {
