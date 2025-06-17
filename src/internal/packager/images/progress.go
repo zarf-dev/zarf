@@ -71,7 +71,8 @@ func (pt *progressTracker) StopReporting() {
 	pt.wg.Wait()
 }
 
-// progressReader wraps an io.Reader to track bytes read
+// progressReader wraps an io.Reader to track bytes read incrementally.
+// It is used when the underlying reader does not implement io.WriterTo.
 type progressReader struct {
 	reader    io.Reader
 	bytesRead *atomic.Int64
@@ -84,6 +85,22 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 		pr.bytesRead.Add(int64(n))
 	}
 	return n, err
+}
+
+// progressWriterToReader wraps an io.Reader that also implements io.WriterTo.
+// It tracks progress for both Read and WriteTo operations.
+type progressWriterToReader struct {
+	*progressReader
+	writerTo io.WriterTo
+}
+
+// WriteTo implements io.WriterTo, tracks progress in a single update after the operation.
+func (pwr *progressWriterToReader) WriteTo(w io.Writer) (int64, error) {
+	written, err := pwr.writerTo.WriteTo(w)
+	if written > 0 {
+		pwr.bytesRead.Add(written)
+	}
+	return written, err
 }
 
 // ProgressPushTarget wraps an oras.Target to track progress
@@ -108,12 +125,22 @@ func NewProgressPushTarget(target oras.Target, totalBytes int64, reporter Report
 	return pt
 }
 
-// Push wraps the target push method with the progress reader
-func (pt ProgressPushTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
-	pr := &progressReader{
+// Push wraps the target push method with an appropriate progress reader.
+// It checks if the content reader implements io.WriterTo to select the optimal wrapper.
+func (pt *ProgressPushTarget) Push(ctx context.Context, desc ocispec.Descriptor, content io.Reader) error {
+	pReader := &progressReader{
 		reader:    content,
 		bytesRead: pt.bytesRead,
 	}
+	var newReader io.Reader
+	newReader = pReader
+	// If content supports WriteTo, wrap it with progressWriterToReader
+	if wt, ok := content.(io.WriterTo); ok {
+		newReader = &progressWriterToReader{
+			writerTo:       wt,
+			progressReader: pReader,
+		}
+	}
 
-	return pt.Target.Push(ctx, desc, pr)
+	return pt.Target.Push(ctx, desc, newReader)
 }

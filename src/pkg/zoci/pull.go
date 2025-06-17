@@ -61,6 +61,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
+	r.Log().Info("finished pulling package layers")
 	return layersToPull, nil
 }
 
