@@ -54,6 +54,7 @@ type PushConfig struct {
 	InsecureSkipTLSVerify bool
 	Cluster               *cluster.Cluster
 	ResponseHeaderTimeout time.Duration
+	SBOMDirectory         string
 }
 
 const (

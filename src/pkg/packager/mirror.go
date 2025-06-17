@@ -35,7 +35,7 @@ type ImagePushOptions struct {
 }
 
 // PushImagesToRegistry pushes images in the package layout to the specified registry
-func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo state.RegistryInfo, opts ImagePushOptions) error {
+func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, registryInfo state.RegistryInfo, opts ImagePushOptions) (err error) {
 	if pkgLayout == nil {
 		return fmt.Errorf("package layout is required")
 	}
@@ -58,6 +58,24 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
+
+	var sbomPath string
+	if pkgLayout.ContainsSBOM() {
+		sbomPath, err = utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return err
+		}
+
+		err = pkgLayout.GetSBOM(ctx, sbomPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(sbomPath))
+	}()
+
 	pushConfig := images.PushConfig{
 		OCIConcurrency:        opts.OCIConcurrency,
 		SourceDirectory:       pkgLayout.GetImageDirPath(),
@@ -69,8 +87,9 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		Retries:               opts.Retries,
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Cluster:               opts.Cluster,
+		SBOMDirectory:         sbomPath,
 	}
-	err := images.Push(ctx, pushConfig)
+	err = images.Push(ctx, pushConfig)
 	if err != nil {
 		return fmt.Errorf("failed to push images: %w", err)
 	}
