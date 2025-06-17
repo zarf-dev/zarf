@@ -250,7 +250,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		}
 	}
 
-	l.Info("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
+	l.Info("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return imagesWithManifests, nil
 }

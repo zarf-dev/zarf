@@ -30,6 +30,7 @@ const defaultRetries = 3
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
+	start := time.Now()
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
@@ -178,6 +179,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
+	l.Info("done pushing images", "count", len(cfg.ImageList), "duration", time.Since(start).Round(time.Millisecond*100))
 	return nil
 }
 

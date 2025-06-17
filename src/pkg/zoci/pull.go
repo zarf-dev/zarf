@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -29,6 +30,7 @@ var (
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
+	start := time.Now()
 	// layersToPull is an explicit requirement for pulling package layers
 	if len(layersToPull) == 0 {
 		return nil, fmt.Errorf("no layers to pull")
@@ -61,7 +63,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	if err != nil {
 		return nil, err
 	}
-	r.Log().Info("finished pulling package layers")
+	r.Log().Info("finished pulling package layers", "duration", time.Since(start).Round(time.Millisecond*100))
 	return layersToPull, nil
 }
 
