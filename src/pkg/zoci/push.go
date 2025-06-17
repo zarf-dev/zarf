@@ -95,7 +95,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	copyOpts.Concurrency = concurrency
 	totalSize := oci.SumDescsSize(descs) + root.Size + manifestConfigDesc.Size
 
-	trackedRemote := images.NewProgressTarget(r.OrasRemote.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress"))
+	trackedRemote := images.NewTrackedTarget(r.OrasRemote.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress"))
 	trackedRemote.StartReporting()
 	defer trackedRemote.StopReporting()
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)

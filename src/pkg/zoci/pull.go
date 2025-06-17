@@ -53,7 +53,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 
-	trackedDst := images.NewProgressTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress"))
+	trackedDst := images.NewTrackedTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress"))
 	trackedDst.StartReporting()
 	defer trackedDst.StopReporting()
 
