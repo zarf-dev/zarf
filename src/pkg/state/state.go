@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -35,6 +36,17 @@ const (
 	GitReadKey      = "git-readonly"
 	ArtifactKey     = "artifact"
 	AgentKey        = "agent"
+)
+
+// ComponentStatus defines the deployment status of a Zarf component within a package.
+type ComponentStatus string
+
+// All the different status options for a Zarf Component
+const (
+	ComponentStatusSucceeded ComponentStatus = "Succeeded"
+	ComponentStatusFailed    ComponentStatus = "Failed"
+	ComponentStatusDeploying ComponentStatus = "Deploying"
+	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
 // Values during setup of the initial zarf state
@@ -347,4 +359,62 @@ func sanitizeState(s *State) *State {
 	s.ArtifactServer.PushToken = "**sanitized**"
 
 	return s
+}
+
+// DeployedPackageOptions are options for the DeployedPackage function
+type DeployedPackageOptions func(*DeployedPackage)
+
+// WithPackageNamespaceOverride sets the [ALPHA] optional namespace override for a package during deployment
+func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		o.NamespaceOverride = namespaceOverride
+	}
+}
+
+// DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
+// This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
+type DeployedPackage struct {
+	Name               string               `json:"name"`
+	Data               v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion         string               `json:"cliVersion"`
+	Generation         int                  `json:"generation"`
+	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
+	NamespaceOverride string `json:"namespaceOverride,omitempty"`
+}
+
+// GetSecretName returns the k8s secret name for the deployed package
+func (d *DeployedPackage) GetSecretName() string {
+	if d.NamespaceOverride != "" {
+		// override keyword is used to help prevent collisions in secret name
+		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
+	}
+	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// ConnectString contains information about a connection made with Zarf connect.
+type ConnectString struct {
+	// Descriptive text that explains what the resource you would be connecting to is used for
+	Description string `json:"description"`
+	// URL path that gets appended to the k8s port-forward result
+	URL string `json:"url"`
+}
+
+// ConnectStrings is a map of connect names to connection information.
+type ConnectStrings map[string]ConnectString
+
+// DeployedComponent contains information about a Zarf Package Component that has been deployed to a cluster.
+type DeployedComponent struct {
+	Name               string           `json:"name"`
+	InstalledCharts    []InstalledChart `json:"installedCharts"`
+	Status             ComponentStatus  `json:"status"`
+	ObservedGeneration int              `json:"observedGeneration"`
+}
+
+// InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
+type InstalledChart struct {
+	Namespace      string         `json:"namespace"`
+	ChartName      string         `json:"chartName"`
+	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
 }

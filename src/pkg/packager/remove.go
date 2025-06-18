@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/cli"
@@ -20,13 +21,13 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster *cluster.Cluster
-	Timeout time.Duration
+	Cluster           *cluster.Cluster
+	Timeout           time.Duration
+	NamespaceOverride string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -47,10 +48,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 	}
 
 	// Get or build the secret for the deployed package
-	depPkg := &types.DeployedPackage{}
+	depPkg := &state.DeployedPackage{}
 	if requiresCluster {
 		var err error
-		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name)
+		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
 		}
@@ -59,7 +60,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		depPkg.Name = pkg.Metadata.Name
 		depPkg.Data = pkg
 		for _, component := range pkg.Components {
-			depPkg.DeployedComponents = append(depPkg.DeployedComponents, types.DeployedComponent{Name: component.Name})
+			depPkg.DeployedComponents = append(depPkg.DeployedComponents, state.DeployedComponent{Name: component.Name})
 		}
 	}
 
@@ -150,7 +151,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 
 	// All the installed components were deleted, therefore this package is no longer actually deployed
 	if opts.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opts.Cluster.DeleteDeployedPackage(ctx, depPkg.Name)
+		err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
 		if err != nil {
 			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
 		}
