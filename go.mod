@@ -39,7 +39,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/pterm/pterm v0.12.79
-	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3
+	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v2 v2.4.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.4
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.4
