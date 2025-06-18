@@ -24,6 +24,10 @@ type Report func(bytesRead, totalBytes int64)
 // DefaultReport returns a default report function
 func DefaultReport(l *slog.Logger, msg string, imageName string) Report {
 	return func(bytesRead, totalBytes int64) {
+		if totalBytes <= 0 {
+			l.Warn("total bytes is a non-positive integer, returning")
+			return
+		}
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
 		remaining := float64(totalBytes) - float64(bytesRead)
 		l.Info(msg, "name", imageName, "complete", fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
@@ -33,7 +37,7 @@ func DefaultReport(l *slog.Logger, msg string, imageName string) Report {
 const defaultProgressInterval = 5 * time.Second
 
 // StartReporting starts the reporting goroutine
-func (tt *TrackedTarget) StartReporting() {
+func (tt *TrackedTarget) StartReporting(ctx context.Context) {
 	tt.wg.Add(1)
 	go func() {
 		defer tt.wg.Done()
@@ -45,6 +49,8 @@ func (tt *TrackedTarget) StartReporting() {
 			case <-ticker.C:
 				tt.reporter(tt.bytesRead.Load(), tt.totalBytes)
 			case <-tt.stopReports:
+				return
+			case <-ctx.Done():
 				return
 			}
 		}

@@ -96,7 +96,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
 	trackedRemote := images.NewTrackedTarget(r.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()))
-	trackedRemote.StartReporting()
+	trackedRemote.StartReporting(ctx)
 	defer trackedRemote.StopReporting()
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
 	if err != nil {

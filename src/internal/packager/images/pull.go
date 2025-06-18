@@ -443,7 +443,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst 
 	}
 	pullSrc = orasCache.New(repo, localCache)
 	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-	trackedDst.StartReporting()
+	trackedDst.StartReporting(ctx)
 	defer trackedDst.StopReporting()
 	desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
 	if err != nil {
