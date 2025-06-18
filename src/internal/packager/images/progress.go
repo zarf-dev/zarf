@@ -22,15 +22,15 @@ import (
 type Report func(bytesRead, totalBytes int64)
 
 // DefaultReport returns a default report function
-func DefaultReport(l *slog.Logger, msg string) Report {
+func DefaultReport(l *slog.Logger, msg string, imageName string) Report {
 	return func(bytesRead, totalBytes int64) {
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
 		remaining := float64(totalBytes) - float64(bytesRead)
-		l.Info(msg, "complete", fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
+		l.Info(msg, "complete", "name", imageName, fmt.Sprintf("%.1f%%", percentComplete), "remaining", utils.ByteFormat(remaining, 2))
 	}
 }
 
-const defaultProgressInterval = 5 * time.Second
+const defaultProgressInterval = 2 * time.Second
 
 // StartReporting starts the reporting goroutine
 func (tt *TrackedTarget) StartReporting() {

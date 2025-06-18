@@ -92,10 +92,10 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 	totalSize := oci.SumDescsSize(descs) + root.Size + manifestConfigDesc.Size
-	logger.From(ctx).Info("pushing package to registry", "destination", r.OrasRemote.Repo().Reference.String(),
+	logger.From(ctx).Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 		"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
-	trackedRemote := images.NewTrackedTarget(r.OrasRemote.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress"))
+	trackedRemote := images.NewTrackedTarget(r.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()))
 	trackedRemote.StartReporting()
 	defer trackedRemote.StopReporting()
 	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
@@ -103,11 +103,11 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		return err
 	}
 
-	err = r.OrasRemote.UpdateIndex(ctx, r.OrasRemote.Repo().Reference.Reference, publishedDesc)
+	err = r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
 	if err != nil {
 		return err
 	}
-	logger.From(ctx).Info("completed package publish", "destination", r.OrasRemote.Repo().Reference.String(),
+	logger.From(ctx).Info("completed package publish", "destination", r.Repo().Reference.String(),
 		"duration", time.Since(start).Round(time.Millisecond*100))
 
 	return nil
