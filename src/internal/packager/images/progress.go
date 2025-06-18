@@ -34,37 +34,6 @@ func DefaultReport(l *slog.Logger, msg string, imageName string) Report {
 	}
 }
 
-const defaultProgressInterval = 5 * time.Second
-
-// StartReporting starts the reporting goroutine
-func (tt *TrackedTarget) StartReporting(ctx context.Context) {
-	tt.wg.Add(1)
-	go func() {
-		defer tt.wg.Done()
-		ticker := time.NewTicker(tt.reportInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				tt.reporter(tt.bytesRead.Load(), tt.totalBytes)
-			case <-tt.stopReports:
-				return
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-}
-
-// StopReporting stops the reporting goroutine
-func (tt *TrackedTarget) StopReporting() {
-	if tt.stopReports != nil {
-		close(tt.stopReports)
-	}
-	tt.wg.Wait()
-}
-
 // trackedReader wraps an io.Reader to track bytes read incrementally
 type trackedReader struct {
 	reader    io.Reader
@@ -86,6 +55,8 @@ type trackedWriterToReader struct {
 	writerTo io.WriterTo
 }
 
+const defaultProgressInterval = 5 * time.Second
+
 // WriteTo wraps the io.WriteTo interface to collect bytes read
 func (pwr *trackedWriterToReader) WriteTo(w io.Writer) (int64, error) {
 	written, err := pwr.writerTo.WriteTo(w)
@@ -95,9 +66,37 @@ func (pwr *trackedWriterToReader) WriteTo(w io.Writer) (int64, error) {
 	return written, err
 }
 
-// TrackedTarget wraps an oras.Target to track progress
-type TrackedTarget struct {
-	oras.Target
+// StartReporting starts the reporting goroutine
+func (tt *Tracker) StartReporting(ctx context.Context) {
+	tt.wg.Add(1)
+	go func() {
+		defer tt.wg.Done()
+		ticker := time.NewTicker(tt.reportInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				tt.reporter(tt.bytesRead.Load(), tt.totalBytes)
+			case <-tt.stopReports:
+				return
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// StopReporting stops the reporting goroutine
+func (tt *Tracker) StopReporting() {
+	if tt.stopReports != nil {
+		close(tt.stopReports)
+	}
+	tt.wg.Wait()
+}
+
+// Tracker reports progress against totalBytes as bytesRead gets updated
+type Tracker struct {
 	reporter       Report
 	reportInterval time.Duration
 	bytesRead      *atomic.Int64
@@ -107,15 +106,24 @@ type TrackedTarget struct {
 	wg          sync.WaitGroup
 }
 
+// TrackedTarget wraps an oras.Target to track progress
+type TrackedTarget struct {
+	oras.Target
+	*Tracker
+}
+
 // NewTrackedTarget creates a new TrackedTarget
 func NewTrackedTarget(target oras.Target, totalBytes int64, reporter Report) *TrackedTarget {
-	return &TrackedTarget{
-		Target:         target,
+	tracker := &Tracker{
 		reporter:       reporter,
 		reportInterval: defaultProgressInterval,
 		bytesRead:      &atomic.Int64{},
 		totalBytes:     totalBytes,
 		stopReports:    make(chan struct{}),
+	}
+	return &TrackedTarget{
+		Target:  target,
+		Tracker: tracker,
 	}
 }
 
