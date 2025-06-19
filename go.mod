@@ -41,10 +41,10 @@ require (
 	github.com/pterm/pterm v0.12.79
 	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v2 v2.4.1
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.4
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.8.12
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.5
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.20.1
@@ -131,7 +131,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/redis/go-redis/extra/rediscmd/v9 v9.0.5 // indirect
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5 // indirect
-	github.com/redis/go-redis/v9 v9.7.3 // indirect
+	github.com/redis/go-redis/v9 v9.8.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rust-secure-code/go-rustaudit v0.0.0-20250226111315-e20ec32e963c // indirect
 	github.com/sigstore/protobuf-specs v0.4.1 // indirect
@@ -187,7 +187,7 @@ require (
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azkeys v1.3.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.1 // indirect
@@ -243,7 +243,7 @@ require (
 	github.com/aquasecurity/go-version v0.0.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/aws/aws-sdk-go v1.55.6 // indirect
+	github.com/aws/aws-sdk-go v1.55.7 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.36.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.29.14 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67 // indirect
