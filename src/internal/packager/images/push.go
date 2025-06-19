@@ -74,7 +74,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Cache:  auth.NewCache(),
 			Credential: auth.StaticCredential(registryURL, auth.Credential{
 				Username: cfg.RegistryInfo.PushUsername,
-				Password: cfg.RegistryInfo.PushPassword,
+				// Set both the password and access token and let oras decide which is correct to use
+				Password:    cfg.RegistryInfo.PushPassword,
+				AccessToken: cfg.RegistryInfo.PushPassword,
 			}),
 		}
 
