@@ -17,6 +17,8 @@ spec:
         # Don't mutate this pod, that would be sad times
         zarf.dev/agent: ignore
     spec:
+      nodeSelector:
+        kubernetes.io/arch: "###ZARF_ARCHITECTURE###"
       imagePullSecrets:
         - name: private-registry
       priorityClassName: system-node-critical
