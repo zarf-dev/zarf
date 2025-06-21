@@ -17,7 +17,7 @@ builds:
       - darwin
       - windows
     ldflags:
-      - -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion={{.Tag}}
+      - -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion={{.Env.TAG}}
       - -X k8s.io/component-base/version.gitVersion=v{{.Env.K8S_MODULES_MAJOR_VER}}.{{.Env.K8S_MODULES_MINOR_VER}}.{{.Env.K8S_MODULES_PATCH_VER}}
       - -X k8s.io/component-base/version.gitCommit={{.FullCommit}}
       - -X k8s.io/component-base/version.buildDate={{.Date}}
@@ -37,7 +37,7 @@ builds:
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
   - formats: [ 'binary' ]
-    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{.Env.TAG}}_{{- title .Os }}_{{ .Arch }}"
 
 # generate a sha256 checksum of all release artifacts
 # NOTE: We are explicitly adding the init-packages that are built prior to GoReleaser stage in the GitHub Actions workflow
@@ -51,7 +51,7 @@ checksum:
 sboms:
   - artifacts: binary
     documents:
-      - "sbom_{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}.sbom"
+      - "sbom_{{ .ProjectName }}_{{.Env.TAG}}_{{- title .Os }}_{{ .Arch }}.sbom"
 
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot"
@@ -78,7 +78,7 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-      branch: "{{ .ProjectName }}-{{ .Tag }}"
+      branch: "{{ .ProjectName }}-{{.Env.TAG}}"
       pull_request:
         enabled: true
         base:
@@ -86,7 +86,7 @@ brews:
           owner: defenseunicorns
           name: homebrew-tap
 
-    commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
+    commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{.Env.TAG}}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Airgap"
 
@@ -97,13 +97,13 @@ brews:
       owner: defenseunicorns
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-      branch: "{{ .ProjectName }}-{{ .Tag }}"
+      branch: "{{ .ProjectName }}-{{.Env.TAG}}"
       pull_request:
         enabled: true
         base:
           branch: main
           owner: defenseunicorns
           name: homebrew-tap
-    commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
+    commit_msg_template: "build(release): {{ .ProjectName }}@{{.Env.TAG}}"
     homepage: "https://zarf.dev/"
     description: "DevSecOps for Airgap"
