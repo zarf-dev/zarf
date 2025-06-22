@@ -72,7 +72,7 @@ type deployer struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]types.DeployedComponent, error) {
 	l := logger.From(ctx)
-	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name, "architecture", pkgLayout.Pkg.Metadata.Architecture)
 	start := time.Now()
 
 	if opts.Retries == 0 {
@@ -261,7 +261,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), pkgLayout.Pkg.Metadata.Architecture, component.Images)
 		if err != nil {
 			return nil, err
 		}
