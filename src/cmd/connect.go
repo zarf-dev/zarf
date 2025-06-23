@@ -33,6 +33,7 @@ func newConnectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
+	cmd.Flags().StringVar(&o.zt.ListenAddress, "address", "localhost", lang.CmdConnectFlagAddress)
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
 	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
@@ -72,6 +73,8 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		if o.zt.LocalPort != 0 {
 			ti.LocalPort = o.zt.LocalPort
 		}
+		ti.ListenAddress = o.zt.ListenAddress
+
 		tunnel, err = c.ConnectTunnelInfo(ctx, ti)
 	}
 
@@ -107,7 +110,7 @@ func newConnectListCommand() *cobra.Command {
 	o := &connectListOptions{}
 	cmd := &cobra.Command{
 		Use:     "list",
-		Aliases: []string{"l"},
+		Aliases: []string{"l", "ls"},
 		Short:   lang.CmdConnectListShort,
 		RunE:    o.run,
 	}
