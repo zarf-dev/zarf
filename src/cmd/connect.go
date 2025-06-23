@@ -15,7 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 type connectOptions struct {
@@ -128,7 +127,7 @@ func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func printConnectStringTable(connectStrings types.ConnectStrings) {
+func printConnectStringTable(connectStrings state.ConnectStrings) {
 	if len(connectStrings) > 0 {
 		connectData := [][]string{}
 		// Loop over each connectStrings and convert to a string matrix

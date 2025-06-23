@@ -29,7 +29,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -48,6 +47,8 @@ type DeployOptions struct {
 	Retries int
 	// Number of layers to push concurrently per image
 	OCIConcurrency int
+	// Namespace is an optional namespace override for package deployment
+	NamespaceOverride string
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
@@ -70,10 +71,15 @@ type deployer struct {
 }
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
-func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]types.DeployedComponent, error) {
+func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+	if opts.NamespaceOverride != "" {
+		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+			return nil, err
+		}
+	}
 
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
@@ -119,9 +125,9 @@ func (d *deployer) isConnectedToCluster() bool {
 	return d.c != nil
 }
 
-func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]types.DeployedComponent, error) {
+func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	deployedComponents := []types.DeployedComponent{}
+	deployedComponents := []state.DeployedComponent{}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
@@ -149,14 +155,14 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 			// If this package has been deployed before, increment the package generation within the secret
 			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
-			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name); existingDeployedPackage != nil {
+			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
 				packageGeneration = existingDeployedPackage.Generation + 1
 			}
 		}
 
-		deployedComponent := types.DeployedComponent{
+		deployedComponent := state.DeployedComponent{
 			Name:               component.Name,
-			Status:             types.ComponentStatusDeploying,
+			Status:             state.ComponentStatusDeploying,
 			ObservedGeneration: packageGeneration,
 		}
 
@@ -172,11 +178,11 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
-		var charts []types.InstalledChart
+		var charts []state.InstalledChart
 		var deployErr error
 		if pkgLayout.Pkg.IsInitConfig() {
 			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
@@ -194,9 +200,9 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		if deployErr != nil {
 			onFailure()
-			deployedComponents[idx].Status = types.ComponentStatusFailed
+			deployedComponents[idx].Status = state.ComponentStatusFailed
 			if d.isConnectedToCluster() {
-				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration); err != nil {
+				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 				}
 			}
@@ -205,9 +211,9 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		// Update the package secret to indicate that we successfully deployed this component
 		deployedComponents[idx].InstalledCharts = charts
-		deployedComponents[idx].Status = types.ComponentStatusSucceeded
+		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -221,7 +227,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	return deployedComponents, nil
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]types.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -284,7 +290,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	return charts, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []types.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -380,7 +386,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		})
 	}
 
-	charts := []types.InstalledChart{}
+	charts := []state.InstalledChart{}
 	if hasCharts {
 		helmCharts, err := d.installCharts(ctx, pkgLayout, component, opts)
 		if err != nil {
@@ -417,8 +423,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	return charts, nil
 }
 
-func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []types.InstalledChart, err error) {
-	installedCharts := []types.InstalledChart{}
+func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+	installedCharts := []state.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -476,13 +482,13 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	return installedCharts, nil
 }
 
-func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []types.InstalledChart, err error) {
+func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -495,7 +501,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		return nil, err
 	}
 
-	installedCharts := []types.InstalledChart{}
+	installedCharts := []state.InstalledChart{}
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
 			if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
@@ -537,7 +543,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		if err != nil {
 			return nil, err
 		}
-		installedCharts = append(installedCharts, types.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
 	}
 
 	return installedCharts, nil
