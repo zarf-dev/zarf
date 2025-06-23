@@ -281,17 +281,20 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
+	CmdPackageDeployFlagNamespace                      = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
 
 	CmdPackageInspectFlagSbomOut    = "Specify an output directory for the SBOMs from the inspected Zarf package"
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
+	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
 	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
+	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
@@ -419,6 +422,22 @@ $ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
+	CmdToolsRegistryManifestExample = `
+# Return an image manifest for an internal repo in Zarf
+$ zarf tools registry manifest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+# Return an image manifest from a repo hosted at ghcr.io
+$ zarf tools registry manifest ghcr.io/stefanprodan/podinfo:6.4.0
+`
+
+	CmdToolsRegistryExportExample = `
+# Write tarball to stdout from the internal repo in Zarf
+$ zarf tools registry export 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 -
+
+# Write tarball to file from the registry from a repo hosted at ghcr.io
+$ zarf tools registry export ghcr.io/stefanprodan/podinfo:6.4.0 podinfo.6.4.0.tar
+`
+
 	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
 	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
 	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
@@ -486,8 +505,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
 
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
-	CmdToolsClearCacheDir           = "Cache directory set to: %s"
-	CmdToolsClearCacheSuccess       = "Successfully cleared the cache from %s"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
 	CmdToolsDownloadInitShort               = "Downloads the init package for the current Zarf version into the specified directory"
@@ -503,7 +520,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
-	CmdToolsGenKeySuccess              = "Generated key pair and written to %s and %s"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

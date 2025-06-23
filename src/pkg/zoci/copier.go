@@ -7,7 +7,6 @@ package zoci
 import (
 	"bytes"
 	"context"
-	"fmt"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -53,6 +52,6 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int)
 		return err
 	}
 
-	src.Log().Info(fmt.Sprintf("Published %s to %s", src.Repo().Reference, dst.Repo().Reference))
+	l.Info("package copied successfully", "source", src.Repo().Reference, "destination", dst.Repo().Reference)
 	return nil
 }

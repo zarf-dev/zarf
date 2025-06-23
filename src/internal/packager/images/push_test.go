@@ -9,9 +9,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestPush(t *testing.T) {
@@ -66,7 +66,7 @@ func TestPush(t *testing.T) {
 			require.NoError(t, err)
 			address := testutil.SetupInMemoryRegistry(ctx, t, port)
 			imageList := []transform.Image{}
-			regInfo := types.RegistryInfo{
+			regInfo := state.RegistryInfo{
 				Address: address,
 			}
 			require.NoError(t, err)

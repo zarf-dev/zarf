@@ -52,17 +52,15 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
-	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
 
 		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
-		if c != nil {
+		if cfg.Cluster != nil {
 			var err error
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
 			if err != nil {
 				return err
 			}
@@ -80,7 +78,10 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		if err != nil {
+			return err
+		}
 
 		plainHTTP := cfg.PlainHTTP
 

@@ -90,11 +90,16 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 		select {
 		case <-expired:
 			return errors.New("wait timed out")
+		case <-ctx.Done():
+			return errors.New("received interrupt")
 
 		default:
 			// Check if the resource exists.
+			l.Debug("checking resource existence", "namespace", namespaceFlag, "kind", kind, "identifier", identifier)
 			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			_, stderr, err := exec.Cmd(shell, append(shellArgs, zarfKubectlGet)...)
+			cmd := append(shellArgs, zarfKubectlGet)
+			stdout, stderr, err := exec.Cmd(shell, cmd...)
+			l.Debug("cmd done", "cmd", cmd, "stdout", stdout, "stderr", stderr, "error", err)
 			if err != nil {
 				if strings.Contains(stderr, "connect: connection refused") {
 					l.Info("api server unavailable")
@@ -157,6 +162,8 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 		select {
 		case <-expired:
 			return errors.New("wait timed out")
+		case <-ctx.Done():
+			return errors.New("received interrupt")
 		default:
 			switch resource {
 			case "http", "https":

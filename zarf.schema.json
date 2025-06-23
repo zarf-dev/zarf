@@ -1077,6 +1077,10 @@
           },
           "type": "object",
           "description": "Annotations contains arbitrary metadata about the package.\nUsers are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md"
+        },
+        "allowNamespaceOverride": {
+          "type": "boolean",
+          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden."
         }
       },
       "additionalProperties": false,

@@ -73,7 +73,7 @@ Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/de
 
 ## 🫶 Our Community
 
-Join us on the [Kubernetes Slack](https://kubernetes.slack.com/) in the [_#zarf_](https://kubernetes.slack.com/archives/C03B6BJAUJ3) channel or the [_#zarf-dev_](https://kubernetes.slack.com/archives/C03BP9Z3CMA) channel! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
+Join us in our [Community](./COMMUNITY.md) spaces! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 

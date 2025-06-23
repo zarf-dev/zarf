@@ -24,20 +24,18 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
-var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, types.ZarfInClusterContainerRegistryNodePort)
+var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -99,7 +97,16 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
-	pkg, err := layout2.LoadPackageDefinition(ctx, setBaseDirectory(args), o.flavor, o.setVariables)
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	loadOpts := load.DefinitionOptions{
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
+		CachePath:    cachePath,
+	}
+	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
 		return err
 	}
@@ -121,7 +128,7 @@ type devInspectManifestsOptions struct {
 
 func newDevInspectManifestsOptions() devInspectManifestsOptions {
 	return devInspectManifestsOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -151,14 +158,18 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-
-	opts := packager2.InspectDefinitionResourcesOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
+		CachePath:          cachePath,
 	}
-	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -166,16 +177,16 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
-		return r.ResourceType == packager2.ValuesFileResource
+	resources = slices.DeleteFunc(resources, func(r packager.Resource) bool {
+		return r.ResourceType == packager.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 manifests found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "#type: %s\n", resource.ResourceType)
 		// Helm charts already provide a comment on the source when templated
-		if resource.ResourceType == packager2.ManifestResource {
+		if resource.ResourceType == packager.ManifestResource {
 			fmt.Fprintf(o.outputWriter, "#source: %s\n", resource.Name)
 		}
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
@@ -193,7 +204,7 @@ type devInspectValuesFilesOptions struct {
 
 func newDevInspectValuesFilesOptions() devInspectValuesFilesOptions {
 	return devInspectValuesFilesOptions{
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -224,14 +235,18 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-
-	opts := packager2.InspectDefinitionResourcesOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
+		CachePath:          cachePath,
 	}
-	result, err := packager2.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -239,13 +254,13 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	if err != nil {
 		return err
 	}
-	result.Resources = slices.DeleteFunc(result.Resources, func(r packager2.Resource) bool {
-		return r.ResourceType != packager2.ValuesFileResource
+	resources = slices.DeleteFunc(resources, func(r packager.Resource) bool {
+		return r.ResourceType != packager.ValuesFileResource
 	})
-	if len(result.Resources) == 0 {
+	if len(resources) == 0 {
 		return fmt.Errorf("0 values files found")
 	}
-	for _, resource := range result.Resources {
+	for _, resource := range resources {
 		fmt.Fprintf(o.outputWriter, "# associated chart: %s\n", resource.Name)
 		fmt.Fprintf(o.outputWriter, "%s---\n", resource.Content)
 	}
@@ -301,13 +316,25 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithContext(ctx))
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	defer pkgClient.ClearTempPaths()
 
-	err = pkgClient.DevDeploy(ctx)
+	err = packager.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager.DevDeployOptions{
+		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
+		Flavor:             pkgConfig.CreateOpts.Flavor,
+		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
+		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
+		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
+		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
+		Timeout:            pkgConfig.DeployOpts.Timeout,
+		Retries:            pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
+		RemoteOptions:      defaultRemoteOptions(),
+		CachePath:          cachePath,
+	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -367,14 +394,11 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 		}
 	}
 	l.Info("generating package", "name", name, "path", generatedZarfYAMLPath)
-	opts := &packager2.GenerateOptions{
-		PackageName: name,
-		Version:     o.version,
-		URL:         o.url,
+	opts := packager.GenerateOptions{
 		GitPath:     o.gitPath,
 		KubeVersion: o.kubeVersion,
 	}
-	pkg, err := packager2.Generate(cmd.Context(), opts)
+	pkg, err := packager.Generate(cmd.Context(), name, o.url, o.version, opts)
 	if err != nil {
 		return err
 	}
@@ -413,7 +437,7 @@ func newDevPatchGitCommand() *cobra.Command {
 	}
 
 	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", types.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
 
 	return cmd
 }
@@ -617,7 +641,12 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	findImagesOptions := packager2.FindImagesOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	findImagesOptions := packager.FindImagesOptions{
 		RepoHelmChartPath:   pkgConfig.FindImagesOpts.RepoHelmChartPath,
 		RegistryURL:         pkgConfig.FindImagesOpts.RegistryURL,
 		KubeVersionOverride: pkgConfig.FindImagesOpts.KubeVersionOverride,
@@ -626,8 +655,9 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		Flavor:              pkgConfig.CreateOpts.Flavor,
 		Why:                 pkgConfig.FindImagesOpts.Why,
 		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
+		CachePath:           cachePath,
 	}
-	results, err := packager2.FindImages(ctx, baseDir, findImagesOptions)
+	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -638,7 +668,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	if pkgConfig.FindImagesOpts.Why != "" {
 		var foundWhyResource bool
-		for _, scan := range results.ComponentImageScans {
+		for _, scan := range imagesScans {
 			for _, whyResource := range scan.WhyResources {
 				fmt.Printf("component: %s\n%s: %s\nresource:\n\n%s\n", scan.ComponentName,
 					whyResource.ResourceType, whyResource.Name, whyResource.Content)
@@ -652,7 +682,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	componentDefinition := "\ncomponents:\n"
-	for _, finding := range results.ComponentImageScans {
+	for _, finding := range imagesScans {
 		if len(finding.Matches) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
 			for _, image := range finding.Matches {
@@ -736,10 +766,14 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	v := getViper()
 	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-
-	err := packager2.Lint(ctx, baseDir, packager2.LintOptions{
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	err = packager.Lint(ctx, baseDir, packager.LintOptions{
 		Flavor:       pkgConfig.CreateOpts.Flavor,
 		SetVariables: pkgConfig.CreateOpts.SetVariables,
+		CachePath:    cachePath,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

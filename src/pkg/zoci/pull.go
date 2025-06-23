@@ -14,7 +14,8 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/layout"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2/content/file"
@@ -32,9 +33,12 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 		return nil, fmt.Errorf("no layers to pull")
 	}
 
+	if concurrency == 0 {
+		concurrency = DefaultConcurrency
+	}
+
 	layerSize := oci.SumDescsSize(layersToPull)
-	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
-	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
+	logger.From(ctx).Info("pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -209,14 +213,4 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 		return nil, fmt.Errorf("unknown inspect target %s", layersSelector)
 	}
 	return layers, nil
-}
-
-// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
-}
-
-// PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (r *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, []string{layout.SBOMTar})
 }

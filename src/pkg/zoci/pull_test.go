@@ -6,7 +6,6 @@ package zoci_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"slices"
 	"testing"
@@ -14,11 +13,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
@@ -42,15 +40,16 @@ func TestAssembleLayers(t *testing.T) {
 	tt := []struct {
 		name string
 		path string
-		opts packager2.PublishPackageOpts
+		opts packager.PublishPackageOptions
 	}{
 		{
 			name: "Assemble layers from a package",
 			path: "testdata/basic",
-			opts: packager2.PublishPackageOpts{
-				WithPlainHTTP: true,
-				Architecture:  "amd64",
-				Concurrency:   3,
+			opts: packager.PublishPackageOptions{
+				RemoteOptions: packager.RemoteOptions{
+					PlainHTTP: true,
+				},
+				OCIConcurrency: 3,
 			},
 		},
 	}
@@ -60,32 +59,30 @@ func TestAssembleLayers(t *testing.T) {
 			ctx := testutil.TestContext(t)
 			registryRef := createRegistry(t, ctx)
 			tmpdir := t.TempDir()
-			config.CommonOptions.CachePath = tmpdir
 
 			// create the package
-			opt := packager2.CreateOptions{
-				Output:         tmpdir,
-				OCIConcurrency: tc.opts.Concurrency,
+			opt := packager.CreateOptions{
+				OCIConcurrency: tc.opts.OCIConcurrency,
+				CachePath:      tmpdir,
 			}
-			err := packager2.Create(ctx, tc.path, opt)
+			packagePath, err := packager.Create(ctx, tc.path, tmpdir, opt)
 			require.NoError(t, err)
-			src := fmt.Sprintf("%s/%s-%s-0.0.1.tar.zst", tmpdir, "zarf-package-basic-pod", tc.opts.Architecture)
+			// We want to pull the package and sure the content is the same as the local package
+			layoutExpected, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			require.NoError(t, err)
 
 			// Publish test package
-			err = packager2.PublishPackage(ctx, src, registryRef, tc.opts)
+			packageRef, err := packager.PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
-			// We want to pull the package and sure the content is the same as the local package
-			layoutExpected, err := layout.LoadFromTar(ctx, src, layout.PackageLayoutOptions{Filter: filters.Empty()})
-			require.NoError(t, err)
 			// Publish creates a local oci manifest file using the package name, delete this to clean up test name
 			defer os.Remove(layoutExpected.Pkg.Metadata.Name) //nolint:errcheck
-			// Format url and instantiate remote
-			packageRef, err := zoci.ReferenceFromMetadata(registryRef.String(), &layoutExpected.Pkg.Metadata, &layoutExpected.Pkg.Build)
+
+			cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
 			require.NoError(t, err)
 
-			platform := oci.PlatformForArch(tc.opts.Architecture)
-			remote, err := zoci.NewRemote(ctx, packageRef, platform, oci.WithPlainHTTP(tc.opts.WithPlainHTTP))
+			platform := oci.PlatformForArch(layoutExpected.Pkg.Build.Architecture)
+			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
 			// get all layers
