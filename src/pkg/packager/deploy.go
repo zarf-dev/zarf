@@ -51,6 +51,8 @@ type DeployOptions struct {
 	NamespaceOverride string
 	// Remote Options for image pushes
 	RemoteOptions
+	// [alpha] Whether to skip image push
+	NoImagePush bool
 	// How to configure Zarf state if it's not already been configured
 	GitServer      state.GitServerInfo
 	RegistryInfo   state.RegistryInfo
@@ -187,7 +189,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		if pkgLayout.Pkg.IsInitConfig() {
 			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, opts.NoImagePush, opts)
 		}
 
 		onDeploy := component.Actions.OnDeploy
@@ -273,9 +275,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
+	noImagePush := isSeedRegistry || opts.NoImagePush
+
 	// Skip image checksum if component is agent.
 	// Skip image push if component is seed registry.
-	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
+	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, noImagePush, opts)
 	if err != nil {
 		return nil, err
 	}
