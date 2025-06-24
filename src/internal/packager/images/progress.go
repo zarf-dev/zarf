@@ -25,7 +25,7 @@ type Report func(bytesRead, totalBytes int64)
 func DefaultReport(l *slog.Logger, msg string, imageName string) Report {
 	return func(bytesRead, totalBytes int64) {
 		if totalBytes <= 0 {
-			l.Warn("total bytes is a non-positive integer, returning")
+			l.Warn("total bytes is a non-positive integer, can't report progress")
 			return
 		}
 		percentComplete := float64(bytesRead) / float64(totalBytes) * 100
