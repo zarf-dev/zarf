@@ -80,9 +80,14 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	)
 
 	// Load and validate the chart
-	cl, _, err := loadAndValidateChart(chart.LocalPath)
+	cl, loadedChart, err := loadAndValidateChart(chart.LocalPath)
 	if err != nil {
 		return err
+	}
+
+	if chart.Version != "" && chart.Version != loadedChart.Metadata.Version {
+		// this is important as deploy will use teh chart version to find the chart tarball location
+		return fmt.Errorf("expected chart version %s does not match the actual chart metadata version %s", chart.Version, loadedChart.Metadata.Version)
 	}
 
 	// Handle the chart directory or tarball
