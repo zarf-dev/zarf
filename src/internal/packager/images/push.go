@@ -57,7 +57,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
 		var registryRef registry.Reference
-		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
+		// Include tunnel connection in retry loop in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if cfg.Cluster != nil {
 			var err error
