@@ -54,14 +54,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	}
 
 	err = retry.Do(func() error {
-		var registryRef registry.Reference
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
-		registryRef, err := parseRegistryReference(cfg.RegistryInfo.Address)
-		if err != nil {
-			return fmt.Errorf("failed to get reference from registry address: %w", err)
-		}
-
+		var registryRef registry.Reference
 		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if cfg.Cluster != nil {
@@ -77,6 +72,11 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 			if tunnel != nil {
 				defer tunnel.Close()
+			}
+		} else {
+			registryRef, err = parseRegistryReference(cfg.RegistryInfo.Address)
+			if err != nil {
+				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
 		}
 
