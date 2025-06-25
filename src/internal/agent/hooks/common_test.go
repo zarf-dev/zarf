@@ -46,12 +46,6 @@ func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, a
 func setupRegistry(t *testing.T, ctx context.Context, port int, artifacts []transform.Image, copyOpts oras.CopyOptions) (string, error) {
 	localUrl := testutil.SetupInMemoryRegistry(ctx, t, port)
 
-	localReg, err := remote.NewRegistry(localUrl)
-	localReg.PlainHTTP = true
-	if err != nil {
-		return "", err
-	}
-
 	for _, art := range artifacts {
 		populateLocalRegistry(t, ctx, localUrl, art, copyOpts)
 	}
