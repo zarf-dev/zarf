@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"oras.land/oras-go/v2"
 )
 
 func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRepo *flux.OCIRepository) *v1.AdmissionRequest {
@@ -343,15 +344,10 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			Path: "stefanprodan/manifests/podinfo",
 			Tag:  "6.9.0",
 		},
-		{
-			Host: "ghcr.io",
-			Path: "zarf-dev/images/hello-world",
-			Tag:  "latest",
-		},
 	}
 
 	ctx := context.Background()
-	url, err := setupRegistry(t, ctx, port, artifacts)
+	url, err := setupRegistry(t, ctx, port, artifacts, oras.DefaultCopyOptions)
 	require.NoError(t, err)
 
 	for _, tt := range tests {
