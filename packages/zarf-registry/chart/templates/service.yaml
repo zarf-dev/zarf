@@ -11,12 +11,12 @@ metadata:
 spec:
   {{- if eq .Values.service.ipv6Enabled "false" }}
   type: NodePort
-  ipFamilies:
-    - IPv4
+  # ipFamilies:
+  #   - IPv4
   {{- else }}
   type: ClusterIP
-  ipFamilies:
-    - IPv6
+  # ipFamilies:
+  #   - IPv6
   {{- end }}
   ipFamilyPolicy: PreferDualStack
   ports:

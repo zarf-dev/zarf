@@ -2,7 +2,7 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
-  allowNamespaceOverride: false
+  # allowNamespaceOverride: false
 
 components:
   - name: k3s

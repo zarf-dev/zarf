@@ -124,7 +124,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeClusterIP).
 				WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
-				WithIPFamilies(corev1.IPv6Protocol).
+				// WithIPFamilies(corev1.IPv6Protocol).
 				WithPorts(
 					v1ac.ServicePort().WithPort(int32(5000)),
 				).WithSelector(map[string]string{
