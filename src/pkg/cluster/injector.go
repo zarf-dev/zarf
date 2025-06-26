@@ -35,11 +35,25 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, nodeport int) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
+	if err != nil {
+		return err
+	}
+
+	// This service is created with the nodeport IP to ensure that the injector svc not created using the nodeport IP
+	svcHoldAC := v1ac.Service("hold-registry-nodeport", state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithType(corev1.ServiceTypeNodePort).
+			WithPorts(
+				v1ac.ServicePort().
+					WithPort(int32(5000)).
+					WithTargetPort(intstr.FromInt(5000)).
+					WithNodePort(int32(nodeport))))
+	_, err = c.Clientset.CoreV1().Services(*svcHoldAC.Namespace).Apply(ctx, svcHoldAC, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return err
 	}
@@ -110,6 +124,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return err
+	}
+
+	err = c.Clientset.CoreV1().Services(*svcHoldAC.Namespace).Delete(ctx, *svcHoldAC.Name, metav1.DeleteOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to delete held svc")
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
