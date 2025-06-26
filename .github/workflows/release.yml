@@ -154,8 +154,6 @@ jobs:
 
       - name: Setup release ENV vars
         run: |
-          echo TAG=$GITHUB_REF_NAME >> $GITHUB_ENV
-
           K8S_MODULES_VER=$(go list -f '{{.Version}}' -m k8s.io/client-go | sed 's/v//; s/\./ /g')
           echo K8S_MODULES_MAJOR_VER=$(expr $(echo "$K8S_MODULES_VER" | cut -d " " -f 1) + 1) >> $GITHUB_ENV
           echo K8S_MODULES_MINOR_VER=$(echo "$K8S_MODULES_VER" | cut -d " " -f 2) >> $GITHUB_ENV
