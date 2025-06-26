@@ -186,6 +186,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
+          GORELEASER_CURRENT_TAG: $GITHUB_REF_NAME
 
       - name: Report disk space on failure
         if: failure()
