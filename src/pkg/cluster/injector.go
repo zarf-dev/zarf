@@ -44,18 +44,26 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	// This service is created with the nodeport IP to ensure that the injector svc not created using the nodeport IP
-	svcHoldAC := v1ac.Service("hold-registry-nodeport", state.ZarfNamespaceName).
-		WithSpec(v1ac.ServiceSpec().
-			WithType(corev1.ServiceTypeNodePort).
-			WithPorts(
-				v1ac.ServicePort().
-					WithPort(int32(5000)).
-					WithTargetPort(intstr.FromInt(5000)).
-					WithNodePort(int32(nodeport))))
-	_, err = c.Clientset.CoreV1().Services(*svcHoldAC.Namespace).Apply(ctx, svcHoldAC, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-	if err != nil {
+	// If the Zarf registry is not already up then we save the Zarf registry port so that
+	registrySvc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})
+	if !kerrors.IsNotFound(err) {
 		return err
+	}
+	var tmpRegistrySvc *corev1.Service
+	if registrySvc == nil {
+		// This service is created with the nodeport IP to ensure that the injector svc not created using the nodeport IP
+		svcHoldAC := v1ac.Service("temp-registry-nodeport-placeholder", state.ZarfNamespaceName).
+			WithSpec(v1ac.ServiceSpec().
+				WithType(corev1.ServiceTypeNodePort).
+				WithPorts(
+					v1ac.ServicePort().
+						WithPort(int32(5000)).
+						WithTargetPort(intstr.FromInt(5000)).
+						WithNodePort(int32(nodeport))))
+		tmpRegistrySvc, err = c.Clientset.CoreV1().Services(*svcHoldAC.Namespace).Apply(ctx, svcHoldAC, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		if err != nil {
+			return err
+		}
 	}
 
 	l.Info("creating Zarf injector resources")
@@ -126,9 +134,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	err = c.Clientset.CoreV1().Services(*svcHoldAC.Namespace).Delete(ctx, *svcHoldAC.Name, metav1.DeleteOptions{})
-	if err != nil {
-		return fmt.Errorf("unable to delete held svc")
+	if tmpRegistrySvc != nil {
+		err = c.Clientset.CoreV1().Services(tmpRegistrySvc.Namespace).Delete(ctx, tmpRegistrySvc.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to delete temp nodeport svc")
+		}
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
