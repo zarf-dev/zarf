@@ -1,0 +1,15 @@
+[ req ]
+default_bits       = 4096
+prompt             = no
+default_md         = sha256
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+
+[ req_distinguished_name ]
+CN = 10.43.0.222
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+IP.1 = 10.43.0.222

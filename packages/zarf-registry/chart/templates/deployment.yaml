@@ -71,6 +71,10 @@ spec:
               value: "Registry Realm"
             - name: REGISTRY_AUTH_HTPASSWD_PATH
               value: "/etc/docker/registry/htpasswd"
+            - name: REGISTRY_HTTP_TLS_CERTIFICATE
+              value: "/certs/domain.crt"
+            - name:  REGISTRY_HTTP_TLS_KEY
+              value: "/certs/domain.key"
 {{- if .Values.persistence.enabled }}
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: "/var/lib/registry"
@@ -87,6 +91,11 @@ spec:
               mountPath: /var/lib/registry/
             - name: config
               mountPath: "/etc/docker/registry"
+{{- if .Values.tls.enabled }}
+            - mountPath: "/certs"
+              name: tls-certs
+              readOnly: true
+{{- end }}
 {{- if .Values.caBundle }}
             - mountPath: /etc/ssl/certs/ca-certificates.crt
               name: {{ template "docker-registry.fullname" . }}-ca-bundle
@@ -141,4 +150,9 @@ spec:
         - name: {{ template "docker-registry.fullname" . }}-ca-bundle
           configMap:
             name: {{ template "docker-registry.fullname" . }}-ca-bundle
+{{- end }}
+{{- if .Values.tls.enabled }}
+        - name: tls-certs
+          secret:
+            secretName: {{ include "docker-registry.fullname" . }}-tls
 {{- end }}

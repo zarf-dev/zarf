@@ -61,6 +61,41 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
 
+tls:
+  enabled: true
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIE2zCCAsOgAwIBAgIUTpSv/G+rV4Vgw64IG+lC3RMqh8cwDQYJKoZIhvcNAQEL
+    BQAwFjEUMBIGA1UEAwwLMTAuNDMuMC4yMjIwHhcNMjUwNjIzMTgzNTA4WhcNMjYw
+    NjIzMTgzNTA4WjAWMRQwEgYDVQQDDAsxMC40My4wLjIyMjCCAiIwDQYJKoZIhvcN
+    AQEBBQADggIPADCCAgoCggIBAO0+aNkgO/5MkGs0QFijL4dz59KCCBzJcgrB4fd8
+    2xEQ62sGYLJH00+fwTsyQ3cOJxjGrzQ/T7SMolMAxWUnkGmJt09VdbeHNx5IkaGt
+    R/96TTTi/OfuttS9fokYbABN8mtFvcobNe5OhPOYvlUnctezyp3RTcolAQT8z1z1
+    BKDzPpyOxA0TTFjAMfgCVxA9ma71JoUJnRD8jXsexbB0tBrHpShVmtcusYFNDurh
+    EUy5+4o8lquarbtxMpMm2zYoesEqjL81/MvtAPpoS4wGQayWe5kPcfr4ZSAmi+1T
+    nN9NR0W3Pk65rDzkjWxwxN/xALSdyfvBLMLHA9zH/YQ0XiHyzRzrwPPKudRySwpR
+    KZs+0ZAyJEHOKUmlCpDbsCtjSRdv0CqoKTQaKbwL31ZdMG0oQ2onExRfHfUZMVg9
+    RZI0s44w2CxTSeCX5LgvJDbgSViLQ/aq7Qhp6z4FTNv8IcIkGB0Te0y9kWhGxUhI
+    l4RK6pIE4UTgPHxF5LhcTJt9/2RzAokJ5CX7XrSFwcWIj2f9yDoNZW9RNM0Uwd6M
+    CPf4RhdQXa+7Z+ODD4xCGWNer5v2bKjiFC9to9rZgJoTHnGmQbXRnbnkqJwj6gv2
+    xQyBXpG5vO+hZ7Zq0u2dc6gfesi75VCWZQ2YrYTWFw2fnw0XZLeZUsTyHyBSUo32
+    xsLdAgMBAAGjITAfMB0GA1UdDgQWBBQv2hUrPrPHb6h6V8I14eCooEG1jjANBgkq
+    hkiG9w0BAQsFAAOCAgEACLWldsgccvKYHLO6WvVsC4CXkEJSLT/rcuRMhR7lLZst
+    o1TUumSX4WRslJ4eBj4ZUyvwhAlnrIOLteS3NvzxPgapEq39BjeNGdM2y3+7qhlC
+    EX5SVV/Q8E8U+Vby9EZ2BI67TP011rFkIY8f9AbjPe/k/M71CY8Y3kvoKnE/cVT/
+    UXQlvXKXAMJc4qn4CnTLVpXLY1NRozlupFctR80CeqDoRnRyVXRojGZgYP5Z/qQu
+    FBs+N4Ffng0ztwlwrxMJgRmBfumHl9uWtarc2+YD0l8mM86UaSkY0JH7p3MM97rT
+    YhU5klO1YDMzH05WFhRdUSMz74Is9WomBSSbJP8bEEw6dRPQYLS1rin9p53CrhSZ
+    O4EaCeZZ/+0Kolexr5Xwb7lxaUnJX9LwXfTmywJWjBlrgNk10/d/JFfu39Oy9FXi
+    frDY9UO7mOCcgoNbqTjOsCxe5Zirb7qDGyQbSvSsdTN1dCTDmKsqcpdHyFqepeix
+    4RW/iuO5EcowVenpdM53g8LKCVY9xYi6HX4vOk0VFS8wS23g12JnuP4uThQp6sgB
+    WsqbBhv3qBA8s46rvh7NHOHsPWrCR8t6JiV6Dwk7XhEMjJF31kAnIAb/RFEsuco1
+    ekfqIYXZq2FPOLOZXSde06D+sIWpc2f33YNKZcADRV3T4x9+zqWILJsT/8tYIKk=
+    -----END CERTIFICATE-----
+  ## FIXME add key here
+  key: |
+
+
 caBundle: ""
 ## One or more concatenated certificates
 ## Will be mounted to /etc/ssl/certs/ca-certificates.crt

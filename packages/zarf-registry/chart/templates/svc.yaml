@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zarf-registry
+  namespace: {{ .Values.namespace | default .Release.Namespace }}
+spec:
+  type: ClusterIP
+  clusterIP: 10.43.0.222
+  ports:
+    - port: 5000
+      targetPort: 5000
+  selector:
+    app: {{ template "docker-registry.name" . }}
+    release: {{ .Release.Name }}
