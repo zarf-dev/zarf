@@ -164,16 +164,16 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
-		err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
-		if err != nil && !kerrors.IsNotFound(err) {
-			return err
-		}
 	} else {
 		// IPv6 mode
 		err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
+	}
+	err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return err
 	}
 	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {

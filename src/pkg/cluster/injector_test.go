@@ -32,7 +32,7 @@ func TestInjectorInIPv4Cluster(t *testing.T) {
 }
 
 func TestInjectorInIPv6Cluster(t *testing.T) {
-	testInjector(t, false)
+	testInjector(t, true)
 }
 
 func testInjector(t *testing.T, ipv6Enabled bool) {
