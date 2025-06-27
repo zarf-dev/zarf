@@ -47,7 +47,8 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 		builtinMap := map[string]string{
 			"STORAGE_CLASS": s.StorageClass,
-			"IPV6_ENABLED":  fmt.Sprintf("%t", s.IPv6Enabled),
+			"IPV6_ENABLED":  fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6 || s.IPFamily == state.IPFamilyDualStack),
+			"HOST_NETWORK":  fmt.Sprintf("%t", s.HostNetwork),
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -73,10 +74,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"], err = state.LocalhostRegistryAddress(s.IPv6Enabled, config.ZarfSeedPort)
-			if err != nil {
-				return templateMap, err
-			}
+			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, config.ZarfSeedPort)
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err

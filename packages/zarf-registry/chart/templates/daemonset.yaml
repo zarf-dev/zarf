@@ -1,4 +1,4 @@
-{{ if eq .Values.service.ipv6Enabled "true" }}
+{{ if eq .Values.service.hostNetwork "true" }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -16,25 +16,13 @@ spec:
     spec:
       containers:
         - args:
+          {{ if eq .Values.service.ipv6Enabled "true" }}
             - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
-            - tcp:{{ template "docker-registry.fullname" . }}:5000
-          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
-          imagePullPolicy: IfNotPresent
-          name: zarf-registry-proxy
-          ports:
-            - containerPort: {{ .Values.service.nodePort }}
-          resources:
-            limits:
-              cpu: 100m
-              memory: 200Mi
-            requests:
-              cpu: 100m
-              memory: 200Mi
-
-      containers:
-        - args:
+            - tcp6:{{ template "docker-registry.fullname" . }}:5000
+          {{- else }}
             - tcp4-listen:{{ .Values.service.nodePort }},bind=127.0.0.1,reuseaddr,fork
-            - tcp:{{ template "docker-registry.fullname" . }}:5000
+            - tcp4:{{ template "docker-registry.fullname" . }}:5000
+          {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy

@@ -37,11 +37,11 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useHostNetwork bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
-	err := c.StopInjection(ctx)
+	err := c.StopInjection(ctx, useHostNetwork)
 	if err != nil {
 		return err
 	}
@@ -80,12 +80,8 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	clusterState, err := c.LoadState(ctx)
-	if err != nil {
-		return err
-	}
 	var zarfSeedPort int32
-	if !clusterState.IPv6Enabled {
+	if !useHostNetwork {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -151,14 +147,10 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 }
 
 // StopInjection handles cleanup once the seed registry is up.
-func (c *Cluster) StopInjection(ctx context.Context) error {
+func (c *Cluster) StopInjection(ctx context.Context, useHostNetwork bool) error {
 	start := time.Now()
 	l := logger.From(ctx)
-	clusterState, err := c.LoadState(ctx)
-	if err != nil {
-		return err
-	}
-	if !clusterState.IPv6Enabled {
+	if !useHostNetwork {
 		l.Debug("deleting injector resources")
 		err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
@@ -175,7 +167,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 			return err
 		}
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}

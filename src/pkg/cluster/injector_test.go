@@ -27,16 +27,16 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
-func TestInjectorInIPv4Cluster(t *testing.T) {
+func TestInjectorNodeport(t *testing.T) {
 	testInjector(t, false)
 }
 
-func TestInjectorInIPv6Cluster(t *testing.T) {
+func TestInjectorHostNetwork(t *testing.T) {
 	testInjector(t, false)
 }
 
-func testInjector(t *testing.T, ipv6Enabled bool) {
-	zarfState := fmt.Sprintf(`{"ipv6Enabled": %t}`, ipv6Enabled)
+func testInjector(t *testing.T, useHostNetwork bool) {
+	zarfState := fmt.Sprintf(`{"ipv6Enabled": %t}`, useHostNetwork)
 	ctx := context.Background()
 	cs := fake.NewClientset()
 	c := &Cluster{
@@ -115,7 +115,7 @@ func testInjector(t *testing.T, ipv6Enabled bool) {
 	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	err = c.StopInjection(ctx)
+	err = c.StopInjection(ctx, useHostNetwork)
 	require.NoError(t, err)
 
 	for range 2 {
@@ -129,10 +129,10 @@ func testInjector(t *testing.T, ipv6Enabled bool) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil)
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, false)
 		require.NoError(t, err)
 
-		if !ipv6Enabled {
+		if !useHostNetwork {
 			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 			require.NoError(t, err)
 			require.Len(t, podList.Items, 1)
@@ -148,7 +148,7 @@ func testInjector(t *testing.T, ipv6Enabled bool) {
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
 		var expectedData string
-		if ipv6Enabled {
+		if useHostNetwork {
 			expectedData = "expected-injection-service-IPv6.json"
 		} else {
 			expectedData = "expected-injection-service-IPv4.json"
@@ -171,7 +171,7 @@ func testInjector(t *testing.T, ipv6Enabled bool) {
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 	}
 
-	err = c.StopInjection(ctx)
+	err = c.StopInjection(ctx, useHostNetwork)
 	require.NoError(t, err)
 
 	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})

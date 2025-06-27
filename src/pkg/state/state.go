@@ -49,6 +49,16 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
+// IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
+type IPFamily string
+
+// All the different IP family options for a Zarf deployment
+const (
+	IPFamilyIPv4      = "ipv4"
+	IPFamilyIPv6      = "ipv6"
+	IPFamilyDualStack = "dual"
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -78,8 +88,9 @@ type State struct {
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
-	// Specify if IPv6 mode is going to be used for deploying the internal registry
-	IPv6Enabled bool `json:"ipv6Enabled"`
+	// The IP family of the cluster, can be ipv4, ipv6, or dual
+	IPFamily    IPFamily `json:"ipFamily,omitempty"`
+	HostNetwork bool     `json:"hostNetwork,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 
@@ -203,7 +214,7 @@ func (ri RegistryInfo) IsInternal() bool {
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues(ipv6Enabled bool) error {
+func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
@@ -212,11 +223,7 @@ func (ri *RegistryInfo) FillInEmptyValues(ipv6Enabled bool) error {
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
-		ri.Address, err = LocalhostRegistryAddress(ipv6Enabled, ri.NodePort)
-		if err != nil {
-			return err
-		}
+		ri.Address = LocalhostRegistryAddress(ipFamily, ri.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -266,7 +273,7 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues(false)
+	err = state.RegistryInfo.FillInEmptyValues(IPFamilyDualStack)
 	if err != nil {
 		return nil, err
 	}
@@ -430,9 +437,9 @@ type InstalledChart struct {
 }
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
-func LocalhostRegistryAddress(ipv6Enabled bool, nodePort int) (string, error) {
-	if ipv6Enabled {
-		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort), nil
+func LocalhostRegistryAddress(ipFamily IPFamily, nodePort int) string {
+	if ipFamily == IPFamilyIPv4 {
+		return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
 	}
-	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort), nil
+	return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
 }

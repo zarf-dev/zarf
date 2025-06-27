@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -155,8 +156,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// Specify if IPv6 mode is going to be used for deploying the internal registry
-	IPv6Enabled bool
+	// HostNetwork determines if Zarf uses the nodeport or host network daemonset solution
+	HostNetwork bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -206,6 +207,13 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 			return err
 		}
 		s.AgentTLS = agentTLS
+
+		ipFamily, err := c.GetIPFamily(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+		}
+		s.IPFamily = ipFamily
+		s.HostNetwork = opts.HostNetwork
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -260,7 +268,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 			return err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(opts.IPv6Enabled)
+		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
 		if err != nil {
 			return err
 		}
@@ -294,8 +302,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 	if opts.StorageClass != "" {
 		s.StorageClass = opts.StorageClass
 	}
-
-	s.IPv6Enabled = opts.IPv6Enabled
 
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
@@ -345,4 +351,52 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}
 	return nil
+}
+
+// GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
+// FIXME add unit tests
+func (c *Cluster) GetIPFamily(ctx context.Context) (state.IPFamily, error) {
+	nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get k8s nodes: %w", err)
+	}
+
+	if len(nodes.Items) == 0 {
+		return "", fmt.Errorf("no nodes found")
+	}
+
+	// Use the first node to determine the IP family
+	node := nodes.Items[0]
+	podCIDRs := node.Spec.PodCIDRs
+
+	// Fallback to PodCIDR if PodCIDRs is empty
+	if len(podCIDRs) == 0 {
+		if node.Spec.PodCIDR == "" {
+			return "", fmt.Errorf("no podCIDRs found for node %s", node.Name)
+		}
+		podCIDRs = []string{node.Spec.PodCIDR}
+	}
+
+	hasIPv4 := false
+	hasIPv6 := false
+
+	for _, cidr := range podCIDRs {
+		ip, _, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return "", fmt.Errorf("unable to scan pod cidr %s: %w", cidr, err)
+		}
+
+		if ip.To4() != nil {
+			hasIPv4 = true
+		} else {
+			hasIPv6 = true
+		}
+	}
+
+	if hasIPv4 && hasIPv6 {
+		return state.IPFamilyDualStack, nil
+	} else if hasIPv6 {
+		return state.IPFamilyIPv6, nil
+	}
+	return state.IPFamilyIPv4, nil
 }

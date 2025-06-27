@@ -13,6 +13,7 @@ proxy:
 
 service:
   ipv6Enabled: "false"
+  hostNetwork: "false"
   name: registry
   type: NodePort
   port: 5000

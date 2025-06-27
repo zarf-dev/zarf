@@ -87,19 +87,19 @@ func TestGetSanitizedTemplateMap(t *testing.T) {
 func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 	tests := []struct {
 		name                    string
-		ipv6Enabled             bool
+		IPFamily                state.IPFamily
 		expectedRegistryAddress string
 		expectedIPv6Enabled     string
 	}{
 		{
 			name:                    "IPv4",
-			ipv6Enabled:             false,
+			IPFamily:                state.IPFamilyIPv4,
 			expectedRegistryAddress: "127.0.0.1:31997",
 			expectedIPv6Enabled:     "false",
 		},
 		{
 			name:                    "IPv6",
-			ipv6Enabled:             true,
+			IPFamily:                state.IPFamilyIPv6,
 			expectedRegistryAddress: "[::1]:31997",
 			expectedIPv6Enabled:     "true",
 		},
@@ -112,10 +112,11 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 					Address:  test.expectedRegistryAddress,
 					NodePort: 31997,
 				},
-				IPv6Enabled: test.ipv6Enabled,
+				IPFamily: test.IPFamily,
 			}
 			templateMap, err := GetZarfTemplates(context.Background(), "zarf-seed-registry", &state)
 			require.NoError(t, err)
+			// FIXME add hostport
 			require.Equal(t, test.expectedRegistryAddress, templateMap["###ZARF_SEED_REGISTRY###"].Value)
 			require.Equal(t, test.expectedIPv6Enabled, templateMap["###ZARF_IPV6_ENABLED###"].Value)
 			require.NotEmpty(t, templateMap["###ZARF_HTPASSWD###"].Value)

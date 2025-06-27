@@ -26,6 +26,7 @@ secrets:
 service:
   ipv6Enabled: "###ZARF_IPV6_ENABLED###"
   nodePort: "###ZARF_NODEPORT###"
+  hostNetwork: "###ZARF_HOST_NETWORK###"
 
 resources:
   requests:

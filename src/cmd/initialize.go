@@ -54,7 +54,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
-	cmd.Flags().BoolVar(&pkgConfig.InitOpts.IPv6Enabled, "ipv6", false, lang.CmdInitFlagIPv6Enabled)
+	cmd.Flags().BoolVar(&pkgConfig.InitOpts.HostNetwork, "host-network", false, "uses the host-network solution")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -141,7 +141,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
-		IPv6Enabled:            pkgConfig.InitOpts.IPv6Enabled,
+		HostNetwork:            pkgConfig.InitOpts.HostNetwork,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)

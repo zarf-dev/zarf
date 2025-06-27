@@ -5,9 +5,9 @@ metadata:
   # allowNamespaceOverride: false
 
 components:
-  - name: k3s
-    import:
-      path: packages/distros/k3s
+    # - name: k3s
+    #   import:
+    #     path: packages/distros/k3s
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
