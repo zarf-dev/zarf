@@ -13,10 +13,13 @@ import (
 	"sort"
 	"time"
 
+	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/file"
 )
@@ -26,10 +29,7 @@ const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
 func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, concurrency int) (err error) {
-	logger.From(ctx).Info("pushing package to registry",
-		"destination", r.OrasRemote.Repo().Reference.String(),
-		"architecture", pkgLayout.Pkg.Build.Architecture)
-
+	start := time.Now()
 	if concurrency == 0 {
 		concurrency = DefaultConcurrency
 	}
@@ -91,15 +91,24 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
-	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), r.OrasRemote.Repo(), "", copyOpts)
+	totalSize := oci.SumDescsSize(descs) + root.Size + manifestConfigDesc.Size
+	logger.From(ctx).Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+		"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+
+	trackedRemote := images.NewTrackedTarget(r.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()))
+	trackedRemote.StartReporting(ctx)
+	defer trackedRemote.StopReporting()
+	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
 	if err != nil {
 		return err
 	}
 
-	err = r.OrasRemote.UpdateIndex(ctx, r.OrasRemote.Repo().Reference.Reference, publishedDesc)
+	err = r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
 	if err != nil {
 		return err
 	}
+	logger.From(ctx).Info("completed package publish", "destination", r.Repo().Reference.String(),
+		"duration", time.Since(start).Round(time.Millisecond*100))
 
 	return nil
 }
