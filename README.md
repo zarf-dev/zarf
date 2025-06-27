@@ -73,7 +73,7 @@ Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/de
 
 ## 🫶 Our Community
 
-Join us on the [Kubernetes Slack](https://kubernetes.slack.com/) in the [_#zarf_](https://kubernetes.slack.com/archives/C03B6BJAUJ3) channel or the [_#zarf-dev_](https://kubernetes.slack.com/archives/C03BP9Z3CMA) channel! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
+Join us in our [Community](./COMMUNITY.md) spaces! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 
@@ -99,7 +99,7 @@ To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.de
 We would also like to thank the following awesome libraries and projects without which Zarf would not be possible!
 
 [![pterm/pterm](https://img.shields.io/badge/pterm%2Fpterm-007d9c?logo=go&logoColor=white)](https://github.com/pterm/pterm)
-[![mholt/archiver](https://img.shields.io/badge/mholt%2Farchiver-007d9c?logo=go&logoColor=white)](https://github.com/mholt/archiver)
+[![mholt/archives](https://img.shields.io/badge/mholt%2Farchiver-007d9c?logo=go&logoColor=white)](https://github.com/mholt/archives)
 [![spf13/cobra](https://img.shields.io/badge/spf13%2Fcobra-007d9c?logo=go&logoColor=white)](https://github.com/spf13/cobra)
 [![go-git/go-git](https://img.shields.io/badge/go--git%2Fgo--git-007d9c?logo=go&logoColor=white)](https://github.com/go-git/go-git)
 [![sigstore/cosign](https://img.shields.io/badge/sigstore%2Fcosign-2a1e71?logo=linuxfoundation&logoColor=white)](https://github.com/sigstore/cosign)

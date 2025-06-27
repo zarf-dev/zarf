@@ -34,13 +34,13 @@ import (
 
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // Use same default as Helm CLI does.
 const maxHelmHistory = 10
 
-type InstallUpgradeOpts struct {
+// InstallUpgradeOptions provide options for the Helm install/upgrade operation
+type InstallUpgradeOptions struct {
 	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool
 	// VariableConfig is used to template the variables in the chart
@@ -57,7 +57,7 @@ type InstallUpgradeOpts struct {
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
-func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOpts) (types.ConnectStrings, string, error) {
+func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values, opts InstallUpgradeOptions) (state.ConnectStrings, string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	source := zarfChart.URL
@@ -124,7 +124,10 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", opts.Retries, err, removeMsg)
 
-		releases, _ := histClient.Run(zarfChart.ReleaseName)
+		releases, err := histClient.Run(zarfChart.ReleaseName)
+		if err != nil {
+			return nil, "", errors.Join(err, installErr)
+		}
 		previouslyDeployedVersion := 0
 
 		// Check for previous releases that successfully deployed
@@ -185,7 +188,7 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOpts) error {
+func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 	l.Debug("updating values for helm release", "name", chart.ReleaseName)
 
@@ -367,7 +370,11 @@ func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 
-		rawData, manifestModified, _ := handleDeprecations(rawData, *kubeGitVersion)
+		rawData, manifestModified, err := handleDeprecations(rawData, *kubeGitVersion)
+		if err != nil {
+			// avoid returning the err here in case pluto uses an invalid semver
+			logger.From(ctx).Error("unable to update deprecated resource", "name", resource.Name, "err", err.Error())
+		}
 		manifestContent, err := yaml.Marshal(rawData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal raw manifest after deprecation check: %w", err)

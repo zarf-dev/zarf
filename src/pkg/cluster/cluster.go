@@ -13,11 +13,9 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -150,11 +148,11 @@ type InitStateOptions struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
-	GitServer types.GitServerInfo
+	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
-	RegistryInfo types.RegistryInfo
+	RegistryInfo state.RegistryInfo
 	// Information about the artifact registry Zarf is going to be using
-	ArtifactServer types.ArtifactServerInfo
+	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
 }
@@ -201,7 +199,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 		}
 
 		// Setup zarf agent PKI
-		agentTLS, err := pki.GeneratePKI(config.ZarfAgentHost)
+		agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
 		if err != nil {
 			return err
 		}

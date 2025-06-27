@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 type registryOptions struct {
@@ -92,6 +91,8 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
 
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 
@@ -231,7 +232,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
 	authOption := images.WithPushAuth(s.RegistryInfo)
 

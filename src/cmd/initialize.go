@@ -14,15 +14,14 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -45,8 +44,8 @@ func newInitCommand() *cobra.Command {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, types.ZarfRegistryPushUser)
+	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
+	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
@@ -98,17 +97,10 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	// Continue running package deploy for all components like any other package
-	initPackageName := sources.GetInitPackageName()
-	pkgConfig.PkgOpts.PackageSource = initPackageName
+	initPackageName := config.GetInitPackageName()
 
 	// Try to use an init-package in the executable directory if none exist in current working directory
-	var err error
-	if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
-		return err
-	}
-
-	src, err := sources.New(ctx, &pkgConfig.PkgOpts)
+	packageSource, err := findInitPackage(cmd.Context(), initPackageName)
 	if err != nil {
 		return err
 	}
@@ -117,18 +109,44 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src), packager.WithContext(ctx))
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	defer pkgClient.ClearTempPaths()
 
-	err = pkgClient.Deploy(ctx)
+	loadOpt := packager.LoadOptions{
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+		CachePath:               cachePath,
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	opts := packager.DeployOptions{
+		GitServer:              pkgConfig.InitOpts.GitServer,
+		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
+		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,
+		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
+		Timeout:                pkgConfig.DeployOpts.Timeout,
+		Retries:                pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		RemoteOptions:          defaultRemoteOptions(),
+	}
+	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return err
 	}
-	// Since the new logger ignores pterm output the credential table is no longer printed on init.
-	// This note is the intended replacement, rather than printing creds by default.
+
 	logger.From(ctx).Info("init complete. To get credentials for Zarf deployed services run `zarf tools get-creds`")
 	return nil
 }
@@ -150,7 +168,7 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	absCachePath, err := config.GetAbsCachePath()
+	absCachePath, err := getCachePath(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -174,14 +192,14 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(ctx, absCachePath)
+	err = downloadInitPackage(ctx, absCachePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to download the init package: %w", err)
 	}
-	return downloadCacheTarget, nil
+	return filepath.Join(absCachePath, initPackageName), nil
 }
 
-func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
+func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
@@ -193,20 +211,34 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, er
 		Message: lang.CmdInitPullConfirm,
 	}
 	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-		return "", fmt.Errorf("confirm download canceled: %w", err)
+		return fmt.Errorf("confirm download canceled: %w", err)
 	}
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
+		// Add the oci:// prefix
+		url = fmt.Sprintf("oci://%s", url)
+
+		cachePath, err := getCachePath(ctx)
 		if err != nil {
-			return "", err
+			return err
 		}
-		source := &sources.OCISource{Remote: remote}
-		return source.Collect(ctx, cacheDirectory)
+
+		pullOptions := packager.PullOptions{
+			Architecture:   config.GetArch(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			CachePath:      cachePath,
+		}
+
+		_, err = packager.Pull(ctx, url, cacheDirectory, pullOptions)
+		if err != nil {
+			return fmt.Errorf("unable to download the init package: %w", err)
+		}
+
+		return nil
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return "", errors.New(lang.CmdInitPullErrManual)
+	return errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {

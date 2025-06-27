@@ -8,11 +8,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestListConnections(t *testing.T) {
@@ -40,8 +39,8 @@ func TestListConnections(t *testing.T) {
 
 	connections, err := c.ListConnections(context.Background())
 	require.NoError(t, err)
-	expectedConnections := types.ConnectStrings{
-		"connect name": types.ConnectString{
+	expectedConnections := state.ConnectStrings{
+		"connect name": state.ConnectString{
 			Description: "description",
 			URL:         "url",
 		},

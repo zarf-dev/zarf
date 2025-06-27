@@ -92,24 +92,6 @@ func AddImageNameAnnotation(ociPath string, referenceToDigest map[string]string)
 	return os.WriteFile(indexPath, b, helpers.ReadWriteUser)
 }
 
-// OnlyHasImageLayers checks if all layers in the v1.Image are known image layers.
-func OnlyHasImageLayers(img v1.Image) (bool, error) {
-	layers, err := img.Layers()
-	if err != nil {
-		return false, err
-	}
-	for _, layer := range layers {
-		mediatype, err := layer.MediaType()
-		if err != nil {
-			return false, err
-		}
-		if !mediatype.IsLayer() {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
 // SortImagesIndex sorts the index.json by digest.
 func SortImagesIndex(ociPath string) error {
 	indexPath := filepath.Join(ociPath, "index.json")

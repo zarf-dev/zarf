@@ -7,6 +7,7 @@ package images
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -41,7 +42,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
-	registryURL := cfg.RegistryInfo.Address
+
 	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
 	if err != nil {
 		return err
@@ -52,41 +53,52 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	// The user may or may not have a cluster available, if it's available then use it to connect to the registry
-	c, _ := cluster.New(ctx)
 	err = retry.Do(func() error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
-
-		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
+		var registryRef registry.Reference
+		// Include tunnel connection in retry loop in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
-		if c != nil {
+		if cfg.Cluster != nil {
 			var err error
-			registryURL, tunnel, err = c.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+			var registryURL string
+			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
 			if err != nil {
 				return err
 			}
+			registryRef, err = parseRegistryReference(registryURL)
+			if err != nil {
+				return fmt.Errorf("failed to get reference from registry from internal registry: %w", err)
+			}
 			if tunnel != nil {
 				defer tunnel.Close()
+			}
+		} else {
+			registryRef, err = parseRegistryReference(cfg.RegistryInfo.Address)
+			if err != nil {
+				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
 		}
 
 		client := &auth.Client{
 			Client: orasRetry.DefaultClient,
 			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(registryURL, auth.Credential{
+			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
 				Username: cfg.RegistryInfo.PushUsername,
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
 
-		client.Client.Transport = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		if err != nil {
+			return err
+		}
 
 		plainHTTP := cfg.PlainHTTP
 
-		if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
+		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+			plainHTTP, err = shouldUsePlainHTTP(ctx, registryRef.Host(), client)
 			if err != nil {
 				return err
 			}
@@ -123,7 +135,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			l.Info("pushing image", "name", img)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, img)
+				offlineNameCRC, err := transform.ImageTransformHost(registryRef.String(), img)
 				if err != nil {
 					return err
 				}
@@ -145,7 +157,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
 			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img)
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryRef.String(), img)
 			if err != nil {
 				return err
 			}
@@ -230,4 +242,16 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
 	return nil
+}
+
+// parse registry reference returns a registry.Reference with only the host if the registry URL only contains a host
+// otherwise calls registry.ParseReference()
+func parseRegistryReference(registryURL string) (registry.Reference, error) {
+	parts := strings.SplitN(registryURL, "/", 2)
+	if len(parts) == 1 {
+		return registry.Reference{
+			Registry: registryURL,
+		}, nil
+	}
+	return registry.ParseReference(registryURL)
 }

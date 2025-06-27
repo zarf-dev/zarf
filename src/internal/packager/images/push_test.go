@@ -5,13 +5,18 @@
 package images
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/registry"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
 
 func TestPush(t *testing.T) {
@@ -21,6 +26,7 @@ func TestPush(t *testing.T) {
 		SourceDirectory string
 		imageNames      []string
 		expectErr       bool
+		namespace       string
 	}{
 		{
 			name: "push local images oras",
@@ -48,13 +54,19 @@ func TestPush(t *testing.T) {
 				"hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 			},
 		},
+		{
+			name:            "push image to namespace",
+			SourceDirectory: "testdata/oras-oci-layout/images",
+			imageNames: []string{
+				"local-test:1.0.0",
+			},
+			namespace: "my-namespace",
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			// Push overwrites the index, this code sets it back directory
+			// Push overwrites the index, this code sets it back, this means we can't run these tests in parallel
 			idx, err := getIndexFromOCILayout(tc.SourceDirectory)
 			require.NoError(t, err)
 			defer func() {
@@ -65,8 +77,11 @@ func TestPush(t *testing.T) {
 			port, err := helpers.GetAvailablePort()
 			require.NoError(t, err)
 			address := testutil.SetupInMemoryRegistry(ctx, t, port)
+			if tc.namespace != "" {
+				address = fmt.Sprintf("%s/%s", address, tc.namespace)
+			}
 			imageList := []transform.Image{}
-			regInfo := types.RegistryInfo{
+			regInfo := state.RegistryInfo{
 				Address: address,
 			}
 			require.NoError(t, err)
@@ -92,6 +107,26 @@ func TestPush(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+
+			// Verify all images are in the repo
+			for _, image := range tc.imageNames {
+				checksumRef, err := transform.ImageTransformHost(address, image)
+				require.NoError(t, err)
+				verifyImageExists(ctx, t, checksumRef)
+				ref, err := transform.ImageTransformHostWithoutChecksum(address, image)
+				require.NoError(t, err)
+				verifyImageExists(ctx, t, ref)
+			}
 		})
 	}
+}
+
+func verifyImageExists(ctx context.Context, t *testing.T, ref string) {
+	repo := &orasRemote.Repository{}
+	var err error
+	repo.Reference, err = registry.ParseReference(ref)
+	require.NoError(t, err)
+	repo.PlainHTTP = true
+	_, err = oras.Resolve(ctx, repo, ref, oras.DefaultResolveOptions)
+	require.NoError(t, err)
 }
