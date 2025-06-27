@@ -34,6 +34,6 @@ components:
       path: packages/zarf-agent
 
   # (Optional) Adds a git server to the cluster
-  - name: git-server
-    import:
-      path: packages/gitea
+  # - name: git-server
+  #   import:
+  #     path: packages/gitea

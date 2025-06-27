@@ -17,10 +17,10 @@ spec:
       containers:
         - args:
           {{ if eq .Values.service.ipv6Enabled "true" }}
-            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - tcp6-listen:{{ .Values.service.nodePort }},reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
           {{- else }}
-            - tcp4-listen:{{ .Values.service.nodePort }},bind=127.0.0.1,reuseaddr,fork
+            - tcp4-listen:{{ .Values.service.nodePort }},reuseaddr,fork
             - tcp4:{{ template "docker-registry.fullname" . }}:5000
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
@@ -28,6 +28,8 @@ spec:
           name: zarf-registry-proxy
           ports:
             - containerPort: {{ .Values.service.nodePort }}
+              hostPort: {{ .Values.service.nodePort }}
+              hostIP: "::1"
           resources:
             limits:
               cpu: 100m
@@ -35,6 +37,4 @@ spec:
             requests:
               cpu: 100m
               memory: 200Mi
-      dnsPolicy: ClusterFirstWithHostNet
-      hostNetwork: true
 {{- end }}
