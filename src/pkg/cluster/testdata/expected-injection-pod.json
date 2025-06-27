@@ -98,6 +98,9 @@
       }
     ],
     "restartPolicy": "Never",
+    "nodeSelector": {
+      "kubernetes.io/arch": "amd64"
+    },
     "nodeName": "injection-node",
     "securityContext": {
       "runAsUser": 1000,
