@@ -55,6 +55,10 @@ linters:
         - name: if-return
         - name: increment-decrement
         - name: var-naming
+          arguments:
+            - [] # allowlist
+            - [] # blocklist
+            - [{skipPackageNameChecks: true}] # options map
         - name: var-declaration
         - name: package-comments
         - name: range
