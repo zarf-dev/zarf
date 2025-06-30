@@ -12,7 +12,7 @@ proxy:
     tag: 1.8.0.3
 
 service:
-  ipv6Enabled: "false"
+  ipv6Only: "false"
   hostNetwork: "false"
   name: registry
   type: NodePort

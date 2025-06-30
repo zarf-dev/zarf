@@ -116,9 +116,8 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 			}
 			templateMap, err := GetZarfTemplates(context.Background(), "zarf-seed-registry", &state)
 			require.NoError(t, err)
-			// FIXME add hostport
 			require.Equal(t, test.expectedRegistryAddress, templateMap["###ZARF_SEED_REGISTRY###"].Value)
-			require.Equal(t, test.expectedIPv6Enabled, templateMap["###ZARF_IPV6_ENABLED###"].Value)
+			require.Equal(t, test.expectedIPv6Enabled, templateMap["###ZARF_IPV6_ONLY###"].Value)
 			require.NotEmpty(t, templateMap["###ZARF_HTPASSWD###"].Value)
 		})
 	}

@@ -47,7 +47,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 		builtinMap := map[string]string{
 			"STORAGE_CLASS": s.StorageClass,
-			"IPV6_ENABLED":  fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6 || s.IPFamily == state.IPFamilyDualStack),
+			"IPV6_ONLY":     fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"HOST_NETWORK":  fmt.Sprintf("%t", s.HostNetwork),
 
 			// Registry info

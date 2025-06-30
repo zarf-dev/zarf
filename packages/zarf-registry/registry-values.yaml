@@ -24,7 +24,7 @@ secrets:
       secret: "###ZARF_REGISTRY_SECRET###"
 
 service:
-  ipv6Enabled: "###ZARF_IPV6_ENABLED###"
+  ipv6Only: "###ZARF_IPV6_ONLY###"
   nodePort: "###ZARF_NODEPORT###"
   hostNetwork: "###ZARF_HOST_NETWORK###"
 

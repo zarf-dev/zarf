@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - args:
-          {{ if eq .Values.service.ipv6Enabled "true" }}
+          {{ if eq .Values.service.ipv6Only "true" }}
             - tcp6-listen:{{ .Values.service.nodePort }},reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
           {{- else }}
@@ -28,8 +28,10 @@ spec:
           name: zarf-registry-proxy
           ports:
             - containerPort: {{ .Values.service.nodePort }}
+            {{ if ne .Values.service.ipv6Only "true" }}
               hostPort: {{ .Values.service.nodePort }}
-              hostIP: "::1"
+              hostIP: "127.0.0.1"
+            {{- end }}
           resources:
             limits:
               cpu: 100m
@@ -37,4 +39,9 @@ spec:
             requests:
               cpu: 100m
               memory: 200Mi
+    # IPV6 does not support rewriting packets to localhost so it needs to use host network over hostport
+    {{ if eq .Values.service.ipv6Only "true" }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+    {{- end }}
 {{- end }}
