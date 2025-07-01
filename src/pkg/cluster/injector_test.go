@@ -32,11 +32,10 @@ func TestInjectorNodeport(t *testing.T) {
 }
 
 func TestInjectorHostNetwork(t *testing.T) {
-	testInjector(t, false)
+	testInjector(t, true)
 }
 
 func testInjector(t *testing.T, useHostNetwork bool) {
-	zarfState := fmt.Sprintf(`{"ipv6Enabled": %t}`, useHostNetwork)
 	ctx := context.Background()
 	cs := fake.NewClientset()
 	c := &Cluster{
@@ -71,19 +70,6 @@ func testInjector(t *testing.T, useHostNetwork bool) {
 		return true, nil, nil
 	})
 
-	// Setup zarf-state Secret
-	zarfSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: state.ZarfStateSecretName,
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			state.ZarfStateDataKey: []byte(zarfState),
-		},
-	}
-	_, err := cs.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, zarfSecret, metav1.CreateOptions{})
-	require.NoError(t, err)
-
 	// Setup nodes and pods with images
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,7 +82,7 @@ func testInjector(t *testing.T, useHostNetwork bool) {
 			},
 		},
 	}
-	_, err = cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
+	_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
 	require.NoError(t, err)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -129,7 +115,8 @@ func testInjector(t *testing.T, useHostNetwork bool) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, false)
+		// FIXME
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, useHostNetwork, state.IPFamilyIPv4)
 		require.NoError(t, err)
 
 		if !useHostNetwork {

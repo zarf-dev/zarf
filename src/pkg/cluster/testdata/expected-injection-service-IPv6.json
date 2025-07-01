@@ -16,11 +16,7 @@
     "selector": {
       "app": "zarf-injector"
     },
-    "type": "ClusterIP",
-    "ipFamilies": [
-      "IPv6"
-    ],
-    "ipFamilyPolicy": "PreferDualStack"
+    "type": "ClusterIP"
   },
   "status": {
     "loadBalancer": {}

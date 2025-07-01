@@ -37,11 +37,11 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useHostNetwork bool) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useregistryProxy bool, ipfamily state.IPFamily) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
-	err := c.StopInjection(ctx, useHostNetwork)
+	err := c.StopInjection(ctx, useregistryProxy)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	var zarfSeedPort int32
-	if !useHostNetwork {
+	if !useregistryProxy {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -115,12 +115,9 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			return err
 		}
 	} else {
-		// IPv6 mode
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeClusterIP).
-				WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
-				// WithIPFamilies(corev1.IPv6Protocol).
 				WithPorts(
 					v1ac.ServicePort().WithPort(int32(5000)),
 				).WithSelector(map[string]string{
@@ -130,7 +127,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return err
 		}
-		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq)
+		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq, ipfamily)
 		ds, err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Apply(ctx, dsSpec, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("error creating daemonset in cluster: %w", err)
@@ -161,8 +158,11 @@ func (c *Cluster) StopInjection(ctx context.Context, useHostNetwork bool) error 
 			return err
 		}
 	} else {
-		// IPv6 mode
 		err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return err
+		}
+		err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
@@ -391,11 +391,12 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 			"app":      "zarf-injector",
 			AgentLabel: "ignore",
 		}).
-		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq))
+		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000)))
 	return pod
 }
 
-func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodSpecApplyConfiguration {
+func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image string, payloadCmNames []string,
+	shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, containerPorts *v1ac.ContainerPortApplyConfiguration) *v1ac.PodSpecApplyConfiguration {
 	userID := int64(1000)
 	groupID := int64(2000)
 	fsGroupID := int64(2000)
@@ -421,7 +422,9 @@ func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image str
 					WithImagePullPolicy(corev1.PullIfNotPresent).
 					WithWorkingDir("/zarf-init").
 					WithCommand("/zarf-init/zarf-injector", shasum).
-					WithPorts(v1ac.ContainerPort().WithContainerPort(5000)).
+					WithPorts(
+						containerPorts,
+					).
 					WithVolumeMounts(volumeMounts...).
 					WithSecurityContext(
 						v1ac.SecurityContext().
@@ -447,9 +450,15 @@ func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image str
 	return podSpec
 }
 
-func buildInjectionDaemonset(image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1aa.DaemonSetApplyConfiguration {
-	podSpec := buildPodSpec("", corev1.RestartPolicyAlways, image, payloadCmNames, shasum, resReq).
-		WithHostNetwork(true)
+func buildInjectionDaemonset(image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, ipFamily state.IPFamily) *v1aa.DaemonSetApplyConfiguration {
+	var podSpec *v1ac.PodSpecApplyConfiguration
+	if ipFamily == state.IPFamilyIPv6 {
+		podSpec = buildPodSpec("", corev1.RestartPolicyAlways, image, payloadCmNames, shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000)).
+			WithHostNetwork(true)
+	} else {
+		podSpec = buildPodSpec("", corev1.RestartPolicyAlways, image, payloadCmNames,
+			shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000).WithHostIP("127.0.0.1").WithHostPort(5000))
+	}
 	return v1aa.DaemonSet("zarf-injector", state.ZarfNamespaceName).
 		WithSpec(v1aa.DaemonSetSpec().
 			WithSelector(v1am.LabelSelector().
