@@ -57,6 +57,7 @@ const (
 	IPFamilyIPv4      = "ipv4"
 	IPFamilyIPv6      = "ipv6"
 	IPFamilyDualStack = "dual"
+	IPFamilyUnknown   = "unknown"
 )
 
 // Values during setup of the initial zarf state
