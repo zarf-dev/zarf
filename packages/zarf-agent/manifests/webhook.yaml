@@ -91,6 +91,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-flux-helmrepo.zarf.dev
     namespaceSelector:
       matchExpressions:
