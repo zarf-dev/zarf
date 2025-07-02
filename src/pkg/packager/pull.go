@@ -103,7 +103,7 @@ type pullOCIOptions struct {
 	RemoteOptions
 }
 
-func pullOCI(ctx context.Context, opts pullOCIOptions) (_ *layout.PackageLayout, _ error) {
+func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
