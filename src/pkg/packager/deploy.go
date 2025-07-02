@@ -595,6 +595,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	if s == nil {
 		return nil, errors.New("cluster state should not be nil")
 	}
+	s.Architecture = pkg.Metadata.Architecture
 	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
 		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
 			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
