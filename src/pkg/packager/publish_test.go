@@ -44,18 +44,13 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Architecture:  architecture,
 		Filter:        filters.Empty(),
 		RemoteOptions: defaultTestRemoteOptions(),
+		PublicKeyPath: publicKeyPath,
 		CachePath:     cachePath,
 	}
-	_, tarPath, err := pullOCI(context.Background(), pullOCIOpts)
+	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
 
-	layoutActual, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{
-		Filter:        filters.Empty(),
-		PublicKeyPath: publicKeyPath,
-	})
-	require.NoError(t, err)
-
-	return layoutActual
+	return pkgLayout
 }
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {

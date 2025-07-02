@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -72,8 +71,8 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	isPartial := false
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
+	var pkgLayout *layout.PackageLayout
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
@@ -88,10 +87,18 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			CachePath:      opts.CachePath,
 		}
 
-		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
+		pkgLayout, err = pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
+		// OCI is a special case since it doesn't create a tar unless the tar file is output
+		if opts.Output != "" {
+			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return pkgLayout, nil
 	case "http", "https":
 		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
 		if err != nil {
@@ -114,20 +121,18 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	// Verify checksum if provided
-	if srcType != "oci" && opts.Shasum != "" {
+	if opts.Shasum != "" {
 		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
-	// Load package layout
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
 		Filter:                  opts.Filter,
 	}
-	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
+	pkgLayout, err = layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -142,21 +147,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		dstFile, err := os.Create(tarPath)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			err = errors.Join(err, dstFile.Close())
-		}()
-		srcFile, err := os.Open(tmpPath)
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			err = errors.Join(err, srcFile.Close())
-		}()
-		_, err = io.Copy(dstFile, srcFile)
+		err = os.Rename(tmpPath, tarPath)
 		if err != nil {
 			return nil, err
 		}

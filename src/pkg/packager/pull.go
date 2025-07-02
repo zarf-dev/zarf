@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -25,7 +24,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -91,54 +90,45 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 }
 
 type pullOCIOptions struct {
-	Source         string
-	Directory      string
-	Shasum         string
-	Architecture   string
-	LayersSelector zoci.LayersSelector
-	Filter         filters.ComponentFilterStrategy
-	OCIConcurrency int
-	CachePath      string
+	Source                  string
+	Directory               string
+	Shasum                  string
+	Architecture            string
+	LayersSelector          zoci.LayersSelector
+	Filter                  filters.ComponentFilterStrategy
+	OCIConcurrency          int
+	CachePath               string
+	PublicKeyPath           string
+	SkipSignatureValidation bool
 	RemoteOptions
 }
 
-func pullOCI(ctx context.Context, opts pullOCIOptions) (_ bool, _ string, err error) {
-	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-	if err != nil {
-		return false, "", err
-	}
-	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
-	}()
+func pullOCI(ctx context.Context, opts pullOCIOptions) (_ *layout.PackageLayout, _ error) {
 	if opts.Shasum != "" {
 		opts.Source = fmt.Sprintf("%s@sha256:%s", opts.Source, opts.Shasum)
 	}
 	cacheMod, err := zoci.GetOCICacheModifier(ctx, opts.CachePath)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 	platform := oci.PlatformForArch(opts.Architecture)
 	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 	desc, err := remote.ResolveRoot(ctx)
 	if err != nil {
-		return false, "", fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
+		return nil, fmt.Errorf("could not find package %s with architecture %s: %w", opts.Source, platform.Architecture, err)
 	}
 	isPartial := false
-	tarPath := filepath.Join(opts.Directory, "data.tar")
 	pkg, err := remote.FetchZarfYAML(ctx)
 	if err != nil {
-		return false, "", err
-	}
-	if !pkg.Metadata.Uncompressed {
-		tarPath = fmt.Sprintf("%s.zst", tarPath)
+		return nil, err
 	}
 	if supportsFiltering(desc.Platform) {
 		pkg.Components, err = opts.Filter.Apply(pkg)
 		if err != nil {
-			return false, "", err
+			return nil, err
 		}
 	}
 
@@ -146,30 +136,32 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (_ bool, _ string, err er
 	// this assembles the layers for the components - whether filtered above or not
 	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 
 	root, err := remote.FetchRoot(ctx)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
 	if len(root.Layers) != len(layersToPull) {
 		isPartial = true
 	}
 
-	_, err = remote.PullPackage(ctx, tmpDir, opts.OCIConcurrency, layersToPull...)
+	_, err = remote.PullPackage(ctx, opts.Directory, opts.OCIConcurrency, layersToPull...)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
-	allTheLayers, err := filepath.Glob(filepath.Join(tmpDir, "*"))
+	layoutOpts := layout.PackageLayoutOptions{
+		PublicKeyPath:           opts.PublicKeyPath,
+		SkipSignatureValidation: opts.SkipSignatureValidation,
+		IsPartial:               isPartial,
+		Filter:                  opts.Filter,
+	}
+	pkgLayout, err := layout.LoadFromDir(ctx, opts.Directory, layoutOpts)
 	if err != nil {
-		return false, "", err
+		return nil, err
 	}
-	err = archive.Compress(ctx, allTheLayers, tarPath, archive.CompressOpts{})
-	if err != nil {
-		return false, "", err
-	}
-	return isPartial, tarPath, nil
+	return pkgLayout, nil
 }
 
 func pullHTTP(ctx context.Context, src, tarDir, shasum string, insecureTLSSkipVerify bool) (string, error) {
