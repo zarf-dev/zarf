@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -17,7 +18,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, artifact transform.Image) {
+func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, artifact transform.Image, copyOpts oras.CopyOptions) {
 	localReg, err := remote.NewRegistry(localUrl)
 	require.NoError(t, err)
 
@@ -32,17 +33,17 @@ func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, a
 	dst, err := localReg.Repository(ctx, artifact.Path)
 	require.NoError(t, err)
 
-	_, err = oras.Copy(ctx, src, artifact.Tag, dst, artifact.Tag, oras.DefaultCopyOptions)
+	_, err = oras.Copy(ctx, src, artifact.Tag, dst, artifact.Tag, copyOpts)
 	require.NoError(t, err)
 
 	hashedTag, err := transform.ImageTransformHost(localUrl, fmt.Sprintf("%s/%s:%s", artifact.Host, artifact.Path, artifact.Tag))
 	require.NoError(t, err)
 
-	_, err = oras.Copy(ctx, src, artifact.Tag, dst, hashedTag, oras.DefaultCopyOptions)
+	_, err = oras.Copy(ctx, src, artifact.Tag, dst, hashedTag, copyOpts)
 	require.NoError(t, err)
 }
 
-func setupRegistry(t *testing.T, ctx context.Context, port int, artifacts []transform.Image) (string, error) {
+func setupRegistry(t *testing.T, ctx context.Context, port int, artifacts []transform.Image, copyOpts oras.CopyOptions) (string, error) {
 	localUrl := testutil.SetupInMemoryRegistry(ctx, t, port)
 
 	localReg, err := remote.NewRegistry(localUrl)
@@ -52,7 +53,7 @@ func setupRegistry(t *testing.T, ctx context.Context, port int, artifacts []tran
 	}
 
 	for _, art := range artifacts {
-		populateLocalRegistry(t, ctx, localUrl, art)
+		populateLocalRegistry(t, ctx, localUrl, art, copyOpts)
 	}
 
 	return localUrl, nil
@@ -63,6 +64,7 @@ type mediaTypeTest struct {
 	image    string
 	expected string
 	artifact []transform.Image
+	Opts     oras.CopyOptions
 }
 
 func TestConfigMediaTypes(t *testing.T) {
@@ -70,12 +72,19 @@ func TestConfigMediaTypes(t *testing.T) {
 	port, err := helpers.GetAvailablePort()
 	require.NoError(t, err)
 
+	linuxAmd64Opts := oras.DefaultCopyOptions
+	linuxAmd64Opts.WithTargetPlatform(&v1.Platform{
+		Architecture: "amd64",
+		OS:           "linux",
+	})
+
 	tests := []mediaTypeTest{
 		{
 			// https://oci.dag.dev/?image=ghcr.io%2Fstefanprodan%2Fmanifests%2Fpodinfo%3A6.9.0
 			name:     "flux manifest",
 			expected: "application/vnd.cncf.flux.config.v1+json",
 			image:    fmt.Sprintf("localhost:%d/stefanprodan/manifests/podinfo:6.9.0-zarf-2823281104", port),
+			Opts:     oras.DefaultCopyOptions,
 			artifact: []transform.Image{
 				{
 					Host: "ghcr.io",
@@ -89,6 +98,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			name:     "helm chart manifest",
 			expected: "application/vnd.cncf.helm.config.v1+json",
 			image:    fmt.Sprintf("localhost:%d/stefanprodan/charts/podinfo:6.9.0", port),
+			Opts:     oras.DefaultCopyOptions,
 			artifact: []transform.Image{
 				{
 					Host: "ghcr.io",
@@ -98,11 +108,11 @@ func TestConfigMediaTypes(t *testing.T) {
 			},
 		},
 		{
-			// docker images do not include a `.config.mediaType`
-			// https://oci.dag.dev/?image=ghcr.io%2Fstefanprodan%2Fpodinfo%3A6.9.0
+			//
 			name:     "docker image manifest",
-			expected: "",
+			expected: "application/vnd.oci.image.config.v1+json",
 			image:    fmt.Sprintf("localhost:%d/zarf-dev/images/hello-world:latest", port),
+			Opts:     linuxAmd64Opts,
 			artifact: []transform.Image{
 				{
 					Host: "ghcr.io",
@@ -118,7 +128,7 @@ func TestConfigMediaTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
-			url, err := setupRegistry(t, ctx, port, tt.artifact)
+			url, err := setupRegistry(t, ctx, port, tt.artifact, tt.Opts)
 			require.NoError(t, err)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
