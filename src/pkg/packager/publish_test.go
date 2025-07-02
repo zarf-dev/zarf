@@ -37,10 +37,8 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	t.Helper()
 
 	// Generate tmpdir and pull published package from local registry
-	tmpdir := t.TempDir()
 	pullOCIOpts := pullOCIOptions{
 		Source:        packageRef,
-		Directory:     tmpdir,
 		Architecture:  architecture,
 		Filter:        filters.Empty(),
 		RemoteOptions: defaultTestRemoteOptions(),

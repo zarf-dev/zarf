@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -91,7 +92,6 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 
 type pullOCIOptions struct {
 	Source                  string
-	Directory               string
 	Shasum                  string
 	Architecture            string
 	LayersSelector          zoci.LayersSelector
@@ -146,8 +146,11 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (_ *layout.PackageLayout,
 	if len(root.Layers) != len(layersToPull) {
 		isPartial = true
 	}
-
-	_, err = remote.PullPackage(ctx, opts.Directory, opts.OCIConcurrency, layersToPull...)
+	dirPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return nil, err
+	}
+	_, err = remote.PullPackage(ctx, dirPath, opts.OCIConcurrency, layersToPull...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +160,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (_ *layout.PackageLayout,
 		IsPartial:               isPartial,
 		Filter:                  opts.Filter,
 	}
-	pkgLayout, err := layout.LoadFromDir(ctx, opts.Directory, layoutOpts)
+	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {
 		return nil, err
 	}

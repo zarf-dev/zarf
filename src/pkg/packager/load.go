@@ -77,7 +77,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	case "oci":
 		ociOpts := pullOCIOptions{
 			Source:                  source,
-			Directory:               tmpDir,
 			PublicKeyPath:           opts.PublicKeyPath,
 			SkipSignatureValidation: opts.SkipSignatureValidation,
 			Shasum:                  opts.Shasum,
