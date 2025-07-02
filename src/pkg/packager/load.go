@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -147,7 +148,21 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
-		err = os.Rename(tmpPath, tarPath)
+		dstFile, err := os.Create(tarPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err = errors.Join(err, dstFile.Close())
+		}()
+		srcFile, err := os.Open(tmpPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			err = errors.Join(err, srcFile.Close())
+		}()
+		_, err = io.Copy(dstFile, srcFile)
 		if err != nil {
 			return nil, err
 		}
