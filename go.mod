@@ -10,7 +10,7 @@ replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250401141128-4c1d6bd1e872
 	github.com/anchore/stereoscope v0.1.5
