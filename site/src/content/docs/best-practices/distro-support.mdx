@@ -1,0 +1,12 @@
+---
+title: "Distro support"
+---
+
+Zarf supports:
+
+- Kind - Works
+- K3d - Works
+- Minikube - Works
+- K3s - Works, builtin support
+- Talos - works only in `--registry-proxy` mode and requires `kubectl label namespace zarf pod-security.kubernetes.io/enforce=privileged --overwrite` to get over the default security for `hostport` or `hostNetwork` on IPV6
+-
