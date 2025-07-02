@@ -42,3 +42,33 @@ func TestPackageCreatePublishArch(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageCreateDifferentialOCIPackage(t *testing.T) {
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
+	ctx := testutil.TestContext(t)
+	tests := []struct {
+		name         string
+		path         string
+		expectedArch string
+		packageName  string
+	}{
+		{
+			name:         "differential OCI package",
+			path:         filepath.Join("testdata", "create", "create-publish-arch"),
+			packageName:  "create-arch",
+			expectedArch: "amd64",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := createRegistry(ctx, t)
+			packageSource, err := Create(ctx, tt.path, fmt.Sprintf("oci://%s", reg.String()), CreateOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+			})
+			require.NoError(t, err)
+			layout := pullFromRemote(ctx, t, packageSource, tt.expectedArch, "", t.TempDir())
+			require.Equal(t, tt.expectedArch, layout.Pkg.Metadata.Architecture)
+		})
+	}
+}
