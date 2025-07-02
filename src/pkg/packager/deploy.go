@@ -73,7 +73,7 @@ type deployer struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, error) {
 	l := logger.From(ctx)
-	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name, "architecture", pkgLayout.Pkg.Metadata.Architecture)
 	start := time.Now()
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
@@ -267,7 +267,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), pkgLayout.Pkg.Metadata.Architecture, component.Images)
 		if err != nil {
 			return nil, err
 		}
@@ -595,6 +595,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	if s == nil {
 		return nil, errors.New("cluster state should not be nil")
 	}
+	s.Architecture = pkg.Metadata.Architecture
 	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
 		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
 			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
