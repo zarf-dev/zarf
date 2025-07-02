@@ -73,7 +73,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}()
 
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
-	var pkgLayout *layout.PackageLayout
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
@@ -88,7 +87,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			CachePath:      opts.CachePath,
 		}
 
-		pkgLayout, err = pullOCI(ctx, ociOpts)
+		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -133,7 +132,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		Filter:                  opts.Filter,
 	}
-	pkgLayout, err = layout.LoadFromTar(ctx, tmpPath, layoutOpts)
+	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
 		return nil, err
 	}
