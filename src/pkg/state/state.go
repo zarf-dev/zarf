@@ -439,8 +439,8 @@ type InstalledChart struct {
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
 func LocalhostRegistryAddress(ipFamily IPFamily, nodePort int) string {
-	if ipFamily == IPFamilyIPv4 {
-		return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
+	if ipFamily == IPFamilyIPv6 {
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
 	}
-	return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
 }

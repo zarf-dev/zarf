@@ -7,8 +7,19 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
-  # kubeProxyMode: ""
-  # ipFamily: ipv6
+  kubeProxyMode: ""
+  ipFamily: ipv6
+
+# Calico setup
+# kind: Cluster
+# apiVersion: kind.x-k8s.io/v1alpha4
+# nodes:
+# - role: control-plane
+# - role: worker
+# - role: worker
+# networking:
+#   disableDefaultCNI: true
+#   podSubnet: 192.168.0.0/16
 
 ## Get nodeip
 ## pick the first node (kind is single-node unless you asked for more)

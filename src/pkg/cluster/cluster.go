@@ -401,5 +401,6 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (state.IPFamily, error) {
 		}
 		return state.IPFamilyIPv4, nil
 	}
+	logger.From(ctx).Error("unable to determine IP family of cluster")
 	return state.IPFamilyUnknown, nil
 }
