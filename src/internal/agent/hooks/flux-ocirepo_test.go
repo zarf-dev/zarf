@@ -347,7 +347,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	url, err := setupRegistry(t, ctx, port, artifacts, oras.DefaultCopyOptions)
+	url, err := setupRegistry(ctx, t, port, artifacts, oras.DefaultCopyOptions)
 	require.NoError(t, err)
 
 	for _, tt := range tests {

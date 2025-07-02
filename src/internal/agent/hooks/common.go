@@ -57,7 +57,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, ima
 	_, b, err := oras.FetchBytes(ctx, registry, imageAddress, oras.DefaultFetchBytesOptions)
 
 	if err != nil {
-		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %v", imageAddress, err)
+		return "", fmt.Errorf("got an error when trying to access the manifest for %s, error %w", imageAddress, err)
 	}
 
 	var manifest ocispec.Manifest

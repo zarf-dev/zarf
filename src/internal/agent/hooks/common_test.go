@@ -18,8 +18,8 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, artifact transform.Image, copyOpts oras.CopyOptions) {
-	localReg, err := remote.NewRegistry(localUrl)
+func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
+	localReg, err := remote.NewRegistry(localURL)
 	require.NoError(t, err)
 
 	localReg.PlainHTTP = true
@@ -36,21 +36,21 @@ func populateLocalRegistry(t *testing.T, ctx context.Context, localUrl string, a
 	_, err = oras.Copy(ctx, src, artifact.Tag, dst, artifact.Tag, copyOpts)
 	require.NoError(t, err)
 
-	hashedTag, err := transform.ImageTransformHost(localUrl, fmt.Sprintf("%s/%s:%s", artifact.Host, artifact.Path, artifact.Tag))
+	hashedTag, err := transform.ImageTransformHost(localURL, fmt.Sprintf("%s/%s:%s", artifact.Host, artifact.Path, artifact.Tag))
 	require.NoError(t, err)
 
 	_, err = oras.Copy(ctx, src, artifact.Tag, dst, hashedTag, copyOpts)
 	require.NoError(t, err)
 }
 
-func setupRegistry(t *testing.T, ctx context.Context, port int, artifacts []transform.Image, copyOpts oras.CopyOptions) (string, error) {
-	localUrl := testutil.SetupInMemoryRegistry(ctx, t, port)
+func setupRegistry(ctx context.Context, t *testing.T, port int, artifacts []transform.Image, copyOpts oras.CopyOptions) (string, error) {
+	localURL := testutil.SetupInMemoryRegistry(ctx, t, port)
 
 	for _, art := range artifacts {
-		populateLocalRegistry(t, ctx, localUrl, art, copyOpts)
+		populateLocalRegistry(ctx, t, localURL, art, copyOpts)
 	}
 
-	return localUrl, nil
+	return localURL, nil
 }
 
 type mediaTypeTest struct {
@@ -122,7 +122,7 @@ func TestConfigMediaTypes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
-			url, err := setupRegistry(t, ctx, port, tt.artifact, tt.Opts)
+			url, err := setupRegistry(ctx, t, port, tt.artifact, tt.Opts)
 			require.NoError(t, err)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
