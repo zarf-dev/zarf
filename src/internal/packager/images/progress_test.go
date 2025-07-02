@@ -35,7 +35,7 @@ func TestTracker_ReportingCycle(t *testing.T) {
 		lastTotalBytes.Store(totalBytes)
 	}
 
-	testInterval := 10 * time.Millisecond
+	testInterval := 30 * time.Millisecond
 	initialBytesRead := int64(10)
 	totalBytes := int64(1000)
 	tracker := newTestTracker(initialBytesRead, totalBytes, reporterFunc, testInterval)
