@@ -155,6 +155,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// Specify if IPv6 mode is going to be used for deploying the internal registry
+	IPv6Enabled bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -258,7 +260,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 			return err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues()
+		err = opts.RegistryInfo.FillInEmptyValues(opts.IPv6Enabled)
 		if err != nil {
 			return err
 		}
@@ -292,6 +294,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) error {
 	if opts.StorageClass != "" {
 		s.StorageClass = opts.StorageClass
 	}
+
+	s.IPv6Enabled = opts.IPv6Enabled
 
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
