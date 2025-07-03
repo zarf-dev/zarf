@@ -87,15 +87,15 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return nil
 }
 
-// RepoPushOptions are optional parameters to push images in a zarf package to a registry
+// RepoPushOptions are optional parameters to push repos in a zarf package to a Git server
 type RepoPushOptions struct {
 	Cluster *cluster.Cluster
-	// Components is a list of components to push images for
+	// Components is a list of components to push repos
 	Components []v1alpha1.ZarfComponent
 	Retries    int
 }
 
-// PushReposToRepository pushes Git repositories in the package layout to the registry
+// PushReposToRepository pushes Git repositories in the package layout to the Git server
 func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, opts RepoPushOptions) (err error) {
 	if pkgLayout == nil {
 		return fmt.Errorf("package layout is required")

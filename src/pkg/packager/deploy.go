@@ -363,7 +363,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if hasRepos {
 		repoPushOptions := RepoPushOptions{
 			Cluster: d.c,
-			// we only want to push the images for this single component
+			// we only want to push the repositories for this single component
 			Components: []v1alpha1.ZarfComponent{component},
 			Retries:    opts.Retries,
 		}
