@@ -38,6 +38,7 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	podsMutation := hooks.NewPodMutationHook(ctx, cluster)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, cluster)
 	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, cluster)
+	argocdAppProjectMutation := hooks.NewAppProjectMutationHook(ctx, cluster)
 	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, cluster)
 	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, cluster)
 	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, cluster)
@@ -49,6 +50,7 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	mux.Handle("/mutate/flux-helmrepository", admissionHandler.Serve(ctx, fluxHelmRepositoryMutation))
 	mux.Handle("/mutate/flux-ocirepository", admissionHandler.Serve(ctx, fluxOCIRepositoryMutation))
 	mux.Handle("/mutate/argocd-application", admissionHandler.Serve(ctx, argocdApplicationMutation))
+	mux.Handle("/mutate/argocd-appproject", admissionHandler.Serve(ctx, argocdAppProjectMutation))
 	mux.Handle("/mutate/argocd-repository", admissionHandler.Serve(ctx, argocdRepositoryMutation))
 
 	return startServer(ctx, httpPort, mux)
