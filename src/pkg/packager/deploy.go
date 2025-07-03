@@ -346,7 +346,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	if hasImages {
 		imagePushOpts := ImagePushOptions{
-			Cluster:         d.c,
+			Cluster: d.c,
+			// we only want to push the images for this single component
+			Components:      []v1alpha1.ZarfComponent{component},
 			NoImageChecksum: noImgChecksum,
 			OCIConcurrency:  opts.OCIConcurrency,
 			Retries:         opts.Retries,
@@ -361,7 +363,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if hasRepos {
 		repoPushOptions := RepoPushOptions{
 			Cluster: d.c,
-			Retries: opts.Retries,
+			// we only want to push the images for this single component
+			Components: []v1alpha1.ZarfComponent{component},
+			Retries:    opts.Retries,
 		}
 		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)

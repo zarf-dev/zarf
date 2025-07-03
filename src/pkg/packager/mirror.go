@@ -12,6 +12,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -27,7 +28,9 @@ import (
 
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
 type ImagePushOptions struct {
-	Cluster         *cluster.Cluster
+	Cluster *cluster.Cluster
+	// Components is a list of components to push images for
+	Components      []v1alpha1.ZarfComponent
 	NoImageChecksum bool
 	Retries         int
 	OCIConcurrency  int
@@ -42,11 +45,18 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	var allComponents bool
+	if len(opts.Components) == 0 {
+		allComponents = true
+	}
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
 	}
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
+		if !allComponents && !containsComponent(opts.Components, component) {
+			continue
+		}
 		for _, img := range component.Images {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
@@ -80,7 +90,9 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 // RepoPushOptions are optional parameters to push images in a zarf package to a registry
 type RepoPushOptions struct {
 	Cluster *cluster.Cluster
-	Retries int
+	// Components is a list of components to push images for
+	Components []v1alpha1.ZarfComponent
+	Retries    int
 }
 
 // PushReposToRepository pushes Git repositories in the package layout to the registry
@@ -94,8 +106,15 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 	if gitInfo.Address == "" {
 		return fmt.Errorf("git server address must be specified")
 	}
+	var allComponents bool
+	if len(opts.Components) == 0 {
+		allComponents = true
+	}
 	l := logger.From(ctx)
 	for _, component := range pkgLayout.Pkg.Components {
+		if !allComponents && !containsComponent(opts.Components, component) {
+			continue
+		}
 		for _, repoURL := range component.Repos {
 			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 			if err != nil {
@@ -167,4 +186,14 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 		}
 	}
 	return nil
+}
+
+// containsComponent returns true if the component is in the list - given that name is unique
+func containsComponent(components []v1alpha1.ZarfComponent, component v1alpha1.ZarfComponent) bool {
+	for _, c := range components {
+		if c.Name == component.Name {
+			return true
+		}
+	}
+	return false
 }
