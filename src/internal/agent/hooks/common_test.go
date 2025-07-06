@@ -162,7 +162,7 @@ func TestConfigMediaTypes(t *testing.T) {
 // will allow us to bind.  If every port in the range is in use it returns an
 // error.
 func GetAvailableNodePort() (int, error) {
-	min, max, err := nodePortRange()
+	minPort, maxPort, err := nodePortRange()
 	if err != nil {
 		return 0, err
 	}
@@ -171,19 +171,19 @@ func GetAvailableNodePort() (int, error) {
 	seed := int64(binary.LittleEndian.Uint64(random64()))
 	r := rand.New(rand.NewSource(seed))
 
-	size := max - min + 1
+	size := maxPort - minPort + 1
 	maxAttempts := size * maxAttemptsFactor // statistically enough even on busy hosts
 
 	for i := 0; i < maxAttempts; i++ {
-		port := r.Intn(size) + min
+		port := r.Intn(size) + minPort
 		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
 			continue // busy; try another candidate
 		}
-		_ = l.Close()
+		_ = l.Close() //nolint: errcheck
 		return port, nil
 	}
-	return 0, fmt.Errorf("unable to find a free NodePort in range %d-%d after %d attempts", min, max, maxAttempts)
+	return 0, fmt.Errorf("unable to find a free NodePort in range %d-%d after %d attempts", minPort, maxPort, maxAttempts)
 }
 
 // nodePortRange resolves the active NodePort range.
@@ -191,10 +191,10 @@ func nodePortRange() (int, int, error) {
 	if v := os.Getenv("SERVICE_NODE_PORT_RANGE"); v != "" {
 		parts := strings.SplitN(strings.TrimSpace(v), "-", 2)
 		if len(parts) == 2 {
-			min, err1 := strconv.Atoi(parts[0])
-			max, err2 := strconv.Atoi(parts[1])
-			if err1 == nil && err2 == nil && min > 0 && max >= min {
-				return min, max, nil
+			minPort, err1 := strconv.Atoi(parts[0])
+			maxPort, err2 := strconv.Atoi(parts[1])
+			if err1 == nil && err2 == nil && minPort > 0 && maxPort >= minPort {
+				return minPort, maxPort, nil
 			}
 		}
 		return 0, 0, fmt.Errorf("invalid SERVICE_NODE_PORT_RANGE value %q (expected \"min-max\")", v)
