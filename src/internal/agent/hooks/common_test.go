@@ -5,8 +5,16 @@ package hooks
 
 import (
 	"context"
+	crand "crypto/rand"
+	"encoding/binary"
 	"fmt"
+	"math/rand"
+	"net"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -16,6 +24,15 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
+)
+
+const (
+	// Kubernetes’ compiled-in default if the apiserver flag
+	// --service-node-port-range is not overridden.
+	defaultNodePortMin = 30000
+	defaultNodePortMax = 32767
+	// Hard safety cap so we never spin forever if someone mis-configures a range.
+	maxAttemptsFactor = 2
 )
 
 func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
@@ -131,4 +148,66 @@ func TestConfigMediaTypes(t *testing.T) {
 			require.Equal(t, tt.expected, mediaType)
 		})
 	}
+}
+
+// GetAvailableNodePort returns a free TCP port that falls within the current
+// NodePort range.
+//
+// The range is discovered in this order:
+//  1. The env var SERVICE_NODE_PORT_RANGE (format "min-max") – matches the
+//     kube-apiserver flag name & format.
+//  2. The Kubernetes default range 30000-32767.
+//
+// The function randomly probes ports in that range until it finds one the OS
+// will allow us to bind.  If every port in the range is in use it returns an
+// error.
+func GetAvailableNodePort() (int, error) {
+	min, max, err := nodePortRange()
+	if err != nil {
+		return 0, err
+	}
+
+	// Seed a *local* rand.Rand so concurrent callers don’t step on each other.
+	seed := int64(binary.LittleEndian.Uint64(random64()))
+	r := rand.New(rand.NewSource(seed))
+
+	size := max - min + 1
+	maxAttempts := size * maxAttemptsFactor // statistically enough even on busy hosts
+
+	for i := 0; i < maxAttempts; i++ {
+		port := r.Intn(size) + min
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err != nil {
+			continue // busy; try another candidate
+		}
+		_ = l.Close()
+		return port, nil
+	}
+	return 0, fmt.Errorf("unable to find a free NodePort in range %d-%d after %d attempts", min, max, maxAttempts)
+}
+
+// nodePortRange resolves the active NodePort range.
+func nodePortRange() (int, int, error) {
+	if v := os.Getenv("SERVICE_NODE_PORT_RANGE"); v != "" {
+		parts := strings.SplitN(strings.TrimSpace(v), "-", 2)
+		if len(parts) == 2 {
+			min, err1 := strconv.Atoi(parts[0])
+			max, err2 := strconv.Atoi(parts[1])
+			if err1 == nil && err2 == nil && min > 0 && max >= min {
+				return min, max, nil
+			}
+		}
+		return 0, 0, fmt.Errorf("invalid SERVICE_NODE_PORT_RANGE value %q (expected \"min-max\")", v)
+	}
+	return defaultNodePortMin, defaultNodePortMax, nil
+}
+
+// random64 returns 8 cryptographically-secure random bytes.  We fall back to
+// time.Now if /dev/urandom becomes unavailable (extremely rare).
+func random64() []byte {
+	var b [8]byte
+	if _, err := crand.Read(b[:]); err != nil {
+		binary.LittleEndian.PutUint64(b[:], uint64(time.Now().UnixNano()))
+	}
+	return b[:]
 }
