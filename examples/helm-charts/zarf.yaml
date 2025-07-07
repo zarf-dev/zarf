@@ -57,7 +57,48 @@ components:
       # This is the cosign signature for the podinfo image for image signature verification
       - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
 
+  # Component demonstrating absolute path usage for valuesFiles
+  - name: demo-helm-charts-abs-path
+    description: "Example using absolute paths for Helm chart values files"
+    charts:
+      - name: podinfo-abs-path
+        version: 6.4.0
+        namespace: podinfo-from-abs-path
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          # Relative path (typical usage)
+          - values.yaml
+          # NOTE: The absolute path below is for demonstration purposes.
+          # In real usage, absolute paths might reference shared values files
+          # from outside the package directory or from mounted volumes.
+          # Replace this with an actual absolute path on your system.
+          # Example: /home/user/shared-configs/production-values.yaml
+          ###ZARF_VAR_VALUES_PATH###
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onCreate:
+        defaults:
+          - cmd: |
+              echo "NOTE: To test absolute paths, you can set ZARF_VAR_VALUES_PATH to an absolute path"
+              echo "For example: export ZARF_VAR_VALUES_PATH=/tmp/my-values.yaml"
+              echo "Then copy examples/helm-charts/values-override.yaml to that location"
+
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
   This example shows the many ways you can deploy Helm Charts with Zarf. To learn more about how `charts` work in Zarf, see the [Helm Charts section](/ref/components/#helm-charts) of the package components documentation.
+
+  ## Using Absolute Paths in valuesFiles
+
+  The `demo-helm-charts-abs-path` component demonstrates how to use absolute paths in the `valuesFiles` array. This is useful when:
+  - Sharing common values files across multiple packages
+  - Referencing values files from mounted volumes in CI/CD pipelines
+  - Using organization-wide configuration files stored outside the package directory
+
+  To test this feature:
+  1. Copy the provided `values-override.yaml` to a location outside the package
+  2. Set the `ZARF_VAR_VALUES_PATH` environment variable to the absolute path
+  3. Create and deploy the package
+
+  Note: Absolute paths are preserved as-is during package creation, while relative paths are resolved relative to the package directory.

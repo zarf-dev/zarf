@@ -1,0 +1,23 @@
+# This values file demonstrates using absolute paths in valuesFiles
+# It can be referenced from any location using its absolute path
+
+# Override the default UI color to show this values file is being used
+ui:
+  color: "#34577c"  # A nice blue color
+  message: "This instance is using values from an absolute path!"
+
+# Example of overriding resource limits
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Enable HPA with custom settings
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
