@@ -4,12 +4,15 @@
 package layout
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
 )
 
 func TestGetChecksum(t *testing.T) {
@@ -77,4 +80,87 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	shaSum, err := helpers.GetSHA256OfFile(tarPath)
 	require.NoError(t, err)
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
+}
+
+func TestAssemblePackageWithAbsoluteValuesPath(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	tmpDir := t.TempDir()
+
+	// Create absolute path values file in separate directory
+	valuesDir := t.TempDir()
+	absoluteValuesPath := filepath.Join(valuesDir, "absolute-values.yaml")
+	absoluteValuesContent := `replicaCount: 3
+image:
+  tag: "2.0.0"`
+	err := os.WriteFile(absoluteValuesPath, []byte(absoluteValuesContent), 0o600)
+	require.NoError(t, err)
+
+	// Create relative path values file
+	relativeValuesContent := `service:
+  type: ClusterIP
+  port: 8080`
+	err = os.WriteFile(filepath.Join(tmpDir, "relative-values.yaml"), []byte(relativeValuesContent), 0o600)
+	require.NoError(t, err)
+
+	// Create minimal chart structure
+	chartDir := filepath.Join(tmpDir, "test-chart")
+	err = os.MkdirAll(chartDir, 0o700)
+	require.NoError(t, err)
+
+	chartYaml := `apiVersion: v2
+name: test-chart
+version: 1.0.0
+description: Test chart for absolute path handling`
+	err = os.WriteFile(filepath.Join(chartDir, "Chart.yaml"), []byte(chartYaml), 0o600)
+	require.NoError(t, err)
+
+	component := v1alpha1.ZarfComponent{
+		Name: "test-component",
+		Charts: []v1alpha1.ZarfChart{
+			{
+				Name:      "test-chart",
+				LocalPath: "test-chart",
+				ValuesFiles: []string{
+					absoluteValuesPath,     // Absolute path
+					"relative-values.yaml", // Relative path
+				},
+			},
+		},
+	}
+
+	// Act
+	buildPath := t.TempDir()
+	err = assemblePackageComponent(context.Background(), component, tmpDir, buildPath)
+	require.NoError(t, err)
+
+	// Assert
+	componentPath := filepath.Join(buildPath, "components", component.Name+".tar")
+	require.FileExists(t, componentPath)
+
+	// Extract component to verify contents
+	extractPath := t.TempDir()
+	err = archive.Decompress(context.Background(), componentPath, extractPath, archive.DecompressOpts{})
+	require.NoError(t, err)
+
+	componentExtractPath := filepath.Join(extractPath, component.Name)
+
+	// Verify both values files exist
+	absoluteValuesFile := filepath.Join(componentExtractPath, "values", "test-chart--0")
+	relativeValuesFile := filepath.Join(componentExtractPath, "values", "test-chart--1")
+	require.FileExists(t, absoluteValuesFile)
+	require.FileExists(t, relativeValuesFile)
+
+	// Verify absolute path values content
+	absoluteContent, err := os.ReadFile(absoluteValuesFile)
+	require.NoError(t, err)
+	require.Contains(t, string(absoluteContent), "replicaCount: 3")
+	require.Contains(t, string(absoluteContent), `tag: "2.0.0"`)
+
+	// Verify relative path values content
+	relativeContent, err := os.ReadFile(relativeValuesFile)
+	require.NoError(t, err)
+	require.Contains(t, string(relativeContent), "type: ClusterIP")
+	require.Contains(t, string(relativeContent), "port: 8080")
 }

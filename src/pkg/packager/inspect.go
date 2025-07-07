@@ -314,7 +314,12 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packag
 	valuesFiles := []string{}
 	oldValuesFiles := zarfChart.ValuesFiles
 	for _, v := range zarfChart.ValuesFiles {
-		valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+		// Preserve absolute paths, only join relative paths with packagePath
+		if filepath.IsAbs(v) {
+			valuesFiles = append(valuesFiles, v)
+		} else {
+			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+		}
 	}
 	zarfChart.ValuesFiles = valuesFiles
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))

@@ -49,9 +49,9 @@ type AssembleOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
-	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package
-	DifferentialPackage v1alpha1.ZarfPackage
-	OCIConcurrency      int
+	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
+	DifferentialPackagePath string
+	OCIConcurrency          int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
 }
@@ -61,11 +61,18 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	if opts.DifferentialPackage.Metadata.Name != "" {
-		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
+	if opts.DifferentialPackagePath != "" {
+		l.Debug("creating differential package", "differential", opts.DifferentialPackagePath)
+		layoutOpts := PackageLayoutOptions{
+			SkipSignatureValidation: true,
+		}
+		diffPkgLayout, err := LoadFromTar(ctx, opts.DifferentialPackagePath, layoutOpts)
+		if err != nil {
+			return nil, err
+		}
 		allIncludedImagesMap := map[string]bool{}
 		allIncludedReposMap := map[string]bool{}
-		for _, component := range opts.DifferentialPackage.Components {
+		for _, component := range diffPkgLayout.Pkg.Components {
 			for _, image := range component.Images {
 				allIncludedImagesMap[image] = true
 			}
@@ -75,18 +82,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 
 		pkg.Build.Differential = true
-		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
+		pkg.Build.DifferentialPackageVersion = diffPkgLayout.Pkg.Metadata.Version
 
-		versionsMatch := opts.DifferentialPackage.Metadata.Version == pkg.Metadata.Version
+		versionsMatch := diffPkgLayout.Pkg.Metadata.Version == pkg.Metadata.Version
 		if versionsMatch {
 			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		noVersionSet := opts.DifferentialPackage.Metadata.Version == "" || pkg.Metadata.Version == ""
+		noVersionSet := diffPkgLayout.Pkg.Metadata.Version == "" || pkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
-		var err error
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return nil, err
@@ -280,7 +286,12 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		oldValuesFiles := chart.ValuesFiles
 		valuesFiles := []string{}
 		for _, v := range chart.ValuesFiles {
-			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+			// Preserve absolute paths, only join relative paths with packagePath
+			if filepath.IsAbs(v) {
+				valuesFiles = append(valuesFiles, v)
+			} else {
+				valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+			}
 		}
 		chart.ValuesFiles = valuesFiles
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
@@ -512,7 +523,13 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), filepath.Join(compBuildPath, rel)); err != nil {
+			// Preserve absolute paths, only join relative paths with packagePath
+			sourcePath := path
+			if !filepath.IsAbs(path) {
+				sourcePath = filepath.Join(packagePath, path)
+			}
+
+			if err := helpers.CreatePathAndCopy(sourcePath, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
