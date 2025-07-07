@@ -48,6 +48,20 @@ components:
       # Note: this is a helm OCI artifact rather than a container image
       - ghcr.io/stefanprodan/charts/podinfo:6.4.0
 
+  - name: podinfo-via-flux-helm-oci
+    description: Example deployment via flux (helm oci repo) using the famous podinfo example
+    required: true
+    manifests:
+      - name: podinfo
+        namespace: podinfo-helm-oci
+        files:
+          - helm-oci/podinfo-source.yaml
+          - helm-oci/podinfo-helmrelease.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      # Note: this is a helm OCI artifact rather than a container image
+      - ghcr.io/stefanprodan/charts/podinfo:6.4.0
+
   - name: podinfo-via-flux-oci
     description: Example deployment via flux (native oci) using the famous podinfo example
     required: true
