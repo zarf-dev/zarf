@@ -6,7 +6,9 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -29,6 +31,7 @@ const defaultRetries = 3
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
+	start := time.Now()
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
@@ -41,7 +44,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
-	registryURL := cfg.RegistryInfo.Address
+
 	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
 	if err != nil {
 		return err
@@ -55,24 +58,34 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	err = retry.Do(func() error {
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
-
-		// Include tunnel connection in case the port forward breaks, for example, a registry pod could spin down / restart
+		var registryRef registry.Reference
+		// Include tunnel connection in retry loop in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if cfg.Cluster != nil {
 			var err error
+			var registryURL string
 			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
 			if err != nil {
 				return err
 			}
+			registryRef, err = parseRegistryReference(registryURL)
+			if err != nil {
+				return fmt.Errorf("failed to get reference from registry from internal registry: %w", err)
+			}
 			if tunnel != nil {
 				defer tunnel.Close()
+			}
+		} else {
+			registryRef, err = parseRegistryReference(cfg.RegistryInfo.Address)
+			if err != nil {
+				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
 		}
 
 		client := &auth.Client{
 			Client: orasRetry.DefaultClient,
 			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(registryURL, auth.Credential{
+			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
 				Username: cfg.RegistryInfo.PushUsername,
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
@@ -85,9 +98,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 		plainHTTP := cfg.PlainHTTP
 
-		if dns.IsLocalhost(registryURL) && !cfg.PlainHTTP {
+		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryURL, client)
+			plainHTTP, err = shouldUsePlainHTTP(ctx, registryRef.Host(), client)
 			if err != nil {
 				return err
 			}
@@ -124,7 +137,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			l.Info("pushing image", "name", img)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryURL, img)
+				offlineNameCRC, err := transform.ImageTransformHost(registryRef.String(), img)
 				if err != nil {
 					return err
 				}
@@ -146,7 +159,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 			// To allow for other non-zarf workloads to easily see the images upload a non-checksum version
 			// (this may result in collisions but this is acceptable for this use case)
-			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryURL, img)
+			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryRef.String(), img)
 			if err != nil {
 				return err
 			}
@@ -177,6 +190,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
+	l.Info("done pushing images", "count", len(cfg.ImageList), "duration", time.Since(start).Round(time.Millisecond*100))
 	return nil
 }
 
@@ -204,16 +218,16 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
 	// Assume no platform to start as it can be nil in non container image situations
-	resolveOpts := oras.DefaultResolveOptions
-	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
+	fetchOpts := oras.DefaultFetchBytesOptions
+	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
 	// If an index is pulled we should try pulling with the default platform
 	if isIndex(desc.MediaType) {
-		resolveOpts.TargetPlatform = defaultPlatform
-		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
+		fetchOpts.TargetPlatform = defaultPlatform
+		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
 			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
 		}
@@ -223,12 +237,34 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
 	}
 
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		return err
+	}
+	size := getSizeOfImage(desc, manifest)
+
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)
-	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
+
+	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
+	trackedRemote.StartReporting(ctx)
+	defer trackedRemote.StopReporting()
+	_, err = oras.Copy(ctx, src, srcName, trackedRemote, dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
 	return nil
+}
+
+// parse registry reference returns a registry.Reference with only the host if the registry URL only contains a host
+// otherwise calls registry.ParseReference()
+func parseRegistryReference(registryURL string) (registry.Reference, error) {
+	parts := strings.SplitN(registryURL, "/", 2)
+	if len(parts) == 1 {
+		return registry.Reference{
+			Registry: registryURL,
+		}, nil
+	}
+	return registry.ParseReference(registryURL)
 }

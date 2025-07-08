@@ -72,26 +72,34 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	isPartial := false
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
-			Source:         source,
-			Directory:      tmpDir,
-			Shasum:         opts.Shasum,
-			Architecture:   config.GetArch(opts.Architecture),
-			Filter:         opts.Filter,
-			LayersSelector: opts.LayersSelector,
-			OCIConcurrency: opts.OCIConcurrency,
-			RemoteOptions:  opts.RemoteOptions,
-			CachePath:      opts.CachePath,
+			Source:                  source,
+			PublicKeyPath:           opts.PublicKeyPath,
+			SkipSignatureValidation: opts.SkipSignatureValidation,
+			Shasum:                  opts.Shasum,
+			Architecture:            config.GetArch(opts.Architecture),
+			Filter:                  opts.Filter,
+			LayersSelector:          opts.LayersSelector,
+			OCIConcurrency:          opts.OCIConcurrency,
+			RemoteOptions:           opts.RemoteOptions,
+			CachePath:               opts.CachePath,
 		}
 
-		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
+		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
+		// OCI is a special case since it doesn't create a tar unless the tar file is output
+		if opts.Output != "" {
+			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return pkgLayout, nil
 	case "http", "https":
 		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
 		if err != nil {
@@ -114,17 +122,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	// Verify checksum if provided
-	if srcType != "oci" && opts.Shasum != "" {
+	if opts.Shasum != "" {
 		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
-	// Load package layout
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
 		Filter:                  opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
