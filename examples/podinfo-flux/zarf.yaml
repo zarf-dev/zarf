@@ -9,7 +9,7 @@ components:
     required: true
     manifests:
       - name: flux-install
-        namespace: flux
+        namespace: flux-system
         files:
           - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:

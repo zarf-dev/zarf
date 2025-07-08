@@ -29,18 +29,17 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, imageAddress string) (string, error) {
-	client := &auth.Client{
-		Client: orasRetry.DefaultClient,
-		Cache:  auth.NewCache(),
-		Credential: auth.StaticCredential(imageAddress, auth.Credential{
-			Username: zarfState.RegistryInfo.PullUsername,
-			Password: zarfState.RegistryInfo.PullPassword,
-		}),
-	}
-
 	ref, err := registry.ParseReference(imageAddress)
 	if err != nil {
 		return "", err
+	}
+	client := &auth.Client{
+		Client: orasRetry.DefaultClient,
+		Cache:  auth.NewCache(),
+		Credential: auth.StaticCredential(ref.Registry, auth.Credential{
+			Username: zarfState.RegistryInfo.PullUsername,
+			Password: zarfState.RegistryInfo.PullPassword,
+		}),
 	}
 
 	http, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
