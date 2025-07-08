@@ -157,7 +157,7 @@ type InitStateOptions struct {
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
 	// HostNetwork determines if Zarf uses the nodeport or host network daemonset solution
-	HostNetwork bool
+	HostNetwork *bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -213,7 +213,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
 		}
 		s.IPFamily = ipFamily
-		s.HostNetwork = opts.HostNetwork
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -286,6 +285,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
+	}
+	if opts.HostNetwork != nil {
+		s.HostNetwork = *opts.HostNetwork
 	}
 
 	switch s.Distro {

@@ -56,7 +56,7 @@ type DeployOptions struct {
 	RegistryInfo   state.RegistryInfo
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
-	HostNetwork    bool
+	HostNetwork    *bool
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
@@ -270,7 +270,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, opts.HostNetwork, d.s.IPFamily)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.HostNetwork, d.s.IPFamily)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := d.c.StopInjection(ctx, opts.HostNetwork); err != nil {
+		if err := d.c.StopInjection(ctx, d.s.HostNetwork); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}

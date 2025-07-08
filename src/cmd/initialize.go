@@ -130,6 +130,10 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	var hostNetwork *bool
+	if cmd.Flag("host-network").Changed {
+		hostNetwork = &pkgConfig.InitOpts.HostNetwork
+	}
 
 	opts := packager.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
@@ -141,7 +145,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
-		HostNetwork:            pkgConfig.InitOpts.HostNetwork,
+		HostNetwork:            hostNetwork,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)
