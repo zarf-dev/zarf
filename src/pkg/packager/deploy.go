@@ -70,14 +70,20 @@ type deployer struct {
 	hpaModified bool
 }
 
+// DeployResult is the result of a successful deploy
+type DeployResult struct {
+	DeployedComponents []state.DeployedComponent
+	VariableConfig     *variables.VariableConfig
+}
+
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
-func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) ([]state.DeployedComponent, *variables.VariableConfig, error) {
+func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
-			return nil, nil, err
+			return DeployResult{}, err
 		}
 	}
 
@@ -90,7 +96,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
 	if err != nil {
-		return nil, nil, err
+		return DeployResult{}, err
 	}
 
 	d := deployer{
@@ -103,13 +109,19 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
 	if err != nil {
-		return nil, nil, err
+		return DeployResult{}, err
 	}
 	if len(deployedComponents) == 0 {
 		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
 	l.Debug("deployment complete", "duration", time.Since(start))
-	return deployedComponents, d.vc, nil
+
+	// assemble the result
+	deployResult := DeployResult{
+		DeployedComponents: deployedComponents,
+		VariableConfig:     d.vc,
+	}
+	return deployResult, nil
 }
 
 func (d *deployer) resetRegistryHPA(ctx context.Context) {
