@@ -193,7 +193,7 @@ func withArchive(ctx context.Context, path string, fn func(ex archives.Extractor
 	}
 	defer func() { err = errors.Join(err, f.Close()) }()
 
-	format, input, err := archives.Identify(ctx, filepath.Base(path), f)
+	format, _, err := archives.Identify(ctx, filepath.Base(path), nil)
 	if err != nil {
 		return fmt.Errorf("identifying %q: %w", path, err)
 	}
@@ -201,7 +201,7 @@ func withArchive(ctx context.Context, path string, fn func(ex archives.Extractor
 	if !ok {
 		return fmt.Errorf("format %T cannot extract", format)
 	}
-	return fn(ex, input)
+	return fn(ex, f)
 }
 
 // unarchive extracts all entries from src into dst using the defaultHandler.
