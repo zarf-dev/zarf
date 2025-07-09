@@ -79,7 +79,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 
 		err := func() error {
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
+			_, err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -120,11 +120,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
+			_, err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
+			_, err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
@@ -141,7 +141,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 			return nil
 		}()
 		if err != nil {
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
+			_, removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

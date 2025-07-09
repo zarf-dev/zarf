@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -134,6 +135,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	}
 
 	for _, component := range pkgLayout.Pkg.Components {
+		componentVariables := make(map[string]*v1alpha1.SetVariable)
 		packageGeneration := 1
 		// Connect to cluster if a component requires it.
 		if component.RequiresCluster() {
@@ -184,18 +186,23 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 		var charts []state.InstalledChart
 		var deployErr error
+		var compVars map[string]*v1alpha1.SetVariable
 		if pkgLayout.Pkg.IsInitConfig() {
-			charts, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
+			charts, compVars, deployErr = d.deployInitComponent(ctx, pkgLayout, component, opts)
 		} else {
-			charts, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
+			charts, compVars, deployErr = d.deployComponent(ctx, pkgLayout, component, false, false, opts)
 		}
+
+		maps.Copy(componentVariables, compVars)
 
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc); err != nil {
+			actionVars, err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc)
+			if err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
+			maps.Copy(componentVariables, actionVars)
 		}
 
 		if deployErr != nil {
@@ -218,16 +225,18 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc); err != nil {
+		actionVars, err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc)
+		if err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
+		maps.Copy(componentVariables, actionVars)
+		deployedComponents[idx].SetVariablesMap = componentVariables
 	}
-
 	return deployedComponents, nil
 }
 
-func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
+func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, map[string]*v1alpha1.SetVariable, error) {
 	l := logger.From(ctx)
 	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -251,13 +260,13 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:   opts.StorageClass,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
+			return nil, nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
 	}
 
 	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
 		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	if isRegistry {
@@ -269,28 +278,28 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	// Skip image checksum if component is agent.
 	// Skip image push if component is seed registry.
-	charts, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
+	charts, compVars, err := d.deployComponent(ctx, pkgLayout, component, isAgent, isSeedRegistry, opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
 		if err := d.c.StopInjection(ctx); err != nil {
-			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
+			return nil, nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}
 
-	return charts, nil
+	return charts, compVars, nil
 }
 
-func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, err error) {
+func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, noImgChecksum bool, noImgPush bool, opts DeployOptions) (_ []state.InstalledChart, _ map[string]*v1alpha1.SetVariable, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -305,7 +314,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	onDeploy := component.Actions.OnDeploy
 	cwd, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get working directory: %w", err)
+		return nil, nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 
 	if component.RequiresCluster() {
@@ -314,7 +323,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			var err error
 			d.s, err = setupState(ctx, d.c, pkgLayout.Pkg)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 
@@ -330,17 +339,18 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
-		return nil, fmt.Errorf("unable to run component before action: %w", err)
+	actionVars, err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if hasFiles {
 		if err := processComponentFiles(ctx, pkgLayout, component, d.vc); err != nil {
-			return nil, fmt.Errorf("unable to process the component files: %w", err)
+			return nil, nil, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
 
@@ -354,7 +364,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 		err := PushImagesToRegistry(ctx, pkgLayout, d.s.RegistryInfo, imagePushOpts)
 		if err != nil {
-			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
+			return nil, nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}
 
@@ -364,7 +374,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			Retries: opts.Retries,
 		}
 		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
-			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
+			return nil, nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
 
@@ -372,14 +382,14 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	for idx, data := range component.DataInjections {
 		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer func() {
 			err = errors.Join(err, os.RemoveAll(tmpDir))
 		}()
 		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		g.Go(func() error {
 			return d.c.HandleDataInjection(gCtx, data, dataInjectionsPath, idx)
@@ -390,7 +400,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if hasCharts {
 		helmCharts, err := d.installCharts(ctx, pkgLayout, component, opts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		charts = append(charts, helmCharts...)
 	}
@@ -398,13 +408,14 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	if hasManifests {
 		chartsFromManifests, err := d.installManifests(ctx, pkgLayout, component, opts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		charts = append(charts, chartsFromManifests...)
 	}
 
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
-		return nil, fmt.Errorf("unable to run component after action: %w", err)
+	afterVars, err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	if len(component.HealthChecks) > 0 {
@@ -412,15 +423,17 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		defer cancel()
 		l.Info("running health checks")
 		if err := healthchecks.Run(healthCheckContext, d.c.Watcher, component.HealthChecks); err != nil {
-			return nil, fmt.Errorf("health checks failed: %w", err)
+			return nil, nil, fmt.Errorf("health checks failed: %w", err)
 		}
 	}
 
+	maps.Copy(actionVars, afterVars)
+
 	if err := g.Wait(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	l.Debug("done deploying component", "name", component.Name, "duration", time.Since(start))
-	return charts, nil
+	return charts, actionVars, nil
 }
 
 func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {

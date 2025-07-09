@@ -7,6 +7,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -23,23 +24,27 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) (map[string]*v1alpha1.SetVariable, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
+	setVars := make(map[string]*v1alpha1.SetVariable)
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig); err != nil {
-			return err
+		actionVars, err := runAction(ctx, basePath, defaultCfg, a, variableConfig)
+		if err != nil {
+			return setVars, err
 		}
+		maps.Copy(setVars, actionVars)
 	}
-	return nil
+	return setVars, nil
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) (map[string]*v1alpha1.SetVariable, error) {
 	var cmdEscaped string
 	var err error
+	actionVarMap := make(map[string]*v1alpha1.SetVariable)
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
@@ -54,7 +59,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 
 		// Convert the wait to a command.
 		if cmd, err = convertWaitToCmd(ctx, *action.Wait, action.MaxTotalSeconds); err != nil {
-			return err
+			return actionVarMap, err
 		}
 
 		// Mute the output because it will be noisy.
@@ -112,6 +117,8 @@ retryCmd:
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
 					return err
 				}
+				setVar, _ := variableConfig.GetSetVariable(v.Name)
+				actionVarMap[v.Name] = setVar
 			}
 
 			if action.Wait != nil {
@@ -132,7 +139,7 @@ retryCmd:
 				continue retryCmd
 			}
 
-			return nil
+			return actionVarMap, nil
 		}
 
 		// Run the command on repeat until success or timeout.
@@ -150,7 +157,7 @@ retryCmd:
 				continue retryCmd
 			}
 
-			return nil
+			return actionVarMap, nil
 		}
 	}
 
@@ -158,13 +165,13 @@ retryCmd:
 	case <-timeout:
 		// If we reached this point, the timeout was reached or command failed with no retries.
 		if actionDefaults.MaxTotalSeconds < 1 {
-			return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+			return actionVarMap, fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
 		} else {
-			return fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
+			return actionVarMap, fmt.Errorf("command %q timed out after %d seconds", cmdEscaped, actionDefaults.MaxTotalSeconds)
 		}
 	default:
 		// If we reached this point, the retry limit was reached.
-		return fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
+		return actionVarMap, fmt.Errorf("command %q failed after %d retries", cmdEscaped, actionDefaults.MaxRetries)
 	}
 }
 

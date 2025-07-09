@@ -268,7 +268,8 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	_, err = actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil)
+	if err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -443,7 +444,8 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil); err != nil {
+	_, err = actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil)
+	if err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 

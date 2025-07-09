@@ -410,6 +410,8 @@ type DeployedComponent struct {
 	InstalledCharts    []InstalledChart `json:"installedCharts"`
 	Status             ComponentStatus  `json:"status"`
 	ObservedGeneration int              `json:"observedGeneration"`
+	// [ALPHA] optional map containing variables set during component deployment
+	SetVariablesMap map[string]*v1alpha1.SetVariable
 }
 
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
