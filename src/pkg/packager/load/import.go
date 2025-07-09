@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mholt/archives"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -288,6 +289,7 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	decompressOpts := archive.DecompressOpts{
 		OverwriteExisting: true,
 		StripComponents:   1,
+		Extractor:         archives.Tar{},
 	}
 	err = archive.Decompress(ctx, tarball, dir, decompressOpts)
 	if err != nil {

@@ -160,57 +160,63 @@ type DecompressOpts struct {
 	OverwriteExisting bool
 	// SkipValidation suppresses errors for missing Files entries.
 	SkipValidation bool
+	// Extractor allows the user to specify which extractor should be used for decompression.
+	// If this is not set it will be determined automatically from the file extension
+	Extractor archives.Extractor
 }
 
 // Decompress extracts source into dst, using strip or filter logic per opts, then optionally nests.
 func Decompress(ctx context.Context, source, dst string, opts DecompressOpts) error {
 	switch {
 	case len(opts.Files) > 0:
-		return unarchiveFiltered(ctx, source, dst, opts.Files, opts.SkipValidation)
+		return unarchiveFiltered(ctx, opts.Extractor, source, dst, opts.Files, opts.SkipValidation)
 	case opts.StripComponents > 0 || opts.OverwriteExisting:
-		if err := unarchiveWithStrip(ctx, source, dst, opts.StripComponents, opts.OverwriteExisting); err != nil {
+		if err := unarchiveWithStrip(ctx, opts.Extractor, source, dst, opts.StripComponents, opts.OverwriteExisting); err != nil {
 			return fmt.Errorf("unable to decompress: %w", err)
 		}
 	default:
-		if err := unarchive(ctx, source, dst); err != nil {
+		if err := unarchive(ctx, opts.Extractor, source, dst); err != nil {
 			return fmt.Errorf("unable to decompress: %w", err)
 		}
 	}
 
 	if opts.UnarchiveAll {
-		if err := nestedUnarchive(ctx, dst); err != nil {
+		if err := nestedUnarchive(ctx, opts.Extractor, dst); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// withArchive opens, identifies, and asserts we have an Extractor.
-func withArchive(path string, fn func(ex archives.Extractor, input io.Reader) error) (err error) {
+// withArchive opens, identifies, and creates and asserts an extractor if one is not given
+func withArchive(path string, extractor archives.Extractor, fn func(ex archives.Extractor, input io.Reader) error) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("opening %q: %w", path, err)
 	}
 	defer func() { err = errors.Join(err, f.Close()) }()
 
-	format, err := findArchiver(path)
-	if err != nil {
-		return fmt.Errorf("identifying %q: %w", path, err)
+	if extractor == nil {
+		format, err := findArchiver(path)
+		if err != nil {
+			return fmt.Errorf("identifying %q: %w", path, err)
+		}
+		ex, ok := format.(archives.Extractor)
+		if !ok {
+			return fmt.Errorf("format %T cannot extract", format)
+		}
+		extractor = ex
 	}
-	ex, ok := format.(archives.Extractor)
-	if !ok {
-		return fmt.Errorf("format %T cannot extract", format)
-	}
-	return fn(ex, f)
+	return fn(extractor, f)
 }
 
 // unarchive extracts all entries from src into dst using the defaultHandler.
 // It ensures the destination directory exists before extraction.
-func unarchive(ctx context.Context, src, dst string) error {
+func unarchive(ctx context.Context, extractor archives.Extractor, src, dst string) error {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
-	return withArchive(src, func(ex archives.Extractor, input io.Reader) error {
+	return withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
 		if err := ex.Extract(ctx, input, defaultHandler(dst)); err != nil {
 			return fmt.Errorf("extracting %q: %w", src, err)
 		}
@@ -220,11 +226,11 @@ func unarchive(ctx context.Context, src, dst string) error {
 
 // unarchiveWithStrip extracts all entries from src into dst, stripping the
 // first 'strip' path components and optionally overwriting existing files.
-func unarchiveWithStrip(ctx context.Context, src, dst string, strip int, overwrite bool) error {
+func unarchiveWithStrip(ctx context.Context, extractor archives.Extractor, src, dst string, strip int, overwrite bool) error {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
-	return withArchive(src, func(ex archives.Extractor, input io.Reader) error {
+	return withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
 		if err := ex.Extract(ctx, input, stripHandler(dst, strip, overwrite)); err != nil {
 			return fmt.Errorf("extracting %q with strip: %w", src, err)
 		}
@@ -235,7 +241,7 @@ func unarchiveWithStrip(ctx context.Context, src, dst string, strip int, overwri
 // unarchiveFiltered extracts only the specified 'want' entries from src into dst.
 // It records found entries and, unless skipValidation is true, returns an error
 // if any requested entry is missing.
-func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skipValidation bool) error {
+func unarchiveFiltered(ctx context.Context, extractor archives.Extractor, src, dst string, want []string, skipValidation bool) error {
 	found := make(map[string]bool, len(want))
 	wantSet := map[string]bool{}
 	for _, w := range want {
@@ -245,7 +251,7 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skip
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
 
-	err := withArchive(src, func(ex archives.Extractor, input io.Reader) error {
+	err := withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
 		handler := filterHandler(dst, wantSet, found)
 		return ex.Extract(ctx, input, handler)
 	})
@@ -264,7 +270,7 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skip
 }
 
 // nestedUnarchive walks dst and unarchives each .tar file it finds.
-func nestedUnarchive(ctx context.Context, dst string) error {
+func nestedUnarchive(ctx context.Context, extractor archives.Extractor, dst string) error {
 	return filepath.Walk(dst, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -274,7 +280,7 @@ func nestedUnarchive(ctx context.Context, dst string) error {
 			if info.Name() == sbomFileName {
 				outDir = strings.TrimSuffix(path, extensionTar)
 			}
-			if err := unarchive(ctx, path, outDir); err != nil {
+			if err := unarchive(ctx, extractor, path, outDir); err != nil {
 				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
 			}
 			if err := os.Remove(path); err != nil {
