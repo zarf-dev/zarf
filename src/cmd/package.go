@@ -322,7 +322,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	deployedComponents, err := packager.Deploy(ctx, pkgLayout, opts)
+	deployedComponents, _, err := packager.Deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy package: %w", err)
 	}
