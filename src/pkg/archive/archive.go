@@ -58,8 +58,8 @@ const (
 var archivers = initArchivers()
 
 // initArchivers constructs the archivers map by grouping extensions by compression type.
-func initArchivers() map[string]archives.Archiver {
-	m := map[string]archives.Archiver{
+func initArchivers() map[string]archives.Archival {
+	m := map[string]archives.Archival{
 		extensionTar: archives.Tar{},
 		extensionZip: archives.Zip{},
 	}
@@ -186,14 +186,14 @@ func Decompress(ctx context.Context, source, dst string, opts DecompressOpts) er
 }
 
 // withArchive opens, identifies, and asserts we have an Extractor.
-func withArchive(ctx context.Context, path string, fn func(ex archives.Extractor, input io.Reader) error) (err error) {
+func withArchive(path string, fn func(ex archives.Extractor, input io.Reader) error) (err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("opening %q: %w", path, err)
 	}
 	defer func() { err = errors.Join(err, f.Close()) }()
 
-	format, _, err := archives.Identify(ctx, filepath.Base(path), nil)
+	format, err := findArchiver(path)
 	if err != nil {
 		return fmt.Errorf("identifying %q: %w", path, err)
 	}
@@ -210,7 +210,7 @@ func unarchive(ctx context.Context, src, dst string) error {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
-	return withArchive(ctx, src, func(ex archives.Extractor, input io.Reader) error {
+	return withArchive(src, func(ex archives.Extractor, input io.Reader) error {
 		if err := ex.Extract(ctx, input, defaultHandler(dst)); err != nil {
 			return fmt.Errorf("extracting %q: %w", src, err)
 		}
@@ -224,7 +224,7 @@ func unarchiveWithStrip(ctx context.Context, src, dst string, strip int, overwri
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
-	return withArchive(ctx, src, func(ex archives.Extractor, input io.Reader) error {
+	return withArchive(src, func(ex archives.Extractor, input io.Reader) error {
 		if err := ex.Extract(ctx, input, stripHandler(dst, strip, overwrite)); err != nil {
 			return fmt.Errorf("extracting %q with strip: %w", src, err)
 		}
@@ -245,7 +245,7 @@ func unarchiveFiltered(ctx context.Context, src, dst string, want []string, skip
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
 
-	err := withArchive(ctx, src, func(ex archives.Extractor, input io.Reader) error {
+	err := withArchive(src, func(ex archives.Extractor, input io.Reader) error {
 		handler := filterHandler(dst, wantSet, found)
 		return ex.Extract(ctx, input, handler)
 	})
