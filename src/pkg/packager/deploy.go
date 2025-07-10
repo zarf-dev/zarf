@@ -53,8 +53,6 @@ type DeployOptions struct {
 	OCIConcurrency int
 	// Namespace is an optional namespace override for package deployment
 	NamespaceOverride string
-	// OptionalComponents to deploy
-	OptionalComponents string
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
