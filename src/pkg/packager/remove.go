@@ -10,7 +10,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -31,21 +30,14 @@ type RemoveOptions struct {
 	Cluster           *cluster.Cluster
 	Timeout           time.Duration
 	NamespaceOverride string
-	// Optional component to select by name, all components for the package architecture are selected if this is empty
-	Components []string
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
 func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) error {
 	l := logger.From(ctx)
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(strings.Join(opts.Components, ",")),
-	)
-
 	var err error
-	pkg.Components, err = filter.Apply(pkg)
+	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
 	if err != nil {
 		return err
 	}

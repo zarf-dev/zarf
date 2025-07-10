@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -29,6 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"golang.org/x/sync/errgroup"
@@ -98,12 +100,8 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(opts.OptionalComponents, false),
-	)
 	var err error
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+	pkgLayout.Pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkgLayout.Pkg)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -371,29 +369,34 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	if hasImages {
-		imagePushOpts := ImagePushOptions{
-			Cluster: d.c,
-			// we only want to push the images for this single component
-			Components:      []string{component.Name},
-			NoImageChecksum: noImgChecksum,
-			OCIConcurrency:  opts.OCIConcurrency,
-			Retries:         opts.Retries,
-			RemoteOptions:   opts.RemoteOptions,
+		refs := []transform.Image{}
+		for _, img := range component.Images {
+			ref, err := transform.ParseImageRef(img)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
+			}
+			refs = append(refs, ref)
 		}
-		err := PushImagesToRegistry(ctx, pkgLayout, d.s.RegistryInfo, imagePushOpts)
+		pushConfig := images.PushConfig{
+			OCIConcurrency:        opts.OCIConcurrency,
+			SourceDirectory:       pkgLayout.GetImageDirPath(),
+			RegistryInfo:          d.s.RegistryInfo,
+			ImageList:             refs,
+			PlainHTTP:             opts.PlainHTTP,
+			NoChecksum:            noImgChecksum,
+			Arch:                  pkgLayout.Pkg.Build.Architecture,
+			Retries:               opts.Retries,
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			Cluster:               d.c,
+		}
+		err := images.Push(ctx, pushConfig)
 		if err != nil {
-			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
+			return nil, fmt.Errorf("failed to push images: %w", err)
 		}
 	}
 
 	if hasRepos {
-		repoPushOptions := RepoPushOptions{
-			Cluster: d.c,
-			// we only want to push the repositories for this single component
-			Components: []string{component.Name},
-			Retries:    opts.Retries,
-		}
-		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
+		if err := pushComponentReposToRegistry(ctx, component, pkgLayout, d.s.GitServer, d.c, opts.Retries); err != nil {
 			return nil, fmt.Errorf("unable to push the repos to the repository: %w", err)
 		}
 	}
