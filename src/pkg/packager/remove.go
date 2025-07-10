@@ -31,7 +31,7 @@ type RemoveOptions struct {
 	Cluster           *cluster.Cluster
 	Timeout           time.Duration
 	NamespaceOverride string
-	// Optional component to select by name, all components are selected if this is empty
+	// Optional component to select by name, all components for the package architecture are selected if this is empty
 	Components []string
 }
 
