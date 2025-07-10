@@ -389,7 +389,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 		err := images.Push(ctx, pushConfig)
 		if err != nil {
-			return nil, fmt.Errorf("failed to push images: %w", err)
+			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
 	}
 
