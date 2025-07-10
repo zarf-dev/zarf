@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -49,6 +51,8 @@ type DeployOptions struct {
 	OCIConcurrency int
 	// Namespace is an optional namespace override for package deployment
 	NamespaceOverride string
+	// OptionalComponents to deploy
+	OptionalComponents string
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
@@ -86,6 +90,16 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 	if opts.Timeout == 0 {
 		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ForDeploy(opts.OptionalComponents, false),
+	)
+	var err error
+	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+	if err != nil {
+		return nil, err
 	}
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
@@ -348,7 +362,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		imagePushOpts := ImagePushOptions{
 			Cluster: d.c,
 			// we only want to push the images for this single component
-			Components:      []v1alpha1.ZarfComponent{component},
+			Components:      []string{component.Name},
 			NoImageChecksum: noImgChecksum,
 			OCIConcurrency:  opts.OCIConcurrency,
 			Retries:         opts.Retries,
@@ -364,7 +378,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		repoPushOptions := RepoPushOptions{
 			Cluster: d.c,
 			// we only want to push the repositories for this single component
-			Components: []v1alpha1.ZarfComponent{component},
+			Components: []string{component.Name},
 			Retries:    opts.Retries,
 		}
 		if err := PushReposToRepository(ctx, pkgLayout, d.s.GitServer, repoPushOptions); err != nil {
