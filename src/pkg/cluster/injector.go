@@ -147,9 +147,9 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) error {
 	start := time.Now()
 	l := logger.From(ctx)
-	if !useRegistryProxy {
-		l.Debug("deleting injector resources")
-		err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	l.Debug("deleting injector resources")
+	if useRegistryProxy {
+		err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
@@ -158,7 +158,7 @@ func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) erro
 			return err
 		}
 	} else {
-		err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+		err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {
 			return err
 		}
@@ -205,8 +205,10 @@ func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) erro
 
 	// TODO: Replace with wait package in the future.
 	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
+		podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+			LabelSelector: "zarf.dev/injector",
+		})
+		if len(podList.Items) == 0 {
 			return true, nil
 		}
 		return false, err
@@ -388,8 +390,9 @@ func buildVolumesAndMounts(payloadCmNames []string) ([]*v1ac.VolumeApplyConfigur
 func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			"app":      "zarf-injector",
-			AgentLabel: "ignore",
+			"app":               "zarf-injector",
+			"zarf.dev/injector": "true",
+			AgentLabel:          "ignore",
 		}).
 		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000)))
 	return pod
@@ -467,8 +470,9 @@ func buildInjectionDaemonset(image string, payloadCmNames []string, shasum strin
 				})).
 			WithTemplate(v1ac.PodTemplateSpec().
 				WithLabels(map[string]string{
-					"app":      "zarf-injector",
-					AgentLabel: "ignore",
+					"app":               "zarf-injector",
+					"zarf.dev/injector": "true",
+					AgentLabel:          "ignore",
 				}).
 				WithSpec(podSpec)))
 }
