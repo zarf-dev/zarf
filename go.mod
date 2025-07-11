@@ -30,7 +30,7 @@ require (
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gofrs/flock v0.12.1
-	github.com/golang-cz/devslog v0.0.13
+	github.com/golang-cz/devslog v0.0.15
 	github.com/google/go-containerregistry v0.20.6
 	github.com/gosuri/uitable v0.0.4
 	github.com/mholt/archives v0.1.3
