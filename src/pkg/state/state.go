@@ -90,8 +90,8 @@ type State struct {
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
-	IPFamily    IPFamily `json:"ipFamily,omitempty"`
-	HostNetwork bool     `json:"hostNetwork,omitempty"`
+	IPFamily      IPFamily `json:"ipFamily,omitempty"`
+	RegistryProxy bool     `json:"registryProxy,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 

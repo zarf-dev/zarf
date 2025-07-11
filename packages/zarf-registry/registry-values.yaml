@@ -26,7 +26,7 @@ secrets:
 service:
   ipv6Only: "###ZARF_IPV6_ONLY###"
   nodePort: "###ZARF_NODEPORT###"
-  hostNetwork: "###ZARF_HOST_NETWORK###"
+  registryProxy: "###ZARF_REGISTRY_PROXY###"
 
 resources:
   requests:

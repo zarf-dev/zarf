@@ -132,8 +132,8 @@ type ZarfInitOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// Specify if HostNetwork mode is going to be used for deploying the internal registry
-	HostNetwork bool
+	// Specify if RegistryProxy mode is going to be used for deploying the internal registry
+	RegistryProxy bool
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.

@@ -156,8 +156,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// HostNetwork determines if Zarf uses the nodeport or host network daemonset solution
-	HostNetwork *bool
+	// RegistryProxy determines if Zarf uses the nodeport service or host port proxy daemonset solution
+	RegistryProxy *bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -286,8 +286,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
-	if opts.HostNetwork != nil {
-		s.HostNetwork = *opts.HostNetwork
+	if opts.RegistryProxy != nil {
+		s.RegistryProxy = *opts.RegistryProxy
 	}
 
 	switch s.Distro {

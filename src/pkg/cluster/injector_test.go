@@ -31,19 +31,19 @@ func TestInjector(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                string
-		useHostNetwork      bool
+		useRegistryProxy    bool
 		ipFamily            state.IPFamily
 		expectedServiceFile string
 	}{
 		{
 			name:                "pod injector",
-			useHostNetwork:      false,
+			useRegistryProxy:    false,
 			ipFamily:            state.IPFamilyIPv4,
 			expectedServiceFile: filepath.Join("expected-injection-service-nodeport.json"),
 		},
 		{
 			name:                "pod injector",
-			useHostNetwork:      true,
+			useRegistryProxy:    true,
 			ipFamily:            state.IPFamilyIPv4,
 			expectedServiceFile: filepath.Join("expected-injection-service-proxy.json"),
 		},
@@ -116,7 +116,7 @@ func TestInjector(t *testing.T) {
 			_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			err = c.StopInjection(ctx, tt.useHostNetwork)
+			err = c.StopInjection(ctx, tt.useRegistryProxy)
 			require.NoError(t, err)
 
 			for range 2 {
@@ -130,10 +130,10 @@ func TestInjector(t *testing.T) {
 				_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 				require.NoError(t, err)
 
-				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, tt.useHostNetwork, tt.ipFamily)
+				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, tt.useRegistryProxy, tt.ipFamily)
 				require.NoError(t, err)
 
-				if tt.useHostNetwork {
+				if tt.useRegistryProxy {
 					daemonsetList, err := cs.AppsV1().DaemonSets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 					require.NoError(t, err)
 					require.Len(t, daemonsetList.Items, 1)
@@ -166,7 +166,7 @@ func TestInjector(t *testing.T) {
 				require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 			}
 
-			err = c.StopInjection(ctx, tt.useHostNetwork)
+			err = c.StopInjection(ctx, tt.useRegistryProxy)
 			require.NoError(t, err)
 
 			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})

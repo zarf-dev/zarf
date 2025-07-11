@@ -37,11 +37,11 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useregistryProxy bool, ipfamily state.IPFamily) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useRegistryProxy bool, ipFamily state.IPFamily) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
-	err := c.StopInjection(ctx, useregistryProxy)
+	err := c.StopInjection(ctx, useRegistryProxy)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	var zarfSeedPort int32
-	if !useregistryProxy {
+	if !useRegistryProxy {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -127,7 +127,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return err
 		}
-		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq, ipfamily)
+		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq, ipFamily)
 		ds, err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Apply(ctx, dsSpec, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("error creating daemonset in cluster: %w", err)
@@ -144,10 +144,10 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 }
 
 // StopInjection handles cleanup once the seed registry is up.
-func (c *Cluster) StopInjection(ctx context.Context, useHostNetwork bool) error {
+func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) error {
 	start := time.Now()
 	l := logger.From(ctx)
-	if !useHostNetwork {
+	if !useRegistryProxy {
 		l.Debug("deleting injector resources")
 		err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 		if err != nil && !kerrors.IsNotFound(err) {

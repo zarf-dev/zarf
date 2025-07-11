@@ -56,7 +56,7 @@ type DeployOptions struct {
 	RegistryInfo   state.RegistryInfo
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
-	HostNetwork    *bool
+	RegistryProxy  *bool
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
@@ -251,7 +251,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
-			HostNetwork:    opts.HostNetwork,
+			RegistryProxy:  opts.RegistryProxy,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -270,7 +270,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.HostNetwork, d.s.IPFamily)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryProxy, d.s.IPFamily)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := d.c.StopInjection(ctx, d.s.HostNetwork); err != nil {
+		if err := d.c.StopInjection(ctx, d.s.RegistryProxy); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}
