@@ -307,6 +307,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
 	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
+	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. This will only effect skeleton packages uploaded, will not change non-skeleton packages published."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

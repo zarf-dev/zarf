@@ -131,6 +131,8 @@ type PublishSkeletonOptions struct {
 	SigningKeyPassword string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	// Flavor specifies the flavor to use
+	Flavor string
 	RemoteOptions
 }
 
@@ -152,6 +154,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
 		CachePath: opts.CachePath,
+		Flavor:    opts.Flavor,
 	})
 	if err != nil {
 		return registry.Reference{}, err
@@ -160,6 +163,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	createOpts := layout.AssembleSkeletonOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
+		Flavor:             opts.Flavor,
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {
