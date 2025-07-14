@@ -15,7 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +38,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	state := &types.ZarfState{RegistryInfo: types.RegistryInfo{Address: "127.0.0.1:31999"}}
+	s := &state.State{RegistryInfo: state.RegistryInfo{Address: "127.0.0.1:31999"}}
 
 	tests := []admissionTest{
 		{
@@ -66,21 +66,6 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			}),
 			errContains: "unable to transform the HelmRepo URL",
 			code:        http.StatusInternalServerError,
-		},
-		{
-			name: "should not mutate when agent patched",
-			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "already-patched",
-					Labels: map[string]string{
-						"zarf-agent": "patched",
-					},
-				},
-				Spec: flux.HelmRepositorySpec{
-					Type: "oci",
-				},
-			}),
-			code: http.StatusOK,
 		},
 		{
 			name: "should be mutated with no internal service registry",
@@ -160,14 +145,92 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "should not mutate URL if it has the same hostname as State",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-mutate-this",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://127.0.0.1:31999/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should not mutate URL if it has the same hostname as State internal repo",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-mutate-this",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://10.11.12.13:5000/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://10.11.12.13:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: int32(31999),
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := createTestClientWithZarfState(ctx, t, state)
-			handler := admission.NewHandler().Serve(NewHelmRepositoryMutationHook(ctx, c))
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

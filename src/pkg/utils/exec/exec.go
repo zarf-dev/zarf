@@ -65,8 +65,14 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	cmd.Env = append(os.Environ(), config.Env...)
 
 	// Capture the command outputs.
-	cmdStdout, _ := cmd.StdoutPipe()
-	cmdStderr, _ := cmd.StderrPipe()
+	cmdStdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to capture stdout, error=%w", err)
+	}
+	cmdStderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to capture stderr, error=%w", err)
+	}
 
 	var (
 		stdoutBuf, stderrBuf bytes.Buffer
@@ -82,6 +88,8 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		&stderrBuf,
 	}
 
+	// TODO (@austinabro321) remove config options for stdout/stderr once logger is released
+	// as these options seem to have been added specifically for the spinner
 	// Add the writers if requested.
 	if config.Stdout != nil {
 		stdoutWriters = append(stdoutWriters, config.Stdout)

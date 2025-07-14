@@ -15,6 +15,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 type RegistryResponse struct {
@@ -23,25 +25,25 @@ type RegistryResponse struct {
 
 func TestConnectAndCreds(t *testing.T) {
 	t.Log("E2E: Connect")
-	ctx := context.Background()
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	prevAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	// Init the state variable
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 
 	connectToZarfServices(ctx, t)
 
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
 	require.NoError(t, err)
-	newState, err := c.LoadZarfState(ctx)
+	newState, err := c.LoadState(ctx)
 	require.NoError(t, err)
 	require.NotEqual(t, prevAgentSecretData, newAgentSecretData)
 	require.NotEqual(t, oldState.ArtifactServer.PushToken, newState.ArtifactServer.PushToken)
@@ -53,7 +55,7 @@ func TestConnectAndCreds(t *testing.T) {
 func TestMetrics(t *testing.T) {
 	t.Log("E2E: Emits metrics")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 
 	tunnel, err := c.NewTunnel("zarf", "svc", "agent-hook", "", 8888, 8443)
@@ -74,7 +76,9 @@ func TestMetrics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
 
 	// Read the response body
 	body, err := io.ReadAll(resp.Body)
@@ -102,18 +106,18 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.Contains(t, stdOut, "library/registry")
 
 	// Get the git credentials
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPushPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "git-readonly", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitPullPassword := strings.TrimSpace(stdOut)
-	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "get-creds", "artifact", "--log-format=console", "--no-color")
 	require.NoError(t, err, stdOut, stdErr)
 	gitArtifactToken := strings.TrimSpace(stdOut)
 
 	// Connect to Gitea
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
 	tunnelGit, err := c.Connect(ctx, cluster.ZarfGit)
 	require.NoError(t, err)

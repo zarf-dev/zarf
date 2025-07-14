@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,7 @@ import (
 
 func TestComponentActions(t *testing.T) {
 	t.Log("E2E: Testing component actions")
+	tmpdir := t.TempDir()
 
 	// Note these files will be created in the package directory, not CWD.
 	createArtifacts := []string{
@@ -26,18 +28,19 @@ func TestComponentActions(t *testing.T) {
 	}
 
 	allArtifacts := append(deployArtifacts, createArtifacts...)
-	e2e.CleanFiles(allArtifacts...)
-	defer e2e.CleanFiles(allArtifacts...)
+	e2e.CleanFiles(t, allArtifacts...)
+	defer e2e.CleanFiles(t, allArtifacts...)
 
 	/* Create */
 	// Try creating the package to test the onCreate actions.
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-actions", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-actions", "-o", tmpdir)
+
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Completed \"Create a test file\"")
-	require.Contains(t, stdErr, "Completed \"touch test-create-after.txt\"")
-	require.Contains(t, stdErr, "multiline!")
-	require.Contains(t, stdErr, "updates!")
-	require.Contains(t, stdErr, "realtime!")
+	require.Contains(t, stdErr, "action succeeded cmd=Create a test file")
+	require.Contains(t, stdErr, "action succeeded cmd=touch test-create-after.txt")
+	require.Contains(t, stdOut, "multiline!")
+	require.Contains(t, stdOut, "updates!")
+	require.Contains(t, stdOut, "realtime!")
 
 	// Test for package create prepare artifacts.
 	for _, artifact := range createArtifacts {
@@ -49,7 +52,8 @@ func TestComponentActions(t *testing.T) {
 		require.NoFileExists(t, artifact)
 	}
 
-	path := fmt.Sprintf("build/zarf-package-component-actions-%s.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-component-actions-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 	t.Run("action on-deploy-and-remove", func(t *testing.T) {
 		t.Parallel()
 
@@ -78,7 +82,7 @@ func TestComponentActions(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-timeout", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "after 1 second")
-		require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
+		require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 	})
 
 	t.Run("action on-deploy-with-variable", func(t *testing.T) {
@@ -87,7 +91,7 @@ func TestComponentActions(t *testing.T) {
 		// Test using a Zarf Variable within the action
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-variable", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the dog says ruff")
+		require.Contains(t, stdOut, "the dog says ruff")
 	})
 
 	t.Run("action on-deploy-with-dynamic-variable", func(t *testing.T) {
@@ -95,10 +99,10 @@ func TestComponentActions(t *testing.T) {
 		// Test using dynamic and multiple-variables
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the cat says meow")
-		require.Contains(t, stdErr, "the dog says ruff")
-		require.Contains(t, stdErr, "the snake says hiss")
-		require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
+		require.Contains(t, stdOut, "the cat says meow")
+		require.Contains(t, stdOut, "the dog says ruff")
+		require.Contains(t, stdOut, "the snake says hiss")
+		require.Contains(t, stdOut, "with a TF_VAR, the snake also says hiss")
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {
@@ -111,7 +115,7 @@ func TestComponentActions(t *testing.T) {
 		require.FileExists(t, deployWithEnvVarArtifact)
 
 		// Remove the env var file at the end of the test
-		e2e.CleanFiles(deployWithEnvVarArtifact)
+		e2e.CleanFiles(t, deployWithEnvVarArtifact)
 	})
 
 	t.Run("action on-deploy-with-template", func(t *testing.T) {
@@ -128,7 +132,7 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, string(outTemplated), "The snake says ###ZARF_VAR_SNAKE_SOUND###")
 
 		// Remove the templated file so we can test with dynamic variables
-		e2e.CleanFiles(deployTemplatedArtifact)
+		e2e.CleanFiles(t, deployTemplatedArtifact)
 
 		// Test using a templated file with dynamic variables
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-template-use-of-variable,on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
@@ -140,7 +144,7 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, string(outTemplated), "The snake says hiss")
 
 		// Remove the templated file at the end of the test
-		e2e.CleanFiles(deployTemplatedArtifact)
+		e2e.CleanFiles(t, deployTemplatedArtifact)
 	})
 
 	t.Run("action on-deploy-immediate-failure", func(t *testing.T) {

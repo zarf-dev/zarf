@@ -1,0 +1,30 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifests
+
+constants:
+  - name: HTTPD_VERSION
+    value: "###ZARF_PKG_TMPL_HTTPD_VERSION###"
+
+variables:
+  - name: LABEL
+    default: "###ZARF_PKG_TMPL_LABEL###"
+
+components:
+  - name: httpd-local
+    only:
+      flavor: cool
+    manifests:
+      - name: simple-httpd-deployment
+        namespace: httpd
+        files:
+          - httpd-deployment.yaml
+
+  - name: other-component
+    only:
+      flavor: not-cool
+    manifests:
+      - name: simple-other-deployment
+        namespace: other
+        files:
+          - ../kustomize/httpd-service.yaml

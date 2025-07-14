@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"testing"
@@ -29,10 +30,12 @@ func zarfCommandWStruct(t *testing.T, e2e test.ZarfE2ETest, path string) zarfCom
 func TestNoWait(t *testing.T) {
 	t.Log("E2E: Helm Wait")
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/28-helm-no-wait", "-o=build", "--confirm")
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/28-helm-no-wait", "-o", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-helm-no-wait-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	zarfChannel := make(chan zarfCommandResult, 1)
 	go func() {
@@ -51,7 +54,7 @@ func TestNoWait(t *testing.T) {
 	case <-time.After(30 * time.Second):
 		t.Error("Timeout waiting for zarf deploy (it tried to wait)")
 		t.Log("Removing hanging namespace...")
-		_, _, _ = e2e.Kubectl(t, "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0")
+		_, _, _ = e2e.Kubectl(t, "delete", "namespace", "no-wait", "--force=true", "--wait=false", "--grace-period=0") //nolint:errcheck
 	}
 	require.NoError(t, err, stdOut, stdErr)
 

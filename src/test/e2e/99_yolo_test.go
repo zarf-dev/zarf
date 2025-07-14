@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,13 +27,18 @@ func TestYOLOMode(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "destroy", "--confirm", "--remove-components")
 	require.NoError(t, err, stdOut, stdErr)
 
-	path := fmt.Sprintf("build/zarf-package-yolo-%s.tar.zst", e2e.Arch)
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/yolo", "-o", tmpdir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-yolo-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the YOLO package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 	tunnel, err := c.Connect(context.Background(), "doom")
 	require.NoError(t, err)
@@ -53,9 +59,17 @@ func TestDevDeploy(t *testing.T) {
 		return
 	}
 
+	// Generic test of dev deploy
 	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "kubectl", "delete", "namespace", "dos-games")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Special test of hidden registry-url flag
+	stdOut, stdErr, err = e2e.Zarf(t, "dev", "deploy", "src/test/packages/99-registry-url", "--registry-url", "ghcr.io")
+	require.NoError(t, err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "kubectl", "delete", "namespace", "registry-url")
 	require.NoError(t, err, stdOut, stdErr)
 }

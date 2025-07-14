@@ -2,45 +2,6 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/zarf-dev/zarf/src/api/v1alpha1/zarf-package",
   "$defs": {
-    "BigBang": {
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "The version of Big Bang to use."
-        },
-        "repo": {
-          "type": "string",
-          "description": "Override repo to pull Big Bang from instead of Repo One."
-        },
-        "valuesFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "The list of values files to pass to Big Bang; these will be merged together."
-        },
-        "skipFlux": {
-          "type": "boolean",
-          "description": "Whether to skip deploying flux; Defaults to false."
-        },
-        "fluxPatchFiles": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "Optional paths to Flux kustomize strategic merge patch files."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "version"
-      ],
-      "description": "BigBang holds the configuration for the Big Bang extension.",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "Constant": {
       "properties": {
         "name": {
@@ -416,6 +377,10 @@
           },
           "type": "array",
           "description": "[alpha] List of variables to set in the Helm chart."
+        },
+        "schemaValidation": {
+          "type": "boolean",
+          "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet."
         }
       },
       "additionalProperties": false,
@@ -532,10 +497,6 @@
           },
           "type": "array",
           "description": "List of git repos to include in the package."
-        },
-        "extensions": {
-          "$ref": "#/$defs/ZarfComponentExtensions",
-          "description": "Extend component functionality with additional features."
         },
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
@@ -824,20 +785,6 @@
         "^x-": {}
       }
     },
-    "ZarfComponentExtensions": {
-      "properties": {
-        "bigbang": {
-          "$ref": "#/$defs/BigBang",
-          "description": "Configurations for installing Big Bang and Flux in the cluster."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "description": "ZarfComponentExtensions is a struct that contains all the official extensions.",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "ZarfComponentImport": {
       "properties": {
         "name": {
@@ -845,16 +792,10 @@
           "description": "The name of the component to import from the referenced zarf.yaml."
         },
         "path": {
-          "not": {
-            "pattern": "###ZARF_PKG_TMPL_"
-          },
           "type": "string",
           "description": "The path to the directory containing the zarf.yaml to import."
         },
         "url": {
-          "not": {
-            "pattern": "###ZARF_PKG_TMPL_"
-          },
           "type": "string",
           "pattern": "^oci://.*$",
           "description": "[beta] The URL to a Zarf package to import via OCI."
@@ -1129,6 +1070,17 @@
         "aggregateChecksum": {
           "type": "string",
           "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package."
+        },
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "description": "Annotations contains arbitrary metadata about the package.\nUsers are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md"
+        },
+        "allowNamespaceOverride": {
+          "type": "boolean",
+          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden."
         }
       },
       "additionalProperties": false,

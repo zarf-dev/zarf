@@ -9,7 +9,7 @@ assignees: ''
 ### Is your feature request related to a problem? Please describe.
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
 
-### Describe the solution you'd like
+### Describe the behavior you'd like
 
 - **Given** a state
 - **When** an action is taken

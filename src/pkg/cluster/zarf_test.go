@@ -7,7 +7,6 @@ package cluster
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -16,202 +15,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
-
-// TestPackageSecretNeedsWait verifies that Zarf waits for webhooks to complete correctly.
-func TestPackageSecretNeedsWait(t *testing.T) {
-	t.Parallel()
-
-	type testCase struct {
-		name            string
-		deployedPackage *types.DeployedPackage
-		component       v1alpha1.ZarfComponent
-		skipWebhooks    bool
-		needsWait       bool
-		waitSeconds     int
-		hookName        string
-	}
-
-	var (
-		componentName = "test-component"
-		packageName   = "test-package"
-		webhookName   = "test-webhook"
-	)
-
-	testCases := []testCase{
-		{
-			name:      "NoWebhooks",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name:              packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:      "WebhookRunning",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status:              types.WebhookStatusRunning,
-							WaitDurationSeconds: 10,
-						},
-					},
-				},
-			},
-			needsWait:   true,
-			waitSeconds: 10,
-			hookName:    webhookName,
-		},
-		// Ensure we only wait on running webhooks for the provided component
-		{
-			name:      "WebhookRunningOnDifferentComponent",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					"different-component": {
-						webhookName: types.Webhook{
-							Status:              types.WebhookStatusRunning,
-							WaitDurationSeconds: 10,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:      "WebhookSucceeded",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status: types.WebhookStatusSucceeded,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:      "WebhookFailed",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status: types.WebhookStatusFailed,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:      "WebhookRemoving",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status: types.WebhookStatusRemoving,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:      "SkipWaitForYOLO",
-			component: v1alpha1.ZarfComponent{Name: componentName},
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				Data: v1alpha1.ZarfPackage{
-					Metadata: v1alpha1.ZarfMetadata{
-						YOLO: true,
-					},
-				},
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status:              types.WebhookStatusRunning,
-							WaitDurationSeconds: 10,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-		{
-			name:         "SkipWebhooksFlagUsed",
-			component:    v1alpha1.ZarfComponent{Name: componentName},
-			skipWebhooks: true,
-			deployedPackage: &types.DeployedPackage{
-				Name: packageName,
-				ComponentWebhooks: map[string]map[string]types.Webhook{
-					componentName: {
-						webhookName: types.Webhook{
-							Status:              types.WebhookStatusRunning,
-							WaitDurationSeconds: 10,
-						},
-					},
-				},
-			},
-			needsWait:   false,
-			waitSeconds: 0,
-			hookName:    "",
-		},
-	}
-
-	for _, testCase := range testCases {
-		testCase := testCase
-
-		t.Run(testCase.name, func(t *testing.T) {
-			t.Parallel()
-
-			c := &Cluster{}
-
-			needsWait, waitSeconds, hookName := c.PackageSecretNeedsWait(testCase.deployedPackage, testCase.component, testCase.skipWebhooks)
-
-			require.Equal(t, testCase.needsWait, needsWait)
-			require.Equal(t, testCase.waitSeconds, waitSeconds)
-			require.Equal(t, testCase.hookName, hookName)
-		})
-	}
-}
 
 func TestGetDeployedPackage(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	c := &Cluster{
-		Clientset: fake.NewSimpleClientset(),
+		Clientset: fake.NewClientset(),
 	}
 
-	packages := []types.DeployedPackage{
+	packages := []state.DeployedPackage{
 		{Name: "package1"},
-		{Name: "package2"},
+		{Name: "package2", NamespaceOverride: "test2"},
 	}
 
 	for _, p := range packages {
@@ -219,10 +35,10 @@ func TestGetDeployedPackage(t *testing.T) {
 		require.NoError(t, err)
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      strings.Join([]string{config.ZarfPackagePrefix, p.Name}, ""),
+				Name:      p.GetSecretName(),
 				Namespace: "zarf",
 				Labels: map[string]string{
-					ZarfPackageInfoLabel: p.Name,
+					state.ZarfPackageInfoLabel: p.Name,
 				},
 			},
 			Data: map[string][]byte{
@@ -231,7 +47,7 @@ func TestGetDeployedPackage(t *testing.T) {
 		}
 		_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, &secret, metav1.CreateOptions{})
 		require.NoError(t, err)
-		actual, err := c.GetDeployedPackage(ctx, p.Name)
+		actual, err := c.GetDeployedPackage(ctx, p.Name, state.WithPackageNamespaceOverride(p.NamespaceOverride))
 		require.NoError(t, err)
 		require.Equal(t, p, *actual)
 	}
@@ -241,7 +57,7 @@ func TestGetDeployedPackage(t *testing.T) {
 			Name:      "hello-world",
 			Namespace: "zarf",
 			Labels: map[string]string{
-				ZarfPackageInfoLabel: "whatever",
+				state.ZarfPackageInfoLabel: "whatever",
 			},
 		},
 	}
@@ -255,11 +71,11 @@ func TestGetDeployedPackage(t *testing.T) {
 
 func TestRegistryHPA(t *testing.T) {
 	ctx := context.Background()
-	cs := fake.NewSimpleClientset()
+	cs := fake.NewClientset()
 	hpa := autoscalingv2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zarf-docker-registry",
-			Namespace: ZarfNamespaceName,
+			Namespace: state.ZarfNamespaceName,
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
@@ -295,7 +111,7 @@ func TestInternalGitServerExists(t *testing.T) {
 	}{
 		{
 			name:          "Git server exists",
-			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: ZarfNamespaceName}},
+			svc:           &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ZarfGitServerName, Namespace: state.ZarfNamespaceName}},
 			expectedExist: true,
 			expectedErr:   nil,
 		},
@@ -309,15 +125,15 @@ func TestInternalGitServerExists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cs := fake.NewSimpleClientset()
-			cluster := &Cluster{Clientset: cs}
+			cs := fake.NewClientset()
+			c := &Cluster{Clientset: cs}
 			ctx := context.Background()
 			if tt.svc != nil {
 				_, err := cs.CoreV1().Services(tt.svc.Namespace).Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)
 			}
 
-			exists, err := cluster.InternalGitServerExists(ctx)
+			exists, err := c.InternalGitServerExists(ctx)
 			require.Equal(t, tt.expectedExist, exists)
 			require.Equal(t, tt.expectedErr, err)
 		})

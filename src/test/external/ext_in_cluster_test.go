@@ -14,23 +14,35 @@ import (
 	"testing"
 	"time"
 
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
-var inClusterCredentialArgs = []string{
+var inClusterMirrorCredentialArgs = []string{
 	"--git-push-username=git-user",
 	"--git-push-password=superSecurePassword",
 	"--git-url=http://gitea-http.git-server.svc.cluster.local:3000",
 	"--registry-push-username=push-user",
 	"--registry-push-password=superSecurePassword",
-	"--registry-url=127.0.0.1:31999"}
+	"--registry-url=http://external-registry-docker-registry.external-registry.svc.cluster.local:5000",
+}
+
+var inClusterInitCredentialArgs = []string{
+	"--git-push-username=git-user",
+	"--git-push-password=superSecurePassword",
+	"--git-url=http://gitea-http.git-server.svc.cluster.local:3000",
+	"--registry-push-username=push-user",
+	"--registry-push-password=superSecurePassword",
+	"--registry-url=127.0.0.1:31999",
+}
 
 type ExtInClusterTestSuite struct {
 	suite.Suite
@@ -38,8 +50,8 @@ type ExtInClusterTestSuite struct {
 }
 
 func (suite *ExtInClusterTestSuite) SetupSuite() {
-	fmt.Println("start: current time is ", time.Now())
 	suite.Assertions = require.New(suite.T())
+	ctx := suite.T().Context()
 
 	// Install a gitea chart to the k8s cluster to act as the 'remote' git server
 	giteaChartURL := "https://dl.gitea.io/charts/gitea-8.3.0.tgz"
@@ -57,7 +69,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to install the docker-registry chart")
 
 	// Verify the registry and gitea helm charts installed successfully
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	suite.NoError(err)
 	objs := []object.ObjMetadata{
 		{
@@ -76,9 +88,10 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 			Name:      "gitea-0",
 		},
 	}
-	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx2 := logger.WithContext(ctx, test.GetLogger(suite.T()))
+	waitCtx, waitCancel := context.WithTimeout(ctx2, 2*time.Minute)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 }
 
@@ -96,12 +109,16 @@ func (suite *ExtInClusterTestSuite) TearDownSuite() {
 
 func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
-	mirrorArgs := []string{"package", "mirror-resources", "../../../build/zarf-package-argocd-amd64.tar.zst", "--confirm"}
-	mirrorArgs = append(mirrorArgs, inClusterCredentialArgs...)
-	err := exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
+	t := suite.T()
+	tmpdir := t.TempDir()
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	suite.NoError(err)
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)
+	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(t.Context())
 	suite.NoError(err)
 
 	ctx := testutil.TestContext(suite.T())
@@ -143,11 +160,16 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	// Use Zarf to initialize the cluster
 	initArgs := []string{"init", "--confirm"}
-	initArgs = append(initArgs, inClusterCredentialArgs...)
+	initArgs = append(initArgs, inClusterInitCredentialArgs...)
+	ctx := suite.T().Context()
+
 	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
 	suite.NoError(err, "unable to initialize the k8s server with zarf")
+
 	temp := suite.T().TempDir()
-	defer os.Remove(temp)
+	defer func() {
+		suite.NoError(os.RemoveAll(temp), "failed to clean up tempdir")
+	}()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
@@ -155,7 +177,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	suite.NoError(err)
 	objs := []object.ObjMetadata{
 		{
@@ -185,7 +207,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	}
 	waitCtx, waitCancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReady(waitCtx, c.Watcher, objs)
+	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 
 	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")

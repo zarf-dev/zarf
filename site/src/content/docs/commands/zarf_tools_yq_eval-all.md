@@ -78,7 +78,7 @@ cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
   -P, --prettyPrint                   pretty print, shorthand for '... style = ""'
       --properties-array-brackets     use [x] in array paths (e.g. for SpringBoot)
       --properties-separator string   separator to use between keys and values (default " = ")
-  -s, --split-exp string              print each result (or doc) into a file named (exp). [exp] argument must return a string. You can use $index in the expression as the result counter.
+  -s, --split-exp string              print each result (or doc) into a file named (exp). [exp] argument must return a string. You can use $index in the expression as the result counter. The necessary directories will be created.
       --split-exp-file string         Use a file to specify the split-exp expression.
       --string-interpolation          Toggles strings interpolation of \(exp) (default true)
       --tsv-auto-parse                parse TSV YAML/JSON values (default true)

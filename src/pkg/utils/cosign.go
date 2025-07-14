@@ -29,8 +29,7 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 const (
@@ -43,13 +42,11 @@ const (
 //
 // Forked from https://github.com/sigstore/cosign/blob/v1.7.1/pkg/sget/sget.go
 func Sget(ctx context.Context, image, key string, out io.Writer) error {
-	message.Warnf(lang.WarnSGetDeprecation)
+	l := logger.From(ctx)
+	l.Warn("Using sget to download resources is being deprecated and will removed in the v1.0.0 release of Zarf. Please publish the packages as OCI artifacts instead.")
 
 	// Remove the custom protocol header from the url
 	image = strings.TrimPrefix(image, helpers.SGETURLPrefix)
-
-	spinner := message.NewProgressSpinner("Loading signed file %s", image)
-	defer spinner.Stop()
 
 	ref, err := name.ParseReference(image)
 	if err != nil {
@@ -91,8 +88,6 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	// 2. We're going to find an x509 certificate on the signature and verify against Fulcio root trust
 	// TODO(nsmith5): Refactor this verification logic to pass back _how_ verification
 	// was performed so we don't need to use this fragile logic here.
-	fulcioVerified := co.SigVerifier == nil
-
 	co.RootCerts, err = fulcio.GetRoots()
 	if err != nil {
 		return fmt.Errorf("getting Fulcio roots: %w", err)
@@ -131,26 +126,21 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 		verifyMsg += "PUBLIC KEY. "
 	}
 
-	if fulcioVerified {
-		spinner.Updatef("KEYLESS (OIDC). ")
-	}
-
 	for _, sig := range sp {
 		if cert, err := sig.Cert(); err == nil && cert != nil {
-			message.Debugf("Certificate subject: %s", cert.Subject)
+			l.Debug("utils.Sget", "subject", cert.Subject)
 
 			ce := cosign.CertExtensions{Cert: cert}
 			if issuerURL := ce.GetIssuer(); issuerURL != "" {
-				message.Debugf("Certificate issuer URL: %s", issuerURL)
+				l.Debug("utils.Sget", "issuerURL", issuerURL)
 			}
 		}
 
 		p, err := sig.Payload()
 		if err != nil {
-			spinner.Errorf(err, "Error getting payload")
 			return err
 		}
-		message.Debug(string(p))
+		l.Debug(string(p))
 	}
 
 	// TODO(mattmoor): Depending on what this is, use the higher-level stuff.
@@ -171,7 +161,7 @@ func Sget(ctx context.Context, image, key string, out io.Writer) error {
 	}
 
 	_, err = io.Copy(out, rc)
-	spinner.Successf(verifyMsg)
+	l.Info(verifyMsg)
 
 	return err
 }
@@ -191,7 +181,7 @@ func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) erro
 		return err
 	}
 
-	message.Successf("Package signature validated!")
+	logger.From(ctx).Debug("package signature validated", "key", keyPath)
 	return nil
 }
 
@@ -228,26 +218,27 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	ref, err := name.ParseReference(image, nameOpts...)
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
+	// Return empty if we don't have a signature on the image
 	var remoteOpts []ociremote.Option
-	simg, _ := ociremote.SignedEntity(ref, remoteOpts...)
+	simg, _ := ociremote.SignedEntity(ref, remoteOpts...) //nolint:errcheck
 	if simg == nil {
-		return []string{}, nil
+		return nil, nil
 	}
 
 	// Errors are dogsled because these functions always return a name.Tag which we can check for layers
-	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)
-	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...)
+	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)   //nolint:errcheck
+	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...) //nolint:errcheck
 
 	ss, err := simg.Signatures()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	ssLayers, err := ss.Layers()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 
 	var cosignArtifactList = make([]string, 0)
@@ -257,11 +248,11 @@ func GetCosignArtifacts(image string) ([]string, error) {
 
 	atts, err := simg.Attestations()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	aLayers, err := atts.Layers()
 	if err != nil {
-		return []string{}, err
+		return nil, err
 	}
 	if 0 < len(aLayers) {
 		cosignArtifactList = append(cosignArtifactList, attRef.String())

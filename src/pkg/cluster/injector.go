@@ -14,51 +14,53 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/mholt/archiver/v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	pkgkubernetes "github.com/defenseunicorns/pkg/kubernetes"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) error {
+	l := logger.From(ctx)
+	start := time.Now()
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
 		return err
 	}
 
-	spinner := message.NewProgressSpinner("Attempting to bootstrap the seed image into the cluster")
-	defer spinner.Stop()
+	l.Info("creating Zarf injector resources")
 
-	resReq := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
 			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		},
-		Limits: corev1.ResourceList{
+		}).
+		WithLimits(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
-		},
-	}
+		})
 	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
 	if err != nil {
 		return err
 	}
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, spinner, tmpDir, imagesDir, injectorSeedSrcs)
+	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
 		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
@@ -67,42 +69,24 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	if err != nil {
 		return err
 	}
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ZarfNamespaceName,
-			Name:      "rust-binary",
-		},
-		BinaryData: map[string][]byte{
+	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
+		WithBinaryData(map[string][]byte{
 			"zarf-injector": b,
-		},
-	}
-	_, err = c.Clientset.CoreV1().ConfigMaps(cm.Namespace).Create(ctx, cm, metav1.CreateOptions{})
+		})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return err
 	}
 
-	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ZarfNamespaceName,
-			Name:      "zarf-injector",
-		},
-		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeNodePort,
-			Ports: []corev1.ServicePort{
-				{
-					Port: int32(5000),
-				},
-			},
-			Selector: map[string]string{
-				"app": "zarf-injector",
-			},
-		},
-	}
-	svc, err = c.Clientset.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+	svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithType(corev1.ServiceTypeNodePort).
+			WithPorts(
+				v1ac.ServicePort().WithPort(int32(5000)),
+			).WithSelector(map[string]string{
+			"app": "zarf-injector",
+		}))
+	svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return err
 	}
@@ -110,33 +94,42 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
-	_, err = c.Clientset.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
 	defer waitCancel()
-	err = pkgkubernetes.WaitForReadyRuntime(waitCtx, c.Watcher, []runtime.Object{pod})
+	podRef := v1alpha1.NamespacedObjectKindReference{
+		APIVersion: *pod.APIVersion,
+		Kind:       *pod.Kind,
+		Namespace:  *pod.Namespace,
+		Name:       *pod.Name,
+	}
+	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return err
 	}
 
-	spinner.Success()
+	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
 }
 
 // StopInjection handles cleanup once the seed registry is up.
 func (c *Cluster) StopInjection(ctx context.Context) error {
-	err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
+	start := time.Now()
+	l := logger.From(ctx)
+	l.Debug("deleting injector resources")
+	err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Delete(ctx, "injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().Services(ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+	err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -151,14 +144,14 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
 
 	// This is needed because labels were not present in payload config maps previously.
 	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -166,7 +159,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
 			continue
 		}
-		err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
@@ -174,7 +167,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 
 	// TODO: Replace with wait package in the future.
 	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		_, err := c.Clientset.CoreV1().Pods(ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
+		_, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).Get(ctx, "injector", metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -183,10 +176,12 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	l.Debug("done deleting injector resources", "duration", time.Since(start))
 	return nil
 }
 
-func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.Spinner, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+	l := logger.From(ctx)
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
 	if err := helpers.CreateDirectory(seedImagesDir, helpers.ReadWriteExecuteUser); err != nil {
@@ -221,9 +216,11 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	if err != nil {
 		return nil, "", err
 	}
-	if err := archiver.Archive(tarFileList, tarPath); err != nil {
-		return nil, "", err
+
+	if err := archive.Compress(ctx, tarFileList, tarPath, archive.CompressOpts{}); err != nil {
+		return nil, "", fmt.Errorf("failed to compress the payload: %w", err)
 	}
+
 	payloadChunkSize := 1024 * 768
 	chunks, shasum, err := helpers.ReadFileByChunks(tarPath, payloadChunkSize)
 	if err != nil {
@@ -231,24 +228,18 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 	}
 
 	cmNames := []string{}
+	l.Info("adding archived binary configmaps of registry image to the cluster")
 	for i, data := range chunks {
 		fileName := fmt.Sprintf("zarf-payload-%03d", i)
 
-		spinner.Updatef("Adding archive binary configmap %d of %d to the cluster", i+1, len(chunks))
-
-		cm := &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ZarfNamespaceName,
-				Name:      fileName,
-				Labels: map[string]string{
-					"zarf-injector": "payload",
-				},
-			},
-			BinaryData: map[string][]byte{
+		cm := v1ac.ConfigMap(fileName, state.ZarfNamespaceName).
+			WithLabels(map[string]string{
+				"zarf-injector": "payload",
+			}).
+			WithBinaryData(map[string][]byte{
 				fileName: data,
-			},
-		}
-		_, err = c.Clientset.CoreV1().ConfigMaps(ZarfNamespaceName).Create(ctx, cm, metav1.CreateOptions{})
+			})
+		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return nil, "", err
 		}
@@ -261,7 +252,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, spinner *message.
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq corev1.ResourceRequirements) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
 	// Regex for Zarf seed image
 	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
 	if err != nil {
@@ -279,8 +270,8 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq corev1.Res
 		if err != nil {
 			return "", "", err
 		}
-		if nodeDetails.Status.Allocatable.Cpu().Cmp(resReq.Requests[corev1.ResourceCPU]) < 0 ||
-			nodeDetails.Status.Allocatable.Memory().Cmp(resReq.Requests[corev1.ResourceMemory]) < 0 {
+		if nodeDetails.Status.Allocatable.Cpu().Cmp(*resReq.Requests.Cpu()) < 0 ||
+			nodeDetails.Status.Allocatable.Memory().Cmp(*resReq.Requests.Memory()) < 0 {
 			continue
 		}
 		if hasBlockingTaints(nodeDetails.Spec.Taints) {
@@ -317,99 +308,95 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq corev1.ResourceRequirements) *corev1.Pod {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	executeMode := int32(0777)
+	userID := int64(1000)
+	groupID := int64(2000)
+	fsGroupID := int64(2000)
+	volumes := []*v1ac.VolumeApplyConfiguration{
+		v1ac.Volume().
+			WithName("init").
+			WithConfigMap(
+				v1ac.ConfigMapVolumeSource().
+					WithName("rust-binary").
+					WithDefaultMode(executeMode),
+			),
+		v1ac.Volume().
+			WithName("seed").
+			WithEmptyDir(&v1ac.EmptyDirVolumeSourceApplyConfiguration{})}
 
-	pod := &corev1.Pod{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: corev1.SchemeGroupVersion.String(),
-			Kind:       "Pod",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "injector",
-			Namespace: ZarfNamespaceName,
-			Labels: map[string]string{
-				"app":      "zarf-injector",
-				AgentLabel: "ignore",
-			},
-		},
-		Spec: corev1.PodSpec{
-			NodeName: nodeName,
-			// Do not try to restart the pod as it will be deleted/re-created instead.
-			RestartPolicy: corev1.RestartPolicyNever,
-			Containers: []corev1.Container{
-				{
-					Name:            "injector",
-					Image:           image,
-					ImagePullPolicy: corev1.PullIfNotPresent,
-					WorkingDir:      "/zarf-init",
-					Command:         []string{"/zarf-init/zarf-injector", shasum},
-					VolumeMounts: []corev1.VolumeMount{
-						{
-							Name:      "init",
-							MountPath: "/zarf-init/zarf-injector",
-							SubPath:   "zarf-injector",
-						},
-						{
-							Name:      "seed",
-							MountPath: "/zarf-seed",
-						},
-					},
-					ReadinessProbe: &corev1.Probe{
-						PeriodSeconds:    2,
-						SuccessThreshold: 1,
-						FailureThreshold: 10,
-						ProbeHandler: corev1.ProbeHandler{
-							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/v2/",
-								Port: intstr.FromInt(5000),
-							},
-						},
-					},
-					Resources: resReq,
-				},
-			},
-			Volumes: []corev1.Volume{
-				// Contains the rust binary and collection of configmaps from the tarball (seed image).
-				{
-					Name: "init",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "rust-binary",
-							},
-							DefaultMode: &executeMode,
-						},
-					},
-				},
-				// Empty directory to hold the seed image (new dir to avoid permission issues)
-				{
-					Name: "seed",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
-				},
-			},
-		},
+	volumeMounts := []*v1ac.VolumeMountApplyConfiguration{
+		v1ac.VolumeMount().
+			WithName("init").
+			WithMountPath("/zarf-init/zarf-injector").
+			WithSubPath("zarf-injector"),
+		v1ac.VolumeMount().
+			WithName("seed").
+			WithMountPath("/zarf-seed"),
 	}
 
 	for _, filename := range payloadCmNames {
-		pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{
-			Name: filename,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: filename,
-					},
-				},
-			},
-		})
-		pod.Spec.Containers[0].VolumeMounts = append(pod.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      filename,
-			MountPath: fmt.Sprintf("/zarf-init/%s", filename),
-			SubPath:   filename,
-		})
+		volumes = append(volumes, v1ac.Volume().
+			WithName(filename).
+			WithConfigMap(
+				v1ac.ConfigMapVolumeSource().
+					WithName(filename),
+			))
+		volumeMounts = append(volumeMounts, v1ac.VolumeMount().
+			WithName(filename).
+			WithMountPath(fmt.Sprintf("/zarf-init/%s", filename)).
+			WithSubPath(filename))
 	}
+
+	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
+		WithLabels(map[string]string{
+			"app":      "zarf-injector",
+			AgentLabel: "ignore",
+		}).
+		WithSpec(
+			v1ac.PodSpec().
+				WithNodeName(nodeName).
+				WithRestartPolicy(corev1.RestartPolicyNever).
+				WithSecurityContext(
+					v1ac.PodSecurityContext().
+						WithRunAsUser(userID).
+						WithRunAsGroup(groupID).
+						WithFSGroup(fsGroupID).
+						WithSeccompProfile(
+							v1ac.SeccompProfile().
+								WithType(corev1.SeccompProfileTypeRuntimeDefault),
+						),
+				).
+				WithContainers(
+					v1ac.Container().
+						WithName("injector").
+						WithImage(image).
+						WithImagePullPolicy(corev1.PullIfNotPresent).
+						WithWorkingDir("/zarf-init").
+						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithVolumeMounts(volumeMounts...).
+						WithSecurityContext(
+							v1ac.SecurityContext().
+								WithReadOnlyRootFilesystem(true).
+								WithAllowPrivilegeEscalation(false).
+								WithRunAsNonRoot(true).
+								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
+						).
+						WithReadinessProbe(
+							v1ac.Probe().
+								WithPeriodSeconds(2).
+								WithSuccessThreshold(1).
+								WithFailureThreshold(10).
+								WithHTTPGet(
+									v1ac.HTTPGetAction().
+										WithPath("/v2/").
+										WithPort(intstr.FromInt(5000)),
+								),
+						).
+						WithResources(resReq),
+				).
+				WithVolumes(volumes...),
+		)
 
 	return pod
 }

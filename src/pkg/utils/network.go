@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,10 +14,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 func parseChecksum(src string) (string, string, error) {
@@ -39,7 +41,7 @@ func parseChecksum(src string) (string, string, error) {
 }
 
 // DownloadToFile downloads a given URL to the target filepath (including the cosign key if necessary).
-func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
+func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) (err error) {
 	// check if the parsed URL has a checksum
 	// if so, remove it and use the checksum to validate the file
 	src, checksum, err := parseChecksum(src)
@@ -57,7 +59,11 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 	if err != nil {
 		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
 	}
-	defer file.Close()
+	// Ensure our file closes and any error propagate out on error branches
+	defer func(file *os.File) {
+		err2 := file.Close()
+		err = errors.Join(err, err2)
+	}(file)
 
 	parsed, err := url.Parse(src)
 	if err != nil {
@@ -70,7 +76,7 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 			return fmt.Errorf("unable to download file with sget: %s: %w", src, err)
 		}
 	} else {
-		err = httpGetFile(src, file)
+		err = httpGetFile(ctx, src, file)
 		if err != nil {
 			return err
 		}
@@ -90,29 +96,33 @@ func DownloadToFile(ctx context.Context, src, dst, cosignKeyPath string) error {
 	return nil
 }
 
-func httpGetFile(url string, destinationFile *os.File) error {
-	// Get the data
-	resp, err := http.Get(url)
+func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err error) {
+	l := logger.From(ctx)
+	l.Info("download start", "url", url)
+	start := time.Now()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("unable to download the file %s", url)
+		return fmt.Errorf("unable to create request for %s: %w", url, err)
 	}
-	defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("unable to download the file %s: %w", url, err)
+	}
+	defer func() {
+		err2 := resp.Body.Close()
+		err = errors.Join(err, err2)
+	}()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("bad HTTP status: %s", resp.Status)
 	}
 
-	// Writer the body to file
-	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
-	progressBar := message.NewProgressBar(resp.ContentLength, title)
-
-	if _, err = io.Copy(destinationFile, io.TeeReader(resp.Body, progressBar)); err != nil {
-		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
-		return err
+	// Copy response body to file
+	if _, err = io.Copy(destinationFile, resp.Body); err != nil {
+		return fmt.Errorf("unable to save the file %s: %w", destinationFile.Name(), err)
 	}
-
-	title = fmt.Sprintf("Downloaded %s", url)
-	progressBar.Successf("%s", title)
+	l.Debug("download successful", "url", url, "size", resp.ContentLength, "duration", time.Since(start))
 	return nil
 }

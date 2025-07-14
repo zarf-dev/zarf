@@ -4,11 +4,6 @@
 // Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
 package v1alpha1
 
-import (
-	"github.com/invopop/jsonschema"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1/extensions"
-)
-
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// The name of the component.
@@ -52,9 +47,6 @@ type ZarfComponent struct {
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
-
-	// Extend component functionality with additional features.
-	Extensions extensions.ZarfComponentExtensions `json:"extensions,omitempty"`
 
 	// [Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.
 	DeprecatedScripts DeprecatedZarfComponentScripts `json:"scripts,omitempty" jsonschema:"deprecated=true"`
@@ -161,6 +153,16 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
+	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+}
+
+// ShouldRunSchemaValidation returns if Helm schema validation should be run or not
+func (zc ZarfChart) ShouldRunSchemaValidation() bool {
+	if zc.SchemaValidation != nil {
+		return *zc.SchemaValidation
+	}
+	return true
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
@@ -331,19 +333,6 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty"`
 	// [beta] The URL to a Zarf package to import via OCI.
 	URL string `json:"url,omitempty" jsonschema:"pattern=^oci://.*$"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (ZarfComponentImport) JSONSchemaExtend(schema *jsonschema.Schema) {
-	path, _ := schema.Properties.Get("path")
-	url, _ := schema.Properties.Get("url")
-
-	notSchema := &jsonschema.Schema{
-		Pattern: ZarfPackageTemplatePrefix,
-	}
-
-	path.Not = notSchema
-	url.Not = notSchema
 }
 
 // Shell represents the desired shell to use for a given command

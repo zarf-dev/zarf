@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"testing"
 
@@ -15,10 +16,12 @@ import (
 func TestHealthChecks(t *testing.T) {
 	t.Log("E2E: Health Checks")
 
-	_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/36-health-checks", "-o=build", "--confirm")
+	tmpdir := t.TempDir()
+	_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/36-health-checks", "-o", tmpdir, "--confirm")
 	require.NoError(t, err)
 
-	path := fmt.Sprintf("build/zarf-package-health-checks-%s.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-health-checks-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
 
 	_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err)

@@ -30,7 +30,11 @@ func (f *selectStateFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComp
 	for _, component := range pkg.Components {
 		selectState := included
 		if isPartial {
-			selectState, _ = includedOrExcluded(component.Name, f.requestedComponents)
+			var err error
+			selectState, _, err = includedOrExcluded(component.Name, f.requestedComponents)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if selectState != included {
 			continue

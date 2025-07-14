@@ -12,7 +12,7 @@ Convert between SBOM formats
 
 ### Synopsis
 
-[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft#format-conversion-experimental
+[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft/wiki/format-conversion
 
 ```
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
@@ -21,18 +21,19 @@ zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ### Options
 
 ```
-      --file string          file to write the default report output to (default is STDOUT) (DEPRECATED: use: output)
+      --file string          file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
   -h, --help                 help for convert
-  -o, --output stringArray   report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
+  -o, --output stringArray   report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json purls spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
   -t, --template string      specify the path to a Go template file
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -c, --config string              syft configuration file
+  -c, --config stringArray         syft configuration file(s) to use
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --profile stringArray        configuration profiles to use
   -q, --quiet                      suppress all logging output
   -v, --verbose count              increase verbosity (-v = info, -vv = debug)
 ```

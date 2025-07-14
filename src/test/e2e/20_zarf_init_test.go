@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestZarfInit(t *testing.T) {
@@ -32,7 +32,7 @@ func TestZarfInit(t *testing.T) {
 		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
 	)
 	t.Cleanup(func() {
-		e2e.CleanFiles(mismatchedInitPackage)
+		e2e.CleanFiles(t, mismatchedInitPackage)
 	})
 
 	if runtime.GOOS == "linux" {
@@ -44,7 +44,7 @@ func TestZarfInit(t *testing.T) {
 		// We need to use the --architecture flag here to force zarf to find the package.
 		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
 		require.Error(t, err, stdErr)
-		require.Contains(t, e2e.StripMessageFormatting(stdErr), expectedErrorMessage)
+		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
 	if !e2e.ApplianceMode {
@@ -54,7 +54,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// Check for any old secrets to ensure that they don't get saved in the init log
-	oldState := types.ZarfState{}
+	oldState := state.State{}
 	base64State, _, err := e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	if err == nil {
 		oldStateJSON, err := base64.StdEncoding.DecodeString(base64State)
@@ -64,28 +64,23 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, initStdErr, err := e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "-l", "trace", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--confirm")
 	require.NoError(t, err)
-	require.Contains(t, initStdErr, "an inventory of all software contained in this package")
-	require.NotContains(t, initStdErr, "This package does NOT contain an SBOM. If you require an SBOM, please contact the creator of this package to request a version that includes an SBOM.")
-
-	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(initStdErr))
 
 	// Verify that any state secrets were not included in the log
-	state := types.ZarfState{}
+	s := state.State{}
 	base64State, _, err = e2e.Kubectl(t, "get", "secret", "zarf-state", "-n", "zarf", "-o", "jsonpath={.data.state}")
 	require.NoError(t, err)
 	stateJSON, err := base64.StdEncoding.DecodeString(base64State)
 	require.NoError(t, err)
-	err = json.Unmarshal(stateJSON, &state)
+	err = json.Unmarshal(stateJSON, &s)
 	require.NoError(t, err)
-	checkLogForSensitiveState(t, logText, state)
 
 	if e2e.ApplianceMode {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl(t, "get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
 		require.NoError(t, err)
-		require.Contains(t, kubeletVersion, "v1.28.4+k3s2")
+		require.Contains(t, kubeletVersion, "v1.32.3+k3s1")
 	}
 
 	// Check that the registry is running on the correct NodePort
@@ -104,25 +99,8 @@ func TestZarfInit(t *testing.T) {
 	verifyZarfServiceLabels(t)
 
 	// Special sizing-hacking for reducing resources where Kind + CI eats a lot of free cycles (ignore errors)
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1")
-	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")
-}
-
-func checkLogForSensitiveState(t *testing.T, logText string, zarfState types.ZarfState) {
-	t.Helper()
-
-	require.NotContains(t, logText, zarfState.AgentTLS.CA)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.CA))
-	require.NotContains(t, logText, zarfState.AgentTLS.Cert)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.Cert))
-	require.NotContains(t, logText, zarfState.AgentTLS.Key)
-	require.NotContains(t, logText, string(zarfState.AgentTLS.Key))
-	require.NotContains(t, logText, zarfState.ArtifactServer.PushToken)
-	require.NotContains(t, logText, zarfState.GitServer.PullPassword)
-	require.NotContains(t, logText, zarfState.GitServer.PushPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.PullPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.PushPassword)
-	require.NotContains(t, logText, zarfState.RegistryInfo.Secret)
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
+	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 }
 
 func verifyZarfNamespaceLabels(t *testing.T) {

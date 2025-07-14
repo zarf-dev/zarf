@@ -18,16 +18,14 @@ func TestVariables(t *testing.T) {
 
 	evilSrc := filepath.Join("src", "test", "packages", "24-evil-variables")
 	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
-
 	src := filepath.Join("examples", "variables")
-	path := filepath.Join("build", fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch))
 
 	tfPath := "modified-terraform.tf"
 
-	e2e.CleanFiles(tfPath, evilPath)
+	e2e.CleanFiles(t, tfPath, evilPath)
 
 	// Test that specifying an invalid setVariable value results in an error
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", evilSrc, "--set", "NUMB3R5=K1TT3H", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", evilSrc, "--set", "NUMB3R5=K1TT3H")
 	require.NoError(t, err, stdOut, stdErr)
 	expectedOutString := "\"K1TT3H\""
 	require.Contains(t, stdErr, "", expectedOutString)
@@ -37,14 +35,21 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid constant value results in an error
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", src, "--set", "NGINX_VERSION=", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", src, "--set", "NGINX_VERSION=")
 	require.Error(t, err, stdOut, stdErr)
 	expectedOutString = "constant \"NGINX_VERSION\" does not match pattern "
 	require.Contains(t, stdErr, "", expectedOutString)
 
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", src, "--set", "NGINX_VERSION=1.23.3", "-o", tmpdir, "--skip-sbom")
+	require.NoError(t, err, stdOut, stdErr)
+	packageName := fmt.Sprintf("zarf-package-variables-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
 	// Test that not specifying a prompted variable results in an error
-	_, stdErr, _ = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	expectedOutString = "variable 'SITE_NAME' must be '--set' when using the '--confirm' flag"
+	require.Error(t, err)
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Test that specifying an invalid variable value results in an error
@@ -57,15 +62,11 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
 	// Verify that the variables were shown to the user in the formats we expect
-	require.Contains(t, stdErr, "currently set to 'Defense Unicorns' (default)")
-	require.Contains(t, stdErr, "currently set to 'Lula Web'")
-	require.Contains(t, stdErr, "currently set to '**sanitized**'")
+	require.Contains(t, stdOut, "currently set to 'Defense Unicorns' (default)")
+	require.Contains(t, stdOut, "currently set to 'Lula Web'")
+	require.Contains(t, stdOut, "currently set to '**sanitized**'")
 	// Verify that the sensitive variable 'unicorn-land' was not printed to the screen
-	require.NotContains(t, stdErr, "unicorn-land")
-
-	logText := e2e.GetLogFileContents(t, e2e.StripMessageFormatting(stdErr))
-	// Verify that the sensitive variable 'unicorn-land' was not included in the log
-	require.NotContains(t, logText, "unicorn-land")
+	require.NotContains(t, stdOut, "unicorn-land")
 
 	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)
@@ -73,7 +74,8 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, string(outputTF), "unicorn-land")
 
 	// Verify the configmap was properly templated
-	kubectlOut, _, _ := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
+	kubectlOut, _, err := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
+	require.NoError(t, err, "unable to get nginx configmap")
 	// OPTIONAL_FOOTER should remain unset because it was not set during deploy
 	require.Contains(t, string(kubectlOut), "</pre>\n    \n  </body>")
 	// STYLE should take the default value
@@ -91,5 +93,5 @@ func TestVariables(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	e2e.CleanFiles(tfPath, evilPath)
+	e2e.CleanFiles(t, tfPath, evilPath)
 }

@@ -19,8 +19,6 @@ import (
 const (
 	GithubProject = "zarf-dev/zarf"
 
-	ZarfAgentHost = "agent-hook.zarf.svc"
-
 	ZarfCleanupScriptsPath = "/opt/zarf"
 
 	ZarfPackagePrefix = "zarf-package-"
@@ -44,7 +42,7 @@ var (
 	CLIVersion = UnsetCLIVersion
 
 	// ActionsUseSystemZarf sets whether to use Zarf from the system path if Zarf is being used as a library
-	ActionsUseSystemZarf = false
+	ActionsUseSystemZarf = true
 
 	// ActionsCommandZarfPrefix sets a sub command prefix that Zarf commands are under in the current binary if Zarf is being used as a library (and use system Zarf is not specified)
 	ActionsCommandZarfPrefix = ""
@@ -57,8 +55,6 @@ var (
 
 	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
 	ZarfSeedPort string
-
-	CosignPublicKey string
 
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
@@ -97,16 +93,25 @@ func GetDataInjectionMarker() string {
 }
 
 // GetAbsCachePath gets the absolute cache path for images and git repos.
-func GetAbsCachePath() string {
+func GetAbsCachePath() (string, error) {
 	return GetAbsHomePath(CommonOptions.CachePath)
 }
 
 // GetAbsHomePath replaces ~ with the absolute path to a user's home dir
-func GetAbsHomePath(path string) string {
-	homePath, _ := os.UserHomeDir()
-
+func GetAbsHomePath(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
-		return strings.Replace(path, "~", homePath, 1)
+		homePath, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		return strings.Replace(path, "~", homePath, 1), nil
 	}
-	return path
+	return path, nil
+}
+
+// GetInitPackageName based on the architecture and CLI version
+func GetInitPackageName() string {
+	// No package has been loaded yet so lookup GetArch() with no package info
+	arch := GetArch()
+	return fmt.Sprintf("zarf-init-%s-%s.tar.zst", arch, CLIVersion)
 }

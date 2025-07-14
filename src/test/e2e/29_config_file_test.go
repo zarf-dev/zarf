@@ -5,54 +5,32 @@
 package test
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-func TestConfigFile(t *testing.T) {
-	t.Log("E2E: Config file")
+func TestConfigFileCreate(t *testing.T) {
+	tmpDir := t.TempDir()
+	dir := "examples/config-file"
 
-	var (
-		path   = fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch)
-		dir    = "examples/config-file"
-		config = "zarf-config.toml"
-	)
+	t.Setenv("ZARF_CONFIG", filepath.Join(dir, "zarf-config.toml"))
 
-	e2e.CleanFiles(path)
-
-	// Test the config file environment variable
-	t.Setenv("ZARF_CONFIG", filepath.Join(dir, config))
-	defer os.Unsetenv("ZARF_CONFIG")
-	configFileTests(t, dir, path)
-
-	configFileDefaultTests(t)
-
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "remove", path, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	e2e.CleanFiles(path)
-}
-
-func configFileTests(t *testing.T, dir, path string) {
-	t.Helper()
-
-	_, stdErr, err := e2e.Zarf(t, "package", "create", dir, "--confirm")
+	_, _, err := e2e.Zarf(t, "package", "create", dir, "--confirm", "-o", tmpDir)
 	require.NoError(t, err)
-	require.Contains(t, string(stdErr), "This is a zebra and they have stripes")
-	require.Contains(t, string(stdErr), "This is a leopard and they have spots")
 
-	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-config-file-%s.tar.zst", e2e.Arch))
+	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
-	require.Contains(t, string(stdErr), "📦 LION COMPONENT")
-	require.NotContains(t, string(stdErr), "📦 LEOPARD COMPONENT")
-	require.NotContains(t, string(stdErr), "📦 ZEBRA COMPONENT")
+	require.Equal(t, "This is a zebra and they have stripes", pkgLayout.Pkg.Components[1].Description)
+	require.Equal(t, "This is a leopard and they have spots", pkgLayout.Pkg.Components[2].Description)
 
-	// This package does not contain anything SBOMable
-	require.NotContains(t, string(stdErr), "This package does NOT contain an SBOM.")
+	_, _, err = e2e.Zarf(t, "package", "deploy", tarPath, "--confirm")
+	require.NoError(t, err)
 
 	// Verify the configmap was properly templated
 	kubectlOut, _, err := e2e.Kubectl(t, "-n", "zarf", "get", "configmap", "simple-configmap", "-o", "jsonpath={.data.templateme\\.properties}")
@@ -94,14 +72,10 @@ H4RxbE+FpmsMAUCpdrzvFkc=
 	require.Equal(t, tlsKey, kubectlOut)
 }
 
-func configFileDefaultTests(t *testing.T) {
-	t.Helper()
-
+func TestConfigFileDefault(t *testing.T) {
 	globalFlags := []string{
 		"architecture: 509a38f0",
 		"log_level: 6a845a41",
-		"Disable log file creation (default true)",
-		"Disable fancy UI progress bars, spinners, logos, etc (default true)",
 		"zarf_cache: 978499a5",
 		"Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.",
 		"Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.",
@@ -140,29 +114,32 @@ func configFileDefaultTests(t *testing.T) {
 
 	// Test remaining default initializers
 	t.Setenv("ZARF_CONFIG", filepath.Join("src", "test", "zarf-config-test.toml"))
-	defer os.Unsetenv("ZARF_CONFIG")
 
 	// Test global flags
-	stdOut, _, _ := e2e.Zarf(t, "--help")
+	stdOut, _, err := e2e.Zarf(t, "--help")
+	require.NoError(t, err)
 	for _, test := range globalFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test init flags
-	stdOut, _, _ = e2e.Zarf(t, "init", "--help")
+	stdOut, _, err = e2e.Zarf(t, "init", "--help")
+	require.NoError(t, err)
 	for _, test := range initFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package create flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "create", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "create", "--help")
+	require.NoError(t, err)
 	for _, test := range packageCreateFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 
 	// Test package deploy flags
-	stdOut, _, _ = e2e.Zarf(t, "package", "deploy", "--help")
+	stdOut, _, err = e2e.Zarf(t, "package", "deploy", "--help")
+	require.NoError(t, err)
 	for _, test := range packageDeployFlags {
-		require.Contains(t, string(stdOut), test)
+		require.Contains(t, stdOut, test)
 	}
 }

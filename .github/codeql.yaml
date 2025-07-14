@@ -1,5 +1,4 @@
 paths-ignore:
-  - src/pkg/packager/network.go
   - src/pkg/utils/network.go
   - src/pkg/utils/credentials.go
   - site/**

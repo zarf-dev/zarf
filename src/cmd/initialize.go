@@ -8,73 +8,147 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
-	"github.com/zarf-dev/zarf/src/cmd/common"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
 
-// initCmd represents the init command.
-var initCmd = &cobra.Command{
-	Use:     "init",
-	Aliases: []string{"i"},
-	Short:   lang.CmdInitShort,
-	Long:    lang.CmdInitLong,
-	Example: lang.CmdInitExample,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		zarfLogo := message.GetLogo()
-		_, _ = fmt.Fprintln(os.Stderr, zarfLogo)
+type initOptions struct{}
 
-		if err := validateInitFlags(); err != nil {
-			return fmt.Errorf("invalid command flags were provided: %w", err)
-		}
+func newInitCommand() *cobra.Command {
+	o := initOptions{}
 
-		// Continue running package deploy for all components like any other package
-		initPackageName := sources.GetInitPackageName()
-		pkgConfig.PkgOpts.PackageSource = initPackageName
+	cmd := &cobra.Command{
+		Use:     "init",
+		Aliases: []string{"i"},
+		Short:   lang.CmdInitShort,
+		Long:    lang.CmdInitLong,
+		Example: lang.CmdInitExample,
+		RunE:    o.run,
+	}
 
-		// Try to use an init-package in the executable directory if none exist in current working directory
-		var err error
-		if pkgConfig.PkgOpts.PackageSource, err = findInitPackage(cmd.Context(), initPackageName); err != nil {
-			return err
-		}
+	v := getViper()
 
-		src, err := sources.New(&pkgConfig.PkgOpts)
-		if err != nil {
-			return err
-		}
+	// Init package variable defaults that are non-zero values
+	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
+	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
+	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
-		v := common.GetViper()
-		pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-			v.GetStringMapString(common.VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	// Init package set variable flags
+	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
 
-		pkgClient, err := packager.New(&pkgConfig, packager.WithSource(src))
-		if err != nil {
-			return err
-		}
-		defer pkgClient.ClearTempPaths()
+	// Continue to require --confirm flag for init command to avoid accidental deployments
+	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
+	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-		err = pkgClient.Deploy(cmd.Context())
-		if err != nil {
-			return err
-		}
-		return nil
-	},
+	// Flags for using an external Git server
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+
+	// Flags for using an external registry
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(VInitRegistrySecret), lang.CmdInitFlagRegSecret)
+
+	// Flags for using an external artifact server
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
+	cmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+
+	// Flags that control how a deployment proceeds
+	// Always require adopt-existing-resources flag (no viper)
+	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+
+	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
+	cmd.Flags().SortFlags = true
+
+	return cmd
+}
+
+func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	if err := validateInitFlags(); err != nil {
+		return fmt.Errorf("invalid command flags were provided: %w", err)
+	}
+
+	initPackageName := config.GetInitPackageName()
+
+	// Try to use an init-package in the executable directory if none exist in current working directory
+	packageSource, err := findInitPackage(cmd.Context(), initPackageName)
+	if err != nil {
+		return err
+	}
+
+	v := getViper()
+	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpt := packager.LoadOptions{
+		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+		CachePath:               cachePath,
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	opts := packager.DeployOptions{
+		GitServer:              pkgConfig.InitOpts.GitServer,
+		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
+		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,
+		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
+		Timeout:                pkgConfig.DeployOpts.Timeout,
+		Retries:                pkgConfig.PkgOpts.Retries,
+		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		RemoteOptions:          defaultRemoteOptions(),
+	}
+	_, err = deploy(ctx, pkgLayout, opts)
+	if err != nil {
+		return err
+	}
+
+	logger.From(ctx).Info("init complete. To get credentials for Zarf deployed services run `zarf tools get-creds`")
+	return nil
 }
 
 func findInitPackage(ctx context.Context, initPackageName string) (string, error) {
@@ -94,62 +168,77 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	if helpers.InvalidPath(config.GetAbsCachePath()) {
-		if err := helpers.CreateDirectory(config.GetAbsCachePath(), helpers.ReadExecuteAllWriteUser); err != nil {
-			return "", fmt.Errorf("unable to create the cache directory %s: %w", config.GetAbsCachePath(), err)
+	absCachePath, err := getCachePath(ctx)
+	if err != nil {
+		return "", err
+	}
+	// Verify that we can write to the path
+	if helpers.InvalidPath(absCachePath) {
+		// Create the directory if the path is invalid
+		err = helpers.CreateDirectory(absCachePath, helpers.ReadExecuteAllWriteUser)
+		if err != nil {
+			return "", fmt.Errorf("unable to create the cache directory %s: %w", absCachePath, err)
 		}
 	}
 
 	// Next, look in the cache directory
-	if !helpers.InvalidPath(filepath.Join(config.GetAbsCachePath(), initPackageName)) {
-		return filepath.Join(config.GetAbsCachePath(), initPackageName), nil
+	if !helpers.InvalidPath(filepath.Join(absCachePath, initPackageName)) {
+		// join and return
+		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
-	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
-	downloadCacheTarget, err := downloadInitPackage(ctx, config.GetAbsCachePath())
-	if err != nil {
-		if errors.Is(err, lang.ErrInitNotFound) {
-			return "", err
-		}
-		return "", fmt.Errorf("failed to download the init package: %w", err)
-	}
-	return downloadCacheTarget, nil
-}
-
-func downloadInitPackage(ctx context.Context, cacheDirectory string) (string, error) {
 	if config.CommonOptions.Confirm {
 		return "", lang.ErrInitNotFound
 	}
 
-	var confirmDownload bool
+	// Finally, if the init-package doesn't exist in the cache directory, suggest downloading it
+	err = downloadInitPackage(ctx, absCachePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to download the init package: %w", err)
+	}
+	return filepath.Join(absCachePath, initPackageName), nil
+}
+
+func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
+	l := logger.From(ctx)
 	url := zoci.GetInitPackageURL(config.CLIVersion)
 
 	// Give the user the choice to download the init-package and note that this does require an internet connection
-	message.Question(fmt.Sprintf(lang.CmdInitPullAsk, url))
+	l.Info("the init package was not found locally, but can be pulled in connected environments", "url", fmt.Sprintf("oci://%s", url))
 
-	message.Note(lang.CmdInitPullNote)
-
-	// Prompt the user if --confirm not specified
-	if !confirmDownload {
-		prompt := &survey.Confirm{
-			Message: lang.CmdInitPullConfirm,
-		}
-		if err := survey.AskOne(prompt, &confirmDownload); err != nil {
-			return "", fmt.Errorf("confirm download canceled: %w", err)
-		}
+	var confirmDownload bool
+	prompt := &survey.Confirm{
+		Message: lang.CmdInitPullConfirm,
+	}
+	if err := survey.AskOne(prompt, &confirmDownload); err != nil {
+		return fmt.Errorf("confirm download canceled: %w", err)
 	}
 
 	// If the user wants to download the init-package, download it
 	if confirmDownload {
-		remote, err := zoci.NewRemote(url, oci.PlatformForArch(config.GetArch()))
+		// Add the oci:// prefix
+		url = fmt.Sprintf("oci://%s", url)
+
+		cachePath, err := getCachePath(ctx)
 		if err != nil {
-			return "", err
+			return err
 		}
-		source := &sources.OCISource{Remote: remote}
-		return source.Collect(ctx, cacheDirectory)
+
+		pullOptions := packager.PullOptions{
+			Architecture:   config.GetArch(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			CachePath:      cachePath,
+		}
+
+		_, err = packager.Pull(ctx, url, cacheDirectory, pullOptions)
+		if err != nil {
+			return fmt.Errorf("unable to download the init package: %w", err)
+		}
+
+		return nil
 	}
 	// Otherwise, exit and tell the user to manually download the init-package
-	return "", errors.New(lang.CmdInitPullErrManual)
+	return errors.New(lang.CmdInitPullErrManual)
 }
 
 func validateInitFlags() error {
@@ -174,56 +263,4 @@ func validateInitFlags() error {
 		}
 	}
 	return nil
-}
-
-func init() {
-	v := common.InitViper()
-
-	rootCmd.AddCommand(initCmd)
-
-	// Init package variable defaults that are non-zero values
-	// NOTE: these are not in common.setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(common.VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(common.VInitRegistryPushUser, types.ZarfRegistryPushUser)
-
-	// Init package set variable flags
-	initCmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(common.VPkgDeploySet), lang.CmdInitFlagSet)
-
-	// Continue to require --confirm flag for init command to avoid accidental deployments
-	initCmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
-	initCmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(common.VInitComponents), lang.CmdInitFlagComponents)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(common.VInitStorageClass), lang.CmdInitFlagStorageClass)
-
-	// Flags for using an external Git server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(common.VInitGitURL), lang.CmdInitFlagGitURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(common.VInitGitPushUser), lang.CmdInitFlagGitPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(common.VInitGitPushPass), lang.CmdInitFlagGitPushPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(common.VInitGitPullUser), lang.CmdInitFlagGitPullUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(common.VInitGitPullPass), lang.CmdInitFlagGitPullPass)
-
-	// Flags for using an external registry
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(common.VInitRegistryURL), lang.CmdInitFlagRegURL)
-	initCmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.NodePort, "nodeport", v.GetInt(common.VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(common.VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(common.VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(common.VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(common.VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Secret, "registry-secret", v.GetString(common.VInitRegistrySecret), lang.CmdInitFlagRegSecret)
-
-	// Flags for using an external artifact server
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.Address, "artifact-url", v.GetString(common.VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(common.VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	initCmd.Flags().StringVar(&pkgConfig.InitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(common.VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
-
-	// Flags that control how a deployment proceeds
-	// Always require adopt-existing-resources flag (no viper)
-	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	initCmd.Flags().BoolVar(&pkgConfig.DeployOpts.SkipWebhooks, "skip-webhooks", v.GetBool(common.VPkgDeploySkipWebhooks), lang.CmdPackageDeployFlagSkipWebhooks)
-	initCmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(common.VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
-
-	initCmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(common.VPkgRetries), lang.CmdPackageFlagRetries)
-	initCmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(common.VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	initCmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-
-	initCmd.Flags().SortFlags = true
 }

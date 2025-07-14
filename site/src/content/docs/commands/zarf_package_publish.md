@@ -29,9 +29,10 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 ### Options
 
 ```
+      --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
   -h, --help                        help for publish
-      --signing-key string          Path to a private key file for signing or re-signing packages with a new key
-      --signing-key-pass string     Password to the private key file used for publishing packages
+      --signing-key string          Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string     Password to the private key used for publishing packages
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
 
@@ -41,11 +42,10 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable colors in output
-      --no-log-file                Disable log file creation
-      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
-      --oci-concurrency int        Number of concurrent layer operations to perform when interacting with a remote package. (default 3)
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

@@ -29,6 +29,10 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
 
+### Contributing Guidelines 
+
+Zarf is a tool used within the United States Governement and as such security is our highest priority. Contributors external to Defense Unicorns or non-Zarf maintainers will require two (2) reviewers.
+
 ### Developer Workflow
 
 :key: == Required by automation
@@ -101,9 +105,9 @@ GitHub: @dgershman
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
-#### Sarah Christoff
+#### Kit Patella
 Affiliation: Defense Unicorns
-GitHub: @schristoff-du
+GitHub: @mkcp
 
 #### Wayne Starr
 Affiliation: Defense Unicorns

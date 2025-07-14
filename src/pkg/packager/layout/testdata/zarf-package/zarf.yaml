@@ -1,0 +1,41 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test
+  version: v0.0.1
+components:
+  - name: helm-charts
+    required: true
+    charts:
+      - name: podinfo-local
+        version: 6.4.0
+        namespace: podinfo-from-local-chart
+        localPath: chart
+        valuesFiles:
+          - values.yaml
+  - name: files
+    required: true
+    files:
+      - source: data.txt
+        target: data.txt
+      - source: archive.tar
+        extractPath: archive-data.txt
+        target: archive-data.txt
+  - name: data-injections
+    required: true
+    dataInjections:
+      - source: injection
+        target:
+          namespace: test
+          selector: app=test
+          container: test
+          path: /test
+        compress: true
+  - name: manifests
+    required: true
+    manifests:
+      - name: deployment
+        namespace: httpd
+        files:
+          - deployment.yaml
+        kustomizations:
+          - kustomize

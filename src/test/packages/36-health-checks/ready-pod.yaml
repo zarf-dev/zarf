@@ -9,5 +9,5 @@ spec:
     image: ghcr.io/stefanprodan/podinfo:6.4.0
     command: ["sh", "-c", "sleep 3"]
   containers:
-  - name: podinfo
+  - name: ready-pod-with-long-name-to-test-agent-truncate-annotation-name
     image: ghcr.io/stefanprodan/podinfo:6.4.0

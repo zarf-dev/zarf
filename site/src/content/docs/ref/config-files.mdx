@@ -9,7 +9,7 @@ import { Tabs, TabItem, Code } from "@astrojs/starlight/components";
 
 Users can use a config file to easily control flags for `zarf init`, `zarf package create`, and `zarf package deploy` commands, as well as global flags (excluding `--confirm`), enabling a more straightforward and declarative workflow.
 
-Zarf supports config files written in common configuration file formats including `toml`, `json`, `yaml`, `ini` and `props`, and by default Zarf will look for a file called `zarf-config` with one of these filenames in the current working directory. To generate a blank config file you can run `zarf dev generate-config` with an optional output filename/format. For example, to create an empty config file with the `my-cool-env` in the yaml format, you can use `zarf dev generate-config my-cool-env.yaml`.
+Zarf supports config files written in `toml` and `yaml`. By default Zarf will look for a file called `zarf-config` with one of these filenames in the current working directory. To generate a blank config file you can run `zarf dev generate-config` with an optional output filename/format. For example, to create an empty config file with the `my-cool-env` in the yaml format, you can use `zarf dev generate-config my-cool-env.yaml`.
 
 To use a custom config filename, set the `ZARF_CONFIG` environment variable to the config file's path. For example, to use the `my-cool-env.yaml` config file in the current working directory, you can set the `ZARF_CONFIG` environment variable to `my-cool-env.yaml`. The `ZARF_CONFIG` environment variable can be set either in the shell or in a `.env` file in the current working directory. Note that the `ZARF_CONFIG` environment variable takes precedence over the default config file path.
 
@@ -30,8 +30,6 @@ Zarf searches for the Zarf Config File from either your current working director
 
 import configYaml from "../../../../../examples/config-file/zarf-config.yaml?raw";
 import configToml from "../../../../../examples/config-file/zarf-config.toml?raw";
-import configIni from "../../../../../examples/config-file/zarf-config.ini?raw";
-import configJson from "../../../../../examples/config-file/zarf-config.json?raw";
 
 <Tabs>
   <TabItem label="yaml">
@@ -39,12 +37,6 @@ import configJson from "../../../../../examples/config-file/zarf-config.json?raw
   </TabItem>
   <TabItem label="toml">
     <Code code={configToml} lang="toml" title="zarf-config.toml" />
-  </TabItem>
-  <TabItem label="ini">
-    <Code code={configIni} lang="ini" title="zarf-config.ini" />
-  </TabItem>
-  <TabItem label="json">
-    <Code code={configJson} lang="json" title="zarf-config.json" />
   </TabItem>
 </Tabs>
 
@@ -62,4 +54,3 @@ zarf package deploy zarf-package-config-file-<arch>.tar.zst --confirm
 ```
 
 <Code code={packageConfig} lang="yaml" title="zarf.yaml" />
-

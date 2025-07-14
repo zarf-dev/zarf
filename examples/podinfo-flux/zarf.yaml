@@ -11,14 +11,14 @@ components:
       - name: flux-install
         namespace: flux
         files:
-          - https://github.com/fluxcd/flux2/releases/download/v2.3.0/install.yaml
+          - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:
-      - ghcr.io/fluxcd/helm-controller:v1.0.1
-      - ghcr.io/fluxcd/image-automation-controller:v0.38.0
-      - ghcr.io/fluxcd/image-reflector-controller:v0.32.0
-      - ghcr.io/fluxcd/kustomize-controller:v1.3.0
-      - ghcr.io/fluxcd/notification-controller:v1.3.0
-      - ghcr.io/fluxcd/source-controller:v1.3.0
+      - ghcr.io/fluxcd/helm-controller:v1.1.0
+      - ghcr.io/fluxcd/image-automation-controller:v0.39.0
+      - ghcr.io/fluxcd/image-reflector-controller:v0.33.0
+      - ghcr.io/fluxcd/kustomize-controller:v1.4.0
+      - ghcr.io/fluxcd/notification-controller:v1.4.0
+      - ghcr.io/fluxcd/source-controller:v1.4.1
 
   - name: podinfo-via-flux-git
     description: Example deployment via flux (git) using the famous podinfo example
@@ -33,16 +33,6 @@ components:
       - https://github.com/stefanprodan/podinfo.git
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-    actions:
-      onDeploy:
-        after:
-          - description: Podinfo pods to be ready via wait action
-            wait:
-              cluster:
-                kind: pod
-                name: app=podinfo
-                namespace: podinfo-git
-                condition: ready
 
   - name: podinfo-via-flux-helm
     description: Example deployment via flux (helm oci) using the famous podinfo example
@@ -57,16 +47,6 @@ components:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a helm OCI artifact rather than a container image
       - ghcr.io/stefanprodan/charts/podinfo:6.4.0
-    actions:
-      onDeploy:
-        after:
-          - description: Podinfo pods to be ready via wait action
-            wait:
-              cluster:
-                kind: pod
-                name: app.kubernetes.io/name=podinfo
-                namespace: podinfo-helm
-                condition: ready
 
   - name: podinfo-via-flux-oci
     description: Example deployment via flux (native oci) using the famous podinfo example
@@ -81,17 +61,6 @@ components:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a flux kustomize OCI artifact rather than a container image
       - ghcr.io/stefanprodan/manifests/podinfo:6.4.0
-    actions:
-      onDeploy:
-        after:
-          # This will use a wait action to wait for the podinfo pod to be ready
-          - description: Podinfo pods to be ready via wait action
-            wait:
-              cluster:
-                kind: pod
-                name: app=podinfo
-                namespace: podinfo-oci
-                condition: ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
@@ -107,7 +76,5 @@ x-mdx: |
   Only `type: oci` HelmRepositories are supported by the Zarf Agent. The `type` key requires a HelmRepository CRD version greater than v1beta1.
 
   The Zarf agent will only automatically add the `insecure` key if the internal registry is used. If you are using a http registry outside of the cluster you will need to manually add this key.
-
-  Due to an upstream bug, HelmRepositories with an insecure registry must use IP address instead of a hostname. This is not an issue with the internal Zarf registry, which is always an IP address, but will cause Flux HelmRepositories to break if Zarf is using an external http registry with a hostname.
 
   :::

@@ -69,10 +69,6 @@ func TestZarfSchema(t *testing.T) {
 						Only: v1alpha1.ZarfComponentOnlyTarget{
 							LocalOS: "unsupportedOS",
 						},
-						Import: v1alpha1.ZarfComponentImport{
-							Path: fmt.Sprintf("start%send", v1alpha1.ZarfPackageTemplatePrefix),
-							URL:  fmt.Sprintf("oci://start%send", v1alpha1.ZarfPackageTemplatePrefix),
-						},
 					},
 					{
 						Name: "actions",
@@ -114,8 +110,6 @@ func TestZarfSchema(t *testing.T) {
 				"components.0.only.localOS: components.0.only.localOS must be one of the following: \"linux\", \"darwin\", \"windows\"",
 				"components.1.actions.onCreate.before.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
 				"components.1.actions.onRemove.onSuccess.0.setVariables.0.name: Does not match pattern '^[A-Z0-9_]+$'",
-				"components.0.import.path: Must not validate the schema (not)",
-				"components.0.import.url: Must not validate the schema (not)",
 				"apiVersion: apiVersion must be one of the following: \"zarf.dev/v1alpha1\"",
 			},
 		},
@@ -226,4 +220,70 @@ func TestYqCompat(t *testing.T) {
 		actual := makeFieldPathYqCompat(input)
 		require.Equal(t, input, actual)
 	})
+}
+
+func TestFillObjTemplate(t *testing.T) {
+	testCases := []struct {
+		name              string
+		variables         map[string]string
+		component         v1alpha1.ZarfComponent
+		expectedComponent v1alpha1.ZarfComponent
+	}{
+		{
+			name: "basic template",
+			variables: map[string]string{
+				"KEY": "value",
+			},
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					"value",
+				},
+			},
+		},
+		{
+			name: "deprecated template",
+			variables: map[string]string{
+				"KEY": "value",
+			},
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageVariablePrefix, "KEY"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					"value",
+				},
+			},
+		},
+		{
+			name: "template not defined",
+			component: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
+				},
+			},
+			expectedComponent: v1alpha1.ZarfComponent{
+				Images: []string{
+					fmt.Sprintf("%s%s###", v1alpha1.ZarfPackageTemplatePrefix, "KEY"),
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			component := tc.component
+			if err := templateZarfObj(&component, tc.variables); err != nil {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedComponent, component)
+		})
+	}
 }

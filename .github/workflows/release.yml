@@ -10,36 +10,32 @@ on:
 
 jobs:
   build-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
       packages: write
     steps:
       # Checkout the repo and setup the tooling for this job
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
 
       - name: Install tools
         uses: ./.github/actions/install-tools
 
-      - name: install grype
-        env:
-          VERSION: v0.74.6
-        run: "curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin $VERSION"
-        shell: bash
-
       - name: Build CLI
         run: |
-          make build-cli-linux-amd
-          make build-cli-linux-arm
+          CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-amd
+          CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: ghcr.io
           username: dummy
@@ -55,15 +51,15 @@ jobs:
           echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$GITHUB_REF_NAME --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
 
       - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
-          role-to-assume: ${{ secrets.AWS_KMS_ROLE }}
+          role-to-assume: ${{ secrets.AWS_KMS_ROLE_ARN }}
           role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
-          aws-region: us-east-2
+          aws-region: us-east-1
           role-duration-seconds: 3600
 
       - name: "Zarf Agent: Sign the Image"
-        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME ghcr.io/zarf-dev/zarf/agent@$ZARF_AGENT_IMAGE_DIGEST -y
+        run: cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} -a release-engineer=https://github.com/${{ github.actor }} -a version=$GITHUB_REF_NAME ghcr.io/zarf-dev/zarf/agent@$ZARF_AGENT_IMAGE_DIGEST -y
         env:
           COSIGN_EXPERIMENTAL: 1
 
@@ -75,59 +71,53 @@ jobs:
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
-          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
-          make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
-
-      # Create a CVE report based on this build
-      - name: Create release time CVE report
-        run: "make cve-report"
+          CLI_VERSION=$GITHUB_REF_NAME make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=$GITHUB_REF_NAME make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: build-artifacts
           path: build/
           retention-days: 1
 
   validate-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: build-release
     steps:
       # Checkout the repo and setup the tooling for this job
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Download build artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
 
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
 
-      # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
-
       # Build the example packages and run the tests
       - name: Build examples and run tests
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$GITHUB_REF_NAME make test-e2e ARCH=amd64
 
       - name: Save logs
         if: always()
         uses: ./.github/actions/save-logs
 
   create-release:
-    runs-on: ubuntu-latest
+    runs-on: large-ubuntu-zarf-release
     needs: validate-release
     environment: release
     permissions:
@@ -135,18 +125,20 @@ jobs:
     steps:
       # Checkout the repo and setup the tooling for this job
       - name: Checkout
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: ./.github/actions/golang
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
 
       - name: Install tools
         uses: ./.github/actions/install-tools
 
       - name: Download build artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
@@ -160,10 +152,6 @@ jobs:
             echo "BREW_NAME=zarf" >> $GITHUB_ENV
           fi
 
-      # Before we run the release we need to aggressively cleanup files to reduce disk pressure
-      - name: Cleanup files
-        uses: ./.github/actions/cleanup-files
-
       - name: Setup release ENV vars
         run: |
           K8S_MODULES_VER=$(go list -f '{{.Version}}' -m k8s.io/client-go | sed 's/v//; s/\./ /g')
@@ -174,12 +162,12 @@ jobs:
           echo K9S_VERSION=$(go list -f '{{.Version}}' -m github.com/derailed/k9s) >> $GITHUB_ENV
           echo CRANE_VERSION=$(go list -f '{{.Version}}' -m github.com/google/go-containerregistry) >> $GITHUB_ENV
           echo SYFT_VERSION=$(go list -f '{{.Version}}' -m github.com/anchore/syft) >> $GITHUB_ENV
-          echo ARCHIVER_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archiver/v3) >> $GITHUB_ENV
+          echo ARCHIVES_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archives) >> $GITHUB_ENV
           echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v3) >> $GITHUB_ENV
 
       - name: Get Brew tap repo token
         id: brew-tap-token
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         with:
           app-id: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_ID }}
           private-key: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_SECRET }}
@@ -188,7 +176,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@286f3b13b1b49da4ac219696163fb8c1c93e1200 # v6.0.0
+        uses: goreleaser/goreleaser-action@9c156ee8a17a598857849441385a2041ef570552 # v6.3.0
         with:
           distribution: goreleaser
           version: "~> v2"
@@ -196,9 +184,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
-      - name: Save CVE report
-        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
-        with:
-          name: cve-report
-          path: build/zarf-known-cves.csv
+      - name: Report disk space on failure
+        if: failure()
+        run: |
+          echo "create-release failed, printing out available diskspace"
+          lsblk -f

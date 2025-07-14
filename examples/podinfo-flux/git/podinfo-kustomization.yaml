@@ -12,3 +12,4 @@ spec:
     kind: GitRepository
     name: podinfo
   targetNamespace: podinfo-git
+  wait: true

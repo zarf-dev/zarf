@@ -69,7 +69,7 @@ Any binaries you execute in your `cmd` actions must exist on the machine they ar
 
 ### `wait` Action Configuration
 
-The `wait` action temporarily halts the component stage it"s initiated in, either until the specified condition is satisfied or until the maxTotalSeconds time limit is exceeded (which, by default, is set to 5 minutes). To define `wait` parameters, execute the `wait` key; it"s essential to note that _you cannot use `cmd` and `wait` in the same action_. Essentially, a `wait` action is _yaml sugar_ for a call to `./zarf tools wait-for`.
+The `wait` action temporarily halts the component stage it is initiated in, either until the specified condition is satisfied or until the maxTotalSeconds time limit is exceeded (which, by default, is set to 5 minutes). To define `wait` parameters, execute the `wait` key; it is essential to note that _you cannot use `cmd` and `wait` in the same action_. Essentially, a `wait` action is _yaml sugar_ for a call to `./zarf tools wait-for`.
 
 Within each of the `action` lists (`before`, `after`, `onSuccess`, and `onFailure`), the following action configurations are available:
 
@@ -130,7 +130,7 @@ As you may have noticed mentioned in the `before` action list of the above `Simp
 Below are the transformations that Zarf will make on an action before it is ran:
 
 - Replace `./zarf `&nbsp;with the path to the currently running Zarf executable.
-  - This allows you to run Zarf in Zarf and is designed to help you use `zarf tools` commands in the air gap.
+  - This allows you to run Zarf in Zarf and is designed to help you use `zarf tools` commands in the airgap.
 - Replace common Unix commands and shell syntax with `powershell` / `pwsh` alternatives on Windows.
   - This allows commands like `touch` to work on Windows and while not perfect enhances cross-platform capabilities.
 - Add `env` entries for all previously declared Zarf `variables`.

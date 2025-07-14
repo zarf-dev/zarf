@@ -51,7 +51,7 @@ zarf tools helm dependency list CHART [flags]
       --plain-http                      Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
       --registry-config string          path to the registry config file
-      --repository-cache string         path to the file containing cached repository indexes
+      --repository-cache string         path to the directory containing cached repository indexes
       --repository-config string        path to the file containing repository names and URLs
 ```
 

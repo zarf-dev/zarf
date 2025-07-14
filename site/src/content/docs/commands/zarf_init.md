@@ -68,6 +68,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
   -h, --help                            help for init
   -k, --key string                      Path to public key file for validating signed packages
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
+      --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry
@@ -77,7 +78,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --retries int                     Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation       Skip validating the signature of the Zarf package
-      --skip-webhooks                   [alpha] Skip waiting for external webhooks to execute as each package component is deployed
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
@@ -87,10 +87,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
-      --no-color                   Disable colors in output
-      --no-log-file                Disable log file creation
-      --no-progress                Disable fancy UI progress bars, spinners, logos, etc
+      --no-color                   Disable terminal color codes in logging and stdout prints.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

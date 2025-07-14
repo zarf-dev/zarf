@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-uncompressed
+  version: 0.0.1
+  architecture: amd64
+  uncompressed: true
+components:
+  - name: test
+    required: true
+    manifests:
+      - name: deployment
+        namespace: nginx
+        files:
+          - ../deployment.yaml
+    images:
+      - docker.io/library/alpine:3.20

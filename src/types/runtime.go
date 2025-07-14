@@ -6,6 +6,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -74,12 +76,12 @@ type ZarfFindImagesOptions struct {
 type ZarfDeployOptions struct {
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
-	// Skip waiting for external webhooks to execute as each package component is deployed
-	SkipWebhooks bool
 	// Timeout for performing Helm operations
 	Timeout time.Duration
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	// [Dev Deploy Only] Manual override for ###ZARF_REGISTRY###
+	RegistryURL string
 }
 
 // ZarfMirrorOptions tracks the user-defined preferences during a package mirror.
@@ -123,11 +125,11 @@ type ZarfInitOptions struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
-	GitServer GitServerInfo
+	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
-	RegistryInfo RegistryInfo
+	RegistryInfo state.RegistryInfo
 	// Information about the artifact registry Zarf is going to be using
-	ArtifactServer ArtifactServerInfo
+	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
 }

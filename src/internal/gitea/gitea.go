@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -31,7 +32,11 @@ func NewClient(endpoint, username, password string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
 	transport.MaxIdleConnsPerHost = transport.MaxIdleConns
 	httpClient := &http.Client{
 		Timeout:   10 * time.Second,
@@ -47,7 +52,7 @@ func NewClient(endpoint, username, password string) (*Client, error) {
 }
 
 // DoRequest performs a request to the Gitea API at the given path.
-func (g *Client) DoRequest(ctx context.Context, method string, path string, body []byte) ([]byte, int, error) {
+func (g *Client) DoRequest(ctx context.Context, method string, path string, body []byte) (_ []byte, _ int, err error) {
 	u, err := g.endpoint.Parse(path)
 	if err != nil {
 		return nil, 0, err
@@ -63,7 +68,11 @@ func (g *Client) DoRequest(ctx context.Context, method string, path string, body
 	if err != nil {
 		return nil, 0, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		errClose := resp.Body.Close()
+		err = errors.Join(err, errClose)
+	}()
+
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, 0, err

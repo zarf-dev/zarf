@@ -5,31 +5,18 @@
 package interactive
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// PromptSigPassword prompts the user for the password to their private key
-func PromptSigPassword() ([]byte, error) {
-	var password string
-
-	prompt := &survey.Password{
-		Message: "Private key password (empty for no password): ",
-	}
-	err := survey.AskOne(prompt, &password)
-	if err != nil {
-		return []byte{}, err
-	}
-	return []byte(password), nil
-}
-
 // PromptVariable prompts the user for a value for a variable
-func PromptVariable(variable v1alpha1.InteractiveVariable) (string, error) {
+func PromptVariable(ctx context.Context, variable v1alpha1.InteractiveVariable) (string, error) {
 	if variable.Description != "" {
-		message.Question(variable.Description)
+		logger.From(ctx).Info(variable.Description)
 	}
 
 	prompt := &survey.Input{

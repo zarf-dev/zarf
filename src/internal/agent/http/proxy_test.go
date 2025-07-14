@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestProxyRequestTransform(t *testing.T) {
@@ -19,14 +19,14 @@ func TestProxyRequestTransform(t *testing.T) {
 	tests := []struct {
 		name         string
 		target       string
-		state        *types.ZarfState
+		state        *state.State
 		expectedPath string
 	}{
 		{
 			name:   "basic request",
 			target: "http://example.com/zarf-3xx-no-transform/test",
-			state: &types.ZarfState{
-				ArtifactServer: types.ArtifactServerInfo{
+			state: &state.State{
+				ArtifactServer: state.ArtifactServerInfo{
 					PushUsername: "push-user",
 					PushToken:    "push-token",
 				},

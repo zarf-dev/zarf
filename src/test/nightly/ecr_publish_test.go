@@ -23,7 +23,7 @@ var (
 // TestECRPublishing tests pushing, inspecting, and pulling signed Zarf packages to/from ECR.
 /*
 This test assumes the following:
-  1. The user running the test has a current valid credential to the public.ecr.aws/t8y5r5z5/zarf-nightly repository in their docker config.json
+  1. The user running the test has a current valid credential to the public.ecr.aws/t9t5u0z8/zarf-nightly repository in their docker config.json
   2. The zarf CLI has been built and is available in the build directory
 */
 func TestECRPublishing(t *testing.T) {
@@ -45,7 +45,7 @@ func TestECRPublishing(t *testing.T) {
 	testPackageVersion := "0.0.1"
 	testPackageFileName := fmt.Sprintf("zarf-package-%s-%s-%s.tar.zst", testPackageName, e2e.Arch, testPackageVersion)
 	testPackageLocation := filepath.Join(tmpDir, testPackageFileName)
-	registryURL := "oci://public.ecr.aws/z6q5p6f7/zarf-nightly"
+	registryURL := "oci://public.ecr.aws/t9t5u0z8/zarf-nightly"
 	upstreamPackageURL := fmt.Sprintf("%s/%s:%s", registryURL, testPackageName, testPackageVersion)
 	keyFlag := fmt.Sprintf("--key=%s", "./src/test/packages/zarf-test.pub")
 
@@ -58,26 +58,16 @@ func TestECRPublishing(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", testPackageLocation, registryURL, keyFlag)
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure we get a warning when trying to inspect the online published package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", upstreamPackageURL, keyFlag, "--sbom-out", tmpDir)
-	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "Validating SBOM checksums")
-	require.Contains(t, stdErr, "Package signature validated!")
-
 	// Validate that we can pull the package down from ECR
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL)
+	pullTempDir := t.TempDir()
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", upstreamPackageURL, keyFlag, fmt.Sprintf("-o=%s", pullTempDir))
 	require.NoError(t, err, stdOut, stdErr)
-	defer e2e.CleanFiles(testPackageFileName)
 
-	// Ensure we get a warning when trying to inspect the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName)
-	require.NoError(t, err, stdOut, stdErr)
-	require.NotContains(t, stdErr, "Validating SBOM checksums")
-	require.Contains(t, stdErr, "The package was signed but no public key was provided, skipping signature validation")
+	pulledPackagePath := filepath.Join(pullTempDir, testPackageFileName)
 
-	// Validate that we get no warnings when inspecting the package while providing the public key
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", testPackageFileName, keyFlag)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, "--skip-signature-validation")
 	require.NoError(t, err, stdOut, stdErr)
-	require.NotContains(t, stdErr, "Validating SBOM checksums")
-	require.Contains(t, stdErr, "Package signature validated!")
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, keyFlag)
+	require.NoError(t, err, stdOut, stdErr)
 }

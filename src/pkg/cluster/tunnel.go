@@ -16,6 +16,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -23,8 +24,9 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/internal/dns"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // Zarf specific connect strings
@@ -56,7 +58,7 @@ type TunnelInfo struct {
 }
 
 // ListConnections will return a list of all Zarf connect matches found in the cluster.
-func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, error) {
+func (c *Cluster) ListConnections(ctx context.Context) (state.ConnectStrings, error) {
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{{
 			Operator: metav1.LabelSelectorOpExists,
@@ -70,10 +72,10 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 	if err != nil {
 		return nil, err
 	}
-	connections := types.ConnectStrings{}
+	connections := state.ConnectStrings{}
 	for _, svc := range serviceList.Items {
 		name := svc.Labels[ZarfConnectLabelName]
-		connections[name] = types.ConnectString{
+		connections[name] = state.ConnectString{
 			Description: svc.Annotations[ZarfConnectAnnotationDescription],
 			URL:         svc.Annotations[ZarfConnectAnnotationURL],
 		}
@@ -84,7 +86,7 @@ func (c *Cluster) ListConnections(ctx context.Context) (types.ConnectStrings, er
 // NewTargetTunnelInfo returns a new TunnelInfo object for the specified target.
 func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (TunnelInfo, error) {
 	zt := TunnelInfo{
-		Namespace:    ZarfNamespaceName,
+		Namespace:    state.ZarfNamespaceName,
 		ResourceType: SvcResource,
 	}
 
@@ -142,14 +144,23 @@ func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel
 }
 
 // ConnectToZarfRegistryEndpoint determines if a registry endpoint is in cluster, and if so opens a tunnel to connect to it
-func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInfo types.RegistryInfo) (string, *Tunnel, error) {
+func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInfo state.RegistryInfo) (string, *Tunnel, error) {
 	registryEndpoint := registryInfo.Address
 
 	var err error
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel(ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+			return "", tunnel, err
+		}
+	} else if dns.IsServiceURL(registryInfo.Address) {
+		namespace, name, port, err := dns.ParseServiceURL(registryInfo.Address)
+		if err != nil {
+			return "", tunnel, err
+		}
+		tunnel, err = c.NewTunnel(namespace, SvcResource, name, "", 0, port)
+		if err != nil {
 			return "", tunnel, err
 		}
 	} else {
@@ -220,7 +231,10 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		// Add the url suffix too.
 		zt.urlSuffix = svc.Annotations[ZarfConnectAnnotationURL]
 
-		message.Debugf("tunnel connection match: %s/%s on port %d", svc.Namespace, svc.Name, zt.RemotePort)
+		logger.From(ctx).Debug("tunnel connection match",
+			"namespace", svc.Namespace,
+			"name", svc.Name,
+			"remotePort", zt.RemotePort)
 	} else {
 		return zt, fmt.Errorf("no matching services found for %s", name)
 	}
@@ -302,7 +316,6 @@ const (
 type Tunnel struct {
 	clientset    kubernetes.Interface
 	restConfig   *rest.Config
-	out          io.Writer
 	localPort    int
 	remotePort   int
 	namespace    string
@@ -321,7 +334,6 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 	return &Tunnel{
 		clientset:    c.Clientset,
 		restConfig:   c.RestConfig,
-		out:          io.Discard,
 		localPort:    local,
 		remotePort:   remote,
 		namespace:    namespace,
@@ -336,7 +348,7 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 // Wrap takes a function that returns an error and wraps it to check for tunnel errors as well.
 func (tunnel *Tunnel) Wrap(function func() error) error {
 	var err error
-	funcErrChan := make(chan error)
+	funcErrChan := make(chan error, 1)
 
 	go func() {
 		funcErrChan <- function()
@@ -387,12 +399,20 @@ func (tunnel *Tunnel) FullURL() string {
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
 func (tunnel *Tunnel) Close() {
-	close(tunnel.stopChan)
+	if tunnel.stopChan == nil {
+		return
+	}
+	select {
+	case <-tunnel.stopChan:
+	default:
+		close(tunnel.stopChan)
+	}
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
 func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	var err error
+	l := logger.From(ctx)
 
 	// Track this locally as we may need to retry if the tunnel fails.
 	localPort := tunnel.localPort
@@ -404,31 +424,30 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// since there is a brief moment between `GetAvailablePort` and `forwarder.ForwardPorts` where the selected port
 	// is available for selection again.
 	if localPort == 0 {
-		message.Debugf("Requested local port is 0. Selecting an open port on host system")
+		l.Debug("requested local port is 0. Selecting an open port on host system")
 		localPort, err = helpers.GetAvailablePort()
 		if err != nil {
 			return "", fmt.Errorf("unable to find an available port: %w", err)
 		}
-		message.Debugf("Selected port %d", localPort)
+		l.Debug("selected port", "port", localPort)
 		globalMutex.Lock()
 		defer globalMutex.Unlock()
 	}
 
-	msg := fmt.Sprintf("Opening tunnel %d -> %d for %s/%s in namespace %s",
-		localPort,
-		tunnel.remotePort,
-		tunnel.resourceType,
-		tunnel.resourceName,
-		tunnel.namespace,
+	l.Debug("opening tunnel",
+		"localPort", localPort,
+		"remotePort", tunnel.remotePort,
+		"resourceType", tunnel.resourceType,
+		"resourceName", tunnel.resourceName,
+		"namespace", tunnel.namespace,
 	)
-	message.Debugf(msg)
 
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource(ctx)
 	if err != nil {
 		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
-	message.Debugf("Selected pod %s to open port forward to", podName)
+	l.Debug("selected pod to open port forward to", "name", podName)
 
 	// Build url to the port forward endpoint.
 	// Example: http://localhost:8080/api/v1/namespaces/helm/pods/tiller-deploy-9itlq/portforward.
@@ -441,18 +460,16 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		SubResource("portforward").
 		URL()
 
-	message.Debugf("Using URL %s to create portforward", portForwardCreateURL)
+	l.Debug("using URL to create portforward", "url", portForwardCreateURL)
 
-	// Construct the spdy client required by the client-go portforward library.
-	transport, upgrader, err := spdy.RoundTripperFor(tunnel.restConfig)
+	dialer, err := createDialer(http.MethodPost, portForwardCreateURL, tunnel.restConfig)
 	if err != nil {
-		return "", fmt.Errorf("unable to create the spdy client %w", err)
+		return "", fmt.Errorf("unable to create the dialer %w", err)
 	}
-	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", portForwardCreateURL)
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
-	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, tunnel.out, tunnel.out)
+	portforwarder, err := portforward.New(dialer, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the port forward: %w", err)
 	}
@@ -476,7 +493,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		// Store the error channel to listen for errors
 		tunnel.errChan = errChan
 
-		message.Debugf("Creating port forwarding tunnel at %s", url)
+		l.Debug("creating port forwarding tunnel", "url", url)
 		return url, nil
 	}
 }
@@ -516,4 +533,22 @@ func (tunnel *Tunnel) getAttachablePodForService(ctx context.Context) (string, e
 		return "", fmt.Errorf("no pods found for service %s", tunnel.resourceName)
 	}
 	return podList.Items[0].Name, nil
+}
+
+// Inspired by https://github.com/kubernetes/kubernetes/blob/680ea07dbb2c6050d13b93660fa4d27d2d28d6eb/staging/src/k8s.io/kubectl/pkg/cmd/portforward/portforward.go#L139-L156
+func createDialer(method string, url *url.URL, config *rest.Config) (httpstream.Dialer, error) {
+	transport, upgrader, err := spdy.RoundTripperFor(config)
+	if err != nil {
+		return nil, err
+	}
+	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, method, url)
+	tunnelingDialer, err := portforward.NewSPDYOverWebsocketDialer(url, config)
+	if err != nil {
+		return nil, err
+	}
+	// First attempt tunneling (websocket) dialer, then fallback to spdy dialer.
+	dialer = portforward.NewFallbackDialer(tunnelingDialer, dialer, func(err error) bool {
+		return httpstream.IsUpgradeFailure(err) || httpstream.IsHTTPSProxyError(err)
+	})
+	return dialer, nil
 }

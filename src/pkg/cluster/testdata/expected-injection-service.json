@@ -1,1 +1,24 @@
-{"kind":"Service","apiVersion":"v1","metadata":{"name":"zarf-injector","namespace":"zarf","creationTimestamp":null},"spec":{"ports":[{"port":5000,"targetPort":0}],"selector":{"app":"zarf-injector"},"type":"NodePort"},"status":{"loadBalancer":{}}}
+{
+  "kind": "Service",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "zarf-injector",
+    "namespace": "zarf",
+    "creationTimestamp": null
+  },
+  "spec": {
+    "ports": [
+      {
+        "port": 5000,
+        "targetPort": 0
+      }
+    ],
+    "selector": {
+      "app": "zarf-injector"
+    },
+    "type": "NodePort"
+  },
+  "status": {
+    "loadBalancer": {}
+  }
+}
