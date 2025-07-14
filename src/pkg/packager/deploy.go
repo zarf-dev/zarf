@@ -354,7 +354,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	// This variable needs to be set from the package metadata architecture
 	// This might be able to be expanded to include all the .metadata settings
-	applicationTemplates["###ZARF_ARCHITECTURE###"] = &variables.TextTemplate{
+	applicationTemplates["###ZARF_PKG_ARCHITECTURE###"] = &variables.TextTemplate{
 		Value: pkgLayout.Pkg.Metadata.Architecture,
 	}
 

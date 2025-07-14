@@ -119,7 +119,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 				return fmt.Errorf("error setting up the templates: %w", err)
 			}
 			if arch != "" {
-				applicationTemplates["###ZARF_ARCHITECTURE###"] = &variables.TextTemplate{
+				applicationTemplates["###ZARF_PKG_ARCHITECTURE###"] = &variables.TextTemplate{
 					Value: arch,
 				}
 			}
