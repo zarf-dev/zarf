@@ -12,8 +12,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestFlavorArchFiltering(t *testing.T) {
@@ -62,7 +62,7 @@ func TestFlavorArchFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-package-flavors-%s.tar.zst", tt.arch))
-			pkgLayout, err := layout2.LoadFromTar(context.Background(), tarPath, layout2.PackageLayoutOptions{Filter: tt.Filter})
+			pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{Filter: tt.Filter})
 			require.NoError(t, err)
 			compIDs := []string{}
 			for _, comp := range pkgLayout.Pkg.Components {

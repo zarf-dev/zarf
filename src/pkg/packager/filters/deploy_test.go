@@ -48,7 +48,8 @@ func componentFromQuery(t *testing.T, q string) v1alpha1.ZarfComponent {
 	return c
 }
 
-func componentMatrix(_ *testing.T) []v1alpha1.ZarfComponent {
+func componentMatrix(t *testing.T) []v1alpha1.ZarfComponent {
+	t.Helper()
 	var components []v1alpha1.ZarfComponent
 
 	defaultValues := []bool{true, false}
@@ -63,8 +64,12 @@ func componentMatrix(_ *testing.T) []v1alpha1.ZarfComponent {
 				name := strings.Builder{}
 
 				// per validate rules, components in groups cannot be required
-				if requiredValue != nil && requiredValue.(bool) == true && groupValue != "" {
-					continue
+				if requiredValue != nil {
+					boolValue, ok := requiredValue.(bool)
+					require.True(t, ok)
+					if boolValue && groupValue != "" {
+						continue
+					}
 				}
 
 				name.WriteString(fmt.Sprintf("required=%v", requiredValue))
@@ -99,7 +104,9 @@ func componentMatrix(_ *testing.T) []v1alpha1.ZarfComponent {
 				}
 
 				if requiredValue != nil {
-					c.Required = helpers.BoolPtr(requiredValue.(bool))
+					boolValue, ok := requiredValue.(bool)
+					require.True(t, ok)
+					c.Required = helpers.BoolPtr(boolValue)
 				}
 
 				components = append(components, c)

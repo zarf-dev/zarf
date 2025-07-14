@@ -136,7 +136,6 @@ func TestDownloadToFile(t *testing.T) {
 			if tt.shasum != "" {
 				src = strings.Join([]string{src, tt.shasum}, "@")
 			}
-			fmt.Println(src)
 			dst := filepath.Join(t.TempDir(), tt.fileName)
 			err := DownloadToFile(testutil.TestContext(t), src, dst, "")
 			if tt.expectedErr != "" {
