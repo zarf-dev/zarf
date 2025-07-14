@@ -46,7 +46,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
 	// Recursive calls only include components from the imported pkg that have the name of the component to import
 	importStack = append(importStack, packagePath)
-	
 
 	l.Debug("start layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,
