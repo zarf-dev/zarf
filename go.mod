@@ -1,6 +1,6 @@
 module github.com/zarf-dev/zarf
 
-go 1.24.2
+go 1.24.4
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -12,13 +12,13 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
-	github.com/anchore/clio v0.0.0-20250401141128-4c1d6bd1e872
+	github.com/anchore/clio v0.0.0-20250408180537-ec8fa27f0d9f
 	github.com/anchore/stereoscope v0.1.5
 	github.com/anchore/syft v1.27.1
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
-	github.com/derailed/k9s v0.50.6
+	github.com/derailed/k9s v0.50.7
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.3.0+incompatible
@@ -241,12 +241,12 @@ require (
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
 	github.com/aliyun/credentials-go v1.3.2 // indirect
 	github.com/anchore/bubbly v0.0.0-20231115134915-def0aba654a9 // indirect
-	github.com/anchore/fangs v0.0.0-20250326231402-da263204d38e // indirect
+	github.com/anchore/fangs v0.0.0-20250402135612-96e29e45f3fe // indirect
 	github.com/anchore/go-logger v0.0.0-20250318195838-07ae343dd722 // indirect
 	github.com/anchore/go-macholibre v0.0.0-20220308212642-53e6d0aaf6fb // indirect
 	github.com/anchore/go-struct-converter v0.0.0-20221118182256-c68fdcfa2092 // indirect
 	github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4 // indirect
-	github.com/anchore/grype v0.91.2 // indirect
+	github.com/anchore/grype v0.92.2 // indirect
 	github.com/anchore/packageurl-go v0.1.1-0.20250220190351-d62adb6e1115 // indirect
 	github.com/andybalholm/brotli v1.1.2-0.20250424173009-453214e765f3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
@@ -577,7 +577,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/gorm v1.25.12 // indirect
+	gorm.io/gorm v1.26.1 // indirect
 	k8s.io/apiextensions-apiserver v0.33.2 // indirect
 	k8s.io/apiserver v0.33.2 // indirect
 	k8s.io/cli-runtime v0.33.2 // indirect
