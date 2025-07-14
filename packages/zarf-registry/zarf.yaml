@@ -117,7 +117,7 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: /home/austin/code/secondZarf/src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
+      - source: ../../src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
         # shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
         executable: true
