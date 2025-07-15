@@ -74,6 +74,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	return nil
 }
 
+// RunInjection starts the injection process. It assumes that the rust and image payload configmaps are already in the cluster
 func (c *Cluster) RunInjection(ctx context.Context, useRegistryProxy bool, payloadCmNames []string, shasum string, ipFamily state.IPFamily) error {
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{

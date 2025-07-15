@@ -8,14 +8,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 const (
@@ -31,13 +28,25 @@ const (
 
 // Controller watches registry proxy pods for ErrImagePull status
 type Controller struct {
-	cluster *cluster.Cluster
+	cluster  *cluster.Cluster
+	injector InjectionExecutor
 }
 
 // New creates a new Controller instance
 func New(c *cluster.Cluster) *Controller {
+	clusterAdapter := NewClusterAdapter(c)
+	injector := NewClusterInjectionExecutor(clusterAdapter)
 	return &Controller{
-		cluster: c,
+		cluster:  c,
+		injector: injector,
+	}
+}
+
+// NewWithInjector creates a new Controller instance with a custom injector (useful for testing)
+func NewWithInjector(c *cluster.Cluster, injector InjectionExecutor) *Controller {
+	return &Controller{
+		cluster:  c,
+		injector: injector,
 	}
 }
 
@@ -126,26 +135,17 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod, payloa
 				"reason", containerStatus.State.Waiting.Reason,
 				"message", containerStatus.State.Waiting.Message,
 			)
-			shasum := "d4a6fe82b6c7bc7305dddab60c548304d3faceba66636675ba9c9448ddf36817"
-			err := c.cluster.RunInjection(ctx, true, payloadCMNames, shasum, state.IPFamilyIPv4)
+			shasum := "414c378805141eba2018ee0a16a7900a8bdca0634799b14e231ff0d412a8db7b"
+			err := c.injector.RunInjection(ctx, true, payloadCMNames, shasum, state.IPFamilyIPv4)
 			if err != nil {
 				l.Error("this is the err", "err", err)
 			}
-			objs := []object.ObjMetadata{
-				{
-					GroupKind: schema.GroupKind{
-						Group: "apps",
-						Kind:  "DaemonSet",
-					},
-					Namespace: "zarf",
-					Name:      "zarf-registry-proxy",
-				},
-			}
-			err = healthchecks.WaitForReady(ctx, c.cluster.Watcher, objs)
+			objs := getHealthCheckObjects()
+			err = c.injector.WaitForReady(ctx, objs)
 			if err != nil {
 				l.Error("this is the err", "err", err)
 			}
-			err = c.cluster.StopInjection(ctx, true)
+			err = c.injector.StopInjection(ctx, true)
 			if err != nil {
 				l.Error("this is the err", "err", err)
 			}

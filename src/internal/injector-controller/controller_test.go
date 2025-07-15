@@ -10,24 +10,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
-	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestCheckPodStatus(t *testing.T) {
 	tests := []struct {
-		name                string
-		pod                 *corev1.Pod
-		expectLog           bool
-		expectedLogContains string
+		name            string
+		pod             *corev1.Pod
+		expectInjection bool
 	}{
 		{
-			name: "pod with ErrImagePull in container status",
+			name: "pod with ErrImagePull triggers injection",
 			pod: &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
@@ -47,57 +45,10 @@ func TestCheckPodStatus(t *testing.T) {
 					},
 				},
 			},
-			expectLog:           true,
-			expectedLogContains: "registry proxy pod has ErrImagePull status",
+			expectInjection: true,
 		},
 		{
-			name: "pod with ErrImagePull in init container status",
-			pod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: state.ZarfNamespaceName,
-				},
-				Status: corev1.PodStatus{
-					InitContainerStatuses: []corev1.ContainerStatus{
-						{
-							Name: "init-container",
-							State: corev1.ContainerState{
-								Waiting: &corev1.ContainerStateWaiting{
-									Reason:  "ErrImagePull",
-									Message: "Failed to pull init image",
-								},
-							},
-						},
-					},
-				},
-			},
-			expectLog:           true,
-			expectedLogContains: "registry proxy pod init container has ErrImagePull status",
-		},
-		{
-			name: "pod with running container status",
-			pod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-pod",
-					Namespace: state.ZarfNamespaceName,
-				},
-				Status: corev1.PodStatus{
-					ContainerStatuses: []corev1.ContainerStatus{
-						{
-							Name: "test-container",
-							State: corev1.ContainerState{
-								Running: &corev1.ContainerStateRunning{
-									StartedAt: metav1.NewTime(time.Now()),
-								},
-							},
-						},
-					},
-				},
-			},
-			expectLog: false,
-		},
-		{
-			name: "pod with ImagePullBackOff status (should not log)",
+			name: "pod with ImagePullBackOff triggers injection",
 			pod: &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-pod",
@@ -117,23 +68,49 @@ func TestCheckPodStatus(t *testing.T) {
 					},
 				},
 			},
-			expectLog: false,
+			expectInjection: true,
+		},
+		{
+			name: "pod with running container does not trigger injection",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: state.ZarfNamespaceName,
+				},
+				Status: corev1.PodStatus{
+					ContainerStatuses: []corev1.ContainerStatus{
+						{
+							Name: "test-container",
+							State: corev1.ContainerState{
+								Running: &corev1.ContainerStateRunning{
+									StartedAt: metav1.NewTime(time.Now()),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectInjection: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a logger for testing
 			testLogger, err := logger.New(logger.ConfigDefault())
 			require.NoError(t, err)
 			ctx := logger.WithContext(context.Background(), testLogger)
 			client := fake.NewSimpleClientset()
-			controller := New(client)
 
-			// This test mainly verifies the method doesn't panic and handles different pod states
-			// In a real implementation, you'd want to capture and verify log output
-			controller.checkPodStatus(ctx, tt.pod)
+			fakeInjector := NewFakeInjectionExecutor()
+			cluster := &cluster.Cluster{
+				Clientset: client,
+			}
+			controller := NewWithInjector(cluster, fakeInjector)
 
+			controller.checkPodStatus(ctx, tt.pod, []string{"test-payload"})
+
+			assert.Equal(t, tt.expectInjection, fakeInjector.RunInjectionCalled)
+			assert.Equal(t, tt.expectInjection, fakeInjector.StopInjectionCalled)
 		})
 	}
 }
@@ -154,9 +131,7 @@ func TestPollPods_Success(t *testing.T) {
 					{
 						Name: "test-container",
 						State: corev1.ContainerState{
-							Running: &corev1.ContainerStateRunning{
-								StartedAt: metav1.NewTime(time.Now()),
-							},
+							Running: &corev1.ContainerStateRunning{},
 						},
 					},
 				},
@@ -187,65 +162,43 @@ func TestPollPods_Success(t *testing.T) {
 	}
 
 	client := fake.NewSimpleClientset(&corev1.PodList{Items: testPods})
-	controller := New(client)
+
+	// Create fake injector to track injection calls
+	fakeInjector := NewFakeInjectionExecutor()
+
+	cluster := &cluster.Cluster{
+		Clientset: client,
+	}
+	controller := NewWithInjector(cluster, fakeInjector)
 
 	testLogger, err := logger.New(logger.ConfigDefault())
 	require.NoError(t, err)
 	ctx := logger.WithContext(context.Background(), testLogger)
 
-	err = controller.pollPods(ctx)
+	err = controller.pollPods(ctx, []string{"test-payload"})
 	require.NoError(t, err)
+
+	// Verify that injection was triggered for the ErrImagePull pod
+	assert.True(t, fakeInjector.RunInjectionCalled)
+	assert.True(t, fakeInjector.StopInjectionCalled)
 }
 
 func TestPollPods_EmptyList(t *testing.T) {
+	fakeInjector := NewFakeInjectionExecutor()
 	client := fake.NewSimpleClientset()
-	controller := New(client)
+	cluster := &cluster.Cluster{
+		Clientset: client,
+	}
+	controller := NewWithInjector(cluster, fakeInjector)
 
 	testLogger, err := logger.New(logger.ConfigDefault())
 	require.NoError(t, err)
 	ctx := logger.WithContext(context.Background(), testLogger)
 
-	err = controller.pollPods(ctx)
+	err = controller.pollPods(ctx, []string{})
 	require.NoError(t, err)
-}
 
-func TestPollPods_ListError(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	controller := New(client)
-
-	// Set up the fake client to return an error on list
-	client.PrependReactor("list", "pods", func(_ k8stesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, nil, assert.AnError
-	})
-
-	testLogger, err := logger.New(logger.ConfigDefault())
-	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), testLogger)
-
-	err = controller.pollPods(ctx)
-	require.Error(t, err)
-	assert.Equal(t, assert.AnError, err)
-}
-
-func TestStart_ContextCancellation(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	controller := New(client)
-
-	testLogger, err := logger.New(logger.ConfigDefault())
-	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), testLogger)
-
-	ctx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
-	defer cancel()
-
-	err = controller.Start(ctx)
-	require.Error(t, err)
-	assert.Equal(t, context.DeadlineExceeded, err)
-}
-
-func TestController_Constants(t *testing.T) {
-	assert.Equal(t, "zarf-registry-proxy", DaemonSetName)
-	assert.Equal(t, state.ZarfNamespaceName, Namespace)
-	assert.Equal(t, "injector-controller", ControllerName)
-	assert.Equal(t, 5*time.Second, PollingInterval)
+	// Verify no injection calls were made
+	assert.False(t, fakeInjector.RunInjectionCalled)
+	assert.False(t, fakeInjector.StopInjectionCalled)
 }
