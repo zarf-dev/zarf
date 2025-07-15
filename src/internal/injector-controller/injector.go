@@ -6,7 +6,10 @@ package injectorcontroller
 import (
 	"context"
 
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
@@ -14,43 +17,49 @@ import (
 // InjectionExecutor defines the interface for executing injection operations
 type InjectionExecutor interface {
 	// RunInjection executes the injection process
-	RunInjection(ctx context.Context, useRegistryProxy bool, payloadCMNames []string, shasum string, ipFamily state.IPFamily) error
-	// WaitForReady waits for the specified objects to be ready
-	WaitForReady(ctx context.Context, objs []object.ObjMetadata) error
-	// StopInjection stops the injection process
-	StopInjection(ctx context.Context, useRegistryProxy bool) error
+	Run(ctx context.Context) error
 }
 
 // clusterInjectionExecutor implements InjectionExecutor using cluster operations
 type clusterInjectionExecutor struct {
-	cluster InjectionExecutor
+	cluster *cluster.Cluster
 }
 
 // NewClusterInjectionExecutor creates a new InjectionExecutor using cluster operations
-func NewClusterInjectionExecutor(cluster InjectionExecutor) InjectionExecutor {
+func NewClusterInjectionExecutor(cluster *cluster.Cluster) InjectionExecutor {
 	return &clusterInjectionExecutor{
 		cluster: cluster,
 	}
 }
 
 // RunInjection executes the injection process
-func (e *clusterInjectionExecutor) RunInjection(ctx context.Context, useRegistryProxy bool, payloadCMNames []string, shasum string, ipFamily state.IPFamily) error {
-	return e.cluster.RunInjection(ctx, useRegistryProxy, payloadCMNames, shasum, ipFamily)
-}
-
-// WaitForReady waits for the specified objects to be ready
-func (e *clusterInjectionExecutor) WaitForReady(ctx context.Context, objs []object.ObjMetadata) error {
-	return e.cluster.WaitForReady(ctx, objs)
-}
-
-// StopInjection stops the injection process
-func (e *clusterInjectionExecutor) StopInjection(ctx context.Context, useRegistryProxy bool) error {
-	return e.cluster.StopInjection(ctx, useRegistryProxy)
-}
-
-// getHealthCheckObjects returns the objects to wait for during health checks
-func getHealthCheckObjects() []object.ObjMetadata {
-	return []object.ObjMetadata{
+func (e *clusterInjectionExecutor) Run(ctx context.Context) error {
+	payloadCMNames := []string{}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"zarf-injector": "payload",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	cmList, err := e.cluster.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+		LabelSelector: selector.String(),
+	})
+	for _, cm := range cmList.Items {
+		payloadCMNames = append(payloadCMNames, cm.Name)
+	}
+	if err != nil {
+		return err
+	}
+	// FIXME: get shasum dynamically from cluster
+	shasum := "4a3ba3eed0b5104c6aa07298a4ccb9159389226be56c4bb3c6821f2cdbe69245"
+	// FIXME: Get ipFamily dynamically from state
+	err = e.cluster.RunInjection(ctx, true, payloadCMNames, shasum, state.IPFamilyIPv4)
+	if err != nil {
+		return err
+	}
+	objs := []object.ObjMetadata{
 		{
 			GroupKind: schema.GroupKind{
 				Group: "apps",
@@ -60,4 +69,13 @@ func getHealthCheckObjects() []object.ObjMetadata {
 			Name:      "zarf-registry-proxy",
 		},
 	}
+	err = healthchecks.WaitForReady(ctx, e.cluster.Watcher, objs)
+	if err != nil {
+		return err
+	}
+	err = e.cluster.StopInjection(ctx, true)
+	if err != nil {
+		return err
+	}
+	return nil
 }

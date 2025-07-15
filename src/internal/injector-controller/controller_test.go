@@ -107,16 +107,15 @@ func TestCheckPodStatus(t *testing.T) {
 			}
 			controller := NewWithInjector(cluster, fakeInjector)
 
-			controller.checkPodStatus(ctx, tt.pod, []string{"test-payload"})
+			err = controller.checkPodStatus(ctx, tt.pod)
+			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectInjection, fakeInjector.RunInjectionCalled)
-			assert.Equal(t, tt.expectInjection, fakeInjector.StopInjectionCalled)
 		})
 	}
 }
 
 func TestPollPods_Success(t *testing.T) {
-	// Create test pods
 	testPods := []corev1.Pod{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -175,12 +174,11 @@ func TestPollPods_Success(t *testing.T) {
 	require.NoError(t, err)
 	ctx := logger.WithContext(context.Background(), testLogger)
 
-	err = controller.pollPods(ctx, []string{"test-payload"})
+	err = controller.pollPods(ctx)
 	require.NoError(t, err)
 
 	// Verify that injection was triggered for the ErrImagePull pod
 	assert.True(t, fakeInjector.RunInjectionCalled)
-	assert.True(t, fakeInjector.StopInjectionCalled)
 }
 
 func TestPollPods_EmptyList(t *testing.T) {
@@ -195,10 +193,9 @@ func TestPollPods_EmptyList(t *testing.T) {
 	require.NoError(t, err)
 	ctx := logger.WithContext(context.Background(), testLogger)
 
-	err = controller.pollPods(ctx, []string{})
+	err = controller.pollPods(ctx)
 	require.NoError(t, err)
 
 	// Verify no injection calls were made
 	assert.False(t, fakeInjector.RunInjectionCalled)
-	assert.False(t, fakeInjector.StopInjectionCalled)
 }

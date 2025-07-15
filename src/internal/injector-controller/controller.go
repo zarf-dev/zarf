@@ -6,6 +6,7 @@ package injectorcontroller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -34,8 +35,7 @@ type Controller struct {
 
 // New creates a new Controller instance
 func New(c *cluster.Cluster) *Controller {
-	clusterAdapter := NewClusterAdapter(c)
-	injector := NewClusterInjectionExecutor(clusterAdapter)
+	injector := NewClusterInjectionExecutor(c)
 	return &Controller{
 		cluster:  c,
 		injector: injector,
@@ -58,26 +58,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	ticker := time.NewTicker(PollingInterval)
 	defer ticker.Stop()
 
-	payloadCMNames := []string{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"zarf-injector": "payload",
-		},
-	})
-	if err != nil {
-		return err
-	}
-	cmList, err := c.cluster.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
-		LabelSelector: selector.String(),
-	})
-	for _, cm := range cmList.Items {
-		payloadCMNames = append(payloadCMNames, cm.Name)
-	}
-	if err != nil {
-		return err
-	}
-
-	if err := c.pollPods(ctx, payloadCMNames); err != nil {
+	if err := c.pollPods(ctx); err != nil {
 		l.Error("initial pod check failed", "error", err, "controller", ControllerName)
 	}
 
@@ -87,7 +68,7 @@ func (c *Controller) Start(ctx context.Context) error {
 			l.Info("stopping injector controller", "controller", ControllerName)
 			return ctx.Err()
 		case <-ticker.C:
-			if err := c.pollPods(ctx, payloadCMNames); err != nil {
+			if err := c.pollPods(ctx); err != nil {
 				l.Error("error polling pods", "error", err, "controller", ControllerName)
 				// Continue polling even on error
 			}
@@ -96,7 +77,7 @@ func (c *Controller) Start(ctx context.Context) error {
 }
 
 // pollPods checks all registry proxy pods for ErrImagePull status
-func (c *Controller) pollPods(ctx context.Context, cmNames []string) error {
+func (c *Controller) pollPods(ctx context.Context) error {
 	logger.From(ctx).Info("starting pod poll")
 	labelSelector := metav1.LabelSelector{
 		MatchLabels: map[string]string{
@@ -114,14 +95,16 @@ func (c *Controller) pollPods(ctx context.Context, cmNames []string) error {
 	}
 
 	for _, pod := range podList.Items {
-		c.checkPodStatus(ctx, &pod, cmNames)
+		if err := c.checkPodStatus(ctx, &pod); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // checkPodStatus examines the pod status for ErrImagePull conditions
-func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod, payloadCMNames []string) {
+func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod) error {
 	l := logger.From(ctx)
 
 	// Check container statuses for ErrImagePull
@@ -135,21 +118,11 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod, payloa
 				"reason", containerStatus.State.Waiting.Reason,
 				"message", containerStatus.State.Waiting.Message,
 			)
-			shasum := "414c378805141eba2018ee0a16a7900a8bdca0634799b14e231ff0d412a8db7b"
-			err := c.injector.RunInjection(ctx, true, payloadCMNames, shasum, state.IPFamilyIPv4)
+			err := c.injector.Run(ctx)
 			if err != nil {
-				l.Error("this is the err", "err", err)
-			}
-			objs := getHealthCheckObjects()
-			err = c.injector.WaitForReady(ctx, objs)
-			if err != nil {
-				l.Error("this is the err", "err", err)
-			}
-			err = c.injector.StopInjection(ctx, true)
-			if err != nil {
-				l.Error("this is the err", "err", err)
+				return fmt.Errorf("injector process failed: %w", err)
 			}
 		}
 	}
-
+	return nil
 }
