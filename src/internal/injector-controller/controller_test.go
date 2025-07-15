@@ -19,13 +19,6 @@ import (
 	k8stesting "k8s.io/client-go/testing"
 )
 
-func TestNew(t *testing.T) {
-	client := fake.NewSimpleClientset()
-	controller := New(client)
-	assert.NotNil(t, controller)
-	assert.Equal(t, client, controller.clientset)
-}
-
 func TestCheckPodStatus(t *testing.T) {
 	tests := []struct {
 		name                string
@@ -141,8 +134,6 @@ func TestCheckPodStatus(t *testing.T) {
 			// In a real implementation, you'd want to capture and verify log output
 			controller.checkPodStatus(ctx, tt.pod)
 
-			// The method should complete without error
-			// In practice, you would use a test logger to capture and verify the log output
 		})
 	}
 }

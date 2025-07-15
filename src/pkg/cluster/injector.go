@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -48,20 +47,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	l.Info("creating Zarf injector resources")
 
-	resReq := v1ac.ResourceRequirements().
-		WithRequests(corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(".5"),
-			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		}).
-		WithLimits(corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse("1"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
-		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
-	if err != nil {
-		return err
-	}
-
 	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
 		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
@@ -76,6 +61,30 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			"zarf-injector": b,
 		})
 	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	if err != nil {
+		return err
+	}
+
+	err = c.RunInjection(ctx, useRegistryProxy, payloadCmNames, shasum, ipFamily)
+	if err != nil {
+		return err
+	}
+
+	l.Debug("done with injection", "duration", time.Since(start))
+	return nil
+}
+
+func (c *Cluster) RunInjection(ctx context.Context, useRegistryProxy bool, payloadCmNames []string, shasum string, ipFamily state.IPFamily) error {
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(".5"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}).
+		WithLimits(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		})
+	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
 	if err != nil {
 		return err
 	}
@@ -139,8 +148,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	// TODO: Remove use of passing data through global variables.
 	config.ZarfSeedPort = int(zarfSeedPort)
-
-	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
 }
 
@@ -168,44 +175,45 @@ func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) erro
 			return err
 		}
 	}
-	err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
-		return err
-	}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"zarf-injector": "payload",
-		},
-	})
-	if err != nil {
-		return err
-	}
-	listOpts := metav1.ListOptions{
-		LabelSelector: selector.String(),
-	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
-	if err != nil {
-		return err
-	}
+
+	// err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	// if err != nil && !kerrors.IsNotFound(err) {
+	// 	return err
+	// }
+	// selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+	// 	MatchLabels: map[string]string{
+	// 		"zarf-injector": "payload",
+	// 	},
+	// })
+	// if err != nil {
+	// 	return err
+	// }
+	// listOpts := metav1.ListOptions{
+	// 	LabelSelector: selector.String(),
+	// }
+	// err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// This is needed because labels were not present in payload config maps previously.
 	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, cm := range cmList.Items {
-		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-			continue
-		}
-		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-	}
+	// cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	// if err != nil {
+	// 	return err
+	// }
+	// for _, cm := range cmList.Items {
+	// 	if !strings.HasPrefix(cm.Name, "zarf-payload-") {
+	// 		continue
+	// 	}
+	// 	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	// TODO: Replace with wait package in the future.
-	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
 		podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
 			LabelSelector: "zarf.dev/injector",
 		})
@@ -267,6 +275,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
+	l.Info("shasum", "shasum is", shasum)
 
 	cmNames := []string{}
 	l.Info("adding archived binary configmaps of registry image to the cluster")

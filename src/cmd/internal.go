@@ -436,6 +436,6 @@ func (o *internalRunControllerOptions) run(cmd *cobra.Command, _ []string) error
 		return fmt.Errorf("failed to create cluster client: %w", err)
 	}
 
-	controller := injectorcontroller.New(c.Clientset)
+	controller := injectorcontroller.New(c)
 	return controller.Start(ctx)
 }
