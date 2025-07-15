@@ -223,7 +223,7 @@ func TestPollPods_ListError(t *testing.T) {
 	controller := New(client)
 
 	// Set up the fake client to return an error on list
-	client.PrependReactor("list", "pods", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+	client.PrependReactor("list", "pods", func(_ k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		return true, nil, assert.AnError
 	})
 

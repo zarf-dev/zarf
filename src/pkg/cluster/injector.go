@@ -132,6 +132,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return fmt.Errorf("error creating daemonset in cluster: %w", err)
 		}
+		// FIXME: this should be hostPort for hostport and containerport for the hostNetwork
 		zarfSeedPort = ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort
 		// TODO wait for DaemonSet
 	}

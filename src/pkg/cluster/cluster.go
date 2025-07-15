@@ -208,6 +208,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.AgentTLS = agentTLS
 
+		// FIXME: Need a more reliable way of determining IP family
+		// potential to do more validation https://kubernetes.io/docs/tasks/network/validate-dual-stack/
 		ipFamily, err := c.GetIPFamily(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
