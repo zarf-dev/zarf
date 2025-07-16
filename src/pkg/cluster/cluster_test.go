@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -26,7 +25,7 @@ func TestInit(t *testing.T) {
 
 	existingState := state.State{
 		Distro: DistroIsK3d,
-		RegistryInfo: types.RegistryInfo{
+		RegistryInfo: state.RegistryInfo{
 			PushUsername: "push-user",
 			PullUsername: "pull-user",
 			Address:      "address",

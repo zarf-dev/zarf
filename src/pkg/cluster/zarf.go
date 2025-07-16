@@ -23,13 +23,12 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // GetDeployedZarfPackages gets metadata information about packages that have been deployed to the cluster.
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
 // Returns a list of DeployedPackage structs and a list of errors.
-func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.DeployedPackage, error) {
+func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]state.DeployedPackage, error) {
 	// Get the secrets that describe the deployed packages
 	listOpts := metav1.ListOptions{LabelSelector: state.ZarfPackageInfoLabel}
 	secrets, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).List(ctx, listOpts)
@@ -38,12 +37,12 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 	}
 
 	errs := []error{}
-	deployedPackages := []types.DeployedPackage{}
+	deployedPackages := []state.DeployedPackage{}
 	for _, secret := range secrets.Items {
 		if !strings.HasPrefix(secret.Name, config.ZarfPackagePrefix) {
 			continue
 		}
-		var deployedPackage types.DeployedPackage
+		var deployedPackage state.DeployedPackage
 		// Process the k8s secret into our internal structs
 		err := json.Unmarshal(secret.Data["data"], &deployedPackage)
 		if err != nil {
@@ -62,12 +61,21 @@ func (c *Cluster) GetDeployedZarfPackages(ctx context.Context) ([]types.Deployed
 
 // GetDeployedPackage gets the metadata information about the package name provided (if it exists in the cluster).
 // We determine what packages have been deployed to the cluster by looking for specific secrets in the Zarf namespace.
-func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*types.DeployedPackage, error) {
-	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, config.ZarfPackagePrefix+packageName, metav1.GetOptions{})
+func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
+	deployedPackage := &state.DeployedPackage{
+		Name: packageName,
+	}
+	for _, opt := range opts {
+		opt(deployedPackage)
+	}
+
+	logger.From(ctx).Debug("Getting deployed package secret", "secret", deployedPackage.GetSecretName())
+
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, deployedPackage.GetSecretName(), metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	deployedPackage := &types.DeployedPackage{}
+
 	err = json.Unmarshal(secret.Data["data"], deployedPackage)
 	if err != nil {
 		return nil, err
@@ -76,13 +84,12 @@ func (c *Cluster) GetDeployedPackage(ctx context.Context, packageName string) (*
 }
 
 // UpdateDeployedPackage updates the deployed package metadata.
-func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.DeployedPackage) error {
-	secretName := config.ZarfPackagePrefix + depPkg.Name
+func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
 	packageSecretData, err := json.Marshal(depPkg)
 	if err != nil {
 		return err
 	}
-	packageSecret := v1ac.Secret(secretName, state.ZarfNamespaceName).
+	packageSecret := v1ac.Secret(depPkg.GetSecretName(), state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel:   "zarf",
 			state.ZarfPackageInfoLabel: depPkg.Name,
@@ -97,9 +104,8 @@ func (c *Cluster) UpdateDeployedPackage(ctx context.Context, depPkg types.Deploy
 }
 
 // DeleteDeployedPackage removes the metadata for the deployed package.
-func (c *Cluster) DeleteDeployedPackage(ctx context.Context, packageName string) error {
-	secretName := config.ZarfPackagePrefix + packageName
-	err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, secretName, metav1.DeleteOptions{})
+func (c *Cluster) DeleteDeployedPackage(ctx context.Context, depPkg state.DeployedPackage) error {
+	err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Delete(ctx, depPkg.GetSecretName(), metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
@@ -148,11 +154,11 @@ func (c *Cluster) StripZarfLabelsAndSecretsFromNamespaces(ctx context.Context) {
 }
 
 // RecordPackageDeployment saves metadata about a package that has been deployed to the cluster.
-func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []types.DeployedComponent, generation int) (*types.DeployedPackage, error) {
+func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.ZarfPackage, components []state.DeployedComponent, generation int, opts ...state.DeployedPackageOptions) (*state.DeployedPackage, error) {
 	packageName := pkg.Metadata.Name
 
 	// TODO: This is done for backwards compatibility and could be removed in the future.
-	connectStrings := types.ConnectStrings{}
+	connectStrings := state.ConnectStrings{}
 	for _, comp := range components {
 		for _, chart := range comp.InstalledCharts {
 			for k, v := range chart.ConnectStrings {
@@ -161,7 +167,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		}
 	}
 
-	deployedPackage := &types.DeployedPackage{
+	deployedPackage := &state.DeployedPackage{
 		Name:               packageName,
 		CLIVersion:         config.CLIVersion,
 		Data:               pkg,
@@ -170,13 +176,16 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		Generation:         generation,
 	}
 
+	for _, opt := range opts {
+		opt(deployedPackage)
+	}
+
 	packageData, err := json.Marshal(deployedPackage)
 	if err != nil {
 		return nil, err
 	}
 
-	packageSecretName := fmt.Sprintf("%s%s", config.ZarfPackagePrefix, packageName)
-	deployedPackageSecret := v1ac.Secret(packageSecretName, state.ZarfNamespaceName).
+	deployedPackageSecret := v1ac.Secret(deployedPackage.GetSecretName(), state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel:   "zarf",
 			state.ZarfPackageInfoLabel: packageName,
@@ -225,13 +234,13 @@ func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
-func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent) ([]types.InstalledChart, error) {
-	deployedPackage, err := c.GetDeployedPackage(ctx, packageName)
+func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageName string, component v1alpha1.ZarfComponent, opts ...state.DeployedPackageOptions) ([]state.InstalledChart, error) {
+	deployedPackage, err := c.GetDeployedPackage(ctx, packageName, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	installedCharts := make([]types.InstalledChart, 0)
+	installedCharts := make([]state.InstalledChart, 0)
 	for _, deployedComponent := range deployedPackage.DeployedComponents {
 		if deployedComponent.Name == component.Name {
 			installedCharts = append(installedCharts, deployedComponent.InstalledCharts...)
@@ -242,7 +251,7 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 }
 
 // UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
-func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer types.GitServerInfo) (string, error) {
+func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
 	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return "", err
@@ -272,7 +281,7 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 }
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
-func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer types.GitServerInfo, newGitServer types.GitServerInfo) error {
+func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer state.GitServerInfo, newGitServer state.GitServerInfo) error {
 	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return err

@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"k8s.io/client-go/dynamic"
@@ -41,7 +40,7 @@ type renderer struct {
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
 
-	connectStrings types.ConnectStrings
+	connectStrings state.ConnectStrings
 	namespaces     map[string]*corev1.Namespace
 }
 
@@ -65,7 +64,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		state:                  s,
 		actionConfig:           actionConfig,
 		variableConfig:         variableConfig,
-		connectStrings:         types.ConnectStrings{},
+		connectStrings:         state.ConnectStrings{},
 		namespaces:             map[string]*corev1.Namespace{},
 	}
 
@@ -210,7 +209,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
 
 				// Add the connectString for processing later in the deployment
-				r.connectStrings[key] = types.ConnectString{
+				r.connectStrings[key] = state.ConnectString{
 					Description: annotations[cluster.ZarfConnectAnnotationDescription],
 					URL:         annotations[cluster.ZarfConnectAnnotationURL],
 				}

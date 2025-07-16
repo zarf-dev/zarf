@@ -16,12 +16,12 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager2"
-	"github.com/zarf-dev/zarf/src/internal/packager2/filters"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/spf13/cobra"
 )
@@ -44,8 +44,8 @@ func newInitCommand() *cobra.Command {
 
 	// Init package variable defaults that are non-zero values
 	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(VInitGitPushUser, types.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, types.ZarfRegistryPushUser)
+	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
+	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
@@ -109,15 +109,20 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	loadOpt := packager2.LoadOptions{
-		Source:                  packageSource,
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpt := packager.LoadOptions{
 		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
 		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
+		CachePath:               cachePath,
 	}
-	pkgLayout, err := packager2.LoadPackage(ctx, loadOpt)
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
 	}
@@ -125,7 +130,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	opts := packager2.DeployOpts{
+	opts := packager.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
 		RegistryInfo:           pkgConfig.InitOpts.RegistryInfo,
 		ArtifactServer:         pkgConfig.InitOpts.ArtifactServer,
@@ -133,10 +138,9 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		PlainHTTP:              config.CommonOptions.PlainHTTP,
-		InsecureTLSSkipVerify:  config.CommonOptions.InsecureSkipTLSVerify,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)
 	if err != nil {
@@ -164,7 +168,7 @@ func findInitPackage(ctx context.Context, initPackageName string) (string, error
 	}
 
 	// Create the cache directory if it doesn't exist
-	absCachePath, err := config.GetAbsCachePath()
+	absCachePath, err := getCachePath(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -215,11 +219,18 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 		// Add the oci:// prefix
 		url = fmt.Sprintf("oci://%s", url)
 
-		pullOptions := packager2.PullOptions{
-			Architecture: config.GetArch(),
+		cachePath, err := getCachePath(ctx)
+		if err != nil {
+			return err
 		}
 
-		err := packager2.Pull(ctx, url, cacheDirectory, pullOptions)
+		pullOptions := packager.PullOptions{
+			Architecture:   config.GetArch(),
+			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			CachePath:      cachePath,
+		}
+
+		_, err = packager.Pull(ctx, url, cacheDirectory, pullOptions)
 		if err != nil {
 			return fmt.Errorf("unable to download the init package: %w", err)
 		}

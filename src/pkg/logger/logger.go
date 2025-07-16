@@ -252,3 +252,16 @@ func Default() *slog.Logger {
 func SetDefault(l *slog.Logger) {
 	defaultLogger.Store(l)
 }
+
+// DebugWriter a custom io.Writer that forwards to slog.Debug logs
+type DebugWriter struct {
+	Logger *slog.Logger
+}
+
+func (w *DebugWriter) Write(p []byte) (n int, err error) {
+	msg := strings.TrimSpace(string(p))
+	if msg != "" {
+		w.Logger.Debug(msg)
+	}
+	return len(p), nil
+}

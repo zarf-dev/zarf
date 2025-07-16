@@ -9,12 +9,15 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2/content/file"
@@ -27,14 +30,18 @@ var (
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.
 func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurrency int, layersToPull ...ocispec.Descriptor) (_ []ocispec.Descriptor, err error) {
+	start := time.Now()
 	// layersToPull is an explicit requirement for pulling package layers
 	if len(layersToPull) == 0 {
 		return nil, fmt.Errorf("no layers to pull")
 	}
 
+	if concurrency == 0 {
+		concurrency = DefaultConcurrency
+	}
+
 	layerSize := oci.SumDescsSize(layersToPull)
-	// TODO (@austinabro321) change this and other r.Log() calls to the proper slog format
-	r.Log().Info(fmt.Sprintf("Pulling %s, size: %s", r.Repo().Reference, utils.ByteFormat(float64(layerSize), 2)))
+	logger.From(ctx).Info("pulling package", "name", r.Repo().Reference, "size", utils.ByteFormat(float64(layerSize), 2))
 
 	dst, err := file.New(destinationDir)
 	if err != nil {
@@ -48,10 +55,15 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	copyOpts := r.GetDefaultCopyOpts()
 	copyOpts.Concurrency = concurrency
 
-	err = r.CopyToTarget(ctx, layersToPull, dst, copyOpts)
+	trackedDst := images.NewTrackedTarget(dst, layerSize, images.DefaultReport(r.Log(), "package pull in progress", r.Repo().Reference.String()))
+	trackedDst.StartReporting(ctx)
+	defer trackedDst.StopReporting()
+
+	err = r.CopyToTarget(ctx, layersToPull, trackedDst, copyOpts)
 	if err != nil {
 		return nil, err
 	}
+	r.Log().Info("finished pulling package layers", "duration", time.Since(start).Round(time.Millisecond*100))
 	return layersToPull, nil
 }
 
@@ -209,14 +221,4 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 		return nil, fmt.Errorf("unknown inspect target %s", layersSelector)
 	}
 	return layers, nil
-}
-
-// PullPackageMetadata pulls the package metadata from the remote repository and saves it to `destinationDir`.
-func (r *Remote) PullPackageMetadata(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, PackageAlwaysPull)
-}
-
-// PullPackageSBOM pulls the package's sboms.tar from the remote repository and saves it to `destinationDir`.
-func (r *Remote) PullPackageSBOM(ctx context.Context, destinationDir string) ([]ocispec.Descriptor, error) {
-	return r.PullPaths(ctx, destinationDir, []string{layout.SBOMTar})
 }

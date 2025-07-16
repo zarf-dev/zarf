@@ -6,6 +6,8 @@ package types
 
 import (
 	"time"
+
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
@@ -123,11 +125,11 @@ type ZarfInitOptions struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
 	ApplianceMode bool
 	// Information about the repository Zarf is going to be using
-	GitServer GitServerInfo
+	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
-	RegistryInfo RegistryInfo
+	RegistryInfo state.RegistryInfo
 	// Information about the artifact registry Zarf is going to be using
-	ArtifactServer ArtifactServerInfo
+	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
 }

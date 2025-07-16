@@ -50,9 +50,15 @@ linters:
         - name: error-strings
         - name: error-naming
         - name: exported
+          arguments:
+            - "disableStutteringCheck"
         - name: if-return
         - name: increment-decrement
         - name: var-naming
+          arguments:
+            - [] # allowlist
+            - [] # blocklist
+            - [{skipPackageNameChecks: true}] # options map
         - name: var-declaration
         - name: package-comments
         - name: range
@@ -77,8 +83,6 @@ linters:
       - legacy
     paths:
       - src/cmd/helm
-      - src/internal/packager/sbom
-      - src/pkg/packager
       - third_party$
       - builtin$
       - examples$

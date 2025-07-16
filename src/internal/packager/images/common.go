@@ -18,12 +18,12 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -46,12 +46,13 @@ type PushConfig struct {
 	OCIConcurrency        int
 	SourceDirectory       string
 	ImageList             []transform.Image
-	RegistryInfo          types.RegistryInfo
+	RegistryInfo          state.RegistryInfo
 	NoChecksum            bool
 	Arch                  string
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
+	Cluster               *cluster.Cluster
 	ResponseHeaderTimeout time.Duration
 }
 
@@ -204,27 +205,6 @@ func WithGlobalInsecureFlag() []crane.Option {
 	return []crane.Option{NoopOpt}
 }
 
-// WithArchitecture sets the platform option for crane.
-//
-// This option is actually a slight mis-use of the platform option, as it is
-// setting the architecture only and hard coding the OS to linux.
-func WithArchitecture(arch string) crane.Option {
-	return crane.WithPlatform(&v1.Platform{OS: "linux", Architecture: arch})
-}
-
-// CommonOpts returns a set of common options for crane under Zarf.
-func CommonOpts(arch string) []crane.Option {
-	opts := WithGlobalInsecureFlag()
-	opts = append(opts, WithArchitecture(arch))
-
-	opts = append(opts,
-		crane.WithUserAgent("zarf"),
-		crane.WithNoClobber(true),
-		crane.WithJobs(1),
-	)
-	return opts
-}
-
 // WithBasicAuth returns an option for crane that sets basic auth.
 func WithBasicAuth(username, password string) crane.Option {
 	return crane.WithAuth(authn.FromConfig(authn.AuthConfig{
@@ -234,12 +214,12 @@ func WithBasicAuth(username, password string) crane.Option {
 }
 
 // WithPullAuth returns an option for crane that sets pull auth from a given registry info.
-func WithPullAuth(ri types.RegistryInfo) crane.Option {
+func WithPullAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PullUsername, ri.PullPassword)
 }
 
 // WithPushAuth returns an option for crane that sets push auth from a given registry info.
-func WithPushAuth(ri types.RegistryInfo) crane.Option {
+func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
