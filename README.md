@@ -3,7 +3,6 @@
 [![Latest Release](https://img.shields.io/github/v/release/zarf-dev/zarf)](https://github.com/zarf-dev/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/zarf-dev/zarf?filename=go.mod)](https://go.dev/)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/zarf-dev/zarf/release.yml)](https://github.com/zarf-dev/zarf/actions/workflows/release.yml)
-[![OpenSSF Project](https://img.shields.io/badge/OpenSSF-Project-orange)](https://openssf.org/)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/zarf-dev/zarf/badge)](https://securityscorecards.dev/viewer/?uri=github.com/zarf-dev/zarf)
 
 <img align="right" alt="zarf logo" src="site/src/assets/zarf-logo.png"  height="256" />
