@@ -26,11 +26,11 @@ Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](
 
 ## Should Zarf only be used in the airgap?
 
-No, Zarf is used outside of the airgap as well. Some users leverage Zarf for a declarative deployment mechanism, while others want their resources cached in the event of a lost connection.
+No, Zarf is used in connected environments as well. Some users value making their deployment mechanism declarative, while others want their resources cached in the event of a lost connection.
 
 ## Should Zarf only be used with Kubernetes
 
-No, while improving the airgap Kubernetes UX is often the highest priority for the project, many users find value in [mirroring resources](commands/zarf_package_mirror-resources) across environments and using [Zarf actions](ref/actions).
+No, while improving the airgapped Kubernetes UX is often the top priority for the project, many users find value in [mirroring resources](commands/zarf_package_mirror-resources) across environments and using [Zarf actions](ref/actions).
 
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
