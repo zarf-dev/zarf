@@ -11,7 +11,6 @@ import (
 	"github.com/zarf-dev/zarf/src/cmd/helm"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"helm.sh/helm/v3/pkg/action"
 )
 
@@ -29,7 +28,6 @@ func newHelmCommand() *cobra.Command {
 	// The inclusion of Helm in this manner should be changed once https://github.com/helm/helm/pull/13617 is merged
 	cmd, err := helm.NewRootCmd(actionConfig, os.Stdout, helmArgs)
 	if err != nil {
-		message.Debug("Failed to initialize helm command", "error", err)
 		logger.Default().Debug("failed to initialize helm command", "error", err)
 	}
 	cmd.Short = lang.CmdToolsHelmShort

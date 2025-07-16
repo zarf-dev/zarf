@@ -38,9 +38,9 @@ func TestComponentActions(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdErr, "action succeeded cmd=Create a test file")
 	require.Contains(t, stdErr, "action succeeded cmd=touch test-create-after.txt")
-	require.Contains(t, stdErr, "multiline!")
-	require.Contains(t, stdErr, "updates!")
-	require.Contains(t, stdErr, "realtime!")
+	require.Contains(t, stdOut, "multiline!")
+	require.Contains(t, stdOut, "updates!")
+	require.Contains(t, stdOut, "realtime!")
 
 	// Test for package create prepare artifacts.
 	for _, artifact := range createArtifacts {
@@ -82,7 +82,7 @@ func TestComponentActions(t *testing.T) {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-timeout", "--confirm")
 		require.Error(t, err, stdOut, stdErr)
 		require.Contains(t, stdErr, "after 1 second")
-		require.Contains(t, stdErr, "😭😭😭 this action failed because it took too long to run 😭😭😭")
+		require.Contains(t, stdOut, "😭😭😭 this action failed because it took too long to run 😭😭😭")
 	})
 
 	t.Run("action on-deploy-with-variable", func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestComponentActions(t *testing.T) {
 		// Test using a Zarf Variable within the action
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-variable", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the dog says ruff")
+		require.Contains(t, stdOut, "the dog says ruff")
 	})
 
 	t.Run("action on-deploy-with-dynamic-variable", func(t *testing.T) {
@@ -99,10 +99,10 @@ func TestComponentActions(t *testing.T) {
 		// Test using dynamic and multiple-variables
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=on-deploy-with-dynamic-variable,on-deploy-with-multiple-variables", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "the cat says meow")
-		require.Contains(t, stdErr, "the dog says ruff")
-		require.Contains(t, stdErr, "the snake says hiss")
-		require.Contains(t, stdErr, "with a TF_VAR, the snake also says hiss")
+		require.Contains(t, stdOut, "the cat says meow")
+		require.Contains(t, stdOut, "the dog says ruff")
+		require.Contains(t, stdOut, "the snake says hiss")
+		require.Contains(t, stdOut, "with a TF_VAR, the snake also says hiss")
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {

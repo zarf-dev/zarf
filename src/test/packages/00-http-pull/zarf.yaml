@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../../../../zarf.schema.json
+kind: ZarfPackageConfig
+metadata:
+  name: http-pull
+
+components:
+  - name: foo

@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: dos-games
   description: Simple example to load classic DOS games into K8s in the airgap
-  version: 1.1.0
+  version: 1.2.0
 
 components:
   - name: baseline

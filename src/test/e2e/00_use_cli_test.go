@@ -6,6 +6,9 @@ package test
 
 import (
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,7 +21,7 @@ import (
 )
 
 func TestUseCLI(t *testing.T) {
-	t.Log("E2E: Use CLI")
+	t.Parallel()
 
 	// TODO once cmd is refactored to accept an io.Writer, move this test to DevInspectDefinitionOptions.Run()
 	t.Run("zarf dev inspect definition", func(t *testing.T) {
@@ -32,10 +35,10 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdOut, string(b))
 	})
 
-	t.Run("zarf prepare sha256sum <local>", func(t *testing.T) {
+	t.Run("zarf dev sha256sum <local>", func(t *testing.T) {
 		t.Parallel()
 
-		// Test `zarf prepare sha256sum` for a local asset
+		// Test `zarf dev sha256sum` for a local asset
 		expectedShasum := "61b50898f982d015ed87093ba822de0fe011cec6dd67db39f99d8c56391a6109\n"
 		shasumTestFilePath := "shasum-test-file"
 
@@ -52,34 +55,80 @@ func TestUseCLI(t *testing.T) {
 		require.Equal(t, expectedShasum, stdOut, "The expected SHASUM should equal the actual SHASUM")
 	})
 
-	t.Run("zarf prepare sha256sum <remote>", func(t *testing.T) {
+	t.Run("zarf dev sha256sum <remote>", func(t *testing.T) {
 		t.Parallel()
-		// Test `zarf prepare sha256sum` for a remote asset
-		expectedShasum := "b905e647e0d7876cfd5b665632cfc43ad919dc60408f7236c5b541c53277b503\n"
+		expectedShasum := "a78d66b9e2b00a22edd9b4e6432a4d934621e3757f09493b12f688c7c9baca93\n"
 
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init.s3.us-east-2.amazonaws.com/injector/2024-07-22/zarf-injector-arm64")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init-resources.s3.us-east-1.amazonaws.com/injector/2025-03-24/zarf-injector-amd64")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})
 
-	t.Run("zarf package pull https", func(t *testing.T) {
+	t.Run("zarf package pull http", func(t *testing.T) {
 		t.Parallel()
-		packageShasum := "690799dbe8414238e11d4488754eee52ec264c1584cd0265e3b91e3e251e8b1a"
-		packageName := "zarf-init-amd64-v0.39.0.tar.zst"
-		_, _, err := e2e.Zarf(t, "package", "pull", fmt.Sprintf("https://github.com/zarf-dev/zarf/releases/download/v0.39.0/%s", packageName), "--shasum", packageShasum)
+
+		tmpDir := t.TempDir()
+
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-http-pull", "-o", tmpDir, "--confirm")
 		require.NoError(t, err)
-		require.FileExists(t, packageName)
-		err = os.Remove(packageName)
+
+		// archive/v3 zstd creates non-reproducible tarballs, so need to calculate the sha each time
+		stdOut, _, err := e2e.Zarf(t, "prepare", "sha256sum", fmt.Sprintf("%s/zarf-package-http-pull-%s.tar.zst", tmpDir, e2e.Arch))
 		require.NoError(t, err)
+		shaSum := strings.TrimSpace(stdOut)
+
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == fmt.Sprintf("/zarf-package-http-pull-%s.tar.zst", e2e.Arch) {
+				w.WriteHeader(http.StatusOK)
+				file, err := os.Open(filepath.Join(tmpDir, fmt.Sprintf("zarf-package-http-pull-%s.tar.zst", e2e.Arch)))
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				defer func() {
+					if err := file.Close(); err != nil {
+						w.WriteHeader(http.StatusInternalServerError)
+					}
+				}()
+				_, err = io.Copy(w, file)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				return
+			}
+			w.WriteHeader(http.StatusNotFound)
+		})
+
+		httpServer := httptest.NewServer(handler)
+		t.Cleanup(func() {
+			httpServer.Close()
+		})
+
+		// TODO: also create a httptest.NewTLSServer and pass the server.Client in a unit test
+
+		f := func(url string, expectedErr string) {
+			t.Helper()
+			outputTmpDir := t.TempDir()
+			_, stdErr, err := e2e.Zarf(t, "package", "pull", url, "--shasum", shaSum, "-o", outputTmpDir)
+			if expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, stdErr, expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.FileExists(t, filepath.Join(outputTmpDir, fmt.Sprintf("zarf-package-http-pull-%s.tar.zst", e2e.Arch)))
+		}
+
+		f(fmt.Sprintf("%s/zarf-package-http-pull-%s.tar.zst", httpServer.URL, e2e.Arch), "")
+		f(httpServer.URL, "404 Not Found")
 	})
 
 	t.Run("zarf version", func(t *testing.T) {
 		t.Parallel()
 		// Test `zarf version`
-		version, _, err := e2e.Zarf(t, "version")
-		require.NoError(t, err)
+		version := e2e.GetZarfVersion(t)
 		require.NotEmpty(t, version, "Zarf version should not be an empty string")
-		version = strings.Trim(version, "\n")
 
 		// test `zarf version --output-format=json`
 		stdOut, _, err := e2e.Zarf(t, "version", "--output-format=json")
@@ -134,20 +183,19 @@ func TestUseCLI(t *testing.T) {
 		require.Contains(t, stdErr, expectedOutString, "The log level should be changed to 'debug'")
 	})
 
-	t.Run("zarf package to test archive path", func(t *testing.T) {
+	t.Run("zarf package to test extract path", func(t *testing.T) {
 		t.Parallel()
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "packages/distros/eks", "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
+		tmpDir := t.TempDir()
+		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-extract-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
+		require.NoError(t, err)
 
-		path := fmt.Sprintf("zarf-package-distro-eks-%s-0.0.3.tar.zst", e2e.Arch)
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
+		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s.tar.zst", e2e.Arch))
+		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+		require.NoError(t, err)
 
-		require.FileExists(t, "binaries/eksctl_Darwin_x86_64")
-		require.FileExists(t, "binaries/eksctl_Darwin_arm64")
-		require.FileExists(t, "binaries/eksctl_Linux_x86_64")
+		require.FileExists(t, "src/test/packages/00-extract-path/output.txt")
 
-		e2e.CleanFiles(t, "binaries/eksctl_Darwin_x86_64", "binaries/eksctl_Darwin_arm64", "binaries/eksctl_Linux_x86_64", path, "eks.yaml")
+		e2e.CleanFiles(t, "src/test/packages/00-extract-path/output.txt")
 	})
 
 	t.Run("zarf package create with tmpdir and cache", func(t *testing.T) {
@@ -167,23 +215,15 @@ func TestUseCLI(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		// run `zarf package deploy` with a specified tmp location
-		var (
-			firstFile  = "first-choice-file.txt"
-			secondFile = "second-choice-file.txt"
-		)
-		t.Cleanup(func() {
-			e2e.CleanFiles(t, firstFile, secondFile)
-		})
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/component-choice", "-o", tmpdir)
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-no-components", "-o", tmpdir)
 		require.NoError(t, err, stdOut, stdErr)
-		packageName := fmt.Sprintf("zarf-package-component-choice-%s.tar.zst", e2e.Arch)
+		packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--tmpdir", tmpdir, "--log-level=debug", "--confirm")
-		require.Contains(t, stdErr, tmpdir, "The other tmp path should show as being created")
+		require.Contains(t, stdErr, tmpdir, "The tmp path should show as being created")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("remove cache", func(t *testing.T) {
-		t.Parallel()
 		tmpdir := t.TempDir()
 		// Test removal of cache
 		cachePath := filepath.Join(tmpdir, ".cache-location")

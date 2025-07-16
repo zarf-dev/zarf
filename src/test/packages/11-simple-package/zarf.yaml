@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: simple-package
-  description: simple small package to test pullling, publishing, and inspecting
+  description: simple small package to test skeleton publish
   version: 0.0.1
 
 components:

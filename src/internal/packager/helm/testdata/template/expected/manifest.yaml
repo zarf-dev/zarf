@@ -1,0 +1,25 @@
+# Source: /tmp/TestChartTemplate1484486325/001/zarf-967618574/chart.yaml
+# Source: simple-chart/templates/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-connect
+spec:
+  ports:
+  - port: "8080"
+    name: http
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+---
+# Source: /tmp/TestChartTemplate1484486325/001/zarf-967618574/chart.yaml
+# Source: simple-chart/templates/pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: basic
+spec:
+  containers:
+    - name: container
+      image: "nginx:1.0.0"

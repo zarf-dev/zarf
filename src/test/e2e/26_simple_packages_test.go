@@ -5,7 +5,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -19,21 +18,21 @@ import (
 
 func TestDosGames(t *testing.T) {
 	t.Log("E2E: Dos games")
+	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	tmpdir := t.TempDir()
 
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
-	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.1.0.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
 	path := filepath.Join(tmpdir, packageName)
 
 	// Deploy the game
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	require.NoError(t, err)
-	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
 	tunnel, err := c.Connect(ctx, "doom")
 	require.NoError(t, err)
 	defer tunnel.Close()

@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: differential-test
+  architecture: amd64
+  version: 0.0.1
+
+components:
+  - name: simple-component

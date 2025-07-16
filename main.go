@@ -16,13 +16,12 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
 
-//go:embed cosign.pub
-var cosignPublicKey string
-
 //go:embed zarf.schema.json
 var zarfSchema embed.FS
 
 func main() {
+	// This ensures `./zarf` actions call the current Zarf binary over the system Zarf binary
+	config.ActionsUseSystemZarf = false
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	signalCh := make(chan os.Signal, 1)
@@ -40,7 +39,6 @@ func main() {
 		}
 	}()
 
-	config.CosignPublicKey = cosignPublicKey
 	lint.ZarfSchema = zarfSchema
 	cmd.Execute(ctx)
 }

@@ -17,8 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 // DockerConfig contains the authentication information from the machine's docker config.
@@ -35,7 +34,7 @@ type DockerConfigEntryWithAuth struct {
 }
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
-func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
+func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo state.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
 	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
@@ -70,7 +69,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 	secretDockerConfig := v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel: "zarf",
+			state.ZarfManagedByLabel: "zarf",
 		}).
 		WithType(corev1.SecretTypeDockerConfigJson).
 		WithData(map[string][]byte{
@@ -81,10 +80,10 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 }
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
-func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *v1ac.SecretApplyConfiguration {
+func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo state.GitServerInfo) *v1ac.SecretApplyConfiguration {
 	return v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
-			ZarfManagedByLabel: "zarf",
+			state.ZarfManagedByLabel: "zarf",
 		}).WithType(corev1.SecretTypeOpaque).
 		WithStringData(map[string]string{
 			"username": gitServerInfo.PullUsername,
@@ -93,10 +92,8 @@ func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo typ
 }
 
 // UpdateZarfManagedImageSecrets updates all Zarf-managed image secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *types.ZarfState) error {
+func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, s *state.State) error {
 	l := logger.From(ctx)
-	spinner := message.NewProgressSpinner("Updating existing Zarf-managed image secrets")
-	defer spinner.Stop()
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -112,29 +109,25 @@ func (c *Cluster) UpdateZarfManagedImageSecrets(ctx context.Context, state *type
 			return err
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentRegistrySecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentRegistrySecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, state.RegistryInfo)
+		newRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, namespace.Name, config.ZarfImagePullSecretName, s.RegistryInfo)
 		if err != nil {
 			return err
 		}
 		l.Info("applying Zarf managed registry secret for namespace", "name", namespace.Name)
-		spinner.Updatef("Updating existing Zarf-managed image secret for namespace: '%s'", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newRegistrySecret.Namespace).Apply(ctx, newRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
 	}
 
-	spinner.Success()
 	return nil
 }
 
 // UpdateZarfManagedGitSecrets updates all Zarf-managed git secrets in all namespaces based on state
-func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.ZarfState) error {
-	spinner := message.NewProgressSpinner("Updating existing Zarf-managed git secrets")
-	defer spinner.Stop()
+func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.State) error {
 	l := logger.From(ctx)
 
 	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -150,19 +143,16 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, state *types.
 			continue
 		}
 		// Skip if namespace is skipped and secret is not managed by Zarf.
-		if currentGitSecret.Labels[ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if currentGitSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
 			continue
 		}
-		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, state.GitServer)
-		spinner.Updatef("Updating existing Zarf-managed git secret for namespace: %s", namespace.Name)
+		newGitSecret := c.GenerateGitPullCreds(namespace.Name, config.ZarfGitServerSecretName, s.GitServer)
 		l.Info("applying Zarf managed git secret for namespace", "name", namespace.Name)
 		_, err = c.Clientset.CoreV1().Secrets(*newGitSecret.Namespace).Apply(ctx, newGitSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return err
 		}
 	}
-
-	spinner.Success()
 	return nil
 }
 
@@ -176,7 +166,6 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRe
 	// If this is an internal service then we need to look it up and
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
 	if err != nil {
-		message.Debugf("registry appears to not be a nodeport service, using original address %q", stateRegistryAddress)
 		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", stateRegistryAddress)
 		return stateRegistryAddress, nil
 	}

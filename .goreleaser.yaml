@@ -28,7 +28,7 @@ builds:
       - -X github.com/derailed/k9s/cmd.version={{.Env.K9S_VERSION}}
       - -X github.com/google/go-containerregistry/cmd/crane/cmd.Version={{.Env.CRANE_VERSION}}
       - -X github.com/zarf-dev/zarf/src/cmd.syftVersion={{.Env.SYFT_VERSION}}
-      - -X github.com/zarf-dev/zarf/src/cmd.archiverVersion={{.Env.ARCHIVER_VERSION}}
+      - -X github.com/zarf-dev/zarf/src/cmd.archivesVersion={{.Env.ARCHIVES_VERSION}}
       - -X github.com/zarf-dev/zarf/src/cmd.helmVersion={{.Env.HELM_VERSION}}
     goarch:
       - amd64
@@ -36,7 +36,7 @@ builds:
 
 # Save the built artifacts as binaries (instead of wrapping them in a tarball)
 archives:
-  - format: binary
+  - formats: [ 'binary' ]
     name_template: "{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}"
 
 # generate a sha256 checksum of all release artifacts
@@ -54,7 +54,7 @@ sboms:
       - "sbom_{{ .ProjectName }}_{{ .Tag }}_{{- title .Os }}_{{ .Arch }}.sbom"
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-snapshot"
+  version_template: "{{ incpatch .Version }}-snapshot"
 
 # Use the auto-generated changelog github provides
 changelog:
@@ -88,7 +88,7 @@ brews:
 
     commit_msg_template: "build(release): upgrade {{ .ProjectName }} to {{ .Tag }}"
     homepage: "https://zarf.dev/"
-    description: "DevSecOps for Air Gap"
+    description: "The Airgap Native Packager Manager for Kubernetes"
 
   # NOTE: We are using .Version instead of .Tag because homebrew has weird semver parsing rules and won't be able to
   #       install versioned releases that has a `v` character before the version number.
@@ -106,4 +106,4 @@ brews:
           name: homebrew-tap
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
-    description: "DevSecOps for Air Gap"
+    description: "The Airgap Native Packager Manager for Kubernetes"

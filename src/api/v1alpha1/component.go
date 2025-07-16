@@ -4,10 +4,6 @@
 // Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
 package v1alpha1
 
-import (
-	"github.com/invopop/jsonschema"
-)
-
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// The name of the component.
@@ -337,19 +333,6 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty"`
 	// [beta] The URL to a Zarf package to import via OCI.
 	URL string `json:"url,omitempty" jsonschema:"pattern=^oci://.*$"`
-}
-
-// JSONSchemaExtend extends the generated json schema during `zarf internal gen-config-schema`
-func (ZarfComponentImport) JSONSchemaExtend(schema *jsonschema.Schema) {
-	path, _ := schema.Properties.Get("path")
-	url, _ := schema.Properties.Get("url")
-
-	notSchema := &jsonschema.Schema{
-		Pattern: ZarfPackageTemplatePrefix,
-	}
-
-	path.Not = notSchema
-	url.Not = notSchema
 }
 
 // Shell represents the desired shell to use for a given command

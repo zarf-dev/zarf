@@ -19,7 +19,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 func parseChecksum(src string) (string, string, error) {
@@ -102,10 +101,13 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	l.Info("download start", "url", url)
 	start := time.Now()
 
-	// Get the data
-	resp, err := http.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("unable to download the file %s", url)
+		return fmt.Errorf("unable to create request for %s: %w", url, err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("unable to download the file %s: %w", url, err)
 	}
 	defer func() {
 		err2 := resp.Body.Close()
@@ -117,17 +119,10 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 		return fmt.Errorf("bad HTTP status: %s", resp.Status)
 	}
 
-	// Setup progress bar
-	// TODO(mkcp): Remove message on logger release
-	title := fmt.Sprintf("Downloading %s", filepath.Base(url))
-	progressBar := message.NewProgressBar(resp.ContentLength, title)
-	reader := io.TeeReader(resp.Body, progressBar)
 	// Copy response body to file
-	if _, err = io.Copy(destinationFile, reader); err != nil {
-		progressBar.Failf("Unable to save the file %s: %s", destinationFile.Name(), err.Error())
+	if _, err = io.Copy(destinationFile, resp.Body); err != nil {
 		return fmt.Errorf("unable to save the file %s: %w", destinationFile.Name(), err)
 	}
-	progressBar.Successf("Downloaded %s", url)
 	l.Debug("download successful", "url", url, "size", resp.ContentLength, "duration", time.Since(start))
 	return nil
 }

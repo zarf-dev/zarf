@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/defenseunicorns/pkg/oci"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,15 +29,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
-	"github.com/zarf-dev/zarf/src/pkg/packager/sources"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
-var subAltNames []string
-var outputDirectory string
-var updateCredsInitOpts types.ZarfInitOptions
+var (
+	subAltNames         []string
+	outputDirectory     string
+	updateCredsInitOpts cluster.InitStateOptions
+)
 
 const (
 	registryKey     = "registry"
@@ -58,7 +60,7 @@ func newGetCredsOptions() *getCredsOptions {
 	return &getCredsOptions{
 		outputFormat: outputTable,
 		// TODO accept output writer as a parameter to the root Zarf command and pass it through here
-		outputWriter: message.OutputWriter,
+		outputWriter: OutputWriter,
 	}
 }
 
@@ -90,7 +92,7 @@ func newGetCredsCommand() *cobra.Command {
 func (o *getCredsOptions) complete(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
@@ -99,23 +101,22 @@ func (o *getCredsOptions) complete(ctx context.Context) error {
 }
 
 func (o *getCredsOptions) run(ctx context.Context, args []string) error {
-	state, err := o.cluster.LoadZarfState(ctx)
+	s, err := o.cluster.LoadState(ctx)
 	if err != nil {
 		return err
 	}
 	// TODO: Determine if this is actually needed.
-	if state.Distro == "" {
-		return errors.New("zarf state secret did not load properly")
+	if s.Distro == "" {
+		return errors.New("state.Distro empty, did not load from cluster")
 	}
 
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		printComponentCredential(ctx, state, args[0], o.outputWriter)
-		message.PrintComponentCredential(state, args[0])
+		printComponentCredential(ctx, s, args[0], o.outputWriter)
 		return nil
 	}
-	return printCredentialTable(state, o.outputFormat, o.outputWriter)
+	return printCredentialTable(s, o.outputFormat, o.outputWriter)
 }
 
 type credentialInfo struct {
@@ -129,22 +130,22 @@ type credentialInfo struct {
 // TODO Zarf state should be changed to have empty values when a service is not in use
 // Once this change is in place, this function should check if the git server, artifact server, or registry server
 // information is empty and avoid printing that service if so
-func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out io.Writer) error {
+func printCredentialTable(s *state.State, outputFormat outputFormat, out io.Writer) error {
 	var credentials []credentialInfo
 
-	if state.RegistryInfo.IsInternal() {
+	if s.RegistryInfo.IsInternal() {
 		credentials = append(credentials,
 			credentialInfo{
 				Application: "Registry",
-				Username:    state.RegistryInfo.PushUsername,
-				Password:    state.RegistryInfo.PushPassword,
+				Username:    s.RegistryInfo.PushUsername,
+				Password:    s.RegistryInfo.PushPassword,
 				Connect:     "zarf connect registry",
 				GetCredsKey: registryKey,
 			},
 			credentialInfo{
 				Application: "Registry (read-only)",
-				Username:    state.RegistryInfo.PullUsername,
-				Password:    state.RegistryInfo.PullPassword,
+				Username:    s.RegistryInfo.PullUsername,
+				Password:    s.RegistryInfo.PullPassword,
 				Connect:     "zarf connect registry",
 				GetCredsKey: registryReadKey,
 			},
@@ -154,22 +155,22 @@ func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out
 	credentials = append(credentials,
 		credentialInfo{
 			Application: "Git",
-			Username:    state.GitServer.PushUsername,
-			Password:    state.GitServer.PushPassword,
+			Username:    s.GitServer.PushUsername,
+			Password:    s.GitServer.PushPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitKey,
 		},
 		credentialInfo{
 			Application: "Git (read-only)",
-			Username:    state.GitServer.PullUsername,
-			Password:    state.GitServer.PullPassword,
+			Username:    s.GitServer.PullUsername,
+			Password:    s.GitServer.PullPassword,
 			Connect:     "zarf connect git",
 			GetCredsKey: gitReadKey,
 		},
 		credentialInfo{
 			Application: "Artifact Token",
-			Username:    state.ArtifactServer.PushUsername,
-			Password:    state.ArtifactServer.PushToken,
+			Username:    s.ArtifactServer.PushUsername,
+			Password:    s.ArtifactServer.PushToken,
 			Connect:     "zarf connect git",
 			GetCredsKey: artifactKey,
 		},
@@ -203,24 +204,24 @@ func printCredentialTable(state *types.ZarfState, outputFormat outputFormat, out
 	return nil
 }
 
-func printComponentCredential(ctx context.Context, state *types.ZarfState, componentName string, out io.Writer) {
+func printComponentCredential(ctx context.Context, s *state.State, componentName string, out io.Writer) {
 	l := logger.From(ctx)
 	switch strings.ToLower(componentName) {
 	case gitKey:
-		l.Info("Git server push password", "username", state.GitServer.PushUsername)
-		fmt.Fprintln(out, state.GitServer.PushPassword)
+		l.Info("Git server push password", "username", s.GitServer.PushUsername)
+		fmt.Fprintln(out, s.GitServer.PushPassword)
 	case gitReadKey:
-		l.Info("Git server (read-only) password", "username", state.GitServer.PullUsername)
-		fmt.Fprintln(out, state.GitServer.PullPassword)
+		l.Info("Git server (read-only) password", "username", s.GitServer.PullUsername)
+		fmt.Fprintln(out, s.GitServer.PullPassword)
 	case artifactKey:
-		l.Info("artifact server token", "username", state.ArtifactServer.PushUsername)
-		fmt.Fprintln(out, state.ArtifactServer.PushToken)
+		l.Info("artifact server token", "username", s.ArtifactServer.PushUsername)
+		fmt.Fprintln(out, s.ArtifactServer.PushToken)
 	case registryKey:
-		l.Info("image registry password", "username", state.RegistryInfo.PushUsername)
-		fmt.Fprintln(out, state.RegistryInfo.PushPassword)
+		l.Info("image registry password", "username", s.RegistryInfo.PushUsername)
+		fmt.Fprintln(out, s.RegistryInfo.PushPassword)
 	case registryReadKey:
-		l.Info("image registry (read-only) password", "username", state.RegistryInfo.PullUsername)
-		fmt.Fprintln(out, state.RegistryInfo.PullPassword)
+		l.Info("image registry (read-only) password", "username", s.RegistryInfo.PullUsername)
+		fmt.Fprintln(out, s.RegistryInfo.PullPassword)
 	default:
 		l.Warn("unknown component", "component", componentName)
 	}
@@ -269,7 +270,12 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
-	validKeys := []string{message.RegistryKey, message.GitKey, message.ArtifactKey, message.AgentKey}
+	validKeys := []string{
+		state.RegistryKey,
+		state.GitKey,
+		state.ArtifactKey,
+		state.AgentKey,
+	}
 	if len(args) == 0 {
 		args = validKeys
 	} else {
@@ -284,12 +290,12 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
 
-	oldState, err := c.LoadZarfState(ctx)
+	oldState, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
@@ -297,13 +303,17 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if oldState.Distro == "" {
 		return errors.New("zarf state secret did not load properly")
 	}
-	newState, err := cluster.MergeZarfState(oldState, updateCredsInitOpts, args)
+	opts := state.MergeOptions{
+		GitServer:      updateCredsInitOpts.GitServer,
+		RegistryInfo:   updateCredsInitOpts.RegistryInfo,
+		ArtifactServer: updateCredsInitOpts.ArtifactServer,
+		Services:       args,
+	}
+	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
 
-	// Printing both the pterm output and slogger for now
-	message.PrintCredentialUpdates(oldState, newState, args)
 	printCredentialUpdates(ctx, oldState, newState, args)
 
 	confirm := config.CommonOptions.Confirm
@@ -322,13 +332,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update registry and git pull secrets
-	if slices.Contains(args, message.RegistryKey) {
+	if slices.Contains(args, state.RegistryKey) {
 		err := c.UpdateZarfManagedImageSecrets(ctx, newState)
 		if err != nil {
 			return err
 		}
 	}
-	if slices.Contains(args, message.GitKey) {
+	if slices.Contains(args, state.GitKey) {
 		err := c.UpdateZarfManagedGitSecrets(ctx, newState)
 		if err != nil {
 			return err
@@ -342,7 +352,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update artifact token (if internal)
-	if slices.Contains(args, message.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+	if slices.Contains(args, state.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
 		newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
@@ -350,33 +360,38 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Save the final Zarf State
-	err = c.SaveZarfState(ctx, newState)
+	err = c.SaveState(ctx, newState)
 	if err != nil {
 		return fmt.Errorf("failed to save the Zarf State to the cluster: %w", err)
 	}
 
-	// Update Zarf 'init' component Helm releases if present
-	h := helm.NewClusterOnly(&types.PackagerConfig{}, template.GetZarfVariableConfig(cmd.Context()), newState, c)
+	helmOpts := helm.InstallUpgradeOptions{
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
+		State:          newState,
+		Cluster:        c,
+		AirgapMode:     true,
+		Timeout:        config.ZarfDefaultTimeout,
+		Retries:        config.ZarfDefaultRetries,
+	}
 
-	if slices.Contains(args, message.RegistryKey) && newState.RegistryInfo.IsInternal() {
-		err = h.UpdateZarfRegistryValues(ctx)
+	// Update Zarf 'init' component Helm releases if present
+	if slices.Contains(args, state.RegistryKey) && newState.RegistryInfo.IsInternal() {
+		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateRegistry, err.Error())
 			l.Warn("unable to update Zarf Registry values", "error", err.Error())
 		}
 	}
-	if slices.Contains(args, message.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
+	if slices.Contains(args, state.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
 		err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	if slices.Contains(args, message.AgentKey) {
-		err = h.UpdateZarfAgentValues(ctx)
+	if slices.Contains(args, state.AgentKey) {
+		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
-			message.Warnf(lang.CmdToolsUpdateCredsUnableUpdateAgent, err.Error())
 			l.Warn("unable to update Zarf Agent TLS secrets", "error", err.Error())
 		}
 	}
@@ -384,7 +399,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newState *types.ZarfState, services []string) {
+func printCredentialUpdates(ctx context.Context, oldState *state.State, newState *state.State, services []string) {
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	l := logger.From(ctx)
 	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
@@ -395,29 +410,29 @@ func printCredentialUpdates(ctx context.Context, oldState *types.ZarfState, newS
 			nR := newState.RegistryInfo
 			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
 			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
-			l.Info("registry push password", "changed", !(oR.PushPassword == nR.PushPassword))
+			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
-			l.Info("registry pull password", "changed", !(oR.PullPassword == nR.PullPassword))
+			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
 		case gitKey:
 			oG := oldState.GitServer
 			nG := newState.GitServer
 			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
 			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
-			l.Info("Git server push password", "changed", !(oG.PushPassword == nG.PushPassword))
+			l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
 			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
-			l.Info("Git server pull password", "changed", !(oG.PullPassword == nG.PullPassword))
+			l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
 		case artifactKey:
 			oA := oldState.ArtifactServer
 			nA := newState.ArtifactServer
 			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
 			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-			l.Info("artifact server push token", "changed", !(oA.PushToken == nA.PushToken))
+			l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent certificate authority", "changed", !(string(oT.CA) == string(nT.CA)))
-			l.Info("agent public certificate", "changed", !(string(oT.Cert) == string(nT.Cert)))
-			l.Info("agent private key", "changed", !(string(oT.Key) == string(nT.Key)))
+			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
+			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
+			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
 		}
 	}
 }
@@ -440,22 +455,24 @@ func newClearCacheCommand() *cobra.Command {
 }
 
 func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
-	l := logger.From(cmd.Context())
-	cachePath, err := config.GetAbsCachePath()
+	ctx := cmd.Context()
+	l := logger.From(ctx)
+	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	message.Notef(lang.CmdToolsClearCacheDir, cachePath)
 	l.Info("clearing cache", "path", cachePath)
 	if err := os.RemoveAll(cachePath); err != nil {
 		return fmt.Errorf("unable to clear the cache directory %s: %w", cachePath, err)
 	}
-	message.Successf(lang.CmdToolsClearCacheSuccess, cachePath)
+	l.Info("Successfully cleared the cache", "cachePath", cachePath)
 
 	return nil
 }
 
-type downloadInitOptions struct{}
+type downloadInitOptions struct {
+	version string
+}
 
 func newDownloadInitCommand() *cobra.Command {
 	o := &downloadInitOptions{}
@@ -467,22 +484,52 @@ func newDownloadInitCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
-
+	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
 	return cmd
 }
 
 func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
-	url := zoci.GetInitPackageURL(config.CLIVersion)
-	remote, err := zoci.NewRemote(ctx, url, oci.PlatformForArch(config.GetArch()))
+	var url string
+
+	if o.version == "" {
+		url = zoci.GetInitPackageURL(config.CLIVersion)
+	} else {
+		ver, err := semver.NewVersion(o.version)
+		if err != nil {
+			return fmt.Errorf("unable to parse version %s: %w", o.version, err)
+		}
+
+		url = zoci.GetInitPackageURL(fmt.Sprintf("v%s", ver.String()))
+	}
+
+	// Add the oci:// prefix
+	url = fmt.Sprintf("oci://%s", url)
+
+	if outputDirectory == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		outputDirectory = wd
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	pullOptions := packager.PullOptions{
+		Architecture: config.GetArch(),
+		CachePath:    cachePath,
+	}
+
+	packagePath, err := packager.Pull(ctx, url, outputDirectory, pullOptions)
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
 	}
-	source := &sources.OCISource{Remote: remote}
-	_, err = source.Collect(ctx, outputDirectory)
-	if err != nil {
-		return fmt.Errorf("unable to download the init package: %w", err)
-	}
+	logger.From(ctx).Info("package downloaded successful", "path", packagePath)
+
 	return nil
 }
 
@@ -518,7 +565,6 @@ func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	if err := os.WriteFile("tls.key", pki.Key, helpers.ReadWriteUser); err != nil {
 		return err
 	}
-	message.Successf(lang.CmdToolsGenPkiSuccess, args[0])
 	logger.From(cmd.Context()).Info("successfully created a chain of trust", "host", args[0])
 
 	return nil
@@ -602,9 +648,8 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	message.Successf(lang.CmdToolsGenKeySuccess, prvKeyFileName, pubKeyFileName)
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyExistsErr,
+		"private-key-path", prvKeyFileName,
 		"public-key-path", pubKeyFileName)
 
 	return nil

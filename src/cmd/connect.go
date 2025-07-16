@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -33,7 +34,7 @@ func newConnectCommand() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
-	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", cluster.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
+	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
 	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectFlagLocalPort)
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
@@ -54,10 +55,7 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		target = args[0]
 	}
 
-	spinner := message.NewProgressSpinner(lang.CmdConnectPreparingTunnel, target)
-	defer spinner.Stop()
-
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
@@ -84,20 +82,17 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	defer tunnel.Close()
 
 	if o.open {
-		spinner.Updatef(lang.CmdConnectEstablishedWeb, tunnel.FullURL())
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "url", tunnel.FullURL())
 		if err := exec.LaunchURL(tunnel.FullURL()); err != nil {
 			return err
 		}
 	} else {
-		spinner.Updatef(lang.CmdConnectEstablishedCLI, tunnel.FullURL())
 		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "url", tunnel.FullURL())
 	}
 
 	// Wait for the interrupt signal or an error.
 	select {
 	case <-ctx.Done():
-		spinner.Successf(lang.CmdConnectTunnelClosed, tunnel.FullURL())
 		return nil
 	case err = <-tunnel.ErrChan():
 		return fmt.Errorf("lost connection to the service: %w", err)
@@ -120,7 +115,7 @@ func newConnectListCommand() *cobra.Command {
 }
 
 func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
 	}
@@ -128,6 +123,21 @@ func (o *connectListOptions) run(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	message.PrintConnectStringTable(connections)
+	printConnectStringTable(connections)
 	return nil
+}
+
+func printConnectStringTable(connectStrings state.ConnectStrings) {
+	if len(connectStrings) > 0 {
+		connectData := [][]string{}
+		// Loop over each connectStrings and convert to a string matrix
+		for name, connect := range connectStrings {
+			name = fmt.Sprintf("zarf connect %s", name)
+			connectData = append(connectData, []string{name, connect.Description})
+		}
+
+		// Create the table output with the data
+		header := []string{"Connect Command", "Description"}
+		message.TableWithWriter(OutputWriter, header, connectData)
+	}
 }

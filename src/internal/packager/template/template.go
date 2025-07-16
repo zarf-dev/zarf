@@ -7,19 +7,17 @@ package template
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"log/slog"
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/pkg/state"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -37,22 +35,19 @@ func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 		return interactive.PromptVariable(ctx, variable)
 	}
 
-	if logger.Enabled(ctx) {
-		return variables.New("zarf", prompt, logger.From(ctx))
-	}
-	return variables.New("zarf", prompt, slog.New(message.ZarfHandler{}))
+	return variables.New("zarf", prompt, logger.From(ctx))
 }
 
 // GetZarfTemplates returns the template keys and values to be used for templating.
-func GetZarfTemplates(ctx context.Context, componentName string, state *types.ZarfState) (templateMap map[string]*variables.TextTemplate, err error) {
+func GetZarfTemplates(ctx context.Context, componentName string, s *state.State) (templateMap map[string]*variables.TextTemplate, err error) {
 	templateMap = make(map[string]*variables.TextTemplate)
 
-	if state != nil {
-		regInfo := state.RegistryInfo
-		gitInfo := state.GitServer
+	if s != nil {
+		regInfo := s.RegistryInfo
+		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS": state.StorageClass,
+			"STORAGE_CLASS": s.StorageClass,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -72,7 +67,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, state *types.Za
 		// Don't template component-specific variables for every component
 		switch componentName {
 		case "zarf-agent":
-			agentTLS := state.AgentTLS
+			agentTLS := s.AgentTLS
 			builtinMap["AGENT_CRT"] = base64.StdEncoding.EncodeToString(agentTLS.Cert)
 			builtinMap["AGENT_KEY"] = base64.StdEncoding.EncodeToString(agentTLS.Key)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
@@ -112,7 +107,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, state *types.Za
 }
 
 // generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.
-func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
+func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
 	// Only calculate this for internal registries to allow longer external passwords
 	if regInfo.IsInternal() {
 		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
@@ -133,13 +128,6 @@ func generateHtpasswd(regInfo *types.RegistryInfo) (string, error) {
 
 func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
-
-	b, err := json.MarshalIndent(sanitizedMap, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	message.Debug(fmt.Sprintf("templateMap = %s", string(b)))
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
 	return nil
 }

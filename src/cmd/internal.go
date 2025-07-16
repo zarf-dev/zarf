@@ -20,7 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
@@ -58,11 +58,12 @@ func newInternalAgentCommand() *cobra.Command {
 }
 
 func (o *internalAgentOptions) run(cmd *cobra.Command, _ []string) error {
-	cluster, err := cluster.NewCluster()
+	ctx := cmd.Context()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
-	return agent.StartWebhook(cmd.Context(), cluster)
+	return agent.StartWebhook(ctx, c)
 }
 
 type internalHTTPProxyOptions struct{}
@@ -81,11 +82,12 @@ func newInternalHTTPProxyCommand() *cobra.Command {
 }
 
 func (o *internalHTTPProxyOptions) run(cmd *cobra.Command, _ []string) error {
-	cluster, err := cluster.NewCluster()
+	ctx := cmd.Context()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
-	return agent.StartHTTPProxy(cmd.Context(), cluster)
+	return agent.StartHTTPProxy(ctx, c)
 }
 
 type internalGenCliDocsOptions struct {
@@ -182,7 +184,7 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 		name = name[:len(name)-3]
 
 		// replace _ with space
-		title := strings.Replace(name, "_", " ", -1)
+		title := strings.ReplaceAll(name, "_", " ")
 
 		return fmt.Sprintf(`---
 title: %s
@@ -229,32 +231,33 @@ func newInternalCreateReadOnlyGiteaUserCommand() *cobra.Command {
 }
 
 func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []string) error {
-	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+	ctx := cmd.Context()
+	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
-	state, err := c.LoadZarfState(cmd.Context())
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
-	tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
-	_, err = tunnel.Connect(cmd.Context())
+	_, err = tunnel.Connect(ctx)
 	if err != nil {
 		return err
 	}
 	defer tunnel.Close()
 	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+	giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
 	if err != nil {
 		return err
 	}
 	err = tunnel.Wrap(func() error {
-		err = giteaClient.CreateReadOnlyUser(cmd.Context(), state.GitServer.PullUsername, state.GitServer.PullPassword)
+		err = giteaClient.CreateReadOnlyUser(ctx, s.GitServer.PullUsername, s.GitServer.PullPassword)
 		if err != nil {
 			return err
 		}
@@ -282,31 +285,31 @@ func newInternalCreateArtifactRegistryTokenCommand() *cobra.Command {
 }
 
 func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ []string) error {
-	timeoutCtx, cancel := context.WithTimeout(cmd.Context(), cluster.DefaultTimeout)
+	ctx := cmd.Context()
+	timeoutCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
 	defer cancel()
-	c, err := cluster.NewClusterWithWait(timeoutCtx)
+	c, err := cluster.NewWithWait(timeoutCtx)
 	if err != nil {
 		return err
 	}
-	ctx := cmd.Context()
-	state, err := c.LoadZarfState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return err
 	}
 
 	// If we are setup to use an internal artifact server, create the artifact registry token
-	if state.ArtifactServer.IsInternal() {
-		tunnel, err := c.NewTunnel(cluster.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	if s.ArtifactServer.IsInternal() {
+		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 		if err != nil {
 			return err
 		}
-		_, err = tunnel.Connect(cmd.Context())
+		_, err = tunnel.Connect(ctx)
 		if err != nil {
 			return err
 		}
 		defer tunnel.Close()
 		tunnelURL := tunnel.HTTPEndpoint()
-		giteaClient, err := gitea.NewClient(tunnelURL, state.GitServer.PushUsername, state.GitServer.PushPassword)
+		giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
 		if err != nil {
 			return err
 		}
@@ -315,13 +318,13 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 			if err != nil {
 				return fmt.Errorf("unable to create an artifact registry token for Gitea: %w", err)
 			}
-			state.ArtifactServer.PushToken = tokenSha1
+			s.ArtifactServer.PushToken = tokenSha1
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		if err := c.SaveZarfState(ctx, state); err != nil {
+		if err := c.SaveState(ctx, s); err != nil {
 			return err
 		}
 	}
@@ -351,14 +354,13 @@ func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) erro
 	ctx := cmd.Context()
 	pvcName := os.Getenv("ZARF_VAR_GIT_SERVER_EXISTING_PVC")
 
-	c, err := cluster.NewCluster()
+	c, err := cluster.New(ctx)
 	if err != nil {
 		return err
 	}
 	// There is a possibility that the pvc does not yet exist and Gitea helm chart should create it
 	helmShouldCreate, err := c.UpdateGiteaPVC(ctx, pvcName, o.rollback)
 	if err != nil {
-		message.WarnErr(err, lang.CmdInternalUpdateGiteaPVCErr)
 		logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 	}
 	fmt.Print(helmShouldCreate)
