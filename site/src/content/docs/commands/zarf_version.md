@@ -40,5 +40,5 @@ zarf version [flags]
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 

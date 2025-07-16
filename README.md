@@ -1,4 +1,4 @@
-# Zarf - DevSecOps for Airgap
+# Zarf - The Airgap Native Packager Manager for Kubernetes
 
 [![Latest Release](https://img.shields.io/github/v/release/zarf-dev/zarf)](https://github.com/zarf-dev/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/zarf-dev/zarf?filename=go.mod)](https://go.dev/)
