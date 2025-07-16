@@ -4,9 +4,9 @@ title: FAQ
 
 ## Who is behind this project?
 
-Zarf was built by the developers at [Defense Unicorns](https://www.defenseunicorns.com/) and an amazing community of contributors.
+Zarf is an [Open Source Security Foundation (OpenSSF)](https://openssf.org/) project, and has a vibrant community maintaining it.
 
-Defense Unicorns' mission is to advance freedom and independence globally through Free and Open Source software.
+Zarf was originally built by the developers at [Defense Unicorns](https://www.defenseunicorns.com/).
 
 ## What license is Zarf under?
 
@@ -24,6 +24,14 @@ No, the Zarf binary and init package can be downloaded from the [Releases Page](
 
 Zarf is statically compiled and written in [Go](https://golang.org/) and [Rust](https://www.rust-lang.org/), so it has no external dependencies. For Linux, Zarf can bring a Kubernetes cluster using [K3s](https://k3s.io/). For Mac and Windows, Zarf can leverage any available local or remote cluster the user has access to. Currently, the K3s installation Zarf performs does require a [Systemd](https://en.wikipedia.org/wiki/Systemd) based system and `root` (not just `sudo`) access.
 
+## Should Zarf only be used in the airgap?
+
+No, Zarf is used in connected environments as well. Some users value making their deployment mechanism declarative, while others want their resources cached in the event of a lost connection.
+
+## Should Zarf only be used with Kubernetes?
+
+No, while improving the airgapped Kubernetes UX is often the top priority for the project, many users find value in [mirroring resources](commands/zarf_package_mirror-resources) across environments and using [Zarf actions](ref/actions).
+
 ## How can I improve the speed of loading large images from Docker on `zarf package create`?
 
 Due to some limitations with how Docker provides access to local image layers, `zarf package create` has to rely on `docker save` under the hood which is [very slow overall](https://github.com/zarf-dev/zarf/issues/1214) and also takes a long time to report progress. We experimented with many ways to improve this, but for now recommend leveraging a local docker registry to speed up the process.
@@ -32,7 +40,7 @@ This can be done by running a local registry and pushing the images to it before
 
 ```sh
 # Create a local registry
-docker run -d -p 5000:5000 --restart=always --name registry registry:2
+docker run -d -p 5000:5000 --restart=always --name registry registry:3
 
 # Run the package create with a tag variable
 zarf package create --registry-override registry.enterprise.corp=localhost:5000 --set IMG=my-giant-image:v2

@@ -1247,8 +1247,8 @@ github.com/fluxcd/pkg/apis/acl v0.7.0 h1:dMhZJH+g6ZRPjs4zVOAN9vHBd1DcavFgcIFkg5o
 github.com/fluxcd/pkg/apis/acl v0.7.0/go.mod h1:uv7pXXR/gydiX4MUwlQa7vS8JONEDztynnjTvY3JxKQ=
 github.com/fluxcd/pkg/apis/meta v1.13.0 h1:KKYdXFzEmSuM8CP1Zqpt68IF+jqQILeiDiTmXI7DMTM=
 github.com/fluxcd/pkg/apis/meta v1.13.0/go.mod h1:+son1Va60x2eiDcTwd7lcctbI6C+K3gM7R+ULmEq1SI=
-github.com/fluxcd/source-controller/api v1.6.1 h1:ZPTA9lNzBYHmwHfFX978qb8xVkdnQZHF1ggo6BoFm4w=
-github.com/fluxcd/source-controller/api v1.6.1/go.mod h1:ZJcAi0nemsnBxjVgmJl0WQzNvB0rMETxQMTdoFosmMw=
+github.com/fluxcd/source-controller/api v1.6.2 h1:UmodAeqLIeF29HdTqf2GiacZyO+hJydJlepDaYsMvhc=
+github.com/fluxcd/source-controller/api v1.6.2/go.mod h1:ZJcAi0nemsnBxjVgmJl0WQzNvB0rMETxQMTdoFosmMw=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/fogleman/gg v1.3.0/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8vw=
