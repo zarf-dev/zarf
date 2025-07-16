@@ -25,7 +25,7 @@ require (
 	github.com/fairwindsops/pluto/v5 v5.22.0
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
-	github.com/fluxcd/pkg/apis/meta v1.13.0
+	github.com/fluxcd/pkg/apis/meta v1.18.0
 	github.com/fluxcd/source-controller/api v1.6.2
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/goccy/go-yaml v1.18.0
