@@ -94,11 +94,12 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
 
+	// Ensure we find the release - otherwise this can return without an error and not do anything
 	found := false
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
 		// Maintaining the "raw-init" release name for backwards compatibility
-		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" || release.Chart.Name() == "zarf-agent" {
+		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
 			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",

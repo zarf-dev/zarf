@@ -23,7 +23,7 @@ components:
       - name: zarf-agent
         releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d
         localPath: chart
-        version: 0.51.0
+        version: 0.1.0
         namespace: zarf
     actions:
       onCreate:
