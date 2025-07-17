@@ -37,7 +37,7 @@ See each sub-command's help for details on how to use the generated script.
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 * [zarf completion bash](/commands/zarf_completion_bash/)	 - Generate the autocompletion script for bash
 * [zarf completion fish](/commands/zarf_completion_fish/)	 - Generate the autocompletion script for fish
 * [zarf completion powershell](/commands/zarf_completion_powershell/)	 - Generate the autocompletion script for powershell
