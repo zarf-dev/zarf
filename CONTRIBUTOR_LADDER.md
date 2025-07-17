@@ -1,4 +1,4 @@
-# Zarf Contributor ladder
+# Zarf Contributor Ladder
 
 This document outlines the various contributor roles in the Zarf project, along with their respective prerequisites and responsibilities.
 It also defines the process by which users can request to change roles.  These roles are progressive, in that responsibilites and pre-requisites apply to subsequent rungs in the ladder.
@@ -14,8 +14,7 @@ It also defines the process by which users can request to change roles.  These r
 
 ### Community members
 
-Community participants engage with Zarf,
-contributing their time and energy in discussions or just generally helping out.  Additionally, community members participate in [Zarf community meetings](https://github.com/zarf-dev/zarf/issues/2613).
+Community participants engage with Zarf, contributing their time and energy in discussions or just generally helping out.  Additionally, community members participate in [Zarf community meetings](https://github.com/zarf-dev/zarf/issues/2613).
 
 #### Pre-requisites
 
@@ -28,18 +27,13 @@ contributing their time and energy in discussions or just generally helping out.
 
 ### Contributors
 
-Contributors help advance the Zarf project by creating issues, having issues assigned to them, and submitting PRs.  Contributors participate through GitHub teams,
+Contributors help advance the Zarf project through commits, issues, and pull requests.  Contributors participate through GitHub teams,
 and pre-submit tests are automatically run for their PRs.
 
 #### Pre-requisites
 
 - Enabled two-factor authentication on their GitHub account
-- Have made multiple contributions to the project or community.
-  Contributions may include, but are not limited to:
-  - Authoring or reviewing PRs on GitHub. At least one PR must be **merged**.
-  - Filing or commenting on issues on GitHub
-  - Contributing to a project, or community discussions (e.g. meetings, Slack,
-    email discussion forums, Stack Overflow)
+- Have made contributions to the project in the form of commits, issues, or pull requests.
 
 #### Responsibilities
 - Can be assigned issues and PRs
@@ -54,93 +48,19 @@ and pre-submit tests are automatically run for their PRs.
 
 - Tests run against their PRs automatically
 
-### Community Members
+#### Promotion process
 
-Community Members are active contributors in the community.
-They can have issues and PRs assigned to them, participate through GitHub teams,
-and pre-submit tests are automatically run for their PRs.
-Members are expected to remain active contributors to the community.
+- Make at least one commit to a repository's code or open a pull request that gets merged into the repository
 
-**Defined by:** Member of the OpenSSF GitHub organization
+### Reviewers
 
 #### Pre-requisites
 
-- Enabled two-factor authentication on their GitHub account
-- Have made multiple contributions to the project or community.
-  Contributions may include, but are not limited to:
-  - Authoring or reviewing PRs on GitHub. At least one PR must be **merged**.
-  - Filing or commenting on issues on GitHub
-  - Contributing to a project, or community discussions (e.g. meetings, Slack,
-    email discussion forums, Stack Overflow)
-- Active contributor to Scorecard or a relevant OpenSSF SIG
-
 #### Responsibilities
-
-- Can be assigned issues and PRs
-- Responsive to issues and PRs assigned to them
-- Others can ask for reviews with a `/cc @username`.
-- Responsive to mentions of teams they are members of
-- Active owner of code they have contributed (unless ownership is explicitly transferred)
-  - Ensures code is well tested and that tests consistently pass
-  - Addresses bugs or issues discovered after code is accepted
 
 #### Privileges
 
-- Tests run against their PRs automatically
-
 #### Promotion process
-
-- Sponsored by 1 maintainer or 2 triagers. **Note the following requirements for sponsors**:
-  - Sponsors must have close interactions with the prospective Member – e.g. 
-    code/design/proposal review, coordinating on issues, etc.
-  - Sponsors must be reviewers or approvers in at least one CODEOWNERS file.
-  - Sponsors should preferably be from multiple OpenSSF member companies to incentivize community integration.
-- Open an issue in the project's repository
-  - Ensure your sponsors are `@mentioned`
-  - Describe and/or link to all your relevant contributions to the project
-    (or other OpenSSF projects)
-  - Sponsoring reviewers must comment on the issue/PR confirming their sponsorship
-
-### Triagers
-
-Triagers help a project by reviewing issues and code for quality and correctness.
-They are knowledgeable about the project's codebase (in its entirety or a specific section)
-and software engineering principles.
-
-**Defined by:** "triage" permission in the project
-
-#### Pre-requisites
-
-- Community Member for at least 1 month
-- Helped to triage issues and pull requests
-- Knowledgeable about the codebase
-
-#### Responsibilities
-
-- Read through issues and PRs
-  - Answer questions when possible
-  - Add relevant labels
-  - Draw maintainers' attention (via `@mention`) if relevant
-  - Close issue (as "completed" or "not planned") if necessary
-- Help maintain project quality control via [code reviews] on PRs
-  - Focus on code quality and correctness, including testing and factoring
-  - May also review for more holistic issues, but not a requirement
-- Be responsive to review requests
-- May be assigned PRs to review if in area of expertise
-- Assigned test bugs related to the project of expertise
-
-#### Privileges
-
-- Same as for Community Members
-- Triager status may be a precondition to accepting large code contributions
-
-#### Promotion process
-
-- Sponsored by a maintainer
-  - With no objections from other maintainers
-  - Done through issue or PR to update the CODEOWNERS file
-- May self-nominate or be nominated by a maintainer
-  - In case of self-nomination, sponsor must comment approval on the issue/PR
 
 ### Maintainers
 
