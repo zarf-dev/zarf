@@ -4,7 +4,7 @@ This document outlines the various contributor roles in the Zarf project, along 
 It also defines the process by which users can request to change roles.  These roles are progressive, in that responsibilites and pre-requisites apply to subsequent rungs in the ladder.
 
 - [Roles](#roles)
-  - [Community Members](#community-members)
+  - [Community Participants](#community-members)
   - [Contributors](#contributors)
   - [Reviewers](#reviewers)
   - [Maintainers](#maintainers)
@@ -12,7 +12,7 @@ It also defines the process by which users can request to change roles.  These r
 
 ## Roles
 
-### Community members
+### Community participants
 
 Community participants engage with Zarf, contributing their time and energy in discussions or just generally helping out.  Additionally, community members participate in [Zarf community meetings](https://github.com/zarf-dev/zarf/issues/2613).
 
@@ -29,6 +29,8 @@ Community participants engage with Zarf, contributing their time and energy in d
 
 Contributors help advance the Zarf project through commits, issues, and pull requests.  Contributors participate through GitHub teams,
 and pre-submit tests are automatically run for their PRs.
+
+**Defined by:** Member of the Zarf github organization
 
 #### Pre-requisites
 
@@ -55,6 +57,8 @@ and pre-submit tests are automatically run for their PRs.
 ### Reviewers
 
 #### Pre-requisites
+
+**Defined by:** Zarf "Reviewer" team
 
 #### Responsibilities
 
