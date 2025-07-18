@@ -36,7 +36,7 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, architecture string, injectorSeedSrcs []string, registryNodePort int) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
@@ -56,7 +56,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
+	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, architecture, resReq)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, architecture string, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
 	// Regex for Zarf seed image
 	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
 	if err != nil {
@@ -262,6 +262,9 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
 		if err != nil {
 			return "", "", err
+		}
+		if nodeDetails.Status.NodeInfo.Architecture != architecture {
+			continue
 		}
 		if nodeDetails.Status.Allocatable.Cpu().Cmp(*resReq.Requests.Cpu()) < 0 ||
 			nodeDetails.Status.Allocatable.Memory().Cmp(*resReq.Requests.Memory()) < 0 {

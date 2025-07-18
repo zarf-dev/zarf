@@ -83,7 +83,7 @@ type DeployResult struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	l := logger.From(ctx)
-	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
+	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name, "architecture", pkgLayout.Pkg.Build.Architecture)
 	start := time.Now()
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
@@ -290,7 +290,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), pkgLayout.Pkg.Build.Architecture, component.Images, d.s.RegistryInfo.NodePort)
 		if err != nil {
 			return nil, err
 		}
@@ -352,6 +352,13 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
+
+	// This variable needs to be set from the package metadata architecture
+	// This might be able to be expanded to include all the .metadata settings
+	applicationTemplates["###ZARF_PKG_ARCHITECTURE###"] = &variables.TextTemplate{
+		Value: pkgLayout.Pkg.Build.Architecture,
+	}
+
 	if err != nil {
 		return nil, err
 	}
