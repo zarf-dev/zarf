@@ -35,7 +35,7 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
@@ -78,15 +78,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
-		WithSpec(v1ac.ServiceSpec().
-			WithType(corev1.ServiceTypeNodePort).
-			WithPorts(
-				v1ac.ServicePort().WithPort(int32(5000)),
-			).WithSelector(map[string]string{
-			"app": "zarf-injector",
-		}))
-	svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	svc, err := c.createInjectorNodeportService(ctx, registryNodePort)
 	if err != nil {
 		return err
 	}
@@ -399,4 +391,41 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 		)
 
 	return pod
+}
+
+// createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int) (*corev1.Service, error) {
+	l := logger.From(ctx)
+
+	for {
+		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
+			WithSpec(v1ac.ServiceSpec().
+				WithType(corev1.ServiceTypeNodePort).
+				WithPorts(
+					v1ac.ServicePort().WithPort(int32(5000)),
+				).WithSelector(map[string]string{
+				"app": "zarf-injector",
+			}))
+
+		svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		if err != nil {
+			return nil, err
+		}
+
+		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
+		if assignedNodePort == registryNodePort {
+			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
+
+			err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+			if err != nil {
+				return nil, err
+			}
+
+			time.Sleep(500 * time.Millisecond)
+
+			continue
+		}
+
+		return svc, nil
+	}
 }
