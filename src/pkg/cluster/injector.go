@@ -396,7 +396,6 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
 func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int) (*corev1.Service, error) {
 	l := logger.From(ctx)
-
 	for {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
@@ -415,17 +414,14 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
 		if assignedNodePort == registryNodePort {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
-
 			err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 			if err != nil {
 				return nil, err
 			}
 
 			time.Sleep(500 * time.Millisecond)
-
 			continue
 		}
-
 		return svc, nil
 	}
 }
