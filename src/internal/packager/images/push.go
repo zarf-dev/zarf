@@ -35,6 +35,9 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
+	if cfg.RegistryInfo.Address == "" {
+		return fmt.Errorf("registry address must be specified")
+	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
 	}
