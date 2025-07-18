@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -396,7 +397,10 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
 func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int) (*corev1.Service, error) {
 	l := logger.From(ctx)
-	for i := 0; i < 10; i++ {
+	var svc *corev1.Service
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+	err := retry.Do(func() error {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -406,23 +410,25 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 				"app": "zarf-injector",
 			}))
 
-		svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		var err error
+		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
 		if assignedNodePort == registryNodePort {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
-			err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
-			if err != nil {
-				return nil, err
+			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+			if deleteErr != nil {
+				return deleteErr
 			}
-
-			time.Sleep(500 * time.Millisecond)
-			continue
+			return fmt.Errorf("nodePort conflict with registry port %d", registryNodePort)
 		}
-		return svc, nil
+		return nil
+	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}
-	return nil, fmt.Errorf("failed to create the injector nodeport service")
+	return svc, nil
 }
