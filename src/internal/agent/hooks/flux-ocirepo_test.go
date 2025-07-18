@@ -6,6 +6,7 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -16,10 +17,12 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"oras.land/oras-go/v2"
 )
 
 func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRepo *flux.OCIRepository) *v1.AdmissionRequest {
@@ -35,9 +38,82 @@ func createFluxOCIRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxOCIRep
 }
 
 func TestFluxOCIMutationWebhook(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
+
+	port, err := GetAvailableNodePort()
+	require.NoError(t, err)
 
 	tests := []admissionTest{
+		{
+			name: "should be mutated but not the tag",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/charts/podinfo", port),
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/podinfo", port),
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-2985051089",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
 		{
 			name: "bad oci url",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
@@ -67,7 +143,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+					fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/manifests/podinfo", port),
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -102,7 +178,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+					fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/manifests/podinfo", port),
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -159,7 +235,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					Type: corev1.ServiceTypeNodePort,
 					Ports: []corev1.ServicePort{
 						{
-							NodePort: int32(31999),
+							NodePort: int32(port),
 							Port:     5000,
 						},
 					},
@@ -175,7 +251,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					Name: "mutate-this",
 				},
 				Spec: flux.OCIRepositorySpec{
-					URL: "oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+					URL: fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/manifests/podinfo", port),
 					Reference: &flux.OCIRepositoryRef{
 						Tag: "6.4.0-zarf-2823281104",
 					},
@@ -184,7 +260,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+					fmt.Sprintf("oci://127.0.0.1:%d/stefanprodan/manifests/podinfo", port),
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -204,7 +280,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarf s internal repo",
+			name: "should not mutate URL if it has the same hostname as Zarfs internal repo",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
@@ -245,7 +321,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					Type: corev1.ServiceTypeNodePort,
 					Ports: []corev1.ServicePort{
 						{
-							NodePort: int32(31999),
+							NodePort: int32(port),
 							Port:     5000,
 						},
 					},
@@ -256,12 +332,29 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 		},
 	}
 
+	var artifacts = []transform.Image{
+		{
+			Host: "ghcr.io",
+			Path: "stefanprodan/charts/podinfo",
+			Tag:  "6.9.0",
+		},
+		{
+			Host: "ghcr.io",
+			Path: "stefanprodan/manifests/podinfo",
+			Tag:  "6.9.0",
+		},
+	}
+
 	ctx := context.Background()
-	s := &state.State{RegistryInfo: state.RegistryInfo{Address: "127.0.0.1:31999"}}
+	_, err = setupRegistry(ctx, t, port, artifacts, oras.DefaultCopyOptions)
+	require.NoError(t, err)
+
+	s := &state.State{RegistryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)}}
+
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel()
 			c := createTestClientWithZarfState(ctx, t, s)
 			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
