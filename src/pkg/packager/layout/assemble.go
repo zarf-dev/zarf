@@ -196,6 +196,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 type AssembleSkeletonOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
+	Flavor             string
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -207,8 +208,13 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	for _, component := range pkg.Components {
-		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
+	// To remove the flavor value, as the flavor is configured by the tag uploaded to the registry
+	//   example:
+	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
+	//     is indicating that you are importing the "upstream" flavor of the zarf init package
+	for i := 0; i < len(pkg.Components); i++ {
+		pkg.Components[i].Only.Flavor = ""
+		err := assembleSkeletonComponent(ctx, pkg.Components[i], packagePath, buildPath)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +231,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, "", nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
