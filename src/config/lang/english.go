@@ -398,6 +398,41 @@ $ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
 `
 
+	CmdToolsRegistryLoginFlagInteractive = "Interactively prompt for registry server, username, and password if not provided"
+
+	CmdToolsRegistryLoginPromptServer = "Enter the registry server address (e.g., docker.io):"
+
+	CmdToolsRegistryLoginPromptUsername = "Enter registry server username:"
+
+	CmdToolsRegistryLoginPromptPassword = "Enter registry server password:"
+
+	CmdToolsRegistryLoginPromptNoServerProvidedErr = "server argument is required"
+
+	CmdToolsRegistryLoginPromptServerHelp = "Enter the full registry URL (e.g., docker.io, ghcr.io, registry.example.com:5000)"
+
+	CmdToolsRegistryLoginPromptUsernameHelp = "Enter your username or email address for the registry"
+
+	CmdToolsRegistryLoginPromptPasswordHelp = "Enter your password or access token for the registry"
+
+	CmdToolsRegistryLoginPromptNoUsernameProvidedErr = "required flag \"username\" not set"
+
+	CmdToolsRegistryLoginPromptNoPasswordProvidedErr = "one of the flags \"password\" or \"password-stdin\" is required"
+
+	CmdToolsRegistryLoginShort = "Login to a container registry"
+
+	CmdToolsRegistryLoginExample = `
+  # Login interactively (prompts for server, username, password)
+  $ zarf tools registry login --interactive
+
+  # Login with username, prompt for password
+  $ zarf tools registry login --interactive --username myuser docker.io
+
+  # Login normally with all credentials
+  $ zarf tools registry login --username myuser --password mypass docker.io
+
+  # Login with password from stdin
+  $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
+
 	CmdToolsRegistryPullExample = `
 # Pull an image from an internal repo in Zarf to a local tarball
 $ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
