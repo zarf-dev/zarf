@@ -89,7 +89,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 	zt := TunnelInfo{
 		Namespace:     state.ZarfNamespaceName,
 		ResourceType:  SvcResource,
-		ListenAddress: []string{"localhost"},
+		ListenAddress: []string{helpers.IPV4Localhost},
 	}
 
 	switch strings.ToUpper(target) {
@@ -110,7 +110,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 			zt = ztNew
-			zt.ListenAddress = []string{"localhost"}
+			zt.ListenAddress = []string{helpers.IPV4Localhost}
 		}
 		if zt.ResourceName == "" {
 			return TunnelInfo{}, fmt.Errorf("missing resource name")
@@ -186,7 +186,12 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", tunnel, err
 		}
-		registryEndpoint = tunnel.Endpoint()
+		// there is no support currently for multiple registry endpoints - will use the default 127.0.0.1
+		endpoints := tunnel.Endpoints()
+		if len(endpoints) < 1 {
+			return "", tunnel, fmt.Errorf("no registry endpoints found")
+		}
+		registryEndpoint = endpoints[0]
 	}
 
 	return registryEndpoint, tunnel, nil
@@ -315,6 +320,7 @@ const (
 	SvcResource = "svc"
 )
 
+// TunnelOption is a function that configures a tunnel
 type TunnelOption func(*Tunnel)
 
 // WithListenAddress will set the listen address for the tunnel
@@ -354,7 +360,7 @@ func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix str
 		resourceName: resourceName,
 		urlSuffix:    urlSuffix,
 		listenAddress: []string{
-			"localhost", // default
+			"127.0.0.1", // default
 		},
 		stopChan:  make(chan struct{}, 1),
 		readyChan: make(chan struct{}, 1),
@@ -384,23 +390,27 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 }
 
 // Connect will establish a tunnel to the specified target.
-func (tunnel *Tunnel) Connect(ctx context.Context) (string, error) {
-	url, err := retry.DoWithData(func() (string, error) {
-		url, err := tunnel.establish(ctx)
+func (tunnel *Tunnel) Connect(ctx context.Context) ([]string, error) {
+	urls, err := retry.DoWithData(func() ([]string, error) {
+		urls, err := tunnel.establish(ctx)
 		if err != nil {
-			return "", err
+			return []string{}, err
 		}
-		return url, nil
+		return urls, nil
 	}, retry.Context(ctx), retry.Attempts(6))
 	if err != nil {
-		return "", err
+		return []string{}, err
 	}
-	return url, nil
+	return urls, nil
 }
 
-// Endpoint returns the tunnel ip address and port (i.e. for docker registries)
-func (tunnel *Tunnel) Endpoint() string {
-	return fmt.Sprintf("%s:%d", tunnel.listenAddress, tunnel.localPort)
+// Endpoints returns all tunnel endpoints
+func (tunnel *Tunnel) Endpoints() []string {
+	endpoints := make([]string, len(tunnel.listenAddress))
+	for i, addr := range tunnel.listenAddress {
+		endpoints[i] = fmt.Sprintf("%s:%d", addr, tunnel.localPort)
+	}
+	return endpoints
 }
 
 // ErrChan returns the tunnel's error channel
@@ -408,14 +418,24 @@ func (tunnel *Tunnel) ErrChan() chan error {
 	return tunnel.errChan
 }
 
-// HTTPEndpoint returns the tunnel endpoint as a HTTP URL string.
-func (tunnel *Tunnel) HTTPEndpoint() string {
-	return fmt.Sprintf("http://%s", tunnel.Endpoint())
+// HTTPEndpoints returns all tunnel endpoints as a list of HTTP URL strings.
+func (tunnel *Tunnel) HTTPEndpoints() []string {
+	endpoints := tunnel.Endpoints()
+	httpEndpoints := make([]string, len(endpoints))
+	for i, addr := range endpoints {
+		httpEndpoints[i] = fmt.Sprintf("http://%s", addr)
+	}
+	return httpEndpoints
 }
 
-// FullURL returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
-func (tunnel *Tunnel) FullURL() string {
-	return fmt.Sprintf("%s%s", tunnel.HTTPEndpoint(), tunnel.urlSuffix)
+// FullURLs returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
+func (tunnel *Tunnel) FullURLs() []string {
+	endpoints := tunnel.HTTPEndpoints()
+	fullEndpoints := make([]string, len(endpoints))
+	for i, addr := range endpoints {
+		fullEndpoints[i] = fmt.Sprintf("%s%s", addr, tunnel.urlSuffix)
+	}
+	return fullEndpoints
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
@@ -431,7 +451,7 @@ func (tunnel *Tunnel) Close() {
 }
 
 // establish opens a tunnel to a kubernetes resource, as specified by the provided tunnel struct.
-func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
+func (tunnel *Tunnel) establish(ctx context.Context) ([]string, error) {
 	var err error
 	l := logger.From(ctx)
 
@@ -448,7 +468,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 		l.Debug("requested local port is 0. Selecting an open port on host system")
 		localPort, err = helpers.GetAvailablePort()
 		if err != nil {
-			return "", fmt.Errorf("unable to find an available port: %w", err)
+			return []string{}, fmt.Errorf("unable to find an available port: %w", err)
 		}
 		l.Debug("selected port", "port", localPort)
 		globalMutex.Lock()
@@ -467,7 +487,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// Find the pod to port forward to
 	podName, err := tunnel.getAttachablePodForResource(ctx)
 	if err != nil {
-		return "", fmt.Errorf("unable to find pod attached to given resource: %w", err)
+		return []string{}, fmt.Errorf("unable to find pod attached to given resource: %w", err)
 	}
 	l.Debug("selected pod to open port forward to", "name", podName)
 
@@ -486,14 +506,14 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 
 	dialer, err := createDialer(http.MethodPost, portForwardCreateURL, tunnel.restConfig)
 	if err != nil {
-		return "", fmt.Errorf("unable to create the dialer %w", err)
+		return []string{}, fmt.Errorf("unable to create the dialer %w", err)
 	}
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
 	portforwarder, err := portforward.NewOnAddresses(dialer, tunnel.listenAddress, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
 	if err != nil {
-		return "", fmt.Errorf("unable to create the port forward: %w", err)
+		return []string{}, fmt.Errorf("unable to create the port forward: %w", err)
 	}
 
 	// Open the tunnel in a goroutine so that it is available in the background. Report errors to the main goroutine via
@@ -506,17 +526,17 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 	// Wait for an error or the tunnel to be ready.
 	select {
 	case err = <-errChan:
-		return "", fmt.Errorf("unable to start the tunnel: %w", err)
+		return []string{}, fmt.Errorf("unable to start the tunnel: %w", err)
 	case <-portforwarder.Ready:
 		// Store for endpoint output
 		tunnel.localPort = localPort
-		url := tunnel.FullURL()
+		urls := tunnel.FullURLs()
 
 		// Store the error channel to listen for errors
 		tunnel.errChan = errChan
 
-		l.Debug("creating port forwarding tunnel", "url", url)
-		return url, nil
+		l.Debug("creating port forwarding tunnel", "urls", urls)
+		return urls, nil
 	}
 }
 

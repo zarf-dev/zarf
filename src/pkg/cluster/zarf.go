@@ -261,8 +261,9 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 		return "", err
 	}
 	defer tunnel.Close()
-	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
+	tunnelURLs := tunnel.HTTPEndpoints()
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
 	if err != nil {
 		return "", err
 	}
@@ -291,8 +292,9 @@ func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServe
 		return err
 	}
 	defer tunnel.Close()
-	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, oldGitServer.PushUsername, oldGitServer.PushPassword)
+	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
+	tunnelURLs := tunnel.HTTPEndpoints()
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], oldGitServer.PushUsername, oldGitServer.PushPassword)
 	if err != nil {
 		return err
 	}

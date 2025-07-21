@@ -44,9 +44,12 @@ func TestGit(t *testing.T) {
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
-	testGitServerConnect(t, tunnelGit.HTTPEndpoint())
-	testGitServerReadOnly(ctx, t, tunnelGit.HTTPEndpoint())
-	testGitServerTagAndHash(ctx, t, tunnelGit.HTTPEndpoint())
+	endpoints := tunnelGit.HTTPEndpoints()
+	require.Len(t, endpoints, 1)
+
+	testGitServerConnect(t, endpoints[0])
+	testGitServerReadOnly(ctx, t, endpoints[0])
+	testGitServerTagAndHash(ctx, t, endpoints[0])
 }
 
 func TestGitOpsFlux(t *testing.T) {

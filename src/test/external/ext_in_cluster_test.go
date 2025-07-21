@@ -126,11 +126,11 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Check that the registry contains the images we want
 	tunnelReg, err := c.NewTunnel("external-registry", "svc", "external-registry-docker-registry", "", 0, 5000)
 	suite.NoError(err)
-	_, err = tunnelReg.Connect(ctx)
+	endpoints, err := tunnelReg.Connect(ctx)
 	suite.NoError(err)
 	defer tunnelReg.Close()
 
-	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@%s/v2/_catalog", tunnelReg.Endpoint())
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@%s/v2/_catalog", endpoints[0])
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
@@ -143,11 +143,11 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 
 	tunnelGit, err := c.NewTunnel("git-server", "svc", "gitea-http", "", 0, 3000)
 	suite.NoError(err)
-	_, err = tunnelGit.Connect(ctx)
+	endpoints, err = tunnelGit.Connect(ctx)
 	suite.NoError(err)
 	defer tunnelGit.Close()
 
-	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos/search", tunnelGit.Endpoint())
+	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos/search", endpoints[0])
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
 	gitBody, err := io.ReadAll(respGit.Body)

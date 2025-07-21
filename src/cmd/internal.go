@@ -251,8 +251,9 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 		return err
 	}
 	defer tunnel.Close()
-	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
+	// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
+	tunnelURLs := tunnel.HTTPEndpoints()
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 	if err != nil {
 		return err
 	}
@@ -308,8 +309,9 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 			return err
 		}
 		defer tunnel.Close()
-		tunnelURL := tunnel.HTTPEndpoint()
-		giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
+		// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
+		tunnelURLs := tunnel.HTTPEndpoints()
+		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 		if err != nil {
 			return err
 		}
