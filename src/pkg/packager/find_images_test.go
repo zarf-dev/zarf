@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -19,7 +20,10 @@ func TestFindImages(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	address := testutil.SetupInMemoryRegistryWithAuth(ctx, t, 65000)
+	htp, err := utils.GetHtpasswdString("axol", "otl")
+	require.NoError(t, err)
+
+	address := testutil.SetupInMemoryRegistryWithAuth(ctx, t, 65000, htp)
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
