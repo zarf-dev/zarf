@@ -6,8 +6,13 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -91,13 +96,16 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+		//FIXME, use these two
+		client.Client.Transport, err = orasTransportWithClientCerts(
+			"/home/austin/code/zarf/mtls-test/cert_dir/client-cert.pem",
+			"/home/austin/code/zarf/mtls-test/cert_dir/client-key.pem",
+			"/home/austin/code/zarf/mtls-test/cert_dir/ca.pem")
 		if err != nil {
 			return err
 		}
 
 		plainHTTP := cfg.PlainHTTP
-
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			plainHTTP, err = shouldUsePlainHTTP(ctx, registryRef.Host(), client)
@@ -214,6 +222,39 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	return nil
+}
+
+func orasTransportWithClientCerts(clientCert, clientKey, caCert string) (http.RoundTripper, error) {
+	// Load client certificate
+	cert, err := tls.LoadX509KeyPair(clientCert, clientKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client certificate: %w", err)
+	}
+
+	// Load CA certificate
+	caCertPEM, err := os.ReadFile(caCert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA certificate: %w", err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCertPEM) {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+
+	// Configure TLS
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
+	transport.TLSClientConfig = tlsConfig
+	return transport, nil
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {

@@ -41,6 +41,13 @@ secrets:
       addr: :5000
       headers:
         X-Content-Type-Options: [nosniff]
+      tls:
+        certificate: /certs/server/tls.crt
+        key: /certs/server/tls.key
+        clientcas:
+          - /certs/ca/ca.pem
+        clientauth: require-and-verify-client-cert
+        minimumtls: tls1.2
       debug:
         addr: :5001
         prometheus:

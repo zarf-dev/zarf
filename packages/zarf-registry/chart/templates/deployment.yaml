@@ -49,13 +49,15 @@ spec:
           ports:
             - containerPort: 5000
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 5000
+            periodSeconds: 10
+            initialDelaySeconds: 5
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 5000
+            periodSeconds: 10
+            initialDelaySeconds: 5
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
@@ -83,6 +85,12 @@ spec:
 {{ toYaml .  | indent 12 }}
 {{- end }}
           volumeMounts:
+            - name: server-certs
+              mountPath: /certs/server
+              readOnly: true
+            - name: ca-cert
+              mountPath: /certs/ca
+              readOnly: true
             - name: data
               mountPath: /var/lib/registry/
             - name: config
@@ -120,6 +128,12 @@ spec:
 {{ toYaml .Values.tolerations | indent 8 }}
 {{- end }}
       volumes:
+        - name: server-certs
+          secret:
+            secretName: zarf-registry-server-tls
+        - name: ca-cert
+          secret:
+            secretName: zarf-registry-ca
         - name: config
           secret:
             secretName: {{ template "docker-registry.fullname" . }}-secret
