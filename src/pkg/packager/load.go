@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
@@ -71,26 +72,34 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	isPartial := false
 	tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
-			Source:         source,
-			Directory:      tmpDir,
-			Shasum:         opts.Shasum,
-			Architecture:   config.GetArch(opts.Architecture),
-			Filter:         opts.Filter,
-			LayersSelector: opts.LayersSelector,
-			OCIConcurrency: opts.OCIConcurrency,
-			RemoteOptions:  opts.RemoteOptions,
-			CachePath:      opts.CachePath,
+			Source:                  source,
+			PublicKeyPath:           opts.PublicKeyPath,
+			SkipSignatureValidation: opts.SkipSignatureValidation,
+			Shasum:                  opts.Shasum,
+			Architecture:            config.GetArch(opts.Architecture),
+			Filter:                  opts.Filter,
+			LayersSelector:          opts.LayersSelector,
+			OCIConcurrency:          opts.OCIConcurrency,
+			RemoteOptions:           opts.RemoteOptions,
+			CachePath:               opts.CachePath,
 		}
 
-		isPartial, tmpPath, err = pullOCI(ctx, ociOpts)
+		pkgLayout, err := pullOCI(ctx, ociOpts)
 		if err != nil {
 			return nil, err
 		}
+		// OCI is a special case since it doesn't create a tar unless the tar file is output
+		if opts.Output != "" {
+			_, err := pkgLayout.Archive(ctx, opts.Output, 0)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return pkgLayout, nil
 	case "http", "https":
 		tmpPath, err = pullHTTP(ctx, source, tmpDir, opts.Shasum, opts.InsecureSkipTLSVerify)
 		if err != nil {
@@ -113,17 +122,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	// Verify checksum if provided
-	if srcType != "oci" && opts.Shasum != "" {
+	if opts.Shasum != "" {
 		if err := helpers.SHAsMatch(tmpPath, opts.Shasum); err != nil {
 			return nil, fmt.Errorf("SHA256 mismatch for %s: %w", tmpPath, err)
 		}
 	}
 
-	// Load package layout
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
 		Filter:                  opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
@@ -183,7 +190,7 @@ func identifySource(src string) (string, error) {
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
-func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
+func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -192,7 +199,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		if cluster == nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
-		depPkg, err := cluster.GetDeployedPackage(ctx, src)
+		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(namespaceOverride))
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}

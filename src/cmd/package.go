@@ -38,7 +38,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func newPackageCommand() *cobra.Command {
@@ -189,7 +188,9 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	return nil
 }
 
-type packageDeployOptions struct{}
+type packageDeployOptions struct {
+	namespaceOverride string
+}
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	o := &packageDeployOptions{}
@@ -216,6 +217,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(VPkgDeploySget), lang.CmdPackageDeployFlagSget)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	err := cmd.Flags().MarkHidden("sget")
@@ -273,6 +275,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 
@@ -284,7 +287,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	if pkgLayout.Pkg.IsInitConfig() {
 		return nil
 	}
-	connectStrings := types.ConnectStrings{}
+	connectStrings := state.ConnectStrings{}
 	for _, comp := range deployedComponents {
 		for _, chart := range comp.InstalledCharts {
 			for k, v := range chart.ConnectStrings {
@@ -296,7 +299,13 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]types.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
+	if opts.NamespaceOverride != "" {
+		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+			return nil, err
+		}
+	}
 	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
 	if err != nil {
 		return nil, err
@@ -313,12 +322,12 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	deployedComponents, err := packager.Deploy(ctx, pkgLayout, opts)
+	result, err := packager.Deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy package: %w", err)
 	}
 
-	return deployedComponents, nil
+	return result.DeployedComponents, nil
 }
 
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
@@ -878,6 +887,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 }
 
 type packageInspectImagesOptions struct {
+	namespaceOverride       string
 	skipSignatureValidation bool
 }
 
@@ -896,6 +906,7 @@ func newPackageInspectImagesCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -924,7 +935,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
-	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
+	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -945,6 +956,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 }
 
 type packageInspectDefinitionOptions struct {
+	namespaceOverride       string
 	skipSignatureValidation bool
 }
 
@@ -963,6 +975,7 @@ func newPackageInspectDefinitionCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -991,7 +1004,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
-	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, loadOpts)
+	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
@@ -1052,9 +1065,10 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
-	Package    string   `json:"package"`
-	Version    string   `json:"version"`
-	Components []string `json:"components"`
+	Package           string   `json:"package"`
+	NamespaceOverride string   `json:"namespaceOverride"`
+	Version           string   `json:"version"`
+	Components        []string `json:"components"`
 }
 
 func (o *packageListOptions) run(ctx context.Context) error {
@@ -1070,9 +1084,10 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			components = append(components, component.Name)
 		}
 		packageList = append(packageList, packageListInfo{
-			Package:    pkg.Name,
-			Version:    pkg.Data.Metadata.Version,
-			Components: components,
+			Package:           pkg.Name,
+			NamespaceOverride: pkg.NamespaceOverride,
+			Version:           pkg.Data.Metadata.Version,
+			Components:        components,
 		})
 	}
 
@@ -1090,11 +1105,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Version", "Components"}
+		header := []string{"Package", "Namespace Override", "Version", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.Version, fmt.Sprintf("%v", info.Components),
+				info.Package, info.NamespaceOverride, info.Version, fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)
@@ -1104,7 +1119,9 @@ func (o *packageListOptions) run(ctx context.Context) error {
 	return nil
 }
 
-type packageRemoveOptions struct{}
+type packageRemoveOptions struct {
+	namespaceOverride string
+}
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	o := &packageRemoveOptions{}
@@ -1123,6 +1140,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
 	_ = cmd.MarkFlagRequired("confirm")
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
@@ -1159,13 +1177,14 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
-	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, loadOpts)
+	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
 	if err != nil {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager.RemoveOptions{
-		Cluster: c,
-		Timeout: config.ZarfDefaultTimeout,
+		Cluster:           c,
+		Timeout:           config.ZarfDefaultTimeout,
+		NamespaceOverride: o.namespaceOverride,
 	}
 	err = packager.Remove(ctx, pkg, removeOpt)
 	if err != nil {

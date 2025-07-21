@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/types"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestComponentStatus(t *testing.T) {
@@ -60,8 +60,8 @@ func TestComponentStatus(t *testing.T) {
 					return
 				}
 				status := deployedPackage.DeployedComponents[0].Status
-				if status != types.ComponentStatusDeploying {
-					errCh <- fmt.Errorf("expected %s got %s", types.ComponentStatusDeploying, status)
+				if status != state.ComponentStatusDeploying {
+					errCh <- fmt.Errorf("expected %s got %s", state.ComponentStatusDeploying, status)
 					return
 				}
 				time.Sleep(2 * time.Second)
@@ -84,7 +84,7 @@ func TestComponentStatus(t *testing.T) {
 	deployedPackage, err := getDeployedPackage(stdOut)
 	require.NoError(t, err)
 	require.Len(t, deployedPackage.DeployedComponents, 1)
-	require.Equal(t, types.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status)
+	require.Equal(t, state.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status)
 	// Remove the package
 	t.Cleanup(func() {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
@@ -92,8 +92,8 @@ func TestComponentStatus(t *testing.T) {
 	})
 }
 
-func getDeployedPackage(secret string) (*types.DeployedPackage, error) {
-	deployedPackage := &types.DeployedPackage{}
+func getDeployedPackage(secret string) (*state.DeployedPackage, error) {
+	deployedPackage := &state.DeployedPackage{}
 	decoded, err := base64.StdEncoding.DecodeString(secret)
 	if err != nil {
 		return nil, err

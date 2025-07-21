@@ -52,6 +52,6 @@ zarf connect { REGISTRY | GIT | connect-name } [flags]
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 * [zarf connect list](/commands/zarf_connect_list/)	 - Lists all available connection shortcuts
 
