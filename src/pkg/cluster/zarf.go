@@ -252,7 +252,7 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 
 // UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
 func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
-	tunnel, err := c.NewTunnel("localhost", state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return "", err
 	}
@@ -282,7 +282,7 @@ func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitS
 
 // UpdateInternalGitServerSecret updates the internal gitea server secrets with the new git server info
 func (c *Cluster) UpdateInternalGitServerSecret(ctx context.Context, oldGitServer state.GitServerInfo, newGitServer state.GitServerInfo) error {
-	tunnel, err := c.NewTunnel("localhost", state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)
 	if err != nil {
 		return err
 	}

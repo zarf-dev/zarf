@@ -33,7 +33,7 @@ func newConnectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&o.zt.ListenAddress, "address", "localhost", lang.CmdConnectFlagAddress)
+	cmd.Flags().StringSliceVar(&o.zt.ListenAddress, "address", []string{"localhost"}, lang.CmdConnectFlagAddress)
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
 	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)

@@ -242,7 +242,7 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	if err != nil {
 		return err
 	}
-	tunnel, err := c.NewTunnel("localhost", state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 	if err != nil {
 		return err
 	}
@@ -299,7 +299,7 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 
 	// If we are setup to use an internal artifact server, create the artifact registry token
 	if s.ArtifactServer.IsInternal() {
-		tunnel, err := c.NewTunnel("localhost", state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
+		tunnel, err := c.NewTunnel(state.ZarfNamespaceName, cluster.SvcResource, cluster.ZarfGitServerName, "", 0, cluster.ZarfGitServerPort)
 		if err != nil {
 			return err
 		}

@@ -51,7 +51,7 @@ const (
 type TunnelInfo struct {
 	LocalPort     int
 	RemotePort    int
-	ListenAddress string
+	ListenAddress []string
 	Namespace     string
 	ResourceType  string
 	ResourceName  string
@@ -89,7 +89,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 	zt := TunnelInfo{
 		Namespace:     state.ZarfNamespaceName,
 		ResourceType:  SvcResource,
-		ListenAddress: "localhost",
+		ListenAddress: []string{"localhost"},
 	}
 
 	switch strings.ToUpper(target) {
@@ -110,7 +110,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
 			}
 			zt = ztNew
-			zt.ListenAddress = "localhost"
+			zt.ListenAddress = []string{"localhost"}
 		}
 		if zt.ResourceName == "" {
 			return TunnelInfo{}, fmt.Errorf("missing resource name")
@@ -133,7 +133,7 @@ func (c *Cluster) Connect(ctx context.Context, target string) (*Tunnel, error) {
 
 // ConnectTunnelInfo connects to the cluster with the provided TunnelInfo
 func (c *Cluster) ConnectTunnelInfo(ctx context.Context, zt TunnelInfo) (*Tunnel, error) {
-	tunnel, err := c.NewTunnel(zt.ListenAddress, zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort)
+	tunnel, err := c.NewTunnel(zt.Namespace, zt.ResourceType, zt.ResourceName, zt.urlSuffix, zt.LocalPort, zt.RemotePort, WithListenAddress(zt.ListenAddress))
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 	var tunnel *Tunnel
 	if registryInfo.IsInternal() {
 		// Establish a registry tunnel to send the images to the zarf registry
-		if tunnel, err = c.NewTunnel("localhost", state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
+		if tunnel, err = c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfRegistryName, "", 0, ZarfRegistryPort); err != nil {
 			return "", tunnel, err
 		}
 	} else if dns.IsServiceURL(registryInfo.Address) {
@@ -162,7 +162,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 		if err != nil {
 			return "", tunnel, err
 		}
-		tunnel, err = c.NewTunnel("localhost", namespace, SvcResource, name, "", 0, port)
+		tunnel, err = c.NewTunnel(namespace, SvcResource, name, "", 0, port)
 		if err != nil {
 			return "", tunnel, err
 		}
@@ -175,7 +175,7 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 
 		// If this is a service (no error getting svcInfo), create a port-forward tunnel to that resource
 		if err == nil {
-			if tunnel, err = c.NewTunnel("localhost", svc.Namespace, SvcResource, svc.Name, "", 0, port); err != nil {
+			if tunnel, err = c.NewTunnel(svc.Namespace, SvcResource, svc.Name, "", 0, port); err != nil {
 				return "", tunnel, err
 			}
 		}
@@ -315,17 +315,26 @@ const (
 	SvcResource = "svc"
 )
 
+type TunnelOption func(*Tunnel)
+
+// WithListenAddress will set the listen address for the tunnel
+func WithListenAddress(addr []string) TunnelOption {
+	return func(t *Tunnel) {
+		t.listenAddress = addr
+	}
+}
+
 // Tunnel is the main struct that configures and manages port forwarding tunnels to Kubernetes resources.
 type Tunnel struct {
 	clientset     kubernetes.Interface
 	restConfig    *rest.Config
-	listenAddress string
 	localPort     int
 	remotePort    int
 	namespace     string
 	resourceType  string
 	resourceName  string
 	urlSuffix     string
+	listenAddress []string
 	stopChan      chan struct{}
 	readyChan     chan struct{}
 	errChan       chan error
@@ -334,20 +343,27 @@ type Tunnel struct {
 // NewTunnel will create a new Tunnel struct.
 // Note that if you use 0 for the local port, an open port on the host system
 // will be selected automatically, and the Tunnel struct will be updated with the selected port.
-func (c *Cluster) NewTunnel(address, namespace, resourceType, resourceName, urlSuffix string, local, remote int) (*Tunnel, error) {
-	return &Tunnel{
-		clientset:     c.Clientset,
-		restConfig:    c.RestConfig,
-		listenAddress: address,
-		localPort:     local,
-		remotePort:    remote,
-		namespace:     namespace,
-		resourceType:  resourceType,
-		resourceName:  resourceName,
-		urlSuffix:     urlSuffix,
-		stopChan:      make(chan struct{}, 1),
-		readyChan:     make(chan struct{}, 1),
-	}, nil
+func (c *Cluster) NewTunnel(namespace, resourceType, resourceName, urlSuffix string, local, remote int, opts ...TunnelOption) (*Tunnel, error) {
+	t := &Tunnel{
+		clientset:    c.Clientset,
+		restConfig:   c.RestConfig,
+		localPort:    local,
+		remotePort:   remote,
+		namespace:    namespace,
+		resourceType: resourceType,
+		resourceName: resourceName,
+		urlSuffix:    urlSuffix,
+		listenAddress: []string{
+			"localhost", // default
+		},
+		stopChan:  make(chan struct{}, 1),
+		readyChan: make(chan struct{}, 1),
+	}
+
+	for _, opt := range opts {
+		opt(t)
+	}
+	return t, nil
 }
 
 // Wrap takes a function that returns an error and wraps it to check for tunnel errors as well.
@@ -475,7 +491,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) (string, error) {
 
 	// Construct a new PortForwarder struct that manages the instructed port forward tunnel.
 	ports := []string{fmt.Sprintf("%d:%d", localPort, tunnel.remotePort)}
-	portforwarder, err := portforward.NewOnAddresses(dialer, []string{tunnel.listenAddress}, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
+	portforwarder, err := portforward.NewOnAddresses(dialer, tunnel.listenAddress, ports, tunnel.stopChan, tunnel.readyChan, io.Discard, io.Discard)
 	if err != nil {
 		return "", fmt.Errorf("unable to create the port forward: %w", err)
 	}
