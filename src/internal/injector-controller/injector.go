@@ -55,7 +55,7 @@ func (e *clusterInjectionExecutor) Run(ctx context.Context) error {
 	// FIXME: get shasum dynamically from cluster
 	shasum := "4a3ba3eed0b5104c6aa07298a4ccb9159389226be56c4bb3c6821f2cdbe69245"
 	// FIXME: Get ipFamily dynamically from state
-	err = e.cluster.RunInjection(ctx, true, payloadCMNames, shasum, state.IPFamilyIPv4)
+	err = e.cluster.RunInjection(ctx, true, payloadCMNames, 0, shasum, state.IPFamilyIPv4)
 	if err != nil {
 		return err
 	}

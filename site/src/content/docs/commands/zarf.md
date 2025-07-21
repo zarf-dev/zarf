@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf
 
-DevSecOps for Airgap
+The Airgap Native Packager Manager for Kubernetes
 
 ### Synopsis
 

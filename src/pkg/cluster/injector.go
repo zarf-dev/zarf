@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +36,7 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, useRegistryProxy bool, ipFamily state.IPFamily) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, useRegistryProxy bool, ipFamily state.IPFamily) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
@@ -64,7 +65,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return err
 	}
 
-	err = c.RunInjection(ctx, useRegistryProxy, payloadCmNames, shasum, ipFamily)
+	err = c.RunInjection(ctx, useRegistryProxy, payloadCmNames, registryNodePort, shasum, ipFamily)
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 }
 
 // RunInjection starts the injection process. It assumes that the rust and image payload configmaps are already in the cluster
-func (c *Cluster) RunInjection(ctx context.Context, useRegistryProxy bool, payloadCmNames []string, shasum string, ipFamily state.IPFamily) error {
+func (c *Cluster) RunInjection(ctx context.Context, useRegistryProxy bool, payloadCmNames []string, registryNodePort int, shasum string, ipFamily state.IPFamily) error {
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
@@ -91,15 +92,7 @@ func (c *Cluster) RunInjection(ctx context.Context, useRegistryProxy bool, paylo
 
 	var zarfSeedPort int32
 	if !useRegistryProxy {
-		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
-			WithSpec(v1ac.ServiceSpec().
-				WithType(corev1.ServiceTypeNodePort).
-				WithPorts(
-					v1ac.ServicePort().WithPort(int32(5000)),
-				).WithSelector(map[string]string{
-				"app": "zarf-injector",
-			}))
-		svc, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		svc, err := c.createInjectorNodeportService(ctx, registryNodePort)
 		if err != nil {
 			return err
 		}
@@ -486,4 +479,43 @@ func buildInjectionDaemonset(image string, payloadCmNames []string, shasum strin
 					AgentLabel:          "ignore",
 				}).
 				WithSpec(podSpec)))
+}
+
+// createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int) (*corev1.Service, error) {
+	l := logger.From(ctx)
+	var svc *corev1.Service
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
+	defer cancel()
+	err := retry.Do(func() error {
+		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
+			WithSpec(v1ac.ServiceSpec().
+				WithType(corev1.ServiceTypeNodePort).
+				WithPorts(
+					v1ac.ServicePort().WithPort(int32(5000)),
+				).WithSelector(map[string]string{
+				"app": "zarf-injector",
+			}))
+
+		var err error
+		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		if err != nil {
+			return err
+		}
+
+		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
+		if assignedNodePort == registryNodePort {
+			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
+			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
+			if deleteErr != nil {
+				return deleteErr
+			}
+			return fmt.Errorf("nodePort conflict with registry port %d", registryNodePort)
+		}
+		return nil
+	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
+	}
+	return svc, nil
 }

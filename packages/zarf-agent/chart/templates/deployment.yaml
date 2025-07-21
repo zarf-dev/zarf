@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: agent-hook
-  namespace: zarf
+  name: {{ .Values.deployment.name }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: agent-hook
 spec:
-  replicas: 2
+  replicas: {{ .Values.deployment.replicaCount }}
   selector:
     matchLabels:
       app: agent-hook
@@ -14,23 +14,23 @@ spec:
     metadata:
       labels:
         app: agent-hook
-        # Don't mutate this pod, that would be sad times
         zarf.dev/agent: ignore
     spec:
       imagePullSecrets:
-        - name: private-registry
+        - name: {{ .Values.image.pullSecret }}
       priorityClassName: system-node-critical
-      serviceAccountName: zarf
-      # Security context to comply with restricted PSS
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       securityContext:
         runAsUser: 65532
         fsGroup: 65532
         runAsGroup: 65532
         seccompProfile:
           type: "RuntimeDefault"
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
       containers:
         - name: server
-          image: "###ZARF_REGISTRY###/###ZARF_CONST_AGENT_IMAGE###:###ZARF_CONST_AGENT_IMAGE_TAG###"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -47,16 +47,15 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              memory: "32Mi"
-              cpu: "100m"
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
             limits:
-              memory: "128Mi"
-              cpu: "500m"
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs
               readOnly: true
-            # Required for OpenShift to mount k9s vendored directories
             - name: config
               mountPath: /.config
             - name: xdg
@@ -64,8 +63,7 @@ spec:
       volumes:
         - name: tls-certs
           secret:
-            secretName: agent-hook-tls
-        # Required for OpenShift to mount k9s vendored directories
+            secretName: {{ .Values.secret.name }}
         - name: config
           emptyDir: {}
         - name: xdg
