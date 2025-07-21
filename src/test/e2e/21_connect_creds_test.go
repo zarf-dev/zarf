@@ -72,7 +72,7 @@ func TestMetrics(t *testing.T) {
 
 	client := &http.Client{Transport: tr}
 	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	endpoints := tunnel.Endpoints()
+	endpoints := tunnel.HTTPEndpoints()
 	httpsEndpoint := strings.ReplaceAll(endpoints[0], "http", "https")
 	resp, err := client.Get(httpsEndpoint + "/metrics")
 	if err != nil {
