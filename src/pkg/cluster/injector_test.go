@@ -130,7 +130,7 @@ func TestInjector(t *testing.T) {
 				_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 				require.NoError(t, err)
 
-				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, tt.useRegistryProxy, tt.ipFamily)
+				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, tt.useRegistryProxy, tt.ipFamily)
 				require.NoError(t, err)
 
 				if tt.useRegistryProxy {
