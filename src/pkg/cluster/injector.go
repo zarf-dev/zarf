@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
@@ -214,18 +213,19 @@ func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) erro
 	// }
 
 	// TODO: Replace with wait package in the future.
-	err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-		podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
-			LabelSelector: "zarf.dev/injector",
-		})
-		if len(podList.Items) == 0 {
-			return true, nil
-		}
-		return false, err
-	})
-	if err != nil {
-		return err
-	}
+	// FIXME: re-add later
+	// err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
+	// 	podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+	// 		LabelSelector: "zarf.dev/injector",
+	// 	})
+	// 	if len(podList.Items) == 0 {
+	// 		return true, nil
+	// 	}
+	// 	return false, err
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 	l.Debug("done deleting injector resources", "duration", time.Since(start))
 	return nil
 }

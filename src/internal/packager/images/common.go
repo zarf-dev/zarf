@@ -129,7 +129,7 @@ func shouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 	if err == nil {
 		return false, nil
 	}
-	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL)
+	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL, "err", err)
 	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
 	err2 := Ping(ctx, true, registryURL, client)
 	if err2 != nil {
