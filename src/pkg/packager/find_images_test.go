@@ -19,7 +19,7 @@ func TestFindImages(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	address := testutil.SetupInMemoryRegistryWithAuth(ctx, t, 65000, "axol", "otl")
+	address := testutil.SetupInMemoryRegistryWithAuth(ctx, t, 65000)
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 

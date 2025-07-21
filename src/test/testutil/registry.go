@@ -15,7 +15,6 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
@@ -35,8 +34,8 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	return fmt.Sprintf("localhost:%d", port)
 }
 
-// SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
-func SetupInMemoryRegistryWithAuth(ctx context.Context, t *testing.T, port int, username string, password string) string {
+// SetupInMemoryRegistryWithAuth sets up an in-memory registry on localhost and returns the address. Has an auth of user: `axol`, pass `otl`
+func SetupInMemoryRegistryWithAuth(ctx context.Context, t *testing.T, port int) string {
 	t.Helper()
 	config := &configuration.Configuration{}
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
@@ -44,9 +43,11 @@ func SetupInMemoryRegistryWithAuth(ctx context.Context, t *testing.T, port int, 
 	config.Log.Level = "error"
 	logrus.SetOutput(io.Discard)
 	config.HTTP.DrainTimeout = 10 * time.Second
-	htp, err := utils.GetHtpasswdString(username, password)
-	require.NoError(t, err)
-	config.HTTP.Secret = htp
+	// This is a hard-coded HTTP Auth secret, largely to avoid an import cycle issues with using:
+	// utils.GetHtpasswdString(username, password)
+	// user: axol
+	// pass: otl
+	config.HTTP.Secret = "axol:$2a$10$NY2qOGl71AFVAeNqC951UOc3e8o16HIzFBAqg/QNT1jQJ/RkAP9lS"
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 	ref, err := registry.NewRegistry(ctx, config)
 	require.NoError(t, err)
