@@ -35,7 +35,7 @@ Tools for working with container registries using go-containertools
 * [zarf tools registry delete](/commands/zarf_tools_registry_delete/)	 - Delete an image reference from its registry
 * [zarf tools registry digest](/commands/zarf_tools_registry_digest/)	 - Get the digest of an image
 * [zarf tools registry export](/commands/zarf_tools_registry_export/)	 - Export filesystem of a container image as a tarball
-* [zarf tools registry login](/commands/zarf_tools_registry_login/)	 - Log in to a registry
+* [zarf tools registry login](/commands/zarf_tools_registry_login/)	 - Login to a container registry
 * [zarf tools registry ls](/commands/zarf_tools_registry_ls/)	 - List the tags in a repo
 * [zarf tools registry manifest](/commands/zarf_tools_registry_manifest/)	 - Get the manifest of an image
 * [zarf tools registry prune](/commands/zarf_tools_registry_prune/)	 - Prunes images from the registry that are not currently being used by any Zarf packages.
