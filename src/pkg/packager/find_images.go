@@ -37,10 +37,11 @@ import (
 )
 
 var (
-	imageCheck      = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
-	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
-	shaCheck        = regexp.MustCompile(`(?mi)sha256:[a-fA-F0-9]{64}`)
-	statusCheck     = regexp.MustCompile(`(?mi)status code 40[0-9]`)
+	imageCheck       = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
+	imageFuzzyCheck  = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
+	shaCheck         = regexp.MustCompile(`(?mi)sha256:[a-fA-F0-9]{64}`)
+	statusCheck      = regexp.MustCompile(`(?mi)status code 40[0-9]`)
+	connRefusedCheck = regexp.MustCompile(`(?mi)connect: connection refused`)
 )
 
 // FindImagesOptions declares the parameters to find images.
@@ -244,7 +245,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 					l.Debug("suspected image does not appear to be valid", "error", err)
 					// statusCheck is find if the error has an 40x error code
 					// shaCheck is remove false positives of sha256:aaaaa....
-					if statusCheck.FindString(err.Error()) != "" && shaCheck.FindString(image) == "" {
+					if (statusCheck.FindString(err.Error()) != "" || connRefusedCheck.FindString(err.Error()) != "") && shaCheck.FindString(image) == "" {
 						l.Debug("adding image even though registry check failed")
 						validMaybeImages = append(validMaybeImages, image)
 					}
