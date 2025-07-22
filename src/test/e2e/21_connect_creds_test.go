@@ -72,7 +72,8 @@ func TestMetrics(t *testing.T) {
 
 	client := &http.Client{Transport: tr}
 	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	endpoints := tunnel.HTTPEndpoints()
+	endpoints, err := tunnel.HTTPEndpoints()
+	require.NoError(t, err)
 	httpsEndpoint := strings.ReplaceAll(endpoints[0], "http", "https")
 	resp, err := client.Get(httpsEndpoint + "/metrics")
 	if err != nil {
@@ -126,7 +127,8 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	defer tunnelGit.Close()
 
 	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
-	endpoints := tunnelGit.Endpoints()
+	endpoints, err := tunnelGit.Endpoints()
+	require.NoError(t, err)
 
 	// Make sure Gitea comes up cleanly
 	gitPushURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, endpoints[0])

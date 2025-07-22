@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/spf13/cobra"
@@ -34,7 +35,7 @@ func newConnectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringSliceVar(&o.zt.ListenAddress, "address", []string{helpers.IPV4Localhost}, lang.CmdConnectFlagAddress)
+	cmd.Flags().StringSliceVar(&o.zt.ListenAddresses, "address", []string{helpers.IPV4Localhost}, lang.CmdConnectFlagAddress)
 	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectFlagName)
 	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", state.ZarfNamespaceName, lang.CmdConnectFlagNamespace)
 	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectFlagType)
@@ -74,7 +75,7 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 		if o.zt.LocalPort != 0 {
 			ti.LocalPort = o.zt.LocalPort
 		}
-		ti.ListenAddress = o.zt.ListenAddress
+		ti.ListenAddresses = o.zt.ListenAddresses
 
 		tunnel, err = c.ConnectTunnelInfo(ctx, ti)
 	}
@@ -86,14 +87,21 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	defer tunnel.Close()
 
 	if o.open {
-		urls := tunnel.FullURLs()
+		urls, err := tunnel.FullURLs()
+		if err != nil {
+			return err
+		}
 		// Open the first URL (arbitrary)
-		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "urls", urls)
+		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "urls", strings.Join(urls, ", "))
 		if err := exec.LaunchURL(urls[0]); err != nil {
 			return err
 		}
 	} else {
-		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "urls", tunnel.FullURLs())
+		urls, err := tunnel.FullURLs()
+		if err != nil {
+			return err
+		}
+		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "urls", strings.Join(urls, ", "))
 	}
 
 	// Wait for the interrupt signal or an error.

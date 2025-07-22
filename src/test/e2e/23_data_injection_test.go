@@ -51,7 +51,9 @@ func TestDataInjection(t *testing.T) {
 	require.NoError(t, err)
 	defer tunnel.Close()
 
-	endpoints := tunnel.HTTPEndpoints()
+	endpoints, err := tunnel.HTTPEndpoints()
+	require.NoError(t, err)
+	require.Len(t, endpoints, 1)
 
 	// Ensure connection
 	resp, err := http.Get(endpoints[0])
