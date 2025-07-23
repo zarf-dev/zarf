@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: fuzzy-upstream
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: fuzzy-upstream
+        namespace: default
+        kustomizations:
+          - ./.

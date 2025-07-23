@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rook-ceph-operator-config
+  namespace: rook-ceph
+data:
+  A_IMAGE: registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:v1.12.0
+  B_IMAGE: registry1.dso.mil/ironbank/opensource/kubernetes-sigs/sig-storage/csi-attacher:v4.8.1
+  C_IMAGE: registry1.dso.mil/ironbank/opensource/ceph/ceph-csi:v3.14.1
+  D_IMAGE: registry1.dso.mil/ironbank/opensource/kubernetes-sigs/sig-storage/csi-provisioner:v5.2.0
+  E_IMAGE: localhost:65000/sig-storage/csi-node-driver-registrar:v2.13.0
+  F_IMAGE: localhost:65000/sig-storage/csi-resizer:v1.13.2
+  G_IMAGE: localhost:65000/sig-storage/csi-snapshotter:v8.2.1
