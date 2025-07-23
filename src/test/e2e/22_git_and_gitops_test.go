@@ -44,8 +44,7 @@ func TestGit(t *testing.T) {
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
-	endpoints, err := tunnelGit.HTTPEndpoints()
-	require.NoError(t, err)
+	endpoints := tunnelGit.HTTPEndpoints()
 	require.Len(t, endpoints, 1)
 
 	testGitServerConnect(t, endpoints[0])

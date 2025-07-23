@@ -187,9 +187,9 @@ func (c *Cluster) ConnectToZarfRegistryEndpoint(ctx context.Context, registryInf
 			return "", tunnel, err
 		}
 		// there is no support currently for multiple registry endpoints - will use the default 127.0.0.1
-		endpoints, err := tunnel.Endpoints()
-		if err != nil {
-			return "", tunnel, err
+		endpoints := tunnel.Endpoints()
+		if len(endpoints) == 0 {
+			return "", tunnel, fmt.Errorf("no endpoints found")
 		}
 		registryEndpoint = endpoints[0]
 	}
@@ -405,15 +405,12 @@ func (tunnel *Tunnel) Connect(ctx context.Context) ([]string, error) {
 }
 
 // Endpoints returns all tunnel endpoints
-func (tunnel *Tunnel) Endpoints() ([]string, error) {
+func (tunnel *Tunnel) Endpoints() []string {
 	endpoints := make([]string, len(tunnel.listenAddress))
-	if len(tunnel.listenAddress) == 0 {
-		return []string{}, fmt.Errorf("no listen addresses identified")
-	}
 	for i, addr := range tunnel.listenAddress {
 		endpoints[i] = fmt.Sprintf("%s:%d", addr, tunnel.localPort)
 	}
-	return endpoints, nil
+	return endpoints
 }
 
 // ErrChan returns the tunnel's error channel
@@ -422,29 +419,23 @@ func (tunnel *Tunnel) ErrChan() chan error {
 }
 
 // HTTPEndpoints returns all tunnel endpoints as a list of HTTP URL strings.
-func (tunnel *Tunnel) HTTPEndpoints() ([]string, error) {
-	endpoints, err := tunnel.Endpoints()
-	if err != nil {
-		return []string{}, err
-	}
+func (tunnel *Tunnel) HTTPEndpoints() []string {
+	endpoints := tunnel.Endpoints()
 	httpEndpoints := make([]string, len(endpoints))
 	for i, addr := range endpoints {
 		httpEndpoints[i] = fmt.Sprintf("http://%s", addr)
 	}
-	return httpEndpoints, nil
+	return httpEndpoints
 }
 
 // FullURLs returns the tunnel endpoint as a HTTP URL string with the urlSuffix appended.
-func (tunnel *Tunnel) FullURLs() ([]string, error) {
-	endpoints, err := tunnel.HTTPEndpoints()
-	if err != nil {
-		return []string{}, err
-	}
+func (tunnel *Tunnel) FullURLs() []string {
+	endpoints := tunnel.HTTPEndpoints()
 	fullEndpoints := make([]string, len(endpoints))
 	for i, addr := range endpoints {
 		fullEndpoints[i] = fmt.Sprintf("%s%s", addr, tunnel.urlSuffix)
 	}
-	return fullEndpoints, nil
+	return fullEndpoints
 }
 
 // Close disconnects a tunnel connection by closing the StopChan, thereby stopping the goroutine.
@@ -539,9 +530,9 @@ func (tunnel *Tunnel) establish(ctx context.Context) ([]string, error) {
 	case <-portforwarder.Ready:
 		// Store for endpoint output
 		tunnel.localPort = localPort
-		urls, err := tunnel.FullURLs()
-		if err != nil {
-			return []string{}, fmt.Errorf("unable to get tunnel endpoints: %w", err)
+		urls := tunnel.FullURLs()
+		if len(urls) == 0 {
+			return []string{}, fmt.Errorf("no tunnel endpoints found")
 		}
 
 		// Store the error channel to listen for errors

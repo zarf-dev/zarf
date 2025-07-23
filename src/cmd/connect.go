@@ -87,9 +87,9 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	defer tunnel.Close()
 
 	if o.open {
-		urls, err := tunnel.FullURLs()
-		if err != nil {
-			return err
+		urls := tunnel.FullURLs()
+		if len(urls) == 0 {
+			return fmt.Errorf("no tunnel URLs found")
 		}
 		// Open the first URL (arbitrary)
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "urls", strings.Join(urls, ", "))
@@ -97,9 +97,9 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	} else {
-		urls, err := tunnel.FullURLs()
-		if err != nil {
-			return err
+		urls := tunnel.FullURLs()
+		if len(urls) == 0 {
+			return fmt.Errorf("no tunnel URLs found")
 		}
 		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "urls", strings.Join(urls, ", "))
 	}

@@ -37,8 +37,7 @@ func TestDosGames(t *testing.T) {
 	require.NoError(t, err)
 	defer tunnel.Close()
 
-	endpoints, err := tunnel.HTTPEndpoints()
-	require.NoError(t, err)
+	endpoints := tunnel.HTTPEndpoints()
 	require.Len(t, endpoints, 1)
 
 	// Check that 'curl' returns something.

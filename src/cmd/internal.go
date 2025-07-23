@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -252,9 +253,9 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 	}
 	defer tunnel.Close()
 	// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
-	tunnelURLs, err := tunnel.HTTPEndpoints()
-	if err != nil {
-		return err
+	tunnelURLs := tunnel.HTTPEndpoints()
+	if len(tunnelURLs) == 0 {
+		return errors.New("no tunnel endpoints found")
 	}
 	giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 	if err != nil {
@@ -313,9 +314,9 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 		}
 		defer tunnel.Close()
 		// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
-		tunnelURLs, err := tunnel.HTTPEndpoints()
-		if err != nil {
-			return err
+		tunnelURLs := tunnel.HTTPEndpoints()
+		if len(tunnelURLs) == 0 {
+			return fmt.Errorf("no tunnel endpoints found")
 		}
 		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 		if err != nil {
