@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -341,25 +342,57 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 }
 
 func (c *Cluster) getKubeSystemImage(ctx context.Context) (string, error) {
-	listOpts := metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-	}
-	podList, err := c.Clientset.CoreV1().Pods("kube-system").List(ctx, listOpts)
+	l := logger.From(ctx)
+	nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
-	for _, pod := range podList.Items {
-		for _, container := range pod.Spec.Containers {
-			return container.Image, nil
-		}
-		for _, container := range pod.Spec.InitContainers {
-			return container.Image, nil
-		}
-		for _, container := range pod.Spec.EphemeralContainers {
-			return container.Image, nil
+
+	var pauseImages []corev1.ContainerImage
+	var allImages []corev1.ContainerImage
+
+	for _, node := range nodes.Items {
+		for _, image := range node.Status.Images {
+			allImages = append(allImages, image)
+			for _, name := range image.Names {
+				img, err := transform.ParseImageRef(name)
+				if err != nil {
+					return "", err
+				}
+				if strings.Contains(img.Name, "pause") {
+					pauseImages = append(pauseImages, image)
+					break
+				}
+			}
 		}
 	}
-	return "", fmt.Errorf("no suitable injector image or node exists")
+
+	var targetImages []corev1.ContainerImage
+	if len(pauseImages) > 0 {
+		targetImages = pauseImages
+	} else {
+		targetImages = allImages
+	}
+
+	if len(targetImages) == 0 {
+		return "", fmt.Errorf("no suitable injector image found on any node")
+	}
+
+	// Find the smallest image by size
+	smallestImage := targetImages[0]
+	for _, image := range targetImages[1:] {
+		if image.SizeBytes < smallestImage.SizeBytes {
+			smallestImage = image
+		}
+	}
+
+	if len(smallestImage.Names) == 0 {
+		return "", fmt.Errorf("selected image has no names")
+	}
+	injectorImage := smallestImage.Names[0]
+	l.Info("selected image for daemonset injector", "name", injectorImage)
+
+	return injectorImage, nil
 }
 
 func hasBlockingTaints(taints []corev1.Taint) bool {

@@ -324,3 +324,205 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	require.Equal(t, "pod-2-container", image)
 	require.Equal(t, "good", node)
 }
+
+func TestGetKubeSystemImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		nodes         []corev1.Node
+		expectedImage string
+		expectedError string
+	}{
+		{
+			name: "selects smallest pause image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"docker.io/rancher/mirrored-pause:3.6"},
+								SizeBytes: 300000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.5"},
+								SizeBytes: 200000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.7"},
+								SizeBytes: 400000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.5",
+		},
+		{
+			name: "falls back to smallest image when no pause images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+							{
+								Names:     []string{"ubuntu:latest"},
+								SizeBytes: 80000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "handles pause in image name substring",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/kube-apiserver-pause:v1.28.0"},
+								SizeBytes: 50000000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "registry.k8s.io/kube-apiserver-pause:v1.28.0",
+		},
+		{
+			name: "handles multiple image names per container image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names: []string{
+									"docker.io/rancher/mirrored-pause:3.6",
+									"rancher/mirrored-pause:3.6",
+									"mirrored-pause:3.6",
+								},
+								SizeBytes: 300000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "docker.io/rancher/mirrored-pause:3.6",
+		},
+		{
+			name:          "returns error when no nodes exist",
+			nodes:         []corev1.Node{},
+			expectedError: "no suitable injector image found on any node",
+		},
+		{
+			name: "returns error when nodes have no images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{},
+					},
+				},
+			},
+			expectedError: "no suitable injector image found on any node",
+		},
+		{
+			name: "returns error when image has no names",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{},
+								SizeBytes: 300000,
+							},
+						},
+					},
+				},
+			},
+			expectedError: "selected image has no names",
+		},
+		{
+			name: "handles zero-size images correctly",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.5"},
+								SizeBytes: 0,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.5",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cs := fake.NewClientset()
+			c := &Cluster{
+				Clientset: cs,
+			}
+
+			// Create nodes with their images
+			for _, node := range tt.nodes {
+				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			// Call the function
+			image, err := c.getKubeSystemImage(ctx)
+
+			// Check results
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedImage, image)
+			}
+		})
+	}
+}
