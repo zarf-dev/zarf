@@ -35,6 +35,8 @@ import (
 	v1am "k8s.io/client-go/applyconfigurations/meta/v1"
 )
 
+var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
+
 // StartInjection initializes a Zarf injection into the cluster.
 func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, useRegistryProxy bool, ipFamily state.IPFamily) error {
 	l := logger.From(ctx)
@@ -297,11 +299,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
 func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
-	// Regex for Zarf seed image
-	zarfImageRegex, err := regexp.Compile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
-	if err != nil {
-		return "", "", err
-	}
 	listOpts := metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
 	}
@@ -341,6 +338,28 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		}
 	}
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
+}
+
+func (c *Cluster) getKubeSystemImage(ctx context.Context) (string, error) {
+	listOpts := metav1.ListOptions{
+		FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
+	}
+	podList, err := c.Clientset.CoreV1().Pods("kube-system").List(ctx, listOpts)
+	if err != nil {
+		return "", err
+	}
+	for _, pod := range podList.Items {
+		for _, container := range pod.Spec.Containers {
+			return container.Image, nil
+		}
+		for _, container := range pod.Spec.InitContainers {
+			return container.Image, nil
+		}
+		for _, container := range pod.Spec.EphemeralContainers {
+			return container.Image, nil
+		}
+	}
+	return "", fmt.Errorf("no suitable injector image or node exists")
 }
 
 func hasBlockingTaints(taints []corev1.Taint) bool {
