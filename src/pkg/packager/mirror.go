@@ -149,13 +149,18 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 				return err
 			}
 			defer tunnel.Close()
-			giteaClient, err := gitea.NewClient(tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+			// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
+			endpoints := tunnel.HTTPEndpoints()
+			if len(endpoints) == 0 {
+				return errors.New("no tunnel endpoints found")
+			}
+			giteaClient, err := gitea.NewClient(endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
 			if err != nil {
 				return err
 			}
 			return tunnel.Wrap(func() error {
-				l.Info("pushing repository to server", "repo", repoURL, "server", tunnel.HTTPEndpoint())
-				err = repository.Push(ctx, tunnel.HTTPEndpoint(), gitInfo.PushUsername, gitInfo.PushPassword)
+				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
+				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
 				if err != nil {
 					return err
 				}

@@ -130,7 +130,10 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err)
 	defer tunnelReg.Close()
 
-	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@%s/v2/_catalog", tunnelReg.Endpoint())
+	endpoints := tunnelReg.Endpoints()
+	suite.Len(endpoints, 1)
+
+	regCatalogURL := fmt.Sprintf("http://push-user:superSecurePassword@%s/v2/_catalog", endpoints[0])
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
@@ -147,7 +150,10 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err)
 	defer tunnelGit.Close()
 
-	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos/search", tunnelGit.Endpoint())
+	endpoints = tunnelGit.Endpoints()
+	suite.Len(endpoints, 1)
+
+	gitRepoURL := fmt.Sprintf("http://git-user:superSecurePassword@%s/api/v1/repos/search", endpoints[0])
 	respGit, err := http.Get(gitRepoURL)
 	suite.NoError(err)
 	gitBody, err := io.ReadAll(respGit.Body)
