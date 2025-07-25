@@ -121,9 +121,10 @@ func Ping(ctx context.Context, plainHTTP bool, registryURL string, client *auth.
 	return fmt.Errorf("could not connect to registry %s over %s. status code: %d", registryURL, buildScheme(plainHTTP), resp.StatusCode)
 }
 
+// ShouldUsePlainHTTP returns true if the registryURL is an http endpoint
 // This is inspired by the Crane functionality to determine the schema to be used - https://github.com/google/go-containerregistry/blob/main/pkg/v1/remote/transport/ping.go
 // Zarf relies heavily on this logic, as the internal registry communicates over HTTP, however we want Zarf to be flexible should the registry be over https in the future
-func shouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Client) (bool, error) {
+func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Client) (bool, error) {
 	// If the https connection works use https
 	err := Ping(ctx, false, registryURL, client)
 	if err == nil {
