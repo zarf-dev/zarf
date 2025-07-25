@@ -10,6 +10,10 @@ proxy:
   image:
     repository: alpine/socat
     tag: 1.8.0.3
+  injector:
+    image: registry.k8s.io/pause:3.10
+    payLoadConfigMapAmount: 0
+    shasum: ""
 
 service:
   ipv6Only: "false"

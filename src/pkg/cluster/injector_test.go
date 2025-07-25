@@ -43,7 +43,7 @@ func TestInjector(t *testing.T) {
 			expectedServiceFile: filepath.Join("expected-injection-service-nodeport.json"),
 		},
 		{
-			name:                "pod injector",
+			name:                "daemonset injector",
 			useRegistryProxy:    true,
 			ipFamily:            state.IPFamilyIPv4,
 			expectedServiceFile: filepath.Join("expected-injection-service-proxy.json"),

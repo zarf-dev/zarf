@@ -93,9 +93,8 @@ type State struct {
 	IPFamily      IPFamily `json:"ipFamily,omitempty"`
 	RegistryProxy bool     `json:"registryProxy,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
-	// The image to be used for the long lived injector
-	InjectorImage string `json:"injectorImage"`
+	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
+	InjectorInfo InjectorInfo     `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -103,6 +102,16 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// InjectorInfo contains information on how to run the long lived Daemonset Injector
+type InjectorInfo struct {
+	// The image to be used for the long lived injector
+	Image string `json:"injectorImage"`
+	// The number of payload configmaps required
+	PayLoadConfigMapAmount int `json:"PayLoadConfigMapAmount"`
+	// The PayLoadShaSum for the payload ConfigMaps
+	PayLoadShaSum string `json:"PayLoadShaSum"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.

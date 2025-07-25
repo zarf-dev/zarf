@@ -294,11 +294,19 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		if d.s.RegistryProxy {
 			var err error
-			d.s.InjectorImage, err = d.c.GetInjectorDaemonsetImage(ctx)
+			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
 			if err != nil {
 				return nil, err
 			}
-			l.Info("using injector image", "name", d.s.InjectorImage)
+			l.Info("using injector image", "name", d.s.InjectorInfo.Image)
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
+			if err != nil {
+				return nil, err
+			}
+			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
+			d.s.InjectorInfo.PayLoadShaSum = shasum
+			// FIXME: hardcode or make a better number
+			config.ZarfSeedPort = 5000
 		} else {
 			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, d.s.RegistryProxy, d.s.IPFamily)
 			if err != nil {

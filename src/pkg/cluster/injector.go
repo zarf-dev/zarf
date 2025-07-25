@@ -50,20 +50,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	l.Info("creating Zarf injector resources")
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
-	if err != nil {
-		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
-	}
-
-	b, err := os.ReadFile(filepath.Join(tmpDir, "zarf-injector"))
-	if err != nil {
-		return err
-	}
-	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
-		WithBinaryData(map[string][]byte{
-			"zarf-injector": b,
-		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
 		return err
 	}
@@ -75,6 +62,28 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	l.Debug("done with injection", "duration", time.Since(start))
 	return nil
+}
+
+// CreateInjectorConfigMaps creates the required configmaps to run the injector
+func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string) ([]string, string, error) {
+	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
+	}
+
+	b, err := os.ReadFile(filepath.Join(tmpDir, "zarf-injector"))
+	if err != nil {
+		return nil, "", err
+	}
+	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
+		WithBinaryData(map[string][]byte{
+			"zarf-injector": b,
+		})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	if err != nil {
+		return nil, "", err
+	}
+	return payloadCmNames, shasum, nil
 }
 
 // RunInjection starts the injection process. It assumes that the rust and image payload configmaps are already in the cluster
@@ -272,7 +281,6 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	if err != nil {
 		return nil, "", err
 	}
-	l.Info("shasum", "shasum is", shasum)
 
 	cmNames := []string{}
 	l.Info("adding archived binary configmaps of registry image to the cluster")

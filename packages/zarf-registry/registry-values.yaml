@@ -16,6 +16,10 @@ proxy:
   image:
     repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
     tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
+  injector:
+    image: "###ZARF_INJECTOR_IMAGE###"
+    payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
+    shasum: "###ZARF_INJECTOR_SHASUM###"
 
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"

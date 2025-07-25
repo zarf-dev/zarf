@@ -46,10 +46,12 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS":  s.StorageClass,
-			"IPV6_ONLY":      fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
-			"REGISTRY_PROXY": fmt.Sprintf("%t", s.RegistryProxy),
-			"INJECTOR_IMAGE": s.InjectorImage,
+			"STORAGE_CLASS":               s.StorageClass,
+			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
+			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryProxy),
+			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
+			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
+			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
