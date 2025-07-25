@@ -380,6 +380,9 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 		}
 		matchedImages = appendToImageMapOCIRepo(ctx, matchedImages, ociRepo)
 
+	case "ClusterRoleBinding", "RoleBinding", "ClusterRole", "Role":
+		l.Debug("found a known false positive type", "kind", resource.GetKind())
+
 	default:
 		// Capture any custom images
 		matches := imageCheck.FindAllStringSubmatch(string(b), -1)
@@ -392,8 +395,13 @@ func processUnstructuredImages(ctx context.Context, resource *unstructured.Unstr
 	// Capture "maybe images" for all kinds
 	matches := imageFuzzyCheck.FindAllStringSubmatch(string(b), -1)
 	for _, group := range matches {
-		l.Debug("found possible fuzzy match", "kind", resource.GetKind(), "value", group[1])
-		maybeImages[group[1]] = true
+		switch resource.GetKind() {
+		case "ClusterRoleBinding", "RoleBinding", "ClusterRole", "Role":
+			l.Debug("found a known false positive type", "kind", resource.GetKind())
+		default:
+			l.Debug("found possible fuzzy match", "kind", resource.GetKind(), "value", group[1])
+			maybeImages[group[1]] = true
+		}
 	}
 
 	return matchedImages, maybeImages, nil
