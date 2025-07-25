@@ -341,7 +341,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
-func (c *Cluster) getKubeSystemImage(ctx context.Context) (string, error) {
+func (c *Cluster) getInjectorDaemonsetImage(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
 	nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -350,51 +350,30 @@ func (c *Cluster) getKubeSystemImage(ctx context.Context) (string, error) {
 
 	// Track images across all nodes
 	imageNodeCount := make(map[string]int)
-	imageToContainerImage := make(map[string]corev1.ContainerImage)
+	allImages := []corev1.ContainerImage{}
+	pauseImages := []corev1.ContainerImage{}
 	totalNodes := len(nodes.Items)
 
 	for _, node := range nodes.Items {
 		for _, image := range node.Status.Images {
+			allImages = append(allImages, image)
 			for _, name := range image.Names {
 				imageNodeCount[name]++
-				imageToContainerImage[name] = image
+				img, err := transform.ParseImageRef(name)
+				if err != nil {
+					return "", err
+				}
+				if strings.Contains(img.Name, "pause") {
+					pauseImages = append(pauseImages, image)
+				}
 			}
 		}
 	}
 
-	// First: Check if there's any image that is on every node
-	var universalImages []string
 	for imageName, nodeCount := range imageNodeCount {
 		if nodeCount == totalNodes {
-			universalImages = append(universalImages, imageName)
+			return imageName, nil
 		}
-	}
-
-	if len(universalImages) > 0 {
-		// If no pause images among universal images, return the first one
-		l.Info("selected image for daemonset injector (on every node)", "name", universalImages[0])
-		return universalImages[0], nil
-	}
-
-	// Second: Check for images with "pause" in the name
-	var pauseImages []corev1.ContainerImage
-	for _, containerImage := range imageToContainerImage {
-		for _, name := range containerImage.Names {
-			img, err := transform.ParseImageRef(name)
-			if err != nil {
-				return "", err
-			}
-			if strings.Contains(img.Name, "pause") {
-				pauseImages = append(pauseImages, containerImage)
-				break // Only add this container image once
-			}
-		}
-	}
-
-	// Collect all unique images for fallback
-	var allImages []corev1.ContainerImage
-	for _, containerImage := range imageToContainerImage {
-		allImages = append(allImages, containerImage)
 	}
 
 	var targetImages []corev1.ContainerImage

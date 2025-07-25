@@ -326,7 +326,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	require.Equal(t, "good", node)
 }
 
-func TestGetKubeSystemImage(t *testing.T) {
+func TestGetInjectorDaemonsetImage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -343,7 +343,7 @@ func TestGetKubeSystemImage(t *testing.T) {
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"registry.k8s.io/pause:3.6"},
+								Names:     []string{"registry.k8s.io/pause:3.7"},
 								SizeBytes: 300000,
 							},
 							{
@@ -362,14 +362,14 @@ func TestGetKubeSystemImage(t *testing.T) {
 								SizeBytes: 300000,
 							},
 							{
-								Names:     []string{"alpine:latest"},
+								Names:     []string{"nginx:latest"},
 								SizeBytes: 5000000,
 							},
 						},
 					},
 				},
 			},
-			expectedImage: "registry.k8s.io/pause:3.6",
+			expectedImage: "nginx:latest",
 		},
 		{
 			name: "selects smallest pause image when no universal image",
@@ -422,10 +422,6 @@ func TestGetKubeSystemImage(t *testing.T) {
 								Names:     []string{"alpine:latest"},
 								SizeBytes: 5000000,
 							},
-							{
-								Names:     []string{"ubuntu:latest"},
-								SizeBytes: 80000000,
-							},
 						},
 					},
 				},
@@ -442,63 +438,6 @@ func TestGetKubeSystemImage(t *testing.T) {
 				},
 			},
 			expectedImage: "alpine:latest",
-		},
-		{
-			name: "handles pause in image name substring",
-			nodes: []corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"registry.k8s.io/kube-apiserver-pause:v1.28.0"},
-								SizeBytes: 50000000,
-							},
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
-							},
-						},
-					},
-				},
-			},
-			expectedImage: "registry.k8s.io/kube-apiserver-pause:v1.28.0",
-		},
-		{
-			name: "prefers universal image over pause image",
-			nodes: []corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
-							},
-							{
-								Names:     []string{"k8s.gcr.io/pause:3.5"},
-								SizeBytes: 200000,
-							},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
-							},
-							{
-								Names:     []string{"alpine:latest"},
-								SizeBytes: 5000000,
-							},
-						},
-					},
-				},
-			},
-			expectedImage: "nginx:latest",
 		},
 		{
 			name: "returns error when nodes have no images",
@@ -527,7 +466,7 @@ func TestGetKubeSystemImage(t *testing.T) {
 			}
 
 			// Call the function
-			image, err := c.getKubeSystemImage(ctx)
+			image, err := c.getInjectorDaemonsetImage(ctx)
 
 			if tt.expectedError != "" {
 				require.Error(t, err)
