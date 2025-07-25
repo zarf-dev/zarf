@@ -36,3 +36,12 @@ managedNodeGroups:
     PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
   iam:
     instanceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+- instanceType: "t4g.small"
+  name: ###ZARF_VAR_EKS_CLUSTER_NAME###-arm64-ng
+  minSize: 3
+  maxSize: 6
+  spot: true
+  tags:
+    PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+  iam:
+    instanceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
