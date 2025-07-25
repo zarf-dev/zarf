@@ -49,6 +49,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"STORAGE_CLASS":  s.StorageClass,
 			"IPV6_ONLY":      fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"REGISTRY_PROXY": fmt.Sprintf("%t", s.RegistryProxy),
+			"INJECTOR_IMAGE": s.InjectorImage,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,

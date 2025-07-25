@@ -94,6 +94,8 @@ type State struct {
 	RegistryProxy bool     `json:"registryProxy,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	// The image to be used for the long lived injector
+	InjectorImage string `json:"injectorImage"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`

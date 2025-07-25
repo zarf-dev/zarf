@@ -341,7 +341,11 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
-func (c *Cluster) getInjectorDaemonsetImage(ctx context.Context) (string, error) {
+// GetInjectorDaemonsetImage gets the image that is most likely to be accessible from all nodes
+// First it simply checks if an image is on every node,
+// then it checks for an image with pause in the name as the pause image is required to be accessible.
+// Finally, it falls back to the smallest image.
+func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
 	nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {

@@ -292,9 +292,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, d.s.RegistryProxy, d.s.IPFamily)
-		if err != nil {
-			return nil, err
+		if d.s.RegistryProxy {
+			var err error
+			d.s.InjectorImage, err = d.c.GetInjectorDaemonsetImage(ctx)
+			if err != nil {
+				return nil, err
+			}
+			l.Info("using injector image", "name", d.s.InjectorImage)
+		} else {
+			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, d.s.RegistryProxy, d.s.IPFamily)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
