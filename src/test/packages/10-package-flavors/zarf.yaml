@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: test-package-flavors
   description: A contrived example for package flavor / arch filter testing
+  version: v0.0.0
 
 components:
   - name: combined

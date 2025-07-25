@@ -1193,7 +1193,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packagePublishOptions struct{}
+type packagePublishOptions struct {
+	flavor string
+}
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	o := &packagePublishOptions{}
@@ -1210,6 +1212,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
@@ -1255,6 +1258,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
+			Flavor:             o.flavor,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
