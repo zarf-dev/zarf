@@ -15,30 +15,25 @@ import (
 )
 
 // ReferenceFromMetadata returns a reference for the given metadata.
-func ReferenceFromMetadata(registryLocation string, metadata *v1alpha1.ZarfMetadata, build *v1alpha1.ZarfBuildData) (string, error) {
-	ver := metadata.Version
-	if len(ver) == 0 {
-		return "", errors.New("version is required for publishing")
+func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (registry.Reference, error) {
+	if len(pkg.Metadata.Version) == 0 {
+		return registry.Reference{}, errors.New("version is required for publishing")
 	}
-
 	if !strings.HasSuffix(registryLocation, "/") {
 		registryLocation = registryLocation + "/"
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	format := "%s%s:%s"
-	raw := fmt.Sprintf(format, registryLocation, metadata.Name, ver)
-
-	if build != nil && build.Flavor != "" {
-		raw = fmt.Sprintf("%s-%s", raw, build.Flavor)
+	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, pkg.Metadata.Version)
+	if pkg.Build.Flavor != "" {
+		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
 	}
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse %s: %w", raw, err)
+		return registry.Reference{}, fmt.Errorf("failed to parse %s: %w", raw, err)
 	}
-
-	return ref.String(), nil
+	return ref, nil
 }
 
 // GetInitPackageURL returns the URL for the init package for the given version.

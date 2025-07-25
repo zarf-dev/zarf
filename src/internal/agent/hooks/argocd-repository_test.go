@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +36,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	s := &state.State{GitServer: types.GitServerInfo{
+	s := &state.State{GitServer: state.GitServerInfo{
 		Address:      "https://git-server.com",
 		PushUsername: "a-push-user",
 		PullPassword: "a-pull-password",

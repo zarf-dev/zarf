@@ -31,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
@@ -334,7 +333,7 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 
 	man := &downloader.Manager{
 		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
-		Out:            &message.DebugWriter{},
+		Out:            &logger.DebugWriter{Logger: l},
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,

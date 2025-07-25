@@ -33,7 +33,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 * [zarf package create](/commands/zarf_package_create/)	 - Creates a Zarf package from a given directory or the current directory
 * [zarf package deploy](/commands/zarf_package_deploy/)	 - Deploys a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](/commands/zarf_package_inspect/)	 - Displays the definition of a Zarf package (runs offline)

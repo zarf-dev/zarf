@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestCopyFilter(t *testing.T) {
@@ -35,22 +34,20 @@ func TestCopyFilter(t *testing.T) {
 			},
 		},
 	}
-	loadedDiffData := types.DifferentialData{
-		DifferentialImages: map[string]bool{
-			"example.com/include-image-tag:latest": true,
-			"example.com/diff-image-with-tag:v1":   true,
-			"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":            true,
-			"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": true,
-		},
-		DifferentialRepos: map[string]bool{
-			"https://example.com/no-ref.git":                                               true,
-			"https://example.com/branch.git@refs/heads/main":                               true,
-			"https://example.com/diff-tag.git@v1":                                          true,
-			"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6": true,
-		},
+	differentialImages := map[string]bool{
+		"example.com/include-image-tag:latest": true,
+		"example.com/diff-image-with-tag:v1":   true,
+		"example.com/diff-image-with-digest@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855":            true,
+		"example.com/diff-image-with-tag-and-digest:v1@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": true,
+	}
+	differentialRepos := map[string]bool{
+		"https://example.com/no-ref.git":                                               true,
+		"https://example.com/branch.git@refs/heads/main":                               true,
+		"https://example.com/diff-tag.git@v1":                                          true,
+		"https://example.com/diff-commit.git@524980951ff16e19dc25232e9aea8fd693989ba6": true,
 	}
 
-	filter := ByDifferentialData(&loadedDiffData)
+	filter := ByDifferentialData(differentialImages, differentialRepos)
 	diffComponents, err := filter.Apply(pkg)
 	require.NoError(t, err)
 

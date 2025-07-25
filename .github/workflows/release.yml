@@ -31,8 +31,8 @@ jobs:
 
       - name: Build CLI
         run: |
-          make build-cli-linux-amd
-          make build-cli-linux-arm
+          CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-amd
+          CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
@@ -71,8 +71,8 @@ jobs:
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
-          make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
-          make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=$GITHUB_REF_NAME make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=$GITHUB_REF_NAME make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -110,7 +110,7 @@ jobs:
       # Build the example packages and run the tests
       - name: Build examples and run tests
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$GITHUB_REF_NAME make test-e2e ARCH=amd64
 
       - name: Save logs
         if: always()
@@ -184,6 +184,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.brew-tap-token.outputs.token }}
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
       - name: Report disk space on failure
         if: failure()

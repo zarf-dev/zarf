@@ -1,6 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: minimal-valid
-  description: Minimal valid package
-components:
-  - name: component1

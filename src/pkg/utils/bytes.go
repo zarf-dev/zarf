@@ -7,13 +7,8 @@
 package utils
 
 import (
-	"fmt"
 	"math"
 	"strconv"
-	"time"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/pkg/message"
 )
 
 type unit struct {
@@ -79,43 +74,4 @@ func ByteFormat(in float64, precision int) string {
 
 	vFmt := strconv.FormatFloat(v, 'f', precision, 64)
 	return vFmt + " " + u
-}
-
-// RenderProgressBarForLocalDirWrite creates a progress bar that continuously tracks the progress of writing files to a local directory and all of its subdirectories.
-// NOTE: This function runs infinitely until either completeChan or errChan is triggered, this function should be run in a goroutine while a different thread/process is writing to the directory.
-func RenderProgressBarForLocalDirWrite(filepath string, expectedTotal int64, completeChan chan error, updateText string, successText string) {
-	// Create a progress bar
-	title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(0), 2), ByteFormat(float64(expectedTotal), 2))
-	progressBar := message.NewProgressBar(expectedTotal, title)
-
-	for {
-		select {
-		case err := <-completeChan:
-			if err == nil {
-				// Send success message
-				progressBar.Successf("%s (%s)", successText, ByteFormat(float64(expectedTotal), 2))
-				completeChan <- nil
-				return
-			} else {
-				if err := progressBar.Close(); err != nil {
-					message.Debugf("unable to close progress bar: %s", err.Error())
-				}
-				completeChan <- nil
-				return
-			}
-		default:
-			// Read the directory size
-			currentBytes, dirErr := helpers.GetDirSize(filepath)
-			if dirErr != nil {
-				message.Debugf("unable to get updated progress: %s", dirErr.Error())
-				time.Sleep(200 * time.Millisecond)
-				continue
-			}
-
-			// Update the progress bar with the current size
-			title := fmt.Sprintf("%s (%s of %s)", updateText, ByteFormat(float64(currentBytes), 2), ByteFormat(float64(expectedTotal), 2))
-			progressBar.Update(currentBytes, title)
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
 }

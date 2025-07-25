@@ -1,6 +1,0 @@
-kind: ZarfPackageConfig
-metadata:
-  name: wordpress
-  version: 16.0.4
-  description: |
-    "A Zarf Package that deploys the WordPress blogging and content management platform"

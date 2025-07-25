@@ -25,10 +25,10 @@ func TestComponentActionRemove(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm", "--components=on-remove")
 	require.NoError(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "NAME")
-	require.Contains(t, stdErr, "DATA")
-	require.Contains(t, stdErr, "remove-test-configmap")
-	require.Contains(t, stdErr, "Not Found")
+	require.Contains(t, stdOut, "NAME")
+	require.Contains(t, stdOut, "DATA")
+	require.Contains(t, stdOut, "remove-test-configmap")
+	require.Contains(t, stdOut, "Not Found")
 }
 
 func TestComponentActionEdgeCases(t *testing.T) {

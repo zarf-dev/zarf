@@ -10,18 +10,19 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ByDifferentialData filters any images and repos already present in the reference package components.
-func ByDifferentialData(diffData *types.DifferentialData) ComponentFilterStrategy {
+func ByDifferentialData(images map[string]bool, repos map[string]bool) ComponentFilterStrategy {
 	return &differentialDataFilter{
-		diffData: diffData,
+		images: images,
+		repos:  repos,
 	}
 }
 
 type differentialDataFilter struct {
-	diffData *types.DifferentialData
+	images map[string]bool
+	repos  map[string]bool
 }
 
 func (f *differentialDataFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.ZarfComponent, error) {
@@ -35,7 +36,7 @@ func (f *differentialDataFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.Zar
 			}
 			imgTag := imgRef.TagOrDigest
 			includeImage := imgTag == ":latest" || imgTag == ":stable" || imgTag == ":nightly"
-			if includeImage || !f.diffData.DifferentialImages[img] {
+			if includeImage || !f.images[img] {
 				filteredImages = append(filteredImages, img)
 			}
 		}
@@ -52,7 +53,7 @@ func (f *differentialDataFilter) Apply(pkg v1alpha1.ZarfPackage) ([]v1alpha1.Zar
 				ref = git.ParseRef(refPlain)
 			}
 			includeRepo := ref == "" || (!ref.IsTag() && !plumbing.IsHash(refPlain))
-			if includeRepo || !f.diffData.DifferentialRepos[repoURL] {
+			if includeRepo || !f.repos[repoURL] {
 				filteredRepos = append(filteredRepos, repoURL)
 			}
 		}

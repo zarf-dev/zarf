@@ -14,7 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestUpdateZarfManagedSecrets(t *testing.T) {
@@ -127,11 +126,11 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			require.NoError(t, err)
 
 			s := &state.State{
-				GitServer: types.GitServerInfo{
+				GitServer: state.GitServerInfo{
 					PullUsername: "pull-user",
 					PullPassword: "pull-password",
 				},
-				RegistryInfo: types.RegistryInfo{
+				RegistryInfo: state.RegistryInfo{
 					PullUsername: "pull-user",
 					PullPassword: "pull-password",
 					Address:      "127.0.0.1:30001",

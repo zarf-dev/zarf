@@ -104,7 +104,7 @@ func ColorPrintYAML(data any, hints map[string]string, spaceRootLists bool) erro
 	}
 
 	content := strings.Join([]string{"\n", outputYAML}, "")
-	pterm.Fprintln(message.OutputWriter, content)
+	pterm.Fprintln(os.Stdout, content)
 	return nil
 }
 

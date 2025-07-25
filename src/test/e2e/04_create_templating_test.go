@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestCreateTemplating(t *testing.T) {
@@ -33,7 +33,7 @@ func TestCreateTemplating(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "package", "create", "src/test/packages/04-templating", "-o", outPath, "--set", "PODINFO_VERSION=6.4.0", "--confirm")
 	require.NoError(t, err)
 
-	pkgLayout, err := layout2.LoadFromTar(context.Background(), templatingPath, layout2.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(context.Background(), templatingPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	expectedConstant := v1alpha1.Constant{Name: "PODINFO_VERSION", Value: "6.4.0", Pattern: "^[\\w\\-\\.]+$"}
 	require.Contains(t, pkgLayout.Pkg.Constants, expectedConstant)

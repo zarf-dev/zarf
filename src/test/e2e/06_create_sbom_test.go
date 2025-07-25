@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	layout2 "github.com/zarf-dev/zarf/src/internal/packager2/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -34,7 +34,7 @@ func TestCreateSBOM(t *testing.T) {
 	_, _, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", buildPath, "--sbom-out", outSbomPath, "--confirm")
 	require.NoError(t, err)
 
-	pkgLayout, err := layout2.LoadFromTar(ctx, tarPath, layout2.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 	getSbomPath := t.TempDir()
 	err = pkgLayout.GetSBOM(ctx, getSbomPath)

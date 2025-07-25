@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DockerConfig contains the authentication information from the machine's docker config.
@@ -35,7 +34,7 @@ type DockerConfigEntryWithAuth struct {
 }
 
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
-func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo types.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
+func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo state.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
 	// Auth field must be username:password and base64 encoded
 	fieldValue := registryInfo.PullUsername + ":" + registryInfo.PullPassword
 	authEncodedValue := base64.StdEncoding.EncodeToString([]byte(fieldValue))
@@ -81,7 +80,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 }
 
 // GenerateGitPullCreds generates a secret containing the git credentials.
-func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo types.GitServerInfo) *v1ac.SecretApplyConfiguration {
+func (c *Cluster) GenerateGitPullCreds(namespace, name string, gitServerInfo state.GitServerInfo) *v1ac.SecretApplyConfiguration {
 	return v1ac.Secret(name, namespace).
 		WithLabels(map[string]string{
 			state.ZarfManagedByLabel: "zarf",

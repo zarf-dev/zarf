@@ -1,4 +1,4 @@
-# Zarf - DevSecOps for Airgap
+# Zarf - The Airgap Native Packager Manager for Kubernetes
 
 [![Latest Release](https://img.shields.io/github/v/release/zarf-dev/zarf)](https://github.com/zarf-dev/zarf/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/zarf-dev/zarf?filename=go.mod)](https://go.dev/)
@@ -16,7 +16,7 @@ Zarf eliminates the [complexity of airgap software delivery](https://www.itopsti
 
 ## Why Use Zarf
 
-- 💸 **Free and Open-Source.** Zarf will always be free to use and maintained by the open-source community.
+- 💸 **Free and Open Source.** Zarf will always be free to use and maintained by the open source community.
 - ⭐️ **Zero Dependencies.** As a statically compiled binary, the Zarf CLI has zero dependencies to run on any machine.
 - 🔓 **No Vendor Lock.** There is no proprietary software that locks you into using Zarf. If you want to remove it, you can still use your Helm charts to deploy your software manually.
 - 💻 **OS Agnostic.** Zarf supports numerous operating systems. A full matrix of supported OSes, architectures, and feature sets is coming soon.
@@ -73,7 +73,7 @@ Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/de
 
 ## 🫶 Our Community
 
-Join us on the [Kubernetes Slack](https://kubernetes.slack.com/) in the [_#zarf_](https://kubernetes.slack.com/archives/C03B6BJAUJ3) channel or the [_#zarf-dev_](https://kubernetes.slack.com/archives/C03BP9Z3CMA) channel! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
+Join us in our [Community](./COMMUNITY.md) spaces! Our active community of developers, users, and contributors are available to answer questions, share examples, and find new ways use Zarf together!
 
 We are so grateful to our Zarf community for contributing bug fixes and collaborating on new features:
 

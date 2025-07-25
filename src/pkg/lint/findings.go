@@ -9,8 +9,6 @@ import (
 )
 
 // LintError represents an error containing lint findings.
-//
-//nolint:revive // ignore name
 type LintError struct {
 	PackageName string
 	Findings    []PackageFinding

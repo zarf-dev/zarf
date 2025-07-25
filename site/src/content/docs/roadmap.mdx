@@ -34,14 +34,13 @@ We began the year with a deliberate push to lay the groundwork for SDK support. 
 
 Parallel to these efforts, we also focused on extending our test suite to cover decoupled components and ensure changes did not regress GA stability.
 
-### Hardening & Observability (Q2 - Q3)
+### Operational Enhancements (Q2 - Q3)
 
 As the architecture matures, attention turns to reliability and transparency:
 
 - Improve support for chaining packages and dynamic variable injection during deploy.
 - Enhance package and chart values patterns and enhance configuration opportunities.
 - Improve supply chain lifecycle with enhanced artifact delivery and discovery.
-- Harden lifecycle to recover from partial failures on deploy or remove.
 
 These upgrades strengthen Zarf's use in production pipelines and across disconnected systems.
 
@@ -52,6 +51,7 @@ Actively investing in enhancements that simplify and expand what Zarf can do:
 - Add observable error messages and diagnostic metadata to simplify user troubleshooting.
 - Introduce schema enhancements from new features and deprecation removals.
 - Improve state management to enable more dynamic deployment scenarios and ensure resource traceability.
+- Extend, validate, and document Zarf's support across different Kubernetes distributions.
 
 We believe these improvements can assist in making zarf more operationally effective.
 
@@ -70,7 +70,7 @@ Throughout the year, the Zarf team remains committed to open governance and comm
 
 ## Feature Stability Guidance
 
-We continue to follow the [Kubernetes feature maturity model](https://kubernetes.io/docs/reference/using-api/#api-versioning) for Zarf features:
+Our feature lifecycle is defined as follows:
 
 - **Alpha**: Experimental, subject to change/removal.
 - **Beta**: Functionally complete but still evolving; documented with known caveats.

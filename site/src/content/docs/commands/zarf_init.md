@@ -97,5 +97,5 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 

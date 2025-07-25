@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: fuzzy-registry1
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    manifests:
+      - name: fuzzy-registry1
+        namespace: default
+        files:
+          - configmap.yml

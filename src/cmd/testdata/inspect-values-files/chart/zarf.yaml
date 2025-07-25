@@ -6,7 +6,7 @@ variables:
   - name: PORT
 
 components:
-  - name: demo-helm-charts
+  - name: httpd-local
     charts:
       - name: htppd-local
         version: 1.0.0

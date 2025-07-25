@@ -1,6 +1,7 @@
 [
   {
     "package": "package1",
+    "namespaceOverride": "",
     "version": "0.42.0",
     "components": [
       "component1",
@@ -9,6 +10,7 @@
   },
   {
     "package": "package2",
+    "namespaceOverride": "test2",
     "version": "1.0.0",
     "components": [
       "component3",

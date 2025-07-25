@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 type registryOptions struct {
@@ -92,6 +91,8 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdPull, &craneOptions, lang.CmdToolsRegistryPullExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
+	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
 
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 
@@ -223,7 +224,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	if tunnel != nil {
-		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", zarfState.RegistryInfo.Address)
+		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error { return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint) })
 	}
@@ -231,7 +232,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []types.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
 	authOption := images.WithPushAuth(s.RegistryInfo)
 
@@ -368,7 +369,7 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 			return originalListFn(cmd, args)
 		}
 
-		_, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, s.RegistryInfo)
+		endpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, s.RegistryInfo)
 		if err != nil {
 			return err
 		}
@@ -378,12 +379,12 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
 
 		if tunnel != nil {
-			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", tunnel.Endpoint(), "cluster-address", s.RegistryInfo.Address)
+			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", endpoint, "cluster-address", s.RegistryInfo.Address)
 
 			defer tunnel.Close()
 
 			givenAddress := fmt.Sprintf("%s/", s.RegistryInfo.Address)
-			tunnelAddress := fmt.Sprintf("%s/", tunnel.Endpoint())
+			tunnelAddress := fmt.Sprintf("%s/", endpoint)
 			args[imageNameArgumentIndex] = strings.Replace(args[imageNameArgumentIndex], givenAddress, tunnelAddress, 1)
 			return tunnel.Wrap(func() error { return originalListFn(cmd, args) })
 		}
