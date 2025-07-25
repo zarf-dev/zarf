@@ -205,6 +205,24 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "roles-bindings",
+			packagePath: "./testdata/find-images/roles-bindings",
+			opts: FindImagesOptions{
+				SkipCosign:          true,
+				KubeVersionOverride: "v1.32.0",
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					PotentialMatches: []string{
+						"ghcr.io/kedacore/keda:2.17.0",
+						"ghcr.io/kedacore/keda-metrics-apiserver:2.17.0",
+						"ghcr.io/kedacore/keda-admission-webhooks:2.17.0",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
