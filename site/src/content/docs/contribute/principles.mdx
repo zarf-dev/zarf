@@ -1,0 +1,95 @@
+---
+title: Zarf Principles
+---
+
+Zarf is a tool for secure software delivery, optimized for disconnected environments. To ensure that Zarf remains true to its mission and continues to provide value for its users, the following design principles serve as a framework for evaluating new features and capabilities.
+
+## 1. Airgap-First Functionality
+Zarf is designed for airgapped environments, meaning that all functionality should operate without requiring external dependencies. This includes:
+- Ensuring that all packaged software and dependencies are self-contained.
+- Avoiding reliance on external repositories or registries during runtime.
+- Providing a seamless user experience for both online and offline operations.
+
+**Measured By:**
+- Frequency of successful operations in fully disconnected environments.
+- Number of external calls attempted during airgapped execution (should be zero).
+- Observed failure patterns during offline testing.
+- Feedback from users operating in classified, isolated, or remote settings.
+
+## 2. Minimal and Secure Core Artifacts
+The Zarf binary and init package must remain lightweight and secure while offering core functionality. Considerations include:
+- Baking in only essential tools necessary for package management, deployment, and validation.
+- Avoiding unnecessary bloat by carefully selecting embedded utilities for broad applicability to disconnected environments.
+- Ensuring security best practices, including dependency verification and signed releases.
+
+**Measured By:**
+- Size and composition of binaries and init packages over time.
+- Number and severity of vulnerabilities in embedded tools.
+- Adoption of signed releases and integrity verification methods.
+- Feedback from reviews and user trust evaluations.
+
+## 3. Clear Scope Within Kubernetes Environments
+Zarf operates in Kubernetes clusters but does not attempt to replace existing Kubernetes tooling. Instead, Zarf should:
+- Focus on enabling package management and deployment in airgapped clusters.
+- Complement, rather than compete with, Kubernetes-native solutions (e.g., Helm, Kustomize, and Operator patterns).
+- Align with familiar user and developer workflows rather than inventing new paradigms, unless solving a gap unique to Zarf.
+- Facilitate cluster initialization and ongoing software management without enforcing opinionated infrastructure choices.
+
+**Measured By:**
+- Compatibility with Helm, Kustomize, and other Kubernetes-native tools.
+- Reports of workflow friction or overlap with existing tooling.
+- User adoption across varied Kubernetes environments and distributions.
+- Feedback on ease of integration and alignment with existing developer expectations.
+
+## 4. Declarative and Reproducible Workflows
+To maintain consistency in deployments, Zarf should emphasize:
+- Declarative package definitions that allow for repeatable deployments.
+- Versioned and auditable package formats that ensure integrity across different environments.
+- Support for GitOps workflows where applicable.
+
+**Measured By:**
+- Frequency of versioned package reuse across deployments.
+- User reports on reproducibility in varied environments.
+- Adoption of GitOps-compatible practices within Zarf workflows.
+- Observability and traceability of package contents and changes.
+
+## 5. Operational Simplicity
+Zarf should remain simple to use and operationalize, with considerations such as:
+- Clear and concise configuration files that reduce complexity.
+- A user-friendly CLI that abstracts away unnecessary details while allowing expert-level control when needed.
+- Automation and scripting capabilities that streamline usage in constrained environments.
+- Enhancements that support developer workflows by simplifying common or complex tasks.
+
+**Measured By:**
+- Time to first successful deployment.
+- Frequency and types of user-reported CLI or config issues.
+- Usage rates of CLI helpers like `zarf dev find-images`.
+- Developer sentiment and onboarding feedback.
+
+## 6. Compatibility and Extensibility
+Zarf should be flexible enough to work in various environments while maintaining its core mission. This means:
+- Supporting multiple architectures and operating systems where feasible.
+- Enabling custom Init/Package configuration to reduce/expand scope for user constraints. 
+- Allowing extensibility through SDK integrations.
+- Ensuring compatibility with industry standards to facilitate interoperability.
+
+**Measured By:**
+- Number of supported architectures, OSs, and custom configurations.
+- Usage of SDK extensions and community integrations.
+- Frequency of external tool interoperability issues.
+- Community requests for new compatibility features.
+
+## 7. Community and Open Source Focus
+As an open-source project, Zarf should prioritize community involvement and transparency by:
+- Encouraging feedback and contributions from users and maintainers.
+- Providing clear documentation and guidance for adoption.
+- Adhering to open governance principles to guide long-term sustainability.
+- Enable contributors to create issues and pull requests with understood feedback loops and review.
+
+**Measured By:**
+- Growth and diversity of contributors over time.
+- Activity in discussions, issues, and PRs.
+- Usage statistics for documentation and onboarding/developer guides.
+- Community sentiment in Slack, GitHub, and other public forums.
+
+These principles help guide the evolution of Zarf while ensuring that new features and capabilities align with its core mission. By adhering to these guidelines, Zarf can continue to serve as a robust, reliable tool for software delivery.
