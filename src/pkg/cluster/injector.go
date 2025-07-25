@@ -348,23 +348,53 @@ func (c *Cluster) getKubeSystemImage(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	var pauseImages []corev1.ContainerImage
-	var allImages []corev1.ContainerImage
+	// Track images across all nodes
+	imageNodeCount := make(map[string]int)
+	imageToContainerImage := make(map[string]corev1.ContainerImage)
+	totalNodes := len(nodes.Items)
 
 	for _, node := range nodes.Items {
 		for _, image := range node.Status.Images {
-			allImages = append(allImages, image)
 			for _, name := range image.Names {
-				img, err := transform.ParseImageRef(name)
-				if err != nil {
-					return "", err
-				}
-				if strings.Contains(img.Name, "pause") {
-					pauseImages = append(pauseImages, image)
-					break
-				}
+				imageNodeCount[name]++
+				imageToContainerImage[name] = image
 			}
 		}
+	}
+
+	// First: Check if there's any image that is on every node
+	var universalImages []string
+	for imageName, nodeCount := range imageNodeCount {
+		if nodeCount == totalNodes {
+			universalImages = append(universalImages, imageName)
+		}
+	}
+
+	if len(universalImages) > 0 {
+		// If no pause images among universal images, return the first one
+		l.Info("selected image for daemonset injector (on every node)", "name", universalImages[0])
+		return universalImages[0], nil
+	}
+
+	// Second: Check for images with "pause" in the name
+	var pauseImages []corev1.ContainerImage
+	for _, containerImage := range imageToContainerImage {
+		for _, name := range containerImage.Names {
+			img, err := transform.ParseImageRef(name)
+			if err != nil {
+				return "", err
+			}
+			if strings.Contains(img.Name, "pause") {
+				pauseImages = append(pauseImages, containerImage)
+				break // Only add this container image once
+			}
+		}
+	}
+
+	// Collect all unique images for fallback
+	var allImages []corev1.ContainerImage
+	for _, containerImage := range imageToContainerImage {
+		allImages = append(allImages, containerImage)
 	}
 
 	var targetImages []corev1.ContainerImage
