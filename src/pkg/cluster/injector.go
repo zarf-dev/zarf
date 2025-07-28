@@ -6,6 +6,7 @@ package cluster
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -355,63 +356,72 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 // Finally, it falls back to the smallest image.
 func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
-	nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return "", err
-	}
 
-	// Track images across all nodes
-	imageNodeCount := make(map[string]int)
-	allImages := []corev1.ContainerImage{}
-	pauseImages := []corev1.ContainerImage{}
-	totalNodes := len(nodes.Items)
+	var injectorImage string
+	err := retry.Do(func() error {
+		nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
 
-	for _, node := range nodes.Items {
-		for _, image := range node.Status.Images {
-			allImages = append(allImages, image)
-			for _, name := range image.Names {
-				imageNodeCount[name]++
-				img, err := transform.ParseImageRef(name)
-				if err != nil {
-					return "", err
-				}
-				if strings.Contains(img.Name, "pause") {
-					pauseImages = append(pauseImages, image)
+		// Track images across all nodes
+		imageNodeCount := make(map[string]int)
+		allImages := []corev1.ContainerImage{}
+		pauseImages := []corev1.ContainerImage{}
+		totalNodes := len(nodes.Items)
+
+		for _, node := range nodes.Items {
+			for _, image := range node.Status.Images {
+				allImages = append(allImages, image)
+				for _, name := range image.Names {
+					imageNodeCount[name]++
+					img, err := transform.ParseImageRef(name)
+					if err != nil {
+						return err
+					}
+					if strings.Contains(img.Name, "pause") {
+						pauseImages = append(pauseImages, image)
+					}
 				}
 			}
 		}
-	}
 
-	for imageName, nodeCount := range imageNodeCount {
-		if nodeCount == totalNodes {
-			return imageName, nil
+		for imageName, nodeCount := range imageNodeCount {
+			if nodeCount == totalNodes {
+				injectorImage = imageName
+				return nil
+			}
 		}
-	}
 
-	var targetImages []corev1.ContainerImage
-	if len(pauseImages) > 0 {
-		targetImages = pauseImages
-	} else {
-		targetImages = allImages
-	}
-
-	if len(targetImages) == 0 {
-		return "", fmt.Errorf("no suitable injector image found on any node")
-	}
-
-	// Find the smallest image by size
-	smallestImage := targetImages[0]
-	for _, image := range targetImages[1:] {
-		if image.SizeBytes < smallestImage.SizeBytes {
-			smallestImage = image
+		var targetImages []corev1.ContainerImage
+		if len(pauseImages) > 0 {
+			targetImages = pauseImages
+		} else {
+			targetImages = allImages
 		}
-	}
 
-	if len(smallestImage.Names) == 0 {
-		return "", fmt.Errorf("selected image has no names")
+		if len(targetImages) == 0 {
+			return errors.New("no suitable image found on any node")
+		}
+
+		// Find the smallest image by size
+		smallestImage := targetImages[0]
+		for _, image := range targetImages[1:] {
+			if image.SizeBytes < smallestImage.SizeBytes {
+				smallestImage = image
+			}
+		}
+
+		if len(smallestImage.Names) == 0 {
+			return errors.New("selected image has no names")
+		}
+		injectorImage = smallestImage.Names[0]
+		return nil
+	}, retry.Attempts(15), retry.Delay(5*time.Second), retry.Context(ctx), retry.DelayType(retry.FixedDelay))
+	if err != nil {
+		return "", err
 	}
-	injectorImage := smallestImage.Names[0]
-	l.Info("selected image for daemonset injector", "name", injectorImage)
+	l.Info("selected image for injector Daemonset", "name", injectorImage)
 
 	return injectorImage, nil
 }
