@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -334,6 +335,7 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 		nodes         []corev1.Node
 		expectedImage string
 		expectedError string
+		ctx           context.Context
 	}{
 		{
 			name: "selects image present on every node",
@@ -449,13 +451,16 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 					},
 				},
 			},
-			expectedError: "no suitable injector image found on any node",
+			expectedError: "no suitable image found on any node",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.TestContext(t)
+			// Ensure this times out quickly
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			t.Cleanup(cancel)
 			cs := fake.NewClientset()
 			c := &Cluster{
 				Clientset: cs,
