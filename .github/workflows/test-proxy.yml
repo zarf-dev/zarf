@@ -1,4 +1,4 @@
-name: Test Cross-Cluster
+name: Test Registry Proxy
 on:
   pull_request:
     paths-ignore:
@@ -42,6 +42,13 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # FIXME: remove
+      - name: build injector
+        run: |
+          cd src/injector
+          make install-cross
+          make injector-linux
+
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
         with:
@@ -68,12 +75,6 @@ jobs:
         with:
           name: build-artifacts
           path: build/
-
-      - name: build injector
-        run: |
-          cd src/injector
-          make install-cross
-          make injector-linux
 
       - name: Setup golang
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0

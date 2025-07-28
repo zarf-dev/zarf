@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
@@ -182,56 +183,55 @@ func (c *Cluster) StopInjection(ctx context.Context, useRegistryProxy bool) erro
 		}
 	}
 
-	// err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
-	// if err != nil && !kerrors.IsNotFound(err) {
-	// 	return err
-	// }
-	// selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-	// 	MatchLabels: map[string]string{
-	// 		"zarf-injector": "payload",
-	// 	},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-	// listOpts := metav1.ListOptions{
-	// 	LabelSelector: selector.String(),
-	// }
-	// err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
-	// if err != nil {
-	// 	return err
-	// }
+	err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return err
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"zarf-injector": "payload",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	if err != nil {
+		return err
+	}
 
 	// This is needed because labels were not present in payload config maps previously.
 	// Without this injector will fail if the config maps exist from a previous Zarf version.
-	// cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-	// if err != nil {
-	// 	return err
-	// }
-	// for _, cm := range cmList.Items {
-	// 	if !strings.HasPrefix(cm.Name, "zarf-payload-") {
-	// 		continue
-	// 	}
-	// 	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	cmList, err := c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, cm := range cmList.Items {
+		if !strings.HasPrefix(cm.Name, "zarf-payload-") {
+			continue
+		}
+		err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, cm.Name, metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
+	}
 
 	// TODO: Replace with wait package in the future.
-	// FIXME: re-add later
-	// err := wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
-	// 	podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
-	// 		LabelSelector: "zarf.dev/injector",
-	// 	})
-	// 	if len(podList.Items) == 0 {
-	// 		return true, nil
-	// 	}
-	// 	return false, err
-	// })
-	// if err != nil {
-	// 	return err
-	// }
+	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
+		podList, err := c.Clientset.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{
+			LabelSelector: "zarf.dev/injector",
+		})
+		if len(podList.Items) == 0 {
+			return true, nil
+		}
+		return false, err
+	})
+	if err != nil {
+		return err
+	}
 	l.Debug("done deleting injector resources", "duration", time.Since(start))
 	return nil
 }
