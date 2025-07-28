@@ -39,42 +39,6 @@ spec:
             requests:
               cpu: 100m
               memory: 200Mi
-        # FIXME: I tried to make this a sidecar init container, but it doesn't work as an init container. I may want to make this it's own daemonset
-        - name: injector
-          image: "{{ .Values.proxy.injector.image }}"
-          workingDir: /zarf-init
-          command: ["/zarf-init/zarf-injector", "{{ .Values.proxy.injector.shasum }}"]
-          ports:
-            - containerPort: 5000
-              hostPort: 5000
-              hostIP: 127.0.0.1
-          readinessProbe:
-            failureThreshold: 10
-            httpGet:
-              path: /v2/
-              port: 5000
-              scheme: HTTP
-            periodSeconds: 2
-            successThreshold: 1
-            timeoutSeconds: 1
-          volumeMounts:
-            - mountPath: /zarf-init/zarf-injector
-              name: init
-              subPath: zarf-injector
-            - mountPath: /zarf-seed
-              name: seed
-            {{- range $i := until (int .Values.proxy.injector.payLoadConfigMapAmount) }}
-            - mountPath: /zarf-init/zarf-payload-{{ printf "%03d" $i }}
-              name: zarf-payload-{{ printf "%03d" $i }}
-              subPath: zarf-payload-{{ printf "%03d" $i }}
-            {{- end }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-            readOnlyRootFilesystem: true
-            runAsNonRoot: true
     # IPV6 does not support rewriting packets to localhost so it needs to use host network over hostport
     {{ if eq .Values.service.ipv6Only "true" }}
       dnsPolicy: ClusterFirstWithHostNet
@@ -86,17 +50,4 @@ spec:
         runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
-      volumes:
-        - configMap:
-            defaultMode: 511
-            name: rust-binary
-          name: init
-        - emptyDir: {}
-          name: seed
-        {{- range $i := until (int .Values.proxy.injector.payLoadConfigMapAmount) }}
-        - configMap:
-            defaultMode: 420
-            name: zarf-payload-{{ printf "%03d" $i }}
-          name: zarf-payload-{{ printf "%03d" $i }}
-        {{- end }}
 {{- end }}

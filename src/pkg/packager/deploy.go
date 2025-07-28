@@ -323,7 +323,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
-	if isSeedRegistry {
+	if isSeedRegistry && !d.s.RegistryProxy {
 		if err := d.c.StopInjection(ctx, d.s.RegistryProxy); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
