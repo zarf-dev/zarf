@@ -69,6 +69,12 @@ jobs:
           name: build-artifacts
           path: build/
 
+      - name: build injector
+        run: |
+          cd src/injector
+          make install-cross
+          make injector-linux
+
       - name: Setup golang
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
@@ -83,7 +89,6 @@ jobs:
             kubeProxyMode: "nftables"
           EOF
 
-
       - name: Setup Kind
         run: |
           kind delete cluster && kind create cluster --config=kind-nftables-config.yml
@@ -94,7 +99,7 @@ jobs:
 
       - name: Run tests
         run: |
-          zarf init --host-network --confirm
+          zarf init --registry-proxy --confirm
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
