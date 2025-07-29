@@ -307,7 +307,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			// FIXME: hardcode or make a better number
 			config.ZarfSeedPort = 5000
 		} else {
-			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, d.s.RegistryProxy, d.s.IPFamily)
+			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 			if err != nil {
 				return nil, err
 			}
@@ -323,7 +323,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry && !d.s.RegistryProxy {
-		if err := d.c.StopInjection(ctx, d.s.RegistryProxy); err != nil {
+		if err := d.c.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}

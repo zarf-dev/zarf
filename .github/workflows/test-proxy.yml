@@ -26,7 +26,7 @@ permissions:
 
 # Abort prior jobs in the same workflow / PR
 concurrency:
-  group: e2e-${{ github.ref }}
+  group: proxy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
