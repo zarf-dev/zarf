@@ -44,7 +44,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + "/test:5000"}
+	"--registry-url=k3d-" + registryHost + ":5000/test"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -116,7 +116,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s/test:5000/v2/_catalog", registryUser, commonPassword, registryHost)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s:5000/v2/_catalog", registryUser, commonPassword, registryHost)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
