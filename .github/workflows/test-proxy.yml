@@ -100,7 +100,7 @@ jobs:
 
       - name: Run tests
         run: |
-          zarf init --registry-proxy --confirm
+          build/zarf init --registry-proxy --confirm
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster

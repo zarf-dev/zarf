@@ -9,10 +9,6 @@ apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   kubeProxyMode: "nftables"
   ipFamily: ipv6
-nodes:
-- role: control-plane
-- role: worker
-- role: worker
 
 # Calico setup
 # kind: Cluster
