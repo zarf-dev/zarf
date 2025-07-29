@@ -39,6 +39,13 @@ spec:
             requests:
               cpu: 100m
               memory: 200Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
     # IPV6 does not support rewriting packets to localhost so it needs to use host network over hostport
     {{ if eq .Values.service.ipv6Only "true" }}
       dnsPolicy: ClusterFirstWithHostNet
