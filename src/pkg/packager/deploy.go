@@ -265,7 +265,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 				applianceMode = true
 			}
 		}
-		err := d.c.InitState(ctx, cluster.InitStateOptions{
+		var err error
+		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
 			GitServer:      opts.GitServer,
 			RegistryInfo:   opts.RegistryInfo,
 			ArtifactServer: opts.ArtifactServer,
@@ -289,7 +290,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 		if err != nil {
 			return nil, err
 		}
