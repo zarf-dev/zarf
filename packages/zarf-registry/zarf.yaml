@@ -93,6 +93,10 @@ variables:
     description: The target CPU utilization percentage for the registry
     default: "80"
 
+  - name: HOST_NETWORK_PROXY
+    description: Decides if host port or host network should be used with the registry proxy
+    default: "false"
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"

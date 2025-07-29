@@ -76,3 +76,14 @@ Create the name of the service account to use
     {{ default "default" .Values.serviceAccount.name }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Determine if host network proxy should be enabled
+*/}}
+{{- define "proxy.hostNetwork" -}}
+{{- if or .Values.proxy.hostNetwork .Values.service.ipv6Only -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}

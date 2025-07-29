@@ -1,4 +1,4 @@
-{{ if eq .Values.service.registryProxy "true" }}
+{{ if .Values.service.registryProxy }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -21,8 +21,10 @@ spec:
           command: ["/zarf-init/zarf-injector", "{{ .Values.proxy.injector.shasum }}"]
           ports:
             - containerPort: 5000
+            {{- if eq (include "proxy.hostNetwork" .) "false" }}
               hostPort: 5000
-              hostIP: 127.0.0.1
+              hostIP: "127.0.0.1"
+            {{- end }}
           readinessProbe:
             failureThreshold: 10
             httpGet:
@@ -50,8 +52,7 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
-    # IPV6 does not support rewriting packets to localhost so it needs to use host network over hostport
-    {{ if eq .Values.service.ipv6Only "true" }}
+    {{- if eq (include "proxy.hostNetwork" .) "true" }}
       dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
     {{- end }}
