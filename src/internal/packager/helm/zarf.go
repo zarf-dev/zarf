@@ -7,6 +7,7 @@ package helm
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -80,6 +81,15 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	agentImage, err := transform.ParseImageRef(deployment.Spec.Template.Spec.Containers[0].Image)
 	if err != nil {
 		return err
+	}
+
+	// In the event the registry is external and includes subpaths
+	// we will remove the subpath from the agent path
+	registry := opts.State.RegistryInfo.Address
+	parts := strings.Split(registry, "/")
+	subPath := strings.Join(parts[1:], "/")
+	if subPath != "" {
+		agentImage.Path = strings.TrimPrefix(agentImage.Path, fmt.Sprintf("%s/", subPath))
 	}
 
 	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
