@@ -9,7 +9,7 @@ components:
     required: true
     manifests:
       - name: flux-install
-        namespace: flux
+        namespace: flux-system
         files:
           - https://github.com/fluxcd/flux2/releases/download/v2.4.0/install.yaml
     images:
@@ -43,6 +43,20 @@ components:
         files:
           - helm/podinfo-source.yaml
           - helm/podinfo-helmrelease.yaml
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      # Note: this is a helm OCI artifact rather than a container image
+      - ghcr.io/stefanprodan/charts/podinfo:6.4.0
+
+  - name: podinfo-via-flux-helm-oci
+    description: Example deployment via flux (helm oci repo) using the famous podinfo example
+    required: true
+    manifests:
+      - name: podinfo
+        namespace: podinfo-helm-oci
+        files:
+          - helm-oci/podinfo-source.yaml
+          - helm-oci/podinfo-helmrelease.yaml
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # Note: this is a helm OCI artifact rather than a container image

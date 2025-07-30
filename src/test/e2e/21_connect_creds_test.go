@@ -71,7 +71,10 @@ func TestMetrics(t *testing.T) {
 	}
 
 	client := &http.Client{Transport: tr}
-	httpsEndpoint := strings.ReplaceAll(tunnel.HTTPEndpoint(), "http", "https")
+	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
+	endpoints := tunnel.HTTPEndpoints()
+	require.Len(t, endpoints, 1)
+	httpsEndpoint := strings.ReplaceAll(endpoints[0], "http", "https")
 	resp, err := client.Get(httpsEndpoint + "/metrics")
 	if err != nil {
 		t.Fatal(err)
@@ -123,16 +126,20 @@ func connectToZarfServices(ctx context.Context, t *testing.T) {
 	require.NoError(t, err)
 	defer tunnelGit.Close()
 
+	// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
+	endpoints := tunnelGit.Endpoints()
+	require.Len(t, endpoints, 1)
+
 	// Make sure Gitea comes up cleanly
-	gitPushURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, tunnelGit.Endpoint())
+	gitPushURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitPushPassword, endpoints[0])
 	respGit, err := http.Get(gitPushURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
-	gitPullURL := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, tunnelGit.Endpoint())
+	gitPullURL := fmt.Sprintf("http://zarf-git-read-user:%s@%s/api/v1/user", gitPullPassword, endpoints[0])
 	respGit, err = http.Get(gitPullURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
-	gitArtifactURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, tunnelGit.Endpoint())
+	gitArtifactURL := fmt.Sprintf("http://zarf-git-user:%s@%s/api/v1/user", gitArtifactToken, endpoints[0])
 	respGit, err = http.Get(gitArtifactURL)
 	require.NoError(t, err)
 	require.Equal(t, 200, respGit.StatusCode)
