@@ -270,8 +270,8 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("Usage: {} <sha256sum> [use_ipv6]", args[0]);
-        return;
+      println!("Usage: {} <sha256sum> [use_ipv6]", args[0]);
+      return;
     }
 
     println!("unpacking: {}", args[1]);
