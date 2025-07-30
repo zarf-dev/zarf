@@ -147,7 +147,7 @@ and with sufficient forewarning for the others to prepare. However, sometimes "l
 Therefore, the change in responsibilities will be understood to take immediate effect,
 regardless of whether the issue/PR has been acknowledged or merged.
 
-However, should a Triager or above be deemed inactive for a significant period, any
+However, should a Reviewer or above be deemed inactive for a significant period, any
 Contributor or above may write an issue/PR requesting their removal from the ranks
 (and `@mentioning` the inactive contributor in the hopes of drawing their attention).
 The request must receive support (in comments) from a majority of Maintainers to proceed.
