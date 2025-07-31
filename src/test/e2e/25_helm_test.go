@@ -64,6 +64,10 @@ func testHelmChartsExample(t *testing.T) {
 	defer e2e.CleanFiles(t, fmt.Sprintf("zarf-package-helm-charts-local-tgz-%s-0.0.1.tar.zst", e2e.Arch))
 
 	// Create a package that needs dependencies
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "helm", "repo", "add", "gitlab", "https://charts.gitlab.io/")
+	require.NoError(t, err, stdOut, stdErr)
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "helm", "repo", "update", "gitlab")
+	require.NoError(t, err, stdOut, stdErr)
 	chartDepsPath := filepath.Join("src", "test", "packages", "25-chart-deps")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", chartDepsPath, "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
