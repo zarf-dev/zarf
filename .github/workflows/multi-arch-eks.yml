@@ -3,6 +3,7 @@ on:
   schedule:
     - cron: "0 7 * * *" ## Every day at 0700 UTC
   workflow_dispatch: ## Give us the ability to run this manually
+  pull_request:
 
 permissions:
   id-token: write
@@ -46,7 +47,7 @@ jobs:
 
       - name: create cluster
         run: |
-          ./eksctl cluster create --config-file=.github/workflows/eks.yaml
+          ./eksctl cluster create --config-file=.github/eks.yaml
 
       - name: teardown cluster
         run: |
