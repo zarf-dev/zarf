@@ -4,14 +4,12 @@
 package packager
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -19,11 +17,6 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	htp, err := utils.GetHtpasswdString("axol", "otl")
-	require.NoError(t, err)
-
-	address := testutil.SetupInMemoryRegistryWithAuth(ctx, t, 65000, htp)
 
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
@@ -163,8 +156,8 @@ func TestFindImages(t *testing.T) {
 			},
 		},
 		{
-			name:        "fuzzy-upstream",
-			packagePath: "./testdata/find-images/fuzzy-upstream",
+			name:        "fuzzy",
+			packagePath: "./testdata/find-images/fuzzy",
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
@@ -185,27 +178,6 @@ func TestFindImages(t *testing.T) {
 			},
 		},
 		{
-			name:        "fuzzy-registry-auth",
-			packagePath: "./testdata/find-images/fuzzy-registry-auth",
-			opts: FindImagesOptions{
-				SkipCosign: true,
-			},
-			expectedImages: []ComponentImageScan{
-				{
-					ComponentName: "baseline",
-					PotentialMatches: []string{
-						"registry1.dso.mil/ironbank/kiwigrid/k8s-sidecar:v1.12.0",
-						"registry1.dso.mil/ironbank/opensource/ceph/ceph-csi:v3.14.1",
-						"registry1.dso.mil/ironbank/opensource/kubernetes-sigs/sig-storage/csi-attacher:v4.8.1",
-						"registry1.dso.mil/ironbank/opensource/kubernetes-sigs/sig-storage/csi-provisioner:v5.2.0",
-						fmt.Sprintf("%s/sig-storage/csi-snapshotter:v8.2.1", address),
-						fmt.Sprintf("%s/sig-storage/csi-resizer:v1.13.2", address),
-						fmt.Sprintf("%s/sig-storage/csi-node-driver-registrar:v2.13.0", address),
-					},
-				},
-			},
-		},
-		{
 			name:        "roles-bindings",
 			packagePath: "./testdata/find-images/roles-bindings",
 			opts: FindImagesOptions{
@@ -215,7 +187,7 @@ func TestFindImages(t *testing.T) {
 			expectedImages: []ComponentImageScan{
 				{
 					ComponentName: "baseline",
-					PotentialMatches: []string{
+					Matches: []string{
 						"ghcr.io/kedacore/keda:2.17.0",
 						"ghcr.io/kedacore/keda-metrics-apiserver:2.17.0",
 						"ghcr.io/kedacore/keda-admission-webhooks:2.17.0",
