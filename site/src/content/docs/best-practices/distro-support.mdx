@@ -8,5 +8,4 @@ Zarf supports:
 - K3d - Works
 - Minikube - Works
 - K3s - Works, builtin support
-- Talos - works only in `--registry-proxy` mode and requires `kubectl label namespace zarf pod-security.kubernetes.io/enforce=privileged --overwrite` to get over the default security for `hostport` or `hostNetwork` on IPV6
--
+- Talos - works only in `--registry-proxy` mode and requires `kubectl label namespace zarf pod-security.kubernetes.io/enforce=privileged --overwrite` to get over the default security for `hostport` or `hostNetwork` on IPV6. Apply the configmap in the talos folder with `kustomize build | kubectl apply -f -` and apply the patch with `talosctl patch mc --nodes <node-ip> --patch @talos-patch.yaml`

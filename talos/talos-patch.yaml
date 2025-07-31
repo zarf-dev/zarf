@@ -1,0 +1,12 @@
+cluster:
+  allowSchedulingOnControlPlanes: true
+machine:
+  kubelet:
+    extraMounts:
+      - destination: /var/local-path-provisioner
+        type: bind
+        source: /var/local-path-provisioner
+        options:
+          - bind
+          - rshared
+          - rw
