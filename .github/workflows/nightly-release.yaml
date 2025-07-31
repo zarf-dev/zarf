@@ -1,0 +1,185 @@
+name: Nightly CLI and Packages Build
+
+on:
+  schedule:
+    - cron: "0 7 * * *" ## Every day at 0700 UTC
+  workflow_dispatch:      # Allows manual trigger
+
+permissions:
+  contents: read
+
+env:
+  NIGHTLY_TAG: nightly
+
+jobs:
+  build-release:
+    runs-on: large-ubuntu-zarf-release
+    permissions:
+      id-token: write
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set CLI_VERSION env var with short SHA
+        run: |
+          echo "CLI_VERSION=$(git rev-parse --short HEAD)-nightly" >> $GITHUB_ENV
+
+      - name: Setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Build CLI
+        run: |
+          CLI_VERSION=${{ env.CLI_VERSION }} make build-cli-linux-amd
+          CLI_VERSION=${{ env.CLI_VERSION }} make build-cli-linux-arm
+
+      - name: Zarf Agent: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: dummy
+          password: ${{ github.token }}
+
+      - name: Zarf Agent: Build and Publish the Image
+        run: |
+          cp build/zarf build/zarf-linux-amd64
+          cp build/zarf-arm build/zarf-linux-arm64
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/zarf-dev/zarf/agent:${{ env.CLI_VERSION }} .
+          rm build/zarf-linux-amd64
+          rm build/zarf-linux-arm64
+          echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:${{ env.CLI_VERSION }} --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
+
+      - name: Auth with AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_KMS_ROLE_ARN }}
+          role-session-name: nightly-${{ github.run_id }}
+          aws-region: us-east-1
+          role-duration-seconds: 3600
+
+      - name: Zarf Agent: Sign the Image
+        run: |
+          cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} \
+            -a release-engineer=https://github.com/${{ github.actor }} \
+            -a version=${{ env.CLI_VERSION }} \
+            ghcr.io/zarf-dev/zarf/agent@$ZARF_AGENT_IMAGE_DIGEST -y
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      - name: Build Init Packages
+        run: |
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=${{ env.CLI_VERSION }}
+          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=${{ env.CLI_VERSION }}
+
+      - name: Publish Init Package as OCI and Skeleton
+        run: |
+          CLI_VERSION=${{ env.CLI_VERSION }} make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=${{ env.CLI_VERSION }} make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/
+          retention-days: 1
+
+  validate-release:
+    runs-on: large-ubuntu-zarf-release
+    needs: build-release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set CLI_VERSION env var with short SHA
+        run: |
+          echo "CLI_VERSION=$(git rev-parse --short HEAD)-nightly" >> $GITHUB_ENV
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/
+
+      - name: Setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Make Zarf Executable
+        run: chmod +x build/zarf
+
+      - name: Build Examples and Run Tests
+        run: |
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=${{ env.CLI_VERSION }} make test-e2e ARCH=amd64
+
+      - name: Save Logs
+        if: always()
+        uses: ./.github/actions/save-logs
+
+  create-release:
+    runs-on: large-ubuntu-zarf-release
+    needs: validate-release
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install tools
+        uses: ./.github/actions/install-tools
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: build/
+
+      - name: Make Zarf Executable
+        run: chmod +x build/zarf
+
+      - name: Setup Release ENV Vars
+        run: |
+          K8S_MODULES_VER=$(go list -f '{{.Version}}' -m k8s.io/client-go | sed 's/v//; s/\./ /g')
+          echo K8S_MODULES_MAJOR_VER=$(expr $(echo "$K8S_MODULES_VER" | cut -d " " -f 1) + 1) >> $GITHUB_ENV
+          echo K8S_MODULES_MINOR_VER=$(echo "$K8S_MODULES_VER" | cut -d " " -f 2) >> $GITHUB_ENV
+          echo K8S_MODULES_PATCH_VER=$(echo "$K8S_MODULES_VER" | cut -d " " -f 3) >> $GITHUB_ENV
+
+          echo K9S_VERSION=$(go list -f '{{.Version}}' -m github.com/derailed/k9s) >> $GITHUB_ENV
+          echo CRANE_VERSION=$(go list -f '{{.Version}}' -m github.com/google/go-containerregistry) >> $GITHUB_ENV
+          echo SYFT_VERSION=$(go list -f '{{.Version}}' -m github.com/anchore/syft) >> $GITHUB_ENV
+          echo ARCHIVES_VERSION=$(go list -f '{{.Version}}' -m github.com/mholt/archives) >> $GITHUB_ENV
+          echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v3) >> $GITHUB_ENV
+
+      - name: Run GoReleaser (Nightly)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --verbose --nightly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+          GORELEASER_CURRENT_TAG: nightly
+
+      - name: Report Disk Space on Failure
+        if: failure()
+        run: |
+          echo "create-release failed, printing out available diskspace"
+          lsblk -f
