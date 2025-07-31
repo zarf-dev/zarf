@@ -108,7 +108,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	found := false
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
-		// note: this should never work for custom named init packages - this should be made more generic
 		// Assumes there will only be one release in the zarf namespace with "zarf-agent" in the name
 		if strings.Contains(release.Chart.Name(), "zarf-agent") {
 			found = true
