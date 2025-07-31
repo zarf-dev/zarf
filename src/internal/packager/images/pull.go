@@ -154,7 +154,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 			repo.PlainHTTP = cfg.PlainHTTP
 			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
@@ -426,7 +426,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst 
 	}
 	repo.PlainHTTP = cfg.PlainHTTP
 	if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-		repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 		if err != nil {
 			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
 		}
