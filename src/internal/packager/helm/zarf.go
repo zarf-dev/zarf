@@ -7,6 +7,7 @@ package helm
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -82,6 +83,15 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return err
 	}
 
+	// In the event the registry is external and includes subpaths
+	// we will remove the subpath from the agent path
+	registry := opts.State.RegistryInfo.Address
+	parts := strings.Split(registry, "/")
+	subPath := strings.Join(parts[1:], "/")
+	if subPath != "" {
+		agentImage.Path = strings.TrimPrefix(agentImage.Path, fmt.Sprintf("%s/", subPath))
+	}
+
 	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
 	if err != nil {
 		return err
@@ -94,9 +104,13 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return fmt.Errorf("unable to list helm releases: %w", err)
 	}
 
+	// Ensure we find the release - otherwise this can return without an error and not do anything
+	found := false
 	for _, release := range releases {
 		// Update the Zarf Agent release with the new values
+		// Maintaining the "raw-init" release name for backwards compatibility
 		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",
 				ReleaseName: release.Name,
@@ -122,6 +136,10 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 				return fmt.Errorf("error updating the release values: %w", err)
 			}
 		}
+	}
+
+	if !found {
+		return fmt.Errorf("unable to find the Zarf Agent release")
 	}
 
 	// Trigger a rolling update for the TLS secret update to take effect.

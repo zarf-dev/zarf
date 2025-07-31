@@ -49,9 +49,9 @@ type AssembleOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
-	// DifferentialPackagePath causes a differential package to be created that only contains images and repos not included in the package at the given path
-	DifferentialPackagePath string
-	OCIConcurrency          int
+	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package
+	DifferentialPackage v1alpha1.ZarfPackage
+	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
 }
@@ -61,18 +61,11 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
-	if opts.DifferentialPackagePath != "" {
-		l.Debug("creating differential package", "differential", opts.DifferentialPackagePath)
-		layoutOpts := PackageLayoutOptions{
-			SkipSignatureValidation: true,
-		}
-		diffPkgLayout, err := LoadFromTar(ctx, opts.DifferentialPackagePath, layoutOpts)
-		if err != nil {
-			return nil, err
-		}
+	if opts.DifferentialPackage.Metadata.Name != "" {
+		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
 		allIncludedImagesMap := map[string]bool{}
 		allIncludedReposMap := map[string]bool{}
-		for _, component := range diffPkgLayout.Pkg.Components {
+		for _, component := range opts.DifferentialPackage.Components {
 			for _, image := range component.Images {
 				allIncludedImagesMap[image] = true
 			}
@@ -82,17 +75,18 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 
 		pkg.Build.Differential = true
-		pkg.Build.DifferentialPackageVersion = diffPkgLayout.Pkg.Metadata.Version
+		pkg.Build.DifferentialPackageVersion = opts.DifferentialPackage.Metadata.Version
 
-		versionsMatch := diffPkgLayout.Pkg.Metadata.Version == pkg.Metadata.Version
+		versionsMatch := opts.DifferentialPackage.Metadata.Version == pkg.Metadata.Version
 		if versionsMatch {
 			return nil, errors.New(lang.PkgCreateErrDifferentialSameVersion)
 		}
-		noVersionSet := diffPkgLayout.Pkg.Metadata.Version == "" || pkg.Metadata.Version == ""
+		noVersionSet := opts.DifferentialPackage.Metadata.Version == "" || pkg.Metadata.Version == ""
 		if noVersionSet {
 			return nil, errors.New(lang.PkgCreateErrDifferentialNoVersion)
 		}
 		filter := filters.ByDifferentialData(allIncludedImagesMap, allIncludedReposMap)
+		var err error
 		pkg.Components, err = filter.Apply(pkg)
 		if err != nil {
 			return nil, err
@@ -202,6 +196,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 type AssembleSkeletonOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
+	Flavor             string
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -213,8 +208,13 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	for _, component := range pkg.Components {
-		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
+	// To remove the flavor value, as the flavor is configured by the tag uploaded to the registry
+	//   example:
+	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
+	//     is indicating that you are importing the "upstream" flavor of the zarf init package
+	for i := 0; i < len(pkg.Components); i++ {
+		pkg.Components[i].Only.Flavor = ""
+		err := assembleSkeletonComponent(ctx, pkg.Components[i], packagePath, buildPath)
 		if err != nil {
 			return nil, err
 		}
@@ -231,7 +231,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, "", nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {

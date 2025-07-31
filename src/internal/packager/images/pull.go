@@ -154,7 +154,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 			repo.PlainHTTP = cfg.PlainHTTP
 			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
@@ -243,12 +243,14 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		maps.Copy(imagesWithManifests, daemonImagesWithManifests)
 	}
 
-	err = orasSave(ctx, imagesInfo, cfg, dst, client)
-	if err != nil {
-		return nil, fmt.Errorf("failed to save images: %w", err)
+	for _, imageInfo := range imagesInfo {
+		err = orasSave(ctx, imageInfo, cfg, dst, client)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save images: %w", err)
+		}
 	}
 
-	l.Debug("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart))
+	l.Info("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return imagesWithManifests, nil
 }
@@ -413,47 +415,48 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, imagesInfo []imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
-	for _, imageInfo := range imagesInfo {
-		var pullSrc oras.ReadOnlyTarget
-		var err error
-		repo := &orasRemote.Repository{}
-		repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	var pullSrc oras.ReadOnlyTarget
+	var err error
+	repo := &orasRemote.Repository{}
+	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	if err != nil {
+		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
+	}
+	repo.PlainHTTP = cfg.PlainHTTP
+	if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
+		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 		if err != nil {
-			return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
+			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
 		}
-		repo.PlainHTTP = cfg.PlainHTTP
-		if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-			repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-			if err != nil {
-				return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
-			}
-		}
-		repo.Client = client
+	}
+	repo.Client = client
 
-		copyOpts := oras.DefaultCopyOptions
-		copyOpts.Concurrency = cfg.OCIConcurrency
-		copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-		l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
-		localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
-		if err != nil {
-			return fmt.Errorf("failed to create oci formatted directory: %w", err)
-		}
-		pullSrc = orasCache.New(repo, localCache)
-		desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, dst, imageInfo.ref, copyOpts)
-		if err != nil {
-			return fmt.Errorf("failed to copy: %w", err)
-		}
-		if desc.Annotations == nil {
-			desc.Annotations = make(map[string]string)
-		}
-		desc.Annotations[ocispec.AnnotationRefName] = imageInfo.ref
-		desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.ref
-		err = dst.Tag(ctx, desc, imageInfo.ref)
-		if err != nil {
-			return fmt.Errorf("failed to tag image: %w", err)
-		}
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = cfg.OCIConcurrency
+	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
+	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create oci formatted directory: %w", err)
+	}
+	pullSrc = orasCache.New(repo, localCache)
+	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+	trackedDst.StartReporting(ctx)
+	defer trackedDst.StopReporting()
+	desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+	if err != nil {
+		return fmt.Errorf("failed to copy: %w", err)
+	}
+	if desc.Annotations == nil {
+		desc.Annotations = make(map[string]string)
+	}
+	desc.Annotations[ocispec.AnnotationRefName] = imageInfo.ref
+	desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.ref
+	err = dst.Tag(ctx, desc, imageInfo.ref)
+	if err != nil {
+		return fmt.Errorf("failed to tag image: %w", err)
 	}
 	return nil
 }

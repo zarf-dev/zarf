@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -30,8 +31,12 @@ const defaultRetries = 3
 
 // Push pushes images to a registry.
 func Push(ctx context.Context, cfg PushConfig) error {
+	start := time.Now()
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
+	}
+	if cfg.RegistryInfo.Address == "" {
+		return fmt.Errorf("registry address must be specified")
 	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
@@ -98,7 +103,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
 			if err != nil {
 				return err
 			}
@@ -188,6 +193,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
+	l.Info("done pushing images", "count", len(cfg.ImageList), "duration", time.Since(start).Round(time.Millisecond*100))
 	return nil
 }
 
@@ -215,16 +221,16 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
 	// Assume no platform to start as it can be nil in non container image situations
-	resolveOpts := oras.DefaultResolveOptions
-	desc, err := oras.Resolve(ctx, src, srcName, resolveOpts)
+	fetchOpts := oras.DefaultFetchBytesOptions
+	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
 	// If an index is pulled we should try pulling with the default platform
 	if isIndex(desc.MediaType) {
-		resolveOpts.TargetPlatform = defaultPlatform
-		desc, err = oras.Resolve(ctx, src, srcName, resolveOpts)
+		fetchOpts.TargetPlatform = defaultPlatform
+		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
 			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
 		}
@@ -234,10 +240,20 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
 	}
 
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(b, &manifest); err != nil {
+		return err
+	}
+	size := getSizeOfImage(desc, manifest)
+
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
 	copyOpts.WithTargetPlatform(desc.Platform)
-	_, err = oras.Copy(ctx, src, srcName, remote, dstName, copyOpts)
+
+	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
+	trackedRemote.StartReporting(ctx)
+	defer trackedRemote.StopReporting()
+	_, err = oras.Copy(ctx, src, srcName, trackedRemote, dstName, copyOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push image %s: %w", srcName, err)
 	}
