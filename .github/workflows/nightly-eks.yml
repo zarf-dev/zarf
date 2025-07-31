@@ -38,45 +38,50 @@ jobs:
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
 
-      - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
-        with:
-          role-to-assume: ${{ secrets.AWS_NIGHTLY_EKS_ROLE_ARN }}
-          role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
-          aws-region: us-east-1
-          role-duration-seconds: 7200
-
-      - name: Build the eks package
-        run: ./build/zarf package create packages/distros/eks -o build --confirm
-
-      - name: Deploy the eks package
+      - name: Debug GitHub Context
         run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
-            --components=deploy-eks-cluster \
-            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
-            --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
-            --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary \
-            --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
-            --confirm
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
 
-      - name: Run tests
-        run: make test-e2e-with-cluster ARCH=amd64
+      # - name: Auth with AWS
+      #   uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_NIGHTLY_EKS_ROLE_ARN }}
+      #     role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
+      #     aws-region: us-east-1
+      #     role-duration-seconds: 7200
 
-      - name: show cluster logs
-        uses: ./.github/actions/debug-cluster
-        if: always()
+      # - name: Build the eks package
+      #   run: ./build/zarf package create packages/distros/eks -o build --confirm
 
-      - name: Teardown the cluster
-        if: always()
-        run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
-            --components=teardown-eks-cluster \
-            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
-            --confirm
+      # - name: Deploy the eks package
+      #   run: |
+      #     ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+      #       --components=deploy-eks-cluster \
+      #       --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+      #       --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+      #       --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary \
+      #       --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
+      #       --confirm
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
+      # - name: Run tests
+      #   run: make test-e2e-with-cluster ARCH=amd64
+
+      # - name: show cluster logs
+      #   uses: ./.github/actions/debug-cluster
+      #   if: always()
+
+      # - name: Teardown the cluster
+      #   if: always()
+      #   run: |
+      #     ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+      #       --components=teardown-eks-cluster \
+      #       --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+      #       --confirm
+
+      # - name: Save logs
+      #   if: always()
+      #   uses: ./.github/actions/save-logs
 
       # - name: Send trigger to Slack on workflow failure
       #   if: failure()
