@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
+// FIXME add test for IP family here
 func TestInit(t *testing.T) {
 	s, err := state.Default()
 	require.NoError(t, err)

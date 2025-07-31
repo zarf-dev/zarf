@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,4 +293,161 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "pod-2-container", image)
 	require.Equal(t, "good", node)
+}
+
+func TestGetInjectorDaemonsetImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		nodes         []corev1.Node
+		expectedImage string
+		expectedError string
+		ctx           context.Context
+	}{
+		{
+			name: "selects image present on every node",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.7"},
+								SizeBytes: 300000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.6"},
+								SizeBytes: 300000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "nginx:latest",
+		},
+		{
+			name: "selects smallest pause image when no universal image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"docker.io/my-app/pause-and-go:3.6"},
+								SizeBytes: 400000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.5"},
+								SizeBytes: 200000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.7"},
+								SizeBytes: 500000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.5",
+		},
+		{
+			name: "falls back to smallest image when no pause images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"redis:latest"},
+								SizeBytes: 120000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "returns error when nodes have no images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{},
+					},
+				},
+			},
+			expectedError: "no suitable image found on any node",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			// Ensure this times out quickly
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			t.Cleanup(cancel)
+			cs := fake.NewClientset()
+			c := &Cluster{
+				Clientset: cs,
+			}
+			for _, node := range tt.nodes {
+				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			// Call the function
+			image, err := c.GetInjectorDaemonsetImage(ctx)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedImage, image)
+		})
+	}
 }
