@@ -1,0 +1,52 @@
+kind: ZarfPackageConfig
+metadata:
+  name: injector-controller
+  description: Zarf Injector Controller - Monitors registry proxy pods and creates injector pods when needed
+  version: 0.1.0
+
+variables:
+  - name: CONTROLLER_IMAGE_REPOSITORY
+    description: Repository for the injector controller image
+    default: "ghcr.io/austinabro321/zarf/controller"
+
+  - name: CONTROLLER_IMAGE_TAG
+    description: Tag for the injector controller image
+    default: "0.0.1"
+
+  - name: CONTROLLER_REPLICAS
+    description: Number of controller replicas to deploy
+    default: "1"
+
+  - name: CONTROLLER_CPU_REQUEST
+    description: CPU request for the controller
+    default: "100m"
+
+  - name: CONTROLLER_MEMORY_REQUEST
+    description: Memory request for the controller
+    default: "64Mi"
+
+  - name: CONTROLLER_CPU_LIMIT
+    description: CPU limit for the controller
+    default: "500m"
+
+  - name: CONTROLLER_MEMORY_LIMIT
+    description: Memory limit for the controller
+    default: "256Mi"
+
+components:
+  - name: injector-controller
+    description: |
+      Deploys the Zarf Injector Controller that monitors registry proxy pods for ErrImagePull status
+      and creates injector pods to bootstrap the registry when needed. The controller establishes
+      owner-child relationships between itself and the injector pods it creates.
+    required: true
+    charts:
+      - name: injector-controller
+        releaseName: zarf-injector-controller
+        localPath: chart
+        version: 0.1.0
+        namespace: zarf
+        valuesFiles:
+          - values.yaml
+    images:
+      - "ghcr.io/austinabro321/zarf/controller:0.0.1"

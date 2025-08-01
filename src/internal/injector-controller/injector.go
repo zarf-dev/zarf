@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	metav1ac "k8s.io/client-go/applyconfigurations/meta/v1"
 	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
@@ -23,6 +24,8 @@ import (
 type InjectionExecutor interface {
 	// RunInjection executes the injection process
 	Run(ctx context.Context, pod *corev1.Pod) error
+	// RunWithOwner executes the injection process with an owner reference
+	RunWithOwner(ctx context.Context, pod *corev1.Pod, owner *corev1.Pod) error
 }
 
 // clusterInjectionExecutor implements InjectionExecutor using cluster operations
@@ -39,6 +42,11 @@ func NewClusterInjectionExecutor(cluster *cluster.Cluster) InjectionExecutor {
 
 // RunInjection executes the injection process
 func (e *clusterInjectionExecutor) Run(ctx context.Context, proxyPod *corev1.Pod) error {
+	return e.RunWithOwner(ctx, proxyPod, nil)
+}
+
+// RunWithOwner executes the injection process with an owner reference
+func (e *clusterInjectionExecutor) RunWithOwner(ctx context.Context, proxyPod *corev1.Pod, owner *corev1.Pod) error {
 	// FIXME: Get this info from state dynamically
 	ipFamily := state.IPFamilyIPv4
 	payloadCmNames := []string{}
@@ -106,6 +114,16 @@ func (e *clusterInjectionExecutor) Run(ctx context.Context, proxyPod *corev1.Pod
 			cluster.AgentLabel:  "ignore",
 		}).
 		WithSpec(podSpec)
+
+	// Add owner reference if owner pod is provided
+	if owner != nil {
+		ownerRef := metav1ac.OwnerReference().
+			WithAPIVersion("v1").
+			WithKind("Pod").
+			WithName(owner.Name).
+			WithUID(owner.UID)
+		podAc = podAc.WithOwnerReferences(ownerRef)
+	}
 	_, err = e.cluster.Clientset.CoreV1().Pods(*podAc.Namespace).Apply(ctx, podAc, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)

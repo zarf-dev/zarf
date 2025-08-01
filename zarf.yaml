@@ -33,6 +33,11 @@ components:
     import:
       path: packages/zarf-agent
 
+  - name: injector-controller
+    required: true
+    import:
+      path: packages/injector-controller
+
   # (Optional) Adds a git server to the cluster
   # - name: git-server
   #   import:

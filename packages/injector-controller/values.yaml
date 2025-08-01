@@ -1,0 +1,58 @@
+replicaCount: ###ZARF_VAR_CONTROLLER_REPLICAS###
+
+image:
+  repository: "###ZARF_VAR_CONTROLLER_IMAGE_REPOSITORY###"
+  tag: "###ZARF_VAR_CONTROLLER_IMAGE_TAG###"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsUser: 65532
+  fsGroup: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: "RuntimeDefault"
+
+securityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  capabilities:
+    drop: ["ALL"]
+
+resources:
+  requests:
+    memory: "###ZARF_VAR_CONTROLLER_MEMORY_REQUEST###"
+    cpu: "###ZARF_VAR_CONTROLLER_CPU_REQUEST###"
+  limits:
+    memory: "###ZARF_VAR_CONTROLLER_MEMORY_LIMIT###"
+    cpu: "###ZARF_VAR_CONTROLLER_CPU_LIMIT###"
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# RBAC configuration
+rbac:
+  create: true
+  clusterRole:
+    name: ""
+  clusterRoleBinding:
+    name: ""

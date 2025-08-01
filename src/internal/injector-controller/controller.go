@@ -7,6 +7,7 @@ package injectorcontroller
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -31,15 +32,23 @@ const (
 type Controller struct {
 	cluster  *cluster.Cluster
 	injector InjectionExecutor
+	ownerPod *corev1.Pod
 }
 
 // New creates a new Controller instance
 func New(c *cluster.Cluster) *Controller {
 	injector := NewClusterInjectionExecutor(c)
-	return &Controller{
+	controller := &Controller{
 		cluster:  c,
 		injector: injector,
 	}
+
+	// Try to discover our own pod for owner references
+	if ownerPod := controller.discoverOwnerPod(); ownerPod != nil {
+		controller.ownerPod = ownerPod
+	}
+
+	return controller
 }
 
 // NewWithInjector creates a new Controller instance with a custom injector (useful for testing)
@@ -118,11 +127,35 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod) error 
 				"reason", containerStatus.State.Waiting.Reason,
 				"message", containerStatus.State.Waiting.Message,
 			)
-			err := c.injector.Run(ctx, pod)
+			var err error
+			if c.ownerPod != nil {
+				err = c.injector.RunWithOwner(ctx, pod, c.ownerPod)
+			} else {
+				err = c.injector.Run(ctx, pod)
+			}
 			if err != nil {
 				return fmt.Errorf("injector process failed: %w", err)
 			}
 		}
 	}
 	return nil
+}
+
+// discoverOwnerPod attempts to find the current pod that this controller is running in
+func (c *Controller) discoverOwnerPod() *corev1.Pod {
+	// Try to get pod information from environment variables (Kubernetes downward API)
+	podName := os.Getenv("POD_NAME")
+	podNamespace := os.Getenv("POD_NAMESPACE")
+
+	if podName == "" || podNamespace == "" {
+		return nil
+	}
+
+	ctx := context.Background()
+	pod, err := c.cluster.Clientset.CoreV1().Pods(podNamespace).Get(ctx, podName, metav1.GetOptions{})
+	if err != nil {
+		return nil
+	}
+
+	return pod
 }
