@@ -292,25 +292,9 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		if d.s.RegistryProxy {
-			var err error
-			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
-			if err != nil {
-				return nil, err
-			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
-			if err != nil {
-				return nil, err
-			}
-			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
-			d.s.InjectorInfo.PayLoadShaSum = shasum
-			// FIXME: hardcode or make a better number
-			config.ZarfSeedPort = 5000
-		} else {
-			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
-			if err != nil {
-				return nil, err
-			}
+		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, d.s.RegistryProxy, d.s.IPFamily)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -322,8 +306,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
-	if isSeedRegistry && !d.s.RegistryProxy {
-		if err := d.c.StopInjection(ctx); err != nil {
+	if isSeedRegistry {
+		if err := d.c.StopInjection(ctx, d.s.RegistryProxy); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
+	injectorcontroller "github.com/zarf-dev/zarf/src/internal/injector-controller"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -34,6 +35,7 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	cmd.AddCommand(newInternalAgentCommand())
 	cmd.AddCommand(newInternalHTTPProxyCommand())
 	cmd.AddCommand(newInternalGenCliDocsCommand(rootCmd))
+	cmd.AddCommand(newInternalRunControllerCommand())
 	cmd.AddCommand(newInternalCreateReadOnlyGiteaUserCommand())
 	cmd.AddCommand(newInternalCreateArtifactRegistryTokenCommand())
 	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
@@ -418,4 +420,31 @@ func (o *internalCrc32Options) run(_ *cobra.Command, args []string) {
 	text := args[0]
 	hash := helpers.GetCRCHash(text)
 	fmt.Printf("%d\n", hash)
+}
+
+type internalRunControllerOptions struct{}
+
+func newInternalRunControllerCommand() *cobra.Command {
+	o := &internalRunControllerOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "run-controller",
+		Short: lang.CmdInternalRunControllerShort,
+		Long:  lang.CmdInternalRunControllerLong,
+		RunE:  o.run,
+	}
+
+	return cmd
+}
+
+func (o *internalRunControllerOptions) run(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+
+	c, err := cluster.New(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to create cluster client: %w", err)
+	}
+
+	controller := injectorcontroller.New(c)
+	return controller.Start(ctx)
 }

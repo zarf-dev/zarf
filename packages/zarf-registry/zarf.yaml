@@ -158,6 +158,10 @@ components:
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
       - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
+  # - name: zarf-injector-controller
+  #   images:
+  #     - ""
+
   - name: zarf-registry
     description: |
       Updates the Zarf Registry to use the self-hosted registry image.
