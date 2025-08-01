@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package feature provides feature flags.
 package feature
 
 import (
@@ -15,7 +19,10 @@ var userFeatures = atomic.Value{}    // map[Name]Feature
 // Mode describes the two different ways that Features can be set. These are used as keys for All()'s return map.
 type Mode string
 
+// Default identifies features from Zarf's system defaults.
 var Default Mode = "default"
+
+// User identifies user-specified features.
 var User Mode = "user"
 
 // Name describes the canonical identifier for the feature. It must be globally unique across all features for the full
@@ -59,6 +66,7 @@ var (
 	Deprecated Stage = "deprecated"
 )
 
+// Feature models a Default or User-configured feature flag and its metadata.
 type Feature struct {
 	// Name stores the name of the feature flag.
 	Name `json:"name,omitempty"`
@@ -87,7 +95,7 @@ func IsEnabled(name Name) bool {
 func Set(features []Feature) error {
 	// Ensure user features haven't been set
 	m := AllUser()
-	if m != nil && len(m) > 0 {
+	if len(m) > 0 {
 		return fmt.Errorf("user features have already been set")
 	}
 	userFeatures.Store(featuresToMap(features))
@@ -100,7 +108,7 @@ func Set(features []Feature) error {
 func SetDefault(features []Feature) error {
 	// Ensure default features haven't been set
 	m := AllDefault()
-	if m != nil && len(m) > 0 {
+	if len(m) > 0 {
 		return fmt.Errorf("default features have already been set")
 	}
 	defaultFeatures.Store(featuresToMap(features))
@@ -154,22 +162,24 @@ func All() map[Mode]map[Name]Feature {
 
 // AllDefault returns all features with from the Default set for this version of Zarf.
 func AllDefault() map[Name]Feature {
-	fs := defaultFeatures.Load()
-	// Default set is empty
-	if fs == nil {
+	d := defaultFeatures.Load()
+	m, ok := d.(map[Name]Feature)
+	// Default set is nil, so it's empty
+	if !ok {
 		return map[Name]Feature{}
 	}
-	return fs.(map[Name]Feature)
+	return m
 }
 
 // AllUser returns all features that have been enabled by users.
 func AllUser() map[Name]Feature {
-	fs := userFeatures.Load()
-	// User set is empty
-	if fs == nil {
+	u := userFeatures.Load()
+	m, ok := u.(map[Name]Feature)
+	// User set is nil, so it's empty
+	if !ok {
 		return map[Name]Feature{}
 	}
-	return fs.(map[Name]Feature)
+	return m
 }
 
 func featuresToMap(fs []Feature) map[Name]Feature {
