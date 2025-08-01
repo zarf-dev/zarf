@@ -106,10 +106,10 @@ From here you can copy the `images` key and array of images into the `wordpress`
 
 ```yaml
 components:
-  - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
-    description: |   # (optional) a human-readable description of the component you are defining
+  - name: wordpress
+    description: |
       Deploys the Bitnami-packaged WordPress chart into the cluster
-    required: true   # (optional) sets the component as 'required' so that it is always deployed
+    required: true
     charts:
       - name: wordpress
         url: oci://registry-1.docker.io/bitnamicharts/wordpress
