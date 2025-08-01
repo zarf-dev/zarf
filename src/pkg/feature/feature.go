@@ -35,18 +35,18 @@ var (
 
 type Feature struct {
 	// Name stores the name of the feature flag.
-	Name
+	Name `json:"name,omitempty"`
 	// Description describes how the flag is used.
-	Description
+	Description `json:"description,omitempty"`
 	// Enabled describes whether a feature is explicitly enabled or disabled. A feature that does not exist in any set
 	// is considered disabled.
-	Enabled
+	Enabled `json:"enabled,omitempty"`
 	// Since is the version a feature is first introduced in alpha stage.
-	Since
+	Since `json:"since,omitempty"`
 	// Until is the version when a deprecated feature is fully removed. Historical versions included.
-	Until
+	Until `json:"until,omitempty"`
 	// Stage describes what level of done-ness a feature is. TODO describe this better
-	Stage
+	Stage `json:"stage,omitempty"`
 }
 
 // IsEnabled allows users to optimistically check for a feature. Useful for control flow. Any user-enabled or disabled
