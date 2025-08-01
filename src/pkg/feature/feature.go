@@ -115,8 +115,7 @@ func Get(name Name) (Feature, error) {
 
 // GetDefault takes a flag Name and returns the Feature struct from the default set.
 func GetDefault(name Name) (Feature, error) {
-	m := defaultFeatures.Load().(map[Name]Feature)
-	f, ok := m[name]
+	f, ok := AllDefault()[name]
 	if !ok {
 		return f, fmt.Errorf("feature not found: %s", name)
 	}
@@ -125,8 +124,7 @@ func GetDefault(name Name) (Feature, error) {
 
 // GetUser takes a flag Name and returns the Feature struct from the user set.
 func GetUser(name Name) (Feature, error) {
-	m := userFeatures.Load().(map[Name]Feature)
-	f, ok := m[name]
+	f, ok := AllUser()[name]
 	if !ok {
 		return f, fmt.Errorf("feature not found: %s", name)
 	}
