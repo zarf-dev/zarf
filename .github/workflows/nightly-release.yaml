@@ -2,14 +2,11 @@ name: Nightly CLI and Packages Build
 
 on:
   schedule:
-    - cron: "0 7 * * *" ## Every day at 0700 UTC
-  workflow_dispatch:      # Allows manual trigger
+    - cron: "0 7 * * *" # Every day at 0700 UTC
+  workflow_dispatch:
 
 permissions:
   contents: read
-
-env:
-  NIGHTLY_TAG: nightly
 
 jobs:
   build-release:
@@ -17,15 +14,21 @@ jobs:
     permissions:
       id-token: write
       packages: write
+    outputs:
+      cli_version: ${{ steps.set-version.outputs.cli_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set CLI_VERSION env var with short SHA
+      - name: Set CLI_VERSION and NIGHTLY_TAG
+        id: set-version
         run: |
-          echo "CLI_VERSION=$(git rev-parse --short HEAD)-nightly" >> $GITHUB_ENV
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "cli_version=${SHORT_SHA}-nightly" >> $GITHUB_OUTPUT
+          echo "CLI_VERSION=${SHORT_SHA}-nightly" >> $GITHUB_ENV
+          echo "NIGHTLY_TAG=nightly" >> $GITHUB_ENV
 
       - name: Setup golang
         uses: actions/setup-go@v5
@@ -37,8 +40,8 @@ jobs:
 
       - name: Build CLI
         run: |
-          CLI_VERSION=${{ env.CLI_VERSION }} make build-cli-linux-amd
-          CLI_VERSION=${{ env.CLI_VERSION }} make build-cli-linux-arm
+          CLI_VERSION=$CLI_VERSION make build-cli-linux-amd
+          CLI_VERSION=$CLI_VERSION make build-cli-linux-arm
 
       - name: Zarf Agent: Login to GHCR
         uses: docker/login-action@v3
@@ -51,10 +54,10 @@ jobs:
         run: |
           cp build/zarf build/zarf-linux-amd64
           cp build/zarf-arm build/zarf-linux-arm64
-          docker buildx build --push --platform linux/arm64/v8,linux/amd64 --tag ghcr.io/zarf-dev/zarf/agent:${{ env.CLI_VERSION }} .
-          rm build/zarf-linux-amd64
-          rm build/zarf-linux-arm64
-          echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:${{ env.CLI_VERSION }} --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
+          docker buildx build --push --platform linux/arm64/v8,linux/amd64 \
+            --tag ghcr.io/zarf-dev/zarf/agent:$NIGHTLY_TAG .
+          rm build/zarf-linux-amd64 build/zarf-linux-arm64
+          echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$NIGHTLY_TAG --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
 
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -68,20 +71,20 @@ jobs:
         run: |
           cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} \
             -a release-engineer=https://github.com/${{ github.actor }} \
-            -a version=${{ env.CLI_VERSION }} \
+            -a version=$NIGHTLY_TAG \
             ghcr.io/zarf-dev/zarf/agent@$ZARF_AGENT_IMAGE_DIGEST -y
         env:
           COSIGN_EXPERIMENTAL: 1
 
       - name: Build Init Packages
         run: |
-          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=${{ env.CLI_VERSION }}
-          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=${{ env.CLI_VERSION }}
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$NIGHTLY_TAG
+          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$NIGHTLY_TAG
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
-          CLI_VERSION=${{ env.CLI_VERSION }} make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
-          CLI_VERSION=${{ env.CLI_VERSION }} make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=$CLI_VERSION make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
+          CLI_VERSION=$CLI_VERSION make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -93,15 +96,14 @@ jobs:
   validate-release:
     runs-on: large-ubuntu-zarf-release
     needs: build-release
+    env:
+      CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
+      NIGHTLY_TAG: nightly
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set CLI_VERSION env var with short SHA
-        run: |
-          echo "CLI_VERSION=$(git rev-parse --short HEAD)-nightly" >> $GITHUB_ENV
 
       - name: Download Build Artifacts
         uses: actions/download-artifact@v4
@@ -119,7 +121,7 @@ jobs:
 
       - name: Build Examples and Run Tests
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=${{ env.CLI_VERSION }} make test-e2e ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$CLI_VERSION make test-e2e ARCH=amd64
 
       - name: Save Logs
         if: always()
@@ -127,8 +129,11 @@ jobs:
 
   create-release:
     runs-on: large-ubuntu-zarf-release
-    needs: validate-release
+    needs: build-release
     environment: release
+    env:
+      CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
+      NIGHTLY_TAG: nightly
     permissions:
       contents: write
     steps:
@@ -170,13 +175,13 @@ jobs:
       - name: Run GoReleaser (Nightly)
         uses: goreleaser/goreleaser-action@v6
         with:
-          distribution: goreleaser
+          distribution: goreleaser-pro
           version: "~> v2"
           args: release --clean --verbose --nightly
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
-          GORELEASER_CURRENT_TAG: nightly
+          GORELEASER_CURRENT_TAG: ${{ env.CLI_VERSION }}
 
       - name: Report Disk Space on Failure
         if: failure()
