@@ -15,21 +15,47 @@ var userFeatures = atomic.Value{}    // map[Name]Feature
 // Mode describes the two different ways that Features can be set. These are used as keys for All()'s return map.
 type Mode string
 
-var DefaultMode Mode = "default"
-var UserMode Mode = "user"
+var Default Mode = "default"
+var User Mode = "user"
 
+// Name describes the canonical identifier for the feature. It must be globally unique across all features for the full
+// lifespan of the Zarf project. Once created, names are considered immutable and may not be removed or redacted. Should
+// a feature evolve enough to require renaming, then a new feature can be created and the original marked as Deprecated.
+// The Deprecated feature's Description should provide context (like the ZEP or ADR) and point users to the new feature.
 type Name string
+
+// Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,
+// and any commentary or context appropriate for its stage. Descirptions are mutable, and are intended to be updated
+// throughout the feature's development lifecycle.
 type Description string
+
+// Enabled describes the state of the feature. In cases where the Default feature state and User feature states do not
+// match, User feature state takes precedence.
 type Enabled bool
+
+// Since marks the Zarf version that a feature is first released in Alpha. By convention Since is semver starting with
+// "v": "v1.0.0".
 type Since string
+
+// Until marks the intended Zarf version that a Deprecated feature will or has been fully removed. If Deprecation must
+// be delayed, then this version be updated. By convention Until is semver starting with "v": "v1.0.0".
 type Until string
 
+// Stage describes the lifecycle of a feature, as well as its production-readiness.
 type Stage string
 
 var (
-	Alpha      Stage = "alpha"
-	Beta       Stage = "beta"
-	GA         Stage = "ga"
+	// Alpha features are experimental and are highly subject to change.
+	Alpha Stage = "alpha"
+	// Beta features have solidified into a release candidate and are ready for user feedback and trialed with realistic
+	// workflows. Beta features can still change before release but should be considered nearly complete.
+	Beta Stage = "beta"
+	// GA features have been fully released and are available for production usage.
+	GA Stage = "ga"
+	// Deprecated features wrap functionality that is intended to be removed in a future version. They will start as
+	// enabled by default with a warning, and eventually be disabled by default with the Until field documenting when
+	// the feature is expected to be fully removed. Disabled Deprecated feature structs should be kept in Defaults to
+	// aid in documentation.
 	Deprecated Stage = "deprecated"
 )
 
@@ -45,7 +71,6 @@ type Feature struct {
 	Since `json:"since,omitempty"`
 	// Until is the version when a deprecated feature is fully removed. Historical versions included.
 	Until `json:"until,omitempty"`
-	// Stage describes what level of done-ness a feature is. TODO describe this better
 	Stage `json:"stage,omitempty"`
 }
 
