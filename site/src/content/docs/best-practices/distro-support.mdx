@@ -9,3 +9,19 @@ Zarf supports:
 - Minikube - Works
 - K3s - Works, builtin support
 - Talos - works only in `--registry-proxy` mode and requires `kubectl label namespace zarf pod-security.kubernetes.io/enforce=privileged --overwrite` to get over the default security for `hostport` or `hostNetwork` on IPV6. Apply the configmap in the talos folder with `kustomize build | kubectl apply -f -` and apply the patch with `talosctl patch mc --nodes <node-ip> --patch @talos-patch.yaml`
+
+
+From document on registry proxy
+Practical risks:
+- Some distros may disallow this
+  - Kind - works
+  - K3D - works
+  - microk8s - works
+  - talos - works, but needs to make the Zarf namespace privileged
+  - k0s - almost certainly works, but I need to get PVCs working on it to test 100%
+  - k3s - works
+  - RKE2 - works
+  - OpenShift - HostNetwork works, but hostPort does not. Requires `oc adm policy add-scc-to-user privileged -z default -n zarf` to allow hostNetwork to work.
+- Some CNIs may disallow host network or host port
+  - flannel - works
+  - calico - works
