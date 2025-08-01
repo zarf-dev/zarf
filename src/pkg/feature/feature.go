@@ -52,20 +52,8 @@ type Feature struct {
 // IsEnabled allows users to optimistically check for a feature. Useful for control flow. Any user-enabled or disabled
 // features take precedence over the default setting.
 func IsEnabled(name Name) bool {
-	// Check user features first
-	fUser, err := GetUser(name)
-	if err == nil {
-		return bool(fUser.Enabled)
-	}
-
-	// Fallback to default features
-	fDefault, err := GetDefault(name)
-	if err == nil {
-		return bool(fDefault.Enabled)
-	}
-
-	// Feature does not exist
-	return false
+	_, err := Get(name)
+	return err == nil
 }
 
 // Set takes a slice of one or many flags, inserting the features onto user-configured features. If a feature name is
