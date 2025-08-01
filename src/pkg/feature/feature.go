@@ -147,19 +147,29 @@ func GetUser(name Name) (Feature, error) {
 // All returns all flags from both Default and User.
 func All() map[Mode]map[Name]Feature {
 	m := make(map[Mode]map[Name]Feature)
-	m[DefaultMode] = defaultFeatures.Load().(map[Name]Feature)
-	m[UserMode] = userFeatures.Load().(map[Name]Feature)
+	m[Default] = AllDefault()
+	m[User] = AllUser()
 	return m
 }
 
 // AllDefault returns all features with from the Default set for this version of Zarf.
 func AllDefault() map[Name]Feature {
-	return defaultFeatures.Load().(map[Name]Feature)
+	fs := defaultFeatures.Load()
+	// Default set is empty
+	if fs == nil {
+		return map[Name]Feature{}
+	}
+	return fs.(map[Name]Feature)
 }
 
 // AllUser returns all features that have been enabled by users.
 func AllUser() map[Name]Feature {
-	return userFeatures.Load().(map[Name]Feature)
+	fs := userFeatures.Load()
+	// User set is empty
+	if fs == nil {
+		return map[Name]Feature{}
+	}
+	return fs.(map[Name]Feature)
 }
 
 func featuresToMap(fs []Feature) map[Name]Feature {
