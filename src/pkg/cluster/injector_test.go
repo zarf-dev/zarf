@@ -72,6 +72,9 @@ func TestInjector(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("10"),
 				corev1.ResourceMemory: resource.MustParse("100Gi"),
 			},
+			NodeInfo: corev1.NodeSystemInfo{
+				Architecture: "amd64",
+			},
 		},
 	}
 	_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
@@ -107,7 +110,7 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999)
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), "amd64", nil, 31999)
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -193,6 +196,9 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 					corev1.ResourceCPU:    resource.MustParse("400m"),
 					corev1.ResourceMemory: resource.MustParse("50Mi"),
 				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "amd64",
+				},
 			},
 		},
 		{
@@ -211,6 +217,37 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("10Gi"),
 				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "amd64",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "wrong-architecture",
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "arm64",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "architecture-not-present",
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "",
+				},
 			},
 		},
 		{
@@ -221,6 +258,9 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				Allocatable: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "amd64",
 				},
 			},
 		},
@@ -239,6 +279,9 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				Allocatable: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "amd64",
 				},
 			},
 		},
@@ -287,8 +330,8 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+	image, node, err := c.getInjectorImageAndNode(ctx, "amd64", resReq)
 	require.NoError(t, err)
-	require.Equal(t, "pod-2-container", image)
+	require.Equal(t, "pod-4-container", image)
 	require.Equal(t, "good", node)
 }
