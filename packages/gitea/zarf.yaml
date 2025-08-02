@@ -59,7 +59,7 @@ components:
       - name: gitea
         releaseName: zarf-gitea
         url: oci://registry-1.docker.io/giteacharts/gitea
-        version: 12.0.0
+        version: 12.1.2
         namespace: zarf
         valuesFiles:
           - gitea-values.yaml
