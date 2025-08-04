@@ -243,7 +243,7 @@ func TestSetDefault(t *testing.T) {
 			defer initFeatureState(t)
 
 			// Write
-			err := SetDefault(tc.defaults)
+			err := setDefault(tc.defaults)
 			require.NoError(t, err)
 
 			// Read
@@ -272,9 +272,9 @@ func TestSetDefault_Errors(t *testing.T) {
 			defer initFeatureState(t)
 
 			// Write once
-			require.NoError(t, SetDefault(tc.user))
+			require.NoError(t, setDefault(tc.user))
 			// Write again
-			require.Error(t, SetDefault(tc.user))
+			require.Error(t, setDefault(tc.user))
 		})
 	}
 }

@@ -106,10 +106,10 @@ func Set(features []Feature) error {
 	return nil
 }
 
-// SetDefault takes a slice of one or many flags, inserting the features onto the default feature set. If
+// setDefault takes a slice of one or many flags, inserting the features onto the default feature set. If
 // a feature name is provided that is already a part of the set, then SetDefault will return an error. This function
 // can only be called once.
-func SetDefault(features []Feature) error {
+func setDefault(features []Feature) error {
 	// Ensure default features haven't been set
 	m := AllDefault()
 	if len(m) > 0 {
@@ -217,7 +217,7 @@ func init() {
 		// },
 	}
 
-	err := SetDefault(features)
+	err := setDefault(features)
 	if err != nil {
 		panic(err)
 	}
