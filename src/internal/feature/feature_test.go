@@ -45,79 +45,79 @@ func TestIsEnabled(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "user enabled, default empty",
+			name:  "user enabled, default empty",
+			fName: "foo",
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName:  "foo",
 			expect: true,
 		},
 		{
-			name: " enabled, user empty",
+			name:  "default enabled, user empty",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName:  "foo",
 			expect: true,
 		},
 		{
-			name: " disabled, user empty",
+			name:  "default disabled, user empty",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName:  "foo",
 			expect: false,
 		},
 		{
-			name: "user disabled, default empty",
+			name:  "user disabled, default empty",
+			fName: "foo",
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName:  "foo",
 			expect: false,
 		},
 		{
-			name: " enabled, user enabled",
+			name:  "default enabled, user enabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName:  "foo",
 			expect: true,
 		},
 		{
-			name: " disabled, user disabled",
+			name:  "default disabled, user disabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName:  "foo",
 			expect: false,
 		},
 		{
-			name: " disabled, user enabled",
+			name:  "default disabled, user enabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName:  "foo",
 			expect: true,
 		},
 		{
-			name: " enabled, user disabled",
+			name:  " enabled, user disabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName:  "foo",
 			expect: false,
 		},
 	}
