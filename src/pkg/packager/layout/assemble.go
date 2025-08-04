@@ -435,14 +435,11 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 }
 
 func copyFile(packagePath, file, dst string) error {
-	if filepath.IsAbs(file) {
-		if err := helpers.CreatePathAndCopy(file, dst); err != nil {
-			return fmt.Errorf("unable to copy file %s: %w", file, err)
-		}
-	} else {
-		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file), dst); err != nil {
-			return fmt.Errorf("unable to copy file %s: %w", file, err)
-		}
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(packagePath, file)
+	}
+	if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+		return fmt.Errorf("unable to copy file %s: %w", file, err)
 	}
 	return nil
 }
