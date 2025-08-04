@@ -483,7 +483,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
 func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
-	if chart.LocalPath != "" {
+	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
 		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 	}
 	oldValuesFiles := chart.ValuesFiles

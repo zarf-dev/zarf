@@ -103,6 +103,8 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		t.Parallel()
 		tmpdir := t.TempDir()
 		absoluteFilePath := createFileToImport(t, tmpdir)
+		absoluteChartPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "chart"))
+		require.NoError(t, err)
 		pkg := v1alpha1.ZarfPackage{
 			Kind: v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
@@ -130,13 +132,21 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 							Source: absoluteFilePath,
 						},
 					},
+					Charts: []v1alpha1.ZarfChart{
+						{
+							Name:      "test-chart",
+							Namespace: "test",
+							Version:   "1.0.0",
+							LocalPath: absoluteChartPath,
+						},
+					},
 				},
 			},
 		}
 		// Create the zarf.yaml file in the tmpdir
 		writePackageToDisk(t, pkg, tmpdir)
 
-		pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+		pkg, err = load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 		require.NoError(t, err)
 
 		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{})
