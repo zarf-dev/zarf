@@ -54,15 +54,15 @@ type Stage string
 var (
 	// Alpha features are experimental and are highly subject to change.
 	Alpha Stage = "alpha"
-	// Beta features have solidified into a release candidate and are ready for user feedback and trialed with realistic
-	// workflows. Beta features can still change before release but should be considered nearly complete.
+	// Beta features have solidified into a release candidate and are ready for both user feedback and realistic
+	// workloads. Beta features are open to change before release but should be considered nearly complete.
 	Beta Stage = "beta"
 	// GA features have been fully released and are available for production usage.
 	GA Stage = "ga"
 	// Deprecated features wrap functionality that is intended to be removed in a future version. They will start as
 	// enabled by default with a warning, and eventually be disabled by default with the Until field documenting when
-	// the feature is expected to be fully removed. Disabled Deprecated feature structs should be kept in Defaults to
-	// aid in documentation.
+	// the feature is expected to be fully removed. Even after the feature is, Deprecated feature structs should be
+	// kept for documentation purposes.
 	Deprecated Stage = "deprecated"
 )
 
@@ -95,7 +95,6 @@ func IsEnabled(name Name) bool {
 
 // Set takes a slice of one or many flags, inserting the features onto user-configured features. If a feature name is
 // provided that is already a part of the set, then Set will return an error.
-// TODO: Should we allow users to call this multiple times even if we don't allow them to overwrite features?
 func Set(features []Feature) error {
 	// Ensure user features haven't been set
 	m := AllUser()
@@ -196,7 +195,7 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 
 func init() {
 	features := []Feature{
-		// // FIXME: Example feature
+		// NOTE: Here is an example default feature flag
 		// // Owner: @zarf-maintainers
 		// {
 		// 	Name:        "foo",
@@ -204,16 +203,6 @@ func init() {
 		// 	Enabled:     true,
 		// 	Since:       "v0.60.0",
 		// 	Stage:       GA,
-		// },
-		// // FIXME: Example feature
-		// // Owner: @zarf-maintainers
-		// {
-		// 	Name:        "bar",
-		// 	Description: "bar was honestly always a bit buggy, use baz instead",
-		// 	Enabled:     false,
-		// 	Since:       "v0.52.0",
-		// 	Until:       "v0.62.0",
-		// 	Stage:       Deprecated,
 		// },
 	}
 
