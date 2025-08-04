@@ -507,11 +507,11 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: "user enabled, default empty",
+			name:  "user enabled, default empty",
+			fName: "foo",
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				User: {
 					"foo": {Name: "foo", Enabled: true},
@@ -520,11 +520,11 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " enabled, user empty",
+			name:  "default enabled, user empty",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				User: {},
 				Default: {
@@ -533,7 +533,7 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " disabled, user empty",
+			name: "default disabled, user empty",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
@@ -546,11 +546,11 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: "user disabled, default empty",
+			name:  "user disabled, default empty",
+			fName: "foo",
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				User: {
 					"foo": {Name: "foo", Enabled: false},
@@ -559,14 +559,14 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " enabled, user enabled",
+			name:  "default enabled, user enabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				Default: {
 					"foo": {Name: "foo", Enabled: true},
@@ -577,14 +577,14 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " disabled, user disabled",
+			name:  "default disabled, user disabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				Default: {
 					"foo": {Name: "foo", Enabled: false},
@@ -595,14 +595,14 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " disabled, user enabled",
+			name:  "default disabled, user enabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: false},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: true},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				User: {
 					"foo": {Name: "foo", Enabled: true},
@@ -613,14 +613,14 @@ func TestAll(t *testing.T) {
 			},
 		},
 		{
-			name: " enabled, user disabled",
+			name:  "default enabled, user disabled",
+			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
 			},
 			user: []Feature{
 				{Name: "foo", Enabled: false},
 			},
-			fName: "foo",
 			expect: map[Mode]map[Name]Feature{
 				Default: {
 					"foo": {Name: "foo", Enabled: true},
