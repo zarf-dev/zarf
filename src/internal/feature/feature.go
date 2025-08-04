@@ -85,8 +85,12 @@ type Feature struct {
 // IsEnabled allows users to optimistically check for a feature. Useful for control flow. Any user-enabled or disabled
 // features take precedence over the default setting.
 func IsEnabled(name Name) bool {
-	_, err := Get(name)
-	return err == nil
+	f, err := Get(name)
+	if err != nil {
+		// We don't actually need to check the error here because an empty f will have the same truthiness
+		return false
+	}
+	return bool(f.Enabled)
 }
 
 // Set takes a slice of one or many flags, inserting the features onto user-configured features. If a feature name is
@@ -192,25 +196,25 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 
 func init() {
 	features := []Feature{
-		// FIXME: Example feature
-		// Owner: @zarf-maintainers
-		{
-			Name:        "foo",
-			Description: "foo does the thing of course",
-			Enabled:     true,
-			Since:       "v0.60.0",
-			Stage:       GA,
-		},
-		// FIXME: Example feature
-		// Owner: @zarf-maintainers
-		{
-			Name:        "bar",
-			Description: "bar was honestly always a bit buggy, use baz instead",
-			Enabled:     false,
-			Since:       "v0.52.0",
-			Until:       "v0.62.0",
-			Stage:       Deprecated,
-		},
+		// // FIXME: Example feature
+		// // Owner: @zarf-maintainers
+		// {
+		// 	Name:        "foo",
+		// 	Description: "foo does the thing of course",
+		// 	Enabled:     true,
+		// 	Since:       "v0.60.0",
+		// 	Stage:       GA,
+		// },
+		// // FIXME: Example feature
+		// // Owner: @zarf-maintainers
+		// {
+		// 	Name:        "bar",
+		// 	Description: "bar was honestly always a bit buggy, use baz instead",
+		// 	Enabled:     false,
+		// 	Since:       "v0.52.0",
+		// 	Until:       "v0.62.0",
+		// 	Stage:       Deprecated,
+		// },
 	}
 
 	err := SetDefault(features)
