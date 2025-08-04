@@ -18,20 +18,20 @@ jobs:
       cli_version: ${{ steps.set-version.outputs.cli_version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Set CLI_VERSION and NIGHTLY_TAG
         id: set-version
         run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
+          SHORT_SHA=$(git describe --tags)
           echo "cli_version=${SHORT_SHA}-nightly" >> $GITHUB_OUTPUT
           echo "CLI_VERSION=${SHORT_SHA}-nightly" >> $GITHUB_ENV
           echo "NIGHTLY_TAG=nightly" >> $GITHUB_ENV
 
       - name: Setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
 
@@ -43,14 +43,14 @@ jobs:
           CLI_VERSION=$CLI_VERSION make build-cli-linux-amd
           CLI_VERSION=$CLI_VERSION make build-cli-linux-arm
 
-      - name: Zarf Agent: Login to GHCR
-        uses: docker/login-action@v3
+      - name: "Zarf Agent: Login to GHCR"
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           registry: ghcr.io
           username: dummy
           password: ${{ github.token }}
 
-      - name: Zarf Agent: Build and Publish the Image
+      - name: Zarf Agent Build and Publish the Image
         run: |
           cp build/zarf build/zarf-linux-amd64
           cp build/zarf-arm build/zarf-linux-arm64
@@ -60,14 +60,14 @@ jobs:
           echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$NIGHTLY_TAG --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
 
       - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
           role-to-assume: ${{ secrets.AWS_KMS_ROLE_ARN }}
-          role-session-name: nightly-${{ github.run_id }}
+          role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
           aws-region: us-east-1
           role-duration-seconds: 3600
 
-      - name: Zarf Agent: Sign the Image
+      - name: Zarf Agent Sign the Image
         run: |
           cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} \
             -a release-engineer=https://github.com/${{ github.actor }} \
@@ -86,8 +86,8 @@ jobs:
           CLI_VERSION=$CLI_VERSION make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
           CLI_VERSION=$CLI_VERSION make publish-init-package ARCH=arm64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: build-artifacts
           path: build/
@@ -101,18 +101,18 @@ jobs:
       NIGHTLY_TAG: nightly
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
 
       - name: Setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
 
@@ -138,20 +138,20 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: go.mod
 
       - name: Install tools
         uses: ./.github/actions/install-tools
 
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: build-artifacts
           path: build/
@@ -177,7 +177,7 @@ jobs:
         with:
           distribution: goreleaser-pro
           version: "~> v2"
-          args: release --clean --verbose --nightly
+          args: release --clean --verbose --nightly -f .goreleaser-pro.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
