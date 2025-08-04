@@ -98,7 +98,6 @@ jobs:
     needs: build-release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
-      NIGHTLY_TAG: nightly
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -133,7 +132,6 @@ jobs:
     environment: release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
-      NIGHTLY_TAG: nightly
     permissions:
       contents: write
     steps:
