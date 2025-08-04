@@ -164,7 +164,7 @@ func All() map[Mode]map[Name]Feature {
 	return m
 }
 
-// AllDefault returns all features with from the Default set for this version of Zarf.
+// AllDefault returns all features from the Default set for this version of Zarf.
 func AllDefault() map[Name]Feature {
 	d := defaultFeatures.Load()
 	m, ok := d.(map[Name]Feature)
