@@ -12,7 +12,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -52,31 +51,15 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", err
 	}
 
-	var differntialPkg v1alpha1.ZarfPackage
-	if opts.DifferentialPackagePath != "" {
-		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
-			Architecture:            pkg.Metadata.Architecture,
-			RemoteOptions:           opts.RemoteOptions,
-			LayersSelector:          zoci.MetadataLayers,
-			OCIConcurrency:          opts.OCIConcurrency,
-			CachePath:               opts.CachePath,
-			SkipSignatureValidation: true,
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to load differential package: %w", err)
-		}
-		differntialPkg = pkgLayout.Pkg
-	}
-
 	assembleOpt := layout.AssembleOptions{
-		SkipSBOM:            opts.SkipSBOM,
-		OCIConcurrency:      opts.OCIConcurrency,
-		DifferentialPackage: differntialPkg,
-		Flavor:              opts.Flavor,
-		RegistryOverrides:   opts.RegistryOverrides,
-		SigningKeyPath:      opts.SigningKeyPath,
-		SigningKeyPassword:  opts.SigningKeyPassword,
-		CachePath:           opts.CachePath,
+		SkipSBOM:                opts.SkipSBOM,
+		OCIConcurrency:          opts.OCIConcurrency,
+		DifferentialPackagePath: opts.DifferentialPackagePath,
+		Flavor:                  opts.Flavor,
+		RegistryOverrides:       opts.RegistryOverrides,
+		SigningKeyPath:          opts.SigningKeyPath,
+		SigningKeyPassword:      opts.SigningKeyPassword,
+		CachePath:               opts.CachePath,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {
