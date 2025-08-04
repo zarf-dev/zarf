@@ -335,14 +335,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
 				}
 			} else {
-				if filepath.IsAbs(file.Source) {
-					if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
-				} else {
-					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
+				err := copyFile(packagePath, file.Source, dst)
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -386,7 +381,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
+			if err := copyFile(packagePath, data.Source, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 		}
@@ -439,6 +434,19 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
+func copyFile(packagePath, file, dst string) error {
+	if filepath.IsAbs(file) {
+		if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+			return fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+	} else {
+		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file), dst); err != nil {
+			return fmt.Errorf("unable to copy file %s: %w", file, err)
+		}
+	}
+	return nil
+}
+
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string, cosignKeyPath string) error {
 	for fileIdx, path := range manifest.Files {
@@ -451,7 +459,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
+			if err := copyFile(packagePath, path, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 			}
 		}

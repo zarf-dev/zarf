@@ -117,6 +117,19 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 							Target: "file.txt",
 						},
 					},
+					Manifests: []v1alpha1.ZarfManifest{
+						{
+							Name: "test manifest",
+							Files: []string{
+								absoluteFilePath,
+							},
+						},
+					},
+					DataInjections: []v1alpha1.ZarfDataInjection{
+						{
+							Source: absoluteFilePath,
+						},
+					},
 				},
 			},
 		}
