@@ -105,6 +105,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		absoluteFilePath := createFileToImport(t, tmpdir)
 		absoluteChartPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "chart"))
 		require.NoError(t, err)
+		componentName := "absolute-files"
 		pkg := v1alpha1.ZarfPackage{
 			Kind: v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
@@ -112,7 +113,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 			},
 			Components: []v1alpha1.ZarfComponent{
 				{
-					Name: "file",
+					Name: componentName,
 					Files: []v1alpha1.ZarfFile{
 						{
 							Source: absoluteFilePath,
@@ -121,7 +122,7 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 					},
 					Manifests: []v1alpha1.ZarfManifest{
 						{
-							Name: "test manifest",
+							Name: "test-manifest",
 							Files: []string{
 								absoluteFilePath,
 							},
@@ -149,13 +150,27 @@ func TestCreateAbsolutePathFileSource(t *testing.T) {
 		pkg, err = load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 		require.NoError(t, err)
 
-		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{})
+		pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{
+			SkipSBOM: true,
+		})
 		require.NoError(t, err)
 
-		// Ensure the components have the correct file
-		fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file", layout.FilesComponentDir)
+		// Ensure the component has the correct files
+		fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.FilesComponentDir)
 		require.NoError(t, err)
 		require.FileExists(t, filepath.Join(fileComponent, "0", "file.txt"))
+
+		chartComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.ChartsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(chartComponent, "test-chart-1.0.0.tgz"))
+
+		manifestComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.ManifestsComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(manifestComponent, "test-manifest-0.yaml"))
+
+		dataInjectionsDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.DataComponentDir)
+		require.NoError(t, err)
+		require.FileExists(t, filepath.Join(dataInjectionsDir, "0"))
 	})
 
 	t.Run("test that imports handle absolute paths properly", func(t *testing.T) {
