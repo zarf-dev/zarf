@@ -22,7 +22,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.3.3+incompatible
-	github.com/fairwindsops/pluto/v5 v5.22.1
+	github.com/fairwindsops/pluto/v5 v5.22.2
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.18.0
@@ -37,7 +37,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/pterm/pterm v0.12.81
 	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v2 v2.5.3
