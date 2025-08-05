@@ -116,6 +116,8 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			absoluteFilePath := createFileToImport(t, tmpdir)
 			absoluteChartPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "chart"))
 			require.NoError(t, err)
+			absoluteKustomizePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "kustomize"))
+			require.NoError(t, err)
 			componentName := "absolute-files"
 			pkg := v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
@@ -136,6 +138,9 @@ func TestCreateAbsoluteSources(t *testing.T) {
 								Name: "test-manifest",
 								Files: []string{
 									absoluteFilePath,
+								},
+								Kustomizations: []string{
+									absoluteKustomizePath,
 								},
 							},
 						},
@@ -186,6 +191,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			manifestComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.ManifestsComponentDir)
 			require.NoError(t, err)
 			require.FileExists(t, filepath.Join(manifestComponent, "test-manifest-0.yaml"))
+			require.FileExists(t, filepath.Join(manifestComponent, "kustomization-test-manifest-0.yaml"))
 
 			dataInjectionsDir, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.DataComponentDir)
 			require.NoError(t, err)

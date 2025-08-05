@@ -463,14 +463,13 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		}
 	}
 
-	// FIXME add tests for kustomization as well
 	for kustomizeIdx, path := range manifest.Kustomizations {
 		// Generate manifests from kustomizations and place in the package.
 		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
 		rel := filepath.Join(string(ManifestsComponentDir), kname)
 		dst := filepath.Join(compBuildPath, rel)
 
-		if !helpers.IsURL(path) {
+		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
 			path = filepath.Join(packagePath, path)
 		}
 		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
@@ -657,8 +656,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(filepath.Join(packagePath, path), dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
