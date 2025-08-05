@@ -110,7 +110,7 @@ func TestIsEnabled(t *testing.T) {
 			expect: true,
 		},
 		{
-			name:  " enabled, user disabled",
+			name:  "default enabled, user disabled",
 			fName: "foo",
 			defaults: []Feature{
 				{Name: "foo", Enabled: true},
