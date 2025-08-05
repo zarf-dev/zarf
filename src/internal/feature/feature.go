@@ -6,11 +6,12 @@ package feature
 
 import (
 	"fmt"
+	"maps"
 	"sync/atomic"
 )
 
 // Atoms wrapping the default and user-set collections of Features. These do not require mutexes because they will each
-// be modified very few times, with the public API for each ensuring there only an empty set can be written to.
+// be modified very few times, with the public API for each ensuring that only an empty set can be written to.
 // Alternatively these could be sync.Maps but they're not written to enough where it matters.
 // e.g. These atoms are write once, ready many (WORM).
 var defaultFeatures = atomic.Value{} // map[Name]Feature
@@ -141,7 +142,7 @@ func Get(name Name) (Feature, error) {
 func GetDefault(name Name) (Feature, error) {
 	f, ok := AllDefault()[name]
 	if !ok {
-		return f, fmt.Errorf("feature not found: %s", name)
+		return f, fmt.Errorf("default feature not found: %s", name)
 	}
 	return f, nil
 }
@@ -150,7 +151,7 @@ func GetDefault(name Name) (Feature, error) {
 func GetUser(name Name) (Feature, error) {
 	f, ok := AllUser()[name]
 	if !ok {
-		return f, fmt.Errorf("feature not found: %s", name)
+		return f, fmt.Errorf("user-configured feature not found: %s", name)
 	}
 	return f, nil
 }
@@ -165,24 +166,22 @@ func All() map[Mode]map[Name]Feature {
 
 // AllDefault returns all features from the Default set for this version of Zarf.
 func AllDefault() map[Name]Feature {
-	d := defaultFeatures.Load()
-	m, ok := d.(map[Name]Feature)
+	m, ok := defaultFeatures.Load().(map[Name]Feature)
 	// Default set is nil, so it's empty
 	if !ok {
 		return map[Name]Feature{}
 	}
-	return m
+	return maps.Clone(m)
 }
 
 // AllUser returns all features that have been enabled by users.
 func AllUser() map[Name]Feature {
-	u := userFeatures.Load()
-	m, ok := u.(map[Name]Feature)
+	m, ok := userFeatures.Load().(map[Name]Feature)
 	// User set is nil, so it's empty
 	if !ok {
 		return map[Name]Feature{}
 	}
-	return m
+	return maps.Clone(m)
 }
 
 func featuresToMap(fs []Feature) map[Name]Feature {
