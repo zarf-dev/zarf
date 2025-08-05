@@ -280,21 +280,12 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
-		if chart.LocalPath != "" {
-			chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
-		}
-		oldValuesFiles := chart.ValuesFiles
-		valuesFiles := []string{}
-		for _, v := range chart.ValuesFiles {
-			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-		}
-		chart.ValuesFiles = valuesFiles
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
 		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath)
+		if err != nil {
 			return err
 		}
-		chart.ValuesFiles = oldValuesFiles
 	}
 
 	for filesIdx, file := range component.Files {
@@ -335,23 +326,21 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				}
 			}
 		} else {
+			src := file.Source
+			if !filepath.IsAbs(file.Source) {
+				src = filepath.Join(packagePath, file.Source)
+			}
 			if file.ExtractPath != "" {
 				decompressOpts := archive.DecompressOpts{
 					Files: []string{file.ExtractPath},
 				}
-				err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
 				}
 			} else {
-				if filepath.IsAbs(file.Source) {
-					if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
-				} else {
-					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
+				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", src, err)
 				}
 			}
 		}
@@ -395,7 +384,11 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
+			src := data.Source
+			if !filepath.IsAbs(data.Source) {
+				src = filepath.Join(packagePath, data.Source)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 		}
@@ -409,34 +402,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 	for _, manifest := range component.Manifests {
-		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
-			dst := filepath.Join(compBuildPath, rel)
-
-			// Copy manifests without any processing.
-			if helpers.IsURL(path) {
-				if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
-				}
-			} else {
-				if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
-					return fmt.Errorf("unable to copy manifest %s: %w", path, err)
-				}
-			}
-		}
-
-		for kustomizeIdx, path := range manifest.Kustomizations {
-			// Generate manifests from kustomizations and place in the package.
-			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-			rel := filepath.Join(string(ManifestsComponentDir), kname)
-			dst := filepath.Join(compBuildPath, rel)
-
-			if !helpers.IsURL(path) {
-				path = filepath.Join(packagePath, path)
-			}
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
-			}
+		err := PackageManifest(ctx, manifest, compBuildPath, packagePath, component.DeprecatedCosignKeyPath)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -473,6 +441,62 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
+// PackageManifest takes a Zarf manifest definition and packs it into a package layout
+func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string, cosignKeyPath string) error {
+	for fileIdx, path := range manifest.Files {
+		rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+		dst := filepath.Join(compBuildPath, rel)
+
+		// Copy manifests without any processing.
+		if helpers.IsURL(path) {
+			if err := utils.DownloadToFile(ctx, path, dst, cosignKeyPath); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+			}
+		} else {
+			src := path
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(packagePath, src)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
+			}
+		}
+	}
+
+	for kustomizeIdx, path := range manifest.Kustomizations {
+		// Generate manifests from kustomizations and place in the package.
+		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+		rel := filepath.Join(string(ManifestsComponentDir), kname)
+		dst := filepath.Join(compBuildPath, rel)
+
+		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
+			path = filepath.Join(packagePath, path)
+		}
+		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+		}
+	}
+	return nil
+}
+
+// PackageChart takes a Zarf Chart definition and packs it into a package layout
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
+	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
+		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
+	}
+	oldValuesFiles := chart.ValuesFiles
+	valuesFiles := []string{}
+	for _, v := range chart.ValuesFiles {
+		valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+	}
+	chart.ValuesFiles = valuesFiles
+	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+		return err
+	}
+	chart.ValuesFiles = oldValuesFiles
+	return nil
+}
+
 func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -502,9 +526,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
-			err := helpers.CreatePathAndCopy(filepath.Join(packagePath, chart.LocalPath), dst)
-			if err != nil {
-				return err
+			file := chart.LocalPath
+			if !filepath.IsAbs(file) {
+				file = filepath.Join(packagePath, file)
+			}
+			if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", file, err)
 			}
 
 			component.Charts[chartIdx].LocalPath = rel
@@ -532,14 +559,18 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
+		src := file.Source
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, src)
+		}
 
 		if file.ExtractPath != "" {
 			decompressOpts := archive.DecompressOpts{
 				Files: []string{file.ExtractPath},
 			}
-			err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+			err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
 			}
 
 			// Make sure dst reflects the actual file or directory.
@@ -550,8 +581,8 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				}
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", src, err)
 			}
 		}
 
@@ -585,8 +616,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
-		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
-			return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+		src := data.Source
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, src)
+		}
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("unable to copy data injection %s: %s", src, err.Error())
 		}
 
 		component.DataInjections[dataIdx].Source = rel
@@ -604,8 +639,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
-				return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+			src := path
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(packagePath, src)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 
 			component.Manifests[manifestIdx].Files[fileIdx] = rel
@@ -617,8 +656,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(filepath.Join(packagePath, path), dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
