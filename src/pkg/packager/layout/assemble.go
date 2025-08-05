@@ -525,7 +525,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
-			err := helpers.CreatePathAndCopy(filepath.Join(packagePath, chart.LocalPath), dst)
+			err := copyFile(packagePath, chart.LocalPath, dst)
 			if err != nil {
 				return err
 			}
@@ -573,7 +573,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				}
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
+			if err := copyFile(packagePath, file.Source, dst); err != nil {
 				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
 			}
 		}
@@ -608,7 +608,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
-		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
+		if err := copyFile(packagePath, data.Source, dst); err != nil {
 			return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 		}
 
@@ -627,7 +627,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
+			if err := copyFile(packagePath, path, dst); err != nil {
 				return fmt.Errorf("unable to copy manifest %s: %w", path, err)
 			}
 
