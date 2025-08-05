@@ -326,18 +326,21 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				}
 			}
 		} else {
+			pathToFile := file.Source
+			if !filepath.IsAbs(file.Source) {
+				pathToFile = filepath.Join(packagePath, file.Source)
+			}
 			if file.ExtractPath != "" {
 				decompressOpts := archive.DecompressOpts{
 					Files: []string{file.ExtractPath},
 				}
-				err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+				err = archive.Decompress(ctx, pathToFile, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, pathToFile, err.Error())
 				}
 			} else {
-				err := copyFile(packagePath, file.Source, dst)
-				if err != nil {
-					return err
+				if err := helpers.CreatePathAndCopy(pathToFile, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", pathToFile, err)
 				}
 			}
 		}
@@ -381,7 +384,11 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 			}
 		} else {
-			if err := copyFile(packagePath, data.Source, dst); err != nil {
+			pathToFile := data.Source
+			if !filepath.IsAbs(data.Source) {
+				pathToFile = filepath.Join(packagePath, data.Source)
+			}
+			if err := helpers.CreatePathAndCopy(pathToFile, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 		}
@@ -456,12 +463,17 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
-			if err := copyFile(packagePath, path, dst); err != nil {
-				return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+			pathToManifest := path
+			if !filepath.IsAbs(pathToManifest) {
+				pathToManifest = filepath.Join(packagePath, pathToManifest)
+			}
+			if err := helpers.CreatePathAndCopy(pathToManifest, dst); err != nil {
+				return fmt.Errorf("unable to copy manifest %s: %w", pathToManifest, err)
 			}
 		}
 	}
 
+	// FIXME add tests for kustomization as well
 	for kustomizeIdx, path := range manifest.Kustomizations {
 		// Generate manifests from kustomizations and place in the package.
 		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
