@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: component-actions
   description: Component actions examples
-  version: 0.0.1
 
 variables:
   - name: DOG_SOUND
