@@ -85,15 +85,6 @@ func TestGetSBOM(t *testing.T) {
 	require.ErrorAs(t, err, &noSBOMErr)
 }
 
-func createFileToImport(t *testing.T, dir string) string {
-	t.Helper()
-	absoluteFilePath, err := filepath.Abs(filepath.Join(dir, "file.txt"))
-	require.NoError(t, err)
-	_, err = os.Create(absoluteFilePath)
-	require.NoError(t, err)
-	return absoluteFilePath
-}
-
 func TestCreateAbsoluteSources(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
@@ -113,7 +104,8 @@ func TestCreateAbsoluteSources(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tmpdir := t.TempDir()
-			absoluteFilePath := createFileToImport(t, tmpdir)
+			absoluteFilePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+			require.NoError(t, err)
 			absoluteChartPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "chart"))
 			require.NoError(t, err)
 			absoluteKustomizePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "kustomize"))
@@ -205,7 +197,8 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tmpdir := t.TempDir()
-	absoluteFilePath := createFileToImport(t, tmpdir)
+	absoluteFilePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
+	require.NoError(t, err)
 	parentPkg := v1alpha1.ZarfPackage{
 		Kind: v1alpha1.ZarfPackageConfig,
 		Metadata: v1alpha1.ZarfMetadata{
@@ -241,7 +234,7 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	// Create zarf.yaml files in the tempdir
 	writePackageToDisk(t, parentPkg, tmpdir)
 	childDir := filepath.Join(tmpdir, "child")
-	err := os.Mkdir(childDir, 0700)
+	err = os.Mkdir(childDir, 0700)
 	require.NoError(t, err)
 	writePackageToDisk(t, childPkg, childDir)
 	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
