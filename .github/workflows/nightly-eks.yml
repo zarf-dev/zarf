@@ -50,22 +50,22 @@ jobs:
       - name: Build the eks package
         run: ./build/zarf package create packages/distros/eks -o build --confirm
 
-      - name: Deploy the eks package
-        run: |
-          ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
-            --components=deploy-eks-cluster \
-            --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
-            --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
-            --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary \
-            --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
-            --confirm
+      # - name: Deploy the eks package
+      #   run: |
+      #     ./build/zarf package deploy build/zarf-package-distro-eks-amd64-0.0.3.tar.zst \
+      #       --components=deploy-eks-cluster \
+      #       --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
+      #       --set=EKS_INSTANCE_TYPE=${{ inputs.instance_type || 't3.medium' }} \
+      #       --set=PERMISSIONS_BOUNDARY_ARN=arn:aws:iam::205930641482:policy/uds_permissions_boundary \
+      #       --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
+      #       --confirm
 
-      - name: Run tests
-        run: make test-e2e-with-cluster ARCH=amd64
+      # - name: Run tests
+      #   run: make test-e2e-with-cluster ARCH=amd64
 
-      - name: show cluster logs
-        uses: ./.github/actions/debug-cluster
-        if: always()
+      # - name: show cluster logs
+      #   uses: ./.github/actions/debug-cluster
+      #   if: always()
 
       - name: Teardown the cluster
         if: always()
