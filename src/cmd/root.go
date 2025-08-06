@@ -10,9 +10,8 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
-
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -20,12 +19,17 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
 	// Default global config for the packager
 	pkgConfig = types.PackagerConfig{}
+	// Features is a string map of feature names to enabled state.
+	// Example: "foo=true,bar=false,baz=true"
+	features string
 	// LogLevelCLI holds the log level as input from a command
 	LogLevelCLI string
 	// LogFormat holds the log format as input from a command
@@ -68,6 +72,18 @@ func (o *outputFormat) Type() string {
 var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	// Configure user defined Features
+	err := setupFeatures(features)
+	if err != nil {
+		return err
+	}
+	// Implement "axolotl-mode"
+	if feature.IsEnabled("axolotl-mode") {
+		if _, err = fmt.Fprintln(os.Stderr, logo()); err != nil {
+			return err
+		}
+	}
+
 	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
 	if config.CommonOptions.Insecure {
 		config.CommonOptions.InsecureSkipTLSVerify = true
@@ -87,6 +103,9 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	ctx := logger.WithContext(cmd.Context(), l)
 	cmd.SetContext(ctx)
 
+	// Print enabled features once we have a logger available
+	l.Debug("User-configured features:", "features", flattenUserFeatures())
+
 	// if --no-color is set, disable PTerm color in message prints
 	if IsColorDisabled {
 		pterm.DisableColor()
@@ -100,6 +119,71 @@ func preRun(cmd *cobra.Command, _ []string) error {
 
 	l.Debug("using temporary directory", "tmpDir", config.CommonOptions.TempDirectory)
 	return nil
+}
+
+func setupFeatures(raw string) error {
+	fs, err := parseFeatures(raw)
+	if err != nil {
+		return err
+	}
+
+	err = feature.Set(fs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// parseFeatures take an unstructured string from a viper source (cli flag, env var, disk config) and parses it into
+// feature.Feature structs.
+func parseFeatures(features string) ([]feature.Feature, error) {
+	// No features given, exit
+	if features == "" {
+		return []feature.Feature{}, nil
+	}
+
+	s := make([]feature.Feature, 0)
+
+	// Segment flag string contents into kv slugs, e.g. ["foo=true","bar=false"]
+	kvPairs := strings.Split(features, ",")
+	// Handle pairs
+	for _, f := range kvPairs {
+		// Split slug into key and value
+		pair := strings.Split(f, "=")
+
+		// Validate pair
+		if len(pair) != 2 {
+			return []feature.Feature{}, fmt.Errorf("invalid feature kv pair: %s", f)
+		}
+
+		// Extract values
+		k := pair[0]
+		v := pair[1]
+
+		// Parse value into bool
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			return []feature.Feature{}, fmt.Errorf("unable to parse feature value: %s into bool for key: %s", v, k)
+		}
+
+		// Append to feature set
+		s = append(s, feature.Feature{
+			Name:    feature.Name(k),
+			Enabled: feature.Enabled(b),
+		})
+	}
+
+	return s, nil
+}
+
+func flattenUserFeatures() string {
+	fs := feature.AllUser()
+	ss := make([]string, 0)
+	for _, f := range fs {
+		ss = append(ss, f.String())
+	}
+	return strings.Join(ss, ",")
 }
 
 func run(cmd *cobra.Command, _ []string) {
@@ -173,6 +257,9 @@ func init() {
 	}
 
 	vpr := getViper()
+
+	// Features
+	rootCmd.PersistentFlags().StringVar(&features, "features", vpr.GetString(VFeatures), "[ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
