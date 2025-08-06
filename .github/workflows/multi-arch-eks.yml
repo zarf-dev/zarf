@@ -27,8 +27,9 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # - name: Build binary and zarf packages
-      #   uses: ./.github/actions/packages
+      - name: Build binary and zarf packages
+        uses: ./.github/actions/packages
+
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
@@ -48,6 +49,10 @@ jobs:
         run: |
           ./eksctl create cluster --dry-run --config-file .github/eks.yaml
           ./eksctl create cluster --config-file=.github/eks.yaml
+
+      - name: init Zarf
+        run: |
+          ./build/zarf init --confirm
 
       - name: teardown cluster
         run: |
