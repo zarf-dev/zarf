@@ -44,10 +44,10 @@ jobs:
           tar -xzf eksctl_Linux_amd64.tar.gz
           chmod +x eksctl
 
-      # - name: create cluster
-      #   run: |
-      #     ./eksctl create cluster --dry-run --config-file .github/eks.yaml
-      #     ./eksctl create cluster --config-file=.github/eks.yaml
+      - name: create cluster
+        run: |
+          ./eksctl create cluster --dry-run --config-file .github/eks.yaml
+          ./eksctl create cluster --config-file=.github/eks.yaml
 
       - name: teardown cluster
         run: |
