@@ -3,7 +3,7 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
   name: zarf-nightly-multi-arch-e2e-test
- region: us-east-1
+  region: us-east-1
   tags:
     PermissionsBoundary: uds_permissions_boundary
 
