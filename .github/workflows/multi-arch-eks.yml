@@ -42,17 +42,6 @@ jobs:
 
       # - name: Build binary and zarf packages
       #   uses: ./.github/actions/packages
-      - name: Debug GitHub Context
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Ref: ${{ github.ref }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "SHA: ${{ github.sha }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Job: ${{ github.job }}"
-          echo "pr head sha: ${{ github.event.client_payload.pull_request.head.sha }}"
-          echo "github sha: ${{ github.sha }}"
-
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
         with:
@@ -70,7 +59,8 @@ jobs:
 
       - name: create cluster
         run: |
-          ./eksctl cluster create --config-file=.github/eks.yaml
+          ./eksctl create cluster --dry-run --config-file .github/eks.yaml
+          ./eksctl create cluster --config-file=.github/eks.yaml
 
       - name: teardown cluster
         run: |
