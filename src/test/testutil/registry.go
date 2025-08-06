@@ -19,12 +19,6 @@ import (
 
 // SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
 func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
-	return SetupInMemoryRegistryWithAuth(ctx, t, port, "")
-}
-
-// SetupInMemoryRegistryWithAuth sets up an in-memory registry on localhost and returns the address.
-// If the parameter `htpassword` is not empty, the registry will use that as the auth for accessing it.
-func SetupInMemoryRegistryWithAuth(ctx context.Context, t *testing.T, port int, htpassword string) string {
 	t.Helper()
 	config := &configuration.Configuration{}
 	config.HTTP.Addr = fmt.Sprintf(":%d", port)
@@ -32,9 +26,6 @@ func SetupInMemoryRegistryWithAuth(ctx context.Context, t *testing.T, port int, 
 	config.Log.Level = "error"
 	logrus.SetOutput(io.Discard)
 	config.HTTP.DrainTimeout = 10 * time.Second
-	if htpassword != "" {
-		config.HTTP.Secret = htpassword
-	}
 	config.Storage = map[string]configuration.Parameters{"inmemory": map[string]interface{}{}}
 	ref, err := registry.NewRegistry(ctx, config)
 	require.NoError(t, err)
