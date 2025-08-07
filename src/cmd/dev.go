@@ -533,7 +533,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		}
 
 		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath, "")
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
