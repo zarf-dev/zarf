@@ -76,7 +76,7 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 
 	// Clone the repository
 	cloneOpts := &git.CloneOptions{
-		URL:        gitURLNoRef,
+		URL:        os.ExpandEnv(gitURLNoRef),
 		RemoteName: onlineRemoteName,
 	}
 	if ref.IsTag() || ref.IsBranch() {
