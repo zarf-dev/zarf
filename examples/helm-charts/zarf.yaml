@@ -35,6 +35,8 @@ components:
         version: 6.4.0
         namespace: podinfo-from-git
         # In this case `url` will load the helm chart located in the podinfo git repository
+        # For a private repository, the URL format can be as follows:
+        # url: https://${username}:${password}@github.com/private-repository.git
         url: https://github.com/stefanprodan/podinfo.git
         # By default git will look in the root of the git repository but you can define a sub directory with `gitPath`
         gitPath: charts/podinfo
