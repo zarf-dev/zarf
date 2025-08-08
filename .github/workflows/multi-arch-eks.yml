@@ -48,7 +48,6 @@ jobs:
       - name: Create EKS config
         run: |
           cat <<EOF > eks.yaml
-          # eksctl create cluster --config-file=eks.yaml
           apiVersion: eksctl.io/v1alpha5
           kind: ClusterConfig
           metadata:
