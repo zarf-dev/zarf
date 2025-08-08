@@ -87,6 +87,8 @@ type PublishPackageOptions struct {
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
+	// Retries specifies the number of retries to use
+	Retries int
 	RemoteOptions
 }
 
@@ -94,6 +96,10 @@ type PublishPackageOptions struct {
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
+
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
@@ -114,7 +120,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, err
 	}
 
-	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions); err != nil {
+	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions); err != nil {
 		return registry.Reference{}, err
 	}
 
@@ -133,6 +139,8 @@ type PublishSkeletonOptions struct {
 	CachePath string
 	// Flavor specifies the flavor to use
 	Flavor string
+	// Retries specifies the number of retries to use
+	Retries int
 	RemoteOptions
 }
 
@@ -140,6 +148,10 @@ type PublishSkeletonOptions struct {
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
+
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
@@ -174,7 +186,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions)
+	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -198,7 +210,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to the given reference
-func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, remoteOpts RemoteOptions) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts RemoteOptions) error {
 	arch := layout.Pkg.Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
@@ -208,5 +220,10 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	return remote.PushPackage(ctx, layout, concurrency)
+	_, err = remote.PushPackage(ctx, layout, concurrency, retries)
+	if err != nil {
+		return fmt.Errorf("could not push package: %w", err)
+	}
+
+	return nil
 }

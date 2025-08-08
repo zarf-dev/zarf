@@ -1214,6 +1214,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 
 	return cmd
 }
@@ -1256,6 +1257,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+			Retries:            pkgConfig.PkgOpts.Retries,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 			Flavor:             o.flavor,
@@ -1334,6 +1336,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+		Retries:            pkgConfig.PkgOpts.Retries,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
 

@@ -97,7 +97,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
+		// Setting a default here for retries as the flag is less intuitive during create
+		_, err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency, 2)
 		if err != nil {
 			return "", err
 		}
