@@ -87,7 +87,7 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	if shallow {
 		cloneOpts.Depth = 1
 	}
-	gitCred, err := utils.FindAuthForHost(gitURLNoRef)
+	gitCred, err := utils.FindAuthForHost(os.ExpandEnv(gitURLNoRef))
 	if err != nil {
 		return nil, err
 	}
@@ -96,8 +96,8 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	}
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
-		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
-		err := r.gitCloneFallback(ctx, gitURLNoRef, ref, shallow)
+		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", os.ExpandEnv(gitURLNoRef), "error", err)
+		err := r.gitCloneFallback(ctx, os.ExpandEnv(gitURLNoRef), ref, shallow)
 		if err != nil {
 			return nil, err
 		}
