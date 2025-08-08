@@ -78,8 +78,6 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	// (root + manifestConfigDesc sizes are unknown until built each attempt;
 	// this is a conservative total using layer sizes; progress still works fine.)
 	totalSize := oci.SumDescsSize(descs)
-	// logger.From(ctx).Info("pushing package to registry", "destination", r.Repo().Reference.String(),
-	// 	"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
 	var publishedDesc ocispec.Descriptor
 

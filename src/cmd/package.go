@@ -1271,6 +1271,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency: config.CommonOptions.OCIConcurrency,
 			Architecture:   config.GetArch(),
 			RemoteOptions:  defaultRemoteOptions(),
+			Retries:        pkgConfig.PkgOpts.Retries,
 		}
 
 		// source registry reference

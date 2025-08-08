@@ -29,6 +29,8 @@ type PublishFromOCIOptions struct {
 	OCIConcurrency int
 	// Architecture is the architecture we are publishing to
 	Architecture string
+	// Retries is the number of times to retry a failed push
+	Retries int
 	RemoteOptions
 }
 
@@ -37,6 +39,10 @@ type PublishFromOCIOptions struct {
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	if opts.Retries == 0 {
+		opts.Retries = config.ZarfDefaultRetries
+	}
 
 	if err := src.Validate(); err != nil {
 		return fmt.Errorf("failed to validate source registry: %w", err)
@@ -70,7 +76,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	}
 
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.OCIConcurrency)
+	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.Retries, opts.OCIConcurrency)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
