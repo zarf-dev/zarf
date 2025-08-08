@@ -225,7 +225,7 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = zoci.CopyPackage(ctx, src, dst, 5)
+	err = zoci.CopyPackage(ctx, src, dst, 3, 5)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot(ctx)

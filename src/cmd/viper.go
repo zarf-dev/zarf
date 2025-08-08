@@ -98,6 +98,7 @@ const (
 
 	VPkgPublishSigningKey         = "package.publish.signing_key"
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
+	VPkgPublishRetries            = "package.publish.retries"
 
 	// Package pull config keys
 
