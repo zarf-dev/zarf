@@ -45,10 +45,62 @@ jobs:
           tar -xzf eksctl_Linux_amd64.tar.gz
           chmod +x eksctl
 
+      - name: Create EKS config
+        run: |
+          cat <<EOF > eks.yaml
+          # eksctl create cluster --config-file=eks.yaml
+          apiVersion: eksctl.io/v1alpha5
+          kind: ClusterConfig
+          metadata:
+            name: zarf-nightly-multi-arch-e2e-test
+            region: us-east-1
+            tags:
+              PermissionsBoundary: uds_permissions_boundary
+
+          iam:
+            serviceRolePermissionsBoundary: arn:aws:iam::205930641482:policy/uds_permissions_boundary
+            withOIDC: true
+
+          addons:
+            - name: aws-ebs-csi-driver
+              attachPolicyARNs:
+                - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
+              permissionsBoundary: "arn:aws:iam::205930641482:policy/uds_permissions_boundary"
+              tags:
+                PermissionsBoundary: "uds_permissions_boundary"
+
+            - name: vpc-cni
+              attachPolicyARNs:
+                - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+              permissionsBoundary: "arn:aws:iam::205930641482:policy/uds_permissions_boundary"
+              tags:
+                PermissionsBoundary: "uds_permissions_boundary"
+
+          managedNodeGroups:
+          - instanceType: t3.medium
+            name: amd64-ng
+            minSize: 2
+            maxSize: 2
+            spot: true
+            tags:
+              PermissionsBoundary: "uds_permissions_boundary"
+            iam:
+              instanceRolePermissionsBoundary: "arn:aws:iam::205930641482:policy/uds_permissions_boundary"
+          - instanceType: "t4g.small"
+            name: arm64-ng
+            minSize: 2
+            maxSize: 2
+            spot: true
+            tags:
+              PermissionsBoundary: "uds_permissions_boundary"
+            iam:
+              instanceRolePermissionsBoundary: "arn:aws:iam::205930641482:policy/uds_permissions_boundary"
+          EOF
+
       - name: create cluster
         run: |
-          ./eksctl create cluster --dry-run --config-file .github/eks.yaml
-          ./eksctl create cluster --config-file=.github/eks.yaml
+          ./eksctl create cluster --dry-run --config-file eks.yaml
+          ./eksctl create cluster --config-file=eks.yaml
 
       - name: init Zarf
         run: |
@@ -56,4 +108,4 @@ jobs:
 
       - name: teardown cluster
         run: |
-          ./eksctl delete cluster --config-file=.github/eks.yaml --disable-nodegroup-eviction --wait
+          ./eksctl delete cluster --config-file=eks.yaml --disable-nodegroup-eviction --wait
