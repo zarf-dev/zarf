@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -155,6 +156,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// RegistryProxy determines if Zarf uses the nodeport service or host port proxy daemonset solution
+	RegistryProxy *bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -204,6 +207,14 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.AgentTLS = agentTLS
+
+		// FIXME: Need a more reliable way of determining IP family
+		// potential to do more validation https://kubernetes.io/docs/tasks/network/validate-dual-stack/
+		ipFamily, err := c.GetIPFamily(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+		}
+		s.IPFamily = ipFamily
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
@@ -258,7 +269,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues()
+		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
 		if err != nil {
 			return nil, err
 		}
@@ -276,6 +287,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
+	}
+	if opts.RegistryProxy != nil {
+		s.RegistryProxy = *opts.RegistryProxy
 	}
 
 	switch s.Distro {
@@ -341,4 +355,56 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}
 	return nil
+}
+
+// GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
+// FIXME add unit tests
+func (c *Cluster) GetIPFamily(ctx context.Context) (state.IPFamily, error) {
+	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get k8s nodes: %w", err)
+	}
+
+	if len(nodeList.Items) == 0 {
+		return "", fmt.Errorf("no nodes found")
+	}
+
+	// Use the first node to determine the IP family
+
+	for _, node := range nodeList.Items {
+		podCIDRs := node.Spec.PodCIDRs
+
+		// Fallback to PodCIDR if PodCIDRs is empty
+		if len(podCIDRs) == 0 {
+			if node.Spec.PodCIDR == "" {
+				continue
+			}
+			podCIDRs = []string{node.Spec.PodCIDR}
+		}
+
+		hasIPv4 := false
+		hasIPv6 := false
+
+		for _, cidr := range podCIDRs {
+			ip, _, err := net.ParseCIDR(cidr)
+			if err != nil {
+				return "", fmt.Errorf("unable to scan pod cidr %s: %w", cidr, err)
+			}
+
+			if ip.To4() != nil {
+				hasIPv4 = true
+			} else {
+				hasIPv6 = true
+			}
+		}
+
+		if hasIPv4 && hasIPv6 {
+			return state.IPFamilyDualStack, nil
+		} else if hasIPv6 {
+			return state.IPFamilyIPv6, nil
+		}
+		return state.IPFamilyIPv4, nil
+	}
+	logger.From(ctx).Error("unable to determine IP family of cluster")
+	return state.IPFamilyUnknown, nil
 }

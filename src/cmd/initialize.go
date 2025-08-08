@@ -54,6 +54,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
+	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "uses the registry-proxy solution")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -129,6 +130,10 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
+	var registryProxy *bool
+	if cmd.Flag("registry-proxy").Changed {
+		registryProxy = &pkgConfig.InitOpts.RegistryProxy
+	}
 
 	opts := packager.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
@@ -140,6 +145,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		RegistryProxy:          registryProxy,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)

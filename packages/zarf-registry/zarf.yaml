@@ -93,12 +93,22 @@ variables:
     description: The target CPU utilization percentage for the registry
     default: "80"
 
+  - name: HOST_NETWORK_PROXY
+    description: Decides if host port or host network should be used with the registry proxy
+    default: "false"
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
 
   - name: REGISTRY_IMAGE_TAG
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+
+  - name: REGISTRY_PROXY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###"
+
+  - name: REGISTRY_PROXY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
 components:
   - name: zarf-injector
@@ -111,9 +121,9 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: https://zarf-init-resources.s3.us-east-1.amazonaws.com/injector/###ZARF_PKG_TMPL_INJECTOR_VERSION###/zarf-injector-amd64
+      - source: ../../src/injector/target/x86_64-unknown-linux-musl/release/zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
+        # shasum: "###ZARF_PKG_TMPL_INJECTOR_AMD64_SHASUM###"
         executable: true
 
   - name: zarf-injector
@@ -146,6 +156,7 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
   - name: zarf-registry
     description: |
@@ -171,3 +182,4 @@ components:
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
