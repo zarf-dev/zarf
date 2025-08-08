@@ -109,3 +109,9 @@ jobs:
       - name: teardown cluster
         run: |
           ./eksctl delete cluster --config-file=eks.yaml --disable-nodegroup-eviction --wait
+
+      - name: Send trigger to Slack on workflow failure
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
