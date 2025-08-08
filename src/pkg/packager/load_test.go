@@ -135,16 +135,6 @@ func TestIdentifySource(t *testing.T) {
 			expectedSrcType: "oci",
 		},
 		{
-			name:            "sget with sub path",
-			src:             "sget://github.com/defenseunicorns/zarf-hello-world:x86",
-			expectedSrcType: "sget",
-		},
-		{
-			name:            "sget without host",
-			src:             "sget://defenseunicorns/zarf-hello-world:x86_64",
-			expectedSrcType: "sget",
-		},
-		{
 			name:            "https",
 			src:             "https://github.com/zarf-dev/zarf/releases/download/v1.0.0/zarf-init-amd64-v1.0.0.tar.zst",
 			expectedSrcType: "https",

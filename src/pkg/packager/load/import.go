@@ -325,11 +325,6 @@ func overrideMetadata(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompone
 }
 
 func overrideDeprecated(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfComponent) v1alpha1.ZarfComponent {
-	// Override cosign key path if it was provided.
-	if override.DeprecatedCosignKeyPath != "" {
-		comp.DeprecatedCosignKeyPath = override.DeprecatedCosignKeyPath
-	}
-
 	comp.DeprecatedGroup = override.DeprecatedGroup
 
 	// Merge deprecated scripts for backwards compatibility with older zarf binaries.
@@ -474,12 +469,6 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 	child.Actions.OnCreate.After = fixActionPaths(child.Actions.OnCreate.After, defaultDir, relativeToHead)
 	child.Actions.OnCreate.OnFailure = fixActionPaths(child.Actions.OnCreate.OnFailure, defaultDir, relativeToHead)
 	child.Actions.OnCreate.OnSuccess = fixActionPaths(child.Actions.OnCreate.OnSuccess, defaultDir, relativeToHead)
-
-	// deprecated
-	if child.DeprecatedCosignKeyPath != "" {
-		composed := makePathRelativeTo(child.DeprecatedCosignKeyPath, relativeToHead)
-		child.DeprecatedCosignKeyPath = composed
-	}
 
 	return child
 }

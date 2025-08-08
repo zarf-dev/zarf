@@ -257,7 +257,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
-	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath, ""); err != nil {
+	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
 

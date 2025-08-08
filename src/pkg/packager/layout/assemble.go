@@ -310,7 +310,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 				decompressOpts := archive.DecompressOpts{
@@ -321,7 +321,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
-				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			}
@@ -380,7 +380,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		dst := filepath.Join(compBuildPath, rel)
 
 		if helpers.IsURL(data.Source) {
-			if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, data.Source, dst); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 			}
 		} else {
@@ -402,7 +402,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 	for _, manifest := range component.Manifests {
-		err := PackageManifest(ctx, manifest, compBuildPath, packagePath, component.DeprecatedCosignKeyPath)
+		err := PackageManifest(ctx, manifest, compBuildPath, packagePath)
 		if err != nil {
 			return err
 		}
@@ -442,14 +442,14 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 }
 
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
-func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string, cosignKeyPath string) error {
+func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string) error {
 	for fileIdx, path := range manifest.Files {
 		rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
 		dst := filepath.Join(compBuildPath, rel)
 
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(ctx, path, dst, cosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
 			}
 		} else {
@@ -509,16 +509,6 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	err = os.MkdirAll(compBuildPath, 0o700)
 	if err != nil {
 		return err
-	}
-
-	// Update component DeprecatedCosignKeyPath with cosign.pub if a path exists
-	if component.DeprecatedCosignKeyPath != "" {
-		dst := filepath.Join(compBuildPath, "cosign.pub")
-		err = helpers.CreatePathAndCopy(filepath.Join(packagePath, component.DeprecatedCosignKeyPath), dst)
-		if err != nil {
-			return err
-		}
-		component.DeprecatedCosignKeyPath = "cosign.pub"
 	}
 
 	for chartIdx, chart := range component.Charts {

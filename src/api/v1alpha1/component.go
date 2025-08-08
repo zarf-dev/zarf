@@ -24,9 +24,6 @@ type ZarfComponent struct {
 	// [Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.
 	DeprecatedGroup string `json:"group,omitempty" jsonschema:"deprecated=true"`
 
-	// [Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0.
-	DeprecatedCosignKeyPath string `json:"cosignKeyPath,omitempty" jsonschema:"deprecated=true"`
-
 	// Import a component from another Zarf package.
 	Import ZarfComponentImport `json:"import,omitempty"`
 
