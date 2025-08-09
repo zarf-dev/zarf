@@ -27,7 +27,7 @@ zarf destroy --confirm [flags]
 ### Options
 
 ```
-      --confirm             REQUIRED. Confirm the destroy action to prevent accidental deletions
+  -c, --confirm             REQUIRED. Confirm the destroy action to prevent accidental deletions
   -h, --help                help for destroy
       --remove-components   Also remove any installed components outside the zarf namespace
 ```

@@ -55,7 +55,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
-      --confirm                         Confirm updating credentials without prompting
+  -c, --confirm                         Confirm updating credentials without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server

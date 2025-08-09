@@ -38,7 +38,7 @@ func newDestroyCommand() *cobra.Command {
 	}
 
 	// Still going to require a flag for destroy confirm, no viper oopsies here
-	cmd.Flags().BoolVar(&o.confirmDestroy, "confirm", false, lang.CmdDestroyFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirmDestroy, "confirm", "c", false, lang.CmdDestroyFlagConfirm)
 	cmd.Flags().BoolVar(&o.removeComponents, "remove-components", false, lang.CmdDestroyFlagRemoveComponents)
 	_ = cmd.MarkFlagRequired("confirm")
 
