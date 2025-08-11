@@ -215,6 +215,15 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 	}
 
 	payloadChunkSize := 1024 * 768
+	f, err := os.Open(tarPath)
+	if err != nil {
+		panic(err)
+	}
+	fi, err := f.Stat()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("compressed file is", fi.Size())
 	chunks, shasum, err := helpers.ReadFileByChunks(tarPath, payloadChunkSize)
 	if err != nil {
 		return nil, "", err
