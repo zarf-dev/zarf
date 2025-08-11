@@ -36,8 +36,6 @@ type ZarfPackageOptions struct {
 	PackageSource string
 	// Comma separated list of optional components
 	OptionalComponents string
-	// Location where the public key component of a cosign key-pair can be found
-	SGetKeyPath string
 	// Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package
 	SetVariables map[string]string
 	// Location where the public key component of a cosign key-pair can be found

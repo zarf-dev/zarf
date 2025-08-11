@@ -18,11 +18,9 @@ components:
       name: empty-oci-component
       url: oci://localhost:31888/remote-resources:0.0.1
 
-  # Test file imports including cosignKeyPath
   - name: file-imports
     description: "file-imports == ###ZARF_COMPONENT_NAME###"
     required: false
-    cosignKeyPath: ../../../../cosign.pub
     files:
       # Import of a local file
       - source: ../09-composable-packages/files/coffee-ipsum.txt

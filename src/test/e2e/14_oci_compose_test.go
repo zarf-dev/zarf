@@ -265,14 +265,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 
 		tmpdir := suite.T().TempDir()
 
-		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
-			componentsPath := filepath.Join(unpackedPath, "components")
-			base := filepath.Join(unpackedPath, "components", component.Name)
-			_, _, err = e2e.Zarf(suite.T(), "tools", "archiver", "decompress", fmt.Sprintf("%s.tar", base), componentsPath)
-			suite.NoError(err)
-			suite.FileExists(filepath.Join(base, filepath.Base(component.DeprecatedCosignKeyPath)))
-		}
-
 		var containsChart bool
 		for _, chart := range component.Charts {
 			if isSkeleton && chart.URL != "" {

@@ -90,7 +90,6 @@ const (
 	VPkgDeploySet        = "package.deploy.set"
 	VPkgDeployComponents = "package.deploy.components"
 	VPkgDeployShasum     = "package.deploy.shasum"
-	VPkgDeploySget       = "package.deploy.sget"
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
