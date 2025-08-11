@@ -29,12 +29,12 @@ import (
 const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
-func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, concurrency int, retries int) (_ ocispec.Descriptor, err error) {
+func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, opts PublishOptions) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
 
 	start := time.Now()
-	if concurrency == 0 {
-		concurrency = DefaultConcurrency
+	if opts.OCIConcurrency == 0 {
+		opts.OCIConcurrency = DefaultConcurrency
 	}
 
 	src, err := file.New("")
@@ -74,7 +74,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	annotations[ocispec.AnnotationCreated] = t.Format(OCITimestampFormat)
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
-	copyOpts.Concurrency = concurrency
+	copyOpts.Concurrency = opts.OCIConcurrency
 
 	// For progress reporting and size estimation
 	// (root + manifestConfigDesc sizes are unknown until built each attempt;
@@ -120,16 +120,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 
 			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
 		},
-		retry.Attempts(uint(retries)),
-		retry.Delay(500*time.Millisecond),
-		retry.MaxDelay(8*time.Second),
+		retry.Attempts(uint(opts.Retries)),
+		retry.Delay(defaultDelayTime),
+		retry.MaxDelay(defaultMaxDelayTime),
 		retry.DelayType(retry.BackOffDelay), // exponential backoff
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
 			l.Warn("retrying package push",
 				"attempt", n+1,
-				"max_attempts", retries,
+				"max_attempts", opts.Retries,
 				"error", err,
 			)
 		}),

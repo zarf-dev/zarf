@@ -40,7 +40,8 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	l := logger.From(ctx)
 	start := time.Now()
 
-	if opts.Retries == 0 {
+	// Allow zero but other sanitize retries if less-than zero
+	if opts.Retries < 0 {
 		opts.Retries = config.ZarfDefaultRetries
 	}
 
@@ -75,8 +76,13 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
+	publishOptions := zoci.PublishOptions{
+		OCIConcurrency: opts.OCIConcurrency,
+		Retries:        opts.Retries,
+	}
+
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.OCIConcurrency, opts.Retries)
+	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, publishOptions)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
@@ -103,7 +109,8 @@ type PublishPackageOptions struct {
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	if opts.Retries == 0 {
+	// Allow zero but other sanitize retries if less-than zero
+	if opts.Retries < 0 {
 		opts.Retries = config.ZarfDefaultRetries
 	}
 
@@ -155,7 +162,8 @@ type PublishSkeletonOptions struct {
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	if opts.Retries == 0 {
+	// Allow zero but other sanitize retries if less-than zero
+	if opts.Retries < 0 {
 		opts.Retries = config.ZarfDefaultRetries
 	}
 
@@ -226,7 +234,12 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	_, err = remote.PushPackage(ctx, layout, concurrency, retries)
+	publishOptions := zoci.PublishOptions{
+		OCIConcurrency: concurrency,
+		Retries:        retries,
+	}
+
+	_, err = remote.PushPackage(ctx, layout, publishOptions)
 	if err != nil {
 		return fmt.Errorf("could not push package: %w", err)
 	}

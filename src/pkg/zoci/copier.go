@@ -7,7 +7,6 @@ package zoci
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -17,10 +16,10 @@ import (
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.
-func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int, retries int) (err error) {
+func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOptions) (err error) {
 	l := logger.From(ctx)
-	if concurrency <= 0 {
-		concurrency = DefaultConcurrency
+	if opts.OCIConcurrency <= 0 {
+		opts.OCIConcurrency = DefaultConcurrency
 	}
 
 	// Resolve the root digest of the source package (manifest or index)
@@ -31,7 +30,7 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int,
 	srcRef := srcRoot.Digest.String()
 
 	copyOpts := dst.OrasRemote.GetDefaultCopyOpts()
-	copyOpts.Concurrency = concurrency
+	copyOpts.Concurrency = opts.OCIConcurrency
 
 	tag := src.Repo().Reference.Reference // keep the source tag on the destination
 
@@ -60,16 +59,16 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int,
 			// 2) Update/tag the destination index to the source tag
 			return dst.OrasRemote.UpdateIndex(ctx, tag, publishedDesc)
 		},
-		retry.Attempts(uint(retries)),
-		retry.Delay(500*time.Millisecond),
-		retry.MaxDelay(8*time.Second),
+		retry.Attempts(uint(opts.Retries)),
+		retry.Delay(defaultDelayTime),
+		retry.MaxDelay(defaultMaxDelayTime),
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
 			l.Warn("retrying package copy",
 				"attempt", n+1,
-				"max_attempts", retries,
+				"max_attempts", opts.Retries,
 				"error", err,
 			)
 		}),

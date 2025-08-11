@@ -218,4 +218,7 @@ func setDefaults() {
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
+
+	// Package publish opts that are non-zero values
+	v.SetDefault(VPkgPublishRetries, 1)
 }
