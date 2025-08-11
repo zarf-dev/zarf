@@ -29,7 +29,7 @@ import (
 const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
-func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, retries int, concurrency int) (_ ocispec.Descriptor, err error) {
+func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, concurrency int, retries int) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
 
 	start := time.Now()

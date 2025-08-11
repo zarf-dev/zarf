@@ -17,7 +17,7 @@ import (
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.
-func CopyPackage(ctx context.Context, src *Remote, dst *Remote, retries int, concurrency int) (err error) {
+func CopyPackage(ctx context.Context, src *Remote, dst *Remote, concurrency int, retries int) (err error) {
 	l := logger.From(ctx)
 	if concurrency <= 0 {
 		concurrency = DefaultConcurrency

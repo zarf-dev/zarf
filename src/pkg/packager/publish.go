@@ -76,7 +76,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	}
 
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.Retries, opts.OCIConcurrency)
+	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.OCIConcurrency, opts.Retries)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
@@ -226,7 +226,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	_, err = remote.PushPackage(ctx, layout, retries, concurrency)
+	_, err = remote.PushPackage(ctx, layout, concurrency, retries)
 	if err != nil {
 		return fmt.Errorf("could not push package: %w", err)
 	}
