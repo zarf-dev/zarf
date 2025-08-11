@@ -25,7 +25,7 @@ docker build -t your-registry/your-data:tag .
 docker push your-registry/your-data:tag
 ```
 
-Some registries will not accept images over a certain size. In this case, you can load the image from the Docker Daemon. This can be slow, users are recommended to try out [this strategy for improving the speed of image loads](https://docs.zarf.dev/faq#how-can-i-improve-the-speed-of-loading-large-images-from-docker-on-zarf-package-create). Additionally, before Data Injections is removed Zarf allow users to load images directly from a tar file, ([#2181](https://github.com/zarf-dev/zarf/issues/)), this will be significantly faster than Docker daemon pulls.
+Some registries will not accept images over a certain size. In this case, you can load the image from the Docker Daemon. This can be slow, users are recommended to try out [this strategy for improving the speed of image loads](https://docs.zarf.dev/faq#how-can-i-improve-the-speed-of-loading-large-images-from-docker-on-zarf-package-create). Additionally, before Data Injections is removed Zarf will allow users to load images directly from a tar file, ([#2181](https://github.com/zarf-dev/zarf/issues/)), this will be significantly faster than Docker daemon pulls.
 
 ### Step 2: Update zarf.yaml
 
@@ -42,7 +42,7 @@ components:
       - ghcr.io/my-app:1.0.0
       - alpine:3.18
     dataInjections:
-      - source: zim-data
+      - source: my-folder
         target:
           namespace: my-app
           selector: app=my-app
