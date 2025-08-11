@@ -1,0 +1,117 @@
+---
+title: "Migrate off of Data injections"
+---
+
+This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections is planned to be deprecated the current Zarf schema version and fully removed by Zarf v1.0.0. There are for several reasons behind this:
+
+- **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
+- **Host dependency**: Data injections shell out to `tar`, relying on host binaries that may not be available or differ across environments
+- **Better alternatives**: OCI images provide a Kubernetes native solution for data delivery, and neatly fit into the Zarf delivery paradigm.
+
+## Migration guide
+
+### Step 1: Package Your Data in a Container Image
+
+First, create a container image containing your data:
+
+```dockerfile
+FROM alpine:3.18
+COPY your-data-file /your-data/your-data-file
+```
+
+Build and push this image:
+```bash
+docker build -t your-registry/your-data:tag .
+docker push your-registry/your-data:tag
+```
+
+Some registries will not accept images over a certain size. In this case, you can load the image from the Docker Daemon. This can be slow, users are recommended to try out [this strategy for improving the speed of image loads](https://docs.zarf.dev/faq#how-can-i-improve-the-speed-of-loading-large-images-from-docker-on-zarf-package-create). Additionally, before Data Injections is removed Zarf allow users to load images directly from a tar file, ([#2181](https://github.com/zarf-dev/zarf/issues/)), this will be significantly faster than Docker daemon pulls.
+
+### Step 2: Update zarf.yaml
+
+**Before (Data Injections):**
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: my-data-app
+
+components:
+  - name: my-app
+    required: true
+    images:
+      - ghcr.io/my-app:1.0.0
+      - alpine:3.18
+    dataInjections:
+      - source: zim-data
+        target:
+          namespace: my-app
+          selector: app=my-app
+          container: data-loader
+          path: /data
+        compress: true
+```
+
+**After (Init Container Strategy):**
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: init-data-loading
+
+components:
+  - name: kiwix-serve-init
+    required: true
+    images:
+      - ghcr.io/my-app:1.0.0
+      - your-registry/your-data:tag  # Your container with your data file
+```
+
+**Key Changes:**
+- Remove `dataInjections` section entirely.
+- Replace the image used during data injections with your data image.
+
+### Step 3: Update Deployment Manifest
+
+**Before (Data Injections):**
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: data-loader
+          image: alpine:3.18
+          command: ["sh", "-c"]
+          args:
+            - 'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"'
+          volumeMounts:
+            - mountPath: /data
+              name: data
+```
+
+**After (Init Container Strategy):**
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: data-puller
+          image: your-registry/your-data:tag
+          command: ["sh", "-c"]
+          args:
+            - |
+              cp /your-data/your-data-file /data/my-app-data-location
+              ls -la /data
+              echo "Data initialization complete"
+          volumeMounts:
+            - mountPath: /data
+              name: data
+```
+
+**Key Changes:**
+- Replace data injection marker waiting logic with direct data copying.
+- Use your data container image.
+
+Your app should be ready to deploy. If there are any reasons that this method does not work for you, please comment in issue [#3926](https://github.com/zarf-dev/zarf/issues/3926)
+
+## Future Alternatives
+
+Once the feature is stable, we will recommend the new OCI volume source feature. This feature, in beta as of 1.33, will provide a simpler way to mount data from an image into a pod. Read more about OCI volume sources in the enhancement proposal [4639-oci-volume-source](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source).
