@@ -226,7 +226,7 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	_, err = remote.PushPackage(ctx, layout, concurrency, retries)
+	_, err = remote.PushPackage(ctx, layout, retries, concurrency)
 	if err != nil {
 		return fmt.Errorf("could not push package: %w", err)
 	}

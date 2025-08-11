@@ -66,6 +66,13 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, retries int, con
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			l.Warn("retrying package copy",
+				"attempt", n+1,
+				"max_attempts", retries,
+				"error", err,
+			)
+		}),
 	)
 	if err != nil {
 		return fmt.Errorf("copy failed after retries: %w", err)

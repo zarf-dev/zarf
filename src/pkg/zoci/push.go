@@ -30,6 +30,8 @@ const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
 func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, retries int, concurrency int) (_ ocispec.Descriptor, err error) {
+	l := logger.From(ctx)
+
 	start := time.Now()
 	if concurrency == 0 {
 		concurrency = DefaultConcurrency
@@ -83,7 +85,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 
 	err = retry.Do(
 		func() error {
-			logger.From(ctx).Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 			manifestConfigDesc, cfgErr := r.OrasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
 			if cfgErr != nil {
@@ -124,12 +126,19 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		retry.DelayType(retry.BackOffDelay), // exponential backoff
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			l.Warn("retrying package push",
+				"attempt", n+1,
+				"max_attempts", retries,
+				"error", err,
+			)
+		}),
 	)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("publish failed after retries: %w", err)
 	}
 
-	logger.From(ctx).Info("completed package publish", "destination", r.Repo().Reference.String(),
+	l.Info("completed package publish", "destination", r.Repo().Reference.String(),
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
 	return publishedDesc, nil
