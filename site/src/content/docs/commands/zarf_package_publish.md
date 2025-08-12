@@ -29,7 +29,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 ### Options
 
 ```
-      --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
+  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
   -f, --flavor string               The flavor of components to include in the resulting package. The flavor will be appended to the package tag
   -h, --help                        help for publish
       --signing-key string          Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
