@@ -17,7 +17,7 @@ zarf tools registry prune [flags]
 ### Options
 
 ```
-      --confirm   Confirm the image prune action to prevent accidental deletions
+  -c, --confirm   Confirm the image prune action to prevent accidental deletions
   -h, --help      help for prune
 ```
 
