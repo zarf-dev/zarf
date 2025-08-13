@@ -107,3 +107,17 @@ brews:
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "The Airgap Native Packager Manager for Kubernetes"
+
+# UPX compression to minimize binary size
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
+    brute: false
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
