@@ -200,6 +200,12 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 	return m
 }
 
+// List of feature names
+var (
+	// AxolotlMode declares the "axolotl-mode" feature
+	AxolotlMode Name = "axolotl-mode"
+)
+
 func init() {
 	features := []Feature{
 		// NOTE: Here is an example default feature flag
@@ -212,12 +218,12 @@ func init() {
 		// 	Stage:       GA,
 		// },
 		{
-			Name: "axolotl-mode",
+			Name: AxolotlMode,
 			Description: "Enabling \"axolotl-mode\" runs `zarf say` at the beginning of each CLI command." +
 				"This fun feature is intended to help with testing feature flags.",
 			Enabled: false,
 			Since:   "v0.60.0",
-			Stage:   "alpha",
+			Stage:   Alpha,
 		},
 	}
 
