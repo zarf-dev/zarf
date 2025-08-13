@@ -1179,11 +1179,12 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:           config.ZarfDefaultTimeout,
 		NamespaceOverride: o.namespaceOverride,
 	}
+	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return fmt.Errorf("unable to print package definition: %w", err)
+	}
 	if !config.CommonOptions.Confirm {
-		err = utils.ColorPrintYAML(pkg, nil, true)
-		if err != nil {
-			return fmt.Errorf("unable to print package definition: %w", err)
-		}
 		prompt := &survey.Confirm{
 			Message: "remove this Zarf package?",
 		}
