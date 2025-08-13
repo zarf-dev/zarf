@@ -29,7 +29,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 ### Options
 
 ```
-      --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
+  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
   -f, --flavor string               The flavor of components to include in the resulting package. The flavor will be appended to the package tag
   -h, --help                        help for publish
       --retries int                 Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 1)
