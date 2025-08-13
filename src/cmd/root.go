@@ -29,7 +29,7 @@ var (
 	pkgConfig = types.PackagerConfig{}
 	// Features is a string map of feature names to enabled state.
 	// Example: "foo=true,bar=false,baz=true"
-	features string
+	features map[string]string
 	// LogLevelCLI holds the log level as input from a command
 	LogLevelCLI string
 	// LogFormat holds the log format as input from a command
@@ -78,7 +78,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	// Implement "axolotl-mode"
-	if feature.IsEnabled("axolotl-mode") {
+	if feature.IsEnabled(feature.AxolotlMode) {
 		if _, err = fmt.Fprintln(os.Stderr, logo()); err != nil {
 			return err
 		}
@@ -121,8 +121,8 @@ func preRun(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func setupFeatures(raw string) error {
-	fs, err := parseFeatures(raw)
+func setupFeatures(m map[string]string) error {
+	fs, err := mapToFeatures(m)
 	if err != nil {
 		return err
 	}
@@ -137,30 +137,16 @@ func setupFeatures(raw string) error {
 
 // parseFeatures take an unstructured string from a viper source (cli flag, env var, disk config) and parses it into
 // feature.Feature structs.
-func parseFeatures(features string) ([]feature.Feature, error) {
+func mapToFeatures(m map[string]string) ([]feature.Feature, error) {
 	// No features given, exit
-	if features == "" {
+	if len(m) == 0 {
 		return []feature.Feature{}, nil
 	}
 
 	s := make([]feature.Feature, 0)
 
-	// Segment flag string contents into kv slugs, e.g. ["foo=true","bar=false"]
-	kvPairs := strings.Split(features, ",")
 	// Handle pairs
-	for _, f := range kvPairs {
-		// Split slug into key and value
-		pair := strings.Split(f, "=")
-
-		// Validate pair
-		if len(pair) != 2 {
-			return []feature.Feature{}, fmt.Errorf("invalid feature kv pair: %s", f)
-		}
-
-		// Extract values
-		k := pair[0]
-		v := pair[1]
-
+	for k, v := range m {
 		// Parse value into bool
 		b, err := strconv.ParseBool(v)
 		if err != nil {
@@ -259,7 +245,7 @@ func init() {
 	vpr := getViper()
 
 	// Features
-	rootCmd.PersistentFlags().StringVar(&features, "features", vpr.GetString(VFeatures), "[ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
+	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "[ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)
