@@ -313,7 +313,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 	confirm := config.CommonOptions.Confirm
 	if !confirm {
 		prompt := &survey.Confirm{
-			Message: "continue with image prune?",
+			Message: "Continue with image prune?",
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
 			return fmt.Errorf("confirm selection canceled: %w", err)

@@ -356,7 +356,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	}
 
 	prompt := &survey.Confirm{
-		Message: "deploy this Zarf package?",
+		Message: "Deploy this Zarf package?",
 	}
 	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
