@@ -72,7 +72,8 @@ release:
     - glob: ./build/zarf-init-*
 
 # Update the 'generic' brew formula and create a versioned brew formula for artifacts from this release
-brews:
+# brews is being phased out in favor of homebrew_casks, check https://goreleaser.com/deprecations#brews for more info
+homebrew_casks:
   - name: "{{ .Env.BREW_NAME }}"
     repository:
       owner: defenseunicorns
@@ -117,7 +118,6 @@ upx:
     goos:
       - linux
       - windows
-      - darwin
     goarch:
       - amd64
       - arm64
