@@ -61,7 +61,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
       --debug-node-info                 debug node info
   -e, --exit-status                     set exit status if there are no matches or null or false is returned
       --expression string               forcibly set the expression argument. Useful when yq argument detection thinks your expression is a file.
-      --features string                 [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true"
+      --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --from-file string                Load expression from specified file.
   -f, --front-matter string             (extract|process) first input as yaml front-matter. Extract will pull out the yaml content, process will run the expression against the yaml content, leaving the remaining data intact
       --header-preprocess               Slurp any header comments and separators before processing expression. (default true)
