@@ -60,6 +60,7 @@ components:
     actions:
       onDeploy:
         before:
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) delete cluster -f eks.yaml --disable-nodegroup-eviction --wait
         after:
           # clean up after ourselves
