@@ -1186,7 +1186,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	if !config.CommonOptions.Confirm {
 		prompt := &survey.Confirm{
-			Message: "remove this Zarf package?",
+			Message: "Remove this Zarf package?",
 		}
 		var confirm bool
 		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
