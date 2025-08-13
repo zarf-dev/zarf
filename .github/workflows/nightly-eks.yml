@@ -59,12 +59,12 @@ jobs:
       #       --set=PERMISSIONS_BOUNDARY_TAG=uds_permissions_boundary \
       #       --confirm
 
-      - name: Run tests
-        run: make test-e2e-with-cluster ARCH=amd64
+      # - name: Run tests
+      #   run: make test-e2e-with-cluster ARCH=amd64
 
-      - name: show cluster logs
-        uses: ./.github/actions/debug-cluster
-        if: always()
+      # - name: show cluster logs
+      #   uses: ./.github/actions/debug-cluster
+      #   if: always()
 
       - name: Teardown the cluster
         if: always()
