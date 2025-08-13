@@ -448,10 +448,6 @@
           "type": "string",
           "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead."
         },
-        "cosignKeyPath": {
-          "type": "string",
-          "description": "[Deprecated] Specify a path to a public key to validate signed online resources. This will be removed in Zarf v1.0.0."
-        },
         "import": {
           "$ref": "#/$defs/ZarfComponentImport",
           "description": "Import a component from another Zarf package."

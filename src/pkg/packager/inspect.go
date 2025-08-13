@@ -13,9 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -259,70 +257,48 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 }
 
 func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
-	manifestPaths := []string{}
-	for idx, path := range manifest.Kustomizations {
-		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
-		rel := filepath.Join(string(layout.ManifestsComponentDir), kname)
-		dst := filepath.Join(baseComponentDir, rel)
-		if !helpers.IsURL(path) {
-			path = filepath.Join(packagePath, path)
-		}
-		// Generate manifests from kustomizations and place in the package
-		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-			return nil, fmt.Errorf("unable to build the kustomization for %s: %w", path, err)
-		}
-		manifestPaths = append(manifestPaths, dst)
+	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
+		return nil, err
 	}
-	// Get all manifest files
-	for idx, f := range manifest.Files {
-		rel := filepath.Join(string(layout.ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
-		dst := filepath.Join(baseComponentDir, rel)
-		if helpers.IsURL(f) {
-			if err := utils.DownloadToFile(ctx, f, dst, ""); err != nil {
-				return nil, fmt.Errorf(lang.ErrDownloading, f, err.Error())
-			}
-		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, f), dst); err != nil {
-				return nil, fmt.Errorf("unable to copy manifest %s: %w", f, err)
-			}
-		}
-		manifestPaths = append(manifestPaths, dst)
-	}
+
+	manifestPath := filepath.Join(baseComponentDir, string(layout.ManifestsComponentDir))
+
 	var resources []Resource
-	for _, manifest := range manifestPaths {
+	err := filepath.Walk(manifestPath, func(manifest string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
 		if err := variableConfig.ReplaceTextTemplate(manifest); err != nil {
-			return nil, fmt.Errorf("error templating the manifest: %w", err)
+			return fmt.Errorf("error templating the manifest: %w", err)
 		}
 		content, err := os.ReadFile(manifest)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		resources = append(resources, Resource{
 			Content:      string(content),
 			Name:         manifest,
 			ResourceType: ManifestResource,
 		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
+
 	return resources, nil
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
 func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, kubeVersion string) (Resource, chartutil.Values, error) {
-	if zarfChart.LocalPath != "" {
-		zarfChart.LocalPath = filepath.Join(packagePath, zarfChart.LocalPath)
-	}
-	valuesFiles := []string{}
-	oldValuesFiles := zarfChart.ValuesFiles
-	for _, v := range zarfChart.ValuesFiles {
-		valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-	}
-	zarfChart.ValuesFiles = valuesFiles
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
-	if err := helm.PackageChart(ctx, zarfChart, chartPath, valuesFilePath); err != nil {
-		return Resource{}, chartutil.Values{}, fmt.Errorf("unable to package the chart %s: %w", zarfChart.Name, err)
+	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath); err != nil {
+		return Resource{}, chartutil.Values{}, err
 	}
-	zarfChart.ValuesFiles = oldValuesFiles
 
 	chartOverrides := make(map[string]any)
 	for _, variable := range zarfChart.Variables {
