@@ -356,7 +356,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	}
 
 	prompt := &survey.Confirm{
-		Message: "deploy this Zarf package?",
+		Message: "Deploy this Zarf package?",
 	}
 	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
@@ -1132,7 +1132,6 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
-	_ = cmd.MarkFlagRequired("confirm")
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
@@ -1180,6 +1179,21 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:           config.ZarfDefaultTimeout,
 		NamespaceOverride: o.namespaceOverride,
 	}
+	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return fmt.Errorf("unable to print package definition: %w", err)
+	}
+	if !config.CommonOptions.Confirm {
+		prompt := &survey.Confirm{
+			Message: "Remove this Zarf package?",
+		}
+		var confirm bool
+		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+			return fmt.Errorf("package remove cancelled")
+		}
+	}
+
 	err = packager.Remove(ctx, pkg, removeOpt)
 	if err != nil {
 		return err

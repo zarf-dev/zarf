@@ -22,7 +22,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 
 ```
       --components string           Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
-  -c, --confirm                     REQUIRED. Confirm the removal action to prevent accidental deletions
+  -c, --confirm                     Confirms the removal action
   -h, --help                        help for remove
   -n, --namespace string            [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
       --skip-signature-validation   Skip validating the signature of the Zarf package
