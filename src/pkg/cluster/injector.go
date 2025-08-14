@@ -300,9 +300,8 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 }
 
 // GetInjectorDaemonsetImage gets the image that is most likely to be accessible from all nodes
-// First it simply checks if an image is on every node,
-// then it checks for an image with pause in the name as the pause image is required to be accessible.
-// Finally, it falls back to the smallest image.
+// It first grabs the smallest image with pause in the name. This should be the pause container which every node must have access to
+// If there are no pause images then it grabs the smallest image.
 func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
 
@@ -314,16 +313,13 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 		}
 
 		// Track images across all nodes
-		imageNodeCount := make(map[string]int)
 		allImages := []corev1.ContainerImage{}
 		pauseImages := []corev1.ContainerImage{}
-		totalNodes := len(nodes.Items)
 
 		for _, node := range nodes.Items {
 			for _, image := range node.Status.Images {
 				allImages = append(allImages, image)
 				for _, name := range image.Names {
-					imageNodeCount[name]++
 					img, err := transform.ParseImageRef(name)
 					if err != nil {
 						return err
@@ -332,13 +328,6 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 						pauseImages = append(pauseImages, image)
 					}
 				}
-			}
-		}
-
-		for imageName, nodeCount := range imageNodeCount {
-			if nodeCount == totalNodes {
-				injectorImage = imageName
-				return nil
 			}
 		}
 

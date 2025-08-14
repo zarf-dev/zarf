@@ -306,43 +306,7 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 		ctx           context.Context
 	}{
 		{
-			name: "selects image present on every node",
-			nodes: []corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"registry.k8s.io/pause:3.7"},
-								SizeBytes: 300000,
-							},
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
-							},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"registry.k8s.io/pause:3.6"},
-								SizeBytes: 300000,
-							},
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 5000000,
-							},
-						},
-					},
-				},
-			},
-			expectedImage: "nginx:latest",
-		},
-		{
-			name: "selects smallest pause image when no universal image",
+			name: "selects smallest pause image",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
@@ -353,7 +317,7 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 								SizeBytes: 400000,
 							},
 							{
-								Names:     []string{"k8s.gcr.io/pause:3.5"},
+								Names:     []string{"k8s.gcr.io/pause:3.7"},
 								SizeBytes: 200000,
 							},
 							{
@@ -368,14 +332,14 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"registry.k8s.io/pause:3.7"},
+								Names:     []string{"registry.k8s.io/pause:3.5"},
 								SizeBytes: 500000,
 							},
 						},
 					},
 				},
 			},
-			expectedImage: "k8s.gcr.io/pause:3.5",
+			expectedImage: "k8s.gcr.io/pause:3.7",
 		},
 		{
 			name: "falls back to smallest image when no pause images",
