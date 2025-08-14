@@ -147,6 +147,9 @@ func TestCreateAbsoluteSources(t *testing.T) {
 								Namespace: "test",
 								Version:   "1.0.0",
 								LocalPath: absoluteChartPath,
+								ValuesFiles: []string{
+									absoluteFilePath,
+								},
 							},
 						},
 					},
