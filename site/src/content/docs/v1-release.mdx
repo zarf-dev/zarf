@@ -1,0 +1,123 @@
+---
+title: Zarf V1 Release Plan
+---
+
+## 1. Overview
+
+**Milestone:** [v1.0.0 Release](https://github.com/zarf-dev/zarf/milestone/59)
+**Project Board:** [v1.0.0 Project Board](https://github.com/orgs/zarf-dev/projects/1/views/7)
+
+The v1.0.0 release of **Zarf** represents the first **production-ready**, **stable API** version of the project, designed for reliable use in **air-gapped**, **semi-connected**, and **connected** environments.
+This release will focus on **stability, core feature completeness, and ease of adoption** for both end-users and integrators.
+
+The purpose of this document and all associated references are to create an open and inclusive progression towards the `v1.0.0` release and used to justify work that affects the release accordingly.
+
+---
+
+## 2. Project Goals
+
+- Deliver a stable, tested, and documented set of **core Zarf features** that will remain backward-compatible within the 1.x lifecycle.
+- Provide **robust installation, packaging, and deployment workflows** for air-gapped Kubernetes environments.
+- Offer a **clear upgrade path** from pre-v1.0.0 versions.
+- Ship with **documentation and tutorials** that enable first-time success without deep prior expertise.
+- Integrate **CI/CD automation** for consistent build and release processes.
+
+---
+
+## 3. Non-Goals
+
+- Experimental features that have not undergone sufficient field testing.
+- Major architectural changes that would destabilize the release timeline.
+- Support for environments outside of the defined initial scope (e.g., non-Kubernetes orchestration).
+- Large-scale refactors unrelated to core release goals.
+
+---
+
+## 4. In-Scope Features for v1.0.0
+
+**Core Features:**
+1. **Zarf Package Management**
+   - Creation, signing, and verification of Zarf packages.
+   - Air-gapped deployment support.
+2. **Cluster Bootstrap**
+   - Reliable, repeatable cluster bootstrapping in disconnected environments.
+3. **Artifact Handling**
+   - Image management, registry population, and artifact caching.
+4. **CLI Stability**
+   - Finalized command structure and consistent flags/options.
+5. **Logging and Diagnostics**
+   - Clear, actionable, and auditable logging for troubleshooting.
+
+**Quality & Reliability:**
+- Automated test coverage for core workflows.
+- End-to-end testing in multiple deployment scenarios (connected, semi-connected, air-gapped).
+- Performance benchmarks for common workflows.
+
+**Documentation:**
+- Install guides for different connectivity modes.
+- Tutorials for package creation and deployment.
+- API and CLI reference documentation.
+
+---
+
+## 5. Pre-v1.0.0 Development
+
+These items are not "features" of V1, but are considered critical issues to be delivered before the v1.0.0 release and effect the schedule accordingly:
+
+- CI/CD pipeline reliability improvements.
+- Security audit and remediation of any high/critical findings.
+- Documentation build pipeline finalized.
+- Dependency updates for long-term support stability.
+
+---
+
+## 6. Out of Scope for v1.0.0
+
+- Plugin system for third-party extensions.
+- Major UI/UX rework beyond existing CLI enhancements.
+- Experimental integrations with emerging projects.
+
+---
+
+## 7. Milestones & Timeline
+
+These dates are not estimates. This table offers historical visibility around the progress through key milestones.
+
+| Milestone / Phase                | Target Date     | Description                                                                 |
+|----------------------------------|-----------------|-----------------------------------------------------------------------------|
+| Scope Finalization               | YYYY-MM-DD      | v1.0.0 feature set, non-goals, and blockers.                              |
+| Feature Completion.              | YYYY-MM-DD      | All in-scope features implemented; only bug fixes and docs updates remain. |
+| Docs & Release Prep              | YYYY-MM-DD      | Documentation finalized, release candidate built.                          |
+| V1 Release                       | YYYY-MM-DD      | Public release with announcement and changelog.                            |
+
+---
+
+## 8. Success Criteria
+
+- All issues in the [v1.0.0 Release Milestone](https://github.com/zarf-dev/zarf/milestone/59) are closed or deferred with stakeholder approval.
+- 100% completion of `pre-v1.0.0` items.
+- Zero high/critical unresolved security issues.
+- CI/CD builds passing for all supported platforms.
+- Documentation reviewed and validated by end-users.
+
+---
+
+## 9. Risks & Mitigations
+
+| Risk                                                        | Mitigation                                                                       |
+|-------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Pre-v1.0.0 blockers take longer than expected                | Track separately and escalate during weekly release reviews.                    |
+| Scope creep                                                  | Enforce scope freeze; move non-essential items to post-v1.0.0 milestone.        |
+| External dependency delays                                   | Identify early; build contingency plans for affected functionality.             |
+
+---
+
+## 10. Tracking & Reporting
+
+Progress is tracked via:
+- **GitHub Milestone:** [v1.0.0 Release](https://github.com/zarf-dev/zarf/milestone/59)
+- **Labels:** `v1.0.0`, `pre-v1.0.0`, `post-v1.0.0`
+- **Project Board:** [Zarf v1.0.0 Board](https://github.com/orgs/zarf-dev/projects/1/views/7)
+- **Historical Metrics:** Open Issues / Closed Issues totals
+
+---
