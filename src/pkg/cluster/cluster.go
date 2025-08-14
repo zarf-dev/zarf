@@ -247,7 +247,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
 		}
-		fmt.Println("ip family is ", ipFamily)
 		s.IPFamily = ipFamily
 
 		// Wait up to 2 minutes for the default service account to be created.
