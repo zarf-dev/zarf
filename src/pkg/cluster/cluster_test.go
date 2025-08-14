@@ -48,17 +48,6 @@ func TestGetIPFamily(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			cs := fake.NewClientset()
-
-			// Create zarf namespace
-			zarfNs := &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: state.ZarfNamespaceName,
-				},
-			}
-			_, err := cs.CoreV1().Namespaces().Create(ctx, zarfNs, metav1.CreateOptions{})
-			require.NoError(t, err)
-
-			// Use immediate watcher that reports services as ready
 			immediateWatcher := healthchecks.NewImmediateWatcher(status.CurrentStatus)
 
 			c := &Cluster{
