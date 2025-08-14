@@ -99,7 +99,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		}
 		// Setting a default here for retries as the flag is less intuitive during create
 		publishOptions := zoci.PublishOptions{
-			Retries:        2,
+			Retries:        1,
 			OCIConcurrency: opts.OCIConcurrency,
 		}
 		_, err = remote.PushPackage(ctx, pkgLayout, publishOptions)

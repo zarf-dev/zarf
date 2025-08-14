@@ -127,15 +127,18 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			l.Warn("retrying package push",
-				"attempt", n+1,
-				"max_attempts", opts.Retries,
-				"error", err,
-			)
+			// Only log retry if retries are enabled
+			if opts.Retries > 1 {
+				l.Warn("retrying package push",
+					"attempt", n+1,
+					"max_attempts", opts.Retries,
+					"error", err,
+				)
+			}
 		}),
 	)
 	if err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("publish failed after retries: %w", err)
+		return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", err)
 	}
 
 	l.Info("completed package publish", "destination", r.Repo().Reference.String(),
