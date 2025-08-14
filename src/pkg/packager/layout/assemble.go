@@ -487,7 +487,10 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	oldValuesFiles := chart.ValuesFiles
 	valuesFiles := []string{}
 	for _, v := range chart.ValuesFiles {
-		valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
+		if !filepath.IsAbs(v) {
+			v = filepath.Join(packagePath, v)
+		}
+		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
 	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
@@ -535,7 +538,10 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), filepath.Join(compBuildPath, rel)); err != nil {
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
