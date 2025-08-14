@@ -62,15 +62,6 @@ func TestGetIPFamily(t *testing.T) {
 					Namespace: state.ZarfNamespaceName,
 				},
 				Spec: corev1.ServiceSpec{
-					IPFamilyPolicy: &[]corev1.IPFamilyPolicy{corev1.IPFamilyPolicyPreferDualStack}[0],
-					Ports: []corev1.ServicePort{
-						{
-							Port:     443,
-							Protocol: corev1.ProtocolTCP,
-							Name:     "test-port",
-						},
-					},
-					Type:       corev1.ServiceTypeClusterIP,
 					IPFamilies: tt.protocolsUsed,
 				},
 			}
