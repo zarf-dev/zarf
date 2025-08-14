@@ -205,10 +205,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
-	CmdInternalRunControllerShort = "Runs the injector controller to monitor registry proxy pods"
-	CmdInternalRunControllerLong  = "Runs the injector controller that watches for pods in the zarf-registry-proxy daemonset " +
-		"and logs when they encounter ErrImagePull status. This is used internally for monitoring registry proxy health."
-
 	// zarf package
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
