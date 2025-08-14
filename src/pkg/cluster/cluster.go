@@ -376,10 +376,9 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 		return "", fmt.Errorf("unable to apply test service: %w", err)
 	}
 
-	// FIXME, return error
 	defer func() {
 		if deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, svcName, metav1.DeleteOptions{}); deleteErr != nil {
-			logger.From(ctx).Warn("Failed to cleanup test service", "service", svcName, "error", deleteErr)
+			err = errors.Join(err, fmt.Errorf("failed to cleanup test service %s: %w", svcName, deleteErr))
 		}
 	}()
 
