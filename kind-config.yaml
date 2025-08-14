@@ -8,7 +8,7 @@ kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 networking:
   kubeProxyMode: "nftables"
-  ipFamily: dual
+  ipFamily: ipv6
 # Calico setup
 # kind: Cluster
 # apiVersion: kind.x-k8s.io/v1alpha4

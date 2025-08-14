@@ -18,6 +18,7 @@ spec:
         - name: injector
           image: "{{ .Values.proxy.injector.image }}"
           workingDir: /zarf-init
+          # command: ["/zarf-init/zarf-injector", "{{ .Values.proxy.injector.shasum }}", "{{ if .Values.service.ipv6Only }}[::]:5000{{ else }}0.0.0.0:5000{{ end }}"]
           command: ["/zarf-init/zarf-injector", "{{ .Values.proxy.injector.shasum }}", "{{ .Values.service.ipv6Only }}"]
           ports:
             - containerPort: 5000
