@@ -360,30 +360,20 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 }
 
 // GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
-func (c *Cluster) GetIPFamily(ctx context.Context) (state.IPFamily, error) {
+func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error) {
 	svcName := "zarf-ip-family-test"
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcName,
-			Namespace: state.ZarfNamespaceName,
-		},
-		Spec: corev1.ServiceSpec{
-			IPFamilyPolicy: &[]corev1.IPFamilyPolicy{corev1.IPFamilyPolicyPreferDualStack}[0],
-			Ports: []corev1.ServicePort{
-				{
-					Port:     443,
-					Protocol: corev1.ProtocolTCP,
-					Name:     "test-port",
-				},
-			},
-			Type: corev1.ServiceTypeClusterIP,
-		},
-	}
+	service := v1ac.Service(svcName, state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
+			WithPorts(v1ac.ServicePort().
+				WithPort(443).
+				WithProtocol(corev1.ProtocolTCP).
+				WithName("test-port")).
+			WithType(corev1.ServiceTypeClusterIP))
 
-	// Create the service
-	_, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Create(ctx, service, metav1.CreateOptions{})
+	_, err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Apply(ctx, service, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 	if err != nil {
-		return "", fmt.Errorf("unable to create test service: %w", err)
+		return "", fmt.Errorf("unable to apply test service: %w", err)
 	}
 
 	// FIXME, return error
