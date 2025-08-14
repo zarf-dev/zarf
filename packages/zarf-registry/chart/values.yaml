@@ -7,6 +7,7 @@ image:
   tag: 2.8.3
 
 proxy:
+  enabled: "false"
   image:
     repository: alpine/socat
     tag: 1.8.0.3
@@ -17,7 +18,6 @@ proxy:
 
 service:
   ipv6Only: "false"
-  registryProxy: "false"
   name: registry
   type: NodePort
   port: 5000
