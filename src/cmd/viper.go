@@ -102,6 +102,7 @@ const (
 
 	VPkgPublishSigningKey         = "package.publish.signing_key"
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
+	VPkgPublishRetries            = "package.publish.retries"
 
 	// Package pull config keys
 
@@ -221,4 +222,7 @@ func setDefaults() {
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
+
+	// Package publish opts that are non-zero values
+	v.SetDefault(VPkgPublishRetries, 1)
 }
