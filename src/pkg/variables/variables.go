@@ -17,7 +17,7 @@ type SetVariableMap map[string]*v1alpha1.SetVariable
 
 // GetSetVariable gets a variable set within a VariableConfig by its name
 func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
-	variable, ok := vc.setVariableMap[name]
+	variable, ok := vc.setVariableMap[strings.ToUpper(name)]
 	return variable, ok
 }
 
@@ -67,6 +67,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
 func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
+	name = strings.ToUpper(name)
 	vc.setVariableMap[name] = &v1alpha1.SetVariable{
 		Variable: v1alpha1.Variable{
 			Name:       name,

@@ -102,11 +102,12 @@ func TestPopulateVariables(t *testing.T) {
 		{
 			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
 			vars: []v1alpha1.InteractiveVariable{
-				{Variable: v1alpha1.Variable{Name: "lowercase"}},
+				{Variable: v1alpha1.Variable{Name: "lowercase-prompt"}, Prompt: true},
 			},
-			presets: map[string]string{"LOWERCASE": "set"},
+			presets: map[string]string{"lowercase-preset": "made-upper"},
 			wantVars: SetVariableMap{
-				"LOWERCASE": {Variable: v1alpha1.Variable{Name: "LOWERCASE"}, Value: "set"},
+				"LOWERCASE-PRESET": {Variable: v1alpha1.Variable{Name: "LOWERCASE-PRESET"}, Value: "made-upper"},
+				"LOWERCASE-PROMPT": {Variable: v1alpha1.Variable{Name: "LOWERCASE-PROMPT"}, Value: "Prompt"},
 			},
 		},
 	}
