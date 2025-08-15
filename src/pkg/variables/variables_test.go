@@ -99,6 +99,16 @@ func TestPopulateVariables(t *testing.T) {
 				"NAME": {Variable: v1alpha1.Variable{Name: "NAME"}, Value: "Set"},
 			},
 		},
+		{
+			vc: VariableConfig{setVariableMap: SetVariableMap{}, prompt: prompt},
+			vars: []v1alpha1.InteractiveVariable{
+				{Variable: v1alpha1.Variable{Name: "lowercase"}},
+			},
+			presets: map[string]string{"LOWERCASE": "set"},
+			wantVars: SetVariableMap{
+				"LOWERCASE": {Variable: v1alpha1.Variable{Name: "LOWERCASE"}, Value: "set"},
+			},
+		},
 	}
 
 	for _, tc := range tests {

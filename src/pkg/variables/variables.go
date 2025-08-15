@@ -7,6 +7,7 @@ package variables
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -27,6 +28,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 	}
 
 	for _, variable := range variables {
+		variable.Name = strings.ToUpper(variable.Name)
 		_, present := vc.setVariableMap[variable.Name]
 
 		// Variable is present, no need to continue checking
