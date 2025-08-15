@@ -96,7 +96,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageCreateFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageCreateFlagConfirm)
 
 	outputDirectory := v.GetString("package.create.output_directory")
 	output := v.GetString(VPkgCreateOutput)
@@ -206,7 +206,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
@@ -216,14 +216,8 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.SGetKeyPath, "sget", v.GetString(VPkgDeploySget), lang.CmdPackageDeployFlagSget)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-
-	err := cmd.Flags().MarkHidden("sget")
-	if err != nil {
-		logger.Default().Debug("unable to mark flag sget", "error", err)
-	}
 
 	return cmd
 }
@@ -362,7 +356,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	}
 
 	prompt := &survey.Confirm{
-		Message: "deploy this Zarf package?",
+		Message: "Deploy this Zarf package?",
 	}
 	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
@@ -422,7 +416,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
@@ -1137,8 +1131,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 		ValidArgsFunction: getPackageCompletionArgs,
 	}
 
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackageRemoveFlagConfirm)
-	_ = cmd.MarkFlagRequired("confirm")
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
@@ -1186,6 +1179,21 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Timeout:           config.ZarfDefaultTimeout,
 		NamespaceOverride: o.namespaceOverride,
 	}
+	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
+	err = utils.ColorPrintYAML(pkg, nil, false)
+	if err != nil {
+		return fmt.Errorf("unable to print package definition: %w", err)
+	}
+	if !config.CommonOptions.Confirm {
+		prompt := &survey.Confirm{
+			Message: "Remove this Zarf package?",
+		}
+		var confirm bool
+		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+			return fmt.Errorf("package remove cancelled")
+		}
+	}
+
 	err = packager.Remove(ctx, pkg, removeOpt)
 	if err != nil {
 		return err
@@ -1193,7 +1201,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type packagePublishOptions struct{}
+type packagePublishOptions struct {
+	flavor string
+}
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	o := &packagePublishOptions{}
@@ -1210,7 +1220,8 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
 }
@@ -1255,6 +1266,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
+			Flavor:             o.flavor,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err

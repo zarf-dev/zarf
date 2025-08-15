@@ -37,6 +37,7 @@ zarf tools helm repo update [REPO1 [REPO2 ...]] [flags]
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
       --debug                           enable verbose output
+      --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --kube-apiserver string           the address and the port for the Kubernetes API server
       --kube-as-group stringArray       group to impersonate for the operation, this flag can be repeated to specify multiple groups.

@@ -13,8 +13,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250408180537-ec8fa27f0d9f
-	github.com/anchore/stereoscope v0.1.7
-	github.com/anchore/syft v1.29.0
+	github.com/anchore/stereoscope v0.1.8
+	github.com/anchore/syft v1.31.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
@@ -22,7 +22,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.3.3+incompatible
-	github.com/fairwindsops/pluto/v5 v5.22.1
+	github.com/fairwindsops/pluto/v5 v5.22.3
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.18.0
@@ -37,7 +37,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/pterm/pterm v0.12.81
 	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v2 v2.5.3
@@ -50,16 +50,16 @@ require (
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.40.0
+	golang.org/x/crypto v0.41.0
 	golang.org/x/sync v0.16.0
-	golang.org/x/term v0.33.0
-	helm.sh/helm/v3 v3.18.4
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
-	k8s.io/client-go v0.33.3
-	k8s.io/component-base v0.33.3
+	golang.org/x/term v0.34.0
+	helm.sh/helm/v3 v3.18.5
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
+	k8s.io/client-go v0.33.4
+	k8s.io/component-base v0.33.4
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubectl v0.33.3
+	k8s.io/kubectl v0.33.4
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.20.1
@@ -127,7 +127,7 @@ require (
 	github.com/in-toto/attestation v1.1.2 // indirect
 	github.com/itchyny/gojq v0.12.17 // indirect
 	github.com/itchyny/timefmt-go v0.1.6 // indirect
-	github.com/jedib0t/go-pretty/v6 v6.6.7 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.6.8 // indirect
 	github.com/lmittmann/tint v1.0.7 // indirect
 	github.com/mikelolasagasti/xz v1.0.1 // indirect
 	github.com/minio/minlz v1.0.0 // indirect
@@ -138,8 +138,8 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/nix-community/go-nix v0.0.0-20250101154619-4bdde671e0a1 // indirect
 	github.com/nwaples/rardecode/v2 v2.1.0 // indirect
-	github.com/olekukonko/errors v0.0.0-20250405072817-4e6d85265da6 // indirect
-	github.com/olekukonko/ll v0.0.8 // indirect
+	github.com/olekukonko/errors v1.1.0 // indirect
+	github.com/olekukonko/ll v0.0.9 // indirect
 	github.com/onsi/gomega v1.36.2 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pandatix/go-cvss v0.6.2 // indirect
@@ -150,6 +150,7 @@ require (
 	github.com/redis/go-redis/v9 v9.8.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/rust-secure-code/go-rustaudit v0.0.0-20250226111315-e20ec32e963c // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sigstore/rekor-tiles v0.1.7-0.20250624231741-98cd4a77300f // indirect
 	github.com/sigstore/sigstore-go v1.1.0 // indirect
@@ -184,7 +185,7 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
@@ -289,7 +290,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/bmatcuk/doublestar/v2 v2.0.4 // indirect
-	github.com/bmatcuk/doublestar/v4 v4.9.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.9.1 // indirect
 	github.com/buildkite/agent/v3 v3.102.1 // indirect
 	github.com/buildkite/go-pipeline v0.14.0 // indirect
 	github.com/buildkite/interpolate v0.1.5 // indirect
@@ -475,7 +476,7 @@ require (
 	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/oleiade/reflections v1.1.0 // indirect
-	github.com/olekukonko/tablewriter v1.0.8 // indirect
+	github.com/olekukonko/tablewriter v1.0.9 // indirect
 	github.com/open-policy-agent/opa v1.6.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
@@ -567,12 +568,12 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/mod v0.26.0 // indirect
-	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
+	golang.org/x/mod v0.27.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/api v0.241.0 // indirect
@@ -588,17 +589,17 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.30.0 // indirect
-	k8s.io/apiextensions-apiserver v0.33.2 // indirect
-	k8s.io/apiserver v0.33.2 // indirect
-	k8s.io/cli-runtime v0.33.3 // indirect
-	k8s.io/component-helpers v0.33.3 // indirect
+	k8s.io/apiextensions-apiserver v0.33.3 // indirect
+	k8s.io/apiserver v0.33.3 // indirect
+	k8s.io/cli-runtime v0.33.4 // indirect
+	k8s.io/component-helpers v0.33.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
-	k8s.io/metrics v0.33.3 // indirect
+	k8s.io/metrics v0.33.4 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
-	modernc.org/libc v1.65.10 // indirect
+	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.38.0 // indirect
+	modernc.org/sqlite v1.38.2 // indirect
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.6.0 // indirect

@@ -277,7 +277,6 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote https package."
-	CmdPackageDeployFlagSget                           = "[Deprecated] Path to public sget key file for remote packages signed via cosign. This flag will be removed in v1.0.0 please use the --key flag instead."
 	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"
 	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
@@ -293,7 +292,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
-	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
+	CmdPackageRemoveFlagConfirm    = "Confirms the removal action"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
 
@@ -308,6 +307,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
 	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
+	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

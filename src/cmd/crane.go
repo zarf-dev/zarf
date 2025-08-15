@@ -192,7 +192,7 @@ func newRegistryPruneCommand() *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
 
 	return cmd
 }
@@ -313,7 +313,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 	confirm := config.CommonOptions.Confirm
 	if !confirm {
 		prompt := &survey.Confirm{
-			Message: "continue with image prune?",
+			Message: "Continue with image prune?",
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
 			return fmt.Errorf("confirm selection canceled: %w", err)
