@@ -64,4 +64,4 @@ serviceAccount:
     ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
 
 nodeSelector:
-  kubernetes.io/arch: "###ZARF_PKG_ARCHITECTURE###"
+  kubernetes.io/arch: "###ZARF_ARCHITECTURE###"
