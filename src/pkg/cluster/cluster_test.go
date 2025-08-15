@@ -42,6 +42,11 @@ func TestGetIPFamily(t *testing.T) {
 			protocolsUsed: []corev1.IPFamily{corev1.IPv6Protocol},
 			expected:      state.IPFamilyIPv6,
 		},
+		{
+			name:          "ipv6 only support",
+			protocolsUsed: []corev1.IPFamily{corev1.IPv6Protocol},
+			expected:      state.IPFamilyIPv6,
+		},
 	}
 
 	for _, tt := range tests {

@@ -293,6 +293,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
 		if d.s.RegistryProxy {
+			// FIXME: we are not actually saving this state, because state is already initialized before we start doing this
 			var err error
 			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
 			if err != nil {

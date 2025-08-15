@@ -54,10 +54,9 @@ type IPFamily string
 
 // All the different IP family options for a Zarf deployment
 const (
-	IPFamilyIPv4      = "ipv4"
-	IPFamilyIPv6      = "ipv6"
-	IPFamilyDualStack = "dual"
-	IPFamilyUnknown   = "unknown"
+	IPFamilyIPv4      IPFamily = "ipv4"
+	IPFamilyIPv6      IPFamily = "ipv6"
+	IPFamilyDualStack IPFamily = "dual"
 )
 
 // Values during setup of the initial zarf state

@@ -153,6 +153,8 @@ type InitStateOptions struct {
 	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
 	RegistryInfo state.RegistryInfo
+	// Information on the DaemonSet Injector
+	InjectorInfo state.InjectorInfo
 	// Information about the artifact registry Zarf is going to be using
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
@@ -241,8 +243,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
-		// FIXME: Need a more reliable way of determining IP family
-		// potential to do more validation https://kubernetes.io/docs/tasks/network/validate-dual-stack/
 		ipFamily, err := c.GetIPFamily(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
@@ -289,6 +289,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
+	s.InjectorInfo = opts.InjectorInfo
 	if opts.RegistryProxy != nil {
 		s.RegistryProxy = *opts.RegistryProxy
 	}
@@ -403,11 +404,6 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 
 	// Determine IP family based on the service's IP families
 	ipFamilies := updatedService.Spec.IPFamilies
-	if len(ipFamilies) == 0 {
-		logger.From(ctx).Error("unable to determine IP family of cluster - no IP families found")
-		return state.IPFamilyUnknown, nil
-	}
-
 	hasIPv4 := false
 	hasIPv6 := false
 
@@ -428,6 +424,5 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 		return state.IPFamilyIPv4, nil
 	}
 
-	logger.From(ctx).Error("unable to determine IP family of cluster")
-	return state.IPFamilyUnknown, nil
+	return "", fmt.Errorf("unable to determine IP family of cluster")
 }
