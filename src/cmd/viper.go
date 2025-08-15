@@ -37,6 +37,10 @@ const (
 	VLogFormat = "log_format"
 	VNoColor   = "no_color"
 
+	// Root config, Features
+
+	VFeatures = "features"
+
 	// Init config keys
 
 	VInitComponents   = "init.components"

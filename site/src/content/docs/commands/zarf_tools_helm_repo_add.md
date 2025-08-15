@@ -36,6 +36,7 @@ zarf tools helm repo add [NAME] [URL] [flags]
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
       --debug                           enable verbose output
+      --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --kube-apiserver string           the address and the port for the Kubernetes API server
       --kube-as-group stringArray       group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --kube-as-user string             username to impersonate for the operation
