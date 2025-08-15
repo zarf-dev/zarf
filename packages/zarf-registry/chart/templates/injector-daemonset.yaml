@@ -6,11 +6,11 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: zarf-injector
+      app: zarf-daemonset-injector
   template:
     metadata:
       labels:
-        app: zarf-injector
+        app: zarf-daemonset-injector
         # Don't mutate this pod
         zarf.dev/agent: ignore
     spec:
