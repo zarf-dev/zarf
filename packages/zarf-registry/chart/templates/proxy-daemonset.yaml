@@ -27,6 +27,7 @@ spec:
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
           ports:
+            # FIXME: I need to make a separate flag for this port rather than sharing the nodeport flag. It should probably default to 5000 and the injector 5001
             - containerPort: {{ .Values.service.nodePort }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
               hostPort: {{ .Values.service.nodePort }}

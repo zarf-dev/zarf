@@ -54,6 +54,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
+
 	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "uses the registry-proxy solution")
 
 	// Flags for using an external Git server
