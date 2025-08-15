@@ -66,8 +66,8 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			// Only log retry if retries are enabled
-			if opts.Retries > 1 {
+			// Only log retry if retries are enabled and we're not on the last attempt
+			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
 				l.Warn("retrying package copy",
 					"attempt", n+1,
 					"max_attempts", opts.Retries,
