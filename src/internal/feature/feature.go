@@ -83,6 +83,14 @@ type Feature struct {
 	Stage `json:"stage,omitempty"`
 }
 
+func (f Feature) String() string {
+	s := "disabled"
+	if f.Enabled {
+		s = "enabled"
+	}
+	return fmt.Sprintf("%s:%s", f.Name, s)
+}
+
 // IsEnabled allows users to optimistically check for a feature. Useful for control flow. Any user-enabled or disabled
 // features take precedence over the default setting.
 func IsEnabled(name Name) bool {
@@ -192,6 +200,12 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 	return m
 }
 
+// List of feature names
+var (
+	// AxolotlMode declares the "axolotl-mode" feature
+	AxolotlMode Name = "axolotl-mode"
+)
+
 func init() {
 	features := []Feature{
 		// NOTE: Here is an example default feature flag
@@ -203,6 +217,14 @@ func init() {
 		// 	Since:       "v0.60.0",
 		// 	Stage:       GA,
 		// },
+		{
+			Name: AxolotlMode,
+			Description: "Enabling \"axolotl-mode\" runs `zarf say` at the beginning of each CLI command." +
+				"This fun feature is intended to help with testing feature flags.",
+			Enabled: false,
+			Since:   "v0.60.0",
+			Stage:   Alpha,
+		},
 	}
 
 	err := setDefault(features)
