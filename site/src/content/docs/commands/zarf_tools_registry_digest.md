@@ -38,6 +38,7 @@ $ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure                           Allow image references to be fetched without TLS
       --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
