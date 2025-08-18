@@ -8,8 +8,13 @@ on:
 permissions:
   contents: read
 
+env:
+  # Global switch: only run jobs when executing in this repository
+  UPSTREAM_REPO: zarf-dev/zarf
+
 jobs:
   build-release:
+    if: ${{ github.repository == env.UPSTREAM_REPO }}
     runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
@@ -22,13 +27,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set CLI_VERSION and NIGHTLY_TAG
+      - name: Set CLI_VERSION
         id: set-version
+        shell: bash
         run: |
-          SHORT_SHA=$(git describe --tags)
-          echo "cli_version=${SHORT_SHA}-nightly" >> $GITHUB_OUTPUT
-          echo "CLI_VERSION=${SHORT_SHA}-nightly" >> $GITHUB_ENV
-          echo "NIGHTLY_TAG=nightly" >> $GITHUB_ENV
+          set -euo pipefail
+          # Get the latest tag (e.g., v1.2.3 or 1.2.3)
+          LATEST_TAG="$(git describe --tags --abbrev=0)"
+
+          # Preserve any non-numeric prefix (commonly "v")
+          PREFIX="${LATEST_TAG%%[0-9]*}"            # "v" or ""
+          CORE="${LATEST_TAG#"$PREFIX"}"            # strip prefix -> "1.2.3[-suffix][+build]"
+
+          # Strip any pre-release/build metadata from the core version
+          CORE="${CORE%%-*}"                        # drop "-rc1" etc.
+          CORE="${CORE%%+*}"                        # drop "+build" etc.
+
+          IFS='.' read -r MAJOR MINOR PATCH <<<"${CORE}"
+          : "${MAJOR:=0}" ; : "${MINOR:=0}" ; : "${PATCH:=0}"
+
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}-nightly"
+          NEW_TAG="${PREFIX}${NEW_VERSION}"
+
+          echo "Computed nightly: ${NEW_TAG}"
+
+          # Outputs / ENV
+          echo "cli_version=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          echo "CLI_VERSION=${NEW_TAG}" >> "$GITHUB_ENV"
 
       - name: Setup golang
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -55,9 +81,9 @@ jobs:
           cp build/zarf build/zarf-linux-amd64
           cp build/zarf-arm build/zarf-linux-arm64
           docker buildx build --push --platform linux/arm64/v8,linux/amd64 \
-            --tag ghcr.io/zarf-dev/zarf/agent:$NIGHTLY_TAG .
+            --tag ghcr.io/zarf-dev/zarf/agent:$CLI_VERSION .
           rm build/zarf-linux-amd64 build/zarf-linux-arm64
-          echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$NIGHTLY_TAG --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
+          echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$CLI_VERSION --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
 
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3d116df # v4.2.1
@@ -71,15 +97,15 @@ jobs:
         run: |
           cosign sign --key awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} \
             -a release-engineer=https://github.com/${{ github.actor }} \
-            -a version=$NIGHTLY_TAG \
+            -a version=$CLI_VERSION \
             ghcr.io/zarf-dev/zarf/agent@$ZARF_AGENT_IMAGE_DIGEST -y
         env:
           COSIGN_EXPERIMENTAL: 1
 
       - name: Build Init Packages
         run: |
-          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$NIGHTLY_TAG
-          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$NIGHTLY_TAG
+          make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$CLI_VERSION
+          make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$CLI_VERSION
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
@@ -94,6 +120,7 @@ jobs:
           retention-days: 1
 
   validate-release:
+    if: ${{ github.repository == env.UPSTREAM_REPO }}
     runs-on: large-ubuntu-zarf-release
     needs: build-release
     env:
@@ -127,6 +154,7 @@ jobs:
         uses: ./.github/actions/save-logs
 
   create-release:
+    if: ${{ github.repository == env.UPSTREAM_REPO }}
     runs-on: large-ubuntu-zarf-release
     needs: build-release
     environment: release
