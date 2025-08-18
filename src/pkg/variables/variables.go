@@ -7,6 +7,7 @@ package variables
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
@@ -16,7 +17,7 @@ type SetVariableMap map[string]*v1alpha1.SetVariable
 
 // GetSetVariable gets a variable set within a VariableConfig by its name
 func (vc *VariableConfig) GetSetVariable(name string) (*v1alpha1.SetVariable, bool) {
-	variable, ok := vc.setVariableMap[name]
+	variable, ok := vc.setVariableMap[strings.ToUpper(name)]
 	return variable, ok
 }
 
@@ -27,6 +28,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 	}
 
 	for _, variable := range variables {
+		variable.Name = strings.ToUpper(variable.Name)
 		_, present := vc.setVariableMap[variable.Name]
 
 		// Variable is present, no need to continue checking
@@ -65,6 +67,7 @@ func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVari
 
 // SetVariable sets a variable in a VariableConfig's SetVariableMap
 func (vc *VariableConfig) SetVariable(name, value string, sensitive bool, autoIndent bool, varType v1alpha1.VariableType) {
+	name = strings.ToUpper(name)
 	vc.setVariableMap[name] = &v1alpha1.SetVariable{
 		Variable: v1alpha1.Variable{
 			Name:       name,

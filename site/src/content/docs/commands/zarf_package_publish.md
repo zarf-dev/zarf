@@ -29,7 +29,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 ### Options
 
 ```
-      --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
+  -c, --confirm                     Confirms package publish without prompting. Skips prompt for the signing key password
   -f, --flavor string               The flavor of components to include in the resulting package. The flavor will be appended to the package tag
   -h, --help                        help for publish
       --signing-key string          Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
@@ -41,6 +41,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
