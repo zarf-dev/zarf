@@ -37,6 +37,10 @@ const (
 	VLogFormat = "log_format"
 	VNoColor   = "no_color"
 
+	// Root config, Features
+
+	VFeatures = "features"
+
 	// Init config keys
 
 	VInitComponents   = "init.components"
@@ -90,7 +94,6 @@ const (
 	VPkgDeploySet        = "package.deploy.set"
 	VPkgDeployComponents = "package.deploy.components"
 	VPkgDeployShasum     = "package.deploy.shasum"
-	VPkgDeploySget       = "package.deploy.sget"
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
