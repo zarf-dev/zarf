@@ -4,11 +4,6 @@ agent_image_domain = 'ghcr.io/'
 agent_image = 'zarf-dev/zarf/agent'
 agent_image_tag = 'local'
 
-# Tag for the zarf injector binary to use
-injector_version = 'v0.1.0'
-injector_amd64_shasum = '97d2c3ec3c789a866c7bb88ed1d6819f8b279762f9398c8ec5ad70458f23bf85'
-injector_arm64_shasum = '32c4cfc9c2082affea519903e707bfb9b3a454fa8c003042f0a35925e72fe3bc'
-
 
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
