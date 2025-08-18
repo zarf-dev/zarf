@@ -111,8 +111,8 @@ type InjectorInfo struct {
 	PayLoadConfigMapAmount int `json:"payLoadConfigMapAmount"`
 	// The PayLoadShaSum for the payload ConfigMaps
 	PayLoadShaSum string `json:"payLoadShaSum"`
-	// The port that this field uses on the host
-	HostPort int `json:"hostPort"`
+	// The port that the injector is exposed through, either hostPort or nodePort
+	Port int `json:"port"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.

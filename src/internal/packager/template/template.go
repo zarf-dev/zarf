@@ -50,7 +50,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
 			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryProxy),
 			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
-			"INJECTOR_HOST_PORT":          fmt.Sprintf("%d", s.InjectorInfo.HostPort),
+			"INJECTOR_HOST_PORT":          fmt.Sprintf("%d", s.InjectorInfo.Port),
 			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
 			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
@@ -78,11 +78,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			seedPort := config.ZarfSeedPort
-			if s.RegistryProxy {
-				seedPort = s.InjectorInfo.HostPort
-			}
-			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, seedPort)
+			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err

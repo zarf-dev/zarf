@@ -26,7 +26,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -39,20 +38,20 @@ import (
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int) error {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int) (int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	l.Info("creating Zarf injector resources")
 
 	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	resReq := v1ac.ResourceRequirements().
@@ -66,20 +65,18 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		})
 	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	svc, err := c.createInjectorNodeportService(ctx, registryNodePort)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	// TODO: Remove use of passing data through global variables.
-	config.ZarfSeedPort = int(svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
-		return fmt.Errorf("error creating pod in cluster: %w", err)
+		return 0, fmt.Errorf("error creating pod in cluster: %w", err)
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -92,11 +89,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
-	return nil
+	return int(svc.Spec.Ports[0].NodePort), nil
 }
 
 // CreateInjectorConfigMaps creates the required configmaps to run the injector

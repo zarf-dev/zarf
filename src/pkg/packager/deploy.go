@@ -308,15 +308,16 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
-			d.s.InjectorInfo.HostPort = 5001
+			d.s.InjectorInfo.Port = 5001
 			if err := d.c.SaveState(ctx, d.s); err != nil {
 				return nil, err
 			}
 		} else {
-			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 			if err != nil {
 				return nil, err
 			}
+			d.s.InjectorInfo.Port = seedPort
 		}
 	}
 

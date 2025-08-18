@@ -272,7 +272,19 @@ func TestInit(t *testing.T) {
 				}
 			}()
 
-			_, err := c.InitState(ctx, tt.initOpts)
+			svc := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-ip-family-test",
+					Namespace: state.ZarfNamespaceName,
+				},
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+				},
+			}
+			_, err := cs.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			_, err = c.InitState(ctx, tt.initOpts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return
