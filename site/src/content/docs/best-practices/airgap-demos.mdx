@@ -23,12 +23,17 @@ Zarf takes the opposite stance: **live demos should be reliable**. Zarf packages
 ---
 
 ## What we’ll build
-We’ll package the popular sample app **podinfo**. The result is a single file like `zarf-package-podinfo-demo-<version>-amd64.tar.zst` that you can copy to your demo laptop. On stage, you’ll:
+We’ll package the popular sample app **podinfo**. The result is a single file like `zarf-package-podinfo-demo-<version>-amd64.tar.zst` that you can copy to your demo laptop.
 
-1. Ensure the cluster is running
-2. (If not already done) `zarf init`
-3. `zarf package deploy` the file — **with Wi‑Fi off**
-4. Port‑forward to the service and browse the app
+Before you take the stage, you'll:
+
+- Ensure the cluster is running
+-  (If not already done) `zarf init`
+
+Once you take the stage:
+
+- `zarf package deploy` the file — **with Wi‑Fi off**
+- `zarf connect` to port-forward to any required UI services
 
 ---
 
@@ -55,17 +60,15 @@ components:
     required: true
     charts:
       - name: podinfo
-        # Lock to the exact chart version you tested
-        version: "<PODINFO_CHART_VERSION>"      # e.g., "6.5.4"
+        version: 6.9.1
         namespace: demo
         releaseName: podinfo
-        # Use the OCI location so Zarf vendors the chart into the package
         url: oci://ghcr.io/stefanprodan/podinfo-chart
         valuesFiles:
           - values.yaml
     # Explicitly list images so they are pulled into the package
     images:
-      - ghcr.io/stefanprodan/podinfo:<PODINFO_IMAGE_TAG>  # e.g., "6.5.4"
+      - ghcr.io/stefanprodan/podinfo:6.9.1
 ```
 
 Create a minimal `values.yaml` to customize the demo:
@@ -79,10 +82,12 @@ ui:
 
 > 💡 The chart and image versions don’t have to match numerically, but **must** exist. Pin them to an exact version you’ve tested to ensure reproducibility.
 
+Identify the architecture you plan to deploy to on-stage. If you are building the package on a connected system that happens to be an `amd64` architecture but plan to use `arm64` you can pass `-a/--architecture` with the architecture you want the package to run on. 
+
 Now create the package (this step downloads artifacts and embeds them):
 
 ```bash
-zarf package create . --confirm
+zarf package create .
 ```
 
 You should now have a file similar to:
@@ -94,10 +99,10 @@ zarf-package-podinfo-demo-1.0.0-amd64.tar.zst
 Optionally verify what’s inside:
 
 ```bash
-zarf package inspect zarf-package-podinfo-demo-1.0.0-amd64.tar.zst
+zarf package inspect definition zarf-package-podinfo-demo-1.0.0-amd64.tar.zst
 ```
 
-Copy the package file to your demo laptop (USB, etc.).
+Copy the package file to your demo laptop (USB, etc.) or optionally publish it to a public registry such as `ghcr.io`.
 
 ---
 
@@ -105,7 +110,7 @@ Copy the package file to your demo laptop (USB, etc.).
 On the demo machine **with the target cluster running**, initialize Zarf. This installs the Zarf system components (including the internal registry) into the cluster so deployments can load packaged images without the public internet.
 
 ```bash
-zarf init --confirm
+zarf tools download-init && zarf init --confirm
 ```
 
 > ✅ Do this only once per cluster. For fresh ephemeral clusters (kind/k3d/minikube), run it after the cluster is created.
@@ -125,7 +130,8 @@ Watch the pods come up:
 kubectl get pods -n demo -w
 ```
 
-When `podinfo` is `Running`, port‑forward and open your browser:
+TODO: (replace this with zarf connect)
+When `podinfo` is `Running`, port‑forward and open your browser: 
 
 ```bash
 kubectl port-forward -n demo svc/podinfo 8080:80
@@ -157,16 +163,15 @@ zarf package remove podinfo-demo --confirm
 
 ## Troubleshooting
 - **Image not found during create**: double‑check `images:` tags exist and are reachable from the build machine.
+  - Ensure the image packaged (including the repository) is the exact reference used in the manifests/helm charts.
 - **Chart fetch fails during create**: verify the OCI URL and chart `version`. Zarf vendors the chart into the package; it will not contact the chart repo at deploy time.
 - **No pods after deploy**: did you run `zarf init` on this cluster? Run `zarf init --confirm` once, then redeploy.
-- **Port‑forwarding hangs**: ensure the service name is `podinfo` in namespace `demo`. Use `kubectl get svc -n demo` to confirm.
 
 ---
 
 ## Reuse & extensions
-- **Workshops:** hand out the same `.tar.zst` file to attendees; they can deploy without internet as long as their cluster is initialized with Zarf.
-- **Multiple apps:** add more components to the same `zarf.yaml` (each with charts/images) to build a single multi‑app demo bundle.
-- **Ingress:** if your venue provides a local network, set up an ingress in `values.yaml` for friendlier URLs.
+- **Workshops:** Publish the package to a registry such as `ghcr.io` and/or a local network registry for offline retrieval.
+- **Multiple apps:** add more components to the same `zarf.yaml` (each with charts/images) to build a single multi‑app demo package.
 
 ---
 
@@ -210,8 +215,3 @@ ui:
 - [ ] Package file copied to demo machine
 - [ ] Demo cluster created and `zarf init --confirm` has been run once
 - [ ] Optional: test deploy with Wi‑Fi off ahead of the talk
-
----
-
-## Rationale for docs site
-Conference organizers often advise against live demos due to network instability. This tutorial demonstrates how Zarf **eliminates that risk** by packaging all dependencies ahead of time. Speakers can confidently deliver real, hands‑on demos that work everywhere—from a hotel ballroom to a classified lab—without internet access.
