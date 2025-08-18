@@ -14,6 +14,7 @@ imagePullSecrets:
 
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
+  injectorHostPort: ###ZARF_INJECTOR_HOST_PORT###
   hostNetwork: ###ZARF_VAR_HOST_NETWORK###
   image:
     repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"

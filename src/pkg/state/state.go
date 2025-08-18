@@ -108,9 +108,11 @@ type InjectorInfo struct {
 	// The image to be used for the long lived injector
 	Image string `json:"injectorImage"`
 	// The number of payload configmaps required
-	PayLoadConfigMapAmount int `json:"PayLoadConfigMapAmount"`
+	PayLoadConfigMapAmount int `json:"payLoadConfigMapAmount"`
 	// The PayLoadShaSum for the payload ConfigMaps
-	PayLoadShaSum string `json:"PayLoadShaSum"`
+	PayLoadShaSum string `json:"payLoadShaSum"`
+	// The port that this field uses on the host
+	HostPort int `json:"hostPort"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.

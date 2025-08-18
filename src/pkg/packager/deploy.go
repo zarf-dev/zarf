@@ -297,7 +297,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
 		if d.s.RegistryProxy {
-			// FIXME: we are not actually saving this state, because state is already initialized before we start doing this
 			var err error
 			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
 			if err != nil {
@@ -309,8 +308,10 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
-			// FIXME: hardcode or make a better number
-			config.ZarfSeedPort = 5000
+			d.s.InjectorInfo.HostPort = 5001
+			if err := d.c.SaveState(ctx, d.s); err != nil {
+				return nil, err
+			}
 		} else {
 			err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 			if err != nil {

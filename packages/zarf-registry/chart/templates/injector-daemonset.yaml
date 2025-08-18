@@ -23,7 +23,7 @@ spec:
           ports:
             - containerPort: 5000
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
-              hostPort: 5000
+              hostPort: {{ .Values.proxy.injectorHostPort }}
               hostIP: "127.0.0.1"
             {{- end }}
           readinessProbe:
