@@ -41,7 +41,7 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 
 	dockerConfigJSON := DockerConfig{
 		Auths: DockerConfigEntry{
-			// nodePort for zarf-docker-registry
+			// nodePort for zarf-docker-registry - ie 127.0.0.1:31999
 			registryInfo.Address: DockerConfigEntryWithAuth{
 				Auth: authEncodedValue,
 			},
@@ -52,11 +52,16 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 	if err != nil {
 		return nil, err
 	}
-	// Build zarf-docker-registry service address string
+	// Build zarf-docker-registry service address and internal dns string
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 	if err == nil {
 		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
 		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
+			Auth: authEncodedValue,
+		}
+
+		kubeDNSRegistryHostname := fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port)
+		dockerConfigJSON.Auths[kubeDNSRegistryHostname] = DockerConfigEntryWithAuth{
 			Auth: authEncodedValue,
 		}
 	}

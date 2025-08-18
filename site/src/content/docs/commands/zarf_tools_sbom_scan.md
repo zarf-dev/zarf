@@ -34,6 +34,7 @@ zarf tools sbom scan [SOURCE] [flags]
   -s, --scope string                              selection of layers to catalog, options=[squashed all-layers deep-squashed]
       --select-catalogers stringArray             add, remove, and filter the catalogers to be used
       --source-name string                        set the name of the target being analyzed
+      --source-supplier string                    the organization that supplied the component, which often may be the manufacturer, distributor, or repackager
       --source-version string                     set the version of the target being analyzed
   -t, --template string                           specify the path to a Go template file
 ```
@@ -42,6 +43,7 @@ zarf tools sbom scan [SOURCE] [flags]
 
 ```
   -c, --config stringArray         syft configuration file(s) to use
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --profile stringArray        configuration profiles to use
