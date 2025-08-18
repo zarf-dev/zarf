@@ -264,24 +264,20 @@ func (p *PackageLayout) FileName() (string, error) {
 	var name string
 	switch p.Pkg.Kind {
 	case v1alpha1.ZarfInitConfig:
-		if p.Pkg.Metadata.Name == "" || p.Pkg.Metadata.Name == "init" {
-			name = fmt.Sprintf("zarf-init-%s", arch)
-		} else {
-			name = fmt.Sprintf("zarf-init-%s-%s", p.Pkg.Metadata.Name, arch)
-		}
+		name = fmt.Sprintf("zarf-init-%s", arch)
 	case v1alpha1.ZarfPackageConfig:
 		name = fmt.Sprintf("zarf-package-%s-%s", p.Pkg.Metadata.Name, arch)
 	default:
 		name = fmt.Sprintf("zarf-%s-%s", strings.ToLower(string(p.Pkg.Kind)), arch)
-	}
-	if p.Pkg.Build.Flavor != "" {
-		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
 	}
 	if p.Pkg.Build.Differential {
 		name = fmt.Sprintf("%s-%s-differential-%s",
 			name, p.Pkg.Build.DifferentialPackageVersion, p.Pkg.Metadata.Version)
 	} else if p.Pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
+	}
+	if p.Pkg.Build.Flavor != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
 	}
 
 	if p.Pkg.Metadata.Uncompressed {

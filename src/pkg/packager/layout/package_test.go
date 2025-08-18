@@ -105,14 +105,14 @@ func TestPackageFileName(t *testing.T) {
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
-					Name:    "my-cool-start",
 					Version: "v0.55.4",
 				},
 				Build: v1alpha1.ZarfBuildData{
 					Architecture: "amd64",
+					Flavor:       "upstream",
 				},
 			},
-			expected: "zarf-init-my-cool-start-amd64-v0.55.4.tar.zst",
+			expected: "zarf-init-amd64-v0.55.4-upstream.tar.zst",
 		},
 		{
 			name: "regular package with version",
@@ -170,7 +170,7 @@ func TestPackageFileName(t *testing.T) {
 					Flavor:       "upstream",
 				},
 			},
-			expected: "zarf-package-my-package-amd64-upstream-v0.55.4.tar.zst",
+			expected: "zarf-package-my-package-amd64-v0.55.4-upstream.tar.zst",
 		},
 		{
 			name: "uncompressed",
