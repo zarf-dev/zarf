@@ -28,7 +28,7 @@ contributing their time and energy in discussions or just generally helping out.
 
 ### Contributors
 
-Contributors help advance the Zarf project through commits, issues, and pull requests.  Contributors participate through GitHub teams,
+Contributors help advance the Zarf project through commits, issues, and pull requests.
 and pre-submit tests are automatically run for their PRs.
 
 #### Responsibilities
