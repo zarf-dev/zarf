@@ -356,7 +356,7 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 	if err != nil {
 		return "", err
 	}
-	l.Info("selected image for injector Daemonset", "name", injectorImage)
+	l.Info("selected image for injector DaemonSet", "name", injectorImage)
 
 	return injectorImage, nil
 }

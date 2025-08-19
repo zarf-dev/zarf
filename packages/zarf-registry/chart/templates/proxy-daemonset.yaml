@@ -17,20 +17,19 @@ spec:
       containers:
         - args:
           {{ if .Values.service.ipv6Only }}
-            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - tcp6-listen:{{ .Values.proxy.hostPort }},bind=[::1],reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
           {{- else }}
-            - tcp4-listen:{{ .Values.service.nodePort }},reuseaddr,fork
+            - tcp4-listen:{{ .Values.proxy.hostPort }},reuseaddr,fork
             - tcp4:{{ template "docker-registry.fullname" . }}:5000
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
           ports:
-            # FIXME: I need to make a separate flag for this port rather than sharing the nodeport flag. It should probably default to 5000 and the injector 5001
-            - containerPort: {{ .Values.service.nodePort }}
+            - containerPort: 5000
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
-              hostPort: {{ .Values.service.nodePort }}
+              hostPort: {{ .Values.proxy.hostPort }}
               hostIP: "127.0.0.1"
             {{- end }}
           resources:

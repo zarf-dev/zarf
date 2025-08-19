@@ -132,6 +132,8 @@ type ZarfInitOptions struct {
 	StorageClass string
 	// Specify if RegistryProxy mode is going to be used for deploying the internal registry
 	RegistryProxy bool
+	// SeedRegistryHostPort is the host port that is used for the daemonset injector
+	SeedRegistryHostPort int
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.

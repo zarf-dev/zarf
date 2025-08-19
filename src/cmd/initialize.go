@@ -55,7 +55,13 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "uses the registry-proxy solution")
+	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.RegistryInfo.HostPort, "hostport", v.GetInt(VInitRegistryHostPort), "")
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "seed-hostport", v.GetInt(VInitSeedRegistryHostPort), "")
+	// FIXME: potentially I'll need to decide if this port should be different flags that pass through the system the same. I'm thinking yes
+	// This probably wouldn't work because how would I set defaults, I mean I could just do it based on the registry proxy flag.
+	// Would that get weird based on inits
+	// cmd.MarkFlagsMutuallyExclusive()
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -132,6 +138,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 	var registryProxy *bool
+	// FIXME: make registry proxy a part of the registry info
 	if cmd.Flag("registry-proxy").Changed {
 		registryProxy = &pkgConfig.InitOpts.RegistryProxy
 	}
@@ -147,6 +154,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
 		RegistryProxy:          registryProxy,
+		SeedRegistryHostPort:   pkgConfig.InitOpts.SeedRegistryHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)

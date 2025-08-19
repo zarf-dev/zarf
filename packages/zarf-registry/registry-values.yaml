@@ -14,12 +14,13 @@ imagePullSecrets:
 
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
-  injectorHostPort: ###ZARF_INJECTOR_HOST_PORT###
+  hostPort: ###ZARF_PROXY_HOSTPORT###
   hostNetwork: ###ZARF_VAR_HOST_NETWORK###
   image:
     repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
     tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
   injector:
+    hostPort: ###ZARF_INJECTOR_HOSTPORT###
     image: "###ZARF_INJECTOR_IMAGE###"
     payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
     shasum: "###ZARF_INJECTOR_SHASUM###"

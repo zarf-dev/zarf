@@ -64,6 +64,8 @@ const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
+	ZarfInClusterRegistryProxyHostPort     = 5000
+	ZarfSeedRegistryHostPort               = 5001
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
 
@@ -214,8 +216,10 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
+	// Nodeport of the registry. Only needed if the internal Zarf registry is used and connected with over a nodeport service.
 	NodePort int `json:"nodePort"`
+	// HostPort of the registry proxy. Only needed if the internal Zarf registry is used and connected with over a DaemonSet proxy.
+	HostPort int `json:"hostPort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 }
@@ -230,6 +234,8 @@ func (ri RegistryInfo) IsInternal() bool {
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
+	// FIXME: make it so we only set nodeport or hostport. We can accept two variables for it.
+	ri.NodePort = ri.HostPort
 	if ri.NodePort == 0 && ri.Address == "" {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
 	}
