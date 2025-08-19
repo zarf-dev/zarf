@@ -52,7 +52,6 @@ and pre-submit tests are automatically run for their PRs.
   - Filing or commenting on issues on GitHub
   - Contributing to a project, or community discussions (e.g. meetings, Slack,
     email discussion forums, Stack Overflow)
-- Active contributor to Zarf
 
 #### Promotion process `NEEDS REFINED?`
 
