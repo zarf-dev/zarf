@@ -8,6 +8,10 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 // Once https://github.com/glebarez/go-sqlite updates to handle breaking changes in modernc.org/sqlite v1.33.0 this can be removed
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
+// This addresses https://github.com/advisories/GHSA-wjrx-6529-hcj3 until Syft,
+// which is the dependency that brings go-getter in, makes a new release
+replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.7.9
+
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -452,7 +456,6 @@ require (
 	github.com/mikefarah/yq/v4 v4.47.1
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
