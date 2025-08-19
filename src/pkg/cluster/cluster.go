@@ -159,8 +159,6 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// RegistryProxy determines if Zarf uses the nodeport service or host port proxy daemonset solution
-	RegistryProxy *bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -282,6 +280,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
 			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
+		// FIXME: There are two different problems with having registry proxy on the struct at the moment
+		// The first is that if it's set as one item and a user wants it to be changed, it'll be ignored here
+		// The second is that if we change that, then a user might accidentally change the mode that they're running in.
+		// Technically these are both solved if we make update creds solve this
 		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
