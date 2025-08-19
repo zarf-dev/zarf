@@ -298,7 +298,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		if opts.RegistryInfo.HasProxyEnabled() {
+		if d.s.RegistryInfo.HasProxyEnabled() {
 			var err error
 			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
 			if err != nil {
@@ -331,7 +331,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
-	if isSeedRegistry && !opts.RegistryInfo.HasProxyEnabled() {
+	if isSeedRegistry && !d.s.RegistryInfo.HasProxyEnabled() {
 		if err := d.c.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}

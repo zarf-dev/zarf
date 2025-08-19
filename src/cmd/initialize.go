@@ -26,7 +26,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type initOptions struct{}
+type initOptions struct {
+	proxyMode bool
+}
 
 func newInitCommand() *cobra.Command {
 	o := initOptions{}
@@ -55,9 +57,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-	proxyMode := false
-	cmd.Flags().BoolVar(&proxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
-	pkgConfig.InitOpts.RegistryInfo.ProxyMode = &proxyMode
+	cmd.Flags().BoolVar(&o.proxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
 	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "seed-hostport", v.GetInt(VInitSeedRegistryHostPort), "")
 
 	// Flags for using an external Git server
@@ -100,6 +100,10 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	if err := validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
+	}
+	if cmd.Flag("registry-proxy").Changed {
+		fmt.Println("here setting this")
+		pkgConfig.InitOpts.RegistryInfo.ProxyMode = &o.proxyMode
 	}
 
 	initPackageName := config.GetInitPackageName()

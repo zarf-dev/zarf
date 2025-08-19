@@ -280,10 +280,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
 			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
-		// FIXME: There are two different problems with having registry proxy on the struct at the moment
-		// The first is that if it's set as one item and a user wants it to be changed, it'll be ignored here
-		// The second is that if we change that, then a user might accidentally change the mode that they're running in.
-		// Technically these are both solved if we make update creds solve this
+		// FIXME: We'll have to change this so that it doesn't give this warning when proxyMode is different
 		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
@@ -291,7 +288,12 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}
 	}
+
 	s.InjectorInfo = opts.InjectorInfo
+	// Only change state if this field is explicitly set
+	if opts.RegistryInfo.ProxyMode != nil {
+		s.RegistryInfo.ProxyMode = opts.RegistryInfo.ProxyMode
+	}
 
 	switch s.Distro {
 	case DistroIsK3s, DistroIsK3d:
