@@ -13,8 +13,22 @@ env:
   UPSTREAM_REPO: zarf-dev/zarf
 
 jobs:
+  repo-gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.repository }}" = "${{ env.UPSTREAM_REPO }}" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-release:
-    if: ${{ github.repository == env.UPSTREAM_REPO }}
+    needs: repo-gate
+    if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
     permissions:
       id-token: write
@@ -120,9 +134,9 @@ jobs:
           retention-days: 1
 
   validate-release:
-    if: ${{ github.repository == env.UPSTREAM_REPO }}
+    needs: [repo-gate, build-release]
+    if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
-    needs: build-release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
     steps:
@@ -154,9 +168,9 @@ jobs:
         uses: ./.github/actions/save-logs
 
   create-release:
-    if: ${{ github.repository == env.UPSTREAM_REPO }}
+    needs: [repo-gate, build-release]
+    if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
-    needs: build-release
     environment: release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
