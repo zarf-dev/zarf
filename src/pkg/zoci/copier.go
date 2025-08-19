@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2"
 
@@ -41,17 +40,12 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 				"dst", dst.Repo().Reference.String(),
 				"ref", srcRef,
 			)
-			source := src.Repo() // implements oras.ReadOnlyTarget
-			trackedDst := images.NewTrackedTarget(
-				dst.Repo(),
-				0, // unknown total for registry→registry copy
-				images.DefaultReport(dst.Log(), "package copy in progress", dst.Repo().Reference.String()),
-			)
-			trackedDst.StartReporting(ctx)
-			defer trackedDst.StopReporting()
+
+			source := src.Repo()      // implements oras.ReadOnlyTarget
+			destination := dst.Repo() // implements oras.Target
 
 			// 1) Copy by digest from source → destination
-			publishedDesc, copyErr := oras.Copy(ctx, source, srcRef, trackedDst, "", copyOpts)
+			publishedDesc, copyErr := oras.Copy(ctx, source, srcRef, destination, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}
