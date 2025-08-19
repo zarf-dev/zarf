@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -56,13 +57,14 @@ const (
 
 	// Init Registry config keys
 
-	VInitRegistryURL      = "init.registry.url"
-	VInitRegistryNodeport = "init.registry.nodeport"
-	VInitRegistrySecret   = "init.registry.secret"
-	VInitRegistryPushUser = "init.registry.push_username"
-	VInitRegistryPushPass = "init.registry.push_password"
-	VInitRegistryPullUser = "init.registry.pull_username"
-	VInitRegistryPullPass = "init.registry.pull_password"
+	VInitRegistryURL          = "init.registry.url"
+	VInitRegistryNodeport     = "init.registry.nodeport"
+	VInitSeedRegistryHostPort = "init.registry.seed_hostport"
+	VInitRegistrySecret       = "init.registry.secret"
+	VInitRegistryPushUser     = "init.registry.push_username"
+	VInitRegistryPushPass     = "init.registry.push_password"
+	VInitRegistryPullUser     = "init.registry.pull_username"
+	VInitRegistryPullPass     = "init.registry.pull_password"
 
 	// Init Package config keys
 
@@ -218,6 +220,9 @@ func setDefaults() {
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
+
+	v.SetDefault(VInitRegistryNodeport, state.ZarfInClusterContainerRegistryNodePort)
+	v.SetDefault(VInitSeedRegistryHostPort, state.ZarfSeedRegistryHostPort)
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
