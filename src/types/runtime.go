@@ -130,8 +130,6 @@ type ZarfInitOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// Specify if RegistryProxy mode is going to be used for deploying the internal registry
-	RegistryProxy bool
 	// SeedRegistryHostPort is the host port that is used for the daemonset injector
 	SeedRegistryHostPort int
 }

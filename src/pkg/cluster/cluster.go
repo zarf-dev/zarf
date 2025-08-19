@@ -290,9 +290,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 	}
 	s.InjectorInfo = opts.InjectorInfo
-	if opts.RegistryProxy != nil {
-		s.RegistryProxy = *opts.RegistryProxy
-	}
 
 	switch s.Distro {
 	case DistroIsK3s, DistroIsK3d:

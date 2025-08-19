@@ -48,15 +48,14 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		builtinMap := map[string]string{
 			"STORAGE_CLASS":               s.StorageClass,
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
-			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryProxy),
+			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.ProxyMode),
 			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
 			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),
 			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
 			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
 			// Registry info
-			"REGISTRY": regInfo.Address,
-			// FIXME? Set for potential legacy consumers of this? OR have different hostport flag
+			"REGISTRY":           regInfo.Address,
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,

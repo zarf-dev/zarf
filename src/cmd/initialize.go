@@ -55,7 +55,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
+	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryInfo.ProxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
 	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "seed-hostport", v.GetInt(VInitSeedRegistryHostPort), "")
 
 	// Flags for using an external Git server
@@ -132,13 +132,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	var registryProxy *bool
-	// FIXME: make registry proxy a part of the registry info
-	// FIXME: the problem with this is that it will set the port even if the address is not given. Maybe we can't set a constant here.
-	// FIXME: I can't use changed here and a default value. It's probably best to just let this by in the registryInfo struct
-	if cmd.Flag("registry-proxy").Changed {
-		registryProxy = &pkgConfig.InitOpts.RegistryProxy
-	}
 
 	opts := packager.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
@@ -150,7 +143,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
-		RegistryProxy:          registryProxy,
 		SeedRegistryHostPort:   pkgConfig.InitOpts.SeedRegistryHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 	}

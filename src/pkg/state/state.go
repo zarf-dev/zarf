@@ -90,8 +90,7 @@ type State struct {
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
-	IPFamily      IPFamily `json:"ipFamily,omitempty"`
-	RegistryProxy bool     `json:"registryProxy,omitempty"`
+	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
 	InjectorInfo InjectorInfo     `json:"injectorInfo"`
@@ -219,6 +218,8 @@ type RegistryInfo struct {
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
+	// ProxyMode is true if the registry made available through a DaemonSet proxy.
+	ProxyMode bool `json:"proxyMode"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -231,7 +232,6 @@ func (ri RegistryInfo) IsInternal() bool {
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
-	// FIXME: make it so we only set nodeport or hostport. We can accept two variables for it.
 	if ri.NodePort == 0 && ri.Address == "" {
 		ri.NodePort = ZarfInClusterContainerRegistryNodePort
 	}
