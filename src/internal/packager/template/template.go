@@ -58,7 +58,6 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"REGISTRY": regInfo.Address,
 			// FIXME? Set for potential legacy consumers of this? OR have different hostport flag
 			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
-			"PROXY_HOSTPORT":     fmt.Sprintf("%d", regInfo.HostPort),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 

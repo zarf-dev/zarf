@@ -59,7 +59,6 @@ const (
 
 	VInitRegistryURL          = "init.registry.url"
 	VInitRegistryNodeport     = "init.registry.nodeport"
-	VInitRegistryHostPort     = "init.registry.hostport"
 	VInitSeedRegistryHostPort = "init.registry.seed_hostport"
 	VInitRegistrySecret       = "init.registry.secret"
 	VInitRegistryPushUser     = "init.registry.push_username"
@@ -223,7 +222,6 @@ func setDefaults() {
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
 	v.SetDefault(VInitRegistryNodeport, state.ZarfInClusterContainerRegistryNodePort)
-	v.SetDefault(VInitRegistryHostPort, state.ZarfInClusterRegistryProxyHostPort)
 	v.SetDefault(VInitSeedRegistryHostPort, state.ZarfSeedRegistryHostPort)
 
 	// Deploy opts that are non-zero values
