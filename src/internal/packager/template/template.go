@@ -48,6 +48,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 		builtinMap := map[string]string{
 			"STORAGE_CLASS": s.StorageClass,
+			"ARCHITECTURE":  s.Architecture,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,

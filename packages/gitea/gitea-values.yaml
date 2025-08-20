@@ -9,7 +9,7 @@ persistence:
 replicaCount: ###ZARF_VAR_GIT_SERVER_REPLICA_COUNT###
 
 nodeSelector:
-  kubernetes.io/arch: "###ZARF_PKG_ARCHITECTURE###"
+  kubernetes.io/arch: "###ZARF_ARCHITECTURE###"
 
 gitea:
   admin:
