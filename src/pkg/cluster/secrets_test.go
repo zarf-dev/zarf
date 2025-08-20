@@ -168,7 +168,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 				},
 				Type: corev1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{
-					".dockerconfigjson": []byte(`{"auths":{"10.11.12.13:3333":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
+					".dockerconfigjson": []byte(`{"auths":{"10.11.12.13:3333":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"127.0.0.1:30001":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="},"good-service.test.svc.cluster.local:3333":{"auth":"cHVsbC11c2VyOnB1bGwtcGFzc3dvcmQ="}}}`),
 				},
 			}
 			if !tt.updatedImageSecret {
