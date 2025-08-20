@@ -101,6 +101,20 @@ func TestPackageFileName(t *testing.T) {
 			expected: "zarf-init-amd64-v0.55.4.tar.zst",
 		},
 		{
+			name: "init package with a custom name",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Version: "v0.55.4",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+					Flavor:       "upstream",
+				},
+			},
+			expected: "zarf-init-amd64-v0.55.4-upstream.tar.zst",
+		},
+		{
 			name: "regular package with version",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
@@ -142,6 +156,36 @@ func TestPackageFileName(t *testing.T) {
 				},
 			},
 			expected: "zarf-package-my-package-amd64-v0.55.3-differential-v0.55.4.tar.zst",
+		},
+		{
+			name: "flavor package",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:    "my-package",
+					Version: "v0.55.4",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+					Flavor:       "upstream",
+				},
+			},
+			expected: "zarf-package-my-package-amd64-v0.55.4-upstream.tar.zst",
+		},
+		{
+			name: "uncompressed",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "my-package",
+					Version:      "v0.55.4",
+					Uncompressed: true,
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+				},
+			},
+			expected: "zarf-package-my-package-amd64-v0.55.4.tar",
 		},
 	}
 	for _, tt := range tests {
