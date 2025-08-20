@@ -68,10 +68,11 @@ type DeployOptions struct {
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
-	s           *state.State
-	c           *cluster.Cluster
-	vc          *variables.VariableConfig
-	hpaModified bool
+	s                  *state.State
+	c                  *cluster.Cluster
+	vc                 *variables.VariableConfig
+	hpaModified        bool
+	stopInjectionGroup *errgroup.Group
 }
 
 // DeployResult is the result of a successful deploy
@@ -121,6 +122,14 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if err != nil {
 		return DeployResult{}, err
 	}
+
+	if d.stopInjectionGroup != nil {
+		l.Debug("waiting for injector pod to finish terminating")
+		if err := d.stopInjectionGroup.Wait(); err != nil {
+			return DeployResult{}, fmt.Errorf("failed to stop injection: %w", err)
+		}
+	}
+
 	if len(deployedComponents) == 0 {
 		l.Warn("no components were selected for deployment. Inspect the package to view the available components and select components interactively or by name with \"--components\"")
 	}
@@ -303,11 +312,12 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		return nil, err
 	}
 
-	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := d.c.StopInjection(ctx); err != nil {
-			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
-		}
+		l.Info("removing injector pod in parallel")
+		d.stopInjectionGroup, _ = errgroup.WithContext(ctx)
+		d.stopInjectionGroup.Go(func() error {
+			return d.c.StopInjection(ctx)
+		})
 	}
 
 	return charts, nil
