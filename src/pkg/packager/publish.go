@@ -23,6 +23,8 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+const defaultPublishRetries = 1
+
 // PublishFromOCIOptions declares the parameters to publish a package.
 type PublishFromOCIOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
@@ -40,9 +42,9 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	l := logger.From(ctx)
 	start := time.Now()
 
-	// Allow zero but other sanitize retries if less-than zero
-	if opts.Retries < 0 {
-		opts.Retries = config.ZarfDefaultRetries
+	// disallow and sanitize <= 0
+	if opts.Retries < 1 {
+		opts.Retries = defaultPublishRetries
 	}
 
 	if err := src.Validate(); err != nil {
@@ -109,9 +111,9 @@ type PublishPackageOptions struct {
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	// Allow zero but other sanitize retries if less-than zero
-	if opts.Retries < 0 {
-		opts.Retries = config.ZarfDefaultRetries
+	// disallow and sanitize <= 0
+	if opts.Retries < 1 {
+		opts.Retries = defaultPublishRetries
 	}
 
 	// Validate inputs
@@ -162,9 +164,9 @@ type PublishSkeletonOptions struct {
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	// Allow zero but other sanitize retries if less-than zero
-	if opts.Retries < 0 {
-		opts.Retries = config.ZarfDefaultRetries
+	// disallow and sanitize <= 0
+	if opts.Retries < 1 {
+		opts.Retries = defaultPublishRetries
 	}
 
 	// Validate inputs
