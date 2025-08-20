@@ -21,8 +21,12 @@ updates:
           - "github.com/docker/*"
   - package-ecosystem: github-actions
     directory: /
+    groups:
+      actions-organization:
+        patterns:
+          - "actions/*"
     schedule:
-      interval: daily
+      interval: weekly
   - package-ecosystem: npm
     directory: /
     schedule:
