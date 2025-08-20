@@ -189,7 +189,7 @@ func TestUseCLI(t *testing.T) {
 		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-extract-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
 		require.NoError(t, err)
 
-		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s.tar.zst", e2e.Arch))
+		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s-%s.tar.zst", e2e.Arch, runtime.GOOS))
 		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err)
 
