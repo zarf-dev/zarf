@@ -312,6 +312,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		return nil, err
 	}
 
+	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
 		l.Info("removing injector pod in parallel")
 		d.stopInjectionGroup, _ = errgroup.WithContext(ctx)
