@@ -44,6 +44,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}
 
@@ -113,6 +114,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}
 
@@ -166,6 +168,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}
 
