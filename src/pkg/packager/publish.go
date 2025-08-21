@@ -44,7 +44,7 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
-		return fmt.Errorf("retries must be greater than 0")
+		opts.Retries = defaultPublishRetries
 	}
 
 	if err := src.Validate(); err != nil {
@@ -113,7 +113,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
-		return registry.Reference{}, fmt.Errorf("retries must be greater than 0")
+		opts.Retries = defaultPublishRetries
 	}
 
 	// Validate inputs
@@ -166,7 +166,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// disallow infinite or negative
 	if opts.Retries < 1 {
-		return registry.Reference{}, fmt.Errorf("retries must be greater than 0")
+		opts.Retries = defaultPublishRetries
 	}
 
 	// Validate inputs
