@@ -152,7 +152,7 @@ type ZarfChart struct {
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
-	// Whether or not to adopt existin cluster resources when deploying
+	// Whether or not to adopt existing cluster resources in chart when deploying
 	AdoptExistingResources *bool `json:"adoptExistingResources,omitempty"`
 }
 
@@ -188,7 +188,7 @@ type ZarfManifest struct {
 	Kustomizations []string `json:"kustomizations,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
-	// Whether or not to adopt existin cluster resources when deploying
+	// Whether or not to adopt existing cluster manifest resources mwhen deploying
 	AdoptExistingResources *bool `json:"adoptExistingResources,omitempty"`
 }
 
