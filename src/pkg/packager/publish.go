@@ -43,7 +43,10 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	start := time.Now()
 
 	// disallow infinite or negative
-	if opts.Retries < 1 {
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return fmt.Errorf("retries cannot be negative")
+		}
 		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}
@@ -113,7 +116,10 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
-	if opts.Retries < 1 {
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+		}
 		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}
@@ -167,7 +173,10 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	l := logger.From(ctx)
 
 	// disallow infinite or negative
-	if opts.Retries < 1 {
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+		}
 		l.Debug("retries set to default", "retries", defaultPublishRetries)
 		opts.Retries = defaultPublishRetries
 	}

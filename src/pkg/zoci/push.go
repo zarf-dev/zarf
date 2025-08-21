@@ -37,7 +37,12 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.OCIConcurrency = DefaultConcurrency
 	}
 
-	if opts.Retries < 1 {
+	// disallow infinite or negative
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return ocispec.Descriptor{}, fmt.Errorf("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", DefaultRetries)
 		opts.Retries = DefaultRetries
 	}
 
