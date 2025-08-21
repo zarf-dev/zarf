@@ -42,7 +42,8 @@ func TestTranslate(t *testing.T) {
 						Name: "manifests",
 						Manifests: []v1alpha1.ZarfManifest{
 							{
-								NoWait: true,
+								NoWait:                 true,
+								AdoptExistingResources: helpers.BoolPtr(true), // <— added
 							},
 							{
 								NoWait: false,
@@ -104,9 +105,10 @@ func TestTranslate(t *testing.T) {
 						Name: "helm-chart",
 						Charts: []v1alpha1.ZarfChart{
 							{
-								URL:      "https://example.com/chart",
-								RepoName: "repo1",
-								NoWait:   true,
+								URL:                    "https://example.com/chart",
+								RepoName:               "repo1",
+								NoWait:                 true,
+								AdoptExistingResources: helpers.BoolPtr(true), // <— added
 							},
 							{
 								URL:     "https://example.com/chart.git",
@@ -143,7 +145,8 @@ func TestTranslate(t *testing.T) {
 						Optional: helpers.BoolPtr(true),
 						Manifests: []ZarfManifest{
 							{
-								Wait: helpers.BoolPtr(false),
+								Wait:                   helpers.BoolPtr(false),
+								AdoptExistingResources: helpers.BoolPtr(true), // <— added
 							},
 							{
 								Wait: helpers.BoolPtr(true),
@@ -207,7 +210,8 @@ func TestTranslate(t *testing.T) {
 						Optional: helpers.BoolPtr(true),
 						Charts: []ZarfChart{
 							{
-								Wait: helpers.BoolPtr(false),
+								Wait:                   helpers.BoolPtr(false),
+								AdoptExistingResources: helpers.BoolPtr(true), // <— added
 								Helm: HelmRepoSource{
 									URL:      "https://example.com/chart",
 									RepoName: "repo1",

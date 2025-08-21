@@ -145,6 +145,8 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+
+	AdoptExistingResources *bool `json:"adoptExistingResources,omitempty" yaml:"adoptExistingResources,omitempty"`
 }
 
 // HelmRepoSource represents a Helm chart stored in a Helm repository.

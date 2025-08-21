@@ -158,6 +158,7 @@ components:
           - connect.yaml
       - name: kep-1755-registry-annotation
         namespace: zarf
+        adoptExistingResources: true
         files:
           - configmap.yaml
     charts:
