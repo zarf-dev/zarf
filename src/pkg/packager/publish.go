@@ -42,9 +42,9 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 	l := logger.From(ctx)
 	start := time.Now()
 
-	// disallow and sanitize <= 0
+	// disallow infinite or negative
 	if opts.Retries < 1 {
-		opts.Retries = defaultPublishRetries
+		return fmt.Errorf("retries must be greater than 0")
 	}
 
 	if err := src.Validate(); err != nil {
@@ -111,9 +111,9 @@ type PublishPackageOptions struct {
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	// disallow and sanitize <= 0
+	// disallow infinite or negative
 	if opts.Retries < 1 {
-		opts.Retries = defaultPublishRetries
+		return registry.Reference{}, fmt.Errorf("retries must be greater than 0")
 	}
 
 	// Validate inputs
@@ -164,9 +164,9 @@ type PublishSkeletonOptions struct {
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
 
-	// disallow and sanitize <= 0
+	// disallow infinite or negative
 	if opts.Retries < 1 {
-		opts.Retries = defaultPublishRetries
+		return registry.Reference{}, fmt.Errorf("retries must be greater than 0")
 	}
 
 	// Validate inputs

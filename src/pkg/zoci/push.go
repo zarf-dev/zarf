@@ -37,6 +37,10 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.OCIConcurrency = DefaultConcurrency
 	}
 
+	if opts.Retries < 1 {
+		opts.Retries = DefaultRetries
+	}
+
 	src, err := file.New("")
 	if err != nil {
 		return ocispec.Descriptor{}, err

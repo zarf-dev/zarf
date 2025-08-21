@@ -21,6 +21,10 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 		opts.OCIConcurrency = DefaultConcurrency
 	}
 
+	if opts.Retries < 1 {
+		opts.Retries = DefaultRetries
+	}
+
 	// Resolve the root digest of the source package (manifest or index)
 	srcRoot, err := src.ResolveRoot(ctx)
 	if err != nil {
