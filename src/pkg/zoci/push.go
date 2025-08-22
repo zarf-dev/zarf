@@ -13,6 +13,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -28,89 +29,131 @@ import (
 const OCITimestampFormat = time.RFC3339
 
 // PushPackage publishes the zarf package to the remote repository.
-func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, concurrency int) (err error) {
+func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, opts PublishOptions) (_ ocispec.Descriptor, err error) {
+	l := logger.From(ctx)
+
 	start := time.Now()
-	if concurrency == 0 {
-		concurrency = DefaultConcurrency
+	if opts.OCIConcurrency == 0 {
+		opts.OCIConcurrency = DefaultConcurrency
+	}
+
+	// disallow infinite or negative
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return ocispec.Descriptor{}, fmt.Errorf("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", DefaultRetries)
+		opts.Retries = DefaultRetries
 	}
 
 	src, err := file.New("")
 	if err != nil {
-		return err
+		return ocispec.Descriptor{}, err
 	}
 	defer func(src *file.Store) {
 		err2 := src.Close()
 		err = errors.Join(err, err2)
 	}(src)
 
-	descs := []ocispec.Descriptor{}
+	// Stage blobs into local store
+	var descs []ocispec.Descriptor
 	files, err := pkgLayout.Files()
 	if err != nil {
-		return err
+		return ocispec.Descriptor{}, err
 	}
 	for path, name := range files {
 		desc, err := src.Add(ctx, name, ZarfLayerMediaTypeBlob, path)
 		if err != nil {
-			return err
+			return ocispec.Descriptor{}, err
 		}
 		descs = append(descs, desc)
 	}
-
-	// Sort by Digest string
+	// Sort by digest for deterministic ordering
 	sort.Slice(descs, func(i, j int) bool {
 		return descs[i].Digest < descs[j].Digest
 	})
 
 	annotations := annotationsFromMetadata(pkgLayout.Pkg.Metadata)
 
-	// Perform the conversion of the string timestamp to the appropriate format in order to maintain backwards compatibility
+	// Back-compatible timestamp parsing → OCI format
 	t, err := time.Parse(v1alpha1.BuildTimestampFormat, pkgLayout.Pkg.Build.Timestamp)
 	if err != nil {
-		// if we change the format of the timestamp, we need to update the conversion here
-		// and also account for an error state for mismatch with older formats
-		return fmt.Errorf("unable to parse timestamp: %w", err)
+		return ocispec.Descriptor{}, fmt.Errorf("unable to parse timestamp: %w", err)
 	}
 	annotations[ocispec.AnnotationCreated] = t.Format(OCITimestampFormat)
 
-	manifestConfigDesc, err := r.OrasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
-	if err != nil {
-		return err
-	}
-	// here is where the manifest is created and written to the filesystem given the file.store Push() functionality
-	root, err := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		// remove the dangling manifest file created by the PackAndTagManifest
-		// should this behavior change, we should expect this to begin producing an error
-		err2 := os.Remove(pkgLayout.Pkg.Metadata.Name)
-		err = errors.Join(err, err2)
-	}()
-
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
-	copyOpts.Concurrency = concurrency
-	totalSize := oci.SumDescsSize(descs) + root.Size + manifestConfigDesc.Size
-	logger.From(ctx).Info("pushing package to registry", "destination", r.Repo().Reference.String(),
-		"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+	copyOpts.Concurrency = opts.OCIConcurrency
 
-	trackedRemote := images.NewTrackedTarget(r.Repo(), totalSize, images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()))
-	trackedRemote.StartReporting(ctx)
-	defer trackedRemote.StopReporting()
-	publishedDesc, err := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+	// For progress reporting and size estimation
+	// (root + manifestConfigDesc sizes are unknown until built each attempt;
+	// this is a conservative total using layer sizes; progress still works fine.)
+	totalSize := oci.SumDescsSize(descs)
+
+	var publishedDesc ocispec.Descriptor
+
+	err = retry.Do(
+		func() error {
+			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+			manifestConfigDesc, cfgErr := r.OrasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
+			if cfgErr != nil {
+				return cfgErr
+			}
+
+			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
+			if packErr != nil {
+				return packErr
+			}
+			// Always remove the temp manifest file created by PackAndTagManifest
+			defer func() {
+				err2 := os.Remove(pkgLayout.Pkg.Metadata.Name)
+				err = errors.Join(err, err2)
+			}()
+
+			// Update the total with manifest + config for better progress (optional)
+			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
+
+			trackedRemote := images.NewTrackedTarget(
+				r.Repo(),
+				attemptTotal,
+				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
+			)
+			trackedRemote.StartReporting(ctx)
+			defer trackedRemote.StopReporting()
+
+			publishedDesc, copyErr := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			if copyErr != nil {
+				return copyErr
+			}
+
+			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
+		},
+		retry.Attempts(uint(opts.Retries)),
+		retry.Delay(defaultDelayTime),
+		retry.MaxDelay(defaultMaxDelayTime),
+		retry.DelayType(retry.BackOffDelay), // exponential backoff
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			// Only log retry if retries are enabled and this is not the last attempt
+			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
+				l.Warn("retrying package push",
+					"attempt", n+1,
+					"max_attempts", opts.Retries,
+					"error", err,
+				)
+			}
+		}),
+	)
 	if err != nil {
-		return err
+		return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", err)
 	}
 
-	err = r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
-	if err != nil {
-		return err
-	}
-	logger.From(ctx).Info("completed package publish", "destination", r.Repo().Reference.String(),
-		"duration", time.Since(start).Round(time.Millisecond*100))
+	l.Info("completed package publish", "destination", r.Repo().Reference.String(),
+		"duration", time.Since(start).Round(100*time.Millisecond))
 
-	return nil
+	return publishedDesc, nil
 }
 
 func annotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
