@@ -26,6 +26,10 @@ spec:
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
     spec:
+{{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .  | indent 8 }}
+{{- end }}
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
