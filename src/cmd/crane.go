@@ -104,15 +104,111 @@ func newRegistryCommand() *cobra.Command {
 	return cmd
 }
 
-func newRegistryLoginCommand() *cobra.Command {
-	cmd := craneCmd.NewCmdAuthLogin()
-	cmd.Example = ""
-	err := cmd.MarkFlagRequired("username")
-	if err != nil {
-		logger.Default().Error("failed to mark username flag required", "error", err.Error())
+type registryLoginOptions struct {
+	interactive   bool
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
+	if o.interactive {
+		uname, err := cmd.Flags().GetString("username")
+		if err != nil {
+			return err
+		}
+		pass, err := cmd.Flags().GetString("password")
+		if err != nil {
+			return err
+		}
+		passStdin, err := cmd.Flags().GetBool("password-stdin")
+		if err != nil {
+			return err
+		}
+		//Check if a server was provided
+		if len(args) == 0 {
+			var server string
+			prompt := &survey.Input{
+				Message: lang.CmdToolsRegistryLoginPromptServer,
+				Help:    lang.CmdToolsRegistryLoginPromptServerHelp,
+			}
+			err = survey.AskOne(prompt, &server, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			args = []string{server}
+		}
+
+		if uname == "" {
+			prompt := &survey.Input{
+				Message: lang.CmdToolsRegistryLoginPromptUsername,
+				Help:    lang.CmdToolsRegistryLoginPromptUsernameHelp,
+			}
+			err = survey.AskOne(prompt, &uname, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			cmd.Flags().Set("username", uname)
+		}
+
+		if pass == "" && !passStdin {
+			prompt := &survey.Password{
+				Message: lang.CmdToolsRegistryLoginPromptPassword,
+				Help:    lang.CmdToolsRegistryLoginPromptPasswordHelp,
+			}
+			err = survey.AskOne(prompt, &pass, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			cmd.Flags().Set("password", pass)
+		}
+
 	}
-	cmd.MarkFlagsOneRequired("password", "password-stdin")
-	return cmd
+	return o.originalRunFn(cmd, args)
+
+}
+
+func newRegistryLoginCommand() *cobra.Command {
+	o := &registryLoginOptions{}
+	craneCmd := craneCmd.NewCmdAuthLogin()
+	o.originalRunFn = craneCmd.RunE
+	craneCmd.RunE = o.run
+
+	craneCmd.Example = ""
+	craneCmd.Args = nil
+	craneCmd.Short = lang.CmdToolsRegistryLoginShort
+	craneCmd.Example = lang.CmdToolsRegistryLoginExample
+	craneCmd.Flags().BoolVar(&o.interactive, "interactive", false, lang.CmdToolsRegistryLoginFlagInteractive)
+
+	craneCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		interactive, err := cmd.Flags().GetBool("interactive")
+		if err != nil {
+			return err
+		}
+		if !interactive {
+			if len(args) == 0 {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoServerProvidedErr)
+			}
+			username, err := cmd.Flags().GetString("username")
+			if err != nil {
+				return err
+			}
+			if username == "" {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoUsernameProvidedErr)
+			}
+			password, err := cmd.Flags().GetString("password")
+			if err != nil {
+				return err
+			}
+			passwordStdin, err := cmd.Flags().GetBool("password-stdin")
+			if err != nil {
+				return err
+			}
+			if password == "" && !passwordStdin {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoPasswordProvidedErr)
+			}
+		}
+		return nil
+	}
+	return craneCmd
 }
 
 func newRegistryCopyCommand() *cobra.Command {
