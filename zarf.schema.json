@@ -381,6 +381,10 @@
         "schemaValidation": {
           "type": "boolean",
           "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet."
+        },
+        "adoptExistingResources": {
+          "type": "boolean",
+          "description": "Whether or not to adopt existin cluster resources when deploying"
         }
       },
       "additionalProperties": false,
@@ -993,6 +997,10 @@
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for manifest resources to be ready before continuing."
+        },
+        "adoptExistingResources": {
+          "type": "boolean",
+          "description": "Whether or not to adopt existin cluster resources when deploying"
         }
       },
       "additionalProperties": false,
