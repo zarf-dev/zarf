@@ -16,7 +16,7 @@ Zarf has supports composing components together between packages on `zarf packag
 
 ## Decision
 
-We decided to separate composability into its own package that represents a composability import chain as a doubly linked list.  This allows us to represent the whole chain as it exists relative to the "head" Zarf package (the definition that Zarf was asked to build) to more easily handle packages that are in different locations (such as OCI skeletons in one's cache).  We also run the compose functions on all components so that the additional filter logic that is needed for these components can be handled more concisely and built upon (as it might for `flavor` https://github.com/zarf-dev/zarf/issues/2101).
+We decided to separate composability into its own package that represents a composability import chain as a doubly linked list.  This allows us to represent the whole chain as it exists relative to the "head" Zarf package (the definition that Zarf was asked to build) to more easily handle packages that are in different locations (such as OCI skeletons in one's cache).  We also run the compose functions on all components so that the additional filter logic that is needed for these components can be handled more concisely and built upon (as it might for `flavor` https://github.com/defenseunicorns/zarf/issues/2101).
 
 ## Consequences
 
