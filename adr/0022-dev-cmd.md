@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-> Feature request: <https://github.com/defenseunicorns/zarf/issues/2169>
+> Feature request: <https://github.com/zarf-dev/zarf/issues/2169>
 
 The current package development lifecycle is:
 

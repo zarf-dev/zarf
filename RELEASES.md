@@ -40,7 +40,7 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 
 ## Release Checklist
 
-* [ ] Review open [Pull Requests](https://github.com/defenseunicorns/zarf/pulls)
+* [ ] Review open [Pull Requests](https://github.com/zarf-dev/zarf/pulls)
 * [ ] Cut the new release by tagging and pushing:
 
   ```bash

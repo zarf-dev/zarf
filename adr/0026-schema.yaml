@@ -68,7 +68,7 @@ components:
       - name: REPLICA_COUNT
         description: "Override the number of pod replicas"
         path: replicaCount
-    # Everything below this line is changing https://github.com/defenseunicorns/zarf/issues/2245
+    # Everything below this line is changing https://github.com/zarf-dev/zarf/issues/2245
     helm: # Only one of helm, git, oci, url, or local is allowed
       url: https://stefanprodan.github.io/podinfo
       name: podinfo # replaces repoName since it's only applicable in this situation
@@ -98,7 +98,7 @@ components:
   images:
   - podinfo@v1
   repos:
-  - https://github.com/defenseunicorns/zarf
+  - https://github.com/zarf-dev/zarf
   wait: true
   healthChecks:
   - apiVersion: v1
