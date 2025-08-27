@@ -44,15 +44,15 @@ Members partipate through Github teams and pre-submit tests automatically run fo
 
 #### Privileges
 
-- Tests run against their PRs automatically
+- Tests run against their pull requests automatically
 
 #### Prerequisites
 
-- Enabled two-factor authentication on their GitHub account
+- Enabled [two-factor authentication](https://docs.github.com/en/authentication/securing-your-account-with-two-factor-authentication-2fa/about-two-factor-authentication) on their GitHub account
 - Have made contributions to the project in the form of:
   - Authoring or reviewing PRs on GitHub. At least one PR must be **merged**.
   - Filing or helping resolve an issue on GitHub
-  - Contributing to a project, or community discussions (e.g. meetings, Slack,
+  - Substantive contribution to a project, or community discussions (e.g. meetings, Slack,
     email discussion forums, Stack Overflow)
 
 #### Promotion process
