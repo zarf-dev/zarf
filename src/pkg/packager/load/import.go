@@ -13,16 +13,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mholt/archives"
-	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	ocistore "oras.land/oras-go/v2/content/oci"
+	"github.com/mholt/archives"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -250,21 +251,20 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 
 		dir = filepath.Join(cache, "dirs", id)
 	} else {
-		tarball = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+		tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", err
+		}
+		defer os.RemoveAll(tempDir)
+		// FIXME: once oci PR is merged this is unnecessary
+		if err := os.Mkdir(filepath.Join(tempDir, "components"), helpers.ReadWriteExecuteUser); err != nil {
+			return "", err
+		}
+		tarball = filepath.Join(tempDir, componentDesc.Annotations[ocispec.AnnotationTitle])
 		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
-		store, err := ocistore.New(cache)
+		err = remote.PullPath(ctx, tempDir, componentDesc)
 		if err != nil {
-			return "", err
-		}
-		exists, err := store.Exists(ctx, componentDesc)
-		if err != nil {
-			return "", err
-		}
-		if !exists {
-			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
-			if err != nil {
-				return "", err
-			}
+			return "", fmt.Errorf("failed to pull component tarball: %w", err)
 		}
 	}
 
