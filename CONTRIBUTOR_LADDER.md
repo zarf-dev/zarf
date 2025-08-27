@@ -51,7 +51,7 @@ Members partipate through Github teams and pre-submit tests automatically run fo
 - Enabled two-factor authentication on their GitHub account
 - Have made contributions to the project in the form of:
   - Authoring or reviewing PRs on GitHub. At least one PR must be **merged**.
-  - Filing or commenting on issues on GitHub
+  - Filing or helping resolve an issue on GitHub
   - Contributing to a project, or community discussions (e.g. meetings, Slack,
     email discussion forums, Stack Overflow)
 
