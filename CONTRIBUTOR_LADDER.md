@@ -35,7 +35,7 @@ Members partipate through Github teams and pre-submit tests automatically run fo
 
 #### Responsibilities
 - Can be assigned issues and pull request reviews
-- Responsive to issues and PRs assigned to them
+- Responsive to issues and pull request assigned to them
 - Others can ask for reviews with a `/cc @username`.
 - Responsive to mentions of teams they are members of
 - Active owner of code they have contributed (unless ownership is explicitly transferred)
