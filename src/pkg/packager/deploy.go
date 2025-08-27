@@ -60,6 +60,7 @@ type DeployOptions struct {
 	RegistryInfo   state.RegistryInfo
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
+	IPv6Enabled    bool
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
@@ -272,6 +273,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
+			IPv6Enabled:    opts.IPv6Enabled,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)

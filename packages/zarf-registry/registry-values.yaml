@@ -12,6 +12,11 @@ image:
 imagePullSecrets:
   - name: private-registry
 
+proxy:
+  image:
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
@@ -19,6 +24,7 @@ secrets:
       secret: "###ZARF_REGISTRY_SECRET###"
 
 service:
+  ipv6Enabled: "###ZARF_IPV6_ENABLED###"
   nodePort: "###ZARF_NODEPORT###"
 
 resources:
