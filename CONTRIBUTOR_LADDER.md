@@ -34,7 +34,7 @@ Members partipate through Github teams and pre-submit tests automatically run fo
 **Defined by:** Member of the Zarf GitHub "Community Member" team.
 
 #### Responsibilities
-- Can be assigned issues and PRs
+- Can be assigned issues and pull request reviews
 - Responsive to issues and PRs assigned to them
 - Others can ask for reviews with a `/cc @username`.
 - Responsive to mentions of teams they are members of
