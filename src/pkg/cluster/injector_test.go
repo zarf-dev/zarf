@@ -27,7 +27,16 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
-func TestInjector(t *testing.T) {
+func TestInjectorInIPv4Cluster(t *testing.T) {
+	testInjector(t, false)
+}
+
+func TestInjectorInIPv6Cluster(t *testing.T) {
+	testInjector(t, true)
+}
+
+func testInjector(t *testing.T, ipv6Enabled bool) {
+	zarfState := fmt.Sprintf(`{"ipv6Enabled": %t}`, ipv6Enabled)
 	ctx := context.Background()
 	cs := fake.NewClientset()
 	c := &Cluster{
@@ -62,6 +71,19 @@ func TestInjector(t *testing.T) {
 		return true, nil, nil
 	})
 
+	// Setup zarf-state Secret
+	zarfSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: state.ZarfStateSecretName,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			state.ZarfStateDataKey: []byte(zarfState),
+		},
+	}
+	_, err := cs.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, zarfSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
 	// Setup nodes and pods with images
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -74,7 +96,7 @@ func TestInjector(t *testing.T) {
 			},
 		},
 	}
-	_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
+	_, err = cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
 	require.NoError(t, err)
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -110,15 +132,28 @@ func TestInjector(t *testing.T) {
 		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999)
 		require.NoError(t, err)
 
-		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-		require.NoError(t, err)
-		require.Len(t, podList.Items, 1)
-		require.Equal(t, "injector", podList.Items[0].Name)
+		if !ipv6Enabled {
+			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+			require.NoError(t, err)
+			require.Len(t, podList.Items, 1)
+			require.Equal(t, "injector", podList.Items[0].Name)
+		} else {
+			daemonsetList, err := cs.AppsV1().DaemonSets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+			require.NoError(t, err)
+			require.Len(t, daemonsetList.Items, 1)
+			require.Equal(t, "zarf-injector", daemonsetList.Items[0].Name)
+		}
 
 		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
-		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
+		var expectedData string
+		if ipv6Enabled {
+			expectedData = "expected-injection-service-IPv6.json"
+		} else {
+			expectedData = "expected-injection-service-IPv4.json"
+		}
+		expected, err := os.ReadFile(fmt.Sprintf("./testdata/%s", expectedData))
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
 		// Managed fields are auto-set and contain timestamps

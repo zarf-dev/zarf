@@ -130,6 +130,8 @@ type ZarfInitOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// Specify if IPv6 mode is going to be used for deploying the internal registry
+	IPv6Enabled bool
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.

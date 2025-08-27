@@ -65,6 +65,9 @@ const (
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
+// IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
+const IPV6Localhost = "::1"
+
 // State is maintained as a secret in the Zarf namespace to track Zarf init data.
 type State struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
@@ -75,6 +78,8 @@ type State struct {
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
+	// Specify if IPv6 mode is going to be used for deploying the internal registry
+	IPv6Enabled bool `json:"ipv6Enabled"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 
@@ -193,11 +198,12 @@ type RegistryInfo struct {
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues() error {
+func (ri *RegistryInfo) FillInEmptyValues(ipv6Enabled bool) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
@@ -207,6 +213,10 @@ func (ri *RegistryInfo) FillInEmptyValues() error {
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
 		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		ri.Address, err = LocalhostRegistryAddress(ipv6Enabled, ri.NodePort)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -256,7 +266,7 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues(false)
 	if err != nil {
 		return nil, err
 	}
@@ -417,4 +427,12 @@ type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
+}
+
+// LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
+func LocalhostRegistryAddress(ipv6Enabled bool, nodePort int) (string, error) {
+	if ipv6Enabled {
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort), nil
+	}
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort), nil
 }
