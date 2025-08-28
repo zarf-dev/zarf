@@ -88,6 +88,7 @@ const (
 	VPkgCreateDifferential       = "package.create.differential"
 	VPkgCreateRegistryOverride   = "package.create.registry_override"
 	VPkgCreateFlavor             = "package.create.flavor"
+	VPkgCreateValues             = "package.create.values"
 
 	// Package deploy config keys
 
@@ -97,6 +98,7 @@ const (
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
+	VPkgDeployValues     = "package.deploy.values"
 
 	// Package publish config keys
 
