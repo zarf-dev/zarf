@@ -1,0 +1,11 @@
+my-component:
+  resources:
+    limits:
+      memory: 128Mi
+      cpu: 100m
+    requests:
+      memory: 64Mi
+      cpu: 100m
+
+other-component:
+  disabled: true
