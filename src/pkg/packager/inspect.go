@@ -13,8 +13,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -44,10 +46,16 @@ type Resource struct {
 type InspectPackageResourcesOptions struct {
 	SetVariables map[string]string
 	KubeVersion  string
+	value.Values
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
 func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayout, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return []Resource{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+	// TODO(mkcp): Add values handling
+
 	s, err := state.Default()
 	if err != nil {
 		return nil, err
