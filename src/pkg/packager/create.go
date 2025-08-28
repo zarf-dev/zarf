@@ -11,6 +11,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	"github.com/zarf-dev/zarf/src/internal/feature"
+	"github.com/zarf-dev/zarf/src/internal/value"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -21,10 +23,11 @@ import (
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
-	Flavor                  string
-	RegistryOverrides       map[string]string
-	SigningKeyPath          string
-	SigningKeyPassword      string
+	Flavor             string
+	RegistryOverrides  map[string]string
+	SigningKeyPath     string
+	SigningKeyPassword string
+	// TODO(mkcp): Give SetVariables a type
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string
@@ -34,10 +37,16 @@ type CreateOptions struct {
 	CachePath               string
 	// applicable when output is an OCI registry
 	RemoteOptions
+	value.Values
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
 func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return "", fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+	// TODO(mkcp): Add values handling
+
 	if opts.SkipSBOM && opts.SBOMOut != "" {
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
