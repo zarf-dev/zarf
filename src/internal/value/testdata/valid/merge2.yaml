@@ -1,0 +1,4 @@
+app:
+  replicas: 3
+config:
+  debug: true
