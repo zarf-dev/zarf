@@ -266,6 +266,8 @@ type ZarfComponentAction struct {
 	SetVariables []Variable `json:"setVariables,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
+	// (onDeploy/cmd only) An array of values to set in the package's helm chart.'
+	SetValues []Value `json:"setValues,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 	Wait *ZarfComponentActionWait `json:"wait,omitempty"`
 }
