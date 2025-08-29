@@ -163,7 +163,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
-	values, err := value.ParseFiles(o.valuesFiles)
+	values, err := value.ParseFiles(ctx, o.valuesFiles)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
-	values, err := value.ParseFiles(o.valuesFiles)
+	values, err := value.ParseFiles(ctx, o.valuesFiles)
 	if err != nil {
 		return err
 	}
@@ -690,7 +690,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	values, err := value.ParseFiles(o.valuesFiles)
+	values, err := value.ParseFiles(ctx, o.valuesFiles)
 	if err != nil {
 		return err
 	}
