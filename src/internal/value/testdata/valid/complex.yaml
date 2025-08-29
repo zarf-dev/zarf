@@ -1,0 +1,25 @@
+deployment:
+  replicas: 3
+  image:
+    repository: nginx
+    tag: "1.21"
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: example.com
+      paths:
+        - path: /
+          pathType: Prefix
