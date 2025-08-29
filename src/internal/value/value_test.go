@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package value supports values files and validation
 package value
 
 import (
@@ -168,7 +172,7 @@ func TestParseFiles(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 
-			result, err := ParseFiles(ctx, tt.files)
+			result, err := ParseFiles(ctx, tt.files, ParseFilesOptions{})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedResult, result)
 		})
@@ -211,7 +215,7 @@ func TestParseFiles_Errors(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 
-			result, err := ParseFiles(ctx, tt.files)
+			result, err := ParseFiles(ctx, tt.files, ParseFilesOptions{})
 			require.Error(t, err)
 			require.IsType(t, tt.expectedError, err)
 			require.Nil(t, result)
