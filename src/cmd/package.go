@@ -163,10 +163,13 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	// Convert Variables to Values then load user-supplied values
+	values := value.MapVariablesToValues(o.setVariables)
+	fileValues, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
 	}
+	value.DeepMerge(values, fileValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {

@@ -33,6 +33,9 @@ type ParseFilesOptions struct {
 
 // ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
 // Values map.
+// FIXME(mkcp): There's a slight complication here where a path might be a URL not just a file. All of the input
+// validation still holds, but we'll need to add some additional branching in the path loop. Having a path
+// type isn't the worst idea either.
 func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Values, err error) {
 	m := make(Values)
 	start := time.Now()
@@ -56,6 +59,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			return nil, &InvalidFileExtError{FilePath: path, Ext: ext}
 		}
 	}
+
 	logger.From(ctx).Debug("parsing values files", "paths", paths)
 	for _, path := range paths {
 		// Allow for cancellation
@@ -73,9 +77,20 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 		if err != nil {
 			return nil, err
 		}
-		deepMerge(m, vals)
+		DeepMerge(m, vals)
 	}
 	return m, nil
+}
+
+// MapVariablesToValues converts a map of variables to a Values map by making its keys fit lowercase dot notation.
+// FIXME(mkcp): Uppercase keys are allowed in value keys so this is a bit janky, but it works for a proof of concept.
+func MapVariablesToValues(variables map[string]string) Values {
+	m := make(Values)
+	for k, v := range variables {
+		newKey := strings.ToLower(strings.ReplaceAll(k, "_", "."))
+		m[newKey] = v
+	}
+	return m
 }
 
 func parseFile(ctx context.Context, path string) (Values, error) {
@@ -116,8 +131,11 @@ func checkSchemaStub(_ Values, _ string) []error {
 	return nil
 }
 
-// deepMergeValues merges two Values maps recursively via mutation, overwriting keys in dst with keys from src
-func deepMerge(dst, src Values) {
+// DeepMerge merges two Values maps recursively via mutation, overwriting keys in dst with keys from src. Then returns
+// dst.
+// FIXME(mkcp): This should return a copy rather than mutating but for some reason my friday brain could not figure this
+// out.
+func DeepMerge(dst, src Values) {
 	for key, srcVal := range src {
 		if dstVal, exists := dst[key]; exists {
 			// Both have the key, merge
@@ -125,7 +143,7 @@ func deepMerge(dst, src Values) {
 			dstMap, dstIsMap := dstVal.(map[string]any)
 			if srcIsMap && dstIsMap {
 				// Both are maps, recur
-				deepMerge(dstMap, srcMap)
+				DeepMerge(dstMap, srcMap)
 			} else {
 				// Not both maps, src overwrites dst
 				dst[key] = srcVal
