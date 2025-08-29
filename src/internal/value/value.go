@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package value supports values files and validation
 package value
 
 import (
@@ -6,28 +10,61 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// Values provides a map of keys to values for use in templating and Helm overrides.
 type Values map[string]any
 
-// ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
-// Values map
-// TODO: Add schema check. Maybe here in parsing, or later in the process like templating?
-func ParseFiles(ctx context.Context, paths []string) (_ Values, err error) {
-	l := logger.From(ctx)
-	m := make(Values)
+// ParseFilesOptions provides optional configuration for ParseFiles
+type ParseFilesOptions struct {
+	// TODO: Add schema check. Maybe here in parsing, or later in the process like templating?
+	// Schema Schema
+	// REVIEW: Should we guard against?
+	// FileSizeLimit
+	// MaximumYAMLDepth
+	// Timeout
+}
 
+// ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
+// Values map.
+func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Values, err error) {
+	m := make(Values)
+	start := time.Now()
+	defer func() {
+		logger.From(ctx).Debug("values parsing complete",
+			"duration", time.Since(start),
+			"files", len(paths))
+	}()
+
+	if ctx == nil {
+		return Values{}, errors.New("context cannot be nil")
+	}
 	// No files given
 	if len(paths) <= 0 {
-		return map[string]any{}, nil
+		return Values{}, nil
 	}
-
-	// Ensure files exist
-	l.Debug("parsing values files", "paths", paths)
+	// Validate file extensions
 	for _, path := range paths {
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".yaml" && ext != ".yml" {
+			return nil, &InvalidFileExtError{FilePath: path, Ext: ext}
+		}
+	}
+	logger.From(ctx).Debug("parsing values files", "paths", paths)
+	for _, path := range paths {
+		// Allow for cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+		// Ensure file exists
 		// REVIEW: Do we care about empty files? Here? Small UX tradeoff whether or not to fail on empty files
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 			return nil, err
@@ -36,8 +73,7 @@ func ParseFiles(ctx context.Context, paths []string) (_ Values, err error) {
 		if err != nil {
 			return nil, err
 		}
-		newM := deepMergeValues(m, vals)
-		m = newM
+		deepMerge(m, vals)
 	}
 	return m, nil
 }
@@ -52,16 +88,15 @@ func parseFile(ctx context.Context, path string) (Values, error) {
 	}
 	defer func(f *os.File) {
 		if closeErr := f.Close(); closeErr != nil {
-			err = fmt.Errorf("%w:%w", closeErr, err)
+			// Log close errors, don't fail on them for read operations
+			logger.From(ctx).Warn("failed to close file", "path", path, "error", closeErr)
 		}
 	}(f)
 
 	// Decode and merge values
-	err = yaml.NewDecoder(f).DecodeContext(ctx, &m)
-	if err != nil {
-		// an empty file is fine
+	if err = yaml.NewDecoder(f).DecodeContext(ctx, &m); err != nil {
 		if errors.Is(err, io.EOF) {
-			return m, nil
+			return m, nil // Empty file is ok
 		}
 		return nil, &YAMLDecodeError{
 			FilePath: path,
@@ -77,12 +112,12 @@ func parseFile(ctx context.Context, path string) (Values, error) {
 // - Do we take a json or byte array, a map[string]any, or a specific json.schema type?
 // - Do we want to return a list of errors, some specific schema fail datatype, or some other type?
 // - Surely there's libraries for this which have their own opinionated inputs for the schema and return types
-func checkSchema_Stub(values Values, jsonSchema string) []error {
+func checkSchemaStub(_ Values, _ string) []error {
 	return nil
 }
 
-// deepMergeValues merges two Values maps recursively, overwriting keys in dst with keys from src
-func deepMergeValues(dst, src Values) Values {
+// deepMergeValues merges two Values maps recursively via mutation, overwriting keys in dst with keys from src
+func deepMerge(dst, src Values) {
 	for key, srcVal := range src {
 		if dstVal, exists := dst[key]; exists {
 			// Both have the key, merge
@@ -90,7 +125,7 @@ func deepMergeValues(dst, src Values) Values {
 			dstMap, dstIsMap := dstVal.(map[string]any)
 			if srcIsMap && dstIsMap {
 				// Both are maps, recur
-				deepMergeValues(dstMap, srcMap)
+				deepMerge(dstMap, srcMap)
 			} else {
 				// Not both maps, src overwrites dst
 				dst[key] = srcVal
@@ -100,7 +135,16 @@ func deepMergeValues(dst, src Values) Values {
 			dst[key] = srcVal
 		}
 	}
-	return dst
+}
+
+// InvalidFileExtError represents an error when a file has an invalid extension
+type InvalidFileExtError struct {
+	FilePath string
+	Ext      string
+}
+
+func (e *InvalidFileExtError) Error() string {
+	return fmt.Sprintf("invalid file extension for values file %s: %s", e.FilePath, e.Ext)
 }
 
 // YAMLDecodeError represents an error when YAML parsing fails
