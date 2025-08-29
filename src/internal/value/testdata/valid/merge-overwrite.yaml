@@ -1,0 +1,2 @@
+app:
+  replicas: 4
