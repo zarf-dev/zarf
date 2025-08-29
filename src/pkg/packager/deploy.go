@@ -19,10 +19,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -43,6 +45,8 @@ import (
 type DeployOptions struct {
 	// Deploy time set variables
 	SetVariables map[string]string
+	// Values are values added at deploy time to Helm charts.
+	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
 	// Timeout for Helm operations
@@ -85,6 +89,12 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return DeployResult{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+	// TODO(mkcp): Add values handling
+
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
