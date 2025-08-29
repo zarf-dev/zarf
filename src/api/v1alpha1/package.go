@@ -156,6 +156,13 @@ type InteractiveVariable struct {
 	Prompt bool `json:"prompt,omitempty"`
 }
 
+// Value represents a value to be set as the result of a cmd.
+// TODO(mkcp): This is really more of a stub and should be developed a bit more as we work out go-templating.
+type Value struct {
+	Path string `json:"path"`
+	Type string `json:"type"`
+}
+
 // Constant are constants that can be used to dynamically template K8s resources or run in actions.
 type Constant struct {
 	// The name to be used for the constant

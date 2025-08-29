@@ -52,6 +52,8 @@ type ZarfPackage struct {
 	Constants []Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources.
 	Variables []InteractiveVariable `json:"variables,omitempty"`
+	// Values TODO doccomment
+	Values ZarfValues `json:"values,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -177,4 +179,12 @@ type ZarfBuildData struct {
 	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+}
+
+// ZarfValues TODO doccomment
+type ZarfValues struct {
+	// Files TODO doccomment
+	Files []string `json:"files,omitempty"`
+	// Schema TODO doccomment
+	Schema string `json:"schema,omitempty"`
 }

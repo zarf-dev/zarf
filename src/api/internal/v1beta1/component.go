@@ -145,6 +145,8 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// [alpha] List of Helm values to override in the chart.
+	Values []ZarfChartValue `json:"values,omitempty"`
 }
 
 // HelmRepoSource represents a Helm chart stored in a Helm repository.
@@ -183,6 +185,11 @@ type ZarfChartVariable struct {
 	Description string `json:"description"`
 	// The path within the Helm chart values where this variable applies.
 	Path string `json:"path"`
+}
+
+type ZarfChartValue struct {
+	SourcePath string `json:"source_path,omitempty"`
+	TargetPath string `json:"target_path,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
