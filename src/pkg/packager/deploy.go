@@ -124,7 +124,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if d.stopInjectionGroup != nil {
-		l.Debug("waiting for injector pod to finish terminating")
+		l.Info("Removing temporary init resources")
 		if err := d.stopInjectionGroup.Wait(); err != nil {
 			return DeployResult{}, fmt.Errorf("failed to stop injection: %w", err)
 		}
@@ -314,10 +314,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		l.Info("removing injector pod in parallel")
-		d.stopInjectionGroup, _ = errgroup.WithContext(ctx)
+		l.Info("removing injector pod")
+		var gCtx context.Context
+		d.stopInjectionGroup, gCtx = errgroup.WithContext(ctx)
 		d.stopInjectionGroup.Go(func() error {
-			return d.c.StopInjection(ctx)
+			return d.c.StopInjection(gCtx)
 		})
 	}
 
