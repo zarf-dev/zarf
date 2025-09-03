@@ -54,7 +54,6 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
 		return []Resource{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
-	// TODO(mkcp): Add values handling
 
 	s, err := state.Default()
 	if err != nil {
@@ -99,7 +98,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				// Create a Helm values overrides map from set Zarf `variables`, 'values', and DeployOpts library inputs
+				// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `variables` -> Zarf
+				// `values` -> DeployOpts overrides
+				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, variableConfig, nil, opts.Values)
 				if err != nil {
 					return nil, err
 				}

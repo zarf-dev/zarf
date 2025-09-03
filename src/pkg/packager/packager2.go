@@ -11,8 +11,12 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
+
+type ValuesOverrides map[string]map[string]map[string]any
 
 // RemoteOptions are common options when calling a remote
 type RemoteOptions struct {
@@ -29,9 +33,17 @@ func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, s
 	return variableConfig, nil
 }
 
-func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, variableConfig *variables.VariableConfig, valuesOverridesMap map[string]map[string]map[string]interface{}) (map[string]any, error) {
-	valuesOverrides := make(map[string]any)
+// TODO(mkcp): This can be simplified quite a bit by preprocessing the value overrides with just the chart and values.
+func generateValuesOverrides(
+	ctx context.Context,
+	chart v1alpha1.ZarfChart,
+	componentName string,
+	variableConfig *variables.VariableConfig,
+	valuesOverridesMap ValuesOverrides,
+	values value.Values,
+) (map[string]any, error) {
 	chartOverrides := make(map[string]any)
+	valuesOverrides := make(map[string]any)
 
 	for _, variable := range chart.Variables {
 		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
@@ -42,6 +54,32 @@ func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, var
 		}
 	}
 
+	// Map ChartValues' Source to Target
+	for _, chartValue := range chart.Values {
+		if chartValue.SourcePath == "" || chartValue.TargetPath == "" {
+			continue
+		}
+
+		// Extract value from source path in values
+		sourceValue, err := value.ExtractFromPath(values, value.Path(chartValue.SourcePath))
+		if err != nil {
+			// Log warning but don't fail - source path might not exist
+			logger.From(ctx).Warn("unable to extract value from path",
+				"path", chartValue.SourcePath,
+				"error", err,
+				"component", componentName,
+				"chart", chart.Name,
+			)
+			continue
+		}
+
+		// Set value at target path in chart overrides
+		if err := helpers.MergePathAndValueIntoMap(chartOverrides, chartValue.TargetPath, sourceValue); err != nil {
+			return nil, fmt.Errorf("unable to map value from %s to %s: %w",
+				chartValue.SourcePath, chartValue.TargetPath, err)
+		}
+	}
+
 	// Apply any direct overrides specified in the deployment options for this component and chart
 	if componentOverrides, ok := valuesOverridesMap[componentName]; ok {
 		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
@@ -49,8 +87,6 @@ func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, var
 		}
 	}
 
-	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
-	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
 	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
 }
 
