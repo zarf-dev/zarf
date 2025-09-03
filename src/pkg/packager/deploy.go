@@ -66,7 +66,7 @@ type DeployOptions struct {
 	StorageClass   string
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	ValuesOverridesMap ValuesOverrides
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -511,9 +511,9 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			}
 		}
 
-		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
-		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
-		valuesOverrides, err := generateValuesOverrides(chart, component.Name, d.vc, opts.ValuesOverridesMap)
+		// Create a Helm values overrides map from set Zarf `variables`, 'values', and DeployOpts library inputs
+		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `variables` -> Zarf `values` -> DeployOpts overrides
+		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, d.vc, opts.ValuesOverridesMap, opts.Values)
 		if err != nil {
 			return installedCharts, err
 		}

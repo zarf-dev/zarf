@@ -45,7 +45,6 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
 		return "", fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
-	// TODO(mkcp): Add values handling
 
 	if opts.SkipSBOM && opts.SBOMOut != "" {
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
@@ -55,6 +54,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		Flavor:       opts.Flavor,
 		SetVariables: opts.SetVariables,
 		CachePath:    opts.CachePath,
+		Values:       opts.Values,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
