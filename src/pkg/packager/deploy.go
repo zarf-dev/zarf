@@ -68,11 +68,11 @@ type DeployOptions struct {
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
-	s                  *state.State
-	c                  *cluster.Cluster
-	vc                 *variables.VariableConfig
-	hpaModified        bool
-	stopInjectionGroup *errgroup.Group
+	s            *state.State
+	c            *cluster.Cluster
+	vc           *variables.VariableConfig
+	hpaModified  bool
+	cleanupGroup *errgroup.Group
 }
 
 // DeployResult is the result of a successful deploy
@@ -123,9 +123,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
-	if d.stopInjectionGroup != nil {
-		l.Info("removing temporary init resources")
-		if err := d.stopInjectionGroup.Wait(); err != nil {
+	if d.cleanupGroup != nil {
+		l.Info("awaiting temporary resource removal")
+		if err := d.cleanupGroup.Wait(); err != nil {
 			return DeployResult{}, fmt.Errorf("failed to stop injection: %w", err)
 		}
 	}
@@ -314,10 +314,9 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		l.Info("removing injector pod")
 		var gCtx context.Context
-		d.stopInjectionGroup, gCtx = errgroup.WithContext(ctx)
-		d.stopInjectionGroup.Go(func() error {
+		d.cleanupGroup, gCtx = errgroup.WithContext(ctx)
+		d.cleanupGroup.Go(func() error {
 			return d.c.StopInjection(gCtx)
 		})
 	}
