@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -28,16 +29,19 @@ type DefinitionOptions struct {
 	SetVariables map[string]string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	value.Values
 }
 
-// PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
+// PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
 		"flavor", opts.Flavor,
-		"setVariables", opts.SetVariables)
+		"setVariables", opts.SetVariables,
+		"values", opts.Values,
+	)
 
 	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, layout.ZarfYAML))
@@ -53,6 +57,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	// TODO(mkcp): Support values here and go templates.
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
 		if err != nil {
@@ -67,6 +72,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
+// TODO(mkcp): Validate values
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()

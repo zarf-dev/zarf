@@ -21,6 +21,17 @@ import (
 // Values provides a map of keys to values for use in templating and Helm overrides.
 type Values map[string]any
 
+// Path starts with a . and represents a specific key in a nested hierarchy of keys. For example, .resources.limits.cpu
+// resolves the value for "cpu" within the keyspace of Values.
+type Path string
+
+func (p Path) Validate() error {
+	if p == "" || !strings.HasPrefix(string(p), ".") {
+		return fmt.Errorf("invalid path format: %s", p)
+	}
+	return nil
+}
+
 // ParseFilesOptions provides optional configuration for ParseFiles
 type ParseFilesOptions struct {
 	// TODO: Add schema check. Maybe here in parsing, or later in the process like templating?
@@ -69,7 +80,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 		default:
 		}
 		// Ensure file exists
-		// REVIEW: Do we care about empty files? Here? Small UX tradeoff whether or not to fail on empty files
+		// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -93,6 +104,8 @@ func MapVariablesToValues(variables map[string]string) Values {
 	return m
 }
 
+// FIXME(mkcp): parseFile also reads the file from disk. We should probably separate read to happen over a network or
+// locally, and handle decoding in its own step. DecodeContext() helpfully accepts many different value types.
 func parseFile(ctx context.Context, path string) (Values, error) {
 	m := make(Values)
 
@@ -153,6 +166,47 @@ func DeepMerge(dst, src Values) {
 			dst[key] = srcVal
 		}
 	}
+}
+
+// ExtractFromPath extracts a value from a nested Values map using dot notation path.
+// Path format: ".key.subkey.value" where each dot represents a map level.
+func ExtractFromPath(values Values, path Path) (any, error) {
+	if err := path.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Parse path into components, skipping empty leading segment
+	pathStr := string(path)[1:] // Remove leading dot
+	if pathStr == "" {
+		return nil, fmt.Errorf("empty path after dot: %s", path)
+	}
+
+	parts := strings.Split(pathStr, ".")
+
+	// Traverse the nested map structure
+	current := values
+	for i, key := range parts {
+		value, exists := current[key]
+		if !exists {
+			return nil, fmt.Errorf("key %q not found in path %s", key, path)
+		}
+
+		// If this is the final key, return the value
+		if i == len(parts)-1 {
+			return value, nil
+		}
+
+		// Otherwise, value must be a nested map to continue
+		nextMap, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("cannot traverse path %s: key %q contains %T, expected map",
+				path, key, value)
+		}
+		current = nextMap
+	}
+
+	// This should never be reached due to the empty pathStr check above
+	return nil, fmt.Errorf("internal error: empty path components")
 }
 
 // InvalidFileExtError represents an error when a file has an invalid extension

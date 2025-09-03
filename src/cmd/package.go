@@ -161,15 +161,20 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
 
 	// Merge SetVariables and config variables.
-	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	setVars := helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
-	// Convert Variables to Values then load user-supplied values
-	values := value.MapVariablesToValues(o.setVariables)
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	fileValues, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
 	}
-	value.DeepMerge(values, fileValues)
+	// Merge setVars and valuesFiles together
+	// TODO(mkcp): I've commented it out for now, but this is intended as a way for us support variables' key and value
+	// space with values' go-templates syntax. This should help nudge users towards the new templating syntax while
+	// maintaining compatibility.
+	// values := value.MapVariablesToValues(o.setVariables)
+	// value.DeepMerge(values, fileValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -180,7 +185,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RegistryOverrides:       o.registryOverrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
-		SetVariables:            o.setVariables,
+		SetVariables:            setVars,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
@@ -188,9 +193,9 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
-		Values:                  values,
+		Values:                  fileValues,
 	}
-	_, err = packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -199,11 +204,13 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create package: %w", err)
 	}
+	l.Debug("package created", "path", pkgPath)
 	return nil
 }
 
 type packageDeployOptions struct {
 	namespaceOverride string
+	setVariables      map[string]string
 	valuesFiles       []string
 }
 
@@ -228,7 +235,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
@@ -255,9 +262,11 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	v := getViper()
 
 	// Merge SetVariables and config variables.
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	setVars := helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
@@ -291,7 +300,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		SetVariables:           setVars,
 		Values:                 values,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
@@ -693,6 +702,8 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
@@ -789,6 +800,8 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
