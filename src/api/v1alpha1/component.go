@@ -150,6 +150,8 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// [alpha] List of values sources to their Helm override target
+	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
 }
@@ -170,6 +172,12 @@ type ZarfChartVariable struct {
 	Description string `json:"description"`
 	// The path within the Helm chart values where this variable applies.
 	Path string `json:"path"`
+}
+
+// FIXME(mkcp): This is here for testing only, this should actually exist on the beta1 schema
+type ZarfChartValue struct {
+	SourcePath string `json:"source_path,omitempty"`
+	TargetPath string `json:"target_path,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
