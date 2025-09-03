@@ -124,7 +124,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if d.stopInjectionGroup != nil {
-		l.Info("Removing temporary init resources")
+		l.Info("removing temporary init resources")
 		if err := d.stopInjectionGroup.Wait(); err != nil {
 			return DeployResult{}, fmt.Errorf("failed to stop injection: %w", err)
 		}
