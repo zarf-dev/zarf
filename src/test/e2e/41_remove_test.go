@@ -29,7 +29,7 @@ func TestRemovePackageComponents(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Remove the package and check that the other component is still in state
+	// Remove the component "first" and check that the other component is still in state
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "remove-test", "--components=first", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
