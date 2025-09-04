@@ -39,4 +39,11 @@ func TestRemovePackage(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, deployedPackage.DeployedComponents, 1)
 	require.Equal(t, "second", deployedPackage.DeployedComponents[0].Name)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", packagePath, "--components=second", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// verify the package is no longer in state
+	_, err = c.GetDeployedPackage(t.Context(), "remove-test")
+	require.Error(t, err)
 }
