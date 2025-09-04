@@ -43,6 +43,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		return err
 	}
 
+	if len(pkg.Components) == 0 {
+		return fmt.Errorf("package to remove contains no components")
+	}
+
 	// Check that cluster is configured if required.
 	requiresCluster := false
 	componentIdx := map[string]v1alpha1.ZarfComponent{}
