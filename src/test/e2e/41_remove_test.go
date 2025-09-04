@@ -13,7 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 )
 
-func TestRemovePackage(t *testing.T) {
+func TestRemovePackageComponents(t *testing.T) {
 	t.Log("E2E: Remove test package")
 
 	tmpdir := t.TempDir()
