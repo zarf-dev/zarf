@@ -9,16 +9,12 @@ components:
       - name: pod
         namespace: first
         files:
-          - pod.yaml
-    images:
-      - ghcr.io/zarf-dev/images/alpine:3.21.3
+          - configmap.yaml
 
   - name: second
     required: true
-    images:
-      - ghcr.io/zarf-dev/images/alpine:3.21.3
     manifests:
       - name: pod
         namespace: second
         files:
-          - pod.yaml
+          - configmap.yaml
