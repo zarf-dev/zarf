@@ -33,20 +33,20 @@ func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, s
 	return variableConfig, nil
 }
 
-// TODO(mkcp): This can be simplified quite a bit by preprocessing the value overrides with just the chart and values.
-func generateValuesOverrides(
-	ctx context.Context,
-	chart v1alpha1.ZarfChart,
-	componentName string,
-	variableConfig *variables.VariableConfig,
-	valuesOverridesMap ValuesOverrides,
-	values value.Values,
-) (map[string]any, error) {
+type overrideOpts struct {
+	variableConfig     *variables.VariableConfig
+	values             value.Values
+	valuesOverridesMap ValuesOverrides
+}
+
+// generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
+// Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
+func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
 	chartOverrides := make(map[string]any)
 	valuesOverrides := make(map[string]any)
 
 	for _, variable := range chart.Variables {
-		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+		if setVar, ok := opts.variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
 			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
 			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
 				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
@@ -61,7 +61,7 @@ func generateValuesOverrides(
 		}
 
 		// Extract value from source path in values
-		sourceValue, err := value.ExtractFromPath(values, value.Path(chartValue.SourcePath))
+		sourceValue, err := value.ExtractFromPath(opts.values, value.Path(chartValue.SourcePath))
 		if err != nil {
 			// Log warning but don't fail - source path might not exist
 			logger.From(ctx).Warn("unable to extract value from path",
@@ -81,7 +81,7 @@ func generateValuesOverrides(
 	}
 
 	// Apply any direct overrides specified in the deployment options for this component and chart
-	if componentOverrides, ok := valuesOverridesMap[componentName]; ok {
+	if componentOverrides, ok := opts.valuesOverridesMap[componentName]; ok {
 		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
 			valuesOverrides = chartSpecificOverrides
 		}

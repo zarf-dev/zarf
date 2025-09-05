@@ -57,7 +57,16 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	// TODO(mkcp): Support values here and go templates.
+
+	// Load top-level values files and ensure
+	values, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	value.DeepMerge(opts.Values, values)
+
+	// TODO Apply values to package create templates. In files, manifests, and actions*?
+
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
 		if err != nil {

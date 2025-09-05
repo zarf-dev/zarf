@@ -147,7 +147,7 @@ func checkSchemaStub(_ Values, _ string) []error {
 // DeepMerge merges two Values maps recursively via mutation, overwriting keys in dst with keys from src. Then returns
 // dst.
 // FIXME(mkcp): This should return a copy rather than mutating but for some reason my friday brain could not figure this
-// out.
+// out. Also, this could take variadic args to merge as many values maps as needed.
 func DeepMerge(dst, src Values) {
 	for key, srcVal := range src {
 		if dstVal, exists := dst[key]; exists {

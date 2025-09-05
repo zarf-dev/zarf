@@ -45,7 +45,8 @@ import (
 type DeployOptions struct {
 	// Deploy time set variables
 	SetVariables map[string]string
-	// Values are values added at deploy time to Helm charts.
+	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
+	// API callers.
 	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
@@ -75,6 +76,7 @@ type deployer struct {
 	s           *state.State
 	c           *cluster.Cluster
 	vc          *variables.VariableConfig
+	vals        value.Values
 	hpaModified bool
 }
 
@@ -89,11 +91,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
-
-	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
-		return DeployResult{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
-	}
-	// TODO(mkcp): Add values handling
 
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
@@ -119,8 +116,21 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return DeployResult{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
+	vals, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return DeployResult{}, err
+	}
+	// Package defaults are overridden by values sourced from the CLI, config, or passed in directly via the API.
+	value.DeepMerge(vals, opts.Values)
+
 	d := deployer{
-		vc: variableConfig,
+		vc:   variableConfig,
+		vals: vals,
 	}
 
 	// During deploy we disable
@@ -511,12 +521,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			}
 		}
 
-		// Create a Helm values overrides map from set Zarf `variables`, 'values', and DeployOpts library inputs
-		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `variables` -> Zarf `values` -> DeployOpts overrides
-		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, d.vc, opts.ValuesOverridesMap, opts.Values)
+		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+			variableConfig:     d.vc,
+			values:             d.vals,
+			valuesOverridesMap: opts.ValuesOverridesMap,
+		})
 		if err != nil {
 			return installedCharts, err
 		}
+		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides)
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -533,6 +546,11 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
+		logger.From(ctx).Debug("loaded chart",
+			"metadata", helmChart.Metadata,
+			"helmChart.Values", helmChart.Values,
+			"chartUtil.Values", values,
+		)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {

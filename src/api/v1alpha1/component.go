@@ -176,8 +176,8 @@ type ZarfChartVariable struct {
 
 // FIXME(mkcp): This is here for testing only, this should actually exist on the beta1 schema
 type ZarfChartValue struct {
-	SourcePath string `json:"source_path,omitempty"`
-	TargetPath string `json:"target_path,omitempty"`
+	SourcePath string `json:"sourcePath,omitempty"`
+	TargetPath string `json:"targetPath,omitempty"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.

@@ -402,10 +402,10 @@
     },
     "ZarfChartValue": {
       "properties": {
-        "source_path": {
+        "sourcePath": {
           "type": "string"
         },
-        "target_path": {
+        "targetPath": {
           "type": "string"
         }
       },
@@ -1111,6 +1111,27 @@
       "patternProperties": {
         "^x-": {}
       }
+    },
+    "ZarfValues": {
+      "properties": {
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Files declares the location of Values Files, it can be a file path or a URL."
+        },
+        "schema": {
+          "type": "string",
+          "description": "Schema TODO doccomment"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "ZarfValues provides top-level imports for",
+      "patternProperties": {
+        "^x-": {}
+      }
     }
   },
   "properties": {
@@ -1159,6 +1180,10 @@
       },
       "type": "array",
       "description": "Variable template values applied on deploy for K8s resources."
+    },
+    "values": {
+      "$ref": "#/$defs/ZarfValues",
+      "description": "Values imports Zarf values files for templating and overriding Helm values."
     }
   },
   "additionalProperties": false,
