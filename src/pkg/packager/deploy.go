@@ -84,6 +84,7 @@ type deployer struct {
 type DeployResult struct {
 	DeployedComponents []state.DeployedComponent
 	VariableConfig     *variables.VariableConfig
+	Values             value.Values
 }
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
@@ -117,7 +118,8 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
-		return DeployResult{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+		return DeployResult{}, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
@@ -125,8 +127,9 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if err != nil {
 		return DeployResult{}, err
 	}
-	// Package defaults are overridden by values sourced from the CLI, config, or passed in directly via the API.
+	// Package defaults are overridden by deploy values.
 	value.DeepMerge(vals, opts.Values)
+	logger.From(ctx).Debug("package values", "values", vals)
 
 	d := deployer{
 		vc:   variableConfig,
@@ -389,6 +392,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
+	// TODO(mkcp): Add go-templating for values here
+
 	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
@@ -529,7 +534,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
-		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides)
+		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -548,8 +553,9 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		}
 		logger.From(ctx).Debug("loaded chart",
 			"metadata", helmChart.Metadata,
-			"helmChart.Values", helmChart.Values,
-			"chartUtil.Values", values,
+			"chartValues", helmChart.Values,
+			"valuesOverrides", values,
+			"countValuesOverrides", len(values),
 		)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
