@@ -69,7 +69,7 @@ To discover more about Zarf and explore its features, please visit [docs.zarf.de
 - [SBOMs](https://docs.zarf.dev/ref/sboms)
 - and more!
 
-Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/defenseunicorns/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
+Using Zarf in GitHub workflows? Check out the [setup-zarf](https://github.com/zarf-dev/setup-zarf) action. Install any version of Zarf and its `init` package with zero added dependencies.
 
 ## 🫶 Our Community
 

@@ -1202,7 +1202,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packagePublishOptions struct {
-	flavor string
+	flavor  string
+	retries int
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1221,6 +1222,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
@@ -1264,6 +1266,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+			Retries:            o.retries,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 			Flavor:             o.flavor,
@@ -1277,6 +1280,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency: config.CommonOptions.OCIConcurrency,
 			Architecture:   config.GetArch(),
 			RemoteOptions:  defaultRemoteOptions(),
+			Retries:        o.retries,
 		}
 
 		// source registry reference
@@ -1342,6 +1346,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
 
