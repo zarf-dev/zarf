@@ -7,6 +7,7 @@ package zoci
 import (
 	"context"
 	"path/filepath"
+	"time"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -26,6 +27,8 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// DefaultConcurrency is the default concurrency used for operations
 	DefaultConcurrency = 6
+	//DefaultRetries is the default number of retries for operations
+	DefaultRetries = 1
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
 	// AllLayers is the default selector for all layers
@@ -39,6 +42,19 @@ const (
 	// ComponentLayers is the selector for component layers including metadata
 	ComponentLayers LayersSelector = "components"
 )
+
+const (
+	defaultDelayTime    = 500 * time.Millisecond
+	defaultMaxDelayTime = 8 * time.Second
+)
+
+// PublishOptions contains options for the publish operation
+type PublishOptions struct {
+	// Retries is the number of times to retry a failed operation
+	Retries int
+	// OCIConcurrency configures the amount of layers to push in parallel
+	OCIConcurrency int
+}
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
 type Remote struct {

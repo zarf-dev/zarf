@@ -33,3 +33,4 @@ This list is sorted in chronological order, based on the submission date (yyyy-m
 | ------------ | ------- | ---- | ------------------ |
 | [Defense Unicorns](https://defenseunicorns.com/) | @jeff-mccoy | 2024-11-21 | Unicorn Delivery Service (UDS) leverages Zarf to streamline deployments in disconnected or restricted environments, delivering a fully deployable, self-contained platform for mission applications—with all dependencies and configuration included. |
 | [Radius Methods](https://radiusmethod.com/) | @dgershman | 2024-11-21 | Supporting Army and Air Force Software Factories; delivering SocketZero and Landmine products to air-gapped networks; providing multi-node k3s package for high availability. |
+| [Boeing](https://boeing.com/) | @digimil @chadbeaudin | 2025-08-18 | Support disconnected deployments of the Boeing Software Factory to air-gapped networks |

@@ -97,7 +97,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
+		// Setting a default here for retries as the flag is less intuitive during create
+		publishOptions := zoci.PublishOptions{
+			Retries:        1,
+			OCIConcurrency: opts.OCIConcurrency,
+		}
+		_, err = remote.PushPackage(ctx, pkgLayout, publishOptions)
 		if err != nil {
 			return "", err
 		}
