@@ -93,7 +93,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		}
 		zarfSeedPort = svc.Spec.Ports[0].NodePort
 
-		pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq)
+		pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, "0.0.0.0:5000", resReq)
 		_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("error creating pod in cluster: %w", err)
@@ -127,7 +127,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		if err != nil {
 			return err
 		}
-		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq)
+		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, "[::]:5000", resReq)
 		ds, err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Apply(ctx, dsSpec, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("error creating daemonset in cluster: %w", err)
@@ -386,13 +386,13 @@ func buildVolumesAndMounts(payloadCmNames []string) ([]*v1ac.VolumeApplyConfigur
 	return volumes, volumeMounts
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, bindAddr string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":      "zarf-injector",
 			AgentLabel: "ignore",
 		}).
-		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq))
+		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, bindAddr, resReq))
 	return pod
 }
 
@@ -435,7 +435,7 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 	return svc, nil
 }
 
-func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodSpecApplyConfiguration {
+func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image string, payloadCmNames []string, shasum string, bindAddr string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodSpecApplyConfiguration {
 	userID := int64(1000)
 	groupID := int64(2000)
 	fsGroupID := int64(2000)
@@ -460,7 +460,7 @@ func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image str
 					WithImage(image).
 					WithImagePullPolicy(corev1.PullIfNotPresent).
 					WithWorkingDir("/zarf-init").
-					WithCommand("/zarf-init/zarf-injector", shasum).
+					WithCommand("/zarf-init/zarf-injector", shasum, bindAddr).
 					WithPorts(v1ac.ContainerPort().WithContainerPort(5000)).
 					WithVolumeMounts(volumeMounts...).
 					WithSecurityContext(
@@ -487,8 +487,8 @@ func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image str
 	return podSpec
 }
 
-func buildInjectionDaemonset(image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1aa.DaemonSetApplyConfiguration {
-	podSpec := buildPodSpec("", corev1.RestartPolicyAlways, image, payloadCmNames, shasum, resReq).
+func buildInjectionDaemonset(image string, payloadCmNames []string, shasum string, binAddress string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1aa.DaemonSetApplyConfiguration {
+	podSpec := buildPodSpec("", corev1.RestartPolicyAlways, image, payloadCmNames, shasum, binAddress, resReq).
 		WithHostNetwork(true)
 	return v1aa.DaemonSet("zarf-injector", state.ZarfNamespaceName).
 		WithSpec(v1aa.DaemonSetSpec().
