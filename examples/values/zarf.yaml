@@ -10,8 +10,8 @@ components:
         localPath: "charts/example-chart"
         namespace: values-example
         values:
-          # - sourcePath: ".app.name"
-          #   targetPath: ".appName"
+          - sourcePath: ".app.name"
+            targetPath: ".appName"
           - sourcePath: ".app.replicas"
             targetPath: ".replicaCount"
           - sourcePath: ".app.image.tag"
