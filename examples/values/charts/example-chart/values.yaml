@@ -15,10 +15,6 @@ config:
     debug: false
     logLevel: "info"
 
-service:
-  type: ClusterIP
-  port: 80
-
 resources:
   limits:
     cpu: 100m
@@ -26,13 +22,3 @@ resources:
   requests:
     cpu: 50m
     memory: 64Mi
-
-# Test different data types
-metadata:
-  labels: {}
-  annotations: {}
-
-# Test array/list handling
-env:
-  - name: "DEFAULT_ENV"
-    value: "test"
