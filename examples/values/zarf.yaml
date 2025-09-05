@@ -1,3 +1,20 @@
 kind: ZarfPackageConfig
+metadata:
+  name: values-example
+  description: This packages tests the Values feature of Zarf
 components:
-  -
+  - name: values-example-component
+    charts:
+      - name: values-example-chart
+        version: 0.1.0
+        localPath: "charts/example-chart"
+        namespace: values-example
+        values:
+          # - sourcePath: ".app.name"
+          #   targetPath: ".appName"
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".app.image.tag"
+            targetPath: ".image.tag"
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
