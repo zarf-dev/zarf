@@ -378,6 +378,13 @@
           "type": "array",
           "description": "[alpha] List of variables to set in the Helm chart."
         },
+        "values": {
+          "items": {
+            "$ref": "#/$defs/ZarfChartValue"
+          },
+          "type": "array",
+          "description": "[alpha] List of values sources to their Helm override target"
+        },
         "schemaValidation": {
           "type": "boolean",
           "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet."
@@ -389,6 +396,22 @@
         "name"
       ],
       "description": "ZarfChart defines a helm chart to be deployed.",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
+    "ZarfChartValue": {
+      "properties": {
+        "sourcePath": {
+          "type": "string"
+        },
+        "targetPath": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "FIXME(mkcp): This is here for testing only, this should actually exist on the beta1 schema",
       "patternProperties": {
         "^x-": {}
       }
@@ -1088,6 +1111,27 @@
       "patternProperties": {
         "^x-": {}
       }
+    },
+    "ZarfValues": {
+      "properties": {
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Files declares the location of Values Files, it can be a file path or a URL."
+        },
+        "schema": {
+          "type": "string",
+          "description": "Schema TODO doccomment"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "ZarfValues provides top-level imports for",
+      "patternProperties": {
+        "^x-": {}
+      }
     }
   },
   "properties": {
@@ -1136,6 +1180,10 @@
       },
       "type": "array",
       "description": "Variable template values applied on deploy for K8s resources."
+    },
+    "values": {
+      "$ref": "#/$defs/ZarfValues",
+      "description": "Values imports Zarf values files for templating and overriding Helm values."
     }
   },
   "additionalProperties": false,

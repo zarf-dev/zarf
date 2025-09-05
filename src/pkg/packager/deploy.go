@@ -19,10 +19,12 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -43,6 +45,9 @@ import (
 type DeployOptions struct {
 	// Deploy time set variables
 	SetVariables map[string]string
+	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
+	// API callers.
+	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
 	// Timeout for Helm operations
@@ -62,7 +67,7 @@ type DeployOptions struct {
 	StorageClass   string
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	ValuesOverridesMap ValuesOverrides
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -71,6 +76,7 @@ type deployer struct {
 	s           *state.State
 	c           *cluster.Cluster
 	vc          *variables.VariableConfig
+	vals        value.Values
 	hpaModified bool
 }
 
@@ -78,6 +84,7 @@ type deployer struct {
 type DeployResult struct {
 	DeployedComponents []state.DeployedComponent
 	VariableConfig     *variables.VariableConfig
+	Values             value.Values
 }
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
@@ -85,6 +92,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
@@ -109,8 +117,23 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return DeployResult{}, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
+	vals, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return DeployResult{}, err
+	}
+	// Package defaults are overridden by deploy values.
+	value.DeepMerge(vals, opts.Values)
+	logger.From(ctx).Debug("package values", "values", vals)
+
 	d := deployer{
-		vc: variableConfig,
+		vc:   variableConfig,
+		vals: vals,
 	}
 
 	// During deploy we disable
@@ -357,6 +380,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
+	// TODO(mkcp): Add go-templating for values here
+
 	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
@@ -489,12 +514,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			}
 		}
 
-		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
-		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
-		valuesOverrides, err := generateValuesOverrides(chart, component.Name, d.vc, opts.ValuesOverridesMap)
+		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+			variableConfig:     d.vc,
+			values:             d.vals,
+			valuesOverridesMap: opts.ValuesOverridesMap,
+		})
 		if err != nil {
 			return nil, err
 		}
+		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -509,6 +537,12 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return nil, fmt.Errorf("failed to load chart data: %w", err)
 		}
+		logger.From(ctx).Debug("loaded chart",
+			"metadata", helmChart.Metadata,
+			"chartValues", helmChart.Values,
+			"valuesOverrides", values,
+			"countValuesOverrides", len(values),
+		)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {
