@@ -12,6 +12,18 @@ image:
 imagePullSecrets:
   - name: private-registry
 
+proxy:
+  enabled: ###ZARF_REGISTRY_PROXY###
+  hostNetwork: ###ZARF_VAR_HOST_NETWORK###
+  image:
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
+  injector:
+    hostPort: ###ZARF_INJECTOR_HOSTPORT###
+    image: "###ZARF_INJECTOR_IMAGE###"
+    payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
+    shasum: "###ZARF_INJECTOR_SHASUM###"
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
@@ -19,6 +31,7 @@ secrets:
       secret: "###ZARF_REGISTRY_SECRET###"
 
 service:
+  ipv6Only: ###ZARF_IPV6_ONLY###
   nodePort: "###ZARF_NODEPORT###"
 
 resources:

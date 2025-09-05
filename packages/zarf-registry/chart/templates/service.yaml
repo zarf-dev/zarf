@@ -9,13 +9,20 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  type: {{ .Values.service.type }}
+  {{- if .Values.proxy.enabled }}
+  type: ClusterIP
+  {{- else }}
+  type: NodePort
+  {{- end }}
+  ipFamilyPolicy: PreferDualStack
   ports:
     - port: {{ .Values.service.port }}
       protocol: TCP
       name: {{ if .Values.tlsSecretName }}https{{ else }}http{{ end }}-{{ .Values.service.port }}
       targetPort: 5000
+      {{- if eq false .Values.proxy.enabled }}
       nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
   selector:
     app: {{ template "docker-registry.name" . }}
     release: {{ .Release.Name }}

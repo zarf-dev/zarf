@@ -49,11 +49,23 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
+// IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
+type IPFamily string
+
+// All the different IP family options for a Zarf deployment
+const (
+	IPFamilyIPv4      IPFamily = "ipv4"
+	IPFamilyIPv6      IPFamily = "ipv6"
+	IPFamilyDualStack IPFamily = "dual"
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
+	ZarfSeedRegistryHostPort               = 5001
+	ZarfRegistryHostPort                   = 5000
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
 
@@ -65,6 +77,9 @@ const (
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
 )
 
+// IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
+const IPV6Localhost = "::1"
+
 // State is maintained as a secret in the Zarf namespace to track Zarf init data.
 type State struct {
 	// Indicates if Zarf was initialized while deploying its own k8s cluster
@@ -75,8 +90,11 @@ type State struct {
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
+	// The IP family of the cluster, can be ipv4, ipv6, or dual
+	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
+	InjectorInfo InjectorInfo     `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -84,6 +102,18 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// InjectorInfo contains information on how to run the long lived Daemonset Injector
+type InjectorInfo struct {
+	// The image to be used for the long lived injector
+	Image string `json:"injectorImage"`
+	// The number of payload configmaps required
+	PayLoadConfigMapAmount int `json:"payLoadConfigMapAmount"`
+	// The PayLoadShaSum for the payload ConfigMaps
+	PayLoadShaSum string `json:"payLoadShaSum"`
+	// The port that the injector is exposed through, either hostPort or nodePort
+	Port int `json:"port"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
@@ -185,28 +215,41 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
+	// Nodeport of the registry. Only needed if the internal Zarf registry is used and connected with over a nodeport service.
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
+	// ProxyMode is true if the registry made available through a DaemonSet proxy.
+	ProxyMode bool `json:"proxyMode"`
+}
+
+// HasProxyEnabled is true when the internal registry is made available through a DaemonSet proxy.
+func (ri RegistryInfo) HasProxyEnabled() bool {
+	return ri.ProxyMode
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
-func (ri *RegistryInfo) FillInEmptyValues() error {
+func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
-		ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
+		if ri.HasProxyEnabled() {
+			ri.NodePort = ZarfRegistryHostPort
+		} else {
+			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		}
 	}
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort)
+		ri.Address = LocalhostRegistryAddress(ipFamily, ri.NodePort)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -256,7 +299,7 @@ func Default() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = state.RegistryInfo.FillInEmptyValues()
+	err = state.RegistryInfo.FillInEmptyValues(IPFamilyDualStack)
 	if err != nil {
 		return nil, err
 	}
@@ -417,4 +460,12 @@ type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
+}
+
+// LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
+func LocalhostRegistryAddress(ipFamily IPFamily, nodePort int) string {
+	if ipFamily == IPFamilyIPv6 {
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
+	}
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
 }

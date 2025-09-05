@@ -93,12 +93,22 @@ variables:
     description: The target CPU utilization percentage for the registry
     default: "80"
 
+  - name: HOST_NETWORK_PROXY
+    description: Decides if host port or host network should be used with the registry proxy
+    default: "false"
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"
 
   - name: REGISTRY_IMAGE_TAG
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+
+  - name: REGISTRY_PROXY_IMAGE
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###"
+
+  - name: REGISTRY_PROXY_IMAGE_TAG
+    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
 components:
   - name: zarf-injector
@@ -111,9 +121,9 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.1.0/zarf-injector-amd64
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.2.0/zarf-injector-amd64
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "97d2c3ec3c789a866c7bb88ed1d6819f8b279762f9398c8ec5ad70458f23bf85"
+        shasum: "942de1dcf3e91855370acf81446136c0a1357f5805b30d90b406c7dcda943de4"
         executable: true
 
   - name: zarf-injector
@@ -146,6 +156,7 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
 
   - name: zarf-registry
     description: |
@@ -171,3 +182,4 @@ components:
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
