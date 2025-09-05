@@ -65,6 +65,7 @@ const (
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
 	ZarfSeedRegistryHostPort               = 5001
+	ZarfRegistryHostPort                   = 5000
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
 
