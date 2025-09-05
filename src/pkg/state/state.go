@@ -242,7 +242,11 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
-		ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		if ri.HasProxyEnabled() {
+			ri.NodePort = ZarfRegistryHostPort
+		} else {
+			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		}
 	}
 
 	// Set default url if an external registry was not provided
