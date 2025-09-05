@@ -265,7 +265,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	setVars := helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	// Load files supplied by --values / -v
+	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
 	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {

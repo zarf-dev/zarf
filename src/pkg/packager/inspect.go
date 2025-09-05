@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -64,6 +65,16 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return nil, err
 	}
+
+	// Merge packageValues with values from CLI flags, config, or API.
+	// FIXME(mkcp): This is a bit janky
+	packageValues, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, err
+	}
+	values := maps.Clone(packageValues)
+	value.DeepMerge(values, opts.Values)
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -98,10 +109,11 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			}
 
 			for _, chart := range component.Charts {
-				// Create a Helm values overrides map from set Zarf `variables`, 'values', and DeployOpts library inputs
-				// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `variables` -> Zarf
-				// `values` -> DeployOpts overrides
-				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, variableConfig, nil, opts.Values)
+				// FIXME(mkcp): Clean this up
+				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+					variableConfig: variableConfig,
+					values:         values,
+				})
 				if err != nil {
 					return nil, err
 				}
