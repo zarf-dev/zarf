@@ -1,11 +1,8 @@
-my-component:
-  resources:
-    limits:
-      memory: 128Mi
-      cpu: 100m
-    requests:
-      memory: 64Mi
-      cpu: 100m
+app:
+  name: "example-values-app"  # Maps to .appName
+  replicas: 5                 # Maps to .replicaCount
+  image:
+    tag: "v2.1.0"             # Maps to .image.tag
 
-other-component:
-  disabled: true
+database:
+  host: "postgres.zarf.local" # Maps to .config.database.host

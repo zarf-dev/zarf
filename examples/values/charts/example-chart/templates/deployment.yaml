@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}-deployment
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Values.appName }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+    spec:
+      containers:
+        - name: {{ .Values.appName }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+          env:
+            - name: DATABASE_HOST
+              value: "{{ .Values.config.database.host }}"
+            - name: DATABASE_PORT
+              value: "{{ .Values.config.database.port }}"
+            - name: APP_NAME
+              value: "{{ .Values.appName }}"
+          {{- range .Values.env }}
+            - name: {{ .name }}
+              value: "{{ .value }}"
+          {{- end }}
+          resources:
+            {{ toYaml .Values.resources | nindent 12 }}
