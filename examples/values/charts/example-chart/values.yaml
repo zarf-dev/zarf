@@ -1,0 +1,38 @@
+# Chart default values - these will be overridden by Zarf value mappings on the chart definition
+appName: "default-app"
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+config:
+  database:
+    host: "localhost"
+    port: 3306
+  app:
+    debug: false
+    logLevel: "info"
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Test different data types
+metadata:
+  labels: {}
+  annotations: {}
+
+# Test array/list handling
+env:
+  - name: "DEFAULT_ENV"
+    value: "test"

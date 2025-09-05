@@ -1,0 +1,6 @@
+apiVersion: v2
+name: example-chart
+version: 0.1.0
+appVersion: "0.1.0"
+description: A simple example chart for overriding helm values with zarf values.
+type: application
