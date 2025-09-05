@@ -220,15 +220,12 @@ type RegistryInfo struct {
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 	// ProxyMode is true if the registry made available through a DaemonSet proxy.
-	ProxyMode *bool `json:"proxyMode"`
+	ProxyMode bool `json:"proxyMode"`
 }
 
 // HasProxyEnabled is true when the internal registry is made available through a DaemonSet proxy.
 func (ri RegistryInfo) HasProxyEnabled() bool {
-	if ri.ProxyMode == nil {
-		return false
-	}
-	return *ri.ProxyMode
+	return ri.ProxyMode
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -242,6 +239,7 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
+		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
 		if ri.HasProxyEnabled() {
 			ri.NodePort = ZarfRegistryHostPort
 		} else {

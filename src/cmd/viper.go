@@ -222,7 +222,6 @@ func setDefaults() {
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
-	v.SetDefault(VInitRegistryNodeport, state.ZarfInClusterContainerRegistryNodePort)
 	v.SetDefault(VInitSeedRegistryHostPort, state.ZarfSeedRegistryHostPort)
 
 	// Deploy opts that are non-zero values

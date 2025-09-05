@@ -101,13 +101,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	if err := validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
-	if cmd.Flag("registry-proxy").Changed {
-		pkgConfig.InitOpts.RegistryInfo.ProxyMode = &o.proxyMode
-	}
-	// If we're in proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports used hostports
-	if o.proxyMode {
-		pkgConfig.InitOpts.RegistryInfo.NodePort = state.ZarfRegistryHostPort
-	}
 
 	initPackageName := config.GetInitPackageName()
 
