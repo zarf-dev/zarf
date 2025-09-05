@@ -18,9 +18,12 @@ spec:
         - name: injector
           image: "{{ .Values.proxy.injector.image }}"
           workingDir: /zarf-init
-          command: ["/zarf-init/zarf-injector", "{{ .Values.proxy.injector.shasum }}", "{{ if .Values.service.ipv6Only }}[::]:5001{{ else }}0.0.0.0:5001{{ end }}"]
+          command:
+            - "/zarf-init/zarf-injector"
+            - "{{ .Values.proxy.injector.shasum }}"
+            - "{{ if .Values.service.ipv6Only }}[::]:{{ .Values.proxy.injector.hostPort }}{{ else }}0.0.0.0:{{ .Values.proxy.injector.hostPort }}{{ end }}"
           ports:
-            - containerPort: 5001
+            - containerPort: {{ .Values.proxy.injector.hostPort }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
               hostPort: {{ .Values.proxy.injector.hostPort }}
               hostIP: "127.0.0.1"
@@ -29,7 +32,7 @@ spec:
             failureThreshold: 10
             httpGet:
               path: /v2/
-              port: 5001
+              port: {{ .Values.proxy.injector.hostPort }}
               scheme: HTTP
             periodSeconds: 2
             successThreshold: 1
