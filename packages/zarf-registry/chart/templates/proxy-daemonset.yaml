@@ -17,17 +17,17 @@ spec:
       containers:
         - args:
           {{ if .Values.service.ipv6Only }}
-            - tcp6-listen:5000,bind=[::1],reuseaddr,fork
+            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
           {{- else }}
-            - tcp4-listen:5000,reuseaddr,fork
+            - tcp4-listen:{{ .Values.service.nodePort }},reuseaddr,fork
             - tcp4:{{ template "docker-registry.fullname" . }}:5000
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
           ports:
-            - containerPort: 5000
+            - containerPort: {{ .Values.service.nodePort }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
               hostPort: {{ .Values.service.nodePort }}
               hostIP: "127.0.0.1"
