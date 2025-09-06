@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -98,8 +97,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return err
 	}
 
-	arch := deployment.Spec.Template.Spec.NodeSelector["kubernetes.io/arch"]
-
 	// List the releases to find the current agent release name.
 	listClient := action.NewList(actionConfig)
 	releases, err := listClient.Run()
@@ -131,11 +128,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 			applicationTemplates, err := template.GetZarfTemplates(ctx, "zarf-agent", opts.State)
 			if err != nil {
 				return fmt.Errorf("error setting up the templates: %w", err)
-			}
-			if arch != "" {
-				applicationTemplates["###ZARF_PKG_ARCHITECTURE###"] = &variables.TextTemplate{
-					Value: arch,
-				}
 			}
 			opts.VariableConfig.SetApplicationTemplates(applicationTemplates)
 

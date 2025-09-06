@@ -17,7 +17,7 @@ spec:
         zarf.dev/agent: ignore
     spec:
       nodeSelector:
-        kubernetes.io/arch: "###ZARF_PKG_ARCHITECTURE###"
+        kubernetes.io/arch: "###ZARF_ARCHITECTURE###"
       imagePullSecrets:
         - name: {{ .Values.image.pullSecret }}
       priorityClassName: system-node-critical

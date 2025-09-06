@@ -272,6 +272,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
+			Architecture:   pkgLayout.Pkg.Build.Architecture,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -352,12 +353,6 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
-
-	// This variable needs to be set from the package metadata architecture
-	// This might be able to be expanded to include all the .metadata settings
-	applicationTemplates["###ZARF_PKG_ARCHITECTURE###"] = &variables.TextTemplate{
-		Value: pkgLayout.Pkg.Build.Architecture,
-	}
 
 	if err != nil {
 		return nil, err
