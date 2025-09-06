@@ -263,7 +263,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, architecture stri
 		if err != nil {
 			return "", "", err
 		}
-		if nodeDetails.Status.NodeInfo.Architecture == "" || nodeDetails.Status.NodeInfo.Architecture != architecture {
+		if nodeDetails.Status.NodeInfo.Architecture != "" && nodeDetails.Status.NodeInfo.Architecture != architecture {
 			continue
 		}
 		if nodeDetails.Status.Allocatable.Cpu().Cmp(*resReq.Requests.Cpu()) < 0 ||
