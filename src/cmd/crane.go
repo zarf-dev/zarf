@@ -146,7 +146,10 @@ func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			cmd.Flags().Set("username", uname)
+			err := cmd.Flags().Set("username", uname)
+			if err != nil {
+				return err
+			}
 		}
 
 		if pass == "" && !passStdin {
@@ -158,12 +161,13 @@ func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			cmd.Flags().Set("password", pass)
+			err := cmd.Flags().Set("password", pass)
+			if err != nil {
+				return err
+			}
 		}
-
 	}
 	return o.originalRunFn(cmd, args)
-
 }
 
 func newRegistryLoginCommand() *cobra.Command {
