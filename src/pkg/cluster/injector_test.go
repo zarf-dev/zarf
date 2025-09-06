@@ -226,13 +226,6 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "wrong-architecture",
 			},
-			Spec: corev1.NodeSpec{
-				Taints: []corev1.Taint{
-					{
-						Effect: corev1.TaintEffectNoSchedule,
-					},
-				},
-			},
 			Status: corev1.NodeStatus{
 				Allocatable: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
@@ -240,6 +233,20 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				},
 				NodeInfo: corev1.NodeSystemInfo{
 					Architecture: "arm64",
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "architecture-not-present",
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "",
 				},
 			},
 		},
@@ -325,6 +332,6 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			})
 	image, node, err := c.getInjectorImageAndNode(ctx, "amd64", resReq)
 	require.NoError(t, err)
-	require.Equal(t, "pod-3-container", image)
+	require.Equal(t, "pod-4-container", image)
 	require.Equal(t, "good", node)
 }
