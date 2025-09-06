@@ -155,6 +155,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// Architecture of the init package that deployed Zarf
+	Architecture string
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -204,6 +206,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.AgentTLS = agentTLS
+
+		// Set the Architecture
+		s.Architecture = opts.Architecture
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
