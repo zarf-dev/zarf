@@ -327,7 +327,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
 	l := logger.From(ctx)
 
-	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
@@ -381,12 +381,6 @@ func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]strin
 		}
 		hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
 	}
-
-	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
-	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
-	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
-	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
-	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
 
 	return hints
 }
