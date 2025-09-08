@@ -422,9 +422,8 @@ func buildVolumesAndMounts(payloadCmNames []string) ([]*v1ac.VolumeApplyConfigur
 func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			"app":               "zarf-injector",
-			"zarf.dev/injector": "true",
-			AgentLabel:          "ignore",
+			"app":      "zarf-injector",
+			AgentLabel: "ignore",
 		}).
 		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000)))
 	return pod
