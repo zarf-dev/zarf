@@ -162,6 +162,27 @@
         "^x-": {}
       }
     },
+    "SetValue": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Key represents which value to assign to."
+        },
+        "value": {
+          "description": "Value is the current value at the key."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "description": "SetValue declares a value that can be set during a package deploy.",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "Shell": {
       "properties": {
         "windows": {
@@ -588,6 +609,13 @@
           "type": "array",
           "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
         },
+        "setValues": {
+          "items": {
+            "$ref": "#/$defs/SetValue"
+          },
+          "type": "array",
+          "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
+        },
         "description": {
           "type": "string",
           "description": "Description of the action to be displayed during package execution instead of the command."
@@ -972,6 +1000,10 @@
         "extractPath": {
           "type": "string",
           "description": "Local folder or file to be extracted from a 'source' archive."
+        },
+        "template": {
+          "type": "boolean",
+          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values."
         }
       },
       "additionalProperties": false,
@@ -1016,6 +1048,10 @@
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for manifest resources to be ready before continuing."
+        },
+        "template": {
+          "type": "boolean",
+          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values."
         }
       },
       "additionalProperties": false,
