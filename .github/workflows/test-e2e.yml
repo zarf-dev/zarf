@@ -85,12 +85,6 @@ jobs:
         run: |
           make test-e2e-without-cluster ARCH=amd64
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-        with:
-          suffix: -validate-without-cluster
-
   # Run the tests on k3d
   validate-k3d:
     runs-on: ubuntu-latest
@@ -129,12 +123,6 @@ jobs:
         uses: ./.github/actions/debug-cluster
         if: always()
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-        with:
-          suffix: -validate-k3d
-
   # Run the tests on k3s
   validate-k3s:
     runs-on: ubuntu-latest
@@ -168,12 +156,6 @@ jobs:
         #       used for each test
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e-with-cluster ARCH=amd64
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-        with:
-          suffix: -validate-k3s
 
   # Run the tests on kind
   validate-kind:
@@ -215,12 +197,6 @@ jobs:
         uses: ./.github/actions/debug-cluster
         if: always()
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-        with:
-          suffix: -validate-kind
-
   # Run the tests on minikube
   validate-minikube:
     runs-on: ubuntu-latest
@@ -258,9 +234,3 @@ jobs:
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: always()
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-        with:
-          suffix: -validate-minikube

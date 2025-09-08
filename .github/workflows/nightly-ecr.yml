@@ -44,10 +44,6 @@ jobs:
       - name: Test publishing and pulling to ECR
         run: go test ./src/test/nightly/ecr_publish_test.go
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-
       - name: Send trigger to Slack on workflow failure
         if: failure()
         uses: ./.github/actions/slack
