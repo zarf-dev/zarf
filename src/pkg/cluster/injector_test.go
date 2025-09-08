@@ -374,6 +374,27 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 			expectedImage: "alpine:latest",
 		},
 		{
+			name: "skips zarf mutated image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"127.0.0.1:5000/pause:3.10"},
+								SizeBytes: 1,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
 			name: "returns error when nodes have no images",
 			nodes: []corev1.Node{
 				{

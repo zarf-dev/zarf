@@ -280,7 +280,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
 			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
 		}
-		// FIXME: We'll have to change this so that it doesn't give this warning when proxyMode is different
 		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
 			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
 		}

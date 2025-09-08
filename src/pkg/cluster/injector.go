@@ -315,6 +315,16 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 
 		for _, node := range nodes.Items {
 			for _, image := range node.Status.Images {
+				zarfImage := false
+				for _, name := range image.Names {
+					if zarfImageRegex.MatchString(name) {
+						zarfImage = true
+					}
+				}
+				if zarfImage {
+					continue
+				}
+
 				allImages = append(allImages, image)
 				for _, name := range image.Names {
 					img, err := transform.ParseImageRef(name)

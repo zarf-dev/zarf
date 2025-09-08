@@ -126,6 +126,7 @@ components:
         shasum: "942de1dcf3e91855370acf81446136c0a1357f5805b30d90b406c7dcda943de4"
         executable: true
 
+    ## FIXME: use v0.2.0 for arm64 as well
   - name: zarf-injector
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
