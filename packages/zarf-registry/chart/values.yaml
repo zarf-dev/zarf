@@ -7,7 +7,7 @@ image:
   tag: 2.8.3
 
 proxy:
-  enabled: "false"
+  enabled: false
   injectorHostPort: 5001
   image:
     repository: alpine/socat
@@ -18,7 +18,7 @@ proxy:
     shasum: ""
 
 service:
-  ipv6Only: "false"
+  ipv6Only: false
   name: registry
   type: NodePort
   port: 5000
