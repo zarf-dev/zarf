@@ -2,27 +2,24 @@
 # This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
 # NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
 # ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
-constants:
-  - name: NGINX_VERSION
-    value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
-    pattern: "^[\\w\\-\\.]+$"
-
-# FIXME(mkcp): What's our default value here?
 nginx:
-  version: "###ZARF_PKG_TMPL_NGINX_VERSION###"
+  version: "1.29.1"
 site:
-  # The name of the site you are deploying (i.e. Lula Website)
-  name: "###ZARF_VAR_SITE_NAME###"
-  # style sets the CSS styles for the site
+  # The name of the site you are deploying
+  name: "Zarf Values Example Website"
+  # Sets the CSS styles for the site, and provides an example of a multi-line value
   style: |
     body { font-family: sans-serif; color: white; background: #0a0e2e; }
     pre { color: white; background: black; }
   # The organization providing the site
-  organization: "Defense Unicorns"
-  aws:
-    # region modifies modified-terraform.tf file and sets `sensitive` so that it will not be saved in the log
-    region: "us-east-1"
+  organization: "Zarf-Dev"
+  # The footer to be added to the site, overrides the default with whatever you want.
+  footer: ""
 
 # terraform.path sets a filepath for a terraform file to be used as the contents of a template
 terraform:
+  shasum: ""
   path: "modified-terraform.tf"
+  aws:
+    # Modifies modified-terraform.tf file
+    region: "us-east-1"
