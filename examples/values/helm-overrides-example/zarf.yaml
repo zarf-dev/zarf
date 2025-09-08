@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: values-example
-  description: This packages tests the Values feature of Zarf
+  name: helm-overrides-example
+  description: This packages provides a simple example of the Values feature of Zarf
 values:
   files:
     - values.yaml

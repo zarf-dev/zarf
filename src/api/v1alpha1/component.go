@@ -124,6 +124,10 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
+	// [alpha]
+	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
+	// known at deploy-time. See documentation for Zarf Values for how to set these values.
+	Template bool `json:"template,omitempty"`
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -194,6 +198,10 @@ type ZarfManifest struct {
 	Kustomizations []string `json:"kustomizations,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
+	// [alpha]
+	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
+	// known at deploy-time. See documentation for Zarf Values for how to set these values.
+	Template bool `json:"template,omitempty"`
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.
