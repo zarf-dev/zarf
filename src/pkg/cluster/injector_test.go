@@ -198,7 +198,7 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", "0.0.0.0:5000", resReq)
 	require.Equal(t, "injector", *pod.Name)
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
