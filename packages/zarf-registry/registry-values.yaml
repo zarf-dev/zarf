@@ -16,8 +16,8 @@ proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
   hostNetwork: ###ZARF_VAR_HOST_NETWORK###
   image:
-    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_PROXY_IMAGE###"
-    tag: "###ZARF_CONST_REGISTRY_PROXY_IMAGE_TAG###"
+    repository: "###ZARF_SEED_REGISTRY###/alpine/socat"
+    tag: "1.8.0.3"
   injector:
     hostPort: ###ZARF_INJECTOR_HOSTPORT###
     image: "###ZARF_INJECTOR_IMAGE###"

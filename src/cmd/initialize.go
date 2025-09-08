@@ -56,7 +56,11 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryInfo.ProxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
-	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "injector-hostport", v.GetInt(VInitSeedRegistryHostPort), "")
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "injector-hostport", v.GetInt(VInitSeedRegistryHostPort),
+		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
+	// While this feature is in early alpha we will hide the flags
+	cmd.Flags().MarkHidden("registry-proxy")
+	cmd.Flags().MarkHidden("injector-hostport")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)

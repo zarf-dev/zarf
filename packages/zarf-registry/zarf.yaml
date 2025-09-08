@@ -104,12 +104,6 @@ constants:
   - name: REGISTRY_IMAGE_TAG
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
 
-  - name: REGISTRY_PROXY_IMAGE
-    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###"
-
-  - name: REGISTRY_PROXY_IMAGE_TAG
-    value: "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
-
 components:
   - name: zarf-injector
     description: |
