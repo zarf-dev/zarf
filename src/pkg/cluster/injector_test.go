@@ -423,7 +423,6 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			// Call the function
 			image, err := c.GetInjectorDaemonsetImage(ctx)
 
 			if tt.expectedError != "" {
