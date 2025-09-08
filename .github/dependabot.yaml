@@ -32,8 +32,9 @@ updates:
     schedule:
       interval: daily
     ignore:
-      # NOTE(mkcp): These packages were compromised as part of a supply chain attack. Zarf was not affected and many of
-      # the packages have been removed, but we are intentionally ignoring these versions as an extra layer of safety.
+      # NOTE(mkcp): 09/08/25 These packages were compromised as part of a supply chain attack. Zarf was not affected and
+      # many of the packages have been removed, but we are intentionally ignoring these versions as an extra layer of
+      # safety.
       - dependency-name: "backslash"
         versions: ["0.2.1"]
       - dependency-name: "chalk"
