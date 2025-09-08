@@ -884,19 +884,28 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 
 func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
 	l := logger.From(ctx)
-	// TODO(mkcp): Test valuesfile src
+
+	// Handle URL
 	if helpers.IsURL(file) {
+		dst := filepath.Join(buildPath, file)
 		l.Debug("copying values file from URL", "url", file)
-		if err := utils.DownloadToFile(ctx, file, filepath.Join(buildPath, file)); err != nil {
+		if err := utils.DownloadToFile(ctx, file, dst); err != nil {
 			return fmt.Errorf("failed to download values file %s: %w", file, err)
 		}
+		// Set appropriate file permissions
+		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+		}
+		// URL copied to buildPack
+		return nil
 	}
+
+	// Process local values file
 	src := file
 	if !filepath.IsAbs(src) {
 		src = filepath.Join(packagePath, file)
 	}
-
-	// Validate src exists
+	// Validate src
 	if _, err := os.Stat(src); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("values file %s not found", src)
