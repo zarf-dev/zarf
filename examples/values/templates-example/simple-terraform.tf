@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "###ZARF_VAR_AWS_REGION###"
+  region = "{{ .Values.terraform.aws.region }}"
 }
 
 terraform {

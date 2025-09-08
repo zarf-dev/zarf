@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: variables
-  description: Example nginx package to demonstrate Zarf variables
+  name: values-templates-example
+  description: Example nginx package to demonstrate Zarf Values templating
 values:
   files:
     - values.yaml
@@ -30,7 +30,7 @@ components:
     required: true
     images:
       # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
-      - "nginx:{{ ZARF_PKG_TMPL_NGINX_VERSION }}"
+      - "nginx:{{ nginx.version }}"
     manifests:
       - name: variables-with-nginx
         # [alpha] This enables go-templating in the Manifest with Zarf values.

@@ -17,8 +17,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        # This should use dot notation
-        image: nginx:{{ ZARF_CONST_NGINX_VERSION }}
+        image: nginx:{{ .Values.nginx.version }}
         ports:
         - containerPort: 80
           name: http

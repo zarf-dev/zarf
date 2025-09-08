@@ -11,26 +11,20 @@ data:
   index.html: |
     <!DOCTYPE html>
     <html>
-      <head>
-        <!-- FIXME(mkcp): dot notation -->
-        <title>Welcome to {{ ZARF_VAR_SITE_NAME }}!</title>
-        <style>
-          <!-- FIXME(mkcp): This should use dot notation -->
-          {{ ZARF_VAR_STYLE }}
-        </style>
-      </head>
-      <body>
-        <!-- Test two separate variables on the same line -->
-        <!-- FIXME(mkcp): These should use dot notation -->
-        <h1>Welcome to the {{ ZARF_VAR_SITE_NAME }}!</h1><h2>Brought to you by {{ ZARF_VAR_ORGANIZATION }}.</h2>
-        <p>Below is a Terraform File templated by Zarf</p>
-        <pre>
-          <!-- FIXME(mkcp): dot notation -->
-          {{ ZARF_VAR_MODIFIED_TERRAFORM }}
+    <head>
+      <title>Welcome to {{ .Values.site.name }}!</title>
+      <style>
+        {{ .Values.site.style }}
+      </style>
+    </head>
+    <body>
+    <!-- Test two separate variables on the same line -->
+    <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
+    <p>Below is a Terraform File templated by Zarf</p>
+    <pre>
+          {{ .Values.terraform.path }}
         </pre>
-        <!-- FIXME(mkcp): dot notation -->
-        <pre>File SHASUM: {{ ZARF_VAR_MODIFIED_TERRAFORM_SHASUM }}</pre>
-        <!-- FIXME(mkcp): dot notation -->
-        {{ ZARF_VAR_OPTIONAL_FOOTER }}
-      </body>
+    <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
+    {{ .Values.site.optional-footer }}
+    </body>
     </html>
