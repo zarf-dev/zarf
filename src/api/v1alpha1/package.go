@@ -179,6 +179,24 @@ type SetVariable struct {
 	Value string `json:"value"`
 }
 
+type SetValueType string
+
+var SetValueYAML = SetValueType("yaml")
+var SetValueJSON = SetValueType("json")
+var SetValueString = SetValueType("json")
+
+// SetValue declares a value that can be set during a package deploy.
+// FIXME(mkcp): SetValues should probably come last.
+type SetValue struct {
+	// Key represents which value to assign to.
+	Key string `json:"name,omitempty"`
+	// Value is the current value at the key.
+	Value any `json:"value,omitempty"`
+	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
+	// inserting the value into the template.
+	Type SetValueType `json:"type,omitempty"`
+}
+
 // Validate runs all validation checks on a package constant.
 func (c Constant) Validate() error {
 	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {

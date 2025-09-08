@@ -21,12 +21,8 @@ components:
           - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
             # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
             mute: true
-            setVariables:
-              - name: MODIFIED_TERRAFORM_SHASUM
-                # `sensitive` is set to exclude the command output from the logs
-                sensitive: true
-                # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
-                pattern: "^[\\da-f]{64}$"
+            setValues:
+              - key: .terraform.shasum
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx

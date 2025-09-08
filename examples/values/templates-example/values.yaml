@@ -13,39 +13,16 @@ nginx:
 site:
   # The name of the site you are deploying (i.e. Lula Website)
   name: "###ZARF_VAR_SITE_NAME###"
-  # organization sets the organization to Defense Unicorns as a default
+  # style sets the CSS styles for the site
+  style: |
+    body { font-family: sans-serif; color: white; background: #0a0e2e; }
+    pre { color: white; background: black; }
+  # The organization providing the site
   organization: "Defense Unicorns"
   aws:
     # region modifies modified-terraform.tf file and sets `sensitive` so that it will not be saved in the log
     region: "us-east-1"
-  modified_terraform: "###ZARF_VAR_MODIFIED_TERRAFORM###"
 
-# Demonstrates injecting custom variables into a K8s resource
-variables:
-  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the autoIndent key and that it is multi-line)
-  - name: STYLE
-    default: |
-      body { font-family: sans-serif; color: white; background: #0a0e2e; }
-      pre { color: white; background: black; }
-    autoIndent: true
-  # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
-  - name: SITE_NAME
-    description: The name of the site you are deploying (i.e. Lula Website)
-    prompt: true
-    pattern: "^[\\w\\s\\-\\.]+$"
-  # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
-  - name: ORGANIZATION
-    description: The organization providing the site
-    default: Defense Unicorns
-    prompt: true
-    pattern: "^[\\w\\s\\-\\.]+$"
-  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
-  - name: AWS_REGION
-    default: us-east-1
-    sensitive: true
-  # MODIFIED_TERRAFORM sets a filepath for a terraform file to be used as the contents of a template
-  - name: MODIFIED_TERRAFORM
-    default: modified-terraform.tf
-    autoIndent: true
-    sensitive: true
-    type: file
+# terraform.path sets a filepath for a terraform file to be used as the contents of a template
+terraform:
+  path: "modified-terraform.tf"
