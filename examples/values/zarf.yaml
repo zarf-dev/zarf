@@ -2,6 +2,9 @@ kind: ZarfPackageConfig
 metadata:
   name: values-example
   description: This packages tests the Values feature of Zarf
+values:
+  files:
+    - values.yaml
 components:
   - name: values-example-component
     charts:
