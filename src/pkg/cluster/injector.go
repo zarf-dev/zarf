@@ -380,8 +380,11 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildVolumesAndMounts(payloadCmNames []string) ([]*v1ac.VolumeApplyConfiguration, []*v1ac.VolumeMountApplyConfiguration) {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	executeMode := int32(0777)
+	userID := int64(1000)
+	groupID := int64(2000)
+	fsGroupID := int64(2000)
 	volumes := []*v1ac.VolumeApplyConfiguration{
 		v1ac.Volume().
 			WithName("init").
@@ -416,72 +419,58 @@ func buildVolumesAndMounts(payloadCmNames []string) ([]*v1ac.VolumeApplyConfigur
 			WithMountPath(fmt.Sprintf("/zarf-init/%s", filename)).
 			WithSubPath(filename))
 	}
-	return volumes, volumeMounts
-}
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration) *v1ac.PodApplyConfiguration {
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":      "zarf-injector",
 			AgentLabel: "ignore",
 		}).
-		WithSpec(buildPodSpec(nodeName, corev1.RestartPolicyNever, image, payloadCmNames, shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000)))
-	return pod
-}
+		WithSpec(
+			v1ac.PodSpec().
+				WithNodeName(nodeName).
+				WithRestartPolicy(corev1.RestartPolicyNever).
+				WithSecurityContext(
+					v1ac.PodSecurityContext().
+						WithRunAsUser(userID).
+						WithRunAsGroup(groupID).
+						WithFSGroup(fsGroupID).
+						WithSeccompProfile(
+							v1ac.SeccompProfile().
+								WithType(corev1.SeccompProfileTypeRuntimeDefault),
+						),
+				).
+				WithContainers(
+					v1ac.Container().
+						WithName("injector").
+						WithImage(image).
+						WithImagePullPolicy(corev1.PullIfNotPresent).
+						WithWorkingDir("/zarf-init").
+						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithVolumeMounts(volumeMounts...).
+						WithSecurityContext(
+							v1ac.SecurityContext().
+								WithReadOnlyRootFilesystem(true).
+								WithAllowPrivilegeEscalation(false).
+								WithRunAsNonRoot(true).
+								WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
+						).
+						WithReadinessProbe(
+							v1ac.Probe().
+								WithPeriodSeconds(2).
+								WithSuccessThreshold(1).
+								WithFailureThreshold(10).
+								WithHTTPGet(
+									v1ac.HTTPGetAction().
+										WithPath("/v2/").
+										WithPort(intstr.FromInt(5000)),
+								),
+						).
+						WithResources(resReq),
+				).
+				WithVolumes(volumes...),
+		)
 
-func buildPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, image string, payloadCmNames []string,
-	shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, containerPorts *v1ac.ContainerPortApplyConfiguration) *v1ac.PodSpecApplyConfiguration {
-	userID := int64(1000)
-	groupID := int64(2000)
-	fsGroupID := int64(2000)
-	volumes, volumeMounts := buildVolumesAndMounts(payloadCmNames)
-	podSpec :=
-		v1ac.PodSpec().
-			WithNodeName(nodeName).
-			WithRestartPolicy(restartPolicy).
-			WithSecurityContext(
-				v1ac.PodSecurityContext().
-					WithRunAsUser(userID).
-					WithRunAsGroup(groupID).
-					WithFSGroup(fsGroupID).
-					WithSeccompProfile(
-						v1ac.SeccompProfile().
-							WithType(corev1.SeccompProfileTypeRuntimeDefault),
-					),
-			).
-			WithContainers(
-				v1ac.Container().
-					WithName("injector").
-					WithImage(image).
-					WithImagePullPolicy(corev1.PullIfNotPresent).
-					WithWorkingDir("/zarf-init").
-					WithCommand("/zarf-init/zarf-injector", shasum).
-					WithPorts(
-						containerPorts,
-					).
-					WithVolumeMounts(volumeMounts...).
-					WithSecurityContext(
-						v1ac.SecurityContext().
-							WithReadOnlyRootFilesystem(true).
-							WithAllowPrivilegeEscalation(false).
-							WithRunAsNonRoot(true).
-							WithCapabilities(v1ac.Capabilities().WithDrop(corev1.Capability("ALL"))),
-					).
-					WithReadinessProbe(
-						v1ac.Probe().
-							WithPeriodSeconds(2).
-							WithSuccessThreshold(1).
-							WithFailureThreshold(10).
-							WithHTTPGet(
-								v1ac.HTTPGetAction().
-									WithPath("/v2/").
-									WithPort(intstr.FromInt(5000)),
-							),
-					).
-					WithResources(resReq),
-			).
-			WithVolumes(volumes...)
-	return podSpec
+	return pod
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
