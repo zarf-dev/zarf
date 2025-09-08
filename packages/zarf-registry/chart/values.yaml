@@ -17,8 +17,9 @@ proxy:
     payLoadConfigMapAmount: 0
     shasum: ""
 
+ipv6Only: false
+
 service:
-  ipv6Only: false
   name: registry
   type: NodePort
   port: 5000
