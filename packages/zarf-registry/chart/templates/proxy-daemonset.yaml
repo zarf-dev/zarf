@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - args:
-          {{ if .Values.service.ipv6Only }}
+          {{ if .Values.ipv6Only }}
             - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
             - tcp6:{{ template "docker-registry.fullname" . }}:5000
           {{- else }}

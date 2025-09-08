@@ -30,8 +30,9 @@ secrets:
     http:
       secret: "###ZARF_REGISTRY_SECRET###"
 
+ipv6Only: ###ZARF_IPV6_ONLY###
+
 service:
-  ipv6Only: ###ZARF_IPV6_ONLY###
   nodePort: "###ZARF_NODEPORT###"
 
 resources:

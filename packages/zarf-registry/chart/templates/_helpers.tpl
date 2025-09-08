@@ -81,7 +81,7 @@ Create the name of the service account to use
 Determine if host network proxy should be enabled
 */}}
 {{- define "proxy.hostNetwork" -}}
-{{- if or .Values.proxy.hostNetwork .Values.service.ipv6Only -}}
+{{- if or .Values.proxy.hostNetwork .Values.ipv6Only -}}
 true
 {{- else -}}
 false

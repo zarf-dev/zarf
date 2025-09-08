@@ -21,7 +21,7 @@ spec:
           command:
             - "/zarf-init/zarf-injector"
             - "{{ .Values.proxy.injector.shasum }}"
-            - "{{ if .Values.service.ipv6Only }}[::]:{{ .Values.proxy.injector.hostPort }}{{ else }}0.0.0.0:{{ .Values.proxy.injector.hostPort }}{{ end }}"
+            - "{{ if .Values.ipv6Only }}[::]:{{ .Values.proxy.injector.hostPort }}{{ else }}0.0.0.0:{{ .Values.proxy.injector.hostPort }}{{ end }}"
           ports:
             - containerPort: {{ .Values.proxy.injector.hostPort }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
