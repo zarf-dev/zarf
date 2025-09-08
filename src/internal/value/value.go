@@ -79,6 +79,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			return nil, ctx.Err()
 		default:
 		}
+		// FIXME(mkcp): Handle URL values files.
 		// Ensure file exists
 		// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
 		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
