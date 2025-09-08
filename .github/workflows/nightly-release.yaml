@@ -163,10 +163,6 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$CLI_VERSION make test-e2e ARCH=amd64
 
-      - name: Save Logs
-        if: always()
-        uses: ./.github/actions/save-logs
-
   create-release:
     needs: [repo-gate, build-release]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}

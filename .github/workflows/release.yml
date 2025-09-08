@@ -112,10 +112,6 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$GITHUB_REF_NAME make test-e2e ARCH=amd64
 
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
-
   create-release:
     runs-on: large-ubuntu-zarf-release
     needs: validate-release

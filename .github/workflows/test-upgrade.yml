@@ -126,7 +126,3 @@ jobs:
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
