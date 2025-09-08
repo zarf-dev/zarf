@@ -229,10 +229,9 @@ func init() {
 		{
 			Name:        RegistryProxy,
 			Description: "Enables setting Zarf init with the registry proxy flag",
-			// FIXME: set to false
-			Enabled: true,
-			Since:   "v0.60.0",
-			Stage:   Alpha,
+			Enabled:     false,
+			Since:       "v0.60.0",
+			Stage:       Alpha,
 		},
 	}
 

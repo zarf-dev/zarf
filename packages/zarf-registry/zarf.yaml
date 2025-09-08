@@ -126,7 +126,6 @@ components:
         shasum: "942de1dcf3e91855370acf81446136c0a1357f5805b30d90b406c7dcda943de4"
         executable: true
 
-    ## FIXME: use v0.2.0 for arm64 as well
   - name: zarf-injector
     description: |
       Bootstraps a Kubernetes cluster by cloning a running pod in the cluster and hosting the registry image.
@@ -137,9 +136,9 @@ components:
         architecture: arm64
     files:
       # Rust Injector Binary
-      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.1.0/zarf-injector-arm64
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.2.0/zarf-injector-arm64
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "32c4cfc9c2082affea519903e707bfb9b3a454fa8c003042f0a35925e72fe3bc"
+        shasum: "eb4e2fd9450c5a502906fe31bac990b427b358eabddb58fa7a7faeb2d7f9dea5"
         executable: true
 
   - name: zarf-seed-registry
@@ -157,7 +156,8 @@ components:
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
+      # Could be templated out in the future
+      - "alpine/socat:1.8.0.3"
 
   - name: zarf-registry
     description: |
@@ -183,4 +183,4 @@ components:
     images:
       # This image (or images) must match that used for injection (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-      - "###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_PROXY_IMAGE_TAG###"
+      - "alpine/socat:1.8.0.3"
