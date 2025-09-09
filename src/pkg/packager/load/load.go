@@ -5,12 +5,15 @@
 package load
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"text/template"
 	"time"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -58,14 +61,18 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 
-	// Load top-level values files and ensure
+	// Load top-level values files and ensure they're merged with user-provided values.
 	values, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse values files: %w", err)
 	}
 	value.DeepMerge(opts.Values, values)
 
-	// TODO Apply values to package create templates. In files, manifests, and actions*?
+	// Apply values to templates in PackageDefinition
+	pkg, err = fillValuesTemplate(ctx, pkg, opts.Values)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to apply values to templates: %w", err)
+	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
@@ -208,4 +215,46 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 		}
 	}
 	return nil
+}
+
+// fillValuesTemplate takes a ZarfPackage and a value.Values and applies the values to the templates in the package,
+// including templates for package constants and metadata.
+func fillValuesTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, values value.Values) (v1alpha1.ZarfPackage, error) {
+	// Create template context
+	templateData := map[string]any{
+		"Values":    values,
+		"Constants": pkg.Constants,
+		"Metadata":  pkg.Metadata,
+	}
+	logger.From(ctx).Debug("templating package", "packageName", pkg.Metadata.Name, "templateData", templateData)
+	start := time.Now()
+	defer func() {
+		logger.From(ctx).Debug("done templating package", "packageName", pkg.Metadata.Name, "duration", time.Since(start))
+	}()
+
+	// Marshal the package to YAML
+	yamlBytes, err := goyaml.Marshal(pkg)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to marshal package to YAML: %w", err)
+	}
+
+	// Create a new template and parse the YAML content
+	tmpl, err := template.New("package").Parse(string(yamlBytes))
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse package template: %w", err)
+	}
+
+	// Execute the template with the provided data
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, templateData); err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to execute package template: %w", err)
+	}
+
+	// Unmarshal the templated YAML back into a ZarfPackage
+	var templatedPkg v1alpha1.ZarfPackage
+	if err := goyaml.Unmarshal(buf.Bytes(), &templatedPkg); err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to unmarshal templated package: %w", err)
+	}
+
+	return templatedPkg, nil
 }
