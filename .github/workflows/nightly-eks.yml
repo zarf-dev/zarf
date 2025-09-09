@@ -74,8 +74,8 @@ jobs:
             --set=EKS_CLUSTER_NAME=${{ inputs.cluster_name || 'zarf-nightly-eks-e2e-test' }} \
             --confirm
 
-      # - name: Send trigger to Slack on workflow failure
-      #   if: failure()
-      #   uses: ./.github/actions/slack
-      #   with:
-      #     slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Send trigger to Slack on workflow failure
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
