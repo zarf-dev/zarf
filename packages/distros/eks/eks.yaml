@@ -18,6 +18,9 @@ addons:
     permissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
     tags:
       PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+    configurationValues: |-
+      defaultStorageClass:
+        enabled: true
 
   - name: vpc-cni
     attachPolicyARNs:
