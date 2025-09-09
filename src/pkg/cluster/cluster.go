@@ -207,9 +207,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.AgentTLS = agentTLS
 
-		// Set the Architecture
-		s.Architecture = opts.Architecture
-
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
@@ -296,6 +293,11 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	if opts.StorageClass != "" {
 		s.StorageClass = opts.StorageClass
+	}
+
+	// Set the Architecture
+	if s.Architecture == "" {
+		s.Architecture = opts.Architecture
 	}
 
 	// Save the state back to K8s
