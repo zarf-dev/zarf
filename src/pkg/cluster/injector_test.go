@@ -238,21 +238,14 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "architecture-not-present",
+				Name: "no-execute-taint",
 			},
-			Status: corev1.NodeStatus{
-				Allocatable: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1000m"),
-					corev1.ResourceMemory: resource.MustParse("10Gi"),
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{
+					{
+						Effect: corev1.TaintEffectNoExecute,
+					},
 				},
-				NodeInfo: corev1.NodeSystemInfo{
-					Architecture: "",
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "good",
 			},
 			Status: corev1.NodeStatus{
 				Allocatable: corev1.ResourceList{
@@ -266,14 +259,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		},
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "no-execute-taint",
-			},
-			Spec: corev1.NodeSpec{
-				Taints: []corev1.Taint{
-					{
-						Effect: corev1.TaintEffectNoExecute,
-					},
-				},
+				Name: "good",
 			},
 			Status: corev1.NodeStatus{
 				Allocatable: corev1.ResourceList{
