@@ -2,6 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: helm-overrides-example
   description: This packages provides a simple example of the Values feature of Zarf
+  version: 0.0.1
 values:
   files:
     - values.yaml
