@@ -40,16 +40,18 @@ func TestGetSanitizedTemplateMap(t *testing.T) {
 		{
 			name: "Sensitive and non-sensitive entries",
 			input: map[string]*variables.TextTemplate{
-				"###ZARF_GIT_AUTH_PULL###": {Sensitive: true, Value: "secret1"},
-				"###ZARF_GIT_AUTH_PUSH###": {Sensitive: true, Value: "secret2"},
-				"###ZARF_GIT_PUSH###":      {Sensitive: false, Value: "zarf-git-user"},
-				"###ZARF_GIT_PULL###":      {Sensitive: false, Value: "zarf-git-read-user"},
+				"###ZARF_GIT_AUTH_PULL###":    {Sensitive: true, Value: "secret1"},
+				"###ZARF_GIT_AUTH_PUSH###":    {Sensitive: true, Value: "secret2"},
+				"###ZARF_GIT_PUSH###":         {Sensitive: false, Value: "zarf-git-user"},
+				"###ZARF_GIT_PULL###":         {Sensitive: false, Value: "zarf-git-read-user"},
+				"###ZARF_PKG_ARCHITECTURE###": {Sensitive: false, Value: "amd64"},
 			},
 			expected: map[string]string{
-				"###ZARF_GIT_AUTH_PULL###": "**sanitized**",
-				"###ZARF_GIT_AUTH_PUSH###": "**sanitized**",
-				"###ZARF_GIT_PULL###":      "zarf-git-read-user",
-				"###ZARF_GIT_PUSH###":      "zarf-git-user",
+				"###ZARF_GIT_AUTH_PULL###":    "**sanitized**",
+				"###ZARF_GIT_AUTH_PUSH###":    "**sanitized**",
+				"###ZARF_GIT_PULL###":         "zarf-git-read-user",
+				"###ZARF_GIT_PUSH###":         "zarf-git-user",
+				"###ZARF_PKG_ARCHITECTURE###": "amd64",
 			},
 		},
 		{

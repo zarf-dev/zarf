@@ -87,3 +87,5 @@ serviceAccount:
   create: false
   name: ""
   annotations: {}
+
+nodeSelector: {}

@@ -107,7 +107,7 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999)
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), "amd64", nil, 31999)
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -287,7 +287,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+	image, node, err := c.getInjectorImageAndNode(ctx, "amd64", resReq)
 	require.NoError(t, err)
 	require.Equal(t, "pod-2-container", image)
 	require.Equal(t, "good", node)
