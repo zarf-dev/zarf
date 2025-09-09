@@ -14,7 +14,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -48,6 +47,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 		builtinMap := map[string]string{
 			"STORAGE_CLASS": s.StorageClass,
+			"IPV6_ENABLED":  fmt.Sprintf("%t", s.IPv6Enabled),
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -73,7 +73,10 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
+			builtinMap["SEED_REGISTRY"], err = state.LocalhostRegistryAddress(s.IPv6Enabled, config.ZarfSeedPort)
+			if err != nil {
+				return templateMap, err
+			}
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err

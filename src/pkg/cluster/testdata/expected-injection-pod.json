@@ -41,9 +41,15 @@
         "image": "docker.io/library/ubuntu:latest",
         "command": [
           "/zarf-init/zarf-injector",
-          "shasum"
+          "shasum",
+          "0.0.0.0:5000"
         ],
         "workingDir": "/zarf-init",
+        "ports": [
+          {
+            "containerPort": 5000
+          }
+        ],
         "resources": {
           "limits": {
             "cpu": "1",
