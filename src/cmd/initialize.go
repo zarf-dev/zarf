@@ -16,12 +16,14 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -95,6 +97,10 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 	if err := validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
+	}
+
+	if err := validateSubsequentInitState(cmd.Context(), pkgConfig.InitOpts.RegistryInfo, pkgConfig.InitOpts.GitServer, pkgConfig.InitOpts.ArtifactServer); err != nil {
+		return err
 	}
 
 	initPackageName := config.GetInitPackageName()
@@ -241,6 +247,34 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	return errors.New(lang.CmdInitPullErrManual)
 }
 
+func validateSubsequentInitState(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo) error {
+	// Check if init options have changed
+	c, err := cluster.New(ctx)
+	// If there's no cluster available the init package might not need it or doesn't provide it.
+	if err != nil {
+		return nil
+	}
+	s, err := c.LoadState(ctx)
+	// If there is no state found this is the first init on this cluster
+	if kerrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
+		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
+	}
+	if helpers.IsNotZeroAndNotEqual(registryInfo, s.RegistryInfo) {
+		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
+	}
+	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
+		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
+	}
+	return nil
+}
+
 func validateInitFlags() error {
 	// If 'git-url' is provided, make sure they provided values for the username and password of the push user
 	if pkgConfig.InitOpts.GitServer.Address != "" {
@@ -262,5 +296,6 @@ func validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
+
 	return nil
 }
