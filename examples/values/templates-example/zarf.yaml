@@ -18,7 +18,7 @@ components:
       onDeploy:
         after:
           # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
-          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
+          - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
             # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
             mute: true
             setValues:
@@ -26,11 +26,11 @@ components:
 
   # The following component deploys nginx to the cluster using the defined variables
   - name: variables-with-nginx
-    description: "This component deploys nginx version ###ZARF_PKG_TMPL_NGINX_VERSION### to the cluster"
+    description: "This component deploys nginx version {{ .Values.nginx.version }} to the cluster"
     required: true
     images:
       # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
-      - "nginx:{{ nginx.version }}"
+      - "nginx:{{ .Values.nginx.version }}"
     manifests:
       - name: variables-with-nginx
         # [alpha] This enables go-templating in the Manifest with Zarf values.
