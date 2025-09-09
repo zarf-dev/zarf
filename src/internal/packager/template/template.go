@@ -46,9 +46,13 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS":  s.StorageClass,
-			"IPV6_ONLY":      fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
-			"REGISTRY_PROXY": fmt.Sprintf("%t", s.RegistryProxy),
+			"STORAGE_CLASS":               s.StorageClass,
+			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
+			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.ProxyMode),
+			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
+			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),
+			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
+			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -74,7 +78,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, config.ZarfSeedPort)
+			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err

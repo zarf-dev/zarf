@@ -7,13 +7,19 @@ image:
   tag: 2.8.3
 
 proxy:
+  enabled: false
+  injectorHostPort: 5001
   image:
     repository: alpine/socat
     tag: 1.8.0.3
+  injector:
+    image: registry.k8s.io/pause:3.10
+    payLoadConfigMapAmount: 0
+    shasum: ""
+
+ipv6Only: false
 
 service:
-  ipv6Only: "false"
-  registryProxy: "false"
   name: registry
   type: NodePort
   port: 5000

@@ -102,7 +102,26 @@ Once you have the above defined we can now work on setting the images that we wi
 
 <iframe src="/tutorials/prepare_find_images.html" height="220px" width="100%"></iframe>
 
-From here you can copy the `images` key and array of images into the `wordpress` component we defined in our `zarf.yaml`
+From here you can copy the `images` key and array of images into the `wordpress` component we defined in our `zarf.yaml`. The `wordpress` component should now be as follows:
+
+```yaml
+components:
+  - name: wordpress
+    description: |
+      Deploys the Bitnami-packaged WordPress chart into the cluster
+    required: true
+    charts:
+      - name: wordpress
+        url: oci://registry-1.docker.io/bitnamicharts/wordpress
+        version: 16.0.4
+        namespace: wordpress
+        valuesFiles:
+          - wordpress-values.yaml
+    images:
+      - docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2
+      - docker.io/bitnami/mariadb:10.11.2-debian-11-r21
+      - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+```
 
 :::note
 

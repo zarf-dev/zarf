@@ -29,7 +29,7 @@ zarf dev deploy [flags]
   -h, --help                               help for deploy
       --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
       --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
-      --retries int                        Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
+      --retries int                        Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 3)
       --timeout duration                   Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
@@ -37,6 +37,7 @@ zarf dev deploy [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")

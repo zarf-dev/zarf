@@ -2,12 +2,12 @@ kind: ZarfInitConfig
 metadata:
   name: init
   description: Used to establish a new Zarf cluster
-  # allowNamespaceOverride: false
+  allowNamespaceOverride: false
 
 components:
-    # - name: k3s
-    #   import:
-    #     path: packages/distros/k3s
+  - name: k3s
+    import:
+      path: packages/distros/k3s
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
@@ -34,6 +34,6 @@ components:
       path: packages/zarf-agent
 
   # (Optional) Adds a git server to the cluster
-  # - name: git-server
-  #   import:
-  #     path: packages/gitea
+  - name: git-server
+    import:
+      path: packages/gitea

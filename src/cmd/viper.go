@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -37,6 +38,10 @@ const (
 	VLogFormat = "log_format"
 	VNoColor   = "no_color"
 
+	// Root config, Features
+
+	VFeatures = "features"
+
 	// Init config keys
 
 	VInitComponents   = "init.components"
@@ -52,13 +57,14 @@ const (
 
 	// Init Registry config keys
 
-	VInitRegistryURL      = "init.registry.url"
-	VInitRegistryNodeport = "init.registry.nodeport"
-	VInitRegistrySecret   = "init.registry.secret"
-	VInitRegistryPushUser = "init.registry.push_username"
-	VInitRegistryPushPass = "init.registry.push_password"
-	VInitRegistryPullUser = "init.registry.pull_username"
-	VInitRegistryPullPass = "init.registry.pull_password"
+	VInitRegistryURL          = "init.registry.url"
+	VInitRegistryNodeport     = "init.registry.nodeport"
+	VInitSeedRegistryHostPort = "init.registry.seed_hostport"
+	VInitRegistrySecret       = "init.registry.secret"
+	VInitRegistryPushUser     = "init.registry.push_username"
+	VInitRegistryPushPass     = "init.registry.push_password"
+	VInitRegistryPullUser     = "init.registry.pull_username"
+	VInitRegistryPullPass     = "init.registry.pull_password"
 
 	// Init Package config keys
 
@@ -90,7 +96,6 @@ const (
 	VPkgDeploySet        = "package.deploy.set"
 	VPkgDeployComponents = "package.deploy.components"
 	VPkgDeployShasum     = "package.deploy.shasum"
-	VPkgDeploySget       = "package.deploy.sget"
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
@@ -99,6 +104,7 @@ const (
 
 	VPkgPublishSigningKey         = "package.publish.signing_key"
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
+	VPkgPublishRetries            = "package.publish.retries"
 
 	// Package pull config keys
 
@@ -216,6 +222,11 @@ func setDefaults() {
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
+	v.SetDefault(VInitSeedRegistryHostPort, state.ZarfSeedRegistryHostPort)
+
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
+
+	// Package publish opts that are non-zero values
+	v.SetDefault(VPkgPublishRetries, 1)
 }

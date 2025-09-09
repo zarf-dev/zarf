@@ -533,7 +533,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		}
 
 		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath, "")
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
@@ -683,8 +683,10 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	componentDefinition := "\ncomponents:\n"
 	for _, finding := range imagesScans {
-		if len(finding.Matches) > 0 {
+		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
+		}
+		if len(finding.Matches) > 0 {
 			for _, image := range finding.Matches {
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}

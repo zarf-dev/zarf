@@ -24,10 +24,10 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ```
       --adopt-existing-resources    Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string           Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-      --confirm                     Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+  -c, --confirm                     Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                        help for deploy
   -n, --namespace string            [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
-      --retries int                 Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
+      --retries int                 Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 3)
       --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string               Shasum of the package to deploy. Required if deploying a remote https package.
       --skip-signature-validation   Skip validating the signature of the Zarf package
@@ -38,6 +38,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")

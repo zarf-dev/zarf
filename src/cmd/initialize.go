@@ -51,10 +51,16 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdInitFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
-	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryProxy, "registry-proxy", false, "uses the registry-proxy solution")
+
+	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryInfo.ProxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "injector-hostport", v.GetInt(VInitSeedRegistryHostPort),
+		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
+	// While this feature is in early alpha we will hide the flags
+	cmd.Flags().MarkHidden("registry-proxy")
+	cmd.Flags().MarkHidden("injector-hostport")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -130,10 +136,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	var registryProxy *bool
-	if cmd.Flag("registry-proxy").Changed {
-		registryProxy = &pkgConfig.InitOpts.RegistryProxy
-	}
 
 	opts := packager.DeployOptions{
 		GitServer:              pkgConfig.InitOpts.GitServer,
@@ -145,7 +147,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
-		RegistryProxy:          registryProxy,
+		SeedRegistryHostPort:   pkgConfig.InitOpts.SeedRegistryHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)

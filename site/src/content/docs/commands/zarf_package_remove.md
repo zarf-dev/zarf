@@ -22,7 +22,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 
 ```
       --components string           Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
-      --confirm                     REQUIRED. Confirm the removal action to prevent accidental deletions
+  -c, --confirm                     Confirms the removal action
   -h, --help                        help for remove
   -n, --namespace string            [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
       --skip-signature-validation   Skip validating the signature of the Zarf package
@@ -32,6 +32,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
   -k, --key string                 Path to public key file for validating signed packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")

@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	injectorcontroller "github.com/zarf-dev/zarf/src/internal/injector-controller"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -33,7 +33,6 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 
 	cmd.AddCommand(newInternalAgentCommand())
 	cmd.AddCommand(newInternalHTTPProxyCommand())
-	cmd.AddCommand(newInternalRunControllerCommand())
 	cmd.AddCommand(newInternalGenCliDocsCommand(rootCmd))
 	cmd.AddCommand(newInternalCreateReadOnlyGiteaUserCommand())
 	cmd.AddCommand(newInternalCreateArtifactRegistryTokenCommand())
@@ -253,8 +252,12 @@ func (o *internalCreateReadOnlyGiteaUserOptions) run(cmd *cobra.Command, _ []str
 		return err
 	}
 	defer tunnel.Close()
-	tunnelURL := tunnel.HTTPEndpoint()
-	giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
+	// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
+	tunnelURLs := tunnel.HTTPEndpoints()
+	if len(tunnelURLs) == 0 {
+		return errors.New("no tunnel endpoints found")
+	}
+	giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 	if err != nil {
 		return err
 	}
@@ -310,8 +313,12 @@ func (o *internalCreateArtifactRegistryTokenOptions) run(cmd *cobra.Command, _ [
 			return err
 		}
 		defer tunnel.Close()
-		tunnelURL := tunnel.HTTPEndpoint()
-		giteaClient, err := gitea.NewClient(tunnelURL, s.GitServer.PushUsername, s.GitServer.PushPassword)
+		// tunnel is created with the default listenAddress - there will only be one endpoint until otherwise supported
+		tunnelURLs := tunnel.HTTPEndpoints()
+		if len(tunnelURLs) == 0 {
+			return fmt.Errorf("no tunnel endpoints found")
+		}
+		giteaClient, err := gitea.NewClient(tunnelURLs[0], s.GitServer.PushUsername, s.GitServer.PushPassword)
 		if err != nil {
 			return err
 		}
@@ -411,31 +418,4 @@ func (o *internalCrc32Options) run(_ *cobra.Command, args []string) {
 	text := args[0]
 	hash := helpers.GetCRCHash(text)
 	fmt.Printf("%d\n", hash)
-}
-
-type internalRunControllerOptions struct{}
-
-func newInternalRunControllerCommand() *cobra.Command {
-	o := &internalRunControllerOptions{}
-
-	cmd := &cobra.Command{
-		Use:   "run-controller",
-		Short: lang.CmdInternalRunControllerShort,
-		Long:  lang.CmdInternalRunControllerLong,
-		RunE:  o.run,
-	}
-
-	return cmd
-}
-
-func (o *internalRunControllerOptions) run(cmd *cobra.Command, _ []string) error {
-	ctx := cmd.Context()
-
-	c, err := cluster.New(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create cluster client: %w", err)
-	}
-
-	controller := injectorcontroller.New(c)
-	return controller.Start(ctx)
 }

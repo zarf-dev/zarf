@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,158 +30,126 @@ import (
 )
 
 func TestInjector(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name                string
-		useRegistryProxy    bool
-		ipFamily            state.IPFamily
-		expectedServiceFile string
-	}{
-		{
-			name:                "pod injector",
-			useRegistryProxy:    false,
-			ipFamily:            state.IPFamilyIPv4,
-			expectedServiceFile: filepath.Join("expected-injection-service-nodeport.json"),
+	ctx := context.Background()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+	cs.PrependReactor("delete-collection", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		delAction, ok := action.(k8stesting.DeleteCollectionActionImpl)
+		if !ok {
+			return false, nil, fmt.Errorf("action is not of type DeleteCollectionActionImpl")
+		}
+		if delAction.GetListRestrictions().Labels.String() != "zarf-injector=payload" {
+			return false, nil, nil
+		}
+		gvr := delAction.Resource
+		gvk := delAction.Resource.GroupVersion().WithKind("ConfigMap")
+		list, err := cs.Tracker().List(gvr, gvk, delAction.Namespace)
+		require.NoError(t, err)
+		cmList, ok := list.(*corev1.ConfigMapList)
+		require.True(t, ok)
+		for _, cm := range cmList.Items {
+			v, ok := cm.Labels["zarf-injector"]
+			if !ok {
+				continue
+			}
+			if v != "payload" {
+				continue
+			}
+			err = cs.Tracker().Delete(gvr, delAction.Namespace, cm.Name)
+			require.NoError(t, err)
+		}
+		return true, nil, nil
+	})
+
+	// Setup nodes and pods with images
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node1",
 		},
-		{
-			name:                "pod injector",
-			useRegistryProxy:    true,
-			ipFamily:            state.IPFamilyIPv4,
-			expectedServiceFile: filepath.Join("expected-injection-service-proxy.json"),
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10"),
+				corev1.ResourceMemory: resource.MustParse("100Gi"),
+			},
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
-			cs := fake.NewClientset()
-			c := &Cluster{
-				Clientset: cs,
-				Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
-			}
-			cs.PrependReactor("delete-collection", "configmaps", func(action k8stesting.Action) (bool, runtime.Object, error) {
-				delAction, ok := action.(k8stesting.DeleteCollectionActionImpl)
-				if !ok {
-					return false, nil, fmt.Errorf("action is not of type DeleteCollectionActionImpl")
-				}
-				if delAction.GetListRestrictions().Labels.String() != "zarf-injector=payload" {
-					return false, nil, nil
-				}
-				gvr := delAction.Resource
-				gvk := delAction.Resource.GroupVersion().WithKind("ConfigMap")
-				list, err := cs.Tracker().List(gvr, gvk, delAction.Namespace)
-				require.NoError(t, err)
-				cmList, ok := list.(*corev1.ConfigMapList)
-				require.True(t, ok)
-				for _, cm := range cmList.Items {
-					v, ok := cm.Labels["zarf-injector"]
-					if !ok {
-						continue
-					}
-					if v != "payload" {
-						continue
-					}
-					err = cs.Tracker().Delete(gvr, delAction.Namespace, cm.Name)
-					require.NoError(t, err)
-				}
-				return true, nil, nil
-			})
-
-			// Setup nodes and pods with images
-			node := &corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "node1",
+	_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
+	require.NoError(t, err)
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "good",
+			Namespace: "default",
+		},
+		Spec: corev1.PodSpec{
+			NodeName: "node1",
+			Containers: []corev1.Container{
+				{
+					Image: "ubuntu:latest",
 				},
-				Status: corev1.NodeStatus{
-					Allocatable: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("10"),
-						corev1.ResourceMemory: resource.MustParse("100Gi"),
-					},
-				},
-			}
-			_, err := cs.CoreV1().Nodes().Create(ctx, node, metav1.CreateOptions{})
-			require.NoError(t, err)
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "good",
-					Namespace: "default",
-				},
-				Spec: corev1.PodSpec{
-					NodeName: "node1",
-					Containers: []corev1.Container{
-						{
-							Image: "ubuntu:latest",
-						},
-					},
-				},
-			}
-			_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
-			require.NoError(t, err)
-
-			err = c.StopInjection(ctx, tt.useRegistryProxy)
-			require.NoError(t, err)
-
-			for range 2 {
-				tmpDir := t.TempDir()
-				binData := []byte("foobar")
-				err := os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), binData, 0o644)
-				require.NoError(t, err)
-
-				idx, err := random.Index(1, 1, 1)
-				require.NoError(t, err)
-				_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
-				require.NoError(t, err)
-
-				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, tt.useRegistryProxy, tt.ipFamily)
-				require.NoError(t, err)
-
-				if tt.useRegistryProxy {
-					daemonsetList, err := cs.AppsV1().DaemonSets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-					require.NoError(t, err)
-					require.Len(t, daemonsetList.Items, 1)
-					require.Equal(t, "zarf-injector", daemonsetList.Items[0].Name)
-				} else {
-					podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-					require.NoError(t, err)
-					require.Len(t, podList.Items, 1)
-					require.Equal(t, "injector", podList.Items[0].Name)
-				}
-
-				svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-				require.NoError(t, err)
-				require.Len(t, svcList.Items, 1)
-				expected, err := os.ReadFile(fmt.Sprintf("./testdata/%s", tt.expectedServiceFile))
-				require.NoError(t, err)
-				svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
-				// Managed fields are auto-set and contain timestamps
-				svc.ManagedFields = nil
-				require.NoError(t, err)
-				b, err := json.MarshalIndent(svc, "", "  ")
-				require.NoError(t, err)
-				require.Equal(t, strings.TrimSpace(string(expected)), string(b))
-
-				cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-				require.NoError(t, err)
-				require.Len(t, cmList.Items, 2)
-				cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
-				require.NoError(t, err)
-				require.Equal(t, binData, cm.BinaryData["zarf-injector"])
-			}
-
-			err = c.StopInjection(ctx, tt.useRegistryProxy)
-			require.NoError(t, err)
-
-			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-			require.NoError(t, err)
-			require.Empty(t, podList.Items)
-			svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-			require.NoError(t, err)
-			require.Empty(t, svcList.Items)
-			cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-			require.NoError(t, err)
-			require.Empty(t, cmList.Items)
-		})
+			},
+		},
 	}
+	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	err = c.StopInjection(ctx)
+	require.NoError(t, err)
+
+	for range 2 {
+		tmpDir := t.TempDir()
+		binData := []byte("foobar")
+		err := os.WriteFile(filepath.Join(tmpDir, "zarf-injector"), binData, 0o644)
+		require.NoError(t, err)
+
+		idx, err := random.Index(1, 1, 1)
+		require.NoError(t, err)
+		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
+		require.NoError(t, err)
+
+		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999)
+		require.NoError(t, err)
+
+		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, podList.Items, 1)
+		require.Equal(t, "injector", podList.Items[0].Name)
+
+		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, svcList.Items, 1)
+		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
+		require.NoError(t, err)
+		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
+		// Managed fields are auto-set and contain timestamps
+		svc.ManagedFields = nil
+		require.NoError(t, err)
+		b, err := json.MarshalIndent(svc, "", "  ")
+		require.NoError(t, err)
+		require.Equal(t, strings.TrimSpace(string(expected)), string(b))
+
+		cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+		require.NoError(t, err)
+		require.Len(t, cmList.Items, 2)
+		cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
+	}
+
+	err = c.StopInjection(ctx)
+	require.NoError(t, err)
+
+	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, podList.Items)
+	svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, svcList.Items)
+	cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+	require.Empty(t, cmList.Items)
 }
 
 func TestBuildInjectionPod(t *testing.T) {
@@ -323,4 +293,145 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "pod-2-container", image)
 	require.Equal(t, "good", node)
+}
+
+func TestGetInjectorDaemonsetImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		nodes         []corev1.Node
+		expectedImage string
+		expectedError string
+		ctx           context.Context
+	}{
+		{
+			name: "selects smallest pause image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"docker.io/my-app/pause-and-go:3.6"},
+								SizeBytes: 400000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.7"},
+								SizeBytes: 200000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.5"},
+								SizeBytes: 500000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.7",
+		},
+		{
+			name: "falls back to smallest image when no pause images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"redis:latest"},
+								SizeBytes: 120000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "skips zarf mutated image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"127.0.0.1:5000/pause:3.10"},
+								SizeBytes: 1,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "returns error when nodes have no images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{},
+					},
+				},
+			},
+			expectedError: "no suitable image found on any node",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			// Ensure this times out quickly
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			t.Cleanup(cancel)
+			cs := fake.NewClientset()
+			c := &Cluster{
+				Clientset: cs,
+			}
+			for _, node := range tt.nodes {
+				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			image, err := c.GetInjectorDaemonsetImage(ctx)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedImage, image)
+		})
+	}
 }

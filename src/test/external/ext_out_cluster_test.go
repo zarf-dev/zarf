@@ -44,7 +44,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000"}
+	"--registry-url=k3d-" + registryHost + ":5000/test"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -200,6 +200,13 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	suite.NoError(err, "Unable to create package, helm auth likely failed")
 }
 
+func (suite *ExtOutClusterTestSuite) Test_4_SubpathAgentTlsUpdate() {
+	updateCredsArgs := []string{"tools", "update-creds", "agent", "--confirm"}
+
+	err := exec.CmdWithPrint(zarfBinPath, updateCredsArgs...)
+	suite.NoError(err, "Unable to find images, helm auth likely failed")
+}
+
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
 	suite.T().Helper()
 
@@ -210,7 +217,7 @@ func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, user
 	podinfoTarballPath := filepath.Join(tempDir, fmt.Sprintf("podinfo-%s.tgz", podInfoVersion))
 	suite.NoError(err, "Unable to package chart")
 
-	err = utils.DownloadToFile(testutil.TestContext(suite.T()), fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath, "")
+	err = utils.DownloadToFile(testutil.TestContext(suite.T()), fmt.Sprintf("https://stefanprodan.github.io/podinfo/podinfo-%s.tgz", podInfoVersion), podinfoTarballPath)
 	suite.NoError(err)
 	url := fmt.Sprintf("%s/api/packages/%s/helm/api/charts", baseURL, username)
 

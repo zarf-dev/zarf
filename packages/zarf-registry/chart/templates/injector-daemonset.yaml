@@ -1,0 +1,81 @@
+{{ if .Values.proxy.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: zarf-injector
+spec:
+  selector:
+    matchLabels:
+      app: zarf-daemonset-injector
+  template:
+    metadata:
+      labels:
+        app: zarf-daemonset-injector
+        # Don't mutate this pod
+        zarf.dev/agent: ignore
+    spec:
+      containers:
+        - name: injector
+          image: "{{ .Values.proxy.injector.image }}"
+          workingDir: /zarf-init
+          command:
+            - "/zarf-init/zarf-injector"
+            - "{{ .Values.proxy.injector.shasum }}"
+            - "{{ if .Values.ipv6Only }}[::]:{{ .Values.proxy.injector.hostPort }}{{ else }}0.0.0.0:{{ .Values.proxy.injector.hostPort }}{{ end }}"
+          ports:
+            - containerPort: {{ .Values.proxy.injector.hostPort }}
+            {{- if eq (include "proxy.hostNetwork" .) "false" }}
+              hostPort: {{ .Values.proxy.injector.hostPort }}
+              hostIP: "127.0.0.1"
+            {{- end }}
+          readinessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /v2/
+              port: {{ .Values.proxy.injector.hostPort }}
+              scheme: HTTP
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+          volumeMounts:
+            - mountPath: /zarf-init/zarf-injector
+              name: init
+              subPath: zarf-injector
+            - mountPath: /zarf-seed
+              name: seed
+            {{- range $i := until (int .Values.proxy.injector.payLoadConfigMapAmount) }}
+            - mountPath: /zarf-init/zarf-payload-{{ printf "%03d" $i }}
+              name: zarf-payload-{{ printf "%03d" $i }}
+              subPath: zarf-payload-{{ printf "%03d" $i }}
+            {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+    {{- if eq (include "proxy.hostNetwork" .) "true" }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+    {{- end }}
+      securityContext:
+        fsGroup: 2000
+        runAsGroup: 2000
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - configMap:
+            defaultMode: 511
+            name: rust-binary
+          name: init
+        - emptyDir: {}
+          name: seed
+        {{- range $i := until (int .Values.proxy.injector.payLoadConfigMapAmount) }}
+        - configMap:
+            defaultMode: 420
+            name: zarf-payload-{{ printf "%03d" $i }}
+          name: zarf-payload-{{ printf "%03d" $i }}
+        {{- end }}
+{{- end }}
