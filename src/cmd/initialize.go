@@ -296,6 +296,5 @@ func validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
-
 	return nil
 }
