@@ -85,6 +85,11 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: PROXY_TOLERATIONS
+    description: Custom tolerations array for the registry proxy and injector
+    default: ""
+    autoIndent: true
+
   - name: REGISTRY_HPA_AUTO_SIZE
     description: Enable to set min and max replicas based on amount of nodes
     default: "false"

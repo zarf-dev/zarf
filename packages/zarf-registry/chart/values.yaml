@@ -9,6 +9,7 @@ image:
 proxy:
   enabled: false
   injectorHostPort: 5001
+  tolerations: []
   image:
     repository: alpine/socat
     tag: 1.8.0.3
