@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -219,14 +221,17 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 
 // fillValuesTemplate takes a ZarfPackage and a value.Values and applies the values to the templates in the package,
 // including templates for package constants and metadata.
+// FIXME(mkcp): This feels a bit repetitive with fillActiveTemplate, but maybe moreso that the variable templating needs
+// to be extracted into its own layer, and we can explicitly process one step and then the other. We're maybe missing an
+// abstraction.
 func fillValuesTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, values value.Values) (v1alpha1.ZarfPackage, error) {
 	// Create template context
-	templateData := map[string]any{
+	templateContext := map[string]any{
 		"Values":    values,
 		"Constants": pkg.Constants,
 		"Metadata":  pkg.Metadata,
 	}
-	logger.From(ctx).Debug("templating package", "packageName", pkg.Metadata.Name, "templateData", templateData)
+	logger.From(ctx).Debug("templating package", "packageName", pkg.Metadata.Name, "templateContext", templateContext)
 	start := time.Now()
 	defer func() {
 		logger.From(ctx).Debug("done templating package", "packageName", pkg.Metadata.Name, "duration", time.Since(start))
@@ -239,14 +244,14 @@ func fillValuesTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, values va
 	}
 
 	// Create a new template and parse the YAML content
-	tmpl, err := template.New("package").Parse(string(yamlBytes))
+	tmpl, err := template.New("package").Funcs(createTemplateFuncMap()).Parse(string(yamlBytes))
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse package template: %w", err)
 	}
 
-	// Execute the template with the provided data
+	// Execute the template with the templateContext
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, templateData); err != nil {
+	if err := tmpl.Execute(&buf, templateContext); err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to execute package template: %w", err)
 	}
 
@@ -257,4 +262,31 @@ func fillValuesTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, values va
 	}
 
 	return templatedPkg, nil
+}
+
+// FIXME(mkcp): This should definitely not be in load. Need a higher order templating layer.
+func createTemplateFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"default": func(defaultVal any, val any) any {
+			if val == nil || val == "" {
+				return defaultVal
+			}
+			return val
+		},
+
+		// String operations
+		"upper":   func(s string) string { return strings.ToUpper(s) },
+		"lower":   func(s string) string { return strings.ToLower(s) },
+		"strjoin": func(sep string, slice []string) string { return strings.Join(slice, sep) },
+		"split":   func(sep, s string) []string { return strings.Split(s, sep) },
+		"trim":    func(s string) string { return strings.TrimSpace(s) },
+		"quote":   func(s string) string { return strconv.Quote(s) },
+
+		// TODO(mkcp): Add some more
+		// Collection operations
+		// Type conversions
+		// Conditional logic
+		// Math
+		// Encoding
+	}
 }
