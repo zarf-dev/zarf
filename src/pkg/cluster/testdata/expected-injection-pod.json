@@ -98,6 +98,7 @@
       }
     ],
     "restartPolicy": "Never",
+    "terminationGracePeriodSeconds": 1,
     "nodeName": "injection-node",
     "securityContext": {
       "runAsUser": 1000,
