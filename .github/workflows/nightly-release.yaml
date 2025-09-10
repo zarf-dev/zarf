@@ -167,7 +167,6 @@ jobs:
     needs: [repo-gate, build-release]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
-    environment: release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
     permissions:
