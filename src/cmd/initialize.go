@@ -270,7 +270,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
+		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	return nil
 }
