@@ -71,7 +71,7 @@ jobs:
           echo "CLI_VERSION=${NEW_TAG}" >> "$GITHUB_ENV"
 
       - name: Setup golang
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
@@ -152,7 +152,7 @@ jobs:
           path: build/
 
       - name: Setup golang
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
@@ -163,15 +163,10 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true CLI_VERSION=$CLI_VERSION make test-e2e ARCH=amd64
 
-      - name: Save Logs
-        if: always()
-        uses: ./.github/actions/save-logs
-
   create-release:
     needs: [repo-gate, build-release]
     if: ${{ needs.repo-gate.outputs.should_run == 'true' }}
     runs-on: large-ubuntu-zarf-release
-    environment: release
     env:
       CLI_VERSION: ${{ needs.build-release.outputs.cli_version }}
     permissions:
@@ -183,7 +178,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup golang
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
