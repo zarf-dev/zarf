@@ -99,7 +99,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	if err := validateSubsequentInitState(cmd.Context(), pkgConfig.InitOpts.RegistryInfo, pkgConfig.InitOpts.GitServer, pkgConfig.InitOpts.ArtifactServer); err != nil {
+	if err := validateExistingStateMatchesInput(cmd.Context(), pkgConfig.InitOpts.RegistryInfo, pkgConfig.InitOpts.GitServer, pkgConfig.InitOpts.ArtifactServer); err != nil {
 		return err
 	}
 
@@ -247,10 +247,10 @@ func downloadInitPackage(ctx context.Context, cacheDirectory string) error {
 	return errors.New(lang.CmdInitPullErrManual)
 }
 
-func validateSubsequentInitState(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo) error {
-	// Check if init options have changed
+// Checks if an init has already happened and if so check that none of the Zarf service information has changed
+func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo) error {
 	c, err := cluster.New(ctx)
-	// If there's no cluster available the init package might not need it or doesn't provide it.
+	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
 		return nil
 	}
