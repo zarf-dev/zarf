@@ -8,10 +8,6 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 // Once https://github.com/glebarez/go-sqlite updates to handle breaking changes in modernc.org/sqlite v1.33.0 this can be removed
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
-// This addresses https://github.com/advisories/GHSA-wjrx-6529-hcj3 until Syft,
-// which is the dependency that brings go-getter in, makes a new release
-replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.7.9
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -190,6 +186,9 @@ require (
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
+	modernc.org/strutil v1.2.1 // indirect
+	modernc.org/token v1.1.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
@@ -601,7 +600,7 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.38.2 // indirect
+	modernc.org/sqlite v1.38.2
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.6.0 // indirect
