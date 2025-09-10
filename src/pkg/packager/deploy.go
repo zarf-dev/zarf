@@ -251,10 +251,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
-	var hasExternalRegistry bool
-	if d.s != nil {
-		hasExternalRegistry = d.s.RegistryInfo.Address != ""
-	}
+	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
