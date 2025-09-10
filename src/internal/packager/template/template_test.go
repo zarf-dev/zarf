@@ -5,9 +5,11 @@
 package template
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -77,6 +79,48 @@ func TestGetSanitizedTemplateMap(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			output := getSanitizedTemplateMap(test.input)
 			require.Equal(t, test.expected, output)
+		})
+	}
+}
+
+func TestGetZarfTemplates(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		state       state.State
+		expectedMap map[string]*variables.TextTemplate
+	}{
+		{
+			name: "architecture",
+			expectedMap: map[string]*variables.TextTemplate{
+				"###ZARF_ARCHITECTURE###": {Sensitive: false, Value: "amd64"},
+			},
+			state: state.State{
+				Architecture: "amd64",
+			},
+		},
+		{
+			name: "storage-class",
+			expectedMap: map[string]*variables.TextTemplate{
+				"###ZARF_STORAGE_CLASS###": {Sensitive: false, Value: "local-path"},
+			},
+			state: state.State{
+				StorageClass: "local-path",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			output, err := GetZarfTemplates(ctx, "test-component", &test.state)
+			require.NoError(t, err)
+			for key, value := range test.expectedMap {
+				mapValue, exists := output[key]
+				require.True(t, exists)
+				require.Equal(t, value, mapValue)
+			}
 		})
 	}
 }
