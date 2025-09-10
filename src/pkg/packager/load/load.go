@@ -281,6 +281,7 @@ func createTemplateFuncMap() template.FuncMap {
 		"split":   func(sep, s string) []string { return strings.Split(s, sep) },
 		"trim":    func(s string) string { return strings.TrimSpace(s) },
 		"quote":   func(s string) string { return strconv.Quote(s) },
+		"repeat":  func(s string, count int) string { return strings.Repeat(s, count) },
 
 		// TODO(mkcp): Add some more
 		// Collection operations
