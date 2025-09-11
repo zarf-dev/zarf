@@ -219,6 +219,8 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
+		// We don't want to orphan charts that are deployed already if a precursor component fails
+		deployedComponents[idx].InstalledCharts = charts
 
 		if deployErr != nil {
 			onFailure()
@@ -232,7 +234,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
-		deployedComponents[idx].InstalledCharts = charts
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {

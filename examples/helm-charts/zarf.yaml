@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: helm-charts
   description: Example showcasing multiple ways to deploy helm charts
-  version: 0.0.1
+  version: 0.0.2
 
 components:
   - name: demo-helm-charts
@@ -24,7 +24,7 @@ components:
             path: replicaCount
 
       - name: podinfo-oci
-        version: 6.4.0
+        version: 6.9.2
         namespace: podinfo-from-oci
         # In this case `url` will load the helm chart located in the podinfo OCI repository
         url: oci://ghcr.io/stefanprodan/charts/podinfo
