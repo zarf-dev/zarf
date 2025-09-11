@@ -49,6 +49,12 @@ const (
 	ComponentStatusRemoving  ComponentStatus = "Removing"
 )
 
+// All status options for a Zarf component chart
+const (
+	ChartStatusSucceeded ChartStatus = "Succeeded"
+	ChartStatusFailed    ChartStatus = "Failed"
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -412,9 +418,13 @@ type DeployedComponent struct {
 	ObservedGeneration int              `json:"observedGeneration"`
 }
 
+// ChartStatus is the status of a Helm Chart release
+type ChartStatus string
+
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
+	Status         ChartStatus    `json:"status"`
 }
