@@ -24,7 +24,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -154,6 +153,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
+		}
+	}
+
+	l.Debug("copying values files to package", "files", pkg.Values.Files)
+	for _, file := range pkg.Values.Files {
+		if err = copyValuesFile(ctx, file, packagePath, buildPath); err != nil {
+			return nil, err
 		}
 	}
 
@@ -874,4 +880,54 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 
 		return nil
 	})
+}
+
+func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+
+	// FIXME(mkcp): Handle URL valuesfiles. This has some implications with how we reference them at deploy time. Helm
+	// assumes network connectivity at install or upgrade time and will fail if it can't reach the URL. We can assume
+	// that the file is available at create time, but then have to deploy it with a local copy. Only, that local copy
+	// is still referred to by URL. There's a few ways to implement this, and it'll take some thought and documentation
+	// so users understand the expected behavior.
+	// if helpers.IsURL(file) {
+	// 	dst := filepath.Join(buildPath, file)
+	// 	l.Debug("copying values file from URL", "url", file)
+	// 	if err := utils.DownloadToFile(ctx, file, dst); err != nil {
+	// 		return fmt.Errorf("failed to download values file %s: %w", file, err)
+	// 	}
+	// 	// Set appropriate file permissions
+	// 	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+	// 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	// 	}
+	// 	// URL copied to buildPack
+	// 	return nil
+	// }
+
+	// Process local values file
+	src := file
+	if !filepath.IsAbs(src) {
+		src = filepath.Join(packagePath, file)
+	}
+	// Validate src
+	if _, err := os.Stat(src); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("values file %s not found", src)
+		}
+		return fmt.Errorf("unable to access values file %s: %w", src, err)
+	}
+
+	// Copy file to pre-archive package
+	dst := filepath.Join(buildPath, src)
+	l.Debug("copying values file", "src", src, "dst", dst)
+	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		return fmt.Errorf("failed to copy values file %s: %w", src, err)
+	}
+
+	// Set appropriate file permissions
+	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	}
+
+	return nil
 }

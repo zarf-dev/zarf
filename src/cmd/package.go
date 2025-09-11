@@ -23,6 +23,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"oras.land/oras-go/v2/registry"
 
@@ -70,6 +71,7 @@ type packageCreateOptions struct {
 	output                  string
 	differentialPackagePath string
 	setVariables            map[string]string
+	valuesFiles             []string
 	sbom                    bool
 	sbomOutput              string
 	skipSBOM                bool
@@ -114,6 +116,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
 	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgCreateValues), lang.CmdPackageCreateFlagValuesFiles)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
@@ -156,7 +159,22 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+
+	// Merge SetVariables and config variables.
+	setVars := helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	fileValues, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
+	// Merge setVars and valuesFiles together
+	// TODO(mkcp): I've commented it out for now, but this is intended as a way for us support variables' key and value
+	// space with values' go-templates syntax. This should help nudge users towards the new templating syntax while
+	// maintaining compatibility.
+	// values := value.MapVariablesToValues(o.setVariables)
+	// value.DeepMerge(values, fileValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -167,7 +185,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RegistryOverrides:       o.registryOverrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
-		SetVariables:            o.setVariables,
+		SetVariables:            setVars,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
@@ -175,8 +193,9 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
+		Values:                  fileValues,
 	}
-	_, err = packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -185,11 +204,14 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create package: %w", err)
 	}
+	l.Debug("package created", "path", pkgPath)
 	return nil
 }
 
 type packageDeployOptions struct {
 	namespaceOverride string
+	setVariables      map[string]string
+	valuesFiles       []string
 }
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
@@ -213,7 +235,8 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
@@ -237,8 +260,17 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	v := getViper()
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+
+	// Merge SetVariables and config variables.
+	setVars := helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+
+	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -268,7 +300,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		SetVariables:           setVars,
+		Values:                 values,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
@@ -628,6 +661,7 @@ type packageInspectValuesFilesOptions struct {
 	kubeVersion             string
 	setVariables            map[string]string
 	outputWriter            io.Writer
+	valuesFiles             []string
 }
 
 func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
@@ -653,6 +687,7 @@ func newPackageInspectValuesFilesCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 
 	return cmd
 }
@@ -663,7 +698,16 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -691,6 +735,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
+		Values:       values,
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -714,6 +759,7 @@ type packageInspectManifestsOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
 	outputWriter            io.Writer
 }
 
@@ -739,6 +785,7 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 
 	return cmd
 }
@@ -749,7 +796,16 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+
+	// Load files supplied by --values / -v
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -777,6 +833,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
+		Values:       values,
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
