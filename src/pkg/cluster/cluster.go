@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -162,6 +161,7 @@ type InitStateOptions struct {
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
+// If state was already initialized then internal services (registry, git server, artifact server) won't be updated
 func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.State, error) {
 	l := logger.From(ctx)
 
@@ -275,17 +275,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
-	} else {
-		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
-		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
-			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
 	}
 
 	s.InjectorInfo = opts.InjectorInfo
