@@ -160,33 +160,25 @@ jobs:
   # Run the tests on kind
   validate-kind-arm64:
     runs-on: ubuntu-24.04-arm
-    needs: build-e2e
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
-        with:
-          name: build-artifacts
-          path: build/
 
       - name: Setup golang
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
+      - name: Build zarf binary
+        run: build-cli-linux-arm
+
+      - name: Build zarf binary
+        run: make init-package ARCH=arm64
+
       - name: Setup Kind
         run: |
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
-
-      - name: Make Zarf executable
-        run: |
-          chmod +x build/zarf
-
-      - name: Build init-package for arm64
-        run: make init-package ARCH=arm64
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
