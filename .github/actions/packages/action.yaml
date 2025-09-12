@@ -6,10 +6,6 @@ inputs:
     description: 'Build the init package'
     required: false
     default: 'true'
-  build-examples:
-    description: 'Build the example packages'
-    required: false
-    default: 'true'
   os:
     description: 'Which OS to build for'
     required: false
@@ -29,7 +25,3 @@ runs:
         make init-package ARCH=amd64
       shell: ${{ inputs.shell }}
       if: ${{ inputs.init-package == 'true' }}
-    - run: |
-        make build-examples ARCH=amd64
-      shell: ${{ inputs.shell }}
-      if: ${{ inputs.build-examples == 'true' }}
