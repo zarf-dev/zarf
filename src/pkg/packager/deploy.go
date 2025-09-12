@@ -219,21 +219,32 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
-		// We don't want to orphan charts that are deployed already if a precursor component fails
-		deployedComponents[idx].InstalledCharts = charts
 
 		if deployErr != nil {
-			onFailure()
-			deployedComponents[idx].Status = state.ComponentStatusFailed
-			if d.isConnectedToCluster() {
-				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+			cleanup := func(ctx context.Context) {
+				onFailure()
+				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
+				deployedComponents[idx].Status = state.ComponentStatusFailed
+				deployedComponents[idx].InstalledCharts = d.c.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
+				if d.isConnectedToCluster() {
+					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+					}
 				}
 			}
-			return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+			select {
+			case <-ctx.Done():
+				// Use background context here in order to ensure the cleanup logic can run when the context is cancelled
+				cleanup(context.Background())
+				return nil, fmt.Errorf("context cancelled while deploying component %q: %w", component.Name, deployErr)
+			default:
+				cleanup(ctx)
+				return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+			}
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
+		deployedComponents[idx].InstalledCharts = d.c.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {

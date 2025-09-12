@@ -250,6 +250,54 @@ func (c *Cluster) GetInstalledChartsForComponent(ctx context.Context, packageNam
 	return installedCharts, nil
 }
 
+// MergeInstalledChartsForComponent merges the provided existing charts with the provided installed charts.
+func (c *Cluster) MergeInstalledChartsForComponent(existingCharts, installedCharts []state.InstalledChart, partial bool) []state.InstalledChart {
+	key := func(chart state.InstalledChart) string {
+		return fmt.Sprintf("%s/%s", chart.Namespace, chart.ChartName)
+	}
+
+	lookup := make(map[string]state.InstalledChart, 0)
+	for _, chart := range existingCharts {
+		lookup[key(chart)] = chart
+	}
+
+	// Track which keys are still present in newCharts
+	seen := make(map[string]struct{}, len(installedCharts)+len(existingCharts))
+
+	for _, chart := range installedCharts {
+		k := key(chart)
+		seen[k] = struct{}{}
+
+		if _, ok := lookup[k]; ok {
+			existingChart := lookup[k]
+			existingChart.ConnectStrings = chart.ConnectStrings
+			existingChart.Status = chart.Status
+			existingChart.Tracked = true
+			lookup[k] = existingChart
+		} else {
+			chart.Tracked = true
+			lookup[k] = chart
+		}
+	}
+
+	// Mark existing ones that are no longer present if not a partial
+	if !partial {
+		for k, chart := range lookup {
+			if _, ok := seen[k]; !ok {
+				chart.Tracked = false
+				lookup[k] = chart
+			}
+		}
+	}
+
+	merged := make([]state.InstalledChart, 0, len(lookup))
+	for _, chart := range lookup {
+		merged = append(merged, chart)
+	}
+
+	return merged
+}
+
 // UpdateInternalArtifactServerToken updates the the artifact server token on the internal gitea server and returns it
 func (c *Cluster) UpdateInternalArtifactServerToken(ctx context.Context, oldGitServer state.GitServerInfo) (string, error) {
 	tunnel, err := c.NewTunnel(state.ZarfNamespaceName, SvcResource, ZarfGitServerName, "", 0, ZarfGitServerPort)

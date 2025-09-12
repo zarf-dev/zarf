@@ -427,4 +427,5 @@ type InstalledChart struct {
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
 	Status         ChartStatus    `json:"status"`
+	Tracked        bool           `json:"tracked"`
 }
