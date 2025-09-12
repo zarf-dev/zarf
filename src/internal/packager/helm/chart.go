@@ -77,12 +77,12 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	// Setup K8s connection.
 	actionConfig, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
 	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	histClient := action.NewHistory(actionConfig)
@@ -126,7 +126,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		releases, err := histClient.Run(zarfChart.ReleaseName)
 		if err != nil {
-			return nil, "", errors.Join(err, installErr)
+			return nil, zarfChart.ReleaseName, errors.Join(err, installErr)
 		}
 		previouslyDeployedVersion := 0
 
@@ -139,7 +139,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		// No prior releases means this was an initial install.
 		if previouslyDeployedVersion == 0 {
-			return nil, "", installErr
+			return nil, zarfChart.ReleaseName, installErr
 		}
 
 		// Attempt to rollback on a failed upgrade.
@@ -148,12 +148,12 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		if err != nil {
 			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
-		return nil, "", installErr
+		return nil, zarfChart.ReleaseName, installErr
 	}
 
 	resourceList, err := actionConfig.KubeClient.Build(bytes.NewBufferString(release.Manifest), true)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to build the resource list: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to build the resource list: %w", err)
 	}
 
 	runtimeObjs := []runtime.Object{}
@@ -164,7 +164,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		l.Info("running health checks", "chart", zarfChart.Name)
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
-			return nil, "", err
+			return nil, zarfChart.ReleaseName, err
 		}
 	}
 	l.Debug("done processing Helm chart", "name", zarfChart.Name, "duration", time.Since(start))
