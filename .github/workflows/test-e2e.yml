@@ -186,8 +186,7 @@ jobs:
           chmod +x build/zarf
 
       - name: Build init-package for arm64
-        run: |
-          make init-package ARCH=arm64
+        run: make init-package ARCH=arm64
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
