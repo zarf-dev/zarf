@@ -95,6 +95,11 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
+	// If an external registry is used then don't allow users to configure the internal registry / injector
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-proxy")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
+
 	cmd.Flags().SortFlags = true
 
 	return cmd

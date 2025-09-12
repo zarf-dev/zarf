@@ -10,6 +10,9 @@ proxy:
   enabled: false
   injectorHostPort: 5001
   tolerations: []
+  registry:
+    image:
+      repository: registry
   image:
     repository: alpine/socat
     tag: 1.8.0.3
