@@ -170,10 +170,12 @@ jobs:
           go-version-file: go.mod
 
       - name: Build zarf binary
-        run: make build-cli-linux-arm
+        run: |
+          make build-cli-linux-arm
+          mv build/zarf-arm build/zarf
 
       - name: Build init package
-        run: build/zarf-arm package create -o build -a arm64 --confirm .
+        run: make init-package ARCH=arm64
 
       - name: Setup Kind
         run: |
