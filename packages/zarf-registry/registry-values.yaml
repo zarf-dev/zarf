@@ -15,9 +15,14 @@ imagePullSecrets:
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
   hostNetwork: ###ZARF_VAR_HOST_NETWORK###
+  tolerations:
+    ###ZARF_VAR_PROXY_TOLERATIONS###
   image:
     repository: "###ZARF_SEED_REGISTRY###/alpine/socat"
     tag: "1.8.0.3"
+  registry:
+    image:
+      repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
   injector:
     hostPort: ###ZARF_INJECTOR_HOSTPORT###
     image: "###ZARF_INJECTOR_IMAGE###"

@@ -85,6 +85,11 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: PROXY_TOLERATIONS
+    description: Custom tolerations array for the registry proxy and injector
+    default: ""
+    autoIndent: true
+
   - name: REGISTRY_HPA_AUTO_SIZE
     description: Enable to set min and max replicas based on amount of nodes
     default: "false"
@@ -115,9 +120,9 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.2.0/zarf-injector-amd64
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "942de1dcf3e91855370acf81446136c0a1357f5805b30d90b406c7dcda943de4"
+        shasum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
         executable: true
 
   - name: zarf-injector
@@ -130,9 +135,9 @@ components:
         architecture: arm64
     files:
       # Rust Injector Binary
-      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.2.0/zarf-injector-arm64
+      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-arm64
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "eb4e2fd9450c5a502906fe31bac990b427b358eabddb58fa7a7faeb2d7f9dea5"
+        shasum: "7a677809accc0d3d9b1cddc8d6be07ebf0a883a1db887e50828bb3df0e824577"
         executable: true
 
   - name: zarf-seed-registry

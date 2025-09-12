@@ -45,7 +45,6 @@ jobs:
         uses: ./.github/actions/packages
         with:
           init-package: "false"
-          build-examples: "false"
 
       - name: Setup k3d
         uses: ./.github/actions/k3d
@@ -59,7 +58,3 @@ jobs:
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: always()
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs

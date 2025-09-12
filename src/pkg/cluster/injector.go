@@ -427,6 +427,8 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 		}).
 		WithSpec(
 			v1ac.PodSpec().
+				// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
+				WithTerminationGracePeriodSeconds(1).
 				WithNodeName(nodeName).
 				WithRestartPolicy(corev1.RestartPolicyNever).
 				WithSecurityContext(

@@ -43,8 +43,6 @@ jobs:
 
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
-        with:
-          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -126,7 +124,3 @@ jobs:
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs
