@@ -159,7 +159,7 @@ jobs:
 
   # Run the tests on kind
   validate-kind:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: build-e2e
     steps:
       - name: Checkout
@@ -181,6 +181,10 @@ jobs:
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
 
+      - name: Build init-package for arm64
+        run: |
+          make release-init-package ARCH=arm64
+
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
@@ -191,7 +195,7 @@ jobs:
 
       - name: Run tests
         run: |
-          make test-e2e-with-cluster ARCH=amd64
+          make test-e2e-with-cluster ARCH=arm64
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
