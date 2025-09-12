@@ -173,7 +173,7 @@ jobs:
         run: make build-cli-linux-arm
 
       - name: Build init package
-        run: make init-package ARCH=arm64
+        run: build/zarf-arm package create -o build -a arm64 --confirm .
 
       - name: Setup Kind
         run: |
