@@ -158,7 +158,7 @@ jobs:
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e-with-cluster ARCH=amd64
 
   # Run the tests on kind
-  validate-kind:
+  validate-kind-arm64:
     runs-on: ubuntu-24.04-arm
     needs: build-e2e
     steps:
@@ -181,13 +181,13 @@ jobs:
           kind delete cluster && kind create cluster
           kubectl scale deploy -n kube-system coredns --replicas=1
 
-      - name: Build init-package for arm64
-        run: |
-          make release-init-package ARCH=arm64
-
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
+
+      - name: Build init-package for arm64
+        run: |
+          make init-package ARCH=arm64
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
