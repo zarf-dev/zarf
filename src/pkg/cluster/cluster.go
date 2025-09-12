@@ -247,6 +247,13 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.IPFamily = ipFamily
 
+		if opts.RegistryInfo.ProxyMode {
+			err = c.generateRegistryCerts(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate certs: %w", err)
+			}
+		}
+
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -300,6 +307,71 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	return s, nil
+}
+
+// generateRegistryCerts creates CA, server, and client certificates for registry mTLS
+// and applies them to the cluster as Kubernetes secrets
+func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
+	l := logger.From(ctx)
+	l.Info("generating mTLS certificates for registry")
+
+	// Generate CA certificate
+	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
+	if err != nil {
+		return fmt.Errorf("failed to generate CA certificate: %w", err)
+	}
+
+	// Generate server certificate for registry
+	serverHosts := []string{
+		"zarf-docker-registry",
+		"zarf-docker-registry.zarf.svc.cluster.local",
+		"localhost",
+		"127.0.0.1",
+	}
+	serverCert, serverKey, err := pki.GenerateServerCert(caCert, caKey, "zarf-docker-registry", serverHosts)
+	if err != nil {
+		return fmt.Errorf("failed to generate server certificate: %w", err)
+	}
+
+	// Generate client certificate for proxy
+	clientCert, clientKey, err := pki.GenerateClientCert(caCert, caKey, "zarf-registry-proxy")
+	if err != nil {
+		return fmt.Errorf("failed to generate client certificate: %w", err)
+	}
+
+	// Create CA secret
+	caSecret := v1ac.Secret("zarf-registry-ca", state.ZarfNamespaceName).
+		WithData(map[string][]byte{
+			"ca.pem": caCert,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, caSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create CA secret: %w", err)
+	}
+
+	// Create server TLS secret
+	serverSecret := v1ac.Secret("zarf-registry-server-tls", state.ZarfNamespaceName).
+		WithType(corev1.SecretTypeTLS).
+		WithData(map[string][]byte{
+			"tls.crt": serverCert,
+			"tls.key": serverKey,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create server TLS secret: %w", err)
+	}
+
+	// Create proxy TLS secret
+	proxySecret := v1ac.Secret("zarf-registry-proxy-tls", state.ZarfNamespaceName).
+		WithType(corev1.SecretTypeTLS).
+		WithData(map[string][]byte{
+			"tls.crt": clientCert,
+			"tls.key": clientKey,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
+	}
+
+	l.Info("mTLS certificates generated and stored as Kubernetes secrets")
+	return nil
 }
 
 // LoadState utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
