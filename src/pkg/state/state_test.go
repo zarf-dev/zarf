@@ -283,3 +283,85 @@ func TestMergeStateAgent(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
 }
+
+func TestMergeInstalledChartsForComponent(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		existingCharts  []InstalledChart
+		installedCharts []InstalledChart
+		expectedCharts  []InstalledChart
+	}{
+		{
+			name: "existing charts are merged",
+			existingCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+				},
+			},
+			installedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+				},
+			},
+			expectedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+				},
+			},
+		},
+		{
+			name: "overlapping charts are merged",
+			existingCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+				},
+			},
+			installedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+				},
+			},
+			expectedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
+			require.Equal(t, tt.expectedCharts, actual)
+		})
+	}
+}

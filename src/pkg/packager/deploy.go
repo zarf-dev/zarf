@@ -225,7 +225,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				onFailure()
 				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
 				deployedComponents[idx].Status = state.ComponentStatusFailed
-				deployedComponents[idx].InstalledCharts = d.c.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
+				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
 				if d.isConnectedToCluster() {
 					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
@@ -244,7 +244,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
-		deployedComponents[idx].InstalledCharts = d.c.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
+		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
