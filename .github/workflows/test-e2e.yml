@@ -44,8 +44,6 @@ jobs:
 
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
-        with:
-          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
