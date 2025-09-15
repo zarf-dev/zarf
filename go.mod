@@ -8,17 +8,13 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 // Once https://github.com/glebarez/go-sqlite updates to handle breaking changes in modernc.org/sqlite v1.33.0 this can be removed
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
-// This addresses https://github.com/advisories/GHSA-wjrx-6529-hcj3 until Syft,
-// which is the dependency that brings go-getter in, makes a new release
-replace github.com/hashicorp/go-getter => github.com/hashicorp/go-getter v1.7.9
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250408180537-ec8fa27f0d9f
-	github.com/anchore/stereoscope v0.1.8
-	github.com/anchore/syft v1.31.0
+	github.com/anchore/stereoscope v0.1.9-0.20250826202322-ef061ea78385
+	github.com/anchore/syft v1.32.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
@@ -108,7 +104,7 @@ require (
 	github.com/containerd/platforms v1.0.0-rc.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/diskfs/go-diskfs v1.6.1-0.20250601133945-2af1c7ece24c // indirect
+	github.com/diskfs/go-diskfs v1.7.0 // indirect
 	github.com/elliotchance/phpserialize v1.4.0 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
@@ -190,6 +186,9 @@ require (
 	go4.org v0.0.0-20230225012048-214862532bf5 // indirect
 	golang.org/x/tools v0.35.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
+	modernc.org/strutil v1.2.1 // indirect
+	modernc.org/token v1.1.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
@@ -312,7 +311,7 @@ require (
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/containerd/containerd v1.7.27 // indirect
+	github.com/containerd/containerd v1.7.28 // indirect
 	github.com/containerd/continuity v0.4.4 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -333,7 +332,7 @@ require (
 	github.com/docker/cli v28.3.3+incompatible
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
+	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -401,7 +400,7 @@ require (
 	github.com/hako/durafmt v0.0.0-20210608085754-5c1018a4e16b // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-getter v1.7.8 // indirect
+	github.com/hashicorp/go-getter v1.7.9 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -602,7 +601,7 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.38.2 // indirect
+	modernc.org/sqlite v1.38.2
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.7.1 // indirect
