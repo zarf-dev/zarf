@@ -37,6 +37,19 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+
+	// Registry certificate file names
+)
+
+// Registry TLS secret and certificate names
+const (
+	ZarfRegistryCASecretName    = "zarf-registry-ca"
+	ZarfRegistryServerTLSSecret = "zarf-registry-server-tls"
+	ZarfRegistryProxyTLSSecret  = "zarf-registry-proxy-tls"
+
+	ZarfRegistryCAFile     = "ca.pem"
+	ZarfRegistryClientCert = "tls.crt"
+	ZarfRegistryClientKey  = "tls.key"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -340,31 +353,31 @@ func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 	}
 
 	// Create CA secret
-	caSecret := v1ac.Secret("zarf-registry-ca", state.ZarfNamespaceName).
+	caSecret := v1ac.Secret(ZarfRegistryCASecretName, state.ZarfNamespaceName).
 		WithData(map[string][]byte{
-			"ca.pem": caCert,
+			ZarfRegistryCAFile: caCert,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, caSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create CA secret: %w", err)
 	}
 
 	// Create server TLS secret
-	serverSecret := v1ac.Secret("zarf-registry-server-tls", state.ZarfNamespaceName).
+	serverSecret := v1ac.Secret(ZarfRegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			"tls.crt": serverCert,
-			"tls.key": serverKey,
+			ZarfRegistryClientCert: serverCert,
+			ZarfRegistryClientKey:  serverKey,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
 	// Create proxy TLS secret
-	proxySecret := v1ac.Secret("zarf-registry-proxy-tls", state.ZarfNamespaceName).
+	proxySecret := v1ac.Secret(ZarfRegistryProxyTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			"tls.crt": clientCert,
-			"tls.key": clientKey,
+			ZarfRegistryClientCert: clientCert,
+			ZarfRegistryClientKey:  clientKey,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)

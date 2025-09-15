@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -29,7 +28,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultRetries = 3
@@ -99,11 +100,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}),
 		}
 
-		//FIXME, use these two
-		client.Client.Transport, err = orasTransportWithClientCerts(
-			"/home/austin/code/zarf/mtls-test/cert_dir/client-cert.pem",
-			"/home/austin/code/zarf/mtls-test/cert_dir/client-key.pem",
-			"/home/austin/code/zarf/mtls-test/cert_dir/ca.pem")
+		client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
 		if err != nil {
 			return err
 		}
@@ -227,19 +224,39 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 	return nil
 }
 
-func orasTransportWithClientCerts(clientCert, clientKey, caCert string) (http.RoundTripper, error) {
+func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
+	if c == nil {
+		return nil, fmt.Errorf("cluster client is required")
+	}
+
+	// Get CA certificate from secret
+	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryCASecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CA secret: %w", err)
+	}
+	caCertPEM := caSecret.Data[cluster.ZarfRegistryCAFile]
+	if len(caCertPEM) == 0 {
+		return nil, fmt.Errorf("CA certificate not found in secret")
+	}
+
+	// Get client certificate from proxy TLS secret
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryProxyTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client TLS secret: %w", err)
+	}
+	clientCertPEM := clientSecret.Data[cluster.ZarfRegistryClientCert]
+	clientKeyPEM := clientSecret.Data[cluster.ZarfRegistryClientKey]
+	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
+		return nil, fmt.Errorf("client certificate or key not found in secret")
+	}
+
 	// Load client certificate
-	cert, err := tls.LoadX509KeyPair(clientCert, clientKey)
+	cert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)
 	}
 
 	// Load CA certificate
-	caCertPEM, err := os.ReadFile(caCert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CA certificate: %w", err)
-	}
-
 	caCertPool := x509.NewCertPool()
 	if !caCertPool.AppendCertsFromPEM(caCertPEM) {
 		return nil, fmt.Errorf("failed to parse CA certificate")
