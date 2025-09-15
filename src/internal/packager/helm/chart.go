@@ -146,7 +146,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		l.Info("performing Helm rollback", "chart", zarfChart.Name)
 		err = rollbackChart(zarfChart.ReleaseName, previouslyDeployedVersion, actionConfig, opts.Timeout)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
+			return nil, zarfChart.ReleaseName, fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
 		return nil, zarfChart.ReleaseName, installErr
 	}
