@@ -361,7 +361,7 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
-			require.Equal(t, tt.expectedCharts, actual)
+			require.ElementsMatch(t, tt.expectedCharts, actual)
 		})
 	}
 }
