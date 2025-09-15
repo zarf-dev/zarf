@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: remove-test
+
+components:
+  - name: first
+    required: true
+    manifests:
+      - name: pod
+        namespace: first
+        files:
+          - configmap.yaml
+
+  - name: second
+    required: true
+    manifests:
+      - name: pod
+        namespace: second
+        files:
+          - configmap.yaml

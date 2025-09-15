@@ -191,6 +191,9 @@ func identifySource(src string) (string, error) {
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
 func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster, src string, namespaceOverride string, opts LoadOptions) (_ v1alpha1.ZarfPackage, err error) {
+	if opts.Filter == nil {
+		opts.Filter = filters.Empty()
+	}
 	srcType, err := identifySource(src)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -200,6 +203,10 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("cannot get Zarf package from Kubernetes without configuration")
 		}
 		depPkg, err := cluster.GetDeployedPackage(ctx, src, state.WithPackageNamespaceOverride(namespaceOverride))
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		depPkg.Data.Components, err = opts.Filter.Apply(depPkg.Data)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
