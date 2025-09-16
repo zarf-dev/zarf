@@ -94,6 +94,25 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 	if gitCred != nil {
 		cloneOpts.Auth = &gitCred.Auth
 	}
+
+	// Use this independent of a *git.Repository
+	checkout := func(refPlain string, ref plumbing.ReferenceName, r *Repository) error {
+		// Optionally checkout ref
+		if ref != emptyRef && !ref.IsBranch() {
+			// Remove the "refs/tags/" prefix from the ref.
+			stripped := strings.TrimPrefix(refPlain, "refs/tags/")
+			// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
+			alias := fmt.Sprintf("zarf-ref-%s", stripped)
+			trunkBranchName := plumbing.NewBranchReferenceName(alias)
+			// Checkout the ref as a branch.
+			err := r.checkoutRefAsBranch(stripped, trunkBranchName)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
 		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)
@@ -101,6 +120,11 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 		if err != nil {
 			return nil, err
 		}
+		err = checkout(refPlain, ref, r)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 
 	// If we're cloning the whole repo, we need to also fetch the other branches besides the default.
@@ -118,18 +142,9 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 		}
 	}
 
-	// Optionally checkout ref
-	if ref != emptyRef && !ref.IsBranch() {
-		// Remove the "refs/tags/" prefix from the ref.
-		stripped := strings.TrimPrefix(refPlain, "refs/tags/")
-		// Use the plain ref as part of the branch name so it is unique and doesn't conflict with other refs.
-		alias := fmt.Sprintf("zarf-ref-%s", stripped)
-		trunkBranchName := plumbing.NewBranchReferenceName(alias)
-		// Checkout the ref as a branch.
-		err := r.checkoutRefAsBranch(stripped, trunkBranchName)
-		if err != nil {
-			return nil, err
-		}
+	err = checkout(refPlain, ref, r)
+	if err != nil {
+		return nil, err
 	}
 
 	return r, nil
