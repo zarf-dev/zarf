@@ -60,6 +60,10 @@ func TestResolveImports(t *testing.T) {
 			path:   "./testdata/import/flavor",
 			flavor: "pistachio",
 		},
+		{
+			name: "skeleton properties are overridden",
+			path: "./testdata/import/override",
+		},
 	}
 
 	for _, tc := range testCases {
