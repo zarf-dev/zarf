@@ -326,7 +326,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 // and applies them to the cluster as Kubernetes secrets
 func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
-	l.Info("generating mTLS certificates for registry")
 
 	// Generate CA certificate
 	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
