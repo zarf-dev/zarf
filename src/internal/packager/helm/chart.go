@@ -54,6 +54,10 @@ type InstallUpgradeOptions struct {
 	Timeout time.Duration
 	// Retries for the helm install/upgrade
 	Retries int
+	// Pkg is the zarf package being installed
+	Pkg *v1alpha1.ZarfPackage
+	// NamespaceOverride is the namespace to use for the chart
+	NamespaceOverride string
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -80,7 +84,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
+	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.Pkg, opts.NamespaceOverride)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -200,7 +204,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
-	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
+	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.Pkg, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}

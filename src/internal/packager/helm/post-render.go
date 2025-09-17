@@ -40,12 +40,14 @@ type renderer struct {
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
 
-	connectStrings state.ConnectStrings
-	namespaces     map[string]*corev1.Namespace
+	connectStrings    state.ConnectStrings
+	namespaces        map[string]*corev1.Namespace
+	pkg               *v1alpha1.ZarfPackage
+	namespaceOverride string
 }
 
 func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State,
-	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
+	actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkg *v1alpha1.ZarfPackage, namespaceOverride string) (*renderer, error) {
 	if c == nil {
 		return nil, fmt.Errorf("cluster required to run post renderer")
 	}
@@ -66,6 +68,8 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		variableConfig:         variableConfig,
 		connectStrings:         state.ConnectStrings{},
 		namespaces:             map[string]*corev1.Namespace{},
+		pkg:                    pkg,
+		namespaceOverride:      namespaceOverride,
 	}
 
 	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
@@ -115,6 +119,19 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if serverNamespace.Name == name {
 				existingNamespace = true
 			}
+		}
+
+		// Add the package label to the namespace
+		if r.pkg != nil {
+			labels := namespace.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			labels[v1alpha1.PackageLabel] = r.pkg.Metadata.Name
+			if r.namespaceOverride != "" {
+				labels[v1alpha1.NamespaceOverrideLabel] = r.namespaceOverride
+			}
+			namespace.SetLabels(labels)
 		}
 
 		if !existingNamespace {
@@ -177,6 +194,30 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
+		}
+		// If the package is not provided then the labels will not be added
+		if r.pkg != nil {
+			// Add the package label to all resources
+			labels := rawData.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			labels[v1alpha1.PackageLabel] = r.pkg.Metadata.Name
+			// if a namespace override is specified, add it to the labels
+			if r.namespaceOverride != "" {
+				labels[v1alpha1.NamespaceOverrideLabel] = r.namespaceOverride
+			}
+			rawData.SetLabels(labels)
+			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
+			if err := r.addLabelsToNestedPath(rawData, []string{"spec", "template", "metadata", "labels"}); err != nil {
+				return fmt.Errorf("failed to add labels to pod template: %w", err)
+			}
+			newContent, err := yaml.Marshal(rawData)
+			if err != nil {
+				return fmt.Errorf("failed to marshal manifest: %w", err)
+			}
+			// Update the resource content with the new labels
+			resource.Content = string(newContent)
 		}
 
 		switch rawData.GetKind() {
@@ -269,4 +310,27 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
 	return nil
+}
+
+// addLabelsToNestedPath adds package labels to a nested path in an unstructured object
+func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []string) error {
+	// Check if the nested path exists and get the labels
+	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
+	if err != nil {
+		return err
+	} else if !found {
+		// Path doesn't exist, nothing to do
+		return nil
+	}
+	if templateLabels == nil {
+		templateLabels = map[string]string{}
+	}
+	// Add package labels
+	templateLabels[v1alpha1.PackageLabel] = r.pkg.Metadata.Name
+	if r.namespaceOverride != "" {
+		templateLabels[v1alpha1.NamespaceOverrideLabel] = r.namespaceOverride
+	}
+
+	// Set the updated labels back
+	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
 }

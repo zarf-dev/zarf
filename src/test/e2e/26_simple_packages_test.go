@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -14,6 +15,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/test"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestDosGames(t *testing.T) {
@@ -72,10 +75,60 @@ func TestManifests(t *testing.T) {
 
 	path := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch))
 
-	// Deploy the package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	// Deploy the package. Need to adopt existing resources to make sure that the label update for the package name
+	// applies to any previously created namespaces
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--adopt-existing-resources")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// Validate the namespaces are labeled
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "namespaces", "-l", "zarf.dev/package=manifests", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+
+	namespaceList := &corev1.NamespaceList{}
+	err = json.Unmarshal([]byte(stdOut), namespaceList)
+	require.NoError(t, err)
+	require.Len(t, namespaceList.Items, 3, "expected 3 namespaces")
+	// validate the deployments
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "deployments", "-l", "zarf.dev/package=manifests", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+
+	deploymentList := &appsv1.DeploymentList{}
+	err = json.Unmarshal([]byte(stdOut), deploymentList)
+	require.NoError(t, err)
+	require.Len(t, deploymentList.Items, 3, "expected 3 deployments")
+
+	// Wait for all the deployments to be ready
+	stdOut, stdErr, err = e2e.Kubectl(t, "wait", "deployment", "-l", "zarf.dev/package=manifests", "--for=condition=Available", "--all-namespaces", "--timeout=1m")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// List pods by the zarf.dev/package label
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "pods", "-l", "zarf.dev/package=manifests", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+
+	podList := &corev1.PodList{}
+	err = json.Unmarshal([]byte(stdOut), podList)
+	require.NoError(t, err)
+
+	require.Len(t, podList.Items, 6, "expected 6 pods")
+
+	// Each deployment should have 2 replicas.
+	podInfoCount := 0
+	httpdCount := 0
+	nginxCount := 0
+	for _, pod := range podList.Items {
+		if pod.Labels["app"] == "httpd" {
+			httpdCount++
+		}
+		if pod.Labels["app"] == "nginx" {
+			nginxCount++
+		}
+		if pod.Labels["app"] == "podinfo" {
+			podInfoCount++
+		}
+	}
+	require.Equal(t, 2, httpdCount)
+	require.Equal(t, 2, nginxCount)
+	require.Equal(t, 2, podInfoCount)
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "manifests", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -154,6 +155,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// Pkg is the Zarf package being initialized
+	Pkg *v1alpha1.ZarfPackage
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -232,6 +235,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		// Try to create the zarf namespace.
 		l.Debug("creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
+		// Add the package label
+		zarfNamespace.Labels[v1alpha1.PackageLabel] = opts.Pkg.Metadata.Name
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)

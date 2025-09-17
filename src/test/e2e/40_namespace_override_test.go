@@ -5,11 +5,13 @@
 package test
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestSingleNamespaceOverride(t *testing.T) {
@@ -39,6 +41,29 @@ func TestSingleNamespaceOverride(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "list")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Contains(t, stdOut, "test2")
+
+	// Get the config maps for test and test2 packages by the expected labels
+	// The first package should not have a namespace override so filter out resources without that label
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "configmaps", "-l", "!zarf.dev/namespace-override,zarf.dev/package=test-package", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+	configMaps := &corev1.ConfigMapList{}
+	err = json.Unmarshal([]byte(stdOut), configMaps)
+	require.NoError(t, err)
+	require.Len(t, configMaps.Items, 3)
+	for _, configMap := range configMaps.Items {
+		require.Equal(t, "test", configMap.Namespace)
+	}
+
+	// The second package should have a namespace override and package labels
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "configmaps", "-l", "zarf.dev/package=test-package,zarf.dev/namespace-override=test2", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+	configMaps = &corev1.ConfigMapList{}
+	err = json.Unmarshal([]byte(stdOut), configMaps)
+	require.NoError(t, err)
+	require.Len(t, configMaps.Items, 3)
+	for _, configMap := range configMaps.Items {
+		require.Equal(t, "test2", configMap.Namespace)
+	}
 
 	// remove the baseline by package name
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--confirm")

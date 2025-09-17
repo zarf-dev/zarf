@@ -6,7 +6,8 @@
     "namespace": "zarf",
     "labels": {
       "app": "zarf-injector",
-      "zarf.dev/agent": "ignore"
+      "zarf.dev/agent": "ignore",
+      "zarf.dev/package": "test"
     }
   },
   "spec": {
