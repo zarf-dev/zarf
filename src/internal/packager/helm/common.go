@@ -64,10 +64,11 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 	chart := v1alpha1.ZarfChart{
 		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:     tmpChart.Metadata.Version,
-		Namespace:   manifest.Namespace,
-		NoWait:      manifest.NoWait,
+		ReleaseName:            fmt.Sprintf("zarf-%s", sha1ReleaseName),
+		Version:                tmpChart.Metadata.Version,
+		Namespace:              manifest.Namespace,
+		NoWait:                 manifest.NoWait,
+		AdoptExistingResources: manifest.AdoptExistingResources,
 	}
 
 	return chart, tmpChart, nil
