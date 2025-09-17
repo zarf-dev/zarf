@@ -1,6 +1,6 @@
 module github.com/zarf-dev/zarf
 
-go 1.24.6
+go 1.25.0
 
 // TODO (@AABRO): Pending merge into github.com/gojsonschema/gojsonschema (https://github.com/gojsonschema/gojsonschema/pull/5)
 replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonschema v0.0.0-20231116163348-e00f069122d6
@@ -25,7 +25,7 @@ require (
 	github.com/fairwindsops/pluto/v5 v5.22.5
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
-	github.com/fluxcd/pkg/apis/meta v1.18.0
+	github.com/fluxcd/pkg/apis/meta v1.21.0
 	github.com/fluxcd/source-controller/api v1.6.2
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/goccy/go-yaml v1.18.0
