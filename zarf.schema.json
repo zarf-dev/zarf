@@ -164,7 +164,7 @@
     },
     "SetValue": {
       "properties": {
-        "name": {
+        "key": {
           "type": "string",
           "description": "Key represents which value to assign to."
         },
@@ -614,7 +614,7 @@
             "$ref": "#/$defs/SetValue"
           },
           "type": "array",
-          "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
+          "description": "(onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
         },
         "description": {
           "type": "string",

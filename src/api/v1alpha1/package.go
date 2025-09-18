@@ -189,7 +189,7 @@ var SetValueString = SetValueType("json")
 // FIXME(mkcp): SetValues should probably come last.
 type SetValue struct {
 	// Key represents which value to assign to.
-	Key string `json:"name,omitempty"`
+	Key string `json:"key,omitempty"`
 	// Value is the current value at the key.
 	Value any `json:"value,omitempty"`
 	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when

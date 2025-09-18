@@ -280,7 +280,7 @@ type ZarfComponentAction struct {
 	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
-	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
+	// (onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetValues []SetValue `json:"setValues,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
