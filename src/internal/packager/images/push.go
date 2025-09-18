@@ -6,8 +6,12 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -24,7 +28,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultRetries = 3
@@ -93,14 +99,19 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
-
-		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
-		if err != nil {
-			return err
+		if cfg.RegistryInfo.ProxyMode {
+			client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
+			if err != nil {
+				return err
+			}
+		} else {
+			client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if err != nil {
+				return err
+			}
 		}
 
 		plainHTTP := cfg.PlainHTTP
-
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
@@ -217,6 +228,59 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	return nil
+}
+
+func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
+	if c == nil {
+		return nil, fmt.Errorf("cluster client is required")
+	}
+
+	// Get CA certificate from secret
+	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryCASecretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CA secret: %w", err)
+	}
+	caCertPEM := caSecret.Data[cluster.ZarfRegistryCAFile]
+	if len(caCertPEM) == 0 {
+		return nil, fmt.Errorf("CA certificate not found in secret")
+	}
+
+	// Get client certificate from proxy TLS secret
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryProxyTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client TLS secret: %w", err)
+	}
+	clientCertPEM := clientSecret.Data[cluster.ZarfRegistryClientCert]
+	clientKeyPEM := clientSecret.Data[cluster.ZarfRegistryClientKey]
+	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
+		return nil, fmt.Errorf("client certificate or key not found in secret")
+	}
+
+	// Load client certificate
+	cert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client certificate: %w", err)
+	}
+
+	// Load CA certificate
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(caCertPEM) {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+
+	// Configure TLS
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
+	transport.TLSClientConfig = tlsConfig
+	return transport, nil
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
