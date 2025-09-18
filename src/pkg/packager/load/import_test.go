@@ -61,8 +61,8 @@ func TestResolveImports(t *testing.T) {
 			flavor: "pistachio",
 		},
 		{
-			name: "skeleton properties are overridden",
-			path: "./testdata/import/override",
+			name: "chart version and url properties are not overridden",
+			path: "./testdata/import/chart",
 		},
 	}
 
