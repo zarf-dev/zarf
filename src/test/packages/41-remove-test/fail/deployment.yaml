@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: failing-deploy
+  labels:
+    app.kubernetes.io/name: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: deploy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: deploy
+    spec:
+      containers:
+        - name: chart
+          image: "nonexistent:0.0.1"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: /local.html
+              name: nonexistent
+              subPath: local.html
+      volumes:
+        - configMap:
+            name: nonexistent-cm
+          name: nonexistent
+
+          

@@ -1,0 +1,19 @@
+kind: ZarfPackageConfig
+metadata:
+  name: failing-deploy-remove-test
+
+components:
+  - name: first
+    required: true
+    manifests:
+      - name: pod
+        namespace: first
+        files:
+          - ../configmap.yaml
+  - name: second
+    required: true
+    manifests:
+      - name: deployment
+        namespace: second
+        files:
+          -  deployment.yaml
