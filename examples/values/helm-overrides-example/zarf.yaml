@@ -1,18 +1,18 @@
 kind: ZarfPackageConfig
 metadata:
   name: helm-overrides-example
-  description: This packages provides a simple example of the Values feature of Zarf
-  version: 0.0.1
+  description: "{{ .Values.package.description }}"
+  version: "{{ .Values.package.version }}"
 values:
   files:
     - values.yaml
 components:
-  - name: values-example-component
+  - name: "helm-overrides-component"
     charts:
-      - name: values-example-chart
+      - name: "helm-overrides-chart"
         version: 0.1.0
         localPath: "charts/example-chart"
-        namespace: values-example
+        namespace: "helm-overrides"
         values:
           - sourcePath: ".app.name"
             targetPath: ".appName"
@@ -21,4 +21,7 @@ components:
           - sourcePath: ".app.image.tag"
             targetPath: ".image.tag"
           - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+          # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
+          - sourcePath: ".database.host2"
             targetPath: ".config.database.host"

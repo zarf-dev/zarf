@@ -5,44 +5,52 @@ metadata:
 values:
   files:
     - values.yaml
+# These consts and vars and are here to demonstrate go-templating with vars and constants.
+constants:
+  - name: EXAMPLE_CONST
+    value: "foo"
+variables:
+  - name: EXAMPLE_VAR
+    default: "bar"
 components:
-  # The following component templates the provided .tf file with the defined AWS_REGION
-  # NOTE: this component does not actually execute this file in this example
-  - name: variables-with-terraform
-    description: Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file.
+  - name: values-with-terraform
+    description: Change a value in a regular file with a Zarf value. Set AWS_REGION variable to modify the file.
     required: true
     files:
       - source: simple-terraform.tf
         target: modified-terraform.tf
-    actions:
-      onDeploy:
-        after:
-          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
-          - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
-            # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
-            mute: true
-            setValues:
-              - key: .terraform.shasum
+        # Enables go-templating within the file.
+        template: false
+    # TODO(mkcp): Actions next
+    # actions:
+    #   onDeploy:
+    #     after:
+    #       # This command uses Zarf to return the SHASUM of the terraform file
+    #       - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
+    #         # `mute` is set to exclude the command output from being shown
+    #         mute: true
+    #         setValues:
+    #           - key: .terraform.shasum
 
-  # The following component deploys nginx to the cluster using the defined variables
-  - name: variables-with-nginx
-    description: "This component deploys nginx version {{ .Values.nginx.version }} to the cluster"
+  # The following component deploys nginx to the cluster using the defined values
+  - name: values-with-nginx
+    description: "This component deploys the latest nginx version to the cluster"
     required: true
     images:
-      # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
-      - "nginx:{{ .Values.nginx.version }}"
+      # TODO(mkcp): Pkgtemplates aren't implemented yet
+      - "nginx:latest"
     manifests:
-      - name: variables-with-nginx
-        # [alpha] This enables go-templating in the Manifest with Zarf values.
+      - name: values-with-nginx
+        # Enables go-templating within the files.
         template: true
         files:
-          - nginx-configmap.yaml
           - nginx-deployment.yaml
           - nginx-service.yaml
+          - nginx-configmap.yaml
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
-  This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
+  This example demonstrates how to define values in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` and `zarf package remove` with `{{ .Values.<foo> }}` as well as package-level info like `{{ .Metadata.<bar> }}` and `{{ .Build.<baz> }}`.
 
-  With these variables and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
+  With these values and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart.
