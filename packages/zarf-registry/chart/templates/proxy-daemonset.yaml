@@ -18,8 +18,8 @@ spec:
         - args:
           # FIXME: need to make ipv6  work too
           {{ if .Values.ipv6Only }}
-            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
-            - tcp6:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1
+            - TCP6-LISTEN:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1
           {{- else }}
             - TCP4-LISTEN:{{ .Values.service.nodePort }},reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1

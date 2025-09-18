@@ -99,10 +99,16 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
-
-		client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
-		if err != nil {
-			return err
+		if cfg.RegistryInfo.ProxyMode {
+			client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
+			if err != nil {
+				return err
+			}
+		} else {
+			client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if err != nil {
+				return err
+			}
 		}
 
 		plainHTTP := cfg.PlainHTTP
