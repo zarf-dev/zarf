@@ -75,9 +75,8 @@ func TestManifests(t *testing.T) {
 
 	path := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifests-%s-0.0.1.tar.zst", e2e.Arch))
 
-	// Deploy the package. Need to adopt existing resources to make sure that the label update for the package name
-	// applies to any previously created namespaces
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--adopt-existing-resources")
+	// Deploy the package
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Validate the namespaces are labeled

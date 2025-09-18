@@ -235,8 +235,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		// Try to create the zarf namespace.
 		l.Debug("creating the Zarf namespace")
 		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		// Add the package label
-		zarfNamespace.Labels[v1alpha1.PackageLabel] = opts.Pkg.Metadata.Name
+		if opts.Pkg != nil {
+			// Add the package label
+			zarfNamespace.Labels[v1alpha1.PackageLabel] = opts.Pkg.Metadata.Name
+		}
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
