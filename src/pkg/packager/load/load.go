@@ -5,20 +5,16 @@
 package load
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"text/template"
 	"time"
 
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
@@ -63,18 +59,17 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 
+	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	// Load top-level values files and ensure they're merged with user-provided values.
 	values, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse values files: %w", err)
 	}
 	value.DeepMerge(opts.Values, values)
-
-	// Apply values to templates in PackageDefinition
-	pkg, err = fillValuesTemplate(ctx, pkg, opts.Values)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to apply values to templates: %w", err)
-	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
@@ -90,7 +85,6 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-// TODO(mkcp): Validate values
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -217,77 +211,4 @@ func reloadComponentTemplatesInPackage(zarfPackage *v1alpha1.ZarfPackage) error 
 		}
 	}
 	return nil
-}
-
-// fillValuesTemplate takes a ZarfPackage and a value.Values and applies the values to the templates in the package,
-// including templates for package constants and metadata.
-// FIXME(mkcp): This feels a bit repetitive with fillActiveTemplate, but maybe moreso that the variable templating needs
-// to be extracted into its own layer, and we can explicitly process one step and then the other. We're maybe missing an
-// abstraction.
-func fillValuesTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, values value.Values) (v1alpha1.ZarfPackage, error) {
-	// Create template context
-	templateContext := map[string]any{
-		"Values":    values,
-		"Constants": pkg.Constants,
-		"Metadata":  pkg.Metadata,
-	}
-	logger.From(ctx).Debug("templating package", "packageName", pkg.Metadata.Name, "templateContext", templateContext)
-	start := time.Now()
-	defer func() {
-		logger.From(ctx).Debug("done templating package", "packageName", pkg.Metadata.Name, "duration", time.Since(start))
-	}()
-
-	// Marshal the package to YAML
-	yamlBytes, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to marshal package to YAML: %w", err)
-	}
-
-	// Create a new template and parse the YAML content
-	tmpl, err := template.New("package").Funcs(createTemplateFuncMap()).Parse(string(yamlBytes))
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse package template: %w", err)
-	}
-
-	// Execute the template with the templateContext
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, templateContext); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to execute package template: %w", err)
-	}
-
-	// Unmarshal the templated YAML back into a ZarfPackage
-	var templatedPkg v1alpha1.ZarfPackage
-	if err := goyaml.Unmarshal(buf.Bytes(), &templatedPkg); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to unmarshal templated package: %w", err)
-	}
-
-	return templatedPkg, nil
-}
-
-// FIXME(mkcp): This should definitely not be in load. Need a higher order templating layer.
-func createTemplateFuncMap() template.FuncMap {
-	return template.FuncMap{
-		"default": func(defaultVal any, val any) any {
-			if val == nil || val == "" {
-				return defaultVal
-			}
-			return val
-		},
-
-		// String operations
-		"upper":   func(s string) string { return strings.ToUpper(s) },
-		"lower":   func(s string) string { return strings.ToLower(s) },
-		"strjoin": func(sep string, slice []string) string { return strings.Join(slice, sep) },
-		"split":   func(sep, s string) []string { return strings.Split(s, sep) },
-		"trim":    func(s string) string { return strings.TrimSpace(s) },
-		"quote":   func(s string) string { return strconv.Quote(s) },
-		"repeat":  func(s string, count int) string { return strings.Repeat(s, count) },
-
-		// TODO(mkcp): Add some more
-		// Collection operations
-		// Type conversions
-		// Conditional logic
-		// Math
-		// Encoding
-	}
 }

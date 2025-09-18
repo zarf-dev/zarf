@@ -23,7 +23,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -386,20 +387,19 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
-	// TODO(mkcp): Add go-templating for values here
-
+	// TODO(mkcp): Apply go-templates for actions
 	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if hasFiles {
-		if err := processComponentFiles(ctx, pkgLayout, component, d.vc); err != nil {
+		if err := processComponentFiles(ctx, pkgLayout, component, d.vc, d.vals); err != nil {
 			return nil, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
@@ -570,6 +570,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 }
 
 func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -590,6 +591,14 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 				if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+				}
+			}
+			if manifest.Template {
+				path := filepath.Join(manifestDir, manifest.Files[idx])
+				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
+				err := template.ApplyToFile(ctx, path, path, pkgLayout.Pkg, d.vals, d.vc.GetSetVariableMap(), d.vc.GetConstants())
+				if err != nil {
+					return nil, err
 				}
 			}
 		}
@@ -719,7 +728,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) (err error) {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -783,6 +792,15 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				l.Debug("template file", "name", file.Target)
 				if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
+				}
+			}
+			// If the file has go-templating enabled, apply templates.
+			if file.Template {
+				// TODO(mkcp): Test this
+				l.Debug("templates enabled, processing file", "name", file.Target)
+				err = template.ApplyToFile(ctx, subFile, subFile, pkgLayout.Pkg, values, variableConfig.GetSetVariableMap(), pkgLayout.Pkg.Constants)
+				if err != nil {
+					return err
 				}
 			}
 		}
