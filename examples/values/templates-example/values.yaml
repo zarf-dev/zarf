@@ -1,7 +1,6 @@
 # Constants are defined on package create and do not change on deploy
 # This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
-# NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
-# ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
+# TODO(mkcp): Applying this in a component would require package templating, which isn't covered by alpha functionality.
 nginx:
   version: "1.29.1"
 site:
@@ -18,8 +17,20 @@ site:
 
 # terraform.path sets a filepath for a terraform file to be used as the contents of a template
 terraform:
+  # FIXME(mkcp): This is set via action, doesn't need to be defined as empty here.
   shasum: ""
   path: "modified-terraform.tf"
   aws:
     # Modifies modified-terraform.tf file
     region: "us-east-1"
+
+# TODO(mkcp): It would be good to have an example that leverages go-templates' more programmatic features. e.g
+# loops, pipelines, functions (quote, upper, lower), repeat, default,
+
+# TODO(mkcp): These are some examples from templating out the packagedefinition. Not really in scope for templating
+# files, manifests, and deploy / remove actions, but something we're likely to come back to on the road to deprecating Variables.
+package:
+  name: "templating-example"
+  description: "Example of using Zarf values to template out a package definition"
+  version: "0.0.1"
+

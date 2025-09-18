@@ -7,6 +7,8 @@ metadata:
     zarf.dev/connect-description: "Launch the nginx static site."
   labels:
     zarf.dev/connect-name: nginx
+    zarf.dev/example-var: {{ .Variables.EXAMPLE_VAR }}
+    zarf.dev/example-const: {{ .Constants.EXAMPLE_CONST }}
 spec:
   ports:
   - port: 8080

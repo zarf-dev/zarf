@@ -1,0 +1,36 @@
+kind: ZarfPackageConfig
+metadata:
+  name: helm-overrides-example
+  description: Example of using Zarf values to override Helm chart values
+  version: 0.0.1
+  architecture: arm64
+  aggregateChecksum: 70565b175a822ab4d0aeeac0deceab269fbd970efbae726136d10fc360cf1622
+build:
+  terminal: JVQCR6X9NF
+  user: kitpatella
+  architecture: arm64
+  timestamp: Wed, 10 Sep 2025 13:37:26 -0700
+  version: v0.61.2-34-g037e107e
+  migrations:
+  - scripts-to-actions
+  - pluralize-set-variable
+  lastNonBreakingVersion: v0.27.0
+components:
+- name: helm-overrides-example-component
+  charts:
+  - name: helm-overrides-chart
+    version: 0.1.0
+    localPath: charts/example-chart
+    namespace: helm-overrides
+    values:
+    - sourcePath: .app.name
+      targetPath: .appName
+    - sourcePath: .app.replicas
+      targetPath: .replicaCount
+    - sourcePath: .app.image.tag
+      targetPath: .image.tag
+    - sourcePath: .database.host
+      targetPath: .config.database.host
+values:
+  files:
+  - values.yaml
