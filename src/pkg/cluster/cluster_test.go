@@ -11,11 +11,85 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
+	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
+
+func TestGetIPFamily(t *testing.T) {
+	tests := []struct {
+		name          string
+		protocolsUsed []corev1.IPFamily
+		expected      state.IPFamily
+	}{
+		{
+			name:          "dual stack support",
+			protocolsUsed: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			expected:      state.IPFamilyDualStack,
+		},
+		{
+			name:          "ipv4 only support",
+			protocolsUsed: []corev1.IPFamily{corev1.IPv4Protocol},
+			expected:      state.IPFamilyIPv4,
+		},
+		{
+			name:          "ipv6 only support",
+			protocolsUsed: []corev1.IPFamily{corev1.IPv6Protocol},
+			expected:      state.IPFamilyIPv6,
+		},
+		{
+			name:          "ipv6 only support",
+			protocolsUsed: []corev1.IPFamily{corev1.IPv6Protocol},
+			expected:      state.IPFamilyIPv6,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cs := fake.NewClientset()
+			immediateWatcher := healthchecks.NewImmediateWatcher(status.CurrentStatus)
+
+			c := &Cluster{
+				Clientset: cs,
+				Watcher:   immediateWatcher,
+			}
+
+			// Create the service with the IP families based on the test case
+			testService := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-ip-family-test",
+					Namespace: state.ZarfNamespaceName,
+				},
+				Spec: corev1.ServiceSpec{
+					IPFamilies: tt.protocolsUsed,
+				},
+			}
+
+			// mimic the cluster setting setting the IP family
+			cs.PrependReactor("patch", "services", func(_ k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+				return true, testService, nil
+			})
+
+			cs.PrependReactor("get", "services", func(_ k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+				return true, testService, nil
+			})
+
+			cs.PrependReactor("delete", "services", func(_ k8stesting.Action) (handled bool, ret runtime.Object, err error) {
+				return true, nil, nil
+			})
+
+			ipFamily, err := c.GetIPFamily(ctx)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, ipFamily)
+		})
+	}
+}
 
 func TestInit(t *testing.T) {
 	s, err := state.Default()
@@ -157,8 +231,8 @@ func TestInit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			immediateWatcher := healthchecks.NewImmediateWatcher(status.CurrentStatus)
 			ctx := context.Background()
 			cs := fake.NewClientset()
 			for _, node := range tt.nodes {
@@ -175,6 +249,7 @@ func TestInit(t *testing.T) {
 			}
 			c := &Cluster{
 				Clientset: cs,
+				Watcher:   immediateWatcher,
 			}
 
 			// Create default service account in Zarf namespace
@@ -197,7 +272,19 @@ func TestInit(t *testing.T) {
 				}
 			}()
 
-			_, err := c.InitState(ctx, tt.initOpts)
+			svc := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-ip-family-test",
+					Namespace: state.ZarfNamespaceName,
+				},
+				Spec: corev1.ServiceSpec{
+					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+				},
+			}
+			_, err := cs.CoreV1().Services(svc.Namespace).Create(ctx, svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			_, err = c.InitState(ctx, tt.initOpts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

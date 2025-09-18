@@ -201,9 +201,10 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 }
 
 // List of feature names
-var (
+const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode Name = "axolotl-mode"
+	AxolotlMode   Name = "axolotl-mode"
+	RegistryProxy Name = "registry-proxy"
 )
 
 func init() {
@@ -224,6 +225,13 @@ func init() {
 			Enabled: false,
 			Since:   "v0.60.0",
 			Stage:   Alpha,
+		},
+		{
+			Name:        RegistryProxy,
+			Description: "Enables setting Zarf init with the registry proxy flag",
+			Enabled:     false,
+			Since:       "v0.60.0",
+			Stage:       Alpha,
 		},
 	}
 
