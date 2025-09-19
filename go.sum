@@ -1896,8 +1896,8 @@ github.com/miekg/pkcs11 v1.0.2/go.mod h1:XsNlhZGX73bx86s2hdc/FuaLm2CPZJemRLMA+WT
 github.com/miekg/pkcs11 v1.0.3-0.20190429190417-a667d056470f/go.mod h1:XsNlhZGX73bx86s2hdc/FuaLm2CPZJemRLMA+WTFxgs=
 github.com/miekg/pkcs11 v1.1.1 h1:Ugu9pdy6vAYku5DEpVWVFPYnzV+bxB+iRdbuFSu7TvU=
 github.com/miekg/pkcs11 v1.1.1/go.mod h1:XsNlhZGX73bx86s2hdc/FuaLm2CPZJemRLMA+WTFxgs=
-github.com/mikefarah/yq/v4 v4.47.1 h1:qdGJCWt4B+q3kEuEu2CJJKOojfdc3/0Qx0Xai6jRsds=
-github.com/mikefarah/yq/v4 v4.47.1/go.mod h1:+WQ438aOXAHcpWAJxhXXesdVpYR0pb8JszUMFymzeqQ=
+github.com/mikefarah/yq/v4 v4.47.2 h1:Jb5fHlvgK5eeaPbreG9UJs1E5w6l5hUzXjeaY6LTTWY=
+github.com/mikefarah/yq/v4 v4.47.2/go.mod h1:ulYbZUzGJsBDDwO5ohvk/KOW4vW5Iddd/DBeAY1Q09g=
 github.com/mikelolasagasti/xz v1.0.1 h1:Q2F2jX0RYJUG3+WsM+FJknv+6eVjsjXNDV0KJXZzkD0=
 github.com/mikelolasagasti/xz v1.0.1/go.mod h1:muAirjiOUxPRXwm9HdDtB3uoRPrGnL85XHtokL9Hcgc=
 github.com/minio/asm2plan9s v0.0.0-20200509001527-cdd76441f9d8/go.mod h1:mC1jAcsrzbxHt8iiaC+zU4b1ylILSosueou12R++wfY=
