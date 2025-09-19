@@ -46,16 +46,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Get the latest tag (e.g., v1.2.3 or 1.2.3)
-          LATEST_TAG="$(git describe --tags --abbrev=0)"
 
-          # Preserve any non-numeric prefix (commonly "v")
-          PREFIX="${LATEST_TAG%%[0-9]*}"            # "v" or ""
-          CORE="${LATEST_TAG#"$PREFIX"}"            # strip prefix -> "1.2.3[-suffix][+build]"
+          # Find the latest stable semver tag (ignores prereleases, nightly, etc.)
+          LATEST_TAG="$(git tag --sort=-version:refname \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+            | head -n1)"
 
-          # Strip any pre-release/build metadata from the core version
-          CORE="${CORE%%-*}"                        # drop "-rc1" etc.
-          CORE="${CORE%%+*}"                        # drop "+build" etc.
+          if [[ -z "${LATEST_TAG}" ]]; then
+            echo "No stable tags found, defaulting to 0.0.0"
+            LATEST_TAG="v0.0.0"
+          fi
+
+          PREFIX="${LATEST_TAG%%[0-9]*}"   # usually "v" or ""
+          CORE="${LATEST_TAG#"$PREFIX"}"
 
           IFS='.' read -r MAJOR MINOR PATCH <<<"${CORE}"
           : "${MAJOR:=0}" ; : "${MINOR:=0}" ; : "${PATCH:=0}"
@@ -66,7 +69,6 @@ jobs:
 
           echo "Computed nightly: ${NEW_TAG}"
 
-          # Outputs / ENV
           echo "cli_version=${NEW_TAG}" >> "$GITHUB_OUTPUT"
           echo "CLI_VERSION=${NEW_TAG}" >> "$GITHUB_ENV"
 
