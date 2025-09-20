@@ -110,7 +110,7 @@ func TestZarfInit(t *testing.T) {
 func verifyZarfNamespaceLabels(t *testing.T) {
 	t.Helper()
 
-	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf"}'`
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf","zarf.dev/package":"init"}'`
 	actualLabels, _, err := e2e.Kubectl(t, "get", "ns", "zarf", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
@@ -140,8 +140,9 @@ func verifyZarfSecretLabels(t *testing.T) {
 	// agent hook TLS
 	//
 	// this secret does not have the managed by zarf label
-	// because it is deployed as a helm chart rather than generated in Go code.
-	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm"}'`
+	// because it is deployed as a helm chart rather than generated in Go code. It does get the zarf.dev/package label added
+	// as part of the post-renderer.
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/package":"init"}'`
 	actualLabels, _, err = e2e.Kubectl(t, "get", "-n=zarf", "secret", "agent-hook-tls", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
@@ -159,7 +160,7 @@ func verifyZarfPodLabels(t *testing.T) {
 	// registry
 	podHash, _, err := e2e.Kubectl(t, "get", "-n=zarf", "--selector=app=docker-registry", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
 	require.NoError(t, err)
-	expectedLabels := fmt.Sprintf(`'{"app":"docker-registry","pod-template-hash":%s,"release":"zarf-docker-registry","zarf.dev/agent":"ignore"}'`, podHash)
+	expectedLabels := fmt.Sprintf(`'{"app":"docker-registry","pod-template-hash":%s,"release":"zarf-docker-registry","zarf.dev/agent":"ignore","zarf.dev/package":"init"}'`, podHash)
 	actualLabels, _, err := e2e.Kubectl(t, "get", "-n=zarf", "--selector=app=docker-registry", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
@@ -167,13 +168,13 @@ func verifyZarfPodLabels(t *testing.T) {
 	// agent
 	podHash, _, err = e2e.Kubectl(t, "get", "-n=zarf", "--selector=app=agent-hook", "pods", `-o=jsonpath="{.items[0].metadata.labels['pod-template-hash']}"`)
 	require.NoError(t, err)
-	expectedLabels = fmt.Sprintf(`'{"app":"agent-hook","pod-template-hash":%s,"zarf.dev/agent":"ignore"}'`, podHash)
+	expectedLabels = fmt.Sprintf(`'{"app":"agent-hook","pod-template-hash":%s,"zarf.dev/agent":"ignore","zarf.dev/package":"init"}'`, podHash)
 	actualLabels, _, err = e2e.Kubectl(t, "get", "-n=zarf", "--selector=app=agent-hook", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
 
 	// git server
-	patchedLabel := `"zarf-agent":"patched"`
+	patchedLabel := `"zarf-agent":"patched","zarf.dev/package":"init"`
 	actualLabels, _, err = e2e.Kubectl(t, "get", "-n=zarf", "--selector=app.kubernetes.io/instance=zarf-gitea  ", "pods", "-o=jsonpath='{.items[0].metadata.labels}'")
 	require.NoError(t, err)
 	require.Contains(t, actualLabels, patchedLabel)
@@ -183,13 +184,13 @@ func verifyZarfServiceLabels(t *testing.T) {
 	t.Helper()
 
 	// registry
-	expectedLabels := `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"registry"}'`
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"registry","zarf.dev/package":"init"}'`
 	actualLabels, _, err := e2e.Kubectl(t, "get", "-n=zarf", "service", "zarf-connect-registry", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
 
 	// git server
-	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"git"}'`
+	expectedLabels = `'{"app.kubernetes.io/managed-by":"Helm","zarf.dev/connect-name":"git","zarf.dev/package":"init"}'`
 	actualLabels, _, err = e2e.Kubectl(t, "get", "-n=zarf", "service", "zarf-connect-git", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)
