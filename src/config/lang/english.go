@@ -502,6 +502,8 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 `
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
+	CmdToolsCapacityShot = "Shows an overview of the resource requests, limits, and utilization in a Kubernetes cluster using kube-capacity."
+
 	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
 	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
 
