@@ -56,6 +56,9 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, actionConfig *ac
 	if opts.VariableConfig == nil {
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
 	}
+	if opts.Pkg == nil {
+		return nil, fmt.Errorf("package required to run post renderer")
+	}
 	skipSecretUpdates := !opts.AirgapMode && opts.State.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,

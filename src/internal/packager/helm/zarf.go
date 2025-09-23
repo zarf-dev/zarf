@@ -28,6 +28,11 @@ import (
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) error {
+	pkg, err := opts.Cluster.GetDeployedPackage(ctx, "init")
+	if err != nil {
+		return fmt.Errorf("error getting init package: %w", err)
+	}
+	opts.Pkg = &pkg.Data
 	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
@@ -74,6 +79,11 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 
+	pkg, err := opts.Cluster.GetDeployedPackage(ctx, "init")
+	if err != nil {
+		return fmt.Errorf("error getting init package: %w", err)
+	}
+	opts.Pkg = &pkg.Data
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
