@@ -42,6 +42,7 @@ const (
 )
 
 // Registry TLS secret and certificate names
+// FIXME: consider moving these to state
 const (
 	ZarfRegistryCASecretName    = "zarf-registry-ca"
 	ZarfRegistryServerTLSSecret = "zarf-registry-server-tls"
@@ -260,13 +261,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.IPFamily = ipFamily
 
-		if opts.RegistryInfo.ProxyMode {
-			err = c.generateRegistryCerts(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate certs: %w", err)
-			}
-		}
-
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -297,6 +291,16 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.ArtifactServer = opts.ArtifactServer
 	}
 
+	// FIXME: need these to be updated to handle the certs expiring
+	if opts.RegistryInfo.ProxyMode {
+		// IF !userMaintainedCA
+		err = c.generateRegistryCerts(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate certs: %w", err)
+		}
+		// If userMaintainedCA then update if flags are provided
+	}
+
 	s.InjectorInfo = opts.InjectorInfo
 
 	switch s.Distro {
@@ -322,12 +326,59 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	return s, nil
 }
 
+// needsCertificateRenewal checks if a certificate needs renewal (doesn't exist or expires within 6 months)
+func (c *Cluster) needsCertificateRenewal(ctx context.Context, secretName, certKey string) (bool, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
+	}
+
+	certData, exists := secret.Data[certKey]
+	if !exists {
+		return true, nil // Certificate key doesn't exist in secret
+	}
+
+	percentageRemainingLife, err := pki.GetRemainingCertLifePercentage(certData)
+	if err != nil {
+		return false, err
+	}
+	remainingLifeRenewalThreshold := 50.0
+	if percentageRemainingLife < remainingLifeRenewalThreshold {
+		return true, nil
+	}
+	return false, nil
+}
+
 // generateRegistryCerts creates CA, server, and client certificates for registry mTLS
-// and applies them to the cluster as Kubernetes secrets
+// and applies them to the cluster as Kubernetes secrets.
+// Only generates certificates if they don't exist or are expiring within 6 months.
 func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
 
-	// Generate CA certificate
+	// Check if any certificates need renewal
+	needsCArenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryCASecretName, ZarfRegistryCAFile)
+	if err != nil {
+		return fmt.Errorf("failed to check CA certificate renewal: %w", err)
+	}
+
+	needsServerRenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryServerTLSSecret, ZarfRegistryClientCert)
+	if err != nil {
+		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+	}
+
+	needsProxyRenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryProxyTLSSecret, ZarfRegistryClientCert)
+	if err != nil {
+		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
+	}
+
+	if !needsCArenewal && !needsServerRenewal && !needsProxyRenewal {
+		return nil
+	}
+
+	// Generate CA certificate (needed for all other certs)
 	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
 	if err != nil {
 		return fmt.Errorf("failed to generate CA certificate: %w", err)
@@ -345,7 +396,6 @@ func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to generate server certificate: %w", err)
 	}
 
-	// Generate client certificate for proxy
 	clientCert, clientKey, err := pki.GenerateClientCert(caCert, caKey, "zarf-registry-proxy")
 	if err != nil {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
@@ -382,7 +432,7 @@ func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("certificates for mTLS generated and stored as Kubernetes secrets")
+	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{ZarfRegistryCASecretName, ZarfRegistryServerTLSSecret, ZarfRegistryProxyTLSSecret})
 	return nil
 }
 

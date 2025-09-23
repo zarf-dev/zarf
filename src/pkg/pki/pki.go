@@ -344,6 +344,32 @@ func generateClientCert(commonName string, ca *x509.Certificate, caKey *rsa.Priv
 	return cert, privateKey, nil
 }
 
+// GetRemainingCertLifePercentage gives back the percentage of the given certificates total lifespan that it has left before it's expired
+func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
+	// FIXME, create unit tests
+	block, _ := pem.Decode(certData)
+	if block == nil {
+		return 0, fmt.Errorf("failed to decode pem data")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse certificate: %w", err)
+	}
+
+	currentTime := now()
+	totalLifetime := cert.NotAfter.Sub(cert.NotBefore)
+	remainingTime := cert.NotAfter.Sub(currentTime)
+
+	// If certificate is expired, return 0
+	if remainingTime <= 0 {
+		return 0, nil
+	}
+
+	percentage := (float64(remainingTime) / float64(totalLifetime)) * 100
+	return percentage, nil
+}
+
 // CheckForExpiredCert checks if the certificate is expired
 func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 	block, _ := pem.Decode(pk.Cert)
