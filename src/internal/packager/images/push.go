@@ -312,7 +312,6 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
-	copyOpts.WithTargetPlatform(desc.Platform)
 
 	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
 	trackedRemote.StartReporting(ctx)

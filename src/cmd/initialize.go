@@ -58,7 +58,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().BoolVar(&pkgConfig.InitOpts.RegistryInfo.ProxyMode, "registry-proxy", false, "connect to the Zarf registry over a DaemonSet proxy")
-	cmd.Flags().IntVar(&pkgConfig.InitOpts.SeedRegistryHostPort, "injector-hostport", v.GetInt(VInitSeedRegistryHostPort),
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.InjectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
 		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
 	// While this feature is in early alpha we will hide the flags
 	cmd.Flags().MarkHidden("registry-proxy")
@@ -158,7 +158,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
-		SeedRegistryHostPort:   pkgConfig.InitOpts.SeedRegistryHostPort,
+		InjectorHostPort:       pkgConfig.InitOpts.InjectorHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)

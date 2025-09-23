@@ -130,8 +130,8 @@ type ZarfInitOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// SeedRegistryHostPort is the host port that is used for the daemonset injector
-	SeedRegistryHostPort int
+	// InjectorHostPort is the host port that is used for the daemonset injector
+	InjectorHostPort int
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.

@@ -80,6 +80,9 @@ jobs:
           networking:
             kubeProxyMode: "nftables"
             ipFamily: ${{ matrix.ipfamily }}
+          nodes:
+          - role: control-plane
+          - role: worker
           EOF
 
       - name: Setup Kind
