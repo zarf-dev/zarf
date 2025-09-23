@@ -133,7 +133,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if zarfManaged { // If the namespace is already managed by Zarf then update the labels with the new package and namespace override labels.
+		} else if zarfManaged || r.adoptExistingResources { // If the namespace is already managed by Zarf or we are adopting existing resources then update the labels with the new package and namespace override labels.
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
