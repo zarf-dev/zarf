@@ -57,14 +57,14 @@ const (
 
 	// Init Registry config keys
 
-	VInitRegistryURL          = "init.registry.url"
-	VInitRegistryNodeport     = "init.registry.nodeport"
-	VInitSeedRegistryHostPort = "init.registry.seed_hostport"
-	VInitRegistrySecret       = "init.registry.secret"
-	VInitRegistryPushUser     = "init.registry.push_username"
-	VInitRegistryPushPass     = "init.registry.push_password"
-	VInitRegistryPullUser     = "init.registry.pull_username"
-	VInitRegistryPullPass     = "init.registry.pull_password"
+	VInitRegistryURL      = "init.registry.url"
+	VInitRegistryNodeport = "init.registry.nodeport"
+	InjectorHostPort      = "init.registry.seed_hostport"
+	VInitRegistrySecret   = "init.registry.secret"
+	VInitRegistryPushUser = "init.registry.push_username"
+	VInitRegistryPushPass = "init.registry.push_password"
+	VInitRegistryPullUser = "init.registry.pull_username"
+	VInitRegistryPullPass = "init.registry.pull_password"
 
 	// Init Package config keys
 
@@ -222,7 +222,7 @@ func setDefaults() {
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
-	v.SetDefault(VInitSeedRegistryHostPort, state.ZarfSeedRegistryHostPort)
+	v.SetDefault(InjectorHostPort, state.ZarfInjectorHostPort)
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)

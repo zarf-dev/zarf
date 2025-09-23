@@ -57,11 +57,11 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer            state.GitServerInfo
-	RegistryInfo         state.RegistryInfo
-	ArtifactServer       state.ArtifactServerInfo
-	StorageClass         string
-	SeedRegistryHostPort int
+	GitServer        state.GitServerInfo
+	RegistryInfo     state.RegistryInfo
+	ArtifactServer   state.ArtifactServerInfo
+	StorageClass     string
+	InjectorHostPort int
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
@@ -87,8 +87,8 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.ProxyMode {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
-	if opts.SeedRegistryHostPort == 0 {
-		opts.SeedRegistryHostPort = state.ZarfSeedRegistryHostPort
+	if opts.InjectorHostPort == 0 {
+		opts.InjectorHostPort = state.ZarfInjectorHostPort
 	}
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
@@ -310,7 +310,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
-			d.s.InjectorInfo.Port = opts.SeedRegistryHostPort
+			d.s.InjectorInfo.Port = opts.InjectorHostPort
 			if err := d.c.SaveState(ctx, d.s); err != nil {
 				return nil, err
 			}
