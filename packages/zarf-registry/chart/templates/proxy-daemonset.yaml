@@ -16,7 +16,6 @@ spec:
     spec:
       containers:
         - args:
-          # FIXME: need to make ipv6  work too
           {{ if .Values.ipv6Only }}
             - TCP6-LISTEN:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1

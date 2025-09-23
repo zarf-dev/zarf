@@ -37,8 +37,6 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
-
-	// Registry certificate file names
 )
 
 // Registry TLS secret and certificate names

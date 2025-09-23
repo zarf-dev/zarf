@@ -223,18 +223,6 @@ type RegistryInfo struct {
 	ProxyMode bool `json:"proxyMode"`
 }
 
-// FIXME: just add the secrets
-// type RegistryTLSInfo struct {
-// 	CASecretName       string
-// 	CAPemFileName      string
-// 	ServerSecretName   string
-// 	ServerKeyFileName  string
-// 	ServerCertFileName string
-// 	ClientSecretName   string
-// 	ClientKeyFileName  string
-// 	ClientCertFileName string
-// }
-
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||

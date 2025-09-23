@@ -41,7 +41,6 @@ persistence:
   size: 20Gi
   deleteEnabled: true
 
-# FIXME: I think the best move to do here is to hardcode most of the configData and where we want differences expose it as values
 secrets:
   htpasswd: ""
   configData:
