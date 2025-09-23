@@ -49,15 +49,15 @@ spec:
           ports:
             - containerPort: 5000
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /
               port: 5000
-            periodSeconds: 10
-            initialDelaySeconds: 5
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /
               port: 5000
-            periodSeconds: 10
-            initialDelaySeconds: 5
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
