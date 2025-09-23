@@ -382,7 +382,7 @@ func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("mTLS certificates generated and stored as Kubernetes secrets")
+	l.Info("certificates for mTLS generated and stored as Kubernetes secrets")
 	return nil
 }
 

@@ -221,9 +221,19 @@ type RegistryInfo struct {
 	Secret string `json:"secret"`
 	// ProxyMode is true if the registry made available through a DaemonSet proxy.
 	ProxyMode bool `json:"proxyMode"`
-
-	CACertPath string `json:"caCertPath"`
 }
+
+// FIXME: just add the secrets
+// type RegistryTLSInfo struct {
+// 	CASecretName       string
+// 	CAPemFileName      string
+// 	ServerSecretName   string
+// 	ServerKeyFileName  string
+// 	ServerCertFileName string
+// 	ClientSecretName   string
+// 	ClientKeyFileName  string
+// 	ClientCertFileName string
+// }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {

@@ -21,6 +21,11 @@ proxy:
     payLoadConfigMapAmount: 0
     shasum: ""
 
+# If this is enabled, then zarf-registry-server-tls must be created with a cert in tls.cert and a key in tls.key
+# and zarf-registry-ca must be created with a certificate in ca.pem
+mtls:
+  enabled: false
+
 ipv6Only: false
 
 service:
@@ -36,38 +41,12 @@ persistence:
   size: 20Gi
   deleteEnabled: true
 
+# FIXME: I think the best move to do here is to hardcode most of the configData and where we want differences expose it as values
 secrets:
   htpasswd: ""
   configData:
-    version: 0.1
-    log:
-      fields:
-        service: registry
-    storage:
-      cache:
-        blobdescriptor: inmemory
     http:
       secret: ""
-      addr: :5000
-      headers:
-        X-Content-Type-Options: [nosniff]
-      tls:
-        certificate: /certs/server/tls.crt
-        key: /certs/server/tls.key
-        clientcas:
-          - /certs/ca/ca.pem
-        clientauth: verify-client-cert-if-given
-        minimumtls: tls1.2
-      debug:
-        addr: :5001
-        prometheus:
-          enabled: false
-          path: /metrics
-    health:
-      storagedriver:
-        enabled: true
-        interval: 10s
-        threshold: 3
 
 podDisruptionBudget:
   minAvailable: 1
