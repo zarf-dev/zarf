@@ -381,6 +381,12 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 				if overrideChart.ReleaseName != "" {
 					comp.Charts[idx].ReleaseName = overrideChart.ReleaseName
 				}
+				if overrideChart.Version != "" {
+					comp.Charts[idx].Version = overrideChart.Version
+				}
+				if overrideChart.URL != "" {
+					comp.Charts[idx].URL = overrideChart.URL
+				}
 				comp.Charts[idx].ValuesFiles = append(comp.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
 				comp.Charts[idx].Variables = append(comp.Charts[idx].Variables, overrideChart.Variables...)
 				existing = true
