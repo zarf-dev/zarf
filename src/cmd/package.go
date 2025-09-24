@@ -169,12 +169,6 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	// Merge setVars and valuesFiles together
-	// TODO(mkcp): I've commented it out for now, but this is intended as a way for us support variables' key and value
-	// space with values' go-templates syntax. This should help nudge users towards the new templating syntax while
-	// maintaining compatibility.
-	// values := value.MapVariablesToValues(o.setVariables)
-	// value.DeepMerge(values, fileValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
