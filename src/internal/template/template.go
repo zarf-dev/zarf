@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html/template"
 	"io"
 	"os"
 	ttmpl "text/template"
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
-	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -24,6 +22,12 @@ import (
 // Within a template, a user can access the Values from Object{ "Values": { "app": { "name": "foo" }}}
 // With {{ .Values.app.name }} => "foo"
 type Objects map[string]any
+
+// NewObjects instantiates an Objects map, which provides templating context. The "with" options below
+func NewObjects(values value.Values) Objects {
+	o := make(Objects)
+	return o.WithValues(values)
+}
 
 // WithValues takes a value.Values and makes it available in templating Objects.
 func (o Objects) WithValues(values value.Values) Objects {
@@ -72,6 +76,31 @@ func (o Objects) WithConstants(constants []v1alpha1.Constant) Objects {
 	return o
 }
 
+func ApplyToCmd(
+	ctx context.Context,
+	cmd string,
+	pkg v1alpha1.ZarfPackage,
+	values value.Values,
+	vars variables.SetVariableMap,
+	constants []v1alpha1.Constant,
+) (string, error) {
+	// TODO(mkcp): Take an objects and assemble this at the caller? Maybe make values the default
+	obj := NewObjects(values).
+		WithPackage(pkg).
+		WithBuild(pkg.Build).
+		WithVariables(vars).
+		WithConstants(constants)
+	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(cmd)
+	if err != nil {
+		return "", err
+	}
+	b := &bytes.Buffer{}
+	if err = tmpl.Execute(b, obj); err != nil {
+		return "", err
+	}
+	return b.String(), nil
+}
+
 // ApplyToFile takes a file path as well as contextual data like pkg and values, applies the context to the template,
 // then writes the file back in place.
 func ApplyToFile(
@@ -79,7 +108,7 @@ func ApplyToFile(
 	src, dst string,
 	pkg v1alpha1.ZarfPackage,
 	values value.Values,
-	variables variables.SetVariableMap,
+	vars variables.SetVariableMap,
 	constants []v1alpha1.Constant,
 ) error {
 	l := logger.From(ctx)
@@ -90,11 +119,10 @@ func ApplyToFile(
 	}()
 
 	// TODO(mkcp): Assemble this at the caller. It adds 4 params
-	obj := Objects{}.
-		WithValues(values).
+	obj := NewObjects(values).
 		WithPackage(pkg).
 		WithBuild(pkg.Build).
-		WithVariables(variables).
+		WithVariables(vars).
 		WithConstants(constants)
 
 	// Load file into template
@@ -120,73 +148,4 @@ func ApplyToFile(
 		return err
 	}
 	return nil
-}
-
-// ApplyToPackageDefinition takes a ZarfPackage and a value.Values and applies templates in the package.
-// TODO(mkcp): This is rly more of a proof of concept for replacing and enhancing package templates.
-// FIXME(mkcp): Needless to say this needs a major refactor.
-// TODO(mkcp): Rather than bumping this into Yaml and back, what we probably want to do instead is to instead load
-// sections of the PackageDefinition in order. e.g. scan to metadata and parse only that section of the yaml tree.
-// This would allow us to fill in metadata and then apply it to the rest of the
-func ApplyToPackageDefinition(ctx context.Context, pkg v1alpha1.ZarfPackage, values value.Values) (v1alpha1.ZarfPackage, error) {
-	// Create template context
-	objs := Objects{}.WithValues(values).WithPackage(pkg)
-	logger.From(ctx).Debug("templating package", "packageName", pkg.Metadata.Name, "templateObjects", objs)
-	start := time.Now()
-	defer func() {
-		logger.From(ctx).Debug("done templating package", "packageName", pkg.Metadata.Name, "duration", time.Since(start))
-	}()
-
-	// Apply metadata template first
-	// NOTE(mkcp): We have a two-step templating process here because Metadata can be used within templates. We need to
-	// process it first and then grab the applied, plain values to store for the rest of the package definition and
-	// components.
-	metaYAMLBytes, err := goyaml.Marshal(pkg.Metadata)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to marshal pkg metadata to YAML: %w", err)
-	}
-	metaTmpl, err := ttmpl.New("package-metadata").Funcs(sprig.FuncMap()).Parse(string(metaYAMLBytes))
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse package template: %w", err)
-	}
-	// Execute the template with the templateContext
-	var metaBuf bytes.Buffer
-	if err := metaTmpl.Execute(&metaBuf, objs); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to execute package template: %w", err)
-	}
-	// Unmarshal the templated YAML back into a ZarfPackage
-	var templatedMetadata v1alpha1.ZarfMetadata
-	if err := goyaml.Unmarshal(metaBuf.Bytes(), &templatedMetadata); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to unmarshal templated package: %w", err)
-	}
-
-	// Refresh objs and the Package itself with the templated metadata
-	objs = objs.WithMetadata(templatedMetadata)
-	pkg.Metadata = templatedMetadata
-
-	// Now marshal the entire package to YAML
-	yamlBytes, err := goyaml.Marshal(pkg)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to marshal package to YAML: %w", err)
-	}
-
-	// Create a new template and parse the YAML content
-	tmpl, err := template.New("package").Funcs(sprig.FuncMap()).Parse(string(yamlBytes))
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse package template: %w", err)
-	}
-
-	// Execute the template with the templateContext
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, objs); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to execute package template: %w", err)
-	}
-
-	// Unmarshal the templated YAML back into a ZarfPackage
-	var templatedPkg v1alpha1.ZarfPackage
-	if err := goyaml.Unmarshal(buf.Bytes(), &templatedPkg); err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to unmarshal templated package: %w", err)
-	}
-
-	return templatedPkg, nil
 }
