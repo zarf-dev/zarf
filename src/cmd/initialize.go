@@ -277,6 +277,11 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return err
 	}
 
+	// Registry mode is a new field, on clusters created before it was introduced, assume it was the nodeport mode
+	if s.RegistryInfo.RegistryMode == "" {
+		s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+	}
+
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
@@ -284,7 +289,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds registry`")
+		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	return nil
 }
