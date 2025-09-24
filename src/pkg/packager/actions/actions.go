@@ -130,13 +130,13 @@ retryCmd:
 			for _, v := range action.SetValues {
 				var s string
 				switch v.Type {
-				case "yaml", "YAML":
+				case v1alpha1.SetValueYAML:
 					// TODO(mkcp): Implement YAML parsing
 					l.Warn("YAML setValues types not implemented yet", "type", v.Type)
-				case "json", "JSON":
+				case v1alpha1.SetValueJSON:
 					// TODO(mkcp): Implement JSON parsing
 					l.Warn("json setValues types not implemented yet", "type", v.Type)
-				case "string":
+				case v1alpha1.SetValueString:
 					s = outTrimmed
 				default:
 					return fmt.Errorf("unknown setValue type: %s", v.Type)

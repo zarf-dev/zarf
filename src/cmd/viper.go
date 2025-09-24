@@ -88,7 +88,6 @@ const (
 	VPkgCreateDifferential       = "package.create.differential"
 	VPkgCreateRegistryOverride   = "package.create.registry_override"
 	VPkgCreateFlavor             = "package.create.flavor"
-	VPkgCreateValues             = "package.create.values"
 
 	// Package deploy config keys
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	ttmpl "text/template"
 	"time"
@@ -128,10 +127,8 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 			err = fmt.Errorf("%w:%w", err, cErr)
 		}
 	}(f, err)
-	// FIXME(mkcp): Remove stdout print this is just for checking the result in stdout
-	w := io.MultiWriter(f, os.Stdout)
 	// Apply template and write to destination
-	if err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(w, objs); err != nil {
+	if err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(f, objs); err != nil {
 		return err
 	}
 	return nil
