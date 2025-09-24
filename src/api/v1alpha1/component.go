@@ -178,7 +178,7 @@ type ZarfChartVariable struct {
 	Path string `json:"path"`
 }
 
-// FIXME(mkcp): This is here for testing only, this should actually exist on the beta1 schema
+// ZarfChartValue maps a Zarf Value key to a Helm Value.
 type ZarfChartValue struct {
 	SourcePath string `json:"sourcePath,omitempty"`
 	TargetPath string `json:"targetPath,omitempty"`
