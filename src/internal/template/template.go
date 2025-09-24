@@ -88,6 +88,9 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 
 // ApplyToCmd takes a string cmd and fills in any templates.
 func ApplyToCmd(ctx context.Context, cmd string, objs Objects) (string, error) {
+	l := logger.From(ctx)
+	l.Debug("applying templates in cmd", "cmd", cmd)
+
 	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(cmd)
 	if err != nil {
 		return "", err

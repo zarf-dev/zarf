@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -169,9 +170,9 @@ func DeepMerge(dst, src Values) {
 	}
 }
 
-// ExtractFromPath extracts a value from a nested Values map using dot notation path.
+// Extract retrieves a value from a nested Values map using dot notation path.
 // Path format: ".key.subkey.value" where each dot represents a map level.
-func ExtractFromPath(values Values, path Path) (any, error) {
+func (v Values) Extract(path Path) (any, error) {
 	if err := path.Validate(); err != nil {
 		return nil, err
 	}
@@ -185,7 +186,7 @@ func ExtractFromPath(values Values, path Path) (any, error) {
 	parts := strings.Split(pathStr, ".")
 
 	// Traverse the nested map structure
-	current := values
+	current := v
 	for i, key := range parts {
 		value, exists := current[key]
 		if !exists {
@@ -208,6 +209,25 @@ func ExtractFromPath(values Values, path Path) (any, error) {
 
 	// This should never be reached due to the empty pathStr check above
 	return nil, fmt.Errorf("internal error: empty path components")
+}
+
+// Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
+func (v Values) Set(path Path, newVal any) error {
+	if err := path.Validate(); err != nil {
+		return err
+	}
+
+	// Parse path into components, skipping empty leading segment
+	pathStr := string(path)[1:] // Remove leading dot
+	if pathStr == "" {
+		return fmt.Errorf("empty path after dot: %s", path)
+	}
+
+	err := helpers.MergePathAndValueIntoMap(v, pathStr, newVal)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // InvalidFileExtError represents an error when a file has an invalid extension

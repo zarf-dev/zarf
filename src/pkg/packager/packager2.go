@@ -67,7 +67,7 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 		}
 
 		// Extract value from source path in values
-		sourceValue, err := value.ExtractFromPath(opts.values, value.Path(chartValue.SourcePath))
+		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
 		if err != nil {
 			// Log warning but don't fail - source path might not exist
 			logger.From(ctx).Warn("unable to extract value from path",
@@ -79,12 +79,9 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 			continue
 		}
 
-		// Set value at targetPath in chart overrides
-		// HACK(mkcp): Strip off the leading dot from the target path. I ran into a really difficult to debug problem
-		// here where having the leading dot stored the value in a key of emptystring. This broke the overrides silently
-		// and was challenging to spot in the logs.
-		// What we probably want to do here instead is just copy over the MergePath code and have it handle the dot.
+		// Strip off the leading dot from the target path.
 		targetPath := chartValue.TargetPath[1:]
+		// Set value at targetPath in chart overrides
 		if err := helpers.MergePathAndValueIntoMap(chartOverrides, targetPath, sourceValue); err != nil {
 			return nil, fmt.Errorf("unable to map value from %s to %s: %w",
 				chartValue.SourcePath, chartValue.TargetPath, err)

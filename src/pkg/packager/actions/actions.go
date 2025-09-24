@@ -46,7 +46,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	l := logger.From(ctx)
 	start := time.Now()
 
-	_ = template.NewObjects(values).
+	tmplObjs := template.NewObjects(values).
 		WithConstants(variableConfig.GetConstants()).
 		WithVariables(variableConfig.GetSetVariableMap())
 
@@ -82,6 +82,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		cmdEscaped = action.Description
 	} else {
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
+	}
+
+	// Apply go-templates in cmds
+	cmd, err = template.ApplyToCmd(ctx, cmd, tmplObjs)
+	if err != nil {
+		l.Error("could not template cmd", "cmd", cmdEscaped, "err", err.Error())
 	}
 
 	l.Info("running command", "cmd", cmdEscaped)
@@ -121,27 +127,30 @@ retryCmd:
 			}
 
 			// If an output value is defined, parse the result and set it to values map.
-			// for _, v := range action.SetValues {
-			// 		// TODO(mkcp): Parse the result of outTrimmed using the type
-			// 		m := map[string]any
-			// 		switch v.Type:
-			// 		case YAML:
-			// 			outTrimmed
-			// 			yaml.NewDecoder()
-			// 			continue
-			// 		case JSON:
-			// 			err := json.Unmarshal([]byte(outTrimmed), m)
-			// 			if err != nil {
-			// 				return err
-			// 			}
-			// 			continue
-			// 		case "string":
-			// 			continue
-			// 		default:
-			// 			return fmt.Errorf("unknown setValue type: %s", v.Type)
+			for _, v := range action.SetValues {
+				var s string
+				switch v.Type {
+				case "yaml", "YAML":
+					// TODO(mkcp): Implement YAML parsing
+					l.Warn("YAML setValues types not implemented yet", "type", v.Type)
+				case "json", "JSON":
+					// TODO(mkcp): Implement JSON parsing
+					l.Warn("json setValues types not implemented yet", "type", v.Type)
+				case "string":
+					s = outTrimmed
+				default:
+					return fmt.Errorf("unknown setValue type: %s", v.Type)
+				}
 
-			// 		objs["Values"].(value.Values)[v.Key] = m
-			// 	}
+				// NOTE(mkcp): This isn't an ideal implementation because it effectively just mutates the value map that
+				// was passed in by the caller of actions.Run. It silently assumes that this same map will get passed
+				// to the next component, and so on. Ultimately this is the map stored on deployer, but a better
+				// implementation of this would ensure it's safe for concurrent access and keys are explicitly modified.
+				err := values.Set(value.Path(v.Key), s)
+				if err != nil {
+					return err
+				}
+			}
 
 			if action.Wait != nil {
 				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
