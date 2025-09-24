@@ -116,7 +116,6 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
 	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgCreateValues), lang.CmdPackageCreateFlagValuesFiles)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
@@ -163,13 +162,6 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// Merge SetVariables and config variables.
 	setVars := helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
-	// Load files supplied by --values / -v
-	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
-	fileValues, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
-	if err != nil {
-		return err
-	}
-
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -187,7 +179,6 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
-		Values:                  fileValues,
 	}
 	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -256,8 +247,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	v := getViper()
 
 	// Merge SetVariables and config variables.
-	setVars := helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
 	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
 	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
@@ -294,7 +285,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Timeout:                pkgConfig.DeployOpts.Timeout,
 		Retries:                pkgConfig.PkgOpts.Retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		SetVariables:           setVars,
+		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		Values:                 values,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),

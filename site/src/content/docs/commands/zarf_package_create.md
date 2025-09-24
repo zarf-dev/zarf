@@ -36,7 +36,6 @@ zarf package create [ DIRECTORY ] [flags]
       --signing-key string                 Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string            Password to the private key used for signing packages
       --skip-sbom                          Skip generating SBOM for this package
-  -v, --values strings                     [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands

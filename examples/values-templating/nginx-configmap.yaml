@@ -22,12 +22,12 @@ data:
         <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
         <p>Below is a Terraform File templated by Zarf</p>
         <pre>
-          {{ .Values.terraform.path }}
+          "{{ .Values.terraform.content }}"
         </pre>
         <!-- Utilize the value .terraform.shasum from a previous component's setValues  -->
         <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
         <pre>Imported variable from .Variables.EXAMPLE_VAR: {{ .Variables.EXAMPLE_VAR }}</pre>
-        <pre>Imported constant from .Contants.EXAMPLE_CONST: {{ .Constants.EXAMPLE_CONST }}</pre>
+        <pre>Imported constant from .Constants.EXAMPLE_CONST: {{ .Constants.EXAMPLE_CONST }}</pre>
         {{ .Values.site.footer }}
       </body>
     </html>
