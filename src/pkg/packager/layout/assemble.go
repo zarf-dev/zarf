@@ -33,7 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	actions2 "github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -280,7 +280,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -423,7 +423,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
