@@ -203,6 +203,16 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// RegistryMode defines how the registry is accessed
+type RegistryMode string
+
+const (
+	// RegistryModeNodePort accesses the registry via NodePort service
+	RegistryModeNodePort RegistryMode = "nodeport"
+	// RegistryModeProxy accesses the registry via DaemonSet proxy
+	RegistryModeProxy RegistryMode = "proxy"
+)
+
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
 type RegistryInfo struct {
 	// Username of a user with push access to the registry
@@ -219,8 +229,8 @@ type RegistryInfo struct {
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
-	// ProxyMode is true if the registry made available through a DaemonSet proxy.
-	ProxyMode bool `json:"proxyMode"`
+	// RegistryMode defines how the registry is accessed (nodeport or proxy)
+	RegistryMode RegistryMode `json:"registryMode"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -232,12 +242,17 @@ func (ri RegistryInfo) IsInternal() bool {
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
+
+	if ri.RegistryMode == "" {
+		ri.RegistryMode = RegistryModeNodePort
+	}
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
 		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
-		if ri.ProxyMode {
+		switch ri.RegistryMode {
+		case RegistryModeNodePort:
 			ri.NodePort = ZarfRegistryHostPort
-		} else {
+		case RegistryModeProxy:
 			ri.NodePort = ZarfInClusterContainerRegistryNodePort
 		}
 	}

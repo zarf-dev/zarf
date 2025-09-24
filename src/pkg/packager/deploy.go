@@ -84,7 +84,7 @@ type DeployResult struct {
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
-	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.ProxyMode {
+	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
 	if opts.InjectorHostPort == 0 {
@@ -298,7 +298,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		if d.s.RegistryInfo.ProxyMode {
+		switch d.s.RegistryInfo.RegistryMode {
+		case state.RegistryModeProxy:
 			var err error
 			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
 			if err != nil {
@@ -314,7 +315,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err := d.c.SaveState(ctx, d.s); err != nil {
 				return nil, err
 			}
-		} else {
+		case state.RegistryModeNodePort:
 			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 			if err != nil {
 				return nil, err
@@ -331,7 +332,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
-	if isSeedRegistry && !d.s.RegistryInfo.ProxyMode {
+	if isSeedRegistry && d.s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
 		if err := d.c.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
