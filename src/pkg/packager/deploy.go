@@ -239,7 +239,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc); err != nil {
+			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc, d.vals); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -276,7 +276,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc); err != nil {
+		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc, d.vals); err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -393,8 +393,10 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
-	// TODO(mkcp): Apply go-templates for actions
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
+	// Populate objects available to templates in before actions
+	// FIXME(mkcp): These should probably be set once on the deployer, then updated throughout.
+	// No, this should be build as late as possible instead of manipulating template objects.
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc, d.vals); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -472,7 +474,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
+	// Populate objects available to templates in after actions
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc, d.vals); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -596,7 +599,13 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			if manifest.Template {
 				path := filepath.Join(manifestDir, manifest.Files[idx])
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
-				err := template.ApplyToFile(ctx, path, path, pkgLayout.Pkg, d.vals, d.vc.GetSetVariableMap(), d.vc.GetConstants())
+
+				objs := template.NewObjects(d.vals).
+					WithPackage(pkgLayout.Pkg).
+					WithBuild(pkgLayout.Pkg.Build).
+					WithVariables(d.vc.GetSetVariableMap()).
+					WithConstants(d.vc.GetConstants())
+				err := template.ApplyToFile(ctx, path, path, objs)
 				if err != nil {
 					return nil, err
 				}
@@ -796,9 +805,13 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 			}
 			// If the file has go-templating enabled, apply templates.
 			if file.Template {
-				// TODO(mkcp): Test this
 				l.Debug("templates enabled, processing file", "name", file.Target)
-				err = template.ApplyToFile(ctx, subFile, subFile, pkgLayout.Pkg, values, variableConfig.GetSetVariableMap(), pkgLayout.Pkg.Constants)
+				objs := template.NewObjects(values).
+					WithPackage(pkgLayout.Pkg).
+					WithBuild(pkgLayout.Pkg.Build).
+					WithVariables(variableConfig.GetSetVariableMap()).
+					WithConstants(variableConfig.GetConstants())
+				err = template.ApplyToFile(ctx, subFile, subFile, objs)
 				if err != nil {
 					return err
 				}
