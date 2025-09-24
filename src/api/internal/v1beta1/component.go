@@ -145,6 +145,8 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// Whether or not to adopt existing cluster resources in chart when deploying
+	AdoptExistingResources *bool `json:"adoptExistingResources,omitempty"`
 }
 
 // HelmRepoSource represents a Helm chart stored in a Helm repository.
@@ -199,6 +201,8 @@ type ZarfManifest struct {
 	Kustomizations []string `json:"kustomizations,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing. (Defaults to true)
 	Wait *bool `json:"wait,omitempty"`
+	// Whether or not to adopt existing cluster manifest resources mwhen deploying
+	AdoptExistingResources *bool `json:"adoptExistingResources,omitempty"`
 }
 
 // ZarfComponentActions are ActionSets that map to different zarf package operations.

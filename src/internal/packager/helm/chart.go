@@ -80,10 +80,11 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
-	if err != nil {
-		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
+	adopt := opts.AdoptExistingResources
+	if !adopt && zarfChart.AdoptExistingResources != nil && *zarfChart.AdoptExistingResources {
+		adopt = true
 	}
+	postRender, err := newRenderer(ctx, zarfChart, adopt, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
 
 	histClient := action.NewHistory(actionConfig)
 	var release *release.Release
@@ -200,10 +201,11 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
-	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
-	if err != nil {
-		return fmt.Errorf("unable to create helm renderer: %w", err)
+	adopt := opts.AdoptExistingResources
+	if !adopt && chart.AdoptExistingResources != nil && *chart.AdoptExistingResources {
+		adopt = true
 	}
+	postRender, err := newRenderer(ctx, chart, adopt, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
 
 	histClient := action.NewHistory(actionConfig)
 	histClient.Max = 1
