@@ -13,20 +13,18 @@ data:
     <html>
       <head>
         <title>Welcome to {{ .Values.site.name }}!</title>
-        <!-- FIXME(mkcp): This styles example is breaking the yaml compiler sadly, and giving a somewhat dense error
-                          message. Works fine without it though!
         <style>
-          {{ .Values.site.style }}
+          {{ .Values.site.styles }}
         </style>
-        -->
       </head>
       <body>
-        <!-- Test two separate variables on the same line -->
+        <!-- Test two separate values on the same line -->
         <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
         <p>Below is a Terraform File templated by Zarf</p>
         <pre>
           {{ .Values.terraform.path }}
         </pre>
+        <!-- Utilize the value .terraform.shasum from a previous component's setValues  -->
         <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
         {{ .Values.site.footer }}
       </body>

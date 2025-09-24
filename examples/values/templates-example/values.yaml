@@ -4,7 +4,7 @@ site:
   # The name of the site you are deploying
   name: "Zarf Values Example Website"
   # Sets the CSS styles for the site, and provides an example of a multi-line value
-  style: |
+  styles: >-
     body { font-family: sans-serif; color: white; background: #0a0e2e; }
     pre { color: white; background: black; }
   # The organization providing the site
