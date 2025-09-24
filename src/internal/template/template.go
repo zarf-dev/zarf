@@ -23,7 +23,8 @@ import (
 // With {{ .Values.app.name }} => "foo"
 type Objects map[string]any
 
-// NewObjects instantiates an Objects map, which provides templating context. The "with" options below
+// NewObjects instantiates an Objects map, which provides templating context. The "with" options below allow for
+// additional template Objects to be included.
 func NewObjects(values value.Values) Objects {
 	o := make(Objects)
 	return o.WithValues(values)
@@ -32,13 +33,6 @@ func NewObjects(values value.Values) Objects {
 // WithValues takes a value.Values and makes it available in templating Objects.
 func (o Objects) WithValues(values value.Values) Objects {
 	o["Values"] = values
-	return o
-}
-
-// WithPackage takes a v1alpha1.ZarfPackage and makes it available in templating Objects.
-func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
-	o["Constants"] = pkg.Constants
-	o.WithMetadata(pkg.Metadata)
 	return o
 }
 
@@ -54,17 +48,6 @@ func (o Objects) WithBuild(build v1alpha1.ZarfBuildData) Objects {
 	return o
 }
 
-// WithVariables takes a variables.SetVariableMap and unwraps it into the templating Objects map so variables can be
-// accessed by their key name.
-func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
-	m := make(map[string]string)
-	for k, v := range vars {
-		m[k] = v.Value
-	}
-	o["Variables"] = m
-	return o
-}
-
 // WithConstants Takes a slice of v1alpha1.Constants and unwraps it into the templating Objects map so constants can be
 // accessed in templates by their key name.
 func (o Objects) WithConstants(constants []v1alpha1.Constant) Objects {
@@ -76,26 +59,41 @@ func (o Objects) WithConstants(constants []v1alpha1.Constant) Objects {
 	return o
 }
 
-func ApplyToCmd(
-	ctx context.Context,
-	cmd string,
-	pkg v1alpha1.ZarfPackage,
-	values value.Values,
-	vars variables.SetVariableMap,
-	constants []v1alpha1.Constant,
-) (string, error) {
-	// TODO(mkcp): Take an objects and assemble this at the caller? Maybe make values the default
-	obj := NewObjects(values).
-		WithPackage(pkg).
-		WithBuild(pkg.Build).
-		WithVariables(vars).
-		WithConstants(constants)
+// WithVariables takes a variables.SetVariableMap and unwraps it into the templating Objects map so variables can be
+// accessed by their key name.
+func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
+	m := make(map[string]string)
+	for k, v := range vars {
+		m[k] = v.Value
+	}
+	o["Variables"] = m
+	return o
+}
+
+// WithPackage takes a v1alpha1.ZarfPackage and makes Metadata, Constants, and Build available on the Objects map.
+func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
+	// Check for fields that should be set on pkg to see if the sub-obj is available
+	if pkg.Metadata.Name != "" {
+		o.WithMetadata(pkg.Metadata)
+	}
+	if pkg.Build.User != "" {
+		o.WithBuild(pkg.Build)
+	}
+	// Are any Constants set? Load them
+	if len(pkg.Constants) > 0 {
+		o.WithConstants(pkg.Constants)
+	}
+	return o
+}
+
+// ApplyToCmd takes a string cmd and fills in any templates.
+func ApplyToCmd(ctx context.Context, cmd string, objs Objects) (string, error) {
 	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(cmd)
 	if err != nil {
 		return "", err
 	}
 	b := &bytes.Buffer{}
-	if err = tmpl.Execute(b, obj); err != nil {
+	if err = tmpl.Execute(b, objs); err != nil {
 		return "", err
 	}
 	return b.String(), nil
@@ -103,27 +101,13 @@ func ApplyToCmd(
 
 // ApplyToFile takes a file path as well as contextual data like pkg and values, applies the context to the template,
 // then writes the file back in place.
-func ApplyToFile(
-	ctx context.Context,
-	src, dst string,
-	pkg v1alpha1.ZarfPackage,
-	values value.Values,
-	vars variables.SetVariableMap,
-	constants []v1alpha1.Constant,
-) error {
+func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	l := logger.From(ctx)
 	l.Debug("applying templates in file", "path", src)
 	start := time.Now()
 	defer func() {
 		l.Debug("finished applying templates in file", "src", src, "dst", dst, "duration", time.Since(start))
 	}()
-
-	// TODO(mkcp): Assemble this at the caller. It adds 4 params
-	obj := NewObjects(values).
-		WithPackage(pkg).
-		WithBuild(pkg.Build).
-		WithVariables(vars).
-		WithConstants(constants)
 
 	// Load file into template
 	tmpl, err := ttmpl.ParseFiles(src)
@@ -144,7 +128,7 @@ func ApplyToFile(
 	// FIXME(mkcp): Remove stdout print this is just for checking the result in stdout
 	w := io.MultiWriter(f, os.Stdout)
 	// Apply template and write to destination
-	if err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(w, obj); err != nil {
+	if err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(w, objs); err != nil {
 		return err
 	}
 	return nil
