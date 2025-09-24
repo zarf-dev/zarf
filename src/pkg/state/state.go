@@ -251,9 +251,9 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
 		switch ri.RegistryMode {
 		case RegistryModeNodePort:
-			ri.NodePort = ZarfRegistryHostPort
-		case RegistryModeProxy:
 			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		case RegistryModeProxy:
+			ri.NodePort = ZarfRegistryHostPort
 		}
 	}
 
