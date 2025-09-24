@@ -40,15 +40,14 @@ const (
 )
 
 // Registry TLS secret and certificate names
-// FIXME: consider moving these to state
 const (
-	ZarfRegistryCASecretName    = "zarf-registry-ca"
-	ZarfRegistryServerTLSSecret = "zarf-registry-server-tls"
-	ZarfRegistryProxyTLSSecret  = "zarf-registry-proxy-tls"
+	RegistryCASecretName    = "zarf-registry-ca"
+	RegistryServerTLSSecret = "zarf-registry-server-tls"
+	RegistryProxyTLSSecret  = "zarf-registry-proxy-tls"
 
-	ZarfRegistryCAFile     = "ca.pem"
-	ZarfRegistryClientCert = "tls.crt"
-	ZarfRegistryClientKey  = "tls.key"
+	RegistrySecretCAPath   = "ca.pem"
+	RegistrySecretCertPath = "tls.crt"
+	RegistrySecretKeyPath  = "tls.key"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -289,14 +288,11 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.ArtifactServer = opts.ArtifactServer
 	}
 
-	// FIXME: need these to be updated to handle the certs expiring
 	if opts.RegistryInfo.ProxyMode {
-		// IF !userMaintainedCA
-		err = c.generateRegistryCerts(ctx)
+		err = c.generateOrRenewRegistryCerts(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
-		// If userMaintainedCA then update if flags are provided
 	}
 
 	s.InjectorInfo = opts.InjectorInfo
@@ -324,8 +320,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	return s, nil
 }
 
-// needsCertificateRenewal checks if a certificate needs renewal (doesn't exist or expires within 6 months)
-func (c *Cluster) needsCertificateRenewal(ctx context.Context, secretName, certKey string) (bool, error) {
+// needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
+func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string) (bool, error) {
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
@@ -334,7 +330,7 @@ func (c *Cluster) needsCertificateRenewal(ctx context.Context, secretName, certK
 		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
 	}
 
-	certData, exists := secret.Data[certKey]
+	certData, exists := secret.Data[certPath]
 	if !exists {
 		return true, nil // Certificate key doesn't exist in secret
 	}
@@ -350,24 +346,24 @@ func (c *Cluster) needsCertificateRenewal(ctx context.Context, secretName, certK
 	return false, nil
 }
 
-// generateRegistryCerts creates CA, server, and client certificates for registry mTLS
+// generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
 // and applies them to the cluster as Kubernetes secrets.
 // Only generates certificates if they don't exist or are expiring within 6 months.
-func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
+func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
 
 	// Check if any certificates need renewal
-	needsCArenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryCASecretName, ZarfRegistryCAFile)
+	needsCArenewal, err := c.needsCertRenewal(ctx, RegistryCASecretName, RegistrySecretCAPath)
 	if err != nil {
 		return fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
 
-	needsServerRenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryServerTLSSecret, ZarfRegistryClientCert)
+	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsProxyRenewal, err := c.needsCertificateRenewal(ctx, ZarfRegistryProxyTLSSecret, ZarfRegistryClientCert)
+	needsProxyRenewal, err := c.needsCertRenewal(ctx, RegistryProxyTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
 	}
@@ -400,37 +396,37 @@ func (c *Cluster) generateRegistryCerts(ctx context.Context) error {
 	}
 
 	// Create CA secret
-	caSecret := v1ac.Secret(ZarfRegistryCASecretName, state.ZarfNamespaceName).
+	caSecret := v1ac.Secret(RegistryCASecretName, state.ZarfNamespaceName).
 		WithData(map[string][]byte{
-			ZarfRegistryCAFile: caCert,
+			RegistrySecretCAPath: caCert,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, caSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create CA secret: %w", err)
 	}
 
 	// Create server TLS secret
-	serverSecret := v1ac.Secret(ZarfRegistryServerTLSSecret, state.ZarfNamespaceName).
+	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			ZarfRegistryClientCert: serverCert,
-			ZarfRegistryClientKey:  serverKey,
+			RegistrySecretCertPath: serverCert,
+			RegistrySecretKeyPath:  serverKey,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
 	// Create proxy TLS secret
-	proxySecret := v1ac.Secret(ZarfRegistryProxyTLSSecret, state.ZarfNamespaceName).
+	proxySecret := v1ac.Secret(RegistryProxyTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			ZarfRegistryClientCert: clientCert,
-			ZarfRegistryClientKey:  clientKey,
+			RegistrySecretCertPath: clientCert,
+			RegistrySecretKeyPath:  clientKey,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{ZarfRegistryCASecretName, ZarfRegistryServerTLSSecret, ZarfRegistryProxyTLSSecret})
+	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryCASecretName, RegistryServerTLSSecret, RegistryProxyTLSSecret})
 	return nil
 }
 

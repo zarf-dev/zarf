@@ -236,22 +236,22 @@ func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Clu
 	}
 
 	// Get CA certificate from secret
-	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryCASecretName, metav1.GetOptions{})
+	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.RegistryCASecretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CA secret: %w", err)
 	}
-	caCertPEM := caSecret.Data[cluster.ZarfRegistryCAFile]
+	caCertPEM := caSecret.Data[cluster.RegistrySecretCAPath]
 	if len(caCertPEM) == 0 {
 		return nil, fmt.Errorf("CA certificate not found in secret")
 	}
 
 	// Get client certificate from proxy TLS secret
-	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.ZarfRegistryProxyTLSSecret, metav1.GetOptions{})
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.RegistryProxyTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
-	clientCertPEM := clientSecret.Data[cluster.ZarfRegistryClientCert]
-	clientKeyPEM := clientSecret.Data[cluster.ZarfRegistryClientKey]
+	clientCertPEM := clientSecret.Data[cluster.RegistrySecretCertPath]
+	clientKeyPEM := clientSecret.Data[cluster.RegistrySecretKeyPath]
 	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
 		return nil, fmt.Errorf("client certificate or key not found in secret")
 	}
