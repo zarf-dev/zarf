@@ -25,11 +25,13 @@ components:
       onDeploy:
         after:
           # This command uses a templated Zarf cmd to return the SHASUM of the terraform file
-          - cmd: "./zarf prepare sha256sum {{ .Values.terraform.path }}"
-            # Then sets the value to its own keyspace
+          - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
+            # Then sets the value to a new Value key
             setValues:
               - key: .terraform.shasum
                 type: string
+          # Print our newly-set Value
+          - cmd: echo "Look, a new value! SHASUM={{ .Values.terraform.shasum }}"
 
   # The following component deploys nginx to the cluster using the defined values
   - name: values-with-nginx

@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:{{ .Values.nginx.version }}
+        # FIXME(mkcp): This was originally {{ .Values.nginx.version }}
+        image: nginx:latest
         ports:
         - containerPort: 80
           name: http
