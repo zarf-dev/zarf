@@ -26,6 +26,8 @@ data:
         </pre>
         <!-- Utilize the value .terraform.shasum from a previous component's setValues  -->
         <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
+        <pre>Imported variable from .Variables.EXAMPLE_VAR: {{ .Variables.EXAMPLE_VAR }}</pre>
+        <pre>Imported constant from .Contants.EXAMPLE_CONST: {{ .Constants.EXAMPLE_CONST }}</pre>
         {{ .Values.site.footer }}
       </body>
     </html>
