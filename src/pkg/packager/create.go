@@ -23,11 +23,10 @@ import (
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
-	Flavor             string
-	RegistryOverrides  map[string]string
-	SigningKeyPath     string
-	SigningKeyPassword string
-	// TODO(mkcp): Give SetVariables a type
+	Flavor                  string
+	RegistryOverrides       map[string]string
+	SigningKeyPath          string
+	SigningKeyPassword      string
 	SetVariables            map[string]string
 	MaxPackageSizeMB        int
 	SBOMOut                 string

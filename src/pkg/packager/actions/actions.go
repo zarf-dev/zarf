@@ -15,7 +15,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -23,13 +25,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig(ctx)
+		variableConfig = ptmpl.GetZarfVariableConfig(ctx)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values); err != nil {
 			return err
 		}
 	}
@@ -37,12 +39,16 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
+
+	_ = template.NewObjects(values).
+		WithConstants(variableConfig.GetConstants()).
+		WithVariables(variableConfig.GetSetVariableMap())
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {
@@ -113,6 +119,29 @@ retryCmd:
 					return err
 				}
 			}
+
+			// If an output value is defined, parse the result and set it to values map.
+			// for _, v := range action.SetValues {
+			// 		// TODO(mkcp): Parse the result of outTrimmed using the type
+			// 		m := map[string]any
+			// 		switch v.Type:
+			// 		case YAML:
+			// 			outTrimmed
+			// 			yaml.NewDecoder()
+			// 			continue
+			// 		case JSON:
+			// 			err := json.Unmarshal([]byte(outTrimmed), m)
+			// 			if err != nil {
+			// 				return err
+			// 			}
+			// 			continue
+			// 		case "string":
+			// 			continue
+			// 		default:
+			// 			return fmt.Errorf("unknown setValue type: %s", v.Type)
+
+			// 		objs["Values"].(value.Values)[v.Key] = m
+			// 	}
 
 			if action.Wait != nil {
 				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
