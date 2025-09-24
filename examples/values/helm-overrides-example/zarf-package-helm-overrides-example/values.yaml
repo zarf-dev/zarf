@@ -1,10 +1,3 @@
-package:
-  # FIXME: For some reason even when doing multi-pass templating over the metadata, something seems to break every time in
-  # elaborate ways. pkg.Metadata.Name is off limits for templating for now. Should be fixable in the future though.
-  name: "helm-overrides-example"
-  description: "Example of using Zarf values to override Helm chart values"
-  version: "0.0.1"
-
 chart:
   name: "helm-overrides-chart"
   namespace: "helm-overrides"
