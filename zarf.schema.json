@@ -432,7 +432,7 @@
       },
       "additionalProperties": false,
       "type": "object",
-      "description": "FIXME(mkcp): This is here for testing only, this should actually exist on the beta1 schema",
+      "description": "ZarfChartValue maps a Zarf Value key to a Helm Value.",
       "patternProperties": {
         "^x-": {}
       }
