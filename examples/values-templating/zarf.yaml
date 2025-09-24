@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: values-templates-example
+  name: values-templating
   description: Example nginx package to demonstrate Zarf Values templating
 values:
   files:
@@ -20,7 +20,7 @@ components:
       - source: simple-terraform.tf
         target: modified-terraform.tf
         # Enables go-templating within the file.
-        template: false
+        template: true
     actions:
       onDeploy:
         after:
