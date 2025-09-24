@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/avast/retry-go/v4"
@@ -389,25 +390,17 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 
 	// Determine IP family based on the service's IP families
 	ipFamilies := updatedService.Spec.IPFamilies
-	hasIPv4 := false
-	hasIPv6 := false
+	hasIPv4 := slices.Contains(ipFamilies, corev1.IPv4Protocol)
+	hasIPv6 := slices.Contains(ipFamilies, corev1.IPv6Protocol)
 
-	for _, family := range ipFamilies {
-		switch family {
-		case corev1.IPv4Protocol:
-			hasIPv4 = true
-		case corev1.IPv6Protocol:
-			hasIPv6 = true
-		}
-	}
-
-	if hasIPv4 && hasIPv6 {
+	switch {
+	case hasIPv4 && hasIPv6:
 		return state.IPFamilyDualStack, nil
-	} else if hasIPv6 {
+	case hasIPv6:
 		return state.IPFamilyIPv6, nil
-	} else if hasIPv4 {
+	case hasIPv4:
 		return state.IPFamilyIPv4, nil
+	default:
+		return "", fmt.Errorf("unable to determine IP family of cluster")
 	}
-
-	return "", fmt.Errorf("unable to determine IP family of cluster")
 }
