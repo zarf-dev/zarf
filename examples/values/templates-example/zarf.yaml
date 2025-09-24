@@ -21,23 +21,22 @@ components:
         target: modified-terraform.tf
         # Enables go-templating within the file.
         template: false
-    # TODO(mkcp): Actions next
-    # actions:
-    #   onDeploy:
-    #     after:
-    #       # This command uses Zarf to return the SHASUM of the terraform file
-    #       - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
-    #         # `mute` is set to exclude the command output from being shown
-    #         mute: true
-    #         setValues:
-    #           - key: .terraform.shasum
+    actions:
+      onDeploy:
+        after:
+          # This command uses a templated Zarf cmd to return the SHASUM of the terraform file
+          - cmd: "./zarf prepare sha256sum {{ .Values.terraform.path }}"
+            # Then sets the value to its own keyspace
+            setValues:
+              - key: .terraform.shasum
+                type: string
 
   # The following component deploys nginx to the cluster using the defined values
   - name: values-with-nginx
     description: "This component deploys the latest nginx version to the cluster"
     required: true
     images:
-      # TODO(mkcp): Pkgtemplates aren't implemented yet
+      # NOTE(mkcp): Pkgtemplates aren't implemented in Values & go-templating alpha
       - "nginx:latest"
     manifests:
       - name: values-with-nginx
