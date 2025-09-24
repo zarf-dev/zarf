@@ -55,18 +55,9 @@ func generatePKI(host string, notAfter time.Time, dnsNames ...string) (Generated
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
 	}
-	results.CA = pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: ca.Raw,
-	})
-	results.Cert = pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: hostCert.Raw,
-	})
-	results.Key = pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(hostKey),
-	})
+	results.CA = encodeCertToPEM(ca)
+	results.Cert = encodeCertToPEM(hostCert)
+	results.Key = encodeKeyToPEM(hostKey)
 	return results, nil
 }
 
@@ -131,27 +122,49 @@ func generateCA(notAfter time.Time) (*x509.Certificate, *rsa.PrivateKey, error) 
 	return ca, priv, nil
 }
 
-// generateCert generates a new certificate for the given host using the
-// provided certificate authority. The cert and key files are stored in
-// the provided files.
-func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(notAfter)
+// encodeCertToPEM encodes a certificate to PEM format
+func encodeCertToPEM(cert *x509.Certificate) []byte {
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert.Raw,
+	})
+}
+
+// encodeKeyToPEM encodes an RSA private key to PEM format
+func encodeKeyToPEM(key *rsa.PrivateKey) []byte {
+	return pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+}
+
+// parseCAFromPEM parses CA certificate and private key from PEM data
+func parseCAFromPEM(caCertPEM, caKeyPEM []byte) (*x509.Certificate, *rsa.PrivateKey, error) {
+	// Parse CA certificate
+	caBlock, _ := pem.Decode(caCertPEM)
+	if caBlock == nil {
+		return nil, nil, fmt.Errorf("failed to decode CA certificate")
+	}
+	caCert, err := x509.ParseCertificate(caBlock.Bytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
 	}
 
-	template.IPAddresses = append(template.IPAddresses, net.ParseIP(helpers.IPV4Localhost))
-
-	// Only use SANs to keep golang happy, https://go-review.googlesource.com/c/go/+/231379
-	if ip := net.ParseIP(host); ip != nil {
-		template.IPAddresses = append(template.IPAddresses, ip)
-	} else {
-		template.DNSNames = append(template.DNSNames, host)
-		template.DNSNames = append(template.DNSNames, dnsNames...)
+	// Parse CA private key
+	caKeyBlock, _ := pem.Decode(caKeyPEM)
+	if caKeyBlock == nil {
+		return nil, nil, fmt.Errorf("failed to decode CA private key")
+	}
+	caKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse CA private key: %w", err)
 	}
 
-	template.Subject.CommonName = host
+	return caCert, caKey, nil
+}
 
+// createAndSignCertificate creates and signs a certificate with the given template
+func createAndSignCertificate(template *x509.Certificate, ca *x509.Certificate, caKey *rsa.PrivateKey) (*x509.Certificate, *rsa.PrivateKey, error) {
 	privateKey, err := newPrivateKey()
 	if err != nil {
 		return nil, nil, err
@@ -168,6 +181,13 @@ func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notA
 	}
 
 	return cert, privateKey, nil
+}
+
+// generateCert generates a new certificate for the given host using the
+// provided certificate authority. The cert and key files are stored in
+// the provided files.
+func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	return generateTypedCert(CertTypeServer, host, ca, caKey, notAfter, dnsNames...)
 }
 
 // GenerateCA creates a CA certificate and returns the PEM-encoded certificate and private key
@@ -180,39 +200,14 @@ func GenerateCA(subject string) ([]byte, []byte, error) {
 
 	ca.Subject.CommonName = subject
 
-	caPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: ca.Raw,
-	})
-
-	caKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(caKey),
-	})
-
-	return caPEM, caKeyPEM, nil
+	return encodeCertToPEM(ca), encodeKeyToPEM(caKey), nil
 }
 
 // GenerateServerCert creates a server certificate signed by the provided CA
 func GenerateServerCert(caCertPEM, caKeyPEM []byte, commonName string, dnsNames []string) ([]byte, []byte, error) {
-	// Parse CA certificate
-	caBlock, _ := pem.Decode(caCertPEM)
-	if caBlock == nil {
-		return nil, nil, fmt.Errorf("failed to decode CA certificate")
-	}
-	caCert, err := x509.ParseCertificate(caBlock.Bytes)
+	caCert, caKey, err := parseCAFromPEM(caCertPEM, caKeyPEM)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
-	}
-
-	// Parse CA private key
-	caKeyBlock, _ := pem.Decode(caKeyPEM)
-	if caKeyBlock == nil {
-		return nil, nil, fmt.Errorf("failed to decode CA private key")
-	}
-	caKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA private key: %w", err)
+		return nil, nil, err
 	}
 
 	notAfter := now().Add(validFor)
@@ -221,39 +216,14 @@ func GenerateServerCert(caCertPEM, caKeyPEM []byte, commonName string, dnsNames 
 		return nil, nil, fmt.Errorf("unable to generate server certificate: %w", err)
 	}
 
-	serverCertPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: serverCert.Raw,
-	})
-
-	serverKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(serverKey),
-	})
-
-	return serverCertPEM, serverKeyPEM, nil
+	return encodeCertToPEM(serverCert), encodeKeyToPEM(serverKey), nil
 }
 
 // GenerateClientCert creates a client certificate signed by the provided CA
 func GenerateClientCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, []byte, error) {
-	// Parse CA certificate
-	caBlock, _ := pem.Decode(caCertPEM)
-	if caBlock == nil {
-		return nil, nil, fmt.Errorf("failed to decode CA certificate")
-	}
-	caCert, err := x509.ParseCertificate(caBlock.Bytes)
+	caCert, caKey, err := parseCAFromPEM(caCertPEM, caKeyPEM)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
-	}
-
-	// Parse CA private key
-	caKeyBlock, _ := pem.Decode(caKeyPEM)
-	if caKeyBlock == nil {
-		return nil, nil, fmt.Errorf("failed to decode CA private key")
-	}
-	caKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA private key: %w", err)
+		return nil, nil, err
 	}
 
 	notAfter := now().Add(validFor)
@@ -262,99 +232,79 @@ func GenerateClientCert(caCertPEM, caKeyPEM []byte, commonName string) ([]byte, 
 		return nil, nil, fmt.Errorf("unable to generate client certificate: %w", err)
 	}
 
-	clientCertPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: clientCert.Raw,
-	})
-
-	clientKeyPEM := pem.EncodeToMemory(&pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(clientKey),
-	})
-
-	return clientCertPEM, clientKeyPEM, nil
+	return encodeCertToPEM(clientCert), encodeKeyToPEM(clientKey), nil
 }
 
-// generateServerCert generates a server certificate with server auth extended key usage
-func generateServerCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	template, err := newCertificate(notAfter)
-	if err != nil {
-		return nil, nil, err
-	}
+// CertType defines the type of certificate to generate
+type CertType int
 
-	template.IPAddresses = append(template.IPAddresses, net.ParseIP(helpers.IPV4Localhost))
+// The different types of Certs that can be generated
+const (
+	CertTypeServer CertType = iota
+	CertTypeClient
+)
 
-	// Add IPv6 localhost
-	template.IPAddresses = append(template.IPAddresses, net.ParseIP("::1"))
-
-	// Only use SANs to keep golang happy
-	if ip := net.ParseIP(host); ip != nil {
-		template.IPAddresses = append(template.IPAddresses, ip)
-	} else {
-		template.DNSNames = append(template.DNSNames, host)
-		template.DNSNames = append(template.DNSNames, dnsNames...)
-	}
-
-	template.Subject.CommonName = host
-	template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-
-	privateKey, err := newPrivateKey()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, ca, privateKey.Public(), caKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cert, err := x509.ParseCertificate(derBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return cert, privateKey, nil
-}
-
-// generateClientCert generates a client certificate with client auth extended key usage
-func generateClientCert(commonName string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time) (*x509.Certificate, *rsa.PrivateKey, error) {
+// generateTypedCert generates a certificate with the specified type and configuration
+func generateTypedCert(certType CertType, commonName string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
 	template, err := newCertificate(notAfter)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	template.Subject.CommonName = commonName
-	template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 
-	privateKey, err := newPrivateKey()
-	if err != nil {
-		return nil, nil, err
+	switch certType {
+	case CertTypeServer:
+		template.IPAddresses = append(template.IPAddresses, net.ParseIP(helpers.IPV4Localhost))
+		template.IPAddresses = append(template.IPAddresses, net.ParseIP("::1"))
+
+		// Only use SANs to keep golang happy
+		if ip := net.ParseIP(commonName); ip != nil {
+			template.IPAddresses = append(template.IPAddresses, ip)
+		} else {
+			template.DNSNames = append(template.DNSNames, commonName)
+			template.DNSNames = append(template.DNSNames, dnsNames...)
+		}
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
+
+	case CertTypeClient:
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, ca, privateKey.Public(), caKey)
-	if err != nil {
-		return nil, nil, err
+	return createAndSignCertificate(template, ca, caKey)
+}
+
+// generateServerCert generates a server certificate with server auth extended key usage
+func generateServerCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	return generateTypedCert(CertTypeServer, host, ca, caKey, notAfter, dnsNames...)
+}
+
+// generateClientCert generates a client certificate with client auth extended key usage
+func generateClientCert(commonName string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time) (*x509.Certificate, *rsa.PrivateKey, error) {
+	return generateTypedCert(CertTypeClient, commonName, ca, caKey, notAfter)
+}
+
+// parseCertFromPEM parses a certificate from PEM data
+func parseCertFromPEM(certData []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(certData)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode pem data")
 	}
 
-	cert, err := x509.ParseCertificate(derBytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, nil, err
+		return nil, fmt.Errorf("failed to parse certificate: %w", err)
 	}
 
-	return cert, privateKey, nil
+	return cert, nil
 }
 
 // GetRemainingCertLifePercentage gives back the percentage of the given certificates total lifespan that it has left before it's expired
 func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
 	// FIXME, create unit tests
-	block, _ := pem.Decode(certData)
-	if block == nil {
-		return 0, fmt.Errorf("failed to decode pem data")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := parseCertFromPEM(certData)
 	if err != nil {
-		return 0, fmt.Errorf("failed to parse certificate: %w", err)
+		return 0, err
 	}
 
 	currentTime := now()
@@ -372,14 +322,9 @@ func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
 
 // CheckForExpiredCert checks if the certificate is expired
 func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
-	block, _ := pem.Decode(pk.Cert)
-	if block == nil {
-		return fmt.Errorf("failed to decode pem data")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
+	cert, err := parseCertFromPEM(pk.Cert)
 	if err != nil {
-		return fmt.Errorf("failed to parse certificate: %w", err)
+		return err
 	}
 
 	if cert.NotAfter.Before(now()) {

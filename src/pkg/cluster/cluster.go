@@ -372,18 +372,17 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return nil
 	}
 
-	// Generate CA certificate (needed for all other certs)
 	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
 	if err != nil {
 		return fmt.Errorf("failed to generate CA certificate: %w", err)
 	}
 
-	// Generate server certificate for registry
 	serverHosts := []string{
 		"zarf-docker-registry",
 		"zarf-docker-registry.zarf.svc.cluster.local",
 		"localhost",
 		"127.0.0.1",
+		"[::1]",
 	}
 	serverCert, serverKey, err := pki.GenerateServerCert(caCert, caKey, "zarf-docker-registry", serverHosts)
 	if err != nil {
@@ -395,7 +394,6 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
 
-	// Create CA secret
 	caSecret := v1ac.Secret(RegistryCASecretName, state.ZarfNamespaceName).
 		WithData(map[string][]byte{
 			RegistrySecretCAPath: caCert,
@@ -404,7 +402,6 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create CA secret: %w", err)
 	}
 
-	// Create server TLS secret
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
