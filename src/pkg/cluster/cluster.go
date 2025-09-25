@@ -153,8 +153,6 @@ type InitStateOptions struct {
 	GitServer state.GitServerInfo
 	// Information about the container registry Zarf is going to be using
 	RegistryInfo state.RegistryInfo
-	// Information on the DaemonSet Injector
-	InjectorInfo state.InjectorInfo
 	// Information about the artifact registry Zarf is going to be using
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
@@ -277,8 +275,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
 	}
-
-	s.InjectorInfo = opts.InjectorInfo
 
 	switch s.Distro {
 	case DistroIsK3s, DistroIsK3d:
