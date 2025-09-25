@@ -312,15 +312,16 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 			d.s.InjectorInfo.Port = opts.InjectorHostPort
-			if err := d.c.SaveState(ctx, d.s); err != nil {
-				return nil, err
-			}
 		case state.RegistryModeNodePort:
 			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.Port = seedPort
+		}
+		// Save the injector updates to state
+		if err := d.c.SaveState(ctx, d.s); err != nil {
+			return nil, err
 		}
 	}
 
