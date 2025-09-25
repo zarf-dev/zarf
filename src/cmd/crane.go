@@ -60,7 +60,9 @@ func newRegistryCommand() *cobra.Command {
 			if o.verbose {
 				logs.Debug.SetOutput(os.Stderr)
 			}
+			fmt.Println("here before insecure")
 			if o.insecure {
+				fmt.Println("here in insecure")
 				craneOptions = append(craneOptions, crane.Insecure)
 			}
 			if o.ndlayers {
@@ -80,7 +82,7 @@ func newRegistryCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(newRegistryPruneCommand())
+	cmd.AddCommand(newRegistryPruneCommand(&craneOptions))
 	cmd.AddCommand(newRegistryLoginCommand())
 	cmd.AddCommand(newRegistryCopyCommand())
 	cmd.AddCommand(newRegistryCatalogCommand())
@@ -179,10 +181,12 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
-type registryPruneOptions struct{}
+type registryPruneOptions struct {
+	options *[]crane.Option
+}
 
-func newRegistryPruneCommand() *cobra.Command {
-	o := registryPruneOptions{}
+func newRegistryPruneCommand(options *[]crane.Option) *cobra.Command {
+	o := registryPruneOptions{options: options}
 
 	cmd := &cobra.Command{
 		Use:     "prune",
@@ -226,18 +230,17 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	if tunnel != nil {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
-		return tunnel.Wrap(func() error { return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint) })
+		return tunnel.Wrap(func() error {
+			return doPruneImagesForPackages(ctx, *o.options, zarfState, zarfPackages, registryEndpoint)
+		})
 	}
 
-	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
+	return doPruneImagesForPackages(ctx, *o.options, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
-	craneOpts := []crane.Option{}
-	// FIXME, should probably just pass through the normal crane opts
-	craneOpts = append(craneOpts, images.WithPushAuth(s.RegistryInfo))
-	craneOpts = append(craneOpts, crane.Insecure)
+	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
 	l.Info("finding images to prune")
 
@@ -258,7 +261,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 						return err
 					}
 
-					digest, err := crane.Digest(transformedImageNoCheck, craneOpts...)
+					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
 						return err
 					}
@@ -269,20 +272,20 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 	}
 
 	// Find which images and tags are in the registry currently
-	imageCatalog, err := crane.Catalog(registryEndpoint, craneOpts...)
+	imageCatalog, err := crane.Catalog(registryEndpoint, options...)
 	if err != nil {
 		return err
 	}
 	referenceToDigest := map[string]string{}
 	for _, image := range imageCatalog {
 		imageRef := fmt.Sprintf("%s/%s", registryEndpoint, image)
-		tags, err := crane.ListTags(imageRef, craneOpts...)
+		tags, err := crane.ListTags(imageRef, options...)
 		if err != nil {
 			return err
 		}
 		for _, tag := range tags {
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
-			digest, err := crane.Digest(taggedImageRef, craneOpts...)
+			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
 				return err
 			}
@@ -327,7 +330,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 
 		// Delete the digest references that are to be pruned
 		for digestRef := range imageDigestsToPrune {
-			err = crane.Delete(digestRef, craneOpts...)
+			err = crane.Delete(digestRef, options...)
 			if err != nil {
 				return err
 			}
