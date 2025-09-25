@@ -172,6 +172,14 @@ type Constant struct {
 	Pattern string `json:"pattern,omitempty"`
 }
 
+// Validate runs all validation checks on a package constant.
+func (c Constant) Validate() error {
+	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
+		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
+	}
+	return nil
+}
+
 // SetVariable tracks internal variables that have been set during this run of Zarf
 type SetVariable struct {
 	Variable `json:",inline"`
@@ -186,7 +194,6 @@ var SetValueJSON = SetValueType("json")
 var SetValueString = SetValueType("json")
 
 // SetValue declares a value that can be set during a package deploy.
-// FIXME(mkcp): SetValues should probably come last.
 type SetValue struct {
 	// Key represents which value to assign to.
 	Key string `json:"key,omitempty"`
@@ -195,14 +202,6 @@ type SetValue struct {
 	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
 	// inserting the value into the template.
 	Type SetValueType `json:"type,omitempty"`
-}
-
-// Validate runs all validation checks on a package constant.
-func (c Constant) Validate() error {
-	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
-		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
-	}
-	return nil
 }
 
 // ZarfMetadata lists information about the current ZarfPackage.
