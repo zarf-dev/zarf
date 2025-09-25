@@ -79,14 +79,6 @@ func TestManifests(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Validate the namespaces are labeled
-	stdOut, stdErr, err = e2e.Kubectl(t, "get", "namespaces", "-l", "zarf.dev/package=manifests", "-o", "json")
-	require.NoError(t, err, stdOut, stdErr)
-
-	namespaceList := &corev1.NamespaceList{}
-	err = json.Unmarshal([]byte(stdOut), namespaceList)
-	require.NoError(t, err)
-	require.Len(t, namespaceList.Items, 3, "expected 3 namespaces")
 	// validate the deployments
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "deployments", "-l", "zarf.dev/package=manifests", "--all-namespaces", "-o", "json")
 	require.NoError(t, err, stdOut, stdErr)
@@ -96,8 +88,8 @@ func TestManifests(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, deploymentList.Items, 3, "expected 3 deployments")
 
-	// Wait for all the deployments to be ready
-	stdOut, stdErr, err = e2e.Kubectl(t, "wait", "deployment", "-l", "zarf.dev/package=manifests", "--for=condition=Available", "--all-namespaces", "--timeout=1m")
+	// Wait for podinfo to scale up to the HPA min replicas of 2
+	stdOut, stdErr, err = e2e.Kubectl(t, "wait", "deployment", "podinfo", "--for=condition=Available", "-n", "podinfo", "--timeout=1m")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// List pods by the zarf.dev/package label
@@ -108,7 +100,8 @@ func TestManifests(t *testing.T) {
 	err = json.Unmarshal([]byte(stdOut), podList)
 	require.NoError(t, err)
 
-	require.Len(t, podList.Items, 6, "expected 6 pods")
+	// httpd and nginx deployments should have 2 replicas each, podinfo is deployed with hpa so can scale from 2 to 4
+	require.GreaterOrEqual(t, len(podList.Items), 6, "expected at least 6 pods")
 
 	// Each deployment should have 2 replicas.
 	podInfoCount := 0
@@ -127,7 +120,8 @@ func TestManifests(t *testing.T) {
 	}
 	require.Equal(t, 2, httpdCount)
 	require.Equal(t, 2, nginxCount)
-	require.Equal(t, 2, podInfoCount)
+	// podinfo should have at least 2 replicas
+	require.GreaterOrEqual(t, podInfoCount, 2)
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "manifests", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

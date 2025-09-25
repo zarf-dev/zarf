@@ -36,6 +36,10 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+	// PackageLabel is the label used to identify the owning of package.
+	PackageLabel string = "zarf.dev/package"
+	// NamespaceOverrideLabel is the label used to identify the namespace override.
+	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -237,7 +241,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
 		if opts.Pkg != nil {
 			// Add the package label
-			zarfNamespace.Labels[v1alpha1.PackageLabel] = opts.Pkg.Metadata.Name
+			zarfNamespace.Labels[PackageLabel] = opts.Pkg.Metadata.Name
 		}
 		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 		if err != nil {

@@ -75,7 +75,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			"zarf-injector": b,
 		}).
 		WithLabels(map[string]string{
-			v1alpha1.PackageLabel: pkg.Metadata.Name,
+			PackageLabel: pkg.Metadata.Name,
 		})
 	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
@@ -230,8 +230,8 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 
 		cm := v1ac.ConfigMap(fileName, state.ZarfNamespaceName).
 			WithLabels(map[string]string{
-				"zarf-injector":       "payload",
-				v1alpha1.PackageLabel: pkg.Metadata.Name,
+				"zarf-injector": "payload",
+				PackageLabel:    pkg.Metadata.Name,
 			}).
 			WithBinaryData(map[string][]byte{
 				fileName: data,
@@ -347,9 +347,9 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			"app":                 "zarf-injector",
-			AgentLabel:            "ignore",
-			v1alpha1.PackageLabel: pkg.Metadata.Name,
+			"app":        "zarf-injector",
+			AgentLabel:   "ignore",
+			PackageLabel: pkg.Metadata.Name,
 		}).
 		WithSpec(
 			v1ac.PodSpec().
@@ -416,7 +416,7 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 				).WithSelector(map[string]string{
 				"app": "zarf-injector",
 			})).WithLabels(map[string]string{
-			v1alpha1.PackageLabel: pkg.Metadata.Name,
+			PackageLabel: pkg.Metadata.Name,
 		})
 
 		var err error

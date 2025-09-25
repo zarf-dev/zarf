@@ -47,10 +47,6 @@ const (
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 	// APIVersion the api version of this package.
 	APIVersion string = "zarf.dev/v1alpha1"
-	// PackageLabel is the label used to identify the owning of package.
-	PackageLabel string = "zarf.dev/package"
-	// NamespaceOverrideLabel is the label used to identify the namespace override.
-	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // SkeletonArch is a special architecture used for skeleton packages

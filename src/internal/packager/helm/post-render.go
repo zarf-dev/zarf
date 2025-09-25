@@ -46,32 +46,29 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, actionConfig *action.Configuration, opts InstallUpgradeOptions) (*renderer, error) {
-	if opts.Cluster == nil {
-		return nil, fmt.Errorf("cluster required to run post renderer")
-	}
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkg *v1alpha1.ZarfPackage, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
-	if opts.VariableConfig == nil {
+	if variableConfig == nil {
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
 	}
-	if opts.Pkg == nil {
+	if pkg == nil {
 		return nil, fmt.Errorf("package required to run post renderer")
 	}
-	skipSecretUpdates := !opts.AirgapMode && opts.State.Distro == "YOLO"
+	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
 	rend := &renderer{
 		chart:                  chart,
-		adoptExistingResources: opts.AdoptExistingResources,
-		cluster:                opts.Cluster,
+		adoptExistingResources: adoptExistingResources,
+		cluster:                c,
 		skipSecretUpdates:      skipSecretUpdates,
-		state:                  opts.State,
+		state:                  s,
 		actionConfig:           actionConfig,
-		variableConfig:         opts.VariableConfig,
+		variableConfig:         variableConfig,
 		connectStrings:         state.ConnectStrings{},
 		namespaces:             map[string]*corev1.Namespace{},
-		pkg:                    opts.Pkg,
-		namespaceOverride:      opts.NamespaceOverride,
+		pkg:                    pkg,
+		namespaceOverride:      namespaceOverride,
 	}
 
 	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
@@ -80,7 +77,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, actionConfig *ac
 	}
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
-	} else {
+	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 		rend.namespaces[rend.chart.Namespace] = namespace
 	}
@@ -117,17 +114,12 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 	for name, namespace := range r.namespaces {
 		// Check to see if this namespace already exists
 		var existingNamespace bool
-		var zarfManaged bool
 		for _, serverNamespace := range namespaceList.Items {
 			if serverNamespace.Name == name {
 				existingNamespace = true
-				if serverNamespace.Labels[state.ZarfManagedByLabel] == "zarf" {
-					zarfManaged = true
-				}
 				break
 			}
 		}
-		namespace.Labels = r.setPackageLabels(namespace.Labels)
 		// If the namespace doesn't exist then create it. If it does exist and is already managed by Zarf then update the labels with
 		// the new package and namespace override labels.
 		if !existingNamespace {
@@ -136,7 +128,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if zarfManaged || r.adoptExistingResources { // If the namespace is already managed by Zarf or we are adopting existing resources then update the labels with the new package and namespace override labels.
+		} else if r.adoptExistingResources {
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {
@@ -325,9 +317,9 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 // setPackageLabels will add the package labels to an existing labels map
 func (r *renderer) setPackageLabels(labels map[string]string) map[string]string {
 	if r.pkg != nil {
-		labels[v1alpha1.PackageLabel] = r.pkg.Metadata.Name
+		labels[cluster.PackageLabel] = r.pkg.Metadata.Name
 		if r.namespaceOverride != "" {
-			labels[v1alpha1.NamespaceOverrideLabel] = r.namespaceOverride
+			labels[cluster.NamespaceOverrideLabel] = r.namespaceOverride
 		}
 	}
 	return labels
