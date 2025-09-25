@@ -289,7 +289,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.ArtifactServer = opts.ArtifactServer
 	}
 
-	if opts.RegistryInfo.ProxyMode {
+	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		err = c.generateOrRenewRegistryCerts(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate certs: %w", err)

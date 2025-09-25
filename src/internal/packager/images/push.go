@@ -99,7 +99,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
-		if cfg.RegistryInfo.ProxyMode {
+		if cfg.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 			client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
 			if err != nil {
 				return err

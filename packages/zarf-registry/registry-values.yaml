@@ -71,6 +71,7 @@ autoscaling:
   maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
   targetCPUUtilizationPercentage: ###ZARF_VAR_REGISTRY_HPA_TARGET_CPU###
 
+# FIXME: My solution for mtls should work with this, see implementing PR https://github.com/zarf-dev/zarf/pull/2008
 caBundle: |
   ###ZARF_VAR_REGISTRY_CA_BUNDLE###
 

@@ -234,7 +234,10 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 
 func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
-	authOption := images.WithPushAuth(s.RegistryInfo)
+	craneOpts := []crane.Option{}
+	// FIXME, should probably just pass through the normal crane opts
+	craneOpts = append(craneOpts, images.WithPushAuth(s.RegistryInfo))
+	craneOpts = append(craneOpts, crane.Insecure)
 
 	l.Info("finding images to prune")
 
@@ -255,7 +258,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 						return err
 					}
 
-					digest, err := crane.Digest(transformedImageNoCheck, authOption)
+					digest, err := crane.Digest(transformedImageNoCheck, craneOpts...)
 					if err != nil {
 						return err
 					}
@@ -266,20 +269,20 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 	}
 
 	// Find which images and tags are in the registry currently
-	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
+	imageCatalog, err := crane.Catalog(registryEndpoint, craneOpts...)
 	if err != nil {
 		return err
 	}
 	referenceToDigest := map[string]string{}
 	for _, image := range imageCatalog {
 		imageRef := fmt.Sprintf("%s/%s", registryEndpoint, image)
-		tags, err := crane.ListTags(imageRef, authOption)
+		tags, err := crane.ListTags(imageRef, craneOpts...)
 		if err != nil {
 			return err
 		}
 		for _, tag := range tags {
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
-			digest, err := crane.Digest(taggedImageRef, authOption)
+			digest, err := crane.Digest(taggedImageRef, craneOpts...)
 			if err != nil {
 				return err
 			}
@@ -324,7 +327,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 
 		// Delete the digest references that are to be pruned
 		for digestRef := range imageDigestsToPrune {
-			err = crane.Delete(digestRef, authOption)
+			err = crane.Delete(digestRef, craneOpts...)
 			if err != nil {
 				return err
 			}
