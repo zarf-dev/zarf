@@ -71,7 +71,6 @@ type packageCreateOptions struct {
 	output                  string
 	differentialPackagePath string
 	setVariables            map[string]string
-	valuesFiles             []string
 	sbom                    bool
 	sbomOutput              string
 	skipSBOM                bool

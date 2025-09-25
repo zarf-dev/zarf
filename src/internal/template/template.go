@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package template provides functions for applying go-templates within Zarf.
 package template
 
 import (
@@ -22,6 +26,14 @@ import (
 // With {{ .Values.app.name }} => "foo"
 type Objects map[string]any
 
+var (
+	objectKeyValues    = "Values"
+	objectKeyMetadata  = "Metadata"
+	objectKeyBuild     = "Build"
+	objectKeyConstants = "Constants"
+	objectKeyVariables = "Variables"
+)
+
 // NewObjects instantiates an Objects map, which provides templating context. The "with" options below allow for
 // additional template Objects to be included.
 func NewObjects(values value.Values) Objects {
@@ -31,19 +43,19 @@ func NewObjects(values value.Values) Objects {
 
 // WithValues takes a value.Values and makes it available in templating Objects.
 func (o Objects) WithValues(values value.Values) Objects {
-	o["Values"] = values
+	o[objectKeyValues] = values
 	return o
 }
 
 // WithMetadata takes the v1alpha1.ZarfMetadata section of a created package and makes it available in templating Objects.
 func (o Objects) WithMetadata(meta v1alpha1.ZarfMetadata) Objects {
-	o["Metadata"] = meta
+	o[objectKeyMetadata] = meta
 	return o
 }
 
 // WithBuild takes the v1alpha1.ZarfBuildData section of a created package and makes it available in templating Objects.
 func (o Objects) WithBuild(build v1alpha1.ZarfBuildData) Objects {
-	o["Build"] = build
+	o[objectKeyBuild] = build
 	return o
 }
 
@@ -54,7 +66,7 @@ func (o Objects) WithConstants(constants []v1alpha1.Constant) Objects {
 	for _, v := range constants {
 		m[v.Name] = v.Value
 	}
-	o["Constants"] = m
+	o[objectKeyConstants] = m
 	return o
 }
 
@@ -65,7 +77,7 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	for k, v := range vars {
 		m[k] = v.Value
 	}
-	o["Variables"] = m
+	o[objectKeyVariables] = m
 	return o
 }
 
@@ -121,15 +133,13 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	if err != nil {
 		return err
 	}
-	defer func(f *os.File, err error) {
+	defer func(f *os.File) {
 		cErr := f.Close()
 		if cErr != nil {
 			err = fmt.Errorf("%w:%w", err, cErr)
 		}
-	}(f, err)
+	}(f)
 	// Apply template and write to destination
-	if err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(f, objs); err != nil {
-		return err
-	}
-	return nil
+	err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(f, objs)
+	return err
 }
