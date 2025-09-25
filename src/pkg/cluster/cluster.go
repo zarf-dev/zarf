@@ -439,7 +439,9 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
 	// If registry mode is not set then this is an old Zarf cluster and we can assume it's using the nodeport method
-	s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+	if s.RegistryInfo.RegistryMode == "" {
+		s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+	}
 	state.DebugPrint(ctx, s)
 	return s, nil
 }
