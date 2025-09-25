@@ -7,14 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -44,10 +47,15 @@ type Resource struct {
 type InspectPackageResourcesOptions struct {
 	SetVariables map[string]string
 	KubeVersion  string
+	value.Values
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
 func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayout, opts InspectPackageResourcesOptions) (_ []Resource, err error) {
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return []Resource{}, fmt.Errorf("values passed in but \"%s\" feature is not enabled. Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	s, err := state.Default()
 	if err != nil {
 		return nil, err
@@ -57,6 +65,16 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return nil, err
 	}
+
+	// Merge packageValues with values from CLI flags, config, or API.
+	// FIXME(mkcp): This is a bit janky
+	packageValues, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, err
+	}
+	values := maps.Clone(packageValues)
+	value.DeepMerge(values, opts.Values)
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -91,7 +109,11 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				// FIXME(mkcp): Clean this up
+				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+					variableConfig: variableConfig,
+					values:         values,
+				})
 				if err != nil {
 					return nil, err
 				}

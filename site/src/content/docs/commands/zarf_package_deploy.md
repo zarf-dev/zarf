@@ -32,6 +32,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --shasum string               Shasum of the package to deploy. Required if deploying a remote https package.
       --skip-signature-validation   Skip validating the signature of the Zarf package
       --timeout duration            Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+  -v, --values strings              [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands

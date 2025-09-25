@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configmap
+  namespace: nginx
+  labels:
+    app: nginx
+data:
+  01_http.conf: |
+    add_header X-Kubernetes-Pod $hostname;
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Welcome to {{ .Values.site.name }}!</title>
+        <style>
+          {{ .Values.site.styles }}
+        </style>
+      </head>
+      <body>
+        <!-- Test two separate values on the same line -->
+        <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
+        <p>Below is a Terraform File templated by Zarf</p>
+        <pre>
+          "{{ .Values.terraform.content }}"
+        </pre>
+        <!-- Utilize the value .terraform.shasum from a previous component's setValues  -->
+        <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
+        <pre>Imported variable from .Variables.EXAMPLE_VAR: {{ .Variables.EXAMPLE_VAR }}</pre>
+        <pre>Imported constant from .Constants.EXAMPLE_CONST: {{ .Constants.EXAMPLE_CONST }}</pre>
+        {{ .Values.site.footer }}
+      </body>
+    </html>

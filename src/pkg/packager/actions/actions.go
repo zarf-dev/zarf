@@ -15,7 +15,9 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -23,13 +25,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig(ctx)
+		variableConfig = ptmpl.GetZarfVariableConfig(ctx)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values); err != nil {
 			return err
 		}
 	}
@@ -37,12 +39,16 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
+
+	tmplObjs := template.NewObjects(values).
+		WithConstants(variableConfig.GetConstants()).
+		WithVariables(variableConfig.GetSetVariableMap())
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {
@@ -78,6 +84,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
 
+	// Apply go-templates in cmds
+	cmd, err = template.ApplyToCmd(ctx, cmd, tmplObjs)
+	if err != nil {
+		l.Error("could not template cmd", "cmd", cmdEscaped, "err", err.Error())
+	}
+
 	l.Info("running command", "cmd", cmdEscaped)
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
@@ -110,6 +122,32 @@ retryCmd:
 			for _, v := range action.SetVariables {
 				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+					return err
+				}
+			}
+
+			// If an output value is defined, parse the result and set it to values map.
+			for _, v := range action.SetValues {
+				var s string
+				switch v.Type {
+				case v1alpha1.SetValueYAML:
+					// TODO(mkcp): Implement YAML parsing
+					l.Warn("YAML setValues types not implemented yet", "type", v.Type)
+				case v1alpha1.SetValueJSON:
+					// TODO(mkcp): Implement JSON parsing
+					l.Warn("json setValues types not implemented yet", "type", v.Type)
+				case v1alpha1.SetValueString:
+					s = outTrimmed
+				default:
+					return fmt.Errorf("unknown setValue type: %s", v.Type)
+				}
+
+				// NOTE(mkcp): This isn't an ideal implementation because it effectively just mutates the value map that
+				// was passed in by the caller of actions.Run. It silently assumes that this same map will get passed
+				// to the next component, and so on. Ultimately this is the map stored on deployer, but a better
+				// implementation of this would ensure it's safe for concurrent access and keys are explicitly modified.
+				err := values.Set(value.Path(v.Key), s)
+				if err != nil {
 					return err
 				}
 			}
