@@ -110,7 +110,7 @@ func TestZarfInit(t *testing.T) {
 func verifyZarfNamespaceLabels(t *testing.T) {
 	t.Helper()
 
-	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf","zarf.dev/package":"init"}'`
+	expectedLabels := `'{"app.kubernetes.io/managed-by":"zarf","kubernetes.io/metadata.name":"zarf"}'`
 	actualLabels, _, err := e2e.Kubectl(t, "get", "ns", "zarf", "-o=jsonpath='{.metadata.labels}'")
 	require.NoError(t, err)
 	require.Equal(t, expectedLabels, actualLabels)

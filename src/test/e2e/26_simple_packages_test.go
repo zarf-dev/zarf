@@ -5,11 +5,13 @@
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -17,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func TestDosGames(t *testing.T) {
@@ -91,6 +94,15 @@ func TestManifests(t *testing.T) {
 	// Wait for podinfo to scale up to the HPA min replicas of 2
 	stdOut, stdErr, err = e2e.Kubectl(t, "wait", "deployment", "podinfo", "--for=condition=Available", "-n", "podinfo", "--timeout=1m")
 	require.NoError(t, err, stdOut, stdErr)
+	err = wait.PollUntilContextTimeout(t.Context(), time.Second*5, time.Minute*1, false, func(_ context.Context) (bool, error) {
+		stdOut, stdErr, err = e2e.Kubectl(t, "get", "pods", "-l", "app=podinfo", "-n", "podinfo", "-o", "json")
+		require.NoError(t, err, stdOut, stdErr)
+		podList := &corev1.PodList{}
+		err = json.Unmarshal([]byte(stdOut), podList)
+		require.NoError(t, err)
+		return len(podList.Items) >= 2, nil
+	})
+	require.NoError(t, err)
 
 	// List pods by the zarf.dev/package label
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "pods", "-l", "zarf.dev/package=manifests", "--all-namespaces", "-o", "json")
