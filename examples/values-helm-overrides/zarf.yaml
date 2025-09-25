@@ -1,13 +1,14 @@
 kind: ZarfPackageConfig
 metadata:
   name: helm-overrides-example
-  description: "{{ .Values.package.description }}"
-  version: "{{ .Values.package.version }}"
+  description: "An example for passing Zarf values into Helm values."
+  version: "0.0.1"
 values:
   files:
     - values.yaml
 components:
   - name: "helm-overrides-component"
+    required: true
     charts:
       - name: "helm-overrides-chart"
         version: 0.1.0
