@@ -10,6 +10,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+// RegistryOverride describes an override for a specific registry.
+type RegistryOverride struct {
+	// Source describes the source registry.
+	// May be of the form:
+	// - docker.io/library
+	// - docker.io
+	Source string
+	// Override replaces the source registry as a string prefix.
+	Override string
+}
+
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	// Verify that Zarf should perform an action
@@ -155,7 +166,8 @@ type ZarfCreateOptions struct {
 	// Path to a previously built package used as the basis for creating a differential package
 	DifferentialPackagePath string
 	// A map of domains to override on package create when pulling images
-	RegistryOverrides map[string]string
+	// Has the form: docker.io=docker.example.com
+	RegistryOverrides []string
 	// An optional variant that controls which components will be included in a package
 	Flavor string
 	// Whether to create a skeleton package

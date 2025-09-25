@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -74,7 +75,7 @@ type packageCreateOptions struct {
 	sbomOutput              string
 	skipSBOM                bool
 	maxPackageSizeMB        int
-	registryOverrides       map[string]string
+	registryOverrides       []string
 	signingKeyPath          string
 	signingKeyPassword      string
 	flavor                  string
@@ -112,7 +113,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
@@ -143,6 +144,23 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
+// Converts registry overrides to a structured type.
+// Input is of the following form:
+// []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
+func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error) {
+	result := make([]types.RegistryOverride, len(overrides))
+	for i, override := range overrides {
+		source, override, found := strings.Cut(override, "=")
+		if !found {
+			return nil, fmt.Errorf("invalid override: missing '=': %s", override)
+		}
+		result[i].Source = source
+		result[i].Override = override
+	}
+
+	return result, nil
+}
+
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// TODO pass confirm through the system rather than keeping it as a global
 	config.CommonOptions.Confirm = o.confirm
@@ -157,6 +175,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	overrides, err := parseRegistryOverrides(o.registryOverrides)
+	if err != nil {
+		return fmt.Errorf("error parsing registry override: %w", err)
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -164,7 +186,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 	opt := packager.CreateOptions{
 		Flavor:                  o.flavor,
-		RegistryOverrides:       o.registryOverrides,
+		RegistryOverrides:       overrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
 		SetVariables:            o.setVariables,
