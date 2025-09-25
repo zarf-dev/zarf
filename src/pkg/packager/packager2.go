@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
+// ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
 type ValuesOverrides map[string]map[string]map[string]any
 
 // RemoteOptions are common options when calling a remote

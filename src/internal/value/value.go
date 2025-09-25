@@ -26,6 +26,7 @@ type Values map[string]any
 // resolves the value for "cpu" within the keyspace of Values.
 type Path string
 
+// Validate inspects the string stored at Path and ensures it's valid.
 func (p Path) Validate() error {
 	if p == "" || !strings.HasPrefix(string(p), ".") {
 		return fmt.Errorf("invalid path format: %s", p)
@@ -80,7 +81,11 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			if helpers.IsURL(path) {
 				return nil, fmt.Errorf("remote values files not yet supported, url=%s", path)
 			}
-			if ok, err := helpers.IsTextFile(path); ok {
+			ok, err := helpers.IsTextFile(path)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
 				// Ensure file exists
 				// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
 				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
@@ -90,9 +95,6 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 				if err != nil {
 					return nil, err
 				}
-			}
-			if err != nil {
-				return nil, err
 			}
 			// Done, merge new values into existing
 			DeepMerge(m, vals)

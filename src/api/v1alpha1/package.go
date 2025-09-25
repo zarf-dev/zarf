@@ -187,11 +187,17 @@ type SetVariable struct {
 	Value string `json:"value"`
 }
 
+// SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
 type SetValueType string
 
+// SetValueYAML enables YAML parsing.
 var SetValueYAML = SetValueType("yaml")
+
+// SetValueJSON enables JSON parsing.
 var SetValueJSON = SetValueType("json")
-var SetValueString = SetValueType("json")
+
+// SetValueString sets the raw value.
+var SetValueString = SetValueType("string")
 
 // SetValue declares a value that can be set during a package deploy.
 type SetValue struct {
