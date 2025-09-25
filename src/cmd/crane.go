@@ -66,7 +66,6 @@ func newRegistryCommand() *cobra.Command {
 			if o.ndlayers {
 				craneOptions = append(craneOptions, crane.WithNondistributable())
 			}
-
 			var err error
 			var v1Platform *v1.Platform
 			if o.platform != "all" {
