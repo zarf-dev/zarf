@@ -66,6 +66,7 @@ func newRegistryCommand() *cobra.Command {
 			if o.ndlayers {
 				craneOptions = append(craneOptions, crane.WithNondistributable())
 			}
+
 			var err error
 			var v1Platform *v1.Platform
 			if o.platform != "all" {
@@ -80,10 +81,10 @@ func newRegistryCommand() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(newRegistryPruneCommand(craneOptions))
+	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
-	cmd.AddCommand(newRegistryCopyCommand())
-	cmd.AddCommand(newRegistryCatalogCommand())
+	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
+	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
@@ -115,25 +116,35 @@ func newRegistryLoginCommand() *cobra.Command {
 	return cmd
 }
 
-func newRegistryCopyCommand() *cobra.Command {
-	// No package information is available so do not pass in a list of architectures
-	craneOptions := []crane.Option{}
-	cmd := craneCmd.NewCmdCopy(&craneOptions)
+func newRegistryCopyCommand(craneOpts *[]crane.Option) *cobra.Command {
+	cmd := craneCmd.NewCmdCopy(craneOpts)
+	// Store crane's original PreRunE if it exists
+	originalPreRunE := cmd.PreRunE
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		// No package information is available so do not pass in a list of architectures
+		*craneOpts = append(*craneOpts, crane.WithPlatform(nil))
+		// return the original pre run
+		if originalPreRunE != nil {
+			return originalPreRunE(cmd, args)
+		}
+		return nil
+	}
+
 	return cmd
 }
 
 type registryCatalogOptions struct {
-	craneOptions  []crane.Option
+	craneOptions  *[]crane.Option
 	originalRunFn func(cmd *cobra.Command, args []string) error
 }
 
-func newRegistryCatalogCommand() *cobra.Command {
+func newRegistryCatalogCommand(craneOpts *[]crane.Option) *cobra.Command {
 	o := registryCatalogOptions{
 		// No package information is available so do not pass in a list of architectures
-		craneOptions: []crane.Option{},
+		craneOptions: craneOpts,
 	}
 
-	cmd := craneCmd.NewCmdCatalog(&o.craneOptions)
+	cmd := craneCmd.NewCmdCatalog(o.craneOptions)
 	cmd.Example = lang.CmdToolsRegistryCatalogExample
 	cmd.Args = nil
 
@@ -169,7 +180,7 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Add the correct authentication to the crane command options
 	authOption := images.WithPullAuth(zarfState.RegistryInfo)
-	o.craneOptions = append(o.craneOptions, authOption)
+	*o.craneOptions = append(*o.craneOptions, authOption)
 
 	if tunnel != nil {
 		defer tunnel.Close()
@@ -180,11 +191,11 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type registryPruneOptions struct {
-	options []crane.Option
+	insecure bool
 }
 
-func newRegistryPruneCommand(options []crane.Option) *cobra.Command {
-	o := registryPruneOptions{options: options}
+func newRegistryPruneCommand() *cobra.Command {
+	o := registryPruneOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "prune",
@@ -195,6 +206,7 @@ func newRegistryPruneCommand(options []crane.Option) *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
 }
@@ -204,6 +216,10 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
+	}
+	options := []crane.Option{}
+	if o.insecure {
+		options = append(options, crane.Insecure)
 	}
 
 	ctx := cmd.Context()
@@ -229,11 +245,11 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error {
-			return doPruneImagesForPackages(ctx, o.options, zarfState, zarfPackages, registryEndpoint)
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint)
 		})
 	}
 
-	return doPruneImagesForPackages(ctx, o.options, zarfState, zarfPackages, registryEndpoint)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint)
 }
 
 func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
