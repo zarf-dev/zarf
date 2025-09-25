@@ -42,18 +42,18 @@ type renderer struct {
 
 	connectStrings    state.ConnectStrings
 	namespaces        map[string]*corev1.Namespace
-	pkg               *v1alpha1.ZarfPackage
+	pkgName           string
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkg *v1alpha1.ZarfPackage, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
 	if variableConfig == nil {
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
 	}
-	if pkg == nil {
+	if pkgName == "" {
 		return nil, fmt.Errorf("package required to run post renderer")
 	}
 	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
@@ -67,7 +67,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		variableConfig:         variableConfig,
 		connectStrings:         state.ConnectStrings{},
 		namespaces:             map[string]*corev1.Namespace{},
-		pkg:                    pkg,
+		pkgName:                pkgName,
 		namespaceOverride:      namespaceOverride,
 	}
 
@@ -316,8 +316,8 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 
 // setPackageLabels will add the package labels to an existing labels map
 func (r *renderer) setPackageLabels(labels map[string]string) map[string]string {
-	if r.pkg != nil {
-		labels[cluster.PackageLabel] = r.pkg.Metadata.Name
+	if r.pkgName != "" {
+		labels[cluster.PackageLabel] = r.pkgName
 		if r.namespaceOverride != "" {
 			labels[cluster.NamespaceOverrideLabel] = r.namespaceOverride
 		}

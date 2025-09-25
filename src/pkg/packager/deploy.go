@@ -272,7 +272,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
-			Pkg:            &pkgLayout.Pkg,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -505,7 +504,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
 			Retries:                opts.Retries,
-			Pkg:                    &pkgLayout.Pkg,
+			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
@@ -571,7 +570,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
 			Retries:                opts.Retries,
-			Pkg:                    &pkgLayout.Pkg,
+			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
 		}
 
