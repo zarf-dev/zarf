@@ -45,9 +45,6 @@ type ParseFilesOptions struct {
 
 // ParseFiles parses the given files in order, overwriting previous values with later values, and returns a merged
 // Values map.
-// FIXME(mkcp): There's a slight complication here where a path might be a URL not just a file. All of the input
-// validation still holds, but we'll need to add some additional branching in the path loop. Having a path
-// type isn't the worst idea either.
 func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Values, err error) {
 	m := make(Values)
 	start := time.Now()
@@ -79,36 +76,32 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
+			var vals Values
+			if helpers.IsURL(path) {
+				return nil, fmt.Errorf("remote values files not yet supported, url=%s", path)
+			}
+			if ok, err := helpers.IsTextFile(path); ok {
+				// Ensure file exists
+				// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
+				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+					return nil, err
+				}
+				vals, err = parseLocalFile(ctx, path)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if err != nil {
+				return nil, err
+			}
+			// Done, merge new values into existing
+			DeepMerge(m, vals)
 		}
-		// FIXME(mkcp): Handle URL values files.
-		// Ensure file exists
-		// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
-		if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-			return nil, err
-		}
-		vals, err := parseFile(ctx, path)
-		if err != nil {
-			return nil, err
-		}
-		DeepMerge(m, vals)
 	}
 	return m, nil
 }
 
-// MapVariablesToValues converts a map of variables to a Values map by making its keys fit lowercase dot notation.
-// FIXME(mkcp): Uppercase keys are allowed in value keys so this is a bit janky, but it works for a proof of concept.
-func MapVariablesToValues(variables map[string]string) Values {
-	m := make(Values)
-	for k, v := range variables {
-		newKey := strings.ToLower(strings.ReplaceAll(k, "_", "."))
-		m[newKey] = v
-	}
-	return m
-}
-
-// FIXME(mkcp): parseFile also reads the file from disk. We should probably separate read to happen over a network or
-// locally, and handle decoding in its own step. DecodeContext() helpfully accepts many different value types.
-func parseFile(ctx context.Context, path string) (Values, error) {
+func parseLocalFile(ctx context.Context, path string) (Values, error) {
 	m := make(Values)
 
 	// Handle files
@@ -142,15 +135,19 @@ func parseFile(ctx context.Context, path string) (Values, error) {
 // - Do we take a json or byte array, a map[string]any, or a specific json.schema type?
 // - Do we want to return a list of errors, some specific schema fail datatype, or some other type?
 // - Surely there's libraries for this which have their own opinionated inputs for the schema and return types
-func checkSchemaStub(_ Values, _ string) []error {
-	return nil
-}
+// func checkSchemaStub(_ Values, _ string) []error {
+// 	return nil
+// }
 
-// DeepMerge merges two Values maps recursively via mutation, overwriting keys in dst with keys from src. Then returns
-// dst.
-// FIXME(mkcp): This should return a copy rather than mutating but for some reason my friday brain could not figure this
-// out. Also, this could take variadic args to merge as many values maps as needed.
+// DeepMerge merges two Values maps recursively via mutation, overwriting keys in dst with keys from src.
 func DeepMerge(dst, src Values) {
+	// Empty maps are fine, you just get back the full contents of one of the maps.
+	if dst == nil {
+		dst = make(Values)
+	}
+	if src == nil {
+		src = make(Values)
+	}
 	for key, srcVal := range src {
 		if dstVal, exists := dst[key]; exists {
 			// Both have the key, merge
