@@ -75,7 +75,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
-      --retries int                     Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 3)
+      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation       Skip validating the signature of the Zarf package
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
