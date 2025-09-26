@@ -57,7 +57,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-	cmd.Flags().StringVar((*string)(&pkgConfig.InitOpts.RegistryInfo.RegistryMode), "registry-mode", string(state.RegistryModeNodePort),
+	cmd.Flags().StringVar((*string)(&pkgConfig.InitOpts.RegistryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("how to access the registry (valid values: %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy))
 	cmd.Flags().IntVar(&pkgConfig.InitOpts.InjectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
 		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
@@ -280,7 +280,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
-	if helpers.IsNotZeroAndNotEqual(registryInfo, s.RegistryInfo) {
+	if state.CheckIfCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
