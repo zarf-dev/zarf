@@ -287,7 +287,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	s.IPFamily = ipFamily
-	if opts.RegistryInfo.NodePort == 0 {
+	// Check if the nodeport was specified by the caller, and if existing state was internal
+	if opts.RegistryInfo.NodePort != 0 && s.RegistryInfo.IsInternal() {
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, opts.RegistryInfo.NodePort)
 		s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
 	}
 	if opts.RegistryInfo.RegistryMode != "" {

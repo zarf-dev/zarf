@@ -256,11 +256,6 @@ func CheckIfCredsChanged(existing, given RegistryInfo) bool {
 	if given.Address != "" && existing.Address != given.Address {
 		return true
 	}
-	// Check nodeport field
-	// FIXME: check if this is allowed to be changed
-	if given.NodePort != 0 && existing.NodePort != given.NodePort {
-		return true
-	}
 	if given.Secret != "" && existing.Secret != given.Secret {
 		return true
 	}
