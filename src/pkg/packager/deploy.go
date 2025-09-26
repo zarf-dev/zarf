@@ -221,18 +221,30 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 
 		if deployErr != nil {
-			onFailure()
-			deployedComponents[idx].Status = state.ComponentStatusFailed
-			if d.isConnectedToCluster() {
-				if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
-					l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+			cleanup := func(ctx context.Context) {
+				onFailure()
+				l.Debug("component deployment failed", "component", component.Name, "error", deployErr.Error())
+				deployedComponents[idx].Status = state.ComponentStatusFailed
+				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
+				if d.isConnectedToCluster() {
+					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
+					}
 				}
 			}
-			return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+			select {
+			case <-ctx.Done():
+				// Use background context here in order to ensure the cleanup logic can run when the context is cancelled
+				cleanup(context.Background())
+				return nil, fmt.Errorf("context cancelled while deploying component %q: %w", component.Name, deployErr)
+			default:
+				cleanup(ctx)
+				return nil, fmt.Errorf("unable to deploy component %q: %w", component.Name, deployErr)
+			}
 		}
 
 		// Update the package secret to indicate that we successfully deployed this component
-		deployedComponents[idx].InstalledCharts = charts
+		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
 			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
@@ -421,22 +433,22 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	charts := []state.InstalledChart{}
 	if hasCharts {
 		helmCharts, err := d.installCharts(ctx, pkgLayout, component, opts)
-		if err != nil {
-			return nil, err
-		}
 		charts = append(charts, helmCharts...)
+		if err != nil {
+			return charts, err
+		}
 	}
 
 	if hasManifests {
 		chartsFromManifests, err := d.installManifests(ctx, pkgLayout, component, opts)
-		if err != nil {
-			return nil, err
-		}
 		charts = append(charts, chartsFromManifests...)
+		if err != nil {
+			return charts, err
+		}
 	}
 
 	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
-		return nil, fmt.Errorf("unable to run component after action: %w", err)
+		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
 	if len(component.HealthChecks) > 0 {
@@ -444,12 +456,12 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		defer cancel()
 		l.Info("running health checks")
 		if err := healthchecks.Run(healthCheckContext, d.c.Watcher, component.HealthChecks); err != nil {
-			return nil, fmt.Errorf("health checks failed: %w", err)
+			return charts, fmt.Errorf("health checks failed: %w", err)
 		}
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, err
+		return charts, err
 	}
 	l.Debug("done deploying component", "name", component.Name, "duration", time.Since(start))
 	return charts, nil
@@ -485,7 +497,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		for idx := range chart.ValuesFiles {
 			valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
 			if err := d.vc.ReplaceTextTemplate(valueFilePath); err != nil {
-				return nil, err
+				return installedCharts, err
 			}
 		}
 
@@ -493,7 +505,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
 		valuesOverrides, err := generateValuesOverrides(chart, component.Name, d.vc, opts.ValuesOverridesMap)
 		if err != nil {
-			return nil, err
+			return installedCharts, err
 		}
 
 		helmOpts := helm.InstallUpgradeOptions{
@@ -509,14 +521,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load chart data: %w", err)
+			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {
-			return nil, err
+			installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings, Status: state.ChartStatusFailed})
+			return installedCharts, err
 		}
-		installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: chart.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings, Status: state.ChartStatusSucceeded})
 	}
 
 	return installedCharts, nil
@@ -542,7 +555,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 				if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
-					return nil, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
 		}
@@ -560,7 +573,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		// Create a helmChart and helm cfg from a given Zarf Manifest.
 		chart, helmChart, err := helm.ChartFromZarfManifest(manifest, manifestDir, pkgLayout.Pkg.Metadata.Name, component.Name)
 		if err != nil {
-			return nil, err
+			return installedCharts, err
 		}
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -577,9 +590,10 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		// Install the chart.
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, nil, helmOpts)
 		if err != nil {
-			return nil, err
+			installedCharts = append(installedCharts, state.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings, Status: state.ChartStatusFailed})
+			return installedCharts, err
 		}
-		installedCharts = append(installedCharts, state.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings})
+		installedCharts = append(installedCharts, state.InstalledChart{Namespace: manifest.Namespace, ChartName: installedChartName, ConnectStrings: connectStrings, Status: state.ChartStatusSucceeded})
 	}
 
 	return installedCharts, nil
