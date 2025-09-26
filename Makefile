@@ -104,6 +104,7 @@ build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli
 docs-and-schema: ## Generate the Zarf Documentation and Schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
 	hack/schema/create-zarf-schema.sh
+	hack/cots/update-gitea.sh
 
 init-package-with-agent: build build-local-agent-image init-package
 
