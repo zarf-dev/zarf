@@ -317,39 +317,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	return s, nil
 }
 
-// needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
-func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string) (bool, error) {
-	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
-	}
-
-	certData, exists := secret.Data[certPath]
-	if !exists {
-		return true, nil // Certificate key doesn't exist in secret
-	}
-
-	percentageRemainingLife, err := pki.GetRemainingCertLifePercentage(certData)
-	if err != nil {
-		return false, err
-	}
-	remainingLifeRenewalThreshold := 50.0
-	if percentageRemainingLife < remainingLifeRenewalThreshold {
-		return true, nil
-	}
-	return false, nil
-}
-
-// MTLSCerts holds client certificate, private key, and CA certificate for mutual TLS authentication
-type MTLSCerts struct {
-	CACertPEM     []byte
-	ClientCertPEM []byte
-	ClientKeyPEM  []byte
-}
-
 // GetRegistryMTLSCerts retrieves TLS certificates from Kubernetes secrets for registry proxy connections
 func (c *Cluster) GetRegistryMTLSCerts(ctx context.Context) (pki.GeneratedPKI, error) {
 	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryCASecretName, metav1.GetOptions{})
@@ -376,6 +343,32 @@ func (c *Cluster) GetRegistryMTLSCerts(ctx context.Context) (pki.GeneratedPKI, e
 		Cert: clientCertPEM,
 		Key:  clientKeyPEM,
 	}, nil
+}
+
+// needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
+func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string) (bool, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
+	}
+
+	certData, exists := secret.Data[certPath]
+	if !exists {
+		return true, nil // Certificate key doesn't exist in secret
+	}
+
+	percentageRemainingLife, err := pki.GetRemainingCertLifePercentage(certData)
+	if err != nil {
+		return false, err
+	}
+	remainingLifeRenewalThreshold := 50.0
+	if percentageRemainingLife < remainingLifeRenewalThreshold {
+		return true, nil
+	}
+	return false, nil
 }
 
 // generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
