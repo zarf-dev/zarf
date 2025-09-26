@@ -60,9 +60,7 @@ func newRegistryCommand() *cobra.Command {
 			if o.verbose {
 				logs.Debug.SetOutput(os.Stderr)
 			}
-			fmt.Println("here before insecure")
 			if o.insecure {
-				fmt.Println("here in insecure")
 				craneOptions = append(craneOptions, crane.Insecure)
 			}
 			if o.ndlayers {
