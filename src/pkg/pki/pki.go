@@ -199,7 +199,6 @@ func GenerateCA(subject string) ([]byte, []byte, error) {
 	}
 
 	ca.Subject.CommonName = subject
-
 	return encodeCertToPEM(ca), encodeKeyToPEM(caKey), nil
 }
 
@@ -330,11 +329,12 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 		return fmt.Errorf("the Zarf agent certificate is expired as of %s, run `zarf tools update-creds agent` to update", cert.NotAfter)
 	}
 
-	remainingTime := cert.NotAfter.Sub(now())
-	totalTime := cert.NotAfter.Sub(cert.NotBefore)
-	certHas20PercentRemainingTime := (float64(remainingTime) / float64(totalTime)) > 0.2
+	remainingLife, err := GetRemainingCertLifePercentage(pk.Cert)
+	if err != nil {
+		return err
+	}
 
-	if !certHas20PercentRemainingTime {
+	if remainingLife < 20 {
 		logger.From(ctx).Warn("the Zarf agent certificate is expiring soon, run `zarf tools update-creds agent` to update", "expiration", cert.NotAfter)
 	}
 	return nil
