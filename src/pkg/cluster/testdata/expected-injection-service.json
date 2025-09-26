@@ -3,7 +3,10 @@
   "apiVersion": "v1",
   "metadata": {
     "name": "zarf-injector",
-    "namespace": "zarf"
+    "namespace": "zarf",
+    "labels": {
+      "zarf.dev/package": "test"
+    }
   },
   "spec": {
     "ports": [
