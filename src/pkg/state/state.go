@@ -59,6 +59,12 @@ const (
 	IPFamilyDualStack IPFamily = "dual"
 )
 
+// All status options for a Zarf component chart
+const (
+	ChartStatusSucceeded ChartStatus = "Succeeded"
+	ChartStatusFailed    ChartStatus = "Failed"
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -465,11 +471,60 @@ type DeployedComponent struct {
 	ObservedGeneration int              `json:"observedGeneration"`
 }
 
+// ChartStatus is the status of a Helm Chart release
+type ChartStatus string
+
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
+	Status         ChartStatus    `json:"status"`
+}
+
+// MergeInstalledChartsForComponent merges the provided existing charts with the provided installed charts.
+func MergeInstalledChartsForComponent(existingCharts, installedCharts []InstalledChart, partial bool) []InstalledChart {
+	key := func(chart InstalledChart) string {
+		return fmt.Sprintf("%s/%s", chart.Namespace, chart.ChartName)
+	}
+
+	lookup := make(map[string]InstalledChart, 0)
+	for _, chart := range existingCharts {
+		lookup[key(chart)] = chart
+	}
+
+	// Track which keys are still present in newCharts
+	seen := make(map[string]struct{}, len(installedCharts)+len(existingCharts))
+
+	for _, chart := range installedCharts {
+		k := key(chart)
+		seen[k] = struct{}{}
+
+		if _, ok := lookup[k]; ok {
+			existingChart := lookup[k]
+			existingChart.ConnectStrings = chart.ConnectStrings
+			existingChart.Status = chart.Status
+			lookup[k] = existingChart
+		} else {
+			lookup[k] = chart
+		}
+	}
+
+	// retain existing charts that are no longer present if not a partial
+	if !partial {
+		for k, chart := range lookup {
+			if _, ok := seen[k]; !ok {
+				lookup[k] = chart
+			}
+		}
+	}
+
+	merged := make([]InstalledChart, 0, len(lookup))
+	for _, chart := range lookup {
+		merged = append(merged, chart)
+	}
+
+	return merged
 }
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
