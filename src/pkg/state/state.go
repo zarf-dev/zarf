@@ -55,6 +55,13 @@ const (
 	ChartStatusFailed    ChartStatus = "Failed"
 )
 
+// ChartState is the state of a Helm Chart release
+const (
+	ChartStateActive   ChartState = "Active"   // In use, operational or attempted operational
+	ChartStateOrphaned ChartState = "Orphaned" // Detached from operational concerns
+	ChartStatePending  ChartState = "Pending"  // Future installs/cleanup scheduled
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -421,12 +428,16 @@ type DeployedComponent struct {
 // ChartStatus is the status of a Helm Chart release
 type ChartStatus string
 
+// ChartState contains information about a Helm Chart that has been deployed to a cluster
+type ChartState string
+
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
 	Status         ChartStatus    `json:"status"`
+	State          ChartState     `json:"tracking"`
 }
 
 // MergeInstalledChartsForComponent merges the provided existing charts with the provided installed charts.
@@ -440,19 +451,29 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 		lookup[key(chart)] = chart
 	}
 
-	// Track which keys are still present in newCharts
+	// Track which keys are still present in new charts
 	seen := make(map[string]struct{}, len(installedCharts)+len(existingCharts))
 
 	for _, chart := range installedCharts {
 		k := key(chart)
 		seen[k] = struct{}{}
+		// Mark as pending if chart did not deploy successfully
+		pending := chart.Status != ChartStatusSucceeded
 
 		if _, ok := lookup[k]; ok {
 			existingChart := lookup[k]
 			existingChart.ConnectStrings = chart.ConnectStrings
 			existingChart.Status = chart.Status
+			existingChart.State = ChartStateActive
+			if pending {
+				existingChart.State = ChartStatePending
+			}
 			lookup[k] = existingChart
 		} else {
+			chart.State = ChartStateActive
+			if pending {
+				chart.State = ChartStatePending
+			}
 			lookup[k] = chart
 		}
 	}
@@ -461,6 +482,7 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 	if !partial {
 		for k, chart := range lookup {
 			if _, ok := seen[k]; !ok {
+				chart.State = ChartStateOrphaned
 				lookup[k] = chart
 			}
 		}
