@@ -57,6 +57,14 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.StorageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
+	cmd.Flags().StringVar((*string)(&pkgConfig.InitOpts.RegistryInfo.RegistryMode), "registry-mode", string(state.RegistryModeNodePort),
+		fmt.Sprintf("how to access the registry (valid values: %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy))
+	cmd.Flags().IntVar(&pkgConfig.InitOpts.InjectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
+		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
+	// While this feature is in early alpha we will hide the flags
+	cmd.Flags().MarkHidden("registry-mode")
+	cmd.Flags().MarkHidden("injector-hostport")
+
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
 	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
@@ -87,6 +95,11 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
+	// If an external registry is used then don't allow users to configure the internal registry / injector
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 
 	cmd.Flags().SortFlags = true
 
@@ -146,6 +159,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
 		SetVariables:           pkgConfig.PkgOpts.SetVariables,
 		StorageClass:           pkgConfig.InitOpts.StorageClass,
+		InjectorHostPort:       pkgConfig.InitOpts.InjectorHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 	_, err = deploy(ctx, pkgLayout, opts)
@@ -270,7 +284,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds registry`")
+		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	return nil
 }
@@ -296,5 +310,15 @@ func validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
+
+	if pkgConfig.InitOpts.RegistryInfo.RegistryMode != "" {
+		if pkgConfig.InitOpts.RegistryInfo.RegistryMode != state.RegistryModeNodePort &&
+			pkgConfig.InitOpts.RegistryInfo.RegistryMode != state.RegistryModeProxy {
+			return fmt.Errorf("invalid registry mode %q, must be %q or %q", pkgConfig.InitOpts.RegistryInfo.RegistryMode,
+				state.RegistryModeNodePort,
+				state.RegistryModeProxy)
+		}
+	}
+
 	return nil
 }
