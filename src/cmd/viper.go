@@ -59,7 +59,7 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
-	InjectorHostPort      = "init.registry.seed_hostport"
+	InjectorHostPort      = "init.registry.injector_hostport"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
 	VInitRegistryPushPass = "init.registry.push_password"
