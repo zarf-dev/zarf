@@ -200,7 +200,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 
 func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) string {
 	for _, pkg := range pkgs {
-		if pkg.Data.Kind == "ZarfInitConfig" {
+		if pkg.Data.Kind == v1alpha1.ZarfInitConfig {
 			for _, c := range pkg.Data.Components {
 				if c.Name == componentName {
 					return pkg.Name
