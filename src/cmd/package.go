@@ -1195,6 +1195,109 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// Package Prune
+// This command prunes helm charts that may be orphaned or otherwise in a pending state and required explicit cleanup
+// This command expects a package / package-name as an argument with the ability to filter by component and chart
+// TODO: update lang strings
+type packagePruneOptions struct {
+	namespaceOverride string
+	component         string
+}
+
+func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
+	o := &packagePruneOptions{}
+
+	cmd := &cobra.Command{
+		Use:               "prune { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
+		Args:              cobra.MaximumNArgs(1),
+		Short:             lang.CmdPackageRemoveShort,
+		Long:              lang.CmdPackageRemoveLong,
+		PreRun:            o.preRun,
+		RunE:              o.run,
+		ValidArgsFunction: getPackageCompletionArgs,
+	}
+
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
+	cmd.Flags().StringVar(&o.component, "component", "", lang.CmdPackageRemoveFlagComponents)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
+	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+
+	return cmd
+}
+
+func (o *packagePruneOptions) preRun(_ *cobra.Command, _ []string) {
+	// If --insecure was provided, set --skip-signature-validation to match
+	if config.CommonOptions.Insecure {
+		pkgConfig.PkgOpts.SkipSignatureValidation = true
+	}
+}
+
+func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	packageSource, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+	)
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	c, _ := cluster.New(ctx) //nolint:errcheck
+	loadOpts := packager.LoadOptions{
+		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filter,
+		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	pruneOpt := packager.PruneOptions{
+		Cluster:           c,
+		Timeout:           config.ZarfDefaultTimeout,
+		NamespaceOverride: o.namespaceOverride,
+	}
+
+	// First get all applicable orphaned or pending resources based on the component filter
+	charts, err := packager.GetPruneableCharts(ctx, pkg, pruneOpt)
+	if err != nil {
+		return err
+	}
+
+	if len(charts) == 0 {
+		return fmt.Errorf("no resources to prune")
+	}
+
+	// display all orphaned resources
+	if err = utils.ColorPrintYAML(charts, nil, false); err != nil {
+		return fmt.Errorf("unable to print package definition: %w", err)
+	}
+	if !config.CommonOptions.Confirm {
+		prompt := &survey.Confirm{
+			Message: "Prune these resources?",
+		}
+		var confirm bool
+		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+			return fmt.Errorf("package prune cancelled")
+		}
+	}
+
+	err = packager.Prune(ctx, charts, pruneOpt)
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
 type packagePublishOptions struct {
 	flavor  string
 	retries int

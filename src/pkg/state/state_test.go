@@ -289,12 +289,13 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 
 	tests := []struct {
 		name            string
+		partial         bool
 		existingCharts  []InstalledChart
 		installedCharts []InstalledChart
 		expectedCharts  []InstalledChart
 	}{
 		{
-			name: "existing charts are merged",
+			name: "existing charts are merged - no existing state",
 			existingCharts: []InstalledChart{
 				{
 					Namespace: "default",
@@ -309,20 +310,65 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 				{
 					Namespace: "default",
 					ChartName: "chart3",
+					Status:    ChartStatusSucceeded,
 				},
 			},
 			expectedCharts: []InstalledChart{
 				{
 					Namespace: "default",
 					ChartName: "chart1",
+					State:     ChartStateOrphaned,
 				},
 				{
 					Namespace: "default",
 					ChartName: "chart2",
+					State:     ChartStateOrphaned,
 				},
 				{
 					Namespace: "default",
 					ChartName: "chart3",
+					State:     ChartStateActive,
+					Status:    ChartStatusSucceeded,
+				},
+			},
+		},
+		{
+			name: "existing charts are merged - existing state",
+			existingCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+					State:     ChartStateActive,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+					State:     ChartStateOrphaned,
+				},
+			},
+			installedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+					Status:    ChartStatusSucceeded,
+				},
+			},
+			expectedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+					State:     ChartStateOrphaned,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+					State:     ChartStateOrphaned,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+					State:     ChartStateActive,
+					Status:    ChartStatusSucceeded,
 				},
 			},
 		},
@@ -342,16 +388,61 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 				{
 					Namespace: "default",
 					ChartName: "chart1",
+					Status:    ChartStatusSucceeded,
 				},
 			},
 			expectedCharts: []InstalledChart{
 				{
 					Namespace: "default",
 					ChartName: "chart1",
+					State:     ChartStateActive,
+					Status:    ChartStatusSucceeded,
 				},
 				{
 					Namespace: "default",
 					ChartName: "chart2",
+					State:     ChartStateOrphaned,
+				},
+			},
+		},
+		{
+			name:    "existing charts are merged with partial true",
+			partial: true,
+			existingCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+					State:     ChartStateActive,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+					State:     ChartStateOrphaned,
+				},
+			},
+			installedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+					Status:    ChartStatusFailed,
+				},
+			},
+			expectedCharts: []InstalledChart{
+				{
+					Namespace: "default",
+					ChartName: "chart1",
+					State:     ChartStateActive,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart2",
+					State:     ChartStateOrphaned,
+				},
+				{
+					Namespace: "default",
+					ChartName: "chart3",
+					State:     ChartStatePending,
+					Status:    ChartStatusFailed,
 				},
 			},
 		},
@@ -359,8 +450,8 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, false)
+			// t.Parallel()
+			actual := MergeInstalledChartsForComponent(tt.existingCharts, tt.installedCharts, tt.partial)
 			require.ElementsMatch(t, tt.expectedCharts, actual)
 		})
 	}
