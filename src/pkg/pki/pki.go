@@ -301,7 +301,6 @@ func parseCertFromPEM(certData []byte) (*x509.Certificate, error) {
 
 // GetRemainingCertLifePercentage gives back the percentage of the given certificates total lifespan that it has left before it's expired
 func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
-	// FIXME, create unit tests
 	cert, err := parseCertFromPEM(certData)
 	if err != nil {
 		return 0, err

@@ -30,7 +30,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultRetries = 3
@@ -232,48 +231,28 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 
 func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
 	if c == nil {
-		return nil, fmt.Errorf("cluster client is required")
+		return nil, fmt.Errorf("cluster client is required when pulling from registry proxy")
 	}
 
-	// Get CA certificate from secret
-	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.RegistryCASecretName, metav1.GetOptions{})
+	certs, err := c.GetRegistryMTLSCerts(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CA secret: %w", err)
-	}
-	caCertPEM := caSecret.Data[cluster.RegistrySecretCAPath]
-	if len(caCertPEM) == 0 {
-		return nil, fmt.Errorf("CA certificate not found in secret")
+		return nil, err
 	}
 
-	// Get client certificate from proxy TLS secret
-	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.RegistryProxyTLSSecret, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get client TLS secret: %w", err)
-	}
-	clientCertPEM := clientSecret.Data[cluster.RegistrySecretCertPath]
-	clientKeyPEM := clientSecret.Data[cluster.RegistrySecretKeyPath]
-	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
-		return nil, fmt.Errorf("client certificate or key not found in secret")
-	}
-
-	// Load client certificate
-	cert, err := tls.X509KeyPair(clientCertPEM, clientKeyPEM)
+	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)
 	}
 
-	// Load CA certificate
 	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(caCertPEM) {
+	if !caCertPool.AppendCertsFromPEM(certs.CA) {
 		return nil, fmt.Errorf("failed to parse CA certificate")
 	}
 
-	// Configure TLS
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      caCertPool,
 	}
-
 	transport, ok := http.DefaultTransport.(*http.Transport)
 	if !ok {
 		return nil, errors.New("could not get default transport")

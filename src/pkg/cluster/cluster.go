@@ -343,6 +343,41 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 	return false, nil
 }
 
+// MTLSCerts holds client certificate, private key, and CA certificate for mutual TLS authentication
+type MTLSCerts struct {
+	CACertPEM     []byte
+	ClientCertPEM []byte
+	ClientKeyPEM  []byte
+}
+
+// GetRegistryMTLSCerts retrieves TLS certificates from Kubernetes secrets for registry proxy connections
+func (c *Cluster) GetRegistryMTLSCerts(ctx context.Context) (pki.GeneratedPKI, error) {
+	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryCASecretName, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get CA secret: %w", err)
+	}
+	caCertPEM := caSecret.Data[RegistrySecretCAPath]
+	if len(caCertPEM) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("CA certificate not found in secret")
+	}
+
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryProxyTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
+	}
+	clientCertPEM := clientSecret.Data[RegistrySecretCertPath]
+	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
+	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("client certificate or key not found in secret")
+	}
+
+	return pki.GeneratedPKI{
+		CA:   caCertPEM,
+		Cert: clientCertPEM,
+		Key:  clientKeyPEM,
+	}, nil
+}
+
 // generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
 // and applies them to the cluster as Kubernetes secrets.
 // Only generates certificates if they don't exist or are expiring within 6 months.
