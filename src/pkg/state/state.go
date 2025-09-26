@@ -52,7 +52,7 @@ const (
 // IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
 type IPFamily string
 
-// All the different IP family options for a Zarf deployment
+// The possible IP stacks in a Kubernetes Cluster
 const (
 	IPFamilyIPv4      IPFamily = "ipv4"
 	IPFamilyIPv6      IPFamily = "ipv6"
