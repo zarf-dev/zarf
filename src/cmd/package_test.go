@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -316,4 +317,84 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			require.Equal(t, expectedYAMLs, actualYAMLs)
 		})
 	}
+}
+
+// TestParseRegistryOverrides ensures that ordering is maintained for registry overrides.
+func TestParseRegistryOverrides(t *testing.T) {
+	t.Parallel()
+	const intranetRegistry = "docker.example.com/repo"
+	tests := []struct {
+		name string
+		provided []string
+		expected []types.RegistryOverride
+	}{
+		{
+			name: "single override",
+			provided: []string{"docker.io="+intranetRegistry},
+			expected: []types.RegistryOverride{
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "multiple override",
+			provided: []string{
+				"docker.io="+intranetRegistry,
+				"registry1.dso.mil="+intranetRegistry,
+				"ghcr.io="+intranetRegistry,
+				"quay.io="+intranetRegistry,
+			},
+			expected: []types.RegistryOverride{
+				{Source: "docker.io", Override: intranetRegistry},
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "ghcr.io", Override: intranetRegistry},
+				{Source: "quay.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "prefix override",
+			provided: []string{
+				"docker.io/library="+intranetRegistry,
+				"docker.io="+intranetRegistry,
+			},
+			expected: []types.RegistryOverride{
+				{Source: "docker.io/library", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "prefix override with multiple",
+			provided: []string{
+				"docker.io/library="+intranetRegistry,
+				"docker.io="+intranetRegistry,
+				"registry1.dso.mil="+intranetRegistry,
+				"ghcr.io="+intranetRegistry,
+				"quay.io="+intranetRegistry,
+			},
+			expected: []types.RegistryOverride{
+				{Source: "docker.io/library", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "ghcr.io", Override: intranetRegistry},
+				{Source: "quay.io", Override: intranetRegistry},
+			},
+		},
+	}
+	for _, tc := range tests {
+		require.Len(t, tc.expected, len(tc.provided), "The expected array is not the same length as the provided array.")
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := parseRegistryOverrides(tc.provided)
+			require.NoError(t, err)
+			for index, element := range result {
+				require.EqualValues(t, tc.expected[index], element, "Element at index failed to match: %d", index)
+			}
+		})
+	}
+
+	t.Run("error override", func(t *testing.T) {
+		t.Parallel()
+		brokenOverride := []string{"docker.io:"+intranetRegistry}
+		_, err := parseRegistryOverrides(brokenOverride)
+		require.ErrorContains(t, err, "invalid override: missing '='")
+	})
 }
