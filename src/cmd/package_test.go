@@ -324,13 +324,13 @@ func TestParseRegistryOverrides(t *testing.T) {
 	t.Parallel()
 	const intranetRegistry = "docker.example.com/repo"
 	tests := []struct {
-		name string
+		name     string
 		provided []string
 		expected []types.RegistryOverride
 	}{
 		{
-			name: "single override",
-			provided: []string{"docker.io="+intranetRegistry},
+			name:     "single override",
+			provided: []string{"docker.io=" + intranetRegistry},
 			expected: []types.RegistryOverride{
 				{Source: "docker.io", Override: intranetRegistry},
 			},
@@ -338,10 +338,10 @@ func TestParseRegistryOverrides(t *testing.T) {
 		{
 			name: "multiple override",
 			provided: []string{
-				"docker.io="+intranetRegistry,
-				"registry1.dso.mil="+intranetRegistry,
-				"ghcr.io="+intranetRegistry,
-				"quay.io="+intranetRegistry,
+				"docker.io=" + intranetRegistry,
+				"registry1.dso.mil=" + intranetRegistry,
+				"ghcr.io=" + intranetRegistry,
+				"quay.io=" + intranetRegistry,
 			},
 			expected: []types.RegistryOverride{
 				{Source: "docker.io", Override: intranetRegistry},
@@ -353,8 +353,8 @@ func TestParseRegistryOverrides(t *testing.T) {
 		{
 			name: "prefix override",
 			provided: []string{
-				"docker.io/library="+intranetRegistry,
-				"docker.io="+intranetRegistry,
+				"docker.io/library=" + intranetRegistry,
+				"docker.io=" + intranetRegistry,
 			},
 			expected: []types.RegistryOverride{
 				{Source: "docker.io/library", Override: intranetRegistry},
@@ -364,11 +364,11 @@ func TestParseRegistryOverrides(t *testing.T) {
 		{
 			name: "prefix override with multiple",
 			provided: []string{
-				"docker.io/library="+intranetRegistry,
-				"docker.io="+intranetRegistry,
-				"registry1.dso.mil="+intranetRegistry,
-				"ghcr.io="+intranetRegistry,
-				"quay.io="+intranetRegistry,
+				"docker.io/library=" + intranetRegistry,
+				"docker.io=" + intranetRegistry,
+				"registry1.dso.mil=" + intranetRegistry,
+				"ghcr.io=" + intranetRegistry,
+				"quay.io=" + intranetRegistry,
 			},
 			expected: []types.RegistryOverride{
 				{Source: "docker.io/library", Override: intranetRegistry},
@@ -386,14 +386,14 @@ func TestParseRegistryOverrides(t *testing.T) {
 			result, err := parseRegistryOverrides(tc.provided)
 			require.NoError(t, err)
 			for index, element := range result {
-				require.EqualValues(t, tc.expected[index], element, "Element at index failed to match: %d", index)
+				require.Equal(t, tc.expected[index], element, "Element at index failed to match: %d", index)
 			}
 		})
 	}
 
 	t.Run("error override", func(t *testing.T) {
 		t.Parallel()
-		brokenOverride := []string{"docker.io:"+intranetRegistry}
+		brokenOverride := []string{"docker.io:" + intranetRegistry}
 		_, err := parseRegistryOverrides(brokenOverride)
 		require.ErrorContains(t, err, "invalid override: missing '='")
 	})
