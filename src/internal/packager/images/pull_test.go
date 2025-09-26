@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
@@ -99,7 +100,7 @@ func TestPull(t *testing.T) {
 	testCases := []struct {
 		name              string
 		refs              []string
-		RegistryOverrides map[string]string
+		RegistryOverrides []types.RegistryOverride
 		arch              string
 		expectErr         bool
 	}{
@@ -126,8 +127,11 @@ func TestPull(t *testing.T) {
 				"stefanprodan/podinfo:6.4.0",
 			},
 			arch: "amd64",
-			RegistryOverrides: map[string]string{
-				"docker.io": "ghcr.io",
+			RegistryOverrides: []types.RegistryOverride{
+				{
+					Source:   "docker.io",
+					Override: "ghcr.io",
+				},
 			},
 		},
 	}
