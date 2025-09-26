@@ -69,8 +69,8 @@ func TestCreateSBOM(t *testing.T) {
 
 	// Test that we preserve the filepath
 	require.FileExists(t, filepath.Join(outSbomPath, "dos-games", "sbom-viewer-ghcr.io_zarf-dev_doom-game_0.0.1.html"))
-	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-ghcr.io_go-gitea_gitea_1.24.3-rootless.html"))
-	require.FileExists(t, filepath.Join(outSbomPath, "init", "ghcr.io_go-gitea_gitea_1.24.3-rootless.json"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-ghcr.io_go-gitea_gitea_1.24.6-rootless.html"))
+	require.FileExists(t, filepath.Join(outSbomPath, "init", "ghcr.io_go-gitea_gitea_1.24.6-rootless.json"))
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "sbom-viewer-zarf-component-k3s.html"))
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "zarf-component-k3s.json"))
 	require.FileExists(t, filepath.Join(outSbomPath, "init", "compare.html"))
