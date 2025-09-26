@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/avast/retry-go/v4"
 	plutoversionsfile "github.com/fairwindsops/pluto/v5"
 	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
 	goyaml "github.com/goccy/go-yaml"
@@ -91,35 +90,25 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	helmCtx, helmCtxCancel := context.WithTimeout(ctx, opts.Timeout)
 	defer helmCtxCancel()
 
-	err = retry.Do(func() error {
-		var err error
+	releases, histErr := histClient.Run(zarfChart.ReleaseName)
 
-		releases, histErr := histClient.Run(zarfChart.ReleaseName)
+	l.Debug("checking for existing helm deployment")
 
-		l.Debug("checking for existing helm deployment")
+	if errors.Is(histErr, driver.ErrReleaseNotFound) {
+		// No prior release, try to install it.
+		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		if errors.Is(histErr, driver.ErrReleaseNotFound) {
-			// No prior release, try to install it.
-			l.Info("performing Helm install", "chart", zarfChart.Name)
+		release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
+	} else if histErr == nil && len(releases) > 0 {
+		// Otherwise, there is a prior release so upgrade it.
+		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
-			release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
-		} else if histErr == nil && len(releases) > 0 {
-			// Otherwise, there is a prior release so upgrade it.
-			l.Info("performing Helm upgrade", "chart", zarfChart.Name)
+		lastRelease := releases[len(releases)-1]
 
-			lastRelease := releases[len(releases)-1]
-
-			release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
-		} else {
-			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
-		}
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(opts.Retries)), retry.Delay(500*time.Millisecond))
+		release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
+	} else {
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
+	}
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", opts.Retries, err, removeMsg)
