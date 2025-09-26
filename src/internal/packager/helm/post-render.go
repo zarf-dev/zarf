@@ -54,7 +54,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
 	}
 	if pkgName == "" {
-		return nil, fmt.Errorf("package required to run post renderer")
+		return nil, fmt.Errorf("package name required to run post renderer")
 	}
 	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
 	rend := &renderer{
@@ -183,7 +183,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
-		// If the object is empty, it's a blank resource, so we skip it. If the package is nil, we're not in a package and we don't want to add labels.
+		// If the object is empty, it's a blank resource, so we skip it. If the package name is empty we don't want to add labels.
 		if len(rawData.Object) > 0 {
 			// Add the package label to all resources
 			labels := rawData.GetLabels()

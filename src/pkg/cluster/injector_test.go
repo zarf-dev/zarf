@@ -15,7 +15,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
@@ -108,11 +107,7 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, &v1alpha1.ZarfPackage{
-			Metadata: v1alpha1.ZarfMetadata{
-				Name: "test",
-			},
-		})
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -161,11 +156,6 @@ func TestInjector(t *testing.T) {
 func TestBuildInjectionPod(t *testing.T) {
 	t.Parallel()
 
-	pkg := &v1alpha1.ZarfPackage{
-		Metadata: v1alpha1.ZarfMetadata{
-			Name: "test",
-		},
-	}
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse(".5"),
@@ -176,7 +166,7 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, pkg)
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
 	require.Equal(t, "injector", *pod.Name)
 	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	b, err := json.MarshalIndent(pod, "", "  ")

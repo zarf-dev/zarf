@@ -32,12 +32,11 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	for _, pkg := range pkgs {
-		if pkg.Data.Kind == "ZarfInitConfig" {
-			opts.PkgName = pkg.Name
-			break
-		}
+	initPkgName := findInitPackageWithComponent(pkgs, "zarf-registry")
+	if initPkgName == "" {
+		return fmt.Errorf("error finding init package with zarf-registry component")
 	}
+	opts.PkgName = initPkgName
 	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
@@ -84,11 +83,15 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 
-	pkg, err := opts.Cluster.GetDeployedPackage(ctx, "init")
+	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
 	if err != nil {
 		return fmt.Errorf("error getting init package: %w", err)
 	}
-	opts.PkgName = pkg.Name
+	initPkgName := findInitPackageWithComponent(pkgs, "zarf-agent")
+	if initPkgName == "" {
+		return fmt.Errorf("error finding init package with zarf-agent component")
+	}
+	opts.PkgName = initPkgName
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -193,4 +196,17 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return err
 	}
 	return nil
+}
+
+func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) string {
+	for _, pkg := range pkgs {
+		if pkg.Data.Kind == "ZarfInitConfig" {
+			for _, c := range pkg.Data.Components {
+				if c.Name == componentName {
+					return pkg.Name
+				}
+			}
+		}
+	}
+	return ""
 }
