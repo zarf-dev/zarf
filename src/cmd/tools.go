@@ -24,6 +24,7 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newRegistryCommand())
 	cmd.AddCommand(newHelmCommand())
 	cmd.AddCommand(newK9sCommand())
+	cmd.AddCommand(newKubCapCommand())
 	cmd.AddCommand(newKubectlCommand())
 	cmd.AddCommand(newSbomCommand())
 	cmd.AddCommand(newWaitForCommand())
