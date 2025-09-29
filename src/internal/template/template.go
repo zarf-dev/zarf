@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	ttmpl "text/template"
 	"time"
 
@@ -123,11 +124,13 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 		l.Debug("finished applying templates in file", "src", src, "dst", dst, "duration", time.Since(start))
 	}()
 
-	// Load file into template
-	tmpl, err := ttmpl.ParseFiles(src)
+	// NOTE(mkcp): We must create a template here before parsing so we can load the sprig functions.
+	tmpl := ttmpl.New(filepath.Base(src)).Funcs(sprig.TxtFuncMap())
+	tmpl, err := tmpl.ParseFiles(src)
 	if err != nil {
 		return err
 	}
+
 	// Create and close destination
 	f, err := os.Create(dst)
 	if err != nil {
@@ -139,7 +142,8 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 			err = fmt.Errorf("%w:%w", err, cErr)
 		}
 	}(f)
+
 	// Apply template and write to destination
-	err = tmpl.Funcs(sprig.TxtFuncMap()).Execute(f, objs)
+	err = tmpl.Execute(f, objs)
 	return err
 }

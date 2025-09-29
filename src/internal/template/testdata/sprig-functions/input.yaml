@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.app.name | kebabcase }}
+  labels:
+    environment: {{ .Values.env | upper }}
+    version: {{ .Values.version | quote }}
+data:
+  message: {{ .Values.message | title | quote }}
+  hash: {{ .Values.data | sha256sum }}
+  timestamp: {{ now | date "2006-01-02" }}
+  random: {{ randAlphaNum 8 | lower }}
+  joined: {{ .Values.items | join "," }}
+  default-value: {{ .Values.missing | default "fallback" }}
