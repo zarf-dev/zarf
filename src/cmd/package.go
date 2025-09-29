@@ -157,9 +157,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 
 	v := getViper()
-
-	// Merge SetVariables and config variables.
-	setVars := helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -170,7 +168,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RegistryOverrides:       o.registryOverrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
-		SetVariables:            setVars,
+		SetVariables:            o.setVariables,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
