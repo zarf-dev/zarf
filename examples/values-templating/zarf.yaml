@@ -14,7 +14,7 @@ variables:
     default: "bar"
 components:
   - name: values-with-terraform
-    description: Change a value in a regular file with a Zarf value. Set AWS_REGION variable to modify the file.
+    description: Change a value in a regular file with a Zarf value.
     required: true
     files:
       - source: simple-terraform.tf

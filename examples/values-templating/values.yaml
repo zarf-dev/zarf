@@ -11,6 +11,27 @@ site:
   organization: "Zarf-Dev"
   # The footer to be added to the site, overrides the default with whatever you want.
   footer: ""
+  # Additional metadata for sprig examples
+  title: "my awesome app"
+  message: "hello world from zarf"
+
+# Application deployment configuration
+app:
+  environment: "production"
+  replicas: 3
+  # Configuration data that can be hashed for integrity checks
+  config_data: "important application configuration data"
+  # Optional field to demonstrate default values
+  optional_setting: ""  # Will use default value in templates
+  required_setting: "configured value"
+  # List of supported features for list function examples
+  features:
+    - "templating"
+    - "sprig-functions"
+    - "kubernetes-deployment"
+    - "value-substitution"
+  # Network ports for the application
+  ports: [80, 443, 8080]
 
 # terraform.path sets a filepath for a terraform file to be used as the contents of a template
 terraform:
@@ -18,7 +39,4 @@ terraform:
   aws:
     # Modifies modified-terraform.tf file
     region: "us-east-1"
-
-# TODO(mkcp): It would be good to have an example that leverages go-templates' more programmatic features. e.g
-# loops, pipelines, functions (quote, upper, lower), repeat, default,
 

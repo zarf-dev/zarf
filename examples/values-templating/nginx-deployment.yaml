@@ -5,11 +5,19 @@ metadata:
   namespace: nginx
   labels:
     app: nginx
+    # Sprig example: Convert environment to lowercase and kebab-case
+    environment: {{ .Values.app.environment | lower }}
+    # Sprig example: Create a hash-based identifier
+    config-hash: {{ .Values.app.config_data | sha256sum | trunc 8 }}
+  annotations:
+    # Sprig example: Base64 encode sensitive data references
+    config.zarf.dev/data-hash: {{ .Values.app.config_data | b64enc }}
 spec:
   selector:
     matchLabels:
       app: nginx
-  replicas: 1
+  # Sprig example: Use configured replica count with a sensible default
+  replicas: {{ .Values.app.replicas | default 1 }}
   template:
     metadata:
       labels:
@@ -22,9 +30,18 @@ spec:
         ports:
         - containerPort: 80
           name: http
+        env:
+        # Sprig example: Environment variables with transformations
+        - name: ENVIRONMENT
+          value: {{ .Values.app.environment | upper | quote }}
+        - name: APP_NAME
+          value: {{ .Values.site.title | kebabcase | quote }}
+        - name: CONFIG_HASH
+          value: {{ .Values.app.config_data | sha256sum | trunc 16 | quote }}
         resources:
           limits:
-            cpu: 500m
+            # Sprig example: Calculate CPU based on replica count
+            cpu: {{ mul .Values.app.replicas 100 }}m
             memory: 512Mi
         volumeMounts:
         - name: nginx-config
