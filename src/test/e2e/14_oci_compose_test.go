@@ -225,7 +225,12 @@ func (suite *PublishCopySkeletonSuite) Test_3_Copy() {
 	}
 	require.Less(t, attempt, 5, "failed to ping registry")
 
-	err = zoci.CopyPackage(ctx, src, dst, 5)
+	publishOptions := zoci.PublishOptions{
+		OCIConcurrency: 3,
+		Retries:        5,
+	}
+
+	err = zoci.CopyPackage(ctx, src, dst, publishOptions)
 	suite.NoError(err)
 
 	srcRoot, err := src.FetchRoot(ctx)
@@ -264,14 +269,6 @@ func (suite *PublishCopySkeletonSuite) verifyComponentPaths(unpackedPath string,
 		}
 
 		tmpdir := suite.T().TempDir()
-
-		if isSkeleton && component.DeprecatedCosignKeyPath != "" {
-			componentsPath := filepath.Join(unpackedPath, "components")
-			base := filepath.Join(unpackedPath, "components", component.Name)
-			_, _, err = e2e.Zarf(suite.T(), "tools", "archiver", "decompress", fmt.Sprintf("%s.tar", base), componentsPath)
-			suite.NoError(err)
-			suite.FileExists(filepath.Join(base, filepath.Base(component.DeprecatedCosignKeyPath)))
-		}
 
 		var containsChart bool
 		for _, chart := range component.Charts {

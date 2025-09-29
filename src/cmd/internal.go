@@ -429,8 +429,8 @@ func newInternalRunControllerCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run-controller",
-		Short: lang.CmdInternalRunControllerShort,
-		Long:  lang.CmdInternalRunControllerLong,
+		Short: "run injection controller",
+		Long:  "run injection controller",
 		RunE:  o.run,
 	}
 

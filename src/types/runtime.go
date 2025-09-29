@@ -36,8 +36,6 @@ type ZarfPackageOptions struct {
 	PackageSource string
 	// Comma separated list of optional components
 	OptionalComponents string
-	// Location where the public key component of a cosign key-pair can be found
-	SGetKeyPath string
 	// Key-Value map of variable names and their corresponding values that will be used to template manifests and files in the Zarf package
 	SetVariables map[string]string
 	// Location where the public key component of a cosign key-pair can be found
@@ -132,8 +130,8 @@ type ZarfInitOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// Specify if RegistryProxy mode is going to be used for deploying the internal registry
-	RegistryProxy bool
+	// InjectorHostPort is the host port that is used for the daemonset injector
+	InjectorHostPort int
 }
 
 // ZarfCreateOptions tracks the user-defined options used to create the package.

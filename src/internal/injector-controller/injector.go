@@ -143,7 +143,7 @@ func (e *clusterInjectionExecutor) RunWithOwner(ctx context.Context, proxyPod *c
 	if err != nil {
 		return err
 	}
-	err = e.cluster.StopInjection(ctx, true)
+	err = e.cluster.StopInjection(ctx, state.RegistryModeProxy)
 	if err != nil {
 		return err
 	}

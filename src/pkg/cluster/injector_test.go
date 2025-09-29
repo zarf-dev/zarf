@@ -33,19 +33,19 @@ func TestInjector(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name                string
-		useRegistryProxy    bool
+		registryMode        state.RegistryMode
 		ipFamily            state.IPFamily
 		expectedServiceFile string
 	}{
 		{
 			name:                "pod injector",
-			useRegistryProxy:    false,
+			registryMode:        state.RegistryModeNodePort,
 			ipFamily:            state.IPFamilyIPv4,
 			expectedServiceFile: filepath.Join("expected-injection-service-nodeport.json"),
 		},
 		{
 			name:                "daemonset injector",
-			useRegistryProxy:    true,
+			registryMode:        state.RegistryModeProxy,
 			ipFamily:            state.IPFamilyIPv4,
 			expectedServiceFile: filepath.Join("expected-injection-service-proxy.json"),
 		},
@@ -118,7 +118,7 @@ func TestInjector(t *testing.T) {
 			_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			err = c.StopInjection(ctx, tt.useRegistryProxy)
+			err = c.StopInjection(ctx, tt.registryMode)
 			require.NoError(t, err)
 
 			for range 2 {
@@ -132,10 +132,11 @@ func TestInjector(t *testing.T) {
 				_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 				require.NoError(t, err)
 
-				err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, tt.useRegistryProxy, tt.ipFamily)
+				_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "init", tt.registryMode, tt.ipFamily)
 				require.NoError(t, err)
 
-				if tt.useRegistryProxy {
+				// FIXME
+				if tt.registryMode == state.RegistryModeProxy {
 					daemonsetList, err := cs.AppsV1().DaemonSets(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 					require.NoError(t, err)
 					require.Len(t, daemonsetList.Items, 1)
@@ -168,7 +169,7 @@ func TestInjector(t *testing.T) {
 				require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 			}
 
-			err = c.StopInjection(ctx, tt.useRegistryProxy)
+			err = c.StopInjection(ctx, tt.registryMode)
 			require.NoError(t, err)
 
 			podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -182,6 +183,7 @@ func TestInjector(t *testing.T) {
 			require.Empty(t, cmList.Items)
 		})
 	}
+	// FIXME: might have to update these tests
 }
 
 func TestBuildInjectionPod(t *testing.T) {
@@ -197,8 +199,9 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
 	require.Equal(t, "injector", *pod.Name)
+	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 
@@ -335,18 +338,21 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 		nodes         []corev1.Node
 		expectedImage string
 		expectedError string
-		ctx           context.Context
 	}{
 		{
-			name: "selects image present on every node",
+			name: "selects latest pause image with valid semver 3.x and under 1MiB",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"registry.k8s.io/pause:3.7"},
-								SizeBytes: 300000,
+								Names:     []string{"k8s.gcr.io/pause:3.2"},
+								SizeBytes: 800000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 900000,
 							},
 							{
 								Names:     []string{"nginx:latest"},
@@ -360,65 +366,29 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"registry.k8s.io/pause:3.6"},
-								SizeBytes: 300000,
-							},
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 5000000,
-							},
-						},
-					},
-				},
-			},
-			expectedImage: "nginx:latest",
-		},
-		{
-			name: "selects smallest pause image when no universal image",
-			nodes: []corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"docker.io/my-app/pause-and-go:3.6"},
-								SizeBytes: 400000,
-							},
-							{
-								Names:     []string{"k8s.gcr.io/pause:3.5"},
-								SizeBytes: 200000,
-							},
-							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
-							},
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
-							{
-								Names:     []string{"registry.k8s.io/pause:3.7"},
+								Names:     []string{"registry.k8s.io/pause:3.5"},
 								SizeBytes: 500000,
 							},
 						},
 					},
 				},
 			},
-			expectedImage: "k8s.gcr.io/pause:3.5",
+			expectedImage: "k8s.gcr.io/pause:3.9",
 		},
 		{
-			name: "falls back to smallest image when no pause images",
+			name: "accepts pause images with names containing pause",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
+								Names:     []string{"docker.io/my-app/pause-container:3.6"},
+								SizeBytes: 400000,
+							},
+							{
+								Names:     []string{"registry.k8s.io/pausetest:3.7"},
+								SizeBytes: 300000,
 							},
 							{
 								Names:     []string{"alpine:latest"},
@@ -427,13 +397,107 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 						},
 					},
 				},
+			},
+			expectedImage: "registry.k8s.io/pausetest:3.7",
+		},
+		{
+			name: "ignores pause images with invalid semver (version 2.x)",
+			nodes: []corev1.Node{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"redis:latest"},
-								SizeBytes: 120000000,
+								Names:     []string{"k8s.gcr.io/my-custom-pause-app:2.9"},
+								SizeBytes: 6000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 500000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "ignores pause images with invalid semver (version 5.x)",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/my-personal-image-with-pause:5.1"},
+								SizeBytes: 40000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "ignores pause images over 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048577, // 1 MiB + 1 byte
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "smallest-image:1.0",
+		},
+		{
+			name: "accepts pause images exactly at 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048576, // exactly 1 MiB
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.9",
+		},
+		{
+			name: "skips zarf mutated image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"127.0.0.1:5000/pause:3.10"},
+								SizeBytes: 1,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
 							},
 						},
 					},
@@ -470,7 +534,6 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			// Call the function
 			image, err := c.GetInjectorDaemonsetImage(ctx)
 
 			if tt.expectedError != "" {

@@ -7,6 +7,7 @@ package helm
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -27,6 +28,15 @@ import (
 
 // UpdateZarfRegistryValues updates the Zarf registry deployment with the new state values
 func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) error {
+	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting init package: %w", err)
+	}
+	initPkgName := findInitPackageWithComponent(pkgs, "zarf-registry")
+	if initPkgName == "" {
+		return fmt.Errorf("error finding init package with zarf-registry component")
+	}
+	opts.PkgName = initPkgName
 	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)
@@ -73,6 +83,15 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
 
+	pkgs, err := opts.Cluster.GetDeployedZarfPackages(ctx)
+	if err != nil {
+		return fmt.Errorf("error getting init package: %w", err)
+	}
+	initPkgName := findInitPackageWithComponent(pkgs, "zarf-agent")
+	if initPkgName == "" {
+		return fmt.Errorf("error finding init package with zarf-agent component")
+	}
+	opts.PkgName = initPkgName
 	deployment, err := opts.Cluster.Clientset.AppsV1().Deployments(state.ZarfNamespaceName).Get(ctx, "agent-hook", metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -80,6 +99,15 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	agentImage, err := transform.ParseImageRef(deployment.Spec.Template.Spec.Containers[0].Image)
 	if err != nil {
 		return err
+	}
+
+	// In the event the registry is external and includes subpaths
+	// we will remove the subpath from the agent path
+	registry := opts.State.RegistryInfo.Address
+	parts := strings.Split(registry, "/")
+	subPath := strings.Join(parts[1:], "/")
+	if subPath != "" {
+		agentImage.Path = strings.TrimPrefix(agentImage.Path, fmt.Sprintf("%s/", subPath))
 	}
 
 	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
@@ -168,4 +196,17 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		return err
 	}
 	return nil
+}
+
+func findInitPackageWithComponent(pkgs []state.DeployedPackage, componentName string) string {
+	for _, pkg := range pkgs {
+		if pkg.Data.Kind == v1alpha1.ZarfInitConfig {
+			for _, c := range pkg.Data.Components {
+				if c.Name == componentName {
+					return pkg.Name
+				}
+			}
+		}
+	}
+	return ""
 }

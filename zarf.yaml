@@ -5,9 +5,9 @@ metadata:
   allowNamespaceOverride: false
 
 components:
-  # - name: k3s
-  #   import:
-  #     path: packages/distros/k3s
+  - name: k3s
+    import:
+      path: packages/distros/k3s
 
   # This package moves the injector & registries binaries
   - name: zarf-injector
@@ -39,6 +39,6 @@ components:
       path: packages/injector-controller
 
   # (Optional) Adds a git server to the cluster
-  # - name: git-server
-  #   import:
-  #     path: packages/gitea
+  - name: git-server
+    import:
+      path: packages/gitea

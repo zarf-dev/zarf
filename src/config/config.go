@@ -53,9 +53,6 @@ var (
 	// CLIArch is the computer architecture of the device executing the CLI commands
 	CLIArch string
 
-	// ZarfSeedPort is the NodePort Zarf uses for the 'seed registry'
-	ZarfSeedPort int
-
 	// Timestamp of when the CLI was started
 	operationStartTime  = time.Now().Unix()
 	dataInjectionMarker = ".zarf-injection-%d"

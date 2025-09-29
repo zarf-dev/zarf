@@ -7,7 +7,7 @@
     "labels": {
       "app": "zarf-injector",
       "zarf.dev/agent": "ignore",
-      "zarf.dev/injector": "true"
+      "zarf.dev/package": "test"
     }
   },
   "spec": {
@@ -45,11 +45,6 @@
           "shasum"
         ],
         "workingDir": "/zarf-init",
-        "ports": [
-          {
-            "containerPort": 5000
-          }
-        ],
         "resources": {
           "limits": {
             "cpu": "1",
@@ -104,6 +99,7 @@
       }
     ],
     "restartPolicy": "Never",
+    "terminationGracePeriodSeconds": 1,
     "nodeName": "injection-node",
     "securityContext": {
       "runAsUser": 1000,

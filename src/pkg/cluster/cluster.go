@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
+	"slices"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -37,6 +38,10 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+	// PackageLabel is the label used to identify the owning of package.
+	PackageLabel string = "zarf.dev/package"
+	// NamespaceOverrideLabel is the label used to identify the namespace override.
+	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -156,11 +161,10 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
-	// RegistryProxy determines if Zarf uses the nodeport service or host port proxy daemonset solution
-	RegistryProxy *bool
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
+// If state was already initialized then internal services (registry, git server, artifact server) won't be updated
 func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.State, error) {
 	l := logger.From(ctx)
 
@@ -208,14 +212,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.AgentTLS = agentTLS
 
-		// FIXME: Need a more reliable way of determining IP family
-		// potential to do more validation https://kubernetes.io/docs/tasks/network/validate-dual-stack/
-		ipFamily, err := c.GetIPFamily(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
-		}
-		s.IPFamily = ipFamily
-
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
@@ -248,6 +244,12 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
+		ipFamily, err := c.GetIPFamily(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+		}
+		s.IPFamily = ipFamily
+
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -276,20 +278,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
-	} else {
-		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
-		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
-			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
-	}
-	if opts.RegistryProxy != nil {
-		s.RegistryProxy = *opts.RegistryProxy
 	}
 
 	switch s.Distro {
@@ -329,6 +317,10 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+	// If registry mode is not set then this is an old Zarf cluster and we can assume it's using the nodeport method
+	if s.RegistryInfo.RegistryMode == "" {
+		s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+	}
 	state.DebugPrint(ctx, s)
 	return s, nil
 }
@@ -358,53 +350,61 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 }
 
 // GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
-// FIXME add unit tests
-func (c *Cluster) GetIPFamily(ctx context.Context) (state.IPFamily, error) {
-	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error) {
+	svcName := "zarf-ip-family-test"
+	service := v1ac.Service(svcName, state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
+			WithPorts(v1ac.ServicePort().
+				WithPort(443).
+				WithProtocol(corev1.ProtocolTCP).
+				WithName("test-port")).
+			WithType(corev1.ServiceTypeClusterIP))
+
+	_, err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Apply(ctx, service, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 	if err != nil {
-		return "", fmt.Errorf("unable to get k8s nodes: %w", err)
+		return "", fmt.Errorf("unable to apply test service: %w", err)
 	}
 
-	if len(nodeList.Items) == 0 {
-		return "", fmt.Errorf("no nodes found")
+	defer func() {
+		if deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, svcName, metav1.DeleteOptions{}); deleteErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to cleanup test service %s: %w", svcName, deleteErr))
+		}
+	}()
+
+	// Use health checks to wait for the service to be ready
+	healthCheck := []v1alpha1.NamespacedObjectKindReference{
+		{
+			APIVersion: "v1",
+			Kind:       "Service",
+			Namespace:  state.ZarfNamespaceName,
+			Name:       svcName,
+		},
 	}
 
-	// Use the first node to determine the IP family
+	if err := healthchecks.Run(ctx, c.Watcher, healthCheck); err != nil {
+		return "", fmt.Errorf("service health check failed: %w", err)
+	}
 
-	for _, node := range nodeList.Items {
-		podCIDRs := node.Spec.PodCIDRs
+	// Get the updated service to check which IP families are available
+	updatedService, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get updated service: %w", err)
+	}
 
-		// Fallback to PodCIDR if PodCIDRs is empty
-		if len(podCIDRs) == 0 {
-			if node.Spec.PodCIDR == "" {
-				continue
-			}
-			podCIDRs = []string{node.Spec.PodCIDR}
-		}
+	// Determine IP family based on the service's IP families
+	ipFamilies := updatedService.Spec.IPFamilies
+	hasIPv4 := slices.Contains(ipFamilies, corev1.IPv4Protocol)
+	hasIPv6 := slices.Contains(ipFamilies, corev1.IPv6Protocol)
 
-		hasIPv4 := false
-		hasIPv6 := false
-
-		for _, cidr := range podCIDRs {
-			ip, _, err := net.ParseCIDR(cidr)
-			if err != nil {
-				return "", fmt.Errorf("unable to scan pod cidr %s: %w", cidr, err)
-			}
-
-			if ip.To4() != nil {
-				hasIPv4 = true
-			} else {
-				hasIPv6 = true
-			}
-		}
-
-		if hasIPv4 && hasIPv6 {
-			return state.IPFamilyDualStack, nil
-		} else if hasIPv6 {
-			return state.IPFamilyIPv6, nil
-		}
+	switch {
+	case hasIPv4 && hasIPv6:
+		return state.IPFamilyDualStack, nil
+	case hasIPv6:
+		return state.IPFamilyIPv6, nil
+	case hasIPv4:
 		return state.IPFamilyIPv4, nil
+	default:
+		return "", fmt.Errorf("unable to determine IP family of cluster")
 	}
-	logger.From(ctx).Error("unable to determine IP family of cluster")
-	return state.IPFamilyUnknown, nil
 }

@@ -81,9 +81,20 @@ Create the name of the service account to use
 Determine if host network proxy should be enabled
 */}}
 {{- define "proxy.hostNetwork" -}}
-{{- if or .Values.proxy.hostNetwork .Values.service.ipv6Only -}}
+{{- if or .Values.proxy.hostNetwork .Values.ipv6Only -}}
 true
 {{- else -}}
 false
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the appropriate image repository based on proxy configuration
+*/}}
+{{- define "registry.image.repository" -}}
+{{- if .Values.proxy.enabled -}}
+{{ .Values.proxy.registry.image.repository }}
+{{- else -}}
+{{ .Values.image.repository }}
 {{- end -}}
 {{- end -}}

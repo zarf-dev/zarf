@@ -34,17 +34,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Setup golang
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
       - name: Build PR binary and zarf init package
         uses: ./.github/actions/packages
-        with:
-          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -59,16 +57,16 @@ jobs:
     needs: build-upgrade
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Download build artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: build-artifacts
           path: build/
 
       - name: Setup golang
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
           go-version-file: go.mod
 
@@ -126,7 +124,3 @@ jobs:
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
           sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
-
-      - name: Save logs
-        if: always()
-        uses: ./.github/actions/save-logs

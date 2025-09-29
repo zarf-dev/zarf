@@ -52,12 +52,17 @@ const (
 // IPFamily defines the different possible IPfamilies that can be used in Kubernetes clusters
 type IPFamily string
 
-// All the different IP family options for a Zarf deployment
+// The possible IP stacks in a Kubernetes Cluster
 const (
-	IPFamilyIPv4      = "ipv4"
-	IPFamilyIPv6      = "ipv6"
-	IPFamilyDualStack = "dual"
-	IPFamilyUnknown   = "unknown"
+	IPFamilyIPv4      IPFamily = "ipv4"
+	IPFamilyIPv6      IPFamily = "ipv6"
+	IPFamilyDualStack IPFamily = "dual"
+)
+
+// All status options for a Zarf component chart
+const (
+	ChartStatusSucceeded ChartStatus = "Succeeded"
+	ChartStatusFailed    ChartStatus = "Failed"
 )
 
 // Values during setup of the initial zarf state
@@ -65,8 +70,11 @@ const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
-	ZarfRegistryPushUser                   = "zarf-push"
-	ZarfRegistryPullUser                   = "zarf-pull"
+	ZarfInjectorHostPort                   = 5001
+	// FIXME, this needs to be dynamic
+	ZarfRegistryHostPort = 5002
+	ZarfRegistryPushUser = "zarf-push"
+	ZarfRegistryPullUser = "zarf-pull"
 
 	ZarfGitPushUser = "zarf-git-user"
 	ZarfGitReadUser = "zarf-git-read-user"
@@ -90,8 +98,7 @@ type State struct {
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
-	IPFamily      IPFamily `json:"ipFamily,omitempty"`
-	RegistryProxy bool     `json:"registryProxy,omitempty"`
+	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
 	InjectorInfo InjectorInfo     `json:"injectorInfo"`
@@ -109,9 +116,11 @@ type InjectorInfo struct {
 	// The image to be used for the long lived injector
 	Image string `json:"injectorImage"`
 	// The number of payload configmaps required
-	PayLoadConfigMapAmount int `json:"PayLoadConfigMapAmount"`
+	PayLoadConfigMapAmount int `json:"payLoadConfigMapAmount"`
 	// The PayLoadShaSum for the payload ConfigMaps
-	PayLoadShaSum string `json:"PayLoadShaSum"`
+	PayLoadShaSum string `json:"payLoadShaSum"`
+	// The port that the injector is exposed through, either hostPort or nodePort
+	Port int `json:"port"`
 }
 
 // GitServerInfo contains information Zarf uses to communicate with a git repository to push/pull repositories to.
@@ -201,6 +210,16 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// RegistryMode defines how the registry is accessed
+type RegistryMode string
+
+const (
+	// RegistryModeNodePort accesses the registry via NodePort service
+	RegistryModeNodePort RegistryMode = "nodeport"
+	// RegistryModeProxy accesses the registry via DaemonSet proxy
+	RegistryModeProxy RegistryMode = "proxy"
+)
+
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
 type RegistryInfo struct {
 	// Username of a user with push access to the registry
@@ -213,10 +232,12 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the registry is running inside the kubernetes cluster
+	// Nodeport of the registry. Only needed if the internal Zarf registry is used and connected with over a nodeport service.
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
+	// RegistryMode defines how the registry is accessed (nodeport or proxy)
+	RegistryMode RegistryMode `json:"registryMode"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -228,9 +249,19 @@ func (ri RegistryInfo) IsInternal() bool {
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
+
+	if ri.RegistryMode == "" {
+		ri.RegistryMode = RegistryModeNodePort
+	}
 	// Set default NodePort if none was provided and the registry is internal
 	if ri.NodePort == 0 && ri.Address == "" {
-		ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		switch ri.RegistryMode {
+		case RegistryModeNodePort:
+			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
+		case RegistryModeProxy:
+			ri.NodePort = ZarfRegistryHostPort
+		}
 	}
 
 	// Set default url if an external registry was not provided
@@ -441,11 +472,60 @@ type DeployedComponent struct {
 	ObservedGeneration int              `json:"observedGeneration"`
 }
 
+// ChartStatus is the status of a Helm Chart release
+type ChartStatus string
+
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
+	Status         ChartStatus    `json:"status"`
+}
+
+// MergeInstalledChartsForComponent merges the provided existing charts with the provided installed charts.
+func MergeInstalledChartsForComponent(existingCharts, installedCharts []InstalledChart, partial bool) []InstalledChart {
+	key := func(chart InstalledChart) string {
+		return fmt.Sprintf("%s/%s", chart.Namespace, chart.ChartName)
+	}
+
+	lookup := make(map[string]InstalledChart, 0)
+	for _, chart := range existingCharts {
+		lookup[key(chart)] = chart
+	}
+
+	// Track which keys are still present in newCharts
+	seen := make(map[string]struct{}, len(installedCharts)+len(existingCharts))
+
+	for _, chart := range installedCharts {
+		k := key(chart)
+		seen[k] = struct{}{}
+
+		if _, ok := lookup[k]; ok {
+			existingChart := lookup[k]
+			existingChart.ConnectStrings = chart.ConnectStrings
+			existingChart.Status = chart.Status
+			lookup[k] = existingChart
+		} else {
+			lookup[k] = chart
+		}
+	}
+
+	// retain existing charts that are no longer present if not a partial
+	if !partial {
+		for k, chart := range lookup {
+			if _, ok := seen[k]; !ok {
+				lookup[k] = chart
+			}
+		}
+	}
+
+	merged := make([]InstalledChart, 0, len(lookup))
+	for _, chart := range lookup {
+		merged = append(merged, chart)
+	}
+
+	return merged
 }
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.

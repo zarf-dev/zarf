@@ -17,15 +17,16 @@ zarf tools registry prune [flags]
 ### Options
 
 ```
-      --confirm   Confirm the image prune action to prevent accidental deletions
-  -h, --help      help for prune
+  -c, --confirm    Confirm the image prune action to prevent accidental deletions
+  -h, --help       help for prune
+      --insecure   Allow image references to be fetched without TLS
 ```
 
 ### Options inherited from parent commands
 
 ```
       --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
-      --insecure                           Allow image references to be fetched without TLS
+      --features stringToString            [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")

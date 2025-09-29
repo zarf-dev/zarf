@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -106,11 +105,13 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			config.ZarfSeedPort = 31997
 			state := state.State{
 				RegistryInfo: state.RegistryInfo{
 					Address:  test.expectedRegistryAddress,
 					NodePort: 31997,
+				},
+				InjectorInfo: state.InjectorInfo{
+					Port: 31997,
 				},
 				IPFamily: test.IPFamily,
 			}

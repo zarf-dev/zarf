@@ -55,7 +55,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
-      --confirm                         Confirm updating credentials without prompting
+  -c, --confirm                         Confirm updating credentials without prompting
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server
@@ -73,6 +73,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
