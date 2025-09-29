@@ -414,22 +414,22 @@ func TestParseRegistryOverrides(t *testing.T) {
 		{
 			name:          "error: invalid mapping",
 			provided:      []string{"docker.io:" + intranetRegistry},
-			errorContents: "invalid registry override: missing '='",
+			errorContents: "registry override missing '='",
 		},
 		{
 			name:          "error: invalid source",
 			provided:      []string{"=" + intranetRegistry},
-			errorContents: "registry override must have a source",
+			errorContents: "registry override missing source",
 		},
 		{
 			name:          "error: invalid override",
 			provided:      []string{"docker.io="},
-			errorContents: "registry override must have a value",
+			errorContents: "registry override missing value",
 		},
 		{
 			name:          "error: duplicate source",
 			provided:      []string{"docker.io=" + intranetRegistry, "docker.io=" + intranetRegistry},
-			errorContents: "registry source is duplicated: existing index: 0 erroring index: 1 source: docker.io",
+			errorContents: "registry override has duplicate source: existing index 0, new index 1, source docker.io",
 		},
 	}
 
