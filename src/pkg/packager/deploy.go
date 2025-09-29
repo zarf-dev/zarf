@@ -394,8 +394,6 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
 	// Populate objects available to templates in before actions
-	// FIXME(mkcp): These should probably be set once on the deployer, then updated throughout.
-	// No, this should be build as late as possible instead of manipulating template objects.
 	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc, d.vals); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}

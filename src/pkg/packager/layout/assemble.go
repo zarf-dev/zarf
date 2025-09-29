@@ -885,7 +885,7 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	// FIXME(mkcp): Handle URL valuesfiles. This has some implications with how we reference them at deploy time. Helm
+	// TODO(mkcp): Handle URL & OCI valuesfiles. This has some implications with how we reference them at deploy time. Helm
 	// assumes network connectivity at install or upgrade time and will fail if it can't reach the URL. We can assume
 	// that the file is available at create time, but then have to deploy it with a local copy. Only, that local copy
 	// is still referred to by URL. There's a few ways to implement this, and it'll take some thought and documentation
@@ -900,7 +900,7 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	// 	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
 	// 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
 	// 	}
-	// 	// URL copied to buildPack
+	// 	// URL copied to build
 	// 	return nil
 	// }
 

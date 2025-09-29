@@ -67,7 +67,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 
 	// Merge packageValues with values from CLI flags, config, or API.
-	// FIXME(mkcp): This is a bit janky
+	// NOTE(mkcp): This is a bit janky
 	packageValues, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
 	if err != nil {
 		return nil, err
@@ -109,7 +109,6 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			}
 
 			for _, chart := range component.Charts {
-				// FIXME(mkcp): Clean this up
 				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
 					variableConfig: variableConfig,
 					values:         values,

@@ -36,7 +36,7 @@ func (p Path) Validate() error {
 
 // ParseFilesOptions provides optional configuration for ParseFiles
 type ParseFilesOptions struct {
-	// TODO: Add schema check. Maybe here in parsing, or later in the process like templating?
+	// TODO(mkcp): Add schema check. Maybe here in parsing, or later in the process like templating?
 	// Schema Schema
 	// REVIEW: Should we guard against?
 	// FileSizeLimit
