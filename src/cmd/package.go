@@ -145,18 +145,30 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 }
 
 // Converts registry overrides to a structured type.
+// The result will be sorted in descending order.
+// Descending order guarantees the longest prefix will be sorted toward the beginning.
+//
 // Input is of the following form:
 // []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
 func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error) {
 	result := make([]types.RegistryOverride, len(overrides))
-	for i, override := range overrides {
-		source, override, found := strings.Cut(override, "=")
+	for i, mapping := range overrides {
+		source, override, found := strings.Cut(mapping, "=")
 		if !found {
-			return nil, fmt.Errorf("invalid override: missing '=': %s", override)
+			return nil, fmt.Errorf("invalid registry override: missing '=': %s", mapping)
+		} else if source == "" {
+			return nil, fmt.Errorf("registry override must have a source: %s", mapping)
+		} else if override == "" {
+			return nil, fmt.Errorf("registry override must have a value: %s", mapping)
 		}
 		result[i].Source = source
 		result[i].Override = override
 	}
+
+	// We sort these now at parse time so they are handled correctly throughout execution.
+	slices.SortFunc(result, func(a types.RegistryOverride, b types.RegistryOverride) int {
+		return -strings.Compare(a.Source, b.Source)
+	})
 
 	return result, nil
 }
