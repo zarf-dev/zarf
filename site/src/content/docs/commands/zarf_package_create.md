@@ -29,7 +29,7 @@ zarf package create [ DIRECTORY ] [flags]
   -h, --help                            help for create
   -m, --max-package-size int            Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
   -o, --output string                   Specify the output (either a directory or an oci:// URL) for the created Zarf package
-      --registry-override stringArray   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --registry-override stringArray   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
   -s, --sbom                            View SBOM contents after creating the package
       --sbom-out string                 Specify an output directory for the SBOMs from the created Zarf package
       --set stringToString              Specify package variables to set on the command line (KEY=value) (default [])
