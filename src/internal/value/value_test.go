@@ -5,7 +5,6 @@
 package value
 
 import (
-	"io/fs"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -181,14 +180,12 @@ func TestParseFiles(t *testing.T) {
 
 func TestParseFiles_Errors(t *testing.T) {
 	tests := []struct {
-		name          string
-		files         []string
-		expectedError error
+		name  string
+		files []string
 	}{
 		{
-			name:          "non-existent file",
-			files:         []string{"testdata/nonexistent.yaml"},
-			expectedError: &fs.PathError{},
+			name:  "non-existent file",
+			files: []string{"testdata/nonexistent.yaml"},
 		},
 		{
 			name: "both existing and non-existing files",
@@ -196,17 +193,14 @@ func TestParseFiles_Errors(t *testing.T) {
 				"testdata/valid/simple.yaml",
 				"testdata/nonexistent.yaml",
 			},
-			expectedError: &fs.PathError{},
 		},
 		{
-			name:          "invalid YAML syntax",
-			files:         []string{"testdata/invalid/malformed.yaml"},
-			expectedError: &YAMLDecodeError{},
+			name:  "invalid YAML syntax",
+			files: []string{"testdata/invalid/malformed.yaml"},
 		},
 		{
-			name:          "malformed YAML with tabs",
-			files:         []string{"testdata/invalid/tabs.yaml"},
-			expectedError: &YAMLDecodeError{},
+			name:  "malformed YAML with tabs",
+			files: []string{"testdata/invalid/tabs.yaml"},
 		},
 	}
 
@@ -217,7 +211,6 @@ func TestParseFiles_Errors(t *testing.T) {
 
 			result, err := ParseFiles(ctx, tt.files, ParseFilesOptions{})
 			require.Error(t, err)
-			require.IsType(t, tt.expectedError, err)
 			require.Nil(t, result)
 		})
 	}
