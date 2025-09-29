@@ -317,7 +317,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images)
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -325,7 +325,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 			d.s.InjectorInfo.Port = opts.InjectorHostPort
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -545,6 +545,8 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
 			Retries:                opts.Retries,
+			PkgName:                pkgLayout.Pkg.Metadata.Name,
+			NamespaceOverride:      opts.NamespaceOverride,
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
 		if err != nil {
@@ -610,6 +612,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
 			Retries:                opts.Retries,
+			PkgName:                pkgLayout.Pkg.Metadata.Name,
+			NamespaceOverride:      opts.NamespaceOverride,
 		}
 
 		// Install the chart.
