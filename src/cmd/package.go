@@ -160,7 +160,12 @@ func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error
 			return nil, fmt.Errorf("registry override must have a source: %s", mapping)
 		} else if override == "" {
 			return nil, fmt.Errorf("registry override must have a value: %s", mapping)
+		} else if index := slices.IndexFunc(result, func(existing types.RegistryOverride) bool {
+			return existing.Source == source
+		}); index >= 0 {
+			return nil, fmt.Errorf("registry source is duplicated: existing index: %d erroring index: %d source: %s", index, i, source)
 		}
+
 		result[i].Source = source
 		result[i].Override = override
 	}

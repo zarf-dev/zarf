@@ -406,10 +406,38 @@ func TestParseRegistryOverrides(t *testing.T) {
 		})
 	}
 
-	t.Run("error override", func(t *testing.T) {
-		t.Parallel()
-		brokenOverride := []string{"docker.io:" + intranetRegistry}
-		_, err := parseRegistryOverrides(brokenOverride)
-		require.ErrorContains(t, err, "invalid registry override: missing '='")
-	})
+	errorTests := []struct {
+		name          string
+		provided      []string
+		errorContents string
+	}{
+		{
+			name:          "error: invalid mapping",
+			provided:      []string{"docker.io:" + intranetRegistry},
+			errorContents: "invalid registry override: missing '='",
+		},
+		{
+			name:          "error: invalid source",
+			provided:      []string{"=" + intranetRegistry},
+			errorContents: "registry override must have a source",
+		},
+		{
+			name:          "error: invalid override",
+			provided:      []string{"docker.io="},
+			errorContents: "registry override must have a value",
+		},
+		{
+			name:          "error: duplicate source",
+			provided:      []string{"docker.io=" + intranetRegistry, "docker.io=" + intranetRegistry},
+			errorContents: "registry source is duplicated: existing index: 0 erroring index: 1 source: docker.io",
+		},
+	}
+
+	for _, tc := range errorTests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := parseRegistryOverrides(tc.provided)
+			require.ErrorContains(t, err, tc.errorContents)
+		})
+	}
 }
