@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values
+  description: Minimal test package for values feature
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: test-values-component
+    required: true
+    manifests:
+      - name: test-configmap
+        template: true
+        files:
+          - configmap.yaml
