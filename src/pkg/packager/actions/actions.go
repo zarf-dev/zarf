@@ -6,6 +6,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
@@ -128,16 +130,22 @@ retryCmd:
 
 			// If an output value is defined, parse the result and set it to values map.
 			for _, v := range action.SetValues {
-				var s string
+				var val any
 				switch v.Type {
 				case v1alpha1.SetValueYAML:
-					// TODO(mkcp): Implement YAML parsing
-					l.Warn("YAML setValues types not implemented yet", "type", v.Type)
+					var parsed any
+					if err := yaml.Unmarshal([]byte(outTrimmed), &parsed); err != nil {
+						return fmt.Errorf("failed to parse YAML output for setValue %q: %w", v.Key, err)
+					}
+					val = parsed
 				case v1alpha1.SetValueJSON:
-					// TODO(mkcp): Implement JSON parsing
-					l.Warn("json setValues types not implemented yet", "type", v.Type)
+					var parsed any
+					if err := json.Unmarshal([]byte(outTrimmed), &parsed); err != nil {
+						return fmt.Errorf("failed to parse JSON output for setValue %q: %w", v.Key, err)
+					}
+					val = parsed
 				case v1alpha1.SetValueString:
-					s = outTrimmed
+					val = outTrimmed
 				default:
 					return fmt.Errorf("unknown setValue type: %s", v.Type)
 				}
@@ -146,7 +154,7 @@ retryCmd:
 				// was passed in by the caller of actions.Run. It silently assumes that this same map will get passed
 				// to the next component, and so on. Ultimately this is the map stored on deployer, but a better
 				// implementation of this would ensure it's safe for concurrent access and keys are explicitly modified.
-				err := values.Set(value.Path(v.Key), s)
+				err := values.Set(value.Path(v.Key), val)
 				if err != nil {
 					return err
 				}
