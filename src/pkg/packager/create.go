@@ -17,12 +17,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
-	RegistryOverrides       map[string]string
+	RegistryOverrides       []types.RegistryOverride
 	SigningKeyPath          string
 	SigningKeyPassword      string
 	SetVariables            map[string]string
