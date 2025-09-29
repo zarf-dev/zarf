@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
 	corev1 "k8s.io/api/core/v1"
@@ -297,8 +298,8 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 }
 
 // GetInjectorDaemonsetImage gets the image that is most likely to be accessible from all nodes
-// It first grabs the smallest image with pause in the name. This should be the pause container which every node must have access to
-// If there are no pause images then it grabs the smallest image.
+// It first grabs the latest version pause image with semver 3 or 4, under 1MiB, and with pause in the name.
+// If there are no valid pause images then it grabs the smallest image.
 func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error) {
 	l := logger.From(ctx)
 
@@ -311,7 +312,7 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 
 		// Track images across all nodes
 		allImages := []corev1.ContainerImage{}
-		pauseImages := []corev1.ContainerImage{}
+		validPauseImages := []pauseImageInfo{}
 
 		for _, node := range nodes.Items {
 			for _, image := range node.Status.Images {
@@ -327,31 +328,33 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 
 				allImages = append(allImages, image)
 				for _, name := range image.Names {
-					img, err := transform.ParseImageRef(name)
-					if err != nil {
-						return err
-					}
-					if strings.Contains(img.Name, "pause") {
-						pauseImages = append(pauseImages, image)
+					if pauseInfo := determinePauseImage(name, image.SizeBytes); pauseInfo != nil {
+						validPauseImages = append(validPauseImages, *pauseInfo)
 					}
 				}
 			}
 		}
 
-		var targetImages []corev1.ContainerImage
-		if len(pauseImages) > 0 {
-			targetImages = pauseImages
-		} else {
-			targetImages = allImages
+		if len(validPauseImages) > 0 {
+			// Find the latest (highest) version pause image
+			latestPause := validPauseImages[0]
+			for _, pauseImg := range validPauseImages[1:] {
+				if pauseImg.version.GreaterThan(latestPause.version) {
+					latestPause = pauseImg
+				}
+			}
+			injectorImage = latestPause.name
+			return nil
 		}
 
-		if len(targetImages) == 0 {
+		// Fallback to smallest image if no valid pause images
+		if len(allImages) == 0 {
 			return errors.New("no suitable image found on any node")
 		}
 
 		// Find the smallest image by size
-		smallestImage := targetImages[0]
-		for _, image := range targetImages[1:] {
+		smallestImage := allImages[0]
+		for _, image := range allImages[1:] {
 			if image.SizeBytes < smallestImage.SizeBytes {
 				smallestImage = image
 			}
@@ -369,6 +372,50 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 	l.Info("selected image for injector DaemonSet", "name", injectorImage)
 
 	return injectorImage, nil
+}
+
+type pauseImageInfo struct {
+	name    string
+	version *semver.Version
+	size    int64
+}
+
+// determinePauseImage helps us judge if an image is likely to be a pause image with the following criteria:
+// - Name contains "pause"
+// - Semver version 3.x or 4.x
+// - Size is less than 1 MiB (1048576 bytes)
+func determinePauseImage(imageName string, sizeBytes int64) *pauseImageInfo {
+	if !strings.Contains(imageName, "pause") {
+		return nil
+	}
+	// The pause image is currently ~300 KB. Feels relatively safe to assume it will be continue to be less than 1mib
+	// This helps avoid images that coincidentally have pause in the name
+	OneMiB := int64(1024 * 1024)
+	if sizeBytes > OneMiB {
+		return nil
+	}
+
+	img, err := transform.ParseImageRef(imageName)
+	if err != nil {
+		return nil
+	}
+
+	ver, err := semver.NewVersion(img.Tag)
+	if err != nil {
+		return nil
+	}
+
+	// The pause image is currently on 3.11. It was upgraded to version 3, seven years ago
+	// Feels safe to assume it will be version 3 or 4 for the foreseeable future, and we can update this when a new version comes out.
+	if ver.Major() != 3 && ver.Major() != 4 {
+		return nil
+	}
+
+	return &pauseImageInfo{
+		name:    imageName,
+		version: ver,
+		size:    sizeBytes,
+	}
 }
 
 func hasBlockingTaints(taints []corev1.Taint) bool {

@@ -303,22 +303,21 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 		nodes         []corev1.Node
 		expectedImage string
 		expectedError string
-		ctx           context.Context
 	}{
 		{
-			name: "selects smallest pause image",
+			name: "selects latest pause image with valid semver 3.x and under 1MiB",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"docker.io/my-app/pause-and-go:3.6"},
-								SizeBytes: 400000,
+								Names:     []string{"k8s.gcr.io/pause:3.2"},
+								SizeBytes: 800000,
 							},
 							{
-								Names:     []string{"k8s.gcr.io/pause:3.7"},
-								SizeBytes: 200000,
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 900000,
 							},
 							{
 								Names:     []string{"nginx:latest"},
@@ -339,18 +338,22 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 					},
 				},
 			},
-			expectedImage: "k8s.gcr.io/pause:3.7",
+			expectedImage: "k8s.gcr.io/pause:3.9",
 		},
 		{
-			name: "falls back to smallest image when no pause images",
+			name: "accepts pause images with names containing pause",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"nginx:latest"},
-								SizeBytes: 100000000,
+								Names:     []string{"docker.io/my-app/pause-container:3.6"},
+								SizeBytes: 400000,
+							},
+							{
+								Names:     []string{"registry.k8s.io/pausetest:3.7"},
+								SizeBytes: 300000,
 							},
 							{
 								Names:     []string{"alpine:latest"},
@@ -359,19 +362,92 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 						},
 					},
 				},
+			},
+			expectedImage: "registry.k8s.io/pausetest:3.7",
+		},
+		{
+			name: "ignores pause images with invalid semver (version 2.x)",
+			nodes: []corev1.Node{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
 					Status: corev1.NodeStatus{
 						Images: []corev1.ContainerImage{
 							{
-								Names:     []string{"redis:latest"},
-								SizeBytes: 120000000,
+								Names:     []string{"k8s.gcr.io/my-custom-pause-app:2.9"},
+								SizeBytes: 6000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 500000,
 							},
 						},
 					},
 				},
 			},
 			expectedImage: "alpine:latest",
+		},
+		{
+			name: "ignores pause images with invalid semver (version 5.x)",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/my-personal-image-with-pause:5.1"},
+								SizeBytes: 40000000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "ignores pause images over 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048577, // 1 MiB + 1 byte
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "smallest-image:1.0",
+		},
+		{
+			name: "accepts pause images exactly at 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048576, // exactly 1 MiB
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.9",
 		},
 		{
 			name: "skips zarf mutated image",
