@@ -7,11 +7,11 @@ metadata:
 variables:
   - name: CONTROLLER_IMAGE_REPOSITORY
     description: Repository for the injector controller image
-    default: "ghcr.io/austinabro321/zarf/controller"
+    default: "ghcr.io/zarf-dev/zarf/agent"
 
   - name: CONTROLLER_IMAGE_TAG
     description: Tag for the injector controller image
-    default: "0.0.1"
+    default: "local"
 
   - name: CONTROLLER_REPLICAS
     description: Number of controller replicas to deploy
@@ -34,7 +34,7 @@ variables:
     default: "256Mi"
 
 components:
-  - name: injector-controller
+  - name: zarf-injector-controller
     description: |
       Deploys the Zarf Injector Controller that monitors registry proxy pods for ErrImagePull status
       and creates injector pods to bootstrap the registry when needed. The controller establishes
@@ -49,4 +49,4 @@ components:
         valuesFiles:
           - values.yaml
     images:
-      - "ghcr.io/austinabro321/zarf/controller:0.0.1"
+      - "ghcr.io/zarf-dev/zarf/agent:local"

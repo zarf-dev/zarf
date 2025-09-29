@@ -122,17 +122,11 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod) error 
 			l.Info("registry proxy pod has ErrImagePull status",
 				"controller", ControllerName,
 				"pod", pod.Name,
-				"namespace", pod.Namespace,
 				"container", containerStatus.Name,
 				"reason", containerStatus.State.Waiting.Reason,
 				"message", containerStatus.State.Waiting.Message,
 			)
-			var err error
-			if c.ownerPod != nil {
-				err = c.injector.RunWithOwner(ctx, pod, c.ownerPod)
-			} else {
-				err = c.injector.Run(ctx, pod)
-			}
+			err := c.injector.RunWithOwner(ctx, pod, c.ownerPod)
 			if err != nil {
 				return fmt.Errorf("injector process failed: %w", err)
 			}

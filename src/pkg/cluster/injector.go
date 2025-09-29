@@ -42,22 +42,23 @@ var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
 // StartInjection initializes a Zarf injection into the cluster
 func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string,
-	registryNodePort int, pkgName string, registryMode state.RegistryMode, ipFamily state.IPFamily) (int, error) {
+	registryPort int, pkgName string, registryMode state.RegistryMode, ipFamily state.IPFamily) (state.InjectorInfo, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx, registryMode)
 	if err != nil {
-		return 0, err
+		return state.InjectorInfo{}, err
 	}
 
 	l.Info("creating Zarf injector resources")
+	injectorInfo := state.InjectorInfo{}
 
 	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
 	if err != nil {
-		return 0, err
+		return state.InjectorInfo{}, err
 	}
-	l.Info("shasum is", "shasum", shasum)
+	injectorInfo.PayLoadShaSum = shasum
 
 	resReq := v1ac.ResourceRequirements().
 		WithRequests(corev1.ResourceList{
@@ -70,22 +71,21 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		})
 	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
 	if err != nil {
-		return 0, err
+		return state.InjectorInfo{}, err
 	}
 
-	var zarfSeedPort int
 	if registryMode == state.RegistryModeNodePort {
-		svc, err := c.createInjectorNodeportService(ctx, registryNodePort, pkgName)
+		svc, err := c.createInjectorNodeportService(ctx, registryPort, pkgName)
 		if err != nil {
-			return 0, err
+			return state.InjectorInfo{}, err
 		}
-		zarfSeedPort = int(svc.Spec.Ports[0].NodePort)
+		injectorInfo.Port = int(svc.Spec.Ports[0].NodePort)
 
 		//FIXME: I have to add back the package name labels
 		pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
 		_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return 0, fmt.Errorf("error creating pod in cluster: %w", err)
+			return state.InjectorInfo{}, fmt.Errorf("error creating pod in cluster: %w", err)
 		}
 
 		waitCtx, waitCancel := context.WithTimeout(ctx, 60*time.Second)
@@ -98,7 +98,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		}
 		err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 		if err != nil {
-			return 0, err
+			return state.InjectorInfo{}, err
 		}
 	} else {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
@@ -111,20 +111,20 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			}))
 		_, err := c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return 0, err
+			return state.InjectorInfo{}, err
 		}
 		dsSpec := buildInjectionDaemonset(injectorImage, payloadCmNames, shasum, resReq, ipFamily)
 		ds, err := c.Clientset.AppsV1().DaemonSets(state.ZarfNamespaceName).Apply(ctx, dsSpec, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return 0, fmt.Errorf("error creating daemonset in cluster: %w", err)
+			return state.InjectorInfo{}, fmt.Errorf("error creating daemonset in cluster: %w", err)
 		}
 		// FIXME: this should be hostPort for hostport and containerport for the hostNetwork
-		zarfSeedPort = int(ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)
+		injectorInfo.Port = int(ds.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)
 		// TODO wait for DaemonSet
 	}
 
 	l.Debug("done with injection", "duration", time.Since(start))
-	return zarfSeedPort, nil
+	return injectorInfo, nil
 }
 
 // CreateInjectorConfigMaps creates the required configmaps to run the injector
@@ -558,6 +558,8 @@ func BuildInjectionPodSpec(nodeName string, restartPolicy corev1.RestartPolicy, 
 	volumes, volumeMounts := buildVolumesAndMounts(payloadCmNames)
 	podSpec :=
 		v1ac.PodSpec().
+			// The injector doesn't handle sigterm to avoid extra dependencies, so we set it to 1
+			WithTerminationGracePeriodSeconds(1).
 			WithNodeName(nodeName).
 			WithRestartPolicy(restartPolicy).
 			WithSecurityContext(

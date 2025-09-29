@@ -30,7 +30,8 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          command: ["/zarf", "internal", "run-controller", "--log-level=debug", "--log-format=console", "--no-color"]
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: POD_NAME

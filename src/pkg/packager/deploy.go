@@ -276,6 +276,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
 	isAgent := component.Name == "zarf-agent"
+	IsInjectorController := component.Name == "zarf-injector-controller"
 
 	// Always init the state before the first component that requires the cluster (on most deployments, the zarf-seed-registry)
 	if component.RequiresCluster() && d.s == nil {
@@ -303,6 +304,10 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		return nil, nil
 	}
 
+	if IsInjectorController && d.s != nil && (hasExternalRegistry || d.s.RegistryInfo.RegistryMode != state.RegistryModeProxy) {
+		return nil, nil
+	}
+
 	if isRegistry {
 		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
 		d.hpaModified = true
@@ -310,12 +315,12 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		injectorPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images,
+		injectorInfo, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images,
 			d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name, d.s.RegistryInfo.RegistryMode, d.s.IPFamily)
 		if err != nil {
 			return nil, err
 		}
-		d.s.InjectorInfo.Port = injectorPort
+		d.s.InjectorInfo = injectorInfo
 		// Save the injector updates to state
 		if err := d.c.SaveState(ctx, d.s); err != nil {
 			return nil, err
