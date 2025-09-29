@@ -154,17 +154,23 @@ func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error
 	result := make([]types.RegistryOverride, len(overrides))
 	for i, mapping := range overrides {
 		source, override, found := strings.Cut(mapping, "=")
-		if !found {
-			return nil, fmt.Errorf("invalid registry override: missing '=': %s", mapping)
-		} else if source == "" {
-			return nil, fmt.Errorf("registry override must have a source: %s", mapping)
-		} else if override == "" {
-			return nil, fmt.Errorf("registry override must have a value: %s", mapping)
-		} else if index := slices.IndexFunc(result, func(existing types.RegistryOverride) bool {
-			return existing.Source == source
-		}); index >= 0 {
-			return nil, fmt.Errorf("registry source is duplicated: existing index: %d erroring index: %d source: %s", index, i, source)
-		}
+        if !found {
+            return nil, fmt.Errorf("registry override missing '=': %s", mapping)
+        }
+        
+        if source == "" {
+            return nil, fmt.Errorf("registry override missing source: %s", mapping)
+        }
+        
+        if override == "" {
+            return nil, fmt.Errorf("registry override missing value: %s", mapping)
+        }
+        
+        if index := slices.IndexFunc(result, func(existing types.RegistryOverride) bool {
+            return existing.Source == source
+        }); index >= 0 {
+            return nil, fmt.Errorf("registry override has duplicate source: existing index %d, new index %d, source %s", index, i, source)
+        }
 
 		result[i].Source = source
 		result[i].Override = override
