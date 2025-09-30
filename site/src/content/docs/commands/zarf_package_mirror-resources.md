@@ -64,7 +64,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
       --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
       --registry-url string             External registry url address to use for this Zarf cluster
       --repos                           mirror only the git repositories
-      --retries int                     Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 3)
+      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --shasum string                   Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
       --skip-signature-validation       Skip validating the signature of the Zarf package
 ```

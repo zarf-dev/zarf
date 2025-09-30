@@ -21,16 +21,16 @@ zarf dev deploy [flags]
 ### Options
 
 ```
-      --adopt-existing-resources           Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
-      --components string                  Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-      --create-set stringToString          Specify package variables to set on the command line (KEY=value) (default [])
-      --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
-  -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                               help for deploy
-      --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
-      --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
-      --retries int                        Number of retries to perform for Zarf operations like git/image pushes or Helm installs (default 3)
-      --timeout duration                   Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --components string               Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
+      --create-set stringToString       Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString       Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                   The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                            help for deploy
+      --no-yolo                         Disable the YOLO mode default override and create / deploy the package as-defined
+      --registry-override stringArray   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ### Options inherited from parent commands

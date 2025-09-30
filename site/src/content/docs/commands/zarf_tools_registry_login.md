@@ -8,16 +8,34 @@ tableOfContents: false
 
 ## zarf tools registry login
 
-Log in to a registry
+Login to a container registry
 
 ```
 zarf tools registry login [OPTIONS] [SERVER] [flags]
+```
+
+### Examples
+
+```
+
+  # Login interactively (prompts for server, username, password)
+  $ zarf tools registry login --interactive
+
+  # Login with username, prompt for password
+  $ zarf tools registry login --interactive --username myuser docker.io
+
+  # Login normally with all credentials
+  $ zarf tools registry login --username myuser --password mypass docker.io
+
+  # Login with password from stdin
+  $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io
 ```
 
 ### Options
 
 ```
   -h, --help              help for login
+      --interactive       Interactively prompt for registry server, username, and password if not provided
   -p, --password string   Password
       --password-stdin    Take the password from stdin
   -u, --username string   Username

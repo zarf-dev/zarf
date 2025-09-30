@@ -38,6 +38,10 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+	// PackageLabel is the label used to identify the owning of package.
+	PackageLabel string = "zarf.dev/package"
+	// NamespaceOverrideLabel is the label used to identify the namespace override.
+	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // Registry TLS secret and certificate names
