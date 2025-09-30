@@ -262,37 +262,66 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	if err != nil {
 		return "", "", err
 	}
+
 	for _, pod := range podList.Items {
 		nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
 		if err != nil {
 			return "", "", err
 		}
-		if nodeDetails.Status.Allocatable.Cpu().Cmp(*resReq.Requests.Cpu()) < 0 ||
-			nodeDetails.Status.Allocatable.Memory().Cmp(*resReq.Requests.Memory()) < 0 {
+
+		var usedCPU, usedMem int64
+		for _, npod := range podList.Items {
+			if npod.Spec.NodeName != nodeDetails.Name {
+				continue
+			}
+			// skip completed/failed pods
+			if npod.Status.Phase == corev1.PodSucceeded || npod.Status.Phase == corev1.PodFailed {
+				continue
+			}
+			for _, ctn := range npod.Spec.Containers {
+				usedCPU += ctn.Resources.Requests.Cpu().MilliValue()
+				usedMem += ctn.Resources.Requests.Memory().Value()
+			}
+			for _, ctn := range npod.Spec.InitContainers {
+				usedCPU += ctn.Resources.Requests.Cpu().MilliValue()
+				usedMem += ctn.Resources.Requests.Memory().Value()
+			}
+		}
+
+		availCPU := nodeDetails.Status.Allocatable.Cpu().MilliValue() - usedCPU
+		availMem := nodeDetails.Status.Allocatable.Memory().Value() - usedMem
+
+		reqCPU := resReq.Requests.Cpu().MilliValue()
+		reqMem := resReq.Requests.Memory().Value()
+
+		if availCPU < reqCPU || availMem < reqMem {
+			// not enough free capacity
 			continue
 		}
+
+		// Respect taints
 		if hasBlockingTaints(nodeDetails.Spec.Taints) {
 			continue
 		}
+
+		// Look for a non-Zarf image from containers/init/ephemeral containers
 		for _, container := range pod.Spec.Containers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
+			if !zarfImageRegex.MatchString(container.Image) {
+				return container.Image, pod.Spec.NodeName, nil
 			}
-			return container.Image, pod.Spec.NodeName, nil
 		}
 		for _, container := range pod.Spec.InitContainers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
+			if !zarfImageRegex.MatchString(container.Image) {
+				return container.Image, pod.Spec.NodeName, nil
 			}
-			return container.Image, pod.Spec.NodeName, nil
 		}
 		for _, container := range pod.Spec.EphemeralContainers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
+			if !zarfImageRegex.MatchString(container.Image) {
+				return container.Image, pod.Spec.NodeName, nil
 			}
-			return container.Image, pod.Spec.NodeName, nil
 		}
 	}
+
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
