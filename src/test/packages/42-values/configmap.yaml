@@ -4,4 +4,4 @@ metadata:
   name: test-values-configmap
   namespace: default
 data:
-  value: "{{ .Values.testValue }}"
+  value: "{{ .Values.test }}"
