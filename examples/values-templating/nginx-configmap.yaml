@@ -14,7 +14,7 @@ data:
       <head>
         <title>Welcome to {{ .Values.site.name }}!</title>
         <style>
-          {{ .Values.site.styles | quote }}
+          {{ .Values.site.styles }}
         </style>
       </head>
       <body>
