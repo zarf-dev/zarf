@@ -22,6 +22,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -33,7 +34,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 * [zarf package create](/commands/zarf_package_create/)	 - Creates a Zarf package from a given directory or the current directory
 * [zarf package deploy](/commands/zarf_package_deploy/)	 - Deploys a Zarf package from a local file or URL (runs offline)
 * [zarf package inspect](/commands/zarf_package_inspect/)	 - Displays the definition of a Zarf package (runs offline)

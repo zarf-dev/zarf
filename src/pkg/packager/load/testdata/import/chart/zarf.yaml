@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-package
+
+components:
+  - name: common
+    required: true
+    import:
+      path: common
+    charts:
+      - name: chart
+        url: oci://test/different-value
+        version: 2.3.4

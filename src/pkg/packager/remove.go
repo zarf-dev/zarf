@@ -12,6 +12,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -40,6 +41,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
 	if err != nil {
 		return err
+	}
+
+	if len(pkg.Components) == 0 {
+		return fmt.Errorf("package to remove contains no components")
 	}
 
 	// Check that cluster is configured if required.
@@ -116,10 +121,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 						l.Warn("helm release was not found. was it already removed?", "name", chart.ChartName, "namespace", chart.Namespace)
 					}
 
-					// Pop the removed helm chart from the installed charts slice.
-					installedCharts := depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts
-					installedCharts = installedCharts[:len(installedCharts)-1]
-					depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts = installedCharts
+					// remove the helm chart from the installed charts slice.
+					depComp.InstalledCharts = helpers.RemoveMatches(depComp.InstalledCharts, func(t state.InstalledChart) bool {
+						return t.ChartName == chart.ChartName
+					})
+
 					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
@@ -137,9 +143,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
 
-			// Pop the removed component from deploy components slice.
+			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = depPkg.DeployedComponents[:len(depPkg.DeployedComponents)-1]
+				depPkg.DeployedComponents = helpers.RemoveMatches(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
+					return t.Name == depComp.Name
+				})
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of

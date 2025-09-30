@@ -155,6 +155,28 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "fuzzy",
+			packagePath: "./testdata/find-images/fuzzy",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches:       []string{},
+					PotentialMatches: []string{
+						"quay.io/cephcsi/cephcsi:v3.14.1",
+						"quay.io/csiaddons/k8s-sidecar:v0.12.0",
+						"registry.k8s.io/sig-storage/csi-attacher:v4.8.1",
+						"registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0",
+						"registry.k8s.io/sig-storage/csi-provisioner:v5.2.0",
+						"registry.k8s.io/sig-storage/csi-resizer:v1.13.2",
+						"registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

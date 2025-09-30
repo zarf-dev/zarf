@@ -282,7 +282,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// TODO(soltysh): get rid of pkgConfig global
 	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringArrayVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&pkgConfig.DeployOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
@@ -320,12 +320,16 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	overrides, err := parseRegistryOverrides(pkgConfig.CreateOpts.RegistryOverrides)
+	if err != nil {
+		return fmt.Errorf("error parsing registry override: %w", err)
+	}
 
 	err = packager.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager.DevDeployOptions{
 		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
 		Flavor:             pkgConfig.CreateOpts.Flavor,
 		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
-		RegistryOverrides:  pkgConfig.CreateOpts.RegistryOverrides,
+		RegistryOverrides:  overrides,
 		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
 		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
 		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
@@ -533,7 +537,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 		}
 
 		downloadPath := filepath.Join(tmp, fileBase)
-		err = utils.DownloadToFile(ctx, fileName, downloadPath, "")
+		err = utils.DownloadToFile(ctx, fileName, downloadPath)
 		if err != nil {
 			return errors.Join(hashErr, err)
 		}
@@ -683,8 +687,10 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	componentDefinition := "\ncomponents:\n"
 	for _, finding := range imagesScans {
-		if len(finding.Matches) > 0 {
+		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
 			componentDefinition += fmt.Sprintf("  - name: %s\n    images:\n", finding.ComponentName)
+		}
+		if len(finding.Matches) > 0 {
 			for _, image := range finding.Matches {
 				componentDefinition += fmt.Sprintf("      - %s\n", image)
 			}

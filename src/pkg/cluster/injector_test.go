@@ -107,17 +107,19 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil)
+		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, podList.Items, 1)
 		require.Equal(t, "injector", podList.Items[0].Name)
+		require.Equal(t, "test", podList.Items[0].Labels["zarf.dev/package"])
 
 		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
+		require.Equal(t, "test", svcList.Items[0].Labels["zarf.dev/package"])
 		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
@@ -134,6 +136,7 @@ func TestInjector(t *testing.T) {
 		cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
+		require.Equal(t, "test", cm.Labels["zarf.dev/package"])
 	}
 
 	err = c.StopInjection(ctx)
@@ -163,8 +166,9 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
 	require.Equal(t, "injector", *pod.Name)
+	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 

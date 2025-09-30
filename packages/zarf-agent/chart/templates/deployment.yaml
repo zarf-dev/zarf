@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.deployment.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: agent-hook
+spec:
+  replicas: {{ .Values.deployment.replicaCount }}
+  selector:
+    matchLabels:
+      app: agent-hook
+  template:
+    metadata:
+      labels:
+        app: agent-hook
+        zarf.dev/agent: ignore
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecret }}
+      priorityClassName: system-node-critical
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      securityContext:
+        runAsUser: 65532
+        fsGroup: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: "RuntimeDefault"
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+      tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8443
+              scheme: HTTPS
+          ports:
+            - containerPort: 8443
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: {{ .Values.resources.requests.memory }}
+              cpu: {{ .Values.resources.requests.cpu }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+              cpu: {{ .Values.resources.limits.cpu }}
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+            - name: config
+              mountPath: /.config
+            - name: xdg
+              mountPath: /etc/xdg
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.secret.name }}
+        - name: config
+          emptyDir: {}
+        - name: xdg
+          emptyDir: {}

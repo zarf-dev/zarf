@@ -23,12 +23,16 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
+const defaultPublishRetries = 1
+
 // PublishFromOCIOptions declares the parameters to publish a package.
 type PublishFromOCIOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
 	// Architecture is the architecture we are publishing to
 	Architecture string
+	// Retries is the number of times to retry a failed push
+	Retries int
 	RemoteOptions
 }
 
@@ -37,6 +41,15 @@ type PublishFromOCIOptions struct {
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	// disallow infinite or negative
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return fmt.Errorf("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
+		opts.Retries = defaultPublishRetries
+	}
 
 	if err := src.Validate(); err != nil {
 		return fmt.Errorf("failed to validate source registry: %w", err)
@@ -69,8 +82,13 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
+	publishOptions := zoci.PublishOptions{
+		OCIConcurrency: opts.OCIConcurrency,
+		Retries:        opts.Retries,
+	}
+
 	// Execute copy
-	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, opts.OCIConcurrency)
+	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, publishOptions)
 	if err != nil {
 		return fmt.Errorf("could not copy package: %w", err)
 	}
@@ -87,6 +105,8 @@ type PublishPackageOptions struct {
 	SigningKeyPath string
 	// SigningKeyPassword holds a password to use the key at SigningKeyPath.
 	SigningKeyPassword string
+	// Retries specifies the number of retries to use
+	Retries int
 	RemoteOptions
 }
 
@@ -94,6 +114,15 @@ type PublishPackageOptions struct {
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst registry.Reference, opts PublishPackageOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
+
+	// disallow infinite or negative
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
+		opts.Retries = defaultPublishRetries
+	}
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
@@ -114,7 +143,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, err
 	}
 
-	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions); err != nil {
+	if err := pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions); err != nil {
 		return registry.Reference{}, err
 	}
 
@@ -131,6 +160,10 @@ type PublishSkeletonOptions struct {
 	SigningKeyPassword string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	// Flavor specifies the flavor to use
+	Flavor string
+	// Retries specifies the number of retries to use
+	Retries int
 	RemoteOptions
 }
 
@@ -138,6 +171,15 @@ type PublishSkeletonOptions struct {
 // dst is the path to the registry namespace, e.g. my-registry.com/my-namespace. The full package ref is created using the package name and returned
 func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, opts PublishSkeletonOptions) (registry.Reference, error) {
 	l := logger.From(ctx)
+
+	// disallow infinite or negative
+	if opts.Retries <= 0 {
+		if opts.Retries < 0 {
+			return registry.Reference{}, fmt.Errorf("retries cannot be negative")
+		}
+		l.Debug("retries set to default", "retries", defaultPublishRetries)
+		opts.Retries = defaultPublishRetries
+	}
 
 	// Validate inputs
 	l.Debug("validating PublishOpts")
@@ -152,6 +194,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
 		CachePath: opts.CachePath,
+		Flavor:    opts.Flavor,
 	})
 	if err != nil {
 		return registry.Reference{}, err
@@ -160,6 +203,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	createOpts := layout.AssembleSkeletonOptions{
 		SigningKeyPath:     opts.SigningKeyPath,
 		SigningKeyPassword: opts.SigningKeyPassword,
+		Flavor:             opts.Flavor,
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {
@@ -170,7 +214,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.RemoteOptions)
+	err = pushToRemote(ctx, pkgLayout, pkgRef, opts.OCIConcurrency, opts.Retries, opts.RemoteOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -194,7 +238,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to the given reference
-func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, remoteOpts RemoteOptions) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts RemoteOptions) error {
 	arch := layout.Pkg.Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)
@@ -204,5 +248,15 @@ func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registr
 		return fmt.Errorf("could not instantiate remote: %w", err)
 	}
 
-	return remote.PushPackage(ctx, layout, concurrency)
+	publishOptions := zoci.PublishOptions{
+		OCIConcurrency: concurrency,
+		Retries:        retries,
+	}
+
+	_, err = remote.PushPackage(ctx, layout, publishOptions)
+	if err != nil {
+		return fmt.Errorf("could not push package: %w", err)
+	}
+
+	return nil
 }

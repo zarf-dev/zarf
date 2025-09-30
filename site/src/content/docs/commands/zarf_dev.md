@@ -20,6 +20,7 @@ Commands useful for developing packages
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -31,7 +32,7 @@ Commands useful for developing packages
 
 ### SEE ALSO
 
-* [zarf](/commands/zarf/)	 - DevSecOps for Airgap
+* [zarf](/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
 * [zarf dev deploy](/commands/zarf_dev_deploy/)	 - [beta] Creates and deploys a Zarf package from a given directory
 * [zarf dev find-images](/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
 * [zarf dev generate](/commands/zarf_dev_generate/)	 - [alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart

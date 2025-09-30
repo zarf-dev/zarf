@@ -76,11 +76,16 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 
 	imagesWithOverride := []imageWithOverride{}
+	// Iterate over all images, marking each one as overridden.
 	for _, img := range cfg.ImageList {
 		overriddenImage := img
-		for k, v := range cfg.RegistryOverrides {
-			if strings.HasPrefix(img.Reference, k) {
-				overriddenImage.Reference = strings.Replace(img.Reference, k, v, 1)
+		for _, v := range cfg.RegistryOverrides {
+			if strings.HasPrefix(img.Reference, v.Source) {
+				// If we have an override, the first override wins.
+				// Doing so allows earlier, longer prefixes (such as docker.io/library)
+				// to supersede shorter prefixes (such as docker.io).
+				overriddenImage.Reference = strings.Replace(img.Reference, v.Source, v.Override, 1)
+				break
 			}
 		}
 		imagesWithOverride = append(imagesWithOverride, imageWithOverride{
@@ -154,7 +159,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 			repo.PlainHTTP = cfg.PlainHTTP
 			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-				repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
@@ -426,7 +431,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst 
 	}
 	repo.PlainHTTP = cfg.PlainHTTP
 	if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
-		repo.PlainHTTP, err = shouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 		if err != nil {
 			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
 		}

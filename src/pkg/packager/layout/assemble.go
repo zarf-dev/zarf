@@ -38,6 +38,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // AssembleOptions are the options for creating a package from a package object
@@ -45,7 +46,7 @@ type AssembleOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  map[string]string
+	RegistryOverrides  []types.RegistryOverride
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
@@ -196,6 +197,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 type AssembleSkeletonOptions struct {
 	SigningKeyPath     string
 	SigningKeyPassword string
+	Flavor             string
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -207,8 +209,13 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	for _, component := range pkg.Components {
-		err := assembleSkeletonComponent(ctx, component, packagePath, buildPath)
+	// To remove the flavor value, as the flavor is configured by the tag uploaded to the registry
+	//   example:
+	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
+	//     is indicating that you are importing the "upstream" flavor of the zarf init package
+	for i := 0; i < len(pkg.Components); i++ {
+		pkg.Components[i].Only.Flavor = ""
+		err := assembleSkeletonComponent(ctx, pkg.Components[i], packagePath, buildPath)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +232,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, "", nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -274,21 +281,12 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 	// If any helm charts are defined, process them.
 	for _, chart := range component.Charts {
-		if chart.LocalPath != "" {
-			chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
-		}
-		oldValuesFiles := chart.ValuesFiles
-		valuesFiles := []string{}
-		for _, v := range chart.ValuesFiles {
-			valuesFiles = append(valuesFiles, filepath.Join(packagePath, v))
-		}
-		chart.ValuesFiles = valuesFiles
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
 		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath)
+		if err != nil {
 			return err
 		}
-		chart.ValuesFiles = oldValuesFiles
 	}
 
 	for filesIdx, file := range component.Files {
@@ -313,7 +311,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				compressedFile := filepath.Join(tmpDir, compressedFileName)
 
 				// If the file is an archive, download it to the componentPath.Temp
-				if err := utils.DownloadToFile(ctx, file.Source, compressedFile, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 				decompressOpts := archive.DecompressOpts{
@@ -324,28 +322,26 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
 				}
 			} else {
-				if err := utils.DownloadToFile(ctx, file.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+				if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
 					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
 				}
 			}
 		} else {
+			src := file.Source
+			if !filepath.IsAbs(file.Source) {
+				src = filepath.Join(packagePath, file.Source)
+			}
 			if file.ExtractPath != "" {
 				decompressOpts := archive.DecompressOpts{
 					Files: []string{file.ExtractPath},
 				}
-				err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
 				}
 			} else {
-				if filepath.IsAbs(file.Source) {
-					if err := helpers.CreatePathAndCopy(file.Source, dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
-				} else {
-					if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
-						return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
-					}
+				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+					return fmt.Errorf("unable to copy file %s: %w", src, err)
 				}
 			}
 		}
@@ -385,11 +381,15 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		dst := filepath.Join(compBuildPath, rel)
 
 		if helpers.IsURL(data.Source) {
-			if err := utils.DownloadToFile(ctx, data.Source, dst, component.DeprecatedCosignKeyPath); err != nil {
+			if err := utils.DownloadToFile(ctx, data.Source, dst); err != nil {
 				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
+			src := data.Source
+			if !filepath.IsAbs(data.Source) {
+				src = filepath.Join(packagePath, data.Source)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
 			}
 		}
@@ -403,34 +403,9 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 	for _, manifest := range component.Manifests {
-		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
-			dst := filepath.Join(compBuildPath, rel)
-
-			// Copy manifests without any processing.
-			if helpers.IsURL(path) {
-				if err := utils.DownloadToFile(ctx, path, dst, component.DeprecatedCosignKeyPath); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, path, err.Error())
-				}
-			} else {
-				if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
-					return fmt.Errorf("unable to copy manifest %s: %w", path, err)
-				}
-			}
-		}
-
-		for kustomizeIdx, path := range manifest.Kustomizations {
-			// Generate manifests from kustomizations and place in the package.
-			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
-			rel := filepath.Join(string(ManifestsComponentDir), kname)
-			dst := filepath.Join(compBuildPath, rel)
-
-			if !helpers.IsURL(path) {
-				path = filepath.Join(packagePath, path)
-			}
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
-				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
-			}
+		err := PackageManifest(ctx, manifest, compBuildPath, packagePath)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -467,6 +442,65 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	return nil
 }
 
+// PackageManifest takes a Zarf manifest definition and packs it into a package layout
+func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string) error {
+	for fileIdx, path := range manifest.Files {
+		rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+		dst := filepath.Join(compBuildPath, rel)
+
+		// Copy manifests without any processing.
+		if helpers.IsURL(path) {
+			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+			}
+		} else {
+			src := path
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(packagePath, src)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
+			}
+		}
+	}
+
+	for kustomizeIdx, path := range manifest.Kustomizations {
+		// Generate manifests from kustomizations and place in the package.
+		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+		rel := filepath.Join(string(ManifestsComponentDir), kname)
+		dst := filepath.Join(compBuildPath, rel)
+
+		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
+			path = filepath.Join(packagePath, path)
+		}
+		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
+		}
+	}
+	return nil
+}
+
+// PackageChart takes a Zarf Chart definition and packs it into a package layout
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
+	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
+		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
+	}
+	oldValuesFiles := chart.ValuesFiles
+	valuesFiles := []string{}
+	for _, v := range chart.ValuesFiles {
+		if !filepath.IsAbs(v) {
+			v = filepath.Join(packagePath, v)
+		}
+		valuesFiles = append(valuesFiles, v)
+	}
+	chart.ValuesFiles = valuesFiles
+	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+		return err
+	}
+	chart.ValuesFiles = oldValuesFiles
+	return nil
+}
+
 func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -481,24 +515,17 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		return err
 	}
 
-	// Update component DeprecatedCosignKeyPath with cosign.pub if a path exists
-	if component.DeprecatedCosignKeyPath != "" {
-		dst := filepath.Join(compBuildPath, "cosign.pub")
-		err = helpers.CreatePathAndCopy(filepath.Join(packagePath, component.DeprecatedCosignKeyPath), dst)
-		if err != nil {
-			return err
-		}
-		component.DeprecatedCosignKeyPath = "cosign.pub"
-	}
-
 	for chartIdx, chart := range component.Charts {
 		if chart.LocalPath != "" {
 			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
 			dst := filepath.Join(compBuildPath, rel)
 
-			err := helpers.CreatePathAndCopy(filepath.Join(packagePath, chart.LocalPath), dst)
-			if err != nil {
-				return err
+			file := chart.LocalPath
+			if !filepath.IsAbs(file) {
+				file = filepath.Join(packagePath, file)
+			}
+			if err := helpers.CreatePathAndCopy(file, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", file, err)
 			}
 
 			component.Charts[chartIdx].LocalPath = rel
@@ -512,7 +539,10 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), filepath.Join(compBuildPath, rel)); err != nil {
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
@@ -526,14 +556,18 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
+		src := file.Source
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, src)
+		}
 
 		if file.ExtractPath != "" {
 			decompressOpts := archive.DecompressOpts{
 				Files: []string{file.ExtractPath},
 			}
-			err = archive.Decompress(ctx, filepath.Join(packagePath, file.Source), destinationDir, decompressOpts)
+			err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, filepath.Join(packagePath, file.Source), err.Error())
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
 			}
 
 			// Make sure dst reflects the actual file or directory.
@@ -544,8 +578,8 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				}
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, file.Source), dst); err != nil {
-				return fmt.Errorf("unable to copy file %s: %w", file.Source, err)
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy file %s: %w", src, err)
 			}
 		}
 
@@ -579,8 +613,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
-		if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, data.Source), dst); err != nil {
-			return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+		src := data.Source
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, src)
+		}
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("unable to copy data injection %s: %s", src, err.Error())
 		}
 
 		component.DataInjections[dataIdx].Source = rel
@@ -598,8 +636,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
-			if err := helpers.CreatePathAndCopy(filepath.Join(packagePath, path), dst); err != nil {
-				return fmt.Errorf("unable to copy manifest %s: %w", path, err)
+			src := path
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(packagePath, src)
+			}
+			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+				return fmt.Errorf("unable to copy manifest %s: %w", src, err)
 			}
 
 			component.Manifests[manifestIdx].Files[fileIdx] = rel
@@ -611,8 +653,12 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(filepath.Join(packagePath, path), dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
@@ -645,7 +691,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides map[string]string) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []types.RegistryOverride) v1alpha1.ZarfPackage {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -676,7 +722,13 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	pkg.Build.RegistryOverrides = registryOverrides
+	// We lose the ordering for the user-provided registry overrides.
+	overrides := make(map[string]string, len(registryOverrides))
+	for i := range registryOverrides {
+		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
+	}
+
+	pkg.Build.RegistryOverrides = overrides
 
 	return pkg
 }

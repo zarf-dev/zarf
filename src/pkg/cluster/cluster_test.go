@@ -197,7 +197,7 @@ func TestInit(t *testing.T) {
 				}
 			}()
 
-			err := c.InitState(ctx, tt.initOpts)
+			_, err := c.InitState(ctx, tt.initOpts)
 			if tt.expectedErr != "" {
 				require.EqualError(t, err, tt.expectedErr)
 				return

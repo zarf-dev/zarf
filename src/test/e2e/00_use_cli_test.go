@@ -57,9 +57,9 @@ func TestUseCLI(t *testing.T) {
 
 	t.Run("zarf dev sha256sum <remote>", func(t *testing.T) {
 		t.Parallel()
-		expectedShasum := "a78d66b9e2b00a22edd9b4e6432a4d934621e3757f09493b12f688c7c9baca93\n"
+		expectedShasum := "97d2c3ec3c789a866c7bb88ed1d6819f8b279762f9398c8ec5ad70458f23bf85\n"
 
-		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://zarf-init-resources.s3.us-east-1.amazonaws.com/injector/2025-03-24/zarf-injector-amd64")
+		stdOut, stdErr, err := e2e.Zarf(t, "prepare", "sha256sum", "https://github.com/zarf-dev/zarf-injector/releases/download/v0.1.0/zarf-injector-amd64")
 		require.NoError(t, err, stdOut, stdErr)
 		require.Contains(t, stdOut, expectedShasum, "The expected SHASUM should equal the actual SHASUM")
 	})
@@ -189,7 +189,7 @@ func TestUseCLI(t *testing.T) {
 		_, _, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-extract-path", "-o", tmpDir, "--flavor", runtime.GOOS, "--confirm")
 		require.NoError(t, err)
 
-		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s.tar.zst", e2e.Arch))
+		path := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-extract-path-%s-%s.tar.zst", e2e.Arch, runtime.GOOS))
 		_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
 		require.NoError(t, err)
 

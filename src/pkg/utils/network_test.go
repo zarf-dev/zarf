@@ -137,7 +137,7 @@ func TestDownloadToFile(t *testing.T) {
 				src = strings.Join([]string{src, tt.shasum}, "@")
 			}
 			dst := filepath.Join(t.TempDir(), tt.fileName)
-			err := DownloadToFile(testutil.TestContext(t), src, dst, "")
+			err := DownloadToFile(testutil.TestContext(t), src, dst)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return

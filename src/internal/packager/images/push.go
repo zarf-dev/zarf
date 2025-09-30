@@ -103,7 +103,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = shouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
 			if err != nil {
 				return err
 			}
@@ -248,7 +248,6 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency
-	copyOpts.WithTargetPlatform(desc.Platform)
 
 	trackedRemote := NewTrackedTarget(remote, size, DefaultReport(logger.From(ctx), "image push in progress", srcName))
 	trackedRemote.StartReporting(ctx)
