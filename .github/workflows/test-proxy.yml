@@ -93,8 +93,10 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      - name: Run tests
+      - name: Test that Zarf can switch between proxy and nodeport mode
         run: |
+          build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
+          build/zarf init --registry-mode=nodeport --confirm
           build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
 
       - name: get cluster info
