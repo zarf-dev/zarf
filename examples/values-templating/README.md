@@ -30,7 +30,5 @@ zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --feature
 
 # View the results
 kubectl get configmap nginx-configmap -n nginx -o yaml
-zarf connect nginx-service
-
-# Visit http://localhost:8080 to see the templated content
+zarf connect nginx
 ```
