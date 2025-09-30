@@ -24,7 +24,7 @@ func TestValues(t *testing.T) {
 	tmpdir := t.TempDir()
 
 	// Create the package
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "features=\"values=true\"")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 
 	packageName := fmt.Sprintf("zarf-package-test-values-%s.tar.zst", e2e.Arch)
