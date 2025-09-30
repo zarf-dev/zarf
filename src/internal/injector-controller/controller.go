@@ -126,7 +126,7 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod) error 
 				"reason", containerStatus.State.Waiting.Reason,
 				"message", containerStatus.State.Waiting.Message,
 			)
-			err := c.injector.RunWithOwner(ctx, pod, c.ownerPod)
+			err := c.injector.Run(ctx, pod, c.ownerPod)
 			if err != nil {
 				return fmt.Errorf("injector process failed: %w", err)
 			}
@@ -137,7 +137,7 @@ func (c *Controller) checkPodStatus(ctx context.Context, pod *corev1.Pod) error 
 
 // discoverOwnerPod attempts to find the current pod that this controller is running in
 func (c *Controller) discoverOwnerPod() *corev1.Pod {
-	// Try to get pod information from environment variables (Kubernetes downward API)
+	// Get pod information from environment variables set through Kubernetes downward API
 	podName := os.Getenv("POD_NAME")
 	podNamespace := os.Getenv("POD_NAMESPACE")
 

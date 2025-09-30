@@ -26,9 +26,7 @@ import (
 // InjectionExecutor defines the interface for executing injection operations
 type InjectionExecutor interface {
 	// RunInjection executes the injection process
-	Run(ctx context.Context, pod *corev1.Pod) error
-	// RunWithOwner executes the injection process with an owner reference
-	RunWithOwner(ctx context.Context, pod *corev1.Pod, owner *corev1.Pod) error
+	Run(ctx context.Context, pod *corev1.Pod, owner *corev1.Pod) error
 }
 
 // clusterInjectionExecutor implements InjectionExecutor using cluster operations
@@ -43,13 +41,8 @@ func NewClusterInjectionExecutor(cluster *cluster.Cluster) InjectionExecutor {
 	}
 }
 
-// RunInjection executes the injection process
-func (e *clusterInjectionExecutor) Run(ctx context.Context, proxyPod *corev1.Pod) error {
-	return e.RunWithOwner(ctx, proxyPod, nil)
-}
-
-// RunWithOwner executes the injection process with an owner reference
-func (e *clusterInjectionExecutor) RunWithOwner(ctx context.Context, proxyPod *corev1.Pod, owner *corev1.Pod) error {
+// RunWithOwner executes the injection process
+func (e *clusterInjectionExecutor) Run(ctx context.Context, proxyPod *corev1.Pod, owner *corev1.Pod) error {
 	s, err := e.cluster.LoadState(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to load Zarf state: %w", err)
@@ -114,7 +107,8 @@ func (e *clusterInjectionExecutor) RunWithOwner(ctx context.Context, proxyPod *c
 		podSpec = cluster.BuildInjectionPodSpec(nodeDetails.Name, corev1.RestartPolicyAlways, image, payloadCmNames,
 			shasum, resReq, v1ac.ContainerPort().WithContainerPort(5000).WithHostIP("127.0.0.1").WithHostPort(5000))
 	}
-	injectorPodAC := v1ac.Pod("injector", state.ZarfNamespaceName).
+	injectorName := fmt.Sprintf("injector-%s", nodeDetails.Name)
+	injectorPodAC := v1ac.Pod(injectorName, state.ZarfNamespaceName).
 		WithLabels(map[string]string{
 			"app":               "zarf-injector",
 			"zarf.dev/injector": "true",
