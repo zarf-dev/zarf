@@ -918,7 +918,7 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	}
 
 	// Copy file to pre-archive package
-	dst := filepath.Join(buildPath, src)
+	dst := filepath.Join(buildPath, file)
 	l.Debug("copying values file", "src", src, "dst", dst)
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy values file %s: %w", src, err)
