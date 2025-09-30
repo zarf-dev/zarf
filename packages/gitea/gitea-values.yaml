@@ -54,5 +54,8 @@ postgresql-ha:
 redis-cluster:
   enabled: false
 
+valkey-cluster:
+  enabled: false
+
 strategy:
   type: "Recreate"
