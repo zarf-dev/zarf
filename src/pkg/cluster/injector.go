@@ -270,36 +270,33 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			return "", "", err
 		}
 
-		l.Debug("calculating available resources", "node", nodeDetails.Name)
-		var usedCPU, usedMem int64
+		availCPU := nodeDetails.Status.Allocatable.Cpu().DeepCopy()
+		availMem := nodeDetails.Status.Allocatable.Memory().DeepCopy()
+
 		for _, npod := range podList.Items {
 			if npod.Spec.NodeName != nodeDetails.Name {
 				continue
 			}
-			// skip completed/failed pods
 			if npod.Status.Phase == corev1.PodSucceeded || npod.Status.Phase == corev1.PodFailed {
 				continue
 			}
-			for _, ctn := range npod.Spec.Containers {
-				usedCPU += ctn.Resources.Requests.Cpu().MilliValue()
-				usedMem += ctn.Resources.Requests.Memory().Value()
-			}
-			for _, ctn := range npod.Spec.InitContainers {
-				usedCPU += ctn.Resources.Requests.Cpu().MilliValue()
-				usedMem += ctn.Resources.Requests.Memory().Value()
+
+			// account for containers + init containers
+			for _, ctn := range append(npod.Spec.Containers, npod.Spec.InitContainers...) {
+				if cpuReq := ctn.Resources.Requests.Cpu(); cpuReq != nil {
+					availCPU.Sub(*cpuReq)
+				}
+				if memReq := ctn.Resources.Requests.Memory(); memReq != nil {
+					availMem.Sub(*memReq)
+				}
 			}
 		}
 
-		availCPU := nodeDetails.Status.Allocatable.Cpu().MilliValue() - usedCPU
-		availMem := nodeDetails.Status.Allocatable.Memory().Value() - usedMem
+		l.Debug("available resources", "node", nodeDetails.Name, "cpu", availCPU.String(), "mem", availMem.String())
 
-		l.Debug("available resources", "node", nodeDetails.Name, "usedCPU", usedCPU, "usedMem", usedMem, "availCPU", availCPU, "availMem", availMem)
-		reqCPU := resReq.Requests.Cpu().MilliValue()
-		reqMem := resReq.Requests.Memory().Value()
-
-		if availCPU < reqCPU || availMem < reqMem {
-			// not enough free capacity
-			l.Debug("skipping node", "node", nodeDetails.Name, "usedCPU", usedCPU, "usedMem", usedMem, "availCPU", availCPU, "availMem", availMem, "reqCPU", reqCPU, "reqMem", reqMem)
+		// Compare with injector requirements
+		if availCPU.Cmp(*resReq.Requests.Cpu()) < 0 || availMem.Cmp(*resReq.Requests.Memory()) < 0 {
+			l.Debug("skipping node", "node", nodeDetails.Name, "cpu", availCPU.String(), "mem", availMem.String())
 			continue
 		}
 
@@ -308,7 +305,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			continue
 		}
 
-		// Look for a non-Zarf image from containers/init/ephemeral containers
+		// Look for a non-Zarf image
 		for _, container := range pod.Spec.Containers {
 			if !zarfImageRegex.MatchString(container.Image) {
 				return container.Image, pod.Spec.NodeName, nil
