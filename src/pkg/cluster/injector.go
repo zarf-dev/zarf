@@ -250,6 +250,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
 func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
+	l := logger.From(ctx)
 	// Regex for Zarf seed image
 	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
 	if err != nil {
@@ -269,6 +270,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			return "", "", err
 		}
 
+		l.Debug("calculating available resources", "node", nodeDetails.Name)
 		var usedCPU, usedMem int64
 		for _, npod := range podList.Items {
 			if npod.Spec.NodeName != nodeDetails.Name {
@@ -291,11 +293,13 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		availCPU := nodeDetails.Status.Allocatable.Cpu().MilliValue() - usedCPU
 		availMem := nodeDetails.Status.Allocatable.Memory().Value() - usedMem
 
+		l.Debug("available resources", "node", nodeDetails.Name, "usedCPU", usedCPU, "usedMem", usedMem, "availCPU", availCPU, "availMem", availMem)
 		reqCPU := resReq.Requests.Cpu().MilliValue()
 		reqMem := resReq.Requests.Memory().Value()
 
 		if availCPU < reqCPU || availMem < reqMem {
 			// not enough free capacity
+			l.Debug("skipping node", "node", nodeDetails.Name, "usedCPU", usedCPU, "usedMem", usedMem, "availCPU", availCPU, "availMem", availMem, "reqCPU", reqCPU, "reqMem", reqMem)
 			continue
 		}
 
