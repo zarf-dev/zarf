@@ -68,7 +68,12 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 
 	// Merge packageValues with values from CLI flags, config, or API.
 	// NOTE(mkcp): This is a bit janky
-	packageValues, err := value.ParseFiles(ctx, pkgLayout.Pkg.Values.Files, value.ParseFilesOptions{})
+	// Resolve values file paths relative to the package directory
+	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
+	for i, vf := range pkgLayout.Pkg.Values.Files {
+		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), vf)
+	}
+	packageValues, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
 	if err != nil {
 		return nil, err
 	}

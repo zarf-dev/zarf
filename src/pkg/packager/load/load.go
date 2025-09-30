@@ -65,7 +65,12 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	}
 
 	// Load top-level values files and ensure they're merged with user-provided values.
-	values, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
+	// Resolve values file paths relative to the package path
+	valueFilePaths := make([]string, len(pkg.Values.Files))
+	for i, vf := range pkg.Values.Files {
+		valueFilePaths[i] = filepath.Join(packagePath, vf)
+	}
+	values, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse values files: %w", err)
 	}
