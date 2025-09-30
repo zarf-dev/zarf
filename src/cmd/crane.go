@@ -93,14 +93,11 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
-
 	cmd.AddCommand(craneCmd.NewCmdVersion())
-
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
-
 	return cmd
 }
 
@@ -136,7 +133,6 @@ func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
 			}
 			args = []string{server}
 		}
-
 		if uname == "" {
 			prompt := &survey.Input{
 				Message: lang.CmdToolsRegistryLoginPromptUsername,
@@ -146,9 +142,11 @@ func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			cmd.Flags().Set("username", uname)
+			err = cmd.Flags().Set("username", uname)
+			if err != nil {
+				return err
+			}
 		}
-
 		if pass == "" && !passStdin {
 			prompt := &survey.Password{
 				Message: lang.CmdToolsRegistryLoginPromptPassword,
@@ -158,12 +156,13 @@ func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			cmd.Flags().Set("password", pass)
+			err = cmd.Flags().Set("password", pass)
+			if err != nil {
+				return err
+			}
 		}
-
 	}
 	return o.originalRunFn(cmd, args)
-
 }
 
 func newRegistryLoginCommand() *cobra.Command {
