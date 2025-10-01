@@ -22,18 +22,6 @@
       {
         "name": "seed",
         "emptyDir": {}
-      },
-      {
-        "name": "foo",
-        "configMap": {
-          "name": "foo"
-        }
-      },
-      {
-        "name": "bar",
-        "configMap": {
-          "name": "bar"
-        }
       }
     ],
     "containers": [
@@ -41,8 +29,7 @@
         "name": "injector",
         "image": "docker.io/library/ubuntu:latest",
         "command": [
-          "/zarf-init/zarf-injector",
-          "shasum"
+          "/zarf-init/zarf-injector"
         ],
         "workingDir": "/zarf-init",
         "resources": {
@@ -64,16 +51,6 @@
           {
             "name": "seed",
             "mountPath": "/zarf-seed"
-          },
-          {
-            "name": "foo",
-            "mountPath": "/zarf-init/foo",
-            "subPath": "foo"
-          },
-          {
-            "name": "bar",
-            "mountPath": "/zarf-init/bar",
-            "subPath": "bar"
           }
         ],
         "readinessProbe": {

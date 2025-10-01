@@ -28,16 +28,15 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func StartInjection(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir string, injectorImages []string, registryNodePort int, pkgName string) error {
+func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, registryNodePort int, pkgName string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
-	err := StopInjection(ctx, c)
+	err := StopInjection(ctx, pCfg.Cluster)
 	if err != nil {
 		return err
 	}
@@ -53,7 +52,7 @@ func StartInjection(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir s
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := getInjectorImageAndNode(ctx, c, resReq)
+	injectorImage, injectorNodeName, err := getInjectorImageAndNode(ctx, pCfg.Cluster, resReq)
 	if err != nil {
 		return err
 	}
@@ -69,28 +68,20 @@ func StartInjection(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir s
 		WithLabels(map[string]string{
 			cluster.PackageLabel: pkgName,
 		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+	_, err = pCfg.Cluster.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return err
 	}
 
-	svc, err := createInjectorNodeportService(ctx, c, registryNodePort, pkgName)
+	svc, err := createInjectorNodeportService(ctx, pCfg.Cluster, registryNodePort, pkgName)
 	if err != nil {
 		return err
 	}
 	// TODO: Remove use of passing data through global variables.
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
-	refs := []transform.Image{}
-	for _, image := range injectorImages {
-		ref, err := transform.ParseImageRef(image)
-		if err != nil {
-			return err
-		}
-		refs = append(refs, ref)
-	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, resReq, pkgName)
-	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+	_, err = pCfg.Cluster.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -103,26 +94,15 @@ func StartInjection(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir s
 		Namespace:  *pod.Namespace,
 		Name:       *pod.Name,
 	}
-	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
+	err = healthchecks.Run(waitCtx, pCfg.Cluster.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return err
 	}
 
-	pushConfig := images.PushConfig{
-		OCIConcurrency:  3,
-		SourceDirectory: imagesDir,
-		RegistryInfo: state.RegistryInfo{
-			Address: fmt.Sprintf("http://%s.%s.svc.cluster.local:5000", svc.Name, svc.Namespace),
-		},
-		ImageList:  refs,
-		PlainHTTP:  true,
-		NoChecksum: true,
-		//FIXME
-		Arch:                  "amd64",
-		InsecureSkipTLSVerify: true,
-		Cluster:               c,
+	pCfg.RegistryInfo = state.RegistryInfo{
+		Address: fmt.Sprintf("http://%s.%s.svc.cluster.local:5000", svc.Name, svc.Namespace),
 	}
-	err = images.Push(ctx, pushConfig)
+	err = images.Push(ctx, pCfg)
 	if err != nil {
 		return err
 	}

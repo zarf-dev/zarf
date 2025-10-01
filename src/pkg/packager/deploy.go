@@ -303,7 +303,27 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := injector.StartInjection(ctx, d.c, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+		refs := []transform.Image{}
+		for _, image := range component.Images {
+			ref, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, err
+			}
+			refs = append(refs, ref)
+		}
+		pushConfig := images.PushConfig{
+			OCIConcurrency:        opts.OCIConcurrency,
+			SourceDirectory:       pkgLayout.GetImageDirPath(),
+			RegistryInfo:          d.s.RegistryInfo,
+			ImageList:             refs,
+			PlainHTTP:             opts.PlainHTTP,
+			NoChecksum:            true,
+			Arch:                  pkgLayout.Pkg.Build.Architecture,
+			Retries:               opts.Retries,
+			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
+			Cluster:               d.c,
+		}
+		err := injector.StartInjection(ctx, pkgLayout.DirPath(), pushConfig, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 		if err != nil {
 			return nil, err
 		}
