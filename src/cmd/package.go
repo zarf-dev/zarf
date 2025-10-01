@@ -642,7 +642,6 @@ type packageInspectValuesFilesOptions struct {
 	kubeVersion             string
 	setVariables            map[string]string
 	outputWriter            io.Writer
-	valuesFiles             []string
 }
 
 func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
@@ -668,7 +667,6 @@ func newPackageInspectValuesFilesCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 
 	return cmd
 }
@@ -682,13 +680,6 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-
-	// Load files supplied by --values / -v
-	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
-	if err != nil {
-		return err
-	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -716,7 +707,6 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
-		Values:       values,
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -740,7 +730,6 @@ type packageInspectManifestsOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
-	valuesFiles             []string
 	outputWriter            io.Writer
 }
 
@@ -766,7 +755,6 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 
 	return cmd
 }
@@ -780,13 +768,6 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-
-	// Load files supplied by --values / -v
-	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
-	if err != nil {
-		return err
-	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -814,7 +795,6 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables: o.setVariables,
 		KubeVersion:  o.kubeVersion,
-		Values:       values,
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)

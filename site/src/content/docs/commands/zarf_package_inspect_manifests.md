@@ -22,7 +22,6 @@ zarf package inspect manifests [ PACKAGE ] [flags]
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
       --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation   Skip validating the signature of the Zarf package
-  -v, --values strings              [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
 ```
 
 ### Options inherited from parent commands
