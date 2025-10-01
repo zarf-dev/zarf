@@ -15,6 +15,9 @@ components:
           - manifests/service.yaml
     images:
       - ghcr.io/zarf-dev/doom-game:0.0.1
+    files:
+    - source: 2gb.bin
+      target: file.data
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

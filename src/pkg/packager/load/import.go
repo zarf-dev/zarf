@@ -212,7 +212,7 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (_ string, err error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -255,11 +255,18 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 		if err != nil {
 			return "", err
 		}
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tempDir))
+		}()
 		// FIXME: once oci PR is merged this is unnecessary
-		if err := os.Mkdir(filepath.Join(tempDir, "components"), helpers.ReadWriteExecuteUser); err != nil {
-			return "", err
-		}
+		// if err := os.Mkdir(filepath.Join(tempDir, "components"), helpers.ReadWriteExecuteUser); err != nil {
+		// 	return "", err
+		// }
+		// Annotation titles generally look like 'components/component-name.tar'
+
+		// The problem is we still essentially need the cache as a place to put the skeleton image
+		// The only other way would be to store it in a temp directory then when cleaning up after the package is finished we delete that temp directory
+		fmt.Println("this is the digest", componentDesc.Digest.Encoded())
 		tarball = filepath.Join(tempDir, componentDesc.Annotations[ocispec.AnnotationTitle])
 		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
 		err = remote.PullPath(ctx, tempDir, componentDesc)
