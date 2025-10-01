@@ -111,9 +111,9 @@ components:
         architecture: amd64
     files:
       # Rust Injector Binary
-      - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
+      - source: /home/austin/code/zarf-injector/target/x86_64-unknown-linux-musl/release/zarf-injector
         target: "###ZARF_TEMP###/zarf-injector"
-        shasum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
+        # shasum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
         executable: true
 
   - name: zarf-injector
