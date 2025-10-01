@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	componenthelpers "k8s.io/component-helpers/resource"
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -292,17 +293,15 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		var candidateImage string
 
 		for _, pod := range podsByNode[node.Name] {
-			// Subtract usage from containers + init containers
-			for _, ctn := range append(pod.Spec.Containers, pod.Spec.InitContainers...) {
-				if cpuReq := ctn.Resources.Requests.Cpu(); cpuReq != nil {
-					availCPU.Sub(*cpuReq)
-				}
-				if memReq := ctn.Resources.Requests.Memory(); memReq != nil {
-					availMem.Sub(*memReq)
-				}
+			podReqs := componenthelpers.AggregateContainerRequests(&pod, componenthelpers.PodResourcesOptions{})
+			if cpuReq := podReqs.Cpu(); cpuReq != nil {
+				availCPU.Sub(*cpuReq)
+			}
+			if memReq := podReqs.Memory(); memReq != nil {
+				availMem.Sub(*memReq)
 			}
 
-			// Track possible non-Zarf images (containers, init, ephemeral)
+			// Collect candidate images (containers, init, ephemeral)
 			for _, ctn := range pod.Spec.Containers {
 				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
 					candidateImage = ctn.Image
