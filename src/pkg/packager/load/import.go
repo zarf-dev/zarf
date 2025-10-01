@@ -13,16 +13,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mholt/archives"
-	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/archive"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	ocistore "oras.land/oras-go/v2/content/oci"
+	"github.com/mholt/archives"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -211,7 +212,7 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (_ string, err error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -250,21 +251,27 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 
 		dir = filepath.Join(cache, "dirs", id)
 	} else {
-		tarball = filepath.Join(cache, "blobs", "sha256", componentDesc.Digest.Encoded())
+		tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return "", err
+		}
+		defer func() {
+			err = errors.Join(err, os.RemoveAll(tempDir))
+		}()
+		// FIXME: once oci PR is merged this is unnecessary
+		// if err := os.Mkdir(filepath.Join(tempDir, "components"), helpers.ReadWriteExecuteUser); err != nil {
+		// 	return "", err
+		// }
+		// Annotation titles generally look like 'components/component-name.tar'
+
+		// The problem is we still essentially need the cache as a place to put the skeleton image
+		// The only other way would be to store it in a temp directory then when cleaning up after the package is finished we delete that temp directory
+		fmt.Println("this is the digest", componentDesc.Digest.Encoded())
+		tarball = filepath.Join(tempDir, componentDesc.Annotations[ocispec.AnnotationTitle])
 		dir = filepath.Join(cache, "dirs", componentDesc.Digest.Encoded())
-		store, err := ocistore.New(cache)
+		err = remote.PullPath(ctx, tempDir, componentDesc)
 		if err != nil {
-			return "", err
-		}
-		exists, err := store.Exists(ctx, componentDesc)
-		if err != nil {
-			return "", err
-		}
-		if !exists {
-			err = remote.CopyToTarget(ctx, []ocispec.Descriptor{componentDesc}, store, remote.GetDefaultCopyOpts())
-			if err != nil {
-				return "", err
-			}
+			return "", fmt.Errorf("failed to pull component tarball: %w", err)
 		}
 	}
 
