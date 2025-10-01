@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package cluster contains Zarf-specific cluster management functions.
-package cluster
+// Package injector runs the injector
+package injector
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -36,11 +37,11 @@ import (
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, pkgName string) error {
+func StartInjection(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, pkgName string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	// Stop any previous running injection before starting.
-	err := c.StopInjection(ctx)
+	err := StopInjection(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -56,12 +57,12 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
+	injectorImage, injectorNodeName, err := getInjectorImageAndNode(ctx, c, resReq)
 	if err != nil {
 		return err
 	}
 
-	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
+	payloadCmNames, shasum, err := createPayloadConfigMaps(ctx, c, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
 	if err != nil {
 		return fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
 	}
@@ -75,14 +76,14 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			"zarf-injector": b,
 		}).
 		WithLabels(map[string]string{
-			PackageLabel: pkgName,
+			cluster.PackageLabel: pkgName,
 		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return err
 	}
 
-	svc, err := c.createInjectorNodeportService(ctx, registryNodePort, pkgName)
+	svc, err := createInjectorNodeportService(ctx, c, registryNodePort, pkgName)
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
-	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -113,7 +114,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 }
 
 // StopInjection handles cleanup once the seed registry is up.
-func (c *Cluster) StopInjection(ctx context.Context) error {
+func StopInjection(ctx context.Context, c *cluster.Cluster) error {
 	start := time.Now()
 	l := logger.From(ctx)
 	l.Debug("deleting injector resources")
@@ -176,7 +177,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string) ([]string, string, error) {
+func createPayloadConfigMaps(ctx context.Context, c *cluster.Cluster, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string) ([]string, string, error) {
 	l := logger.From(ctx)
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
@@ -230,13 +231,13 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 
 		cm := v1ac.ConfigMap(fileName, state.ZarfNamespaceName).
 			WithLabels(map[string]string{
-				"zarf-injector": "payload",
-				PackageLabel:    pkgName,
+				"zarf-injector":      "payload",
+				cluster.PackageLabel: pkgName,
 			}).
 			WithBinaryData(map[string][]byte{
 				fileName: data,
 			})
-		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		_, err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			return nil, "", err
 		}
@@ -249,7 +250,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
+func getInjectorImageAndNode(ctx context.Context, c *cluster.Cluster, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
 	// Regex for Zarf seed image
 	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
 	if err != nil {
@@ -347,9 +348,9 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 
 	pod := v1ac.Pod("injector", state.ZarfNamespaceName).
 		WithLabels(map[string]string{
-			"app":        "zarf-injector",
-			AgentLabel:   "ignore",
-			PackageLabel: pkgName,
+			"app":                "zarf-injector",
+			cluster.AgentLabel:   "ignore",
+			cluster.PackageLabel: pkgName,
 		}).
 		WithSpec(
 			v1ac.PodSpec().
@@ -402,7 +403,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int, pkgName string) (*corev1.Service, error) {
+func createInjectorNodeportService(ctx context.Context, c *cluster.Cluster, registryNodePort int, pkgName string) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -416,11 +417,11 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 				).WithSelector(map[string]string{
 				"app": "zarf-injector",
 			})).WithLabels(map[string]string{
-			PackageLabel: pkgName,
+			cluster.PackageLabel: pkgName,
 		})
 
 		var err error
-		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
+		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			return err
 		}

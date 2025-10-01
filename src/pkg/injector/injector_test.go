@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package cluster
+package injector
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,7 +31,7 @@ import (
 func TestInjector(t *testing.T) {
 	ctx := context.Background()
 	cs := fake.NewClientset()
-	c := &Cluster{
+	c := &cluster.Cluster{
 		Clientset: cs,
 		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
 	}
@@ -93,7 +94,7 @@ func TestInjector(t *testing.T) {
 	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	err = c.StopInjection(ctx)
+	err = StopInjection(ctx, c)
 	require.NoError(t, err)
 
 	for range 2 {
@@ -107,7 +108,7 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
+		err = StartInjection(ctx, c, tmpDir, t.TempDir(), nil, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -139,7 +140,7 @@ func TestInjector(t *testing.T) {
 		require.Equal(t, "test", cm.Labels["zarf.dev/package"])
 	}
 
-	err = c.StopInjection(ctx)
+	err = StopInjection(ctx, c)
 	require.NoError(t, err)
 
 	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -183,7 +184,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 	ctx := context.Background()
 	cs := fake.NewClientset()
 
-	c := &Cluster{
+	c := &cluster.Cluster{
 		Clientset: cs,
 	}
 
@@ -291,7 +292,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+	image, node, err := getInjectorImageAndNode(ctx, c, resReq)
 	require.NoError(t, err)
 	require.Equal(t, "pod-2-container", image)
 	require.Equal(t, "good", node)

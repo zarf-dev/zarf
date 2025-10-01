@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/injector"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -302,7 +303,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+		err := injector.StartInjection(ctx, d.c, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +318,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := d.c.StopInjection(ctx); err != nil {
+		if err := injector.StopInjection(ctx, d.c); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}
