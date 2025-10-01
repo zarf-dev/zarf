@@ -3,7 +3,13 @@
 
 # Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
 ARCH ?= amd64
-######################################################################################
+
+# Set registry image sha based on architecture
+ifeq ($(ARCH),amd64)
+	REGISTRY_IMAGE_TAG := 3.0.0@sha256:42be4a75b921489e51574e12889b71484a6524a02c4008c52c6f26ce30c7b990
+else ifeq ($(ARCH),arm64)
+	REGISTRY_IMAGE_TAG := 3.0.0@sha256:f26c394e5b7c3a707c7373c3e9388e44f0d5bdd3def19652c6bd2ac1a0fa6758
+endif
 
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
@@ -123,11 +129,11 @@ build-local-agent-image: ## Build the Zarf agent image to be used in a locally b
 
 init-package: ## Create the zarf init package (must `brew install coreutils` on macOS and have `docker` first)
 	@test -s $(ZARF_BIN) || $(MAKE)
-	$(ZARF_BIN) package create -o build -a $(ARCH) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set REGISTRY_IMAGE_TAG="$(REGISTRY_IMAGE_TAG)"
 
 # INTERNAL: used to build a release version of the init package with a specific agent image
 release-init-package:
-	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG) --confirm .
+	$(ZARF_BIN) package create -o build -a $(ARCH) --set AGENT_IMAGE_TAG=$(AGENT_IMAGE_TAG),REGISTRY_IMAGE_TAG="$(REGISTRY_IMAGE_TAG)" .
 
 ## Build the Zarf CLI for all platforms aligned with the release process
 ## skipping validation here to allow for building with a dirty git state (IE development)
