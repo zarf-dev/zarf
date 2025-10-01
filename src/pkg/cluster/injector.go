@@ -344,7 +344,6 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		l.Debug("no suitable image found on node", "node", node.Name)
 	}
 
-	l.Debug("failed to find suitable injector image or node")
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
