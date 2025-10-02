@@ -213,20 +213,46 @@ func (v Values) Extract(path Path) (any, error) {
 }
 
 // Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
+// Special case: path "." merges the newVal's map contents directly into v (at the root).
+// TODO(mkcp): This should be made thread-safe.
 func (v Values) Set(path Path, newVal any) error {
 	if err := path.Validate(); err != nil {
 		return err
 	}
 
-	// Parse path into components, skipping empty leading segment
-	pathStr := string(path)[1:] // Remove leading dot
-	if pathStr == "" {
-		return fmt.Errorf("empty path after dot: %s", path)
+	// Handle root path "." - merge the value directly into the map
+	if path == "." {
+		if valueMap, ok := newVal.(map[string]any); ok {
+			// If newVal is a map, merge its contents into v
+			for k, val := range valueMap {
+				v[k] = val
+			}
+			return nil
+		}
+		return fmt.Errorf("cannot merge non-map value at root path")
 	}
 
-	err := helpers.MergePathAndValueIntoMap(v, pathStr, newVal)
-	if err != nil {
-		return err
+	// Split path into parts (remove leading dot first)
+	parts := strings.Split(string(path)[1:], ".")
+
+	// Navigate to the nested location and set the value
+	current := v
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			// Set the value at the last key in the path
+			current[part] = newVal
+		} else {
+			if _, exists := current[part]; !exists {
+				// If the part does not exist, create a new map for it
+				current[part] = make(map[string]any)
+			}
+
+			nextMap, ok := current[part].(map[string]any)
+			if !ok {
+				return fmt.Errorf("conflict at %q, expected map but got %T", strings.Join(parts[:i+1], "."), current[part])
+			}
+			current = nextMap
+		}
 	}
 	return nil
 }

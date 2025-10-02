@@ -43,14 +43,15 @@ type overrideOpts struct {
 // generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
 // Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
 func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
-	chartOverrides := make(map[string]any)
+	chartOverrides := make(value.Values)
 	valuesOverrides := make(map[string]any)
 
 	for _, variable := range chart.Variables {
 		if setVar, ok := opts.variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
+			// Add leading dot to variable.Path to create a valid value.Path
+			path := "." + variable.Path
+			if err := chartOverrides.Set(value.Path(path), setVar.Value); err != nil {
+				return nil, fmt.Errorf("unable to set value at path %s: %w", path, err)
 			}
 		}
 	}
@@ -80,10 +81,8 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 			continue
 		}
 
-		// Strip off the leading dot from the target path.
-		targetPath := chartValue.TargetPath[1:]
 		// Set value at targetPath in chart overrides
-		if err := helpers.MergePathAndValueIntoMap(chartOverrides, targetPath, sourceValue); err != nil {
+		if err := chartOverrides.Set(value.Path(chartValue.TargetPath), sourceValue); err != nil {
 			return nil, fmt.Errorf("unable to map value from %s to %s: %w",
 				chartValue.SourcePath, chartValue.TargetPath, err)
 		}

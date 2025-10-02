@@ -130,32 +130,7 @@ retryCmd:
 
 			// If an output value is defined, parse the result and set it to values map.
 			for _, v := range action.SetValues {
-				var val any
-				switch v.Type {
-				case v1alpha1.SetValueYAML:
-					var parsed any
-					if err := yaml.Unmarshal([]byte(outTrimmed), &parsed); err != nil {
-						return fmt.Errorf("failed to parse YAML output for setValue %q: %w", v.Key, err)
-					}
-					val = parsed
-				case v1alpha1.SetValueJSON:
-					var parsed any
-					if err := json.Unmarshal([]byte(outTrimmed), &parsed); err != nil {
-						return fmt.Errorf("failed to parse JSON output for setValue %q: %w", v.Key, err)
-					}
-					val = parsed
-				case v1alpha1.SetValueString:
-					val = outTrimmed
-				default:
-					return fmt.Errorf("unknown setValue type: %s", v.Type)
-				}
-
-				// NOTE(mkcp): This isn't an ideal implementation because it effectively just mutates the value map that
-				// was passed in by the caller of actions.Run. It silently assumes that this same map will get passed
-				// to the next component, and so on. Ultimately this is the map stored on deployer, but a better
-				// implementation of this would ensure it's safe for concurrent access and keys are explicitly modified.
-				err := values.Set(value.Path(v.Key), val)
-				if err != nil {
+				if err := parseAndSetValue(outTrimmed, v, values); err != nil {
 					return err
 				}
 			}
@@ -360,4 +335,32 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 		})
 	}
 	return funcs
+}
+
+// parseAndSetValue parses the output string according to the setValue type and sets it in the values map.
+func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Values) error {
+	var val any
+	switch setValue.Type {
+	case v1alpha1.SetValueYAML:
+		var parsed any
+		if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse YAML output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case v1alpha1.SetValueJSON:
+		var parsed any
+		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case v1alpha1.SetValueString:
+		val = output
+	default:
+		return fmt.Errorf("unknown setValue type: %s", setValue.Type)
+	}
+
+	if err := values.Set(value.Path(setValue.Key), val); err != nil {
+		return err
+	}
+	return nil
 }

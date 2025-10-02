@@ -344,3 +344,139 @@ func TestExtract_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestSet(t *testing.T) {
+	tests := []struct {
+		name   string
+		values Values
+		path   Path
+		value  any
+		expect Values
+	}{
+		{
+			name:   "set at root path merges map contents",
+			values: Values{"existing": "value"},
+			path:   ".",
+			value:  map[string]any{"new": "data", "another": 123},
+			expect: Values{"existing": "value", "new": "data", "another": 123},
+		},
+		{
+			name:   "set at root overwrites existing keys",
+			values: Values{"key": "old"},
+			path:   ".",
+			value:  map[string]any{"key": "new"},
+			expect: Values{"key": "new"},
+		},
+		{
+			name:   "set simple key",
+			values: Values{},
+			path:   ".key1",
+			value:  "value1",
+			expect: Values{"key1": "value1"},
+		},
+		{
+			name:   "set overwrites existing key",
+			values: Values{"key1": "old"},
+			path:   ".key1",
+			value:  "new",
+			expect: Values{"key1": "new"},
+		},
+		{
+			name:   "set nested key creates intermediate maps",
+			values: Values{},
+			path:   ".app.name",
+			value:  "myapp",
+			expect: Values{"app": map[string]any{"name": "myapp"}},
+		},
+		{
+			name:   "set nested key in existing map",
+			values: Values{"app": map[string]any{"version": "1.0"}},
+			path:   ".app.name",
+			value:  "myapp",
+			expect: Values{"app": map[string]any{"version": "1.0", "name": "myapp"}},
+		},
+		{
+			name:   "set deeply nested key",
+			values: Values{},
+			path:   ".deployment.resources.limits.cpu",
+			value:  "100m",
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu": "100m",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:   "set with various value types",
+			values: Values{},
+			path:   ".config",
+			value:  map[string]any{"enabled": true, "count": 42, "rate": 3.14},
+			expect: Values{
+				"config": map[string]any{"enabled": true, "count": 42, "rate": 3.14},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.values.Set(tt.path, tt.value)
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, tt.values)
+		})
+	}
+}
+
+func TestSet_Errors(t *testing.T) {
+	tests := []struct {
+		name      string
+		values    Values
+		path      Path
+		value     any
+		errSubstr string
+	}{
+		{
+			name:      "error on non-map value at root",
+			values:    Values{},
+			path:      ".",
+			value:     "string value",
+			errSubstr: "cannot merge non-map value at root path",
+		},
+		{
+			name:      "error on conflict with non-map",
+			values:    Values{"app": "string-value"},
+			path:      ".app.name",
+			value:     "myapp",
+			errSubstr: "conflict",
+		},
+		{
+			name:      "error on invalid path format (no leading dot)",
+			values:    Values{},
+			path:      "key",
+			value:     "value",
+			errSubstr: "invalid path format",
+		},
+		{
+			name:      "error on empty path",
+			values:    Values{},
+			path:      "",
+			value:     "value",
+			errSubstr: "invalid path format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.values.Set(tt.path, tt.value)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errSubstr)
+		})
+	}
+}
