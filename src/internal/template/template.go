@@ -27,7 +27,7 @@ import (
 // With {{ .Values.app.name }} => "foo"
 type Objects map[string]any
 
-var (
+const (
 	objectKeyValues    = "Values"
 	objectKeyMetadata  = "Metadata"
 	objectKeyBuild     = "Build"
@@ -98,12 +98,12 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 	return o
 }
 
-// ApplyToCmd takes a string cmd and fills in any templates.
-func ApplyToCmd(ctx context.Context, cmd string, objs Objects) (string, error) {
+// Apply takes a string, fills in the templates with the given Objects, and returns a new string.
+func Apply(ctx context.Context, s string, objs Objects) (string, error) {
 	l := logger.From(ctx)
-	l.Debug("applying templates in cmd", "cmd", cmd)
+	l.Debug("applying templates", "str", s)
 
-	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(cmd)
+	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(s)
 	if err != nil {
 		return "", err
 	}
@@ -114,11 +114,10 @@ func ApplyToCmd(ctx context.Context, cmd string, objs Objects) (string, error) {
 	return b.String(), nil
 }
 
-// ApplyToFile takes a file path as well as contextual data like pkg and values, applies the context to the template,
-// then writes the file back in place.
+// ApplyToFile load a file path at src, fills in the templates with the given Objects, then writes the file to dst.
 func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	l := logger.From(ctx)
-	l.Debug("applying templates in file", "path", src)
+	l.Debug("applying templates in file", "src", src, "dst", dst)
 	start := time.Now()
 	defer func() {
 		l.Debug("finished applying templates in file", "src", src, "dst", dst, "duration", time.Since(start))

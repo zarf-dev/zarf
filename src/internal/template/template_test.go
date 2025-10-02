@@ -327,17 +327,17 @@ func TestObjects_WithVariables(t *testing.T) {
 	}
 }
 
-func TestApplyToCmd(t *testing.T) {
+func TestApply(t *testing.T) {
 	tests := []struct {
 		name     string
-		cmd      string
+		s        string
 		objects  Objects
 		expected string
 		wantErr  bool
 	}{
 		{
 			name: "simple variable substitution",
-			cmd:  "echo {{ .Values.app.name }}",
+			s:    "echo {{ .Values.app.name }}",
 			objects: Objects{
 				objectKeyValues: value.Values{
 					"app": map[string]any{"name": "test-app"},
@@ -347,7 +347,7 @@ func TestApplyToCmd(t *testing.T) {
 		},
 		{
 			name: "multiple variables",
-			cmd:  "kubectl create deployment {{ .Values.app.name }} --image={{ .Values.app.image }}:{{ .Values.app.tag }}",
+			s:    "kubectl create deployment {{ .Values.app.name }} --image={{ .Values.app.image }}:{{ .Values.app.tag }}",
 			objects: Objects{
 				objectKeyValues: value.Values{
 					"app": map[string]any{
@@ -361,7 +361,7 @@ func TestApplyToCmd(t *testing.T) {
 		},
 		{
 			name: "using constants",
-			cmd:  "echo {{ .Constants.NAMESPACE }}",
+			s:    "echo {{ .Constants.NAMESPACE }}",
 			objects: Objects{
 				objectKeyConstants: map[string]string{
 					"NAMESPACE": "production",
@@ -371,7 +371,7 @@ func TestApplyToCmd(t *testing.T) {
 		},
 		{
 			name: "using variables",
-			cmd:  "connect to {{ .Variables.DB_HOST }}:{{ .Variables.DB_PORT }}",
+			s:    "connect to {{ .Variables.DB_HOST }}:{{ .Variables.DB_PORT }}",
 			objects: Objects{
 				objectKeyVariables: map[string]string{
 					"DB_HOST": "localhost",
@@ -382,7 +382,7 @@ func TestApplyToCmd(t *testing.T) {
 		},
 		{
 			name: "sprig functions",
-			cmd:  "echo {{ .Values.name | upper }}",
+			s:    "echo {{ .Values.name | upper }}",
 			objects: Objects{
 				objectKeyValues: value.Values{
 					"name": "hello world",
@@ -392,13 +392,13 @@ func TestApplyToCmd(t *testing.T) {
 		},
 		{
 			name:    "invalid template syntax",
-			cmd:     "echo {{ .Values.missing",
+			s:       "echo {{ .Values.missing",
 			objects: Objects{},
 			wantErr: true,
 		},
 		{
 			name: "missing field returns no value",
-			cmd:  "echo {{ .Values.missing.field }}",
+			s:    "echo {{ .Values.missing.field }}",
 			objects: Objects{
 				objectKeyValues: value.Values{},
 			},
@@ -409,7 +409,7 @@ func TestApplyToCmd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			result, err := ApplyToCmd(ctx, tt.cmd, tt.objects)
+			result, err := Apply(ctx, tt.s, tt.objects)
 
 			if tt.wantErr {
 				require.Error(t, err)
