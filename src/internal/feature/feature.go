@@ -232,7 +232,7 @@ func init() {
 				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
 				"alternative to Variables .",
 			Enabled: false,
-			Since:   "v0.61.0",
+			Since:   "v0.64.0",
 			Stage:   Alpha,
 		},
 	}
