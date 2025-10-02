@@ -358,9 +358,5 @@ func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Va
 	default:
 		return fmt.Errorf("unknown setValue type: %s", setValue.Type)
 	}
-
-	if err := values.Set(value.Path(setValue.Key), val); err != nil {
-		return err
-	}
-	return nil
+	return values.Set(value.Path(setValue.Key), val)
 }

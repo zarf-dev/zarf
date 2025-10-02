@@ -20,6 +20,9 @@ import (
 )
 
 // Values provides a map of keys to values for use in templating and Helm overrides.
+// NOTE(mkcp): Values is NOT thread-safe. If you need concurrent access:
+//   - Use external synchronization (sync.RWMutex)
+//   - Clone before passing to goroutines
 type Values map[string]any
 
 // Path starts with a . and represents a specific key in a nested hierarchy of keys. For example, .resources.limits.cpu
@@ -180,13 +183,8 @@ func (v Values) Extract(path Path) (any, error) {
 		return v, nil
 	}
 
-	// Parse path into components, skipping empty leading segment
-	pathStr := string(path)[1:] // Remove leading dot
-	if pathStr == "" {
-		return nil, fmt.Errorf("empty path after dot: %s", path)
-	}
-
-	parts := strings.Split(pathStr, ".")
+	// Split path into parts (remove leading dot first)
+	parts := strings.Split(string(path)[1:], ".")
 
 	// Traverse the nested map structure
 	current := v
@@ -209,14 +207,11 @@ func (v Values) Extract(path Path) (any, error) {
 		}
 		current = nextMap
 	}
-
-	// This should never be reached due to the empty pathStr check above
 	return nil, fmt.Errorf("internal error: empty path components")
 }
 
 // Set takes a Values, a Path to a new or existing key, and any value and stores the newVal at the path.
 // Special case: path "." merges the newVal's map contents directly into v (at the root).
-// TODO(mkcp): This should be made thread-safe.
 func (v Values) Set(path Path, newVal any) error {
 	if err := path.Validate(); err != nil {
 		return err
