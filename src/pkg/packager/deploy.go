@@ -312,16 +312,15 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			refs = append(refs, ref)
 		}
 		pushConfig := images.PushConfig{
-			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
-			PlainHTTP:             opts.PlainHTTP,
-			NoChecksum:            true,
-			Arch:                  pkgLayout.Pkg.Build.Architecture,
-			Retries:               opts.Retries,
-			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
-			Cluster:               d.c,
+			OCIConcurrency:  opts.OCIConcurrency,
+			SourceDirectory: pkgLayout.GetImageDirPath(),
+			ImageList:       refs,
+			// The injector is always served over plainHTTP
+			PlainHTTP:  true,
+			NoChecksum: true,
+			Arch:       pkgLayout.Pkg.Build.Architecture,
+			Retries:    opts.Retries,
+			Cluster:    d.c,
 		}
 		err := injector.StartInjection(ctx, pkgLayout.DirPath(), pushConfig, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 		if err != nil {

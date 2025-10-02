@@ -36,8 +36,9 @@ import (
 func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, registryNodePort int, pkgName string) error {
 	l := logger.From(ctx)
 	start := time.Now()
+	c := pCfg.Cluster
 	// Stop any previous running injection before starting.
-	err := StopInjection(ctx, pCfg.Cluster)
+	err := StopInjection(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := getInjectorImageAndNode(ctx, pCfg.Cluster, resReq)
+	injectorImage, injectorNodeName, err := getInjectorImageAndNode(ctx, c, resReq)
 	if err != nil {
 		return err
 	}
@@ -69,12 +70,12 @@ func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, 
 		WithLabels(map[string]string{
 			cluster.PackageLabel: pkgName,
 		})
-	_, err = pCfg.Cluster.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return err
 	}
 
-	svc, err := createInjectorNodeportService(ctx, pCfg.Cluster, registryNodePort, pkgName)
+	svc, err := createInjectorNodeportService(ctx, c, registryNodePort, pkgName)
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, 
 	config.ZarfSeedPort = fmt.Sprintf("%d", svc.Spec.Ports[0].NodePort)
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, resReq, pkgName)
-	_, err = pCfg.Cluster.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 	if err != nil {
 		return fmt.Errorf("error creating pod in cluster: %w", err)
 	}
@@ -95,7 +96,7 @@ func StartInjection(ctx context.Context, tmpDir string, pCfg images.PushConfig, 
 		Namespace:  *pod.Namespace,
 		Name:       *pod.Name,
 	}
-	err = healthchecks.Run(waitCtx, pCfg.Cluster.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
+	err = healthchecks.Run(waitCtx, c.Watcher, []v1alpha1.NamespacedObjectKindReference{podRef})
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ ifeq ($(ARCH),amd64)
 else ifeq ($(ARCH),arm64)
 	REGISTRY_IMAGE_TAG := 3.0.0@sha256:f26c394e5b7c3a707c7373c3e9388e44f0d5bdd3def19652c6bd2ac1a0fa6758
 endif
+######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
 ZARF_BIN := ./build/zarf
