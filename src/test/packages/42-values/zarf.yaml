@@ -10,8 +10,24 @@ values:
 components:
   - name: test-values-component
     required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo '{"json":"json-value"}'
+            setValues:
+              - key: .actionData
+                type: json
+          - cmd: >
+              echo 'yaml: yaml-value'
+            setValues:
+              - key: .actionData
+                type: yaml
     manifests:
       - name: test-configmap
         template: true
         files:
           - configmap.yaml
+      - name: test-action-configmap
+        template: true
+        files:
+          - action-configmap.yaml

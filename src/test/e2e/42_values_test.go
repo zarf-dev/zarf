@@ -15,11 +15,6 @@ import (
 func TestValues(t *testing.T) {
 	t.Log("E2E: Values")
 
-	// Don't run this test in appliance mode
-	if e2e.ApplianceMode {
-		return
-	}
-
 	src := filepath.Join("src", "test", "packages", "42-values")
 	tmpdir := t.TempDir()
 
@@ -38,6 +33,14 @@ func TestValues(t *testing.T) {
 	kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "test-values-configmap", "-o", "jsonpath='{.data.value}'")
 	require.NoError(t, err, "unable to get configmap")
 	require.Contains(t, kubectlOut, "default-value")
+
+	// Verify the action configmap was templated with the action-set values
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-action-configmap", "-o", "jsonpath='{.data.json}'")
+	require.NoError(t, err, "unable to get action configmap")
+	require.Contains(t, kubectlOut, "json-value")
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-action-configmap", "-o", "jsonpath='{.data.yaml}'")
+	require.NoError(t, err, "unable to get action configmap")
+	require.Contains(t, kubectlOut, "yaml-value")
 
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
