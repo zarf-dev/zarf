@@ -13,12 +13,12 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: echo '{"my-key":"my-value"}'
+          - cmd: echo '{"myKey":"myValue"}'
             setValues:
               - key: .json
                 type: json
           - cmd: >
-              echo 'my-key: my-value'
+              echo 'myKey: myValue'
             setValues:
               - key: .yaml
                 type: yaml
