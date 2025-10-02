@@ -215,3 +215,132 @@ func TestParseFiles_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestExtract(t *testing.T) {
+	tests := []struct {
+		name   string
+		values Values
+		path   Path
+		expect any
+	}{
+		{
+			name: "extract root path returns entire map",
+			values: Values{
+				"key1": "value1",
+				"key2": map[string]any{
+					"nested": "value2",
+				},
+			},
+			path: ".",
+			expect: Values{
+				"key1": "value1",
+				"key2": map[string]any{
+					"nested": "value2",
+				},
+			},
+		},
+		{
+			name: "extract simple key",
+			values: Values{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			path:   ".key1",
+			expect: "value1",
+		},
+		{
+			name: "extract nested key",
+			values: Values{
+				"app": map[string]any{
+					"name":    "myapp",
+					"version": "1.0",
+				},
+			},
+			path:   ".app.name",
+			expect: "myapp",
+		},
+		{
+			name: "extract deeply nested key",
+			values: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu": "100m",
+						},
+					},
+				},
+			},
+			path:   ".deployment.resources.limits.cpu",
+			expect: "100m",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := tt.values.Extract(tt.path)
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, result)
+		})
+	}
+}
+
+func TestExtract_Errors(t *testing.T) {
+	tests := []struct {
+		name      string
+		values    Values
+		path      Path
+		errSubstr string
+	}{
+		{
+			name: "error on non-existent key",
+			values: Values{
+				"key1": "value1",
+			},
+			path:      ".key2",
+			errSubstr: "not found",
+		},
+		{
+			name: "error on non-existent nested key",
+			values: Values{
+				"app": map[string]any{
+					"name": "myapp",
+				},
+			},
+			path:      ".app.version",
+			errSubstr: "not found",
+		},
+		{
+			name: "error on traversing non-map",
+			values: Values{
+				"app": "string-value",
+			},
+			path:      ".app.name",
+			errSubstr: "expected map",
+		},
+		{
+			name:      "error on invalid path format (no leading dot)",
+			values:    Values{},
+			path:      "key",
+			errSubstr: "invalid path format",
+		},
+		{
+			name:      "error on empty path",
+			values:    Values{},
+			path:      "",
+			errSubstr: "invalid path format",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := tt.values.Extract(tt.path)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errSubstr)
+			require.Nil(t, result)
+		})
+	}
+}

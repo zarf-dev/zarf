@@ -173,6 +173,11 @@ func (v Values) Extract(path Path) (any, error) {
 		return nil, err
 	}
 
+	// Fetch everything if given the root path "."
+	if path == "." {
+		return v, nil
+	}
+
 	// Parse path into components, skipping empty leading segment
 	pathStr := string(path)[1:] // Remove leading dot
 	if pathStr == "" {
