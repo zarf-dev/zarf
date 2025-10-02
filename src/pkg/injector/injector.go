@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	componenthelpers "k8s.io/component-helpers/resource"
 )
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -177,49 +178,99 @@ func StopInjection(ctx context.Context, c *cluster.Cluster) error {
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
 func getInjectorImageAndNode(ctx context.Context, c *cluster.Cluster, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
-	// Regex for Zarf seed image
+	l := logger.From(ctx)
+
 	zarfImageRegex, err := regexp.Compile(`(?m)^127\.0\.0\.1:`)
 	if err != nil {
 		return "", "", err
 	}
-	listOpts := metav1.ListOptions{
-		FieldSelector: fmt.Sprintf("status.phase=%s", corev1.PodRunning),
-	}
-	podList, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, listOpts)
+
+	// List all nodes and running pods once
+	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", "", err
 	}
-	for _, pod := range podList.Items {
-		nodeDetails, err := c.Clientset.CoreV1().Nodes().Get(ctx, pod.Spec.NodeName, metav1.GetOptions{})
-		if err != nil {
-			return "", "", err
-		}
-		if nodeDetails.Status.Allocatable.Cpu().Cmp(*resReq.Requests.Cpu()) < 0 ||
-			nodeDetails.Status.Allocatable.Memory().Cmp(*resReq.Requests.Memory()) < 0 {
-			continue
-		}
-		if hasBlockingTaints(nodeDetails.Spec.Taints) {
-			continue
-		}
-		for _, container := range pod.Spec.Containers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
-			}
-			return container.Image, pod.Spec.NodeName, nil
-		}
-		for _, container := range pod.Spec.InitContainers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
-			}
-			return container.Image, pod.Spec.NodeName, nil
-		}
-		for _, container := range pod.Spec.EphemeralContainers {
-			if zarfImageRegex.MatchString(container.Image) {
-				continue
-			}
-			return container.Image, pod.Spec.NodeName, nil
-		}
+	podList, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{
+		FieldSelector: "status.phase=Running",
+	})
+	if err != nil {
+		return "", "", err
 	}
+
+	podsByNode := make(map[string][]corev1.Pod)
+	for _, pod := range podList.Items {
+		if pod.Spec.NodeName == "" {
+			continue
+		}
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			continue
+		}
+		podsByNode[pod.Spec.NodeName] = append(podsByNode[pod.Spec.NodeName], pod)
+	}
+
+	// Evaluate nodes one by one, return early when suitable
+	for _, node := range nodeList.Items {
+		if hasBlockingTaints(node.Spec.Taints) {
+			l.Debug("skipping node: blocking taints", "node", node.Name)
+			continue
+		}
+
+		availCPU := node.Status.Allocatable.Cpu().DeepCopy()
+		availMem := node.Status.Allocatable.Memory().DeepCopy()
+		var candidateImage string
+
+		for _, pod := range podsByNode[node.Name] {
+			podReqs := componenthelpers.AggregateContainerRequests(&pod, componenthelpers.PodResourcesOptions{})
+			if cpuReq := podReqs.Cpu(); cpuReq != nil {
+				availCPU.Sub(*cpuReq)
+			}
+			if memReq := podReqs.Memory(); memReq != nil {
+				availMem.Sub(*memReq)
+			}
+
+			// Collect candidate images (containers, init, ephemeral)
+			for _, ctn := range pod.Spec.Containers {
+				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
+					candidateImage = ctn.Image
+				}
+			}
+			for _, ctn := range pod.Spec.InitContainers {
+				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
+					candidateImage = ctn.Image
+				}
+			}
+			for _, ctn := range pod.Spec.EphemeralContainers {
+				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
+					candidateImage = ctn.Image
+				}
+			}
+		}
+
+		l.Debug("calculated available resources",
+			"node", node.Name,
+			"cpu", availCPU.String(),
+			"mem", availMem.String(),
+		)
+
+		if availCPU.Cmp(*resReq.Requests.Cpu()) < 0 || availMem.Cmp(*resReq.Requests.Memory()) < 0 {
+			l.Debug("skipping node: insufficient resources",
+				"node", node.Name,
+				"requiredCPU", resReq.Requests.Cpu().String(),
+				"requiredMem", resReq.Requests.Memory().String(),
+				"availCPU", availCPU.String(),
+				"availMem", availMem.String(),
+			)
+			continue
+		}
+
+		if candidateImage != "" {
+			l.Debug("selected image for injector", "node", node.Name, "image", candidateImage)
+			return candidateImage, node.Name, nil
+		}
+
+		l.Debug("no suitable image found on node", "node", node.Name)
+	}
+
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
