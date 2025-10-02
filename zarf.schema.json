@@ -432,6 +432,10 @@
       },
       "additionalProperties": false,
       "type": "object",
+      "required": [
+        "sourcePath",
+        "targetPath"
+      ],
       "description": "ZarfChartValue maps a Zarf Value key to a Helm Value.",
       "patternProperties": {
         "^x-": {}

@@ -55,9 +55,6 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			"files", len(paths))
 	}()
 
-	if ctx == nil {
-		return Values{}, errors.New("context cannot be nil")
-	}
 	// No files given
 	if len(paths) <= 0 {
 		return Values{}, nil
