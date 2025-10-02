@@ -885,25 +885,6 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	// TODO(mkcp): Handle URL & OCI valuesfiles. This has some implications with how we reference them at deploy time. Helm
-	// assumes network connectivity at install or upgrade time and will fail if it can't reach the URL. We can assume
-	// that the file is available at create time, but then have to deploy it with a local copy. Only, that local copy
-	// is still referred to by URL. There's a few ways to implement this, and it'll take some thought and documentation
-	// so users understand the expected behavior.
-	// if helpers.IsURL(file) {
-	// 	dst := filepath.Join(buildPath, file)
-	// 	l.Debug("copying values file from URL", "url", file)
-	// 	if err := utils.DownloadToFile(ctx, file, dst); err != nil {
-	// 		return fmt.Errorf("failed to download values file %s: %w", file, err)
-	// 	}
-	// 	// Set appropriate file permissions
-	// 	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-	// 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
-	// 	}
-	// 	// URL copied to build
-	// 	return nil
-	// }
-
 	// Process local values file
 	src := file
 	if !filepath.IsAbs(src) {
@@ -911,9 +892,6 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	}
 	// Validate src
 	if _, err := os.Stat(src); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("values file %s not found", src)
-		}
 		return fmt.Errorf("unable to access values file %s: %w", src, err)
 	}
 
