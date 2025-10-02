@@ -37,10 +37,10 @@ func TestValues(t *testing.T) {
 	// Verify the action configmap was templated with the action-set values
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-action-configmap", "-o", "jsonpath='{.data.json}'")
 	require.NoError(t, err, "unable to get action configmap")
-	require.Contains(t, kubectlOut, "json-value")
+	require.Contains(t, kubectlOut, "my-value")
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-action-configmap", "-o", "jsonpath='{.data.yaml}'")
 	require.NoError(t, err, "unable to get action configmap")
-	require.Contains(t, kubectlOut, "yaml-value")
+	require.Contains(t, kubectlOut, "my-value")
 
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")

@@ -13,14 +13,14 @@ components:
     actions:
       onDeploy:
         before:
-          - cmd: echo '{"json":"json-value"}'
+          - cmd: echo '{"my-key":"my-value"}'
             setValues:
-              - key: .actionData
+              - key: .json
                 type: json
           - cmd: >
-              echo 'yaml: yaml-value'
+              echo 'my-key: my-value'
             setValues:
-              - key: .actionData
+              - key: .yaml
                 type: yaml
     manifests:
       - name: test-configmap

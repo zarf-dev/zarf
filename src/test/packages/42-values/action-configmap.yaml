@@ -4,5 +4,5 @@ metadata:
   name: test-action-configmap
   namespace: default
 data:
-  json: "{{ .Values.actionData.json }}"
-  yaml: "{{ .Values.actionData.yaml }}"
+  json: "{{ .Values.json.my-key }}"
+  yaml: "{{ .Values.yaml.my-key }}"
