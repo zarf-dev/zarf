@@ -134,7 +134,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 	// Package defaults are overridden by deploy values.
-	value.DeepMerge(vals, opts.Values)
+	vals.DeepMerge(opts.Values)
 	logger.From(ctx).Debug("package values", "values", vals)
 
 	d := deployer{

@@ -94,7 +94,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 				}
 			}
 			// Done, merge new values into existing
-			DeepMerge(m, vals)
+			m.DeepMerge(vals)
 		}
 	}
 	return m, nil
@@ -138,30 +138,32 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 // 	return nil
 // }
 
-// DeepMerge merges two Values maps recursively via mutation, overwriting keys in dst with keys from src.
-func DeepMerge(dst, src Values) {
-	// Empty maps are fine, you just get back the full contents of one of the maps.
-	if dst == nil {
-		dst = make(Values)
+// DeepMerge merges one or more Values maps recursively into the receiver via mutation.
+// Later maps in the variadic arguments take precedence over earlier ones.
+func (v Values) DeepMerge(sources ...Values) {
+	if v == nil {
+		return
 	}
-	if src == nil {
-		src = make(Values)
-	}
-	for key, srcVal := range src {
-		if dstVal, exists := dst[key]; exists {
-			// Both have the key, merge
-			srcMap, srcIsMap := srcVal.(map[string]any)
-			dstMap, dstIsMap := dstVal.(map[string]any)
-			if srcIsMap && dstIsMap {
-				// Both are maps, recur
-				DeepMerge(dstMap, srcMap)
+	for _, src := range sources {
+		if src == nil {
+			continue
+		}
+		for key, srcVal := range src {
+			if dstVal, exists := v[key]; exists {
+				// Both have the key, merge
+				srcMap, srcIsMap := srcVal.(map[string]any)
+				dstMap, dstIsMap := dstVal.(map[string]any)
+				if srcIsMap && dstIsMap {
+					// Both are maps, recur
+					Values(dstMap).DeepMerge(srcMap)
+				} else {
+					// Not both maps, src overwrites dst
+					v[key] = srcVal
+				}
 			} else {
-				// Not both maps, src overwrites dst
-				dst[key] = srcVal
+				// Key only in src
+				v[key] = srcVal
 			}
-		} else {
-			// Key only in src
-			dst[key] = srcVal
 		}
 	}
 }

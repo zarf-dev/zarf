@@ -480,3 +480,151 @@ func TestSet_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestDeepMerge(t *testing.T) {
+	tests := []struct {
+		name    string
+		dst     Values
+		sources []Values
+		expect  Values
+	}{
+		{
+			name:    "merge single map",
+			dst:     Values{"key1": "value1"},
+			sources: []Values{{"key2": "value2"}},
+			expect:  Values{"key1": "value1", "key2": "value2"},
+		},
+		{
+			name: "merge multiple maps",
+			dst:  Values{"key1": "value1"},
+			sources: []Values{
+				{"key2": "value2"},
+				{"key3": "value3"},
+			},
+			expect: Values{"key1": "value1", "key2": "value2", "key3": "value3"},
+		},
+		{
+			name: "later sources override earlier ones",
+			dst:  Values{"key": "original"},
+			sources: []Values{
+				{"key": "first"},
+				{"key": "second"},
+			},
+			expect: Values{"key": "second"},
+		},
+		{
+			name: "nested maps merge recursively",
+			dst: Values{
+				"app": map[string]any{
+					"name": "myapp",
+				},
+			},
+			sources: []Values{
+				{
+					"app": map[string]any{
+						"version": "1.0",
+					},
+				},
+			},
+			expect: Values{
+				"app": map[string]any{
+					"name":    "myapp",
+					"version": "1.0",
+				},
+			},
+		},
+		{
+			name: "deeply nested maps merge",
+			dst: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu": "100m",
+						},
+					},
+				},
+			},
+			sources: []Values{
+				{
+					"deployment": map[string]any{
+						"resources": map[string]any{
+							"limits": map[string]any{
+								"memory": "128Mi",
+							},
+						},
+					},
+				},
+			},
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "100m",
+							"memory": "128Mi",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "non-map values overwrite",
+			dst: Values{
+				"key": map[string]any{
+					"nested": "value",
+				},
+			},
+			sources: []Values{
+				{"key": "string-value"},
+			},
+			expect: Values{"key": "string-value"},
+		},
+		{
+			name:    "nil source is skipped",
+			dst:     Values{"key1": "value1"},
+			sources: []Values{nil, {"key2": "value2"}},
+			expect:  Values{"key1": "value1", "key2": "value2"},
+		},
+		{
+			name:    "empty sources list",
+			dst:     Values{"key": "value"},
+			sources: []Values{},
+			expect:  Values{"key": "value"},
+		},
+		{
+			name: "complex merge with precedence",
+			dst:  Values{"replicas": 1},
+			sources: []Values{
+				{
+					"replicas": 2,
+					"image": map[string]any{
+						"tag": "v1.0",
+					},
+				},
+				{
+					"replicas": 3,
+					"service": map[string]any{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+			expect: Values{
+				"replicas": 3,
+				"image": map[string]any{
+					"tag": "v1.0",
+				},
+				"service": map[string]any{
+					"type": "LoadBalancer",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tt.dst.DeepMerge(tt.sources...)
+			require.Equal(t, tt.expect, tt.dst)
+		})
+	}
+}

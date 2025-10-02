@@ -74,7 +74,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse values files: %w", err)
 	}
-	value.DeepMerge(opts.Values, values)
+	opts.Values.DeepMerge(values)
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)

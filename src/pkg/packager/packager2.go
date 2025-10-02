@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
@@ -95,7 +94,9 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 		}
 	}
 
-	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
+	// Merge valuesOverrides into chartOverrides (valuesOverrides takes precedence)
+	chartOverrides.DeepMerge(valuesOverrides)
+	return chartOverrides, nil
 }
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace
