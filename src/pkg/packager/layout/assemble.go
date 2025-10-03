@@ -895,8 +895,10 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 		return fmt.Errorf("unable to access values file %s: %w", src, err)
 	}
 
-	// Copy file to pre-archive package
-	dst := filepath.Join(buildPath, file)
+	// Ensure relative paths don't munge the destination and write outside of the package tmpdir
+	cleanFile := filepath.Clean(file)
+	//Copy file to pre-archive package
+	dst := filepath.Join(buildPath, cleanFile)
 	l.Debug("copying values file", "src", src, "dst", dst)
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy values file %s: %w", src, err)
