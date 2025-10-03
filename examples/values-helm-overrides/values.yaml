@@ -1,9 +1,0 @@
-app:
-  name: "helm-overrides-app"  # Maps to .appName
-  replicas: 5                 # Maps to .replicaCount
-  image:
-    tag: "v2.1.0"             # Maps to .image.tag
-
-database:
-  host: "postgres.zarf.local-schmocal" # Maps to .config.database.host
-  host2: "postgres.zarf.local" # Also maps to .config.database.host, but takes priority because it's mapped afterwards.

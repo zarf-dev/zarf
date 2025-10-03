@@ -20,19 +20,14 @@ data:
       <body>
         <!-- Test two separate values on the same line -->
         <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
-        <p>Below is a Terraform File templated by Zarf</p>
-        <blockquote>
-          {{ .Values.terraform.content | quote }}
-        </blockquote>
-        <!-- Utilize the value .terraform.shasum from a previous component's setValues  -->
-        <pre>File SHASUM: {{ .Values.terraform.shasum }}</pre>
+
         <!-- Import Variables and Constants into new go-templates, to help with migrating over to the new Values feature
         and templating syntax -->
         <pre>Imported variable from .Variables.EXAMPLE_VAR {{ .Variables.EXAMPLE_VAR }}</pre>
         <pre>Imported constant from .Constants.EXAMPLE_CONST {{ .Constants.EXAMPLE_CONST }}</pre>
 
         <!-- Sprig Function Examples -->
-        <h3>🌿 Sprig Function Examples</h3>
+        <h3>Sprig Function Examples</h3>
 
         <!-- String manipulation functions -->
         <h4>String Functions:</h4>
@@ -62,8 +57,8 @@ data:
         <pre>Replicas: {{ .Values.app.replicas }}</pre>
         <pre>Add 2: {{ add .Values.app.replicas 2 }}</pre>
         <pre>Multiply: {{ mul .Values.app.replicas 10 }}</pre>
-        <pre>Max Port: {{ max .Values.app.ports }}</pre>
-        <pre>Min Port: {{ min .Values.app.ports }}</pre>
+        <pre>Max Port: {{ max .Values.app.port1 .Values.app.port2 .Values.app.port3 }}</pre>
+        <pre>Min Port: {{ min .Values.app.port1 .Values.app.port2 .Values.app.port3 }}</pre>
 
         <!-- Encoding/hashing functions -->
         <h4>Encoding & Hashing Functions:</h4>

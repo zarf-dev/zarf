@@ -5,44 +5,21 @@ metadata:
 values:
   files:
     - values.yaml
-# These consts and vars and are here to demonstrate go-templating with vars and constants.
+
+# Until Consts and Vars are fully deprecated, they'll be available in go-templates
 constants:
   - name: EXAMPLE_CONST
     value: "foo"
 variables:
   - name: EXAMPLE_VAR
     default: "bar"
-components:
-  - name: values-with-terraform
-    description: Change a value in a regular file with a Zarf value.
-    required: true
-    files:
-      - source: simple-terraform.tf
-        target: modified-terraform.tf
-        # Enables go-templating within the file.
-        template: true
-    actions:
-      onDeploy:
-        after:
-          # This command uses a templated Zarf cmd to return the SHASUM of the terraform file
-          - cmd: ./zarf prepare sha256sum {{ .Values.terraform.path }}
-            # Then sets the value to a new Value key
-            setValues:
-              - key: .terraform.shasum
-                type: string
-          # Print our newly-set Value
-          - cmd: echo "Look, a new value! SHASUM={{ .Values.terraform.shasum }}"
-          - cmd: cat {{ .Values.terraform.path }}
-            setValues:
-              - key: .terraform.content
-                type: string
 
-  # The following component deploys nginx to the cluster using the defined values
-  - name: values-with-nginx
-    description: "This component deploys the latest nginx version to the cluster"
+components:
+  - name: values-with-manifest
+    description: This component demonstrates templating manifest files by deploying an nginx page to the cluster
     required: true
     images:
-      # NOTE(mkcp): Pkgtemplates aren't implemented in Values & go-templating alpha
+      # NOTE: Pkgtemplates aren't yet available with value and go-templates.
       - "nginx:latest"
     manifests:
       - name: values-with-nginx
@@ -53,9 +30,66 @@ components:
           - nginx-service.yaml
           - nginx-configmap.yaml
 
+  - name: values-with-helm-chart
+    description: This component demonstrates helm chart value overrides using Zarf values
+    required: true
+    charts:
+      - name: example-chart
+        version: 0.1.0
+        localPath: "charts/example-chart"
+        namespace: "helm-overrides"
+        values:
+          - sourcePath: ".app.name"
+            targetPath: ".appName"
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".app.image.tag"
+            targetPath: ".image.tag"
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+          # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
+          - sourcePath: ".database.host2"
+            targetPath: ".config.database.host"
+
+
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
-  This example demonstrates how to define values in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` and `zarf package remove` with `{{ .Values.<foo> }}` as well as package-level info like `{{ .Metadata.<bar> }}` and `{{ .Build.<baz> }}`.
+  # [ALPHA] Values & Templates Example
 
-  With these values and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart.
+  This example demonstrates the pre-release alpha version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing and **Helm chart value overrides**.
+
+  ## Features Demonstrated
+
+  - **Basic templating** with `{{ .Values.* }}`, `{{ .Build.* }}`, `{{ .Metadata.* }}`, `{{ .Constants.* }}`, and `{{ .Variables.* }}`
+  - **Sprig functions** for string manipulation, lists, math, encoding, and more
+  - **File templating** with both simple substitution and complex transformations
+  - **Dynamic configuration** using template functions for practical Kubernetes deployments
+  - **Helm chart value overrides** mapping Zarf values to Helm chart values
+
+  ## Sprig Functions Showcased
+
+  The example includes demonstrations of popular Sprig functions:
+    - **String functions**: `upper`, `lower`, `title`, `kebabcase`, `snakecase`, `quote`
+    - **List functions**: `join`, `len`, `first`, `last`, `sortAlpha`, `reverse`
+    - **Default functions**: `default` for fallback values
+    - **Math functions**: `add`, `mul`, `max`, `min`
+    - **Encoding functions**: `b64enc`, `sha256sum`
+    - **Utility functions**: `repeat`, `indent`, `trunc`, `toString`
+
+  ## Try It Out
+
+  Deploy this example to see values and templates in action:
+
+    ```bash
+    # Create and deploy the package (features="values=true" flag required until general release of values)
+    zarf package create . --confirm --features="values=true"
+    zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --features="values=true"
+
+    # View the nginx results
+    kubectl get configmap nginx-configmap -n nginx -o yaml
+    zarf connect nginx
+
+    # View the helm chart results
+    kubectl get configmap -n helm-overrides
+    ```

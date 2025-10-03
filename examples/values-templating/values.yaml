@@ -32,11 +32,16 @@ app:
     - "value-substitution"
   # Network ports for the application
   ports: [80, 443, 8080]
+  port1: 80
+  port2: 443
+  port3: 8080
+  # Helm chart overrides
+  name: "helm-overrides-app"  # Maps to .appName in helm chart
+  image:
+    tag: "v2.1.0"             # Maps to .image.tag in helm chart
 
-# terraform.path sets a filepath for a terraform file to be used as the contents of a template
-terraform:
-  path: "modified-terraform.tf"
-  aws:
-    # Modifies modified-terraform.tf file
-    region: "us-east-1"
+# Database configuration for helm chart
+database:
+  host: "postgres.zarf.local-schmocal" # Maps to .config.database.host in helm chart
+  host2: "postgres.zarf.local" # Also maps to .config.database.host, but takes priority because it's mapped afterwards
 
