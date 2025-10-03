@@ -127,7 +127,17 @@ type ZarfFile struct {
 	// [alpha]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
-	Template bool `json:"template,omitempty"`
+	Template *bool `json:"template,omitempty"`
+}
+
+// IsTemplate returns if the ZarfFile should be templated or not.
+func (f ZarfFile) IsTemplate() bool {
+	if f.Template != nil {
+		return *f.Template
+	}
+
+	// Default to false
+	return false
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -201,7 +211,17 @@ type ZarfManifest struct {
 	// [alpha]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
-	Template bool `json:"template,omitempty"`
+	Template *bool `json:"template,omitempty"`
+}
+
+// IsTemplate returns if the ZarfFile should be templated.
+func (m ZarfManifest) IsTemplate() bool {
+	if m.Template != nil {
+		return *m.Template
+	}
+
+	// Default to false
+	return false
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.

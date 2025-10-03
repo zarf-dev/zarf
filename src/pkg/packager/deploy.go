@@ -599,7 +599,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 				}
 			}
-			if manifest.Template {
+			if manifest.IsTemplate() {
 				path := filepath.Join(manifestDir, manifest.Files[idx])
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 
@@ -807,7 +807,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				}
 			}
 			// If the file has go-templating enabled, apply templates.
-			if file.Template {
+			if file.IsTemplate() {
 				l.Debug("templates enabled, processing file", "name", file.Target)
 				objs := template.NewObjects(values).
 					WithPackage(pkgLayout.Pkg).
