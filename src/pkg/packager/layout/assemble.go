@@ -897,6 +897,9 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 
 	// Ensure relative paths don't munge the destination and write outside of the package tmpdir
 	cleanFile := filepath.Clean(file)
+	if strings.HasPrefix(cleanFile, "..") {
+		return fmt.Errorf("values file path %s escapes package directory", file)
+	}
 	//Copy file to pre-archive package
 	dst := filepath.Join(buildPath, cleanFile)
 	l.Debug("copying values file", "src", src, "dst", dst)
