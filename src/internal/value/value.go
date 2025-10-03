@@ -81,20 +81,13 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			if helpers.IsURL(path) {
 				return nil, fmt.Errorf("remote values files not yet supported, url=%s", path)
 			}
-			ok, err := helpers.IsTextFile(path)
+			_, err := helpers.IsTextFile(path)
 			if err != nil {
 				return nil, err
 			}
-			if ok {
-				// Ensure file exists
-				// REVIEW: Do we actually care about empty files here? Small UX tradeoff whether or not to fail on empty files
-				if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-					return nil, err
-				}
-				vals, err = parseLocalFile(ctx, path)
-				if err != nil {
-					return nil, err
-				}
+			vals, err = parseLocalFile(ctx, path)
+			if err != nil {
+				return nil, err
 			}
 			// Done, merge new values into existing
 			m.DeepMerge(vals)
