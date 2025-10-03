@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configmap
+  namespace: nginx
+  labels:
+    app: nginx
+data:
+  01_http.conf: |
+    add_header X-Kubernetes-Pod $hostname;
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Welcome to {{ .Values.site.name }}!</title>
+        <style>
+          {{ .Values.site.styles }}
+        </style>
+      </head>
+      <body>
+        <!-- Test two separate values on the same line -->
+        <h1>Welcome to the {{ .Values.site.name }}!</h1><h2>Brought to you by {{ .Values.site.organization }}.</h2>
+
+        <!-- Import Variables and Constants into new go-templates, to help with migrating over to the new Values feature
+        and templating syntax -->
+        <pre>Imported variable from .Variables.EXAMPLE_VAR {{ .Variables.EXAMPLE_VAR }}</pre>
+        <pre>Imported constant from .Constants.EXAMPLE_CONST {{ .Constants.EXAMPLE_CONST }}</pre>
+
+        <!-- Sprig Function Examples -->
+        <h3>Sprig Function Examples</h3>
+
+        <!-- String manipulation functions -->
+        <h4>String Functions:</h4>
+        <pre>Original: {{ .Values.site.message | quote }}</pre>
+        <pre>Upper: {{ .Values.site.message | upper | quote }}</pre>
+        <pre>Title: {{ .Values.site.message | title | quote }}</pre>
+        <pre>Kebab: {{ .Values.site.title | kebabcase | quote }}</pre>
+        <pre>Snake: {{ .Values.site.title | snakecase | quote }}</pre>
+
+        <!-- List/array functions -->
+        <h4>List Functions:</h4>
+        <pre>Items: {{ .Values.app.features | join ", " | quote }}</pre>
+        <pre>Count: {{ .Values.app.features | len }}</pre>
+        <pre>First: {{ .Values.app.features | first | quote }}</pre>
+        <pre>Last: {{ .Values.app.features | last | quote }}</pre>
+        <pre>Sorted: {{ .Values.app.features | sortAlpha | join ", " | quote }}</pre>
+        <pre>Reversed: {{ .Values.app.features | reverse | join ", " | quote }}</pre>
+
+        <!-- Default value functions -->
+        <h4>Default & Conditional Functions:</h4>
+        <pre>Required Field: {{ .Values.app.required_setting | default "fallback value" | quote }}</pre>
+        <pre>Optional Field (empty): {{ .Values.app.optional_setting | default "default value" | quote }}</pre>
+        <pre>Environment: {{ .Values.app.environment | upper | quote }}</pre>
+
+        <!-- Math functions -->
+        <h4>Math Functions:</h4>
+        <pre>Replicas: {{ .Values.app.replicas }}</pre>
+        <pre>Add 2: {{ add .Values.app.replicas 2 }}</pre>
+        <pre>Multiply: {{ mul .Values.app.replicas 10 }}</pre>
+        <pre>Max Port: {{ max .Values.app.port1 .Values.app.port2 .Values.app.port3 }}</pre>
+        <pre>Min Port: {{ min .Values.app.port1 .Values.app.port2 .Values.app.port3 }}</pre>
+
+        <!-- Encoding/hashing functions -->
+        <h4>Encoding & Hashing Functions:</h4>
+        <pre>Base64: {{ .Values.app.config_data | b64enc }}</pre>
+        <pre>SHA256: {{ .Values.app.config_data | sha256sum }}</pre>
+
+        <!-- Type conversion and formatting -->
+        <h4>Type & Format Functions:</h4>
+        <pre>Ports as String: {{ .Values.app.ports | join "," | quote }}</pre>
+        <pre>Items Count: {{ .Values.app.features | len | toString }}</pre>
+        <pre>Repeat and Indent Example:</pre>
+        <pre>{{ .Values.site.message | repeat 3 | indent 4 }}</pre>
+
+        {{ .Values.site.footer }}
+      </body>
+    </html>

@@ -57,6 +57,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return nil, err
 	}
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -91,7 +92,9 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			}
 
 			for _, chart := range component.Charts {
-				chartOverrides, err := generateValuesOverrides(chart, component.Name, variableConfig, nil)
+				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+					variableConfig: variableConfig,
+				})
 				if err != nil {
 					return nil, err
 				}

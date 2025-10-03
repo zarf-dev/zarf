@@ -124,6 +124,20 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
+	// [alpha]
+	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
+	// known at deploy-time. See documentation for Zarf Values for how to set these values.
+	Template *bool `json:"template,omitempty"`
+}
+
+// IsTemplate returns if the ZarfFile should be templated or not.
+func (f ZarfFile) IsTemplate() bool {
+	if f.Template != nil {
+		return *f.Template
+	}
+
+	// Default to false
+	return false
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -150,6 +164,8 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// [alpha] List of values sources to their Helm override target
+	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
 }
@@ -172,6 +188,12 @@ type ZarfChartVariable struct {
 	Path string `json:"path"`
 }
 
+// ZarfChartValue maps a Zarf Value key to a Helm Value.
+type ZarfChartValue struct {
+	SourcePath string `json:"sourcePath"`
+	TargetPath string `json:"targetPath"`
+}
+
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
 type ZarfManifest struct {
 	// A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.
@@ -186,6 +208,20 @@ type ZarfManifest struct {
 	Kustomizations []string `json:"kustomizations,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
+	// [alpha]
+	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
+	// known at deploy-time. See documentation for Zarf Values for how to set these values.
+	Template *bool `json:"template,omitempty"`
+}
+
+// IsTemplate returns if the ZarfFile should be templated.
+func (m ZarfManifest) IsTemplate() bool {
+	if m.Template != nil {
+		return *m.Template
+	}
+
+	// Default to false
+	return false
 }
 
 // DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.
@@ -264,6 +300,8 @@ type ZarfComponentAction struct {
 	DeprecatedSetVariable string `json:"setVariable,omitempty" jsonschema:"pattern=^[A-Z0-9_]+$"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
+	// (onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
+	SetValues []SetValue `json:"setValues,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.

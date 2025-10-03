@@ -19,10 +19,13 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -43,6 +46,9 @@ import (
 type DeployOptions struct {
 	// Deploy time set variables
 	SetVariables map[string]string
+	// Values are values passed in at deploy time. They can come from the CLI, user configuration, or set directly by
+	// API callers.
+	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
 	// Timeout for Helm operations
@@ -62,7 +68,7 @@ type DeployOptions struct {
 	StorageClass   string
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
-	ValuesOverridesMap map[string]map[string]map[string]interface{}
+	ValuesOverridesMap ValuesOverrides
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -71,6 +77,7 @@ type deployer struct {
 	s           *state.State
 	c           *cluster.Cluster
 	vc          *variables.VariableConfig
+	vals        value.Values
 	hpaModified bool
 }
 
@@ -78,6 +85,7 @@ type deployer struct {
 type DeployResult struct {
 	DeployedComponents []state.DeployedComponent
 	VariableConfig     *variables.VariableConfig
+	Values             value.Values
 }
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
@@ -85,6 +93,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
+
 	if opts.NamespaceOverride != "" {
 		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
@@ -109,8 +118,28 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return DeployResult{}, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
+	// Resolve values file paths relative to the package directory
+	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
+	for i, vf := range pkgLayout.Pkg.Values.Files {
+		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), vf)
+	}
+	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	if err != nil {
+		return DeployResult{}, err
+	}
+	// Package defaults are overridden by deploy values.
+	vals.DeepMerge(opts.Values)
+	logger.From(ctx).Debug("package values", "values", vals)
+
 	d := deployer{
-		vc: variableConfig,
+		vc:   variableConfig,
+		vals: vals,
 	}
 
 	// During deploy we disable
@@ -215,7 +244,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc); err != nil {
+			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc, d.vals); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -252,7 +281,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc); err != nil {
+		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc, d.vals); err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -363,18 +392,19 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	applicationTemplates, err := template.GetZarfTemplates(ctx, component.Name, d.s)
+	applicationTemplates, err := ptmpl.GetZarfTemplates(ctx, component.Name, d.s)
 	if err != nil {
 		return nil, err
 	}
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc); err != nil {
+	// Populate objects available to templates in before actions
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc, d.vals); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if hasFiles {
-		if err := processComponentFiles(ctx, pkgLayout, component, d.vc); err != nil {
+		if err := processComponentFiles(ctx, pkgLayout, component, d.vc, d.vals); err != nil {
 			return nil, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
@@ -447,7 +477,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		}
 	}
 
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc); err != nil {
+	// Populate objects available to templates in after actions
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc, d.vals); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -501,12 +532,15 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			}
 		}
 
-		// Create a Helm values overrides map from set Zarf `variables` and DeployOpts library inputs
-		// Values overrides are to be applied in order of Helm Chart Defaults -> Zarf `valuesFiles` -> Zarf `variables` -> DeployOpts overrides
-		valuesOverrides, err := generateValuesOverrides(chart, component.Name, d.vc, opts.ValuesOverridesMap)
+		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
+			variableConfig:     d.vc,
+			values:             d.vals,
+			valuesOverridesMap: opts.ValuesOverridesMap,
+		})
 		if err != nil {
 			return installedCharts, err
 		}
+		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -523,6 +557,12 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
+		logger.From(ctx).Debug("loaded chart",
+			"metadata", helmChart.Metadata,
+			"chartValues", helmChart.Values,
+			"valuesOverrides", values,
+			"countValuesOverrides", len(values),
+		)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {
@@ -536,6 +576,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 }
 
 func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -556,6 +597,20 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 				if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
 					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
+				}
+			}
+			if manifest.IsTemplate() {
+				path := filepath.Join(manifestDir, manifest.Files[idx])
+				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
+
+				objs := template.NewObjects(d.vals).
+					WithPackage(pkgLayout.Pkg).
+					WithBuild(pkgLayout.Pkg.Build).
+					WithVariables(d.vc.GetSetVariableMap()).
+					WithConstants(d.vc.GetConstants())
+				err := template.ApplyToFile(ctx, path, path, objs)
+				if err != nil {
+					return nil, err
 				}
 			}
 		}
@@ -685,7 +740,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig) (err error) {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -749,6 +804,19 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				l.Debug("template file", "name", file.Target)
 				if err := variableConfig.ReplaceTextTemplate(subFile); err != nil {
 					return fmt.Errorf("unable to template file %s: %w", subFile, err)
+				}
+			}
+			// If the file has go-templating enabled, apply templates.
+			if file.IsTemplate() {
+				l.Debug("templates enabled, processing file", "name", file.Target)
+				objs := template.NewObjects(values).
+					WithPackage(pkgLayout.Pkg).
+					WithBuild(pkgLayout.Pkg.Build).
+					WithVariables(variableConfig.GetSetVariableMap()).
+					WithConstants(variableConfig.GetConstants())
+				err = template.ApplyToFile(ctx, subFile, subFile, objs)
+				if err != nil {
+					return err
 				}
 			}
 		}

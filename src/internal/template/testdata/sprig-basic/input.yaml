@@ -1,0 +1,6 @@
+name: {{ .Values.name | upper }}
+message: {{ .Values.message | title }}
+count: {{ .Values.numbers | len }}
+first: {{ .Values.numbers | first }}
+last: {{ .Values.numbers | last }}
+quoted: {{ .Values.text | quote }}

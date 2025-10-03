@@ -1,0 +1,33 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values
+  description: Minimal test package for values feature
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: test-values-component
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo '{"myKey":"myValue"}'
+            setValues:
+              - key: .json
+                type: json
+          - cmd: >
+              echo 'myKey: myValue'
+            setValues:
+              - key: .yaml
+                type: yaml
+    manifests:
+      - name: test-configmap
+        template: true
+        files:
+          - configmap.yaml
+      - name: test-action-configmap
+        template: true
+        files:
+          - action-configmap.yaml
