@@ -137,7 +137,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			}
 		}()
 		for img := range toPush {
-			l.Info("pushing image", "name", img)
+			l.Info("pushing image", "count", len(cfg.ImageList), "name", img)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
 				offlineNameCRC, err := transform.ImageTransformHost(registryRef.String(), img)
