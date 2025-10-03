@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -34,7 +35,7 @@ type PullConfig struct {
 	DestinationDirectory  string
 	ImageList             []transform.Image
 	Arch                  string
-	RegistryOverrides     map[string]string
+	RegistryOverrides     []types.RegistryOverride
 	CacheDirectory        string
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool

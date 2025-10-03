@@ -40,20 +40,21 @@ type renderer struct {
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
 
-	connectStrings state.ConnectStrings
-	namespaces     map[string]*corev1.Namespace
+	connectStrings    state.ConnectStrings
+	namespaces        map[string]*corev1.Namespace
+	pkgName           string
+	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State,
-	actionConfig *action.Configuration, variableConfig *variables.VariableConfig) (*renderer, error) {
-	if c == nil {
-		return nil, fmt.Errorf("cluster required to run post renderer")
-	}
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
 	if variableConfig == nil {
 		return nil, fmt.Errorf("variable configuration required to run post renderer")
+	}
+	if pkgName == "" {
+		return nil, fmt.Errorf("package name required to run post renderer")
 	}
 	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
 	rend := &renderer{
@@ -66,6 +67,8 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		variableConfig:         variableConfig,
 		connectStrings:         state.ConnectStrings{},
 		namespaces:             map[string]*corev1.Namespace{},
+		pkgName:                pkgName,
+		namespaceOverride:      namespaceOverride,
 	}
 
 	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
@@ -114,9 +117,11 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		for _, serverNamespace := range namespaceList.Items {
 			if serverNamespace.Name == name {
 				existingNamespace = true
+				break
 			}
 		}
-
+		// If the namespace doesn't exist then create it. If it does exist and is already managed by Zarf then update the labels with
+		// the new package and namespace override labels.
 		if !existingNamespace {
 			// This is a new namespace, add it
 			_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
@@ -177,6 +182,25 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		rawData := &unstructured.Unstructured{}
 		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
+		}
+		// If the object is empty, it's a blank resource, so we skip it. If the package name is empty we don't want to add labels.
+		if len(rawData.Object) > 0 {
+			// Add the package label to all resources
+			labels := rawData.GetLabels()
+			if labels == nil {
+				labels = map[string]string{}
+			}
+			rawData.SetLabels(r.setPackageLabels(labels))
+			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
+			if err := r.addLabelsToNestedPath(rawData, []string{"spec", "template", "metadata", "labels"}); err != nil {
+				return fmt.Errorf("failed to add labels to pod template: %w", err)
+			}
+			newContent, err := yaml.Marshal(rawData)
+			if err != nil {
+				return fmt.Errorf("failed to marshal manifest: %w", err)
+			}
+			// Update the resource content with the new labels
+			resource.Content = string(newContent)
 		}
 
 		switch rawData.GetKind() {
@@ -269,4 +293,34 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}
 	return nil
+}
+
+// addLabelsToNestedPath adds package labels to a nested path in an unstructured object
+func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []string) error {
+	// Check if the nested path exists and get the labels
+	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
+	if err != nil {
+		return err
+	} else if !found {
+		// Path doesn't exist, nothing to do
+		return nil
+	}
+	if templateLabels == nil {
+		templateLabels = map[string]string{}
+	}
+	// Add package labels
+	templateLabels = r.setPackageLabels(templateLabels)
+	// Set the updated labels back
+	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
+}
+
+// setPackageLabels will add the package labels to an existing labels map
+func (r *renderer) setPackageLabels(labels map[string]string) map[string]string {
+	if r.pkgName != "" {
+		labels[cluster.PackageLabel] = r.pkgName
+		if r.namespaceOverride != "" {
+			labels[cluster.NamespaceOverrideLabel] = r.namespaceOverride
+		}
+	}
+	return labels
 }

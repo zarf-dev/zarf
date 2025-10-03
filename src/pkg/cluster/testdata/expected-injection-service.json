@@ -4,7 +4,9 @@
   "metadata": {
     "name": "zarf-injector",
     "namespace": "zarf",
-    "creationTimestamp": null
+    "labels": {
+      "zarf.dev/package": "test"
+    }
   },
   "spec": {
     "ports": [

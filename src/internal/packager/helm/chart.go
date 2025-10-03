@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/avast/retry-go/v4"
 	plutoversionsfile "github.com/fairwindsops/pluto/v5"
 	plutoapi "github.com/fairwindsops/pluto/v5/pkg/api"
 	goyaml "github.com/goccy/go-yaml"
@@ -54,6 +53,10 @@ type InstallUpgradeOptions struct {
 	Timeout time.Duration
 	// Retries for the helm install/upgrade
 	Retries int
+	// PkgName is the name of the zarf package being installed
+	PkgName string
+	// NamespaceOverride is the namespace override to use for the chart
+	NamespaceOverride string
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -77,12 +80,12 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	// Setup K8s connection.
 	actionConfig, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to initialize the K8s client: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
+	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to create helm renderer: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	histClient := action.NewHistory(actionConfig)
@@ -91,42 +94,32 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	helmCtx, helmCtxCancel := context.WithTimeout(ctx, opts.Timeout)
 	defer helmCtxCancel()
 
-	err = retry.Do(func() error {
-		var err error
+	releases, histErr := histClient.Run(zarfChart.ReleaseName)
 
-		releases, histErr := histClient.Run(zarfChart.ReleaseName)
+	l.Debug("checking for existing helm deployment")
 
-		l.Debug("checking for existing helm deployment")
+	if errors.Is(histErr, driver.ErrReleaseNotFound) {
+		// No prior release, try to install it.
+		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		if errors.Is(histErr, driver.ErrReleaseNotFound) {
-			// No prior release, try to install it.
-			l.Info("performing Helm install", "chart", zarfChart.Name)
+		release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
+	} else if histErr == nil && len(releases) > 0 {
+		// Otherwise, there is a prior release so upgrade it.
+		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
-			release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
-		} else if histErr == nil && len(releases) > 0 {
-			// Otherwise, there is a prior release so upgrade it.
-			l.Info("performing Helm upgrade", "chart", zarfChart.Name)
+		lastRelease := releases[len(releases)-1]
 
-			lastRelease := releases[len(releases)-1]
-
-			release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
-		} else {
-			return fmt.Errorf("unable to verify the chart installation status: %w", histErr)
-		}
-
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(opts.Retries)), retry.Delay(500*time.Millisecond))
+		release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
+	} else {
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
+	}
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
 		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", opts.Retries, err, removeMsg)
 
 		releases, err := histClient.Run(zarfChart.ReleaseName)
 		if err != nil {
-			return nil, "", errors.Join(err, installErr)
+			return nil, zarfChart.ReleaseName, errors.Join(err, installErr)
 		}
 		previouslyDeployedVersion := 0
 
@@ -139,21 +132,21 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		// No prior releases means this was an initial install.
 		if previouslyDeployedVersion == 0 {
-			return nil, "", installErr
+			return nil, zarfChart.ReleaseName, installErr
 		}
 
 		// Attempt to rollback on a failed upgrade.
 		l.Info("performing Helm rollback", "chart", zarfChart.Name)
 		err = rollbackChart(zarfChart.ReleaseName, previouslyDeployedVersion, actionConfig, opts.Timeout)
 		if err != nil {
-			return nil, "", fmt.Errorf("%w: unable to rollback: %w", installErr, err)
+			return nil, zarfChart.ReleaseName, fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
-		return nil, "", installErr
+		return nil, zarfChart.ReleaseName, installErr
 	}
 
 	resourceList, err := actionConfig.KubeClient.Build(bytes.NewBufferString(release.Manifest), true)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to build the resource list: %w", err)
+		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to build the resource list: %w", err)
 	}
 
 	runtimeObjs := []runtime.Object{}
@@ -164,7 +157,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		l.Info("running health checks", "chart", zarfChart.Name)
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
-			return nil, "", err
+			return nil, zarfChart.ReleaseName, err
 		}
 	}
 	l.Debug("done processing Helm chart", "name", zarfChart.Name, "duration", time.Since(start))
@@ -200,7 +193,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
-	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig)
+	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}

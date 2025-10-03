@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -74,7 +75,7 @@ type packageCreateOptions struct {
 	sbomOutput              string
 	skipSBOM                bool
 	maxPackageSizeMB        int
-	registryOverrides       map[string]string
+	registryOverrides       []string
 	signingKeyPath          string
 	signingKeyPassword      string
 	flavor                  string
@@ -112,7 +113,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
@@ -143,6 +144,46 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
+// Converts registry overrides to a structured type.
+// The result will be sorted in descending order.
+// Descending order guarantees the longest prefix will be sorted toward the beginning.
+//
+// Input is of the following form:
+// []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
+func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error) {
+	result := make([]types.RegistryOverride, len(overrides))
+	for i, mapping := range overrides {
+		source, override, found := strings.Cut(mapping, "=")
+		if !found {
+			return nil, fmt.Errorf("registry override missing '=': %s", mapping)
+		}
+
+		if source == "" {
+			return nil, fmt.Errorf("registry override missing source: %s", mapping)
+		}
+
+		if override == "" {
+			return nil, fmt.Errorf("registry override missing value: %s", mapping)
+		}
+
+		if index := slices.IndexFunc(result, func(existing types.RegistryOverride) bool {
+			return existing.Source == source
+		}); index >= 0 {
+			return nil, fmt.Errorf("registry override has duplicate source: existing index %d, new index %d, source %s", index, i, source)
+		}
+
+		result[i].Source = source
+		result[i].Override = override
+	}
+
+	// We sort these now at parse time so they are handled correctly throughout execution.
+	slices.SortFunc(result, func(a types.RegistryOverride, b types.RegistryOverride) int {
+		return -strings.Compare(a.Source, b.Source)
+	})
+
+	return result, nil
+}
+
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	// TODO pass confirm through the system rather than keeping it as a global
 	config.CommonOptions.Confirm = o.confirm
@@ -157,6 +198,10 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	overrides, err := parseRegistryOverrides(o.registryOverrides)
+	if err != nil {
+		return fmt.Errorf("error parsing registry override: %w", err)
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -164,7 +209,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 	opt := packager.CreateOptions{
 		Flavor:                  o.flavor,
-		RegistryOverrides:       o.registryOverrides,
+		RegistryOverrides:       overrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
 		SetVariables:            o.setVariables,
@@ -327,7 +372,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
 	l := logger.From(ctx)
 
-	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), true)
+	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
@@ -381,12 +426,6 @@ func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]strin
 		}
 		hints = utils.AddRootListHint(hints, "name", variable.Name, fmt.Sprintf("currently set to %s", value))
 	}
-
-	hints = utils.AddRootHint(hints, "metadata", "information about this package\n")
-	hints = utils.AddRootHint(hints, "build", "info about the machine, zarf version, and user that created this package\n")
-	hints = utils.AddRootHint(hints, "components", "components selected for this operation")
-	hints = utils.AddRootHint(hints, "constants", "static values set by the package author")
-	hints = utils.AddRootHint(hints, "variables", "deployment-specific values that are set on each package deployment")
 
 	return hints
 }
@@ -1202,7 +1241,8 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packagePublishOptions struct {
-	flavor string
+	flavor  string
+	retries int
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1221,6 +1261,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
@@ -1264,6 +1305,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+			Retries:            o.retries,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 			Flavor:             o.flavor,
@@ -1277,6 +1319,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			OCIConcurrency: config.CommonOptions.OCIConcurrency,
 			Architecture:   config.GetArch(),
 			RemoteOptions:  defaultRemoteOptions(),
+			Retries:        o.retries,
 		}
 
 		// source registry reference
@@ -1342,6 +1385,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
 		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
 		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
 

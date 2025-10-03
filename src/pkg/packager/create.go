@@ -17,12 +17,13 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
-	RegistryOverrides       map[string]string
+	RegistryOverrides       []types.RegistryOverride
 	SigningKeyPath          string
 	SigningKeyPassword      string
 	SetVariables            map[string]string
@@ -97,7 +98,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", err
 		}
-		err = remote.PushPackage(ctx, pkgLayout, opts.OCIConcurrency)
+		// Setting a default here for retries as the flag is less intuitive during create
+		publishOptions := zoci.PublishOptions{
+			Retries:        1,
+			OCIConcurrency: opts.OCIConcurrency,
+		}
+		_, err = remote.PushPackage(ctx, pkgLayout, publishOptions)
 		if err != nil {
 			return "", err
 		}

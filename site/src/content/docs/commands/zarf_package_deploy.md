@@ -27,7 +27,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
   -c, --confirm                     Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                        help for deploy
   -n, --namespace string            [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
-      --retries int                 Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
+      --retries int                 Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string               Shasum of the package to deploy. Required if deploying a remote https package.
       --skip-signature-validation   Skip validating the signature of the Zarf package

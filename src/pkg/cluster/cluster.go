@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -36,6 +35,10 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+	// PackageLabel is the label used to identify the owning of package.
+	PackageLabel string = "zarf.dev/package"
+	// NamespaceOverrideLabel is the label used to identify the namespace override.
+	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -158,6 +161,7 @@ type InitStateOptions struct {
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
+// If state was already initialized then internal services (registry, git server, artifact server) won't be updated
 func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.State, error) {
 	l := logger.From(ctx)
 
@@ -265,17 +269,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
-	} else {
-		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
-		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
-			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
 	}
 
 	switch s.Distro {

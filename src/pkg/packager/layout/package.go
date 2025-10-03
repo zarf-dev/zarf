@@ -276,6 +276,9 @@ func (p *PackageLayout) FileName() (string, error) {
 	} else if p.Pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
 	}
+	if p.Pkg.Build.Flavor != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
+	}
 
 	if p.Pkg.Metadata.Uncompressed {
 		return name + ".tar", nil
