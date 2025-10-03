@@ -36,7 +36,7 @@ zarf tools monitor [flags]
       --logoless                       Turn K9s logo off
   -n, --namespace string               If present, the namespace scope for this CLI request
       --readonly                       Sets readOnly mode by overriding readOnly configuration setting
-  -r, --refresh int                    Specify the default refresh rate as an integer (sec) (default 2)
+  -r, --refresh float32                Specify the default refresh rate as a float (sec) (default 2)
       --request-timeout string         The length of time to wait before giving up on a single server request
       --screen-dump-dir string         Sets a path to a dir for a screen dumps
       --splashless                     Turn K9s splash screen off
