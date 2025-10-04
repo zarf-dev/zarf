@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package cluster
+package injector
 
 import (
 	"context"
@@ -16,6 +16,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -30,7 +32,7 @@ import (
 func TestInjector(t *testing.T) {
 	ctx := context.Background()
 	cs := fake.NewClientset()
-	c := &Cluster{
+	c := &cluster.Cluster{
 		Clientset: cs,
 		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
 	}
@@ -93,7 +95,7 @@ func TestInjector(t *testing.T) {
 	_, err = cs.CoreV1().Pods(pod.ObjectMeta.Namespace).Create(ctx, pod, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	err = c.StopInjection(ctx)
+	err = StopInjection(ctx, c)
 	require.NoError(t, err)
 
 	for range 2 {
@@ -107,7 +109,9 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
+		err = StartInjection(ctx, tmpDir, images.PushConfig{
+			Cluster: c,
+		}, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -130,16 +134,13 @@ func TestInjector(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 
-		cmList, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
-		require.NoError(t, err)
-		require.Len(t, cmList.Items, 2)
 		cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
 		require.Equal(t, "test", cm.Labels["zarf.dev/package"])
 	}
 
-	err = c.StopInjection(ctx)
+	err = StopInjection(ctx, c)
 	require.NoError(t, err)
 
 	podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -166,7 +167,7 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", resReq, "test")
 	require.Equal(t, "injector", *pod.Name)
 	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	b, err := json.MarshalIndent(pod, "", "  ")
@@ -177,7 +178,7 @@ func TestBuildInjectionPod(t *testing.T) {
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 }
 
-func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
+func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *cluster.Cluster {
 	t.Helper()
 	cs := fake.NewClientset()
 	ctx := context.Background()
@@ -190,13 +191,108 @@ func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster
 		_, err := cs.CoreV1().Pods(pod.Namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		require.NoError(t, err)
 	}
-	return &Cluster{Clientset: cs}
+	return &cluster.Cluster{Clientset: cs}
 }
 
 func TestGetInjectorImageAndNode(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	cs := fake.NewClientset()
+
+	nodes := []corev1.Node{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "no-resources",
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("400m"),
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "no-schedule-taint",
+			},
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{
+					{
+						Effect: corev1.TaintEffectNoSchedule,
+					},
+				},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "good",
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "no-execute-taint",
+			},
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{
+					{
+						Effect: corev1.TaintEffectNoExecute,
+					},
+				},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+			},
+		},
+	}
+	for i, node := range nodes {
+		_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+		require.NoError(t, err)
+		podName := fmt.Sprintf("pod-%d", i)
+		pod := corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      podName,
+				Namespace: "default",
+			},
+			Spec: corev1.PodSpec{
+				NodeName: node.Name,
+				InitContainers: []corev1.Container{
+					{
+						Image: podName + "-init",
+					},
+				},
+				Containers: []corev1.Container{
+					{
+						Image: podName + "-container",
+					},
+				},
+				EphemeralContainers: []corev1.EphemeralContainer{
+					{
+						EphemeralContainerCommon: corev1.EphemeralContainerCommon{
+							Image: podName + "-ephemeral",
+						},
+					},
+				},
+			},
+		}
+		_, err = cs.CoreV1().Pods(pod.Namespace).Create(ctx, &pod, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
 
 	// Common resource requirement for injector
 	resReq := v1ac.ResourceRequirements().
@@ -229,7 +325,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+		image, node, err := getInjectorImageAndNode(ctx, c, resReq)
 		require.NoError(t, err)
 		require.Equal(t, "nginx", image)
 		require.Equal(t, "good", node)
@@ -247,7 +343,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, nil)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := getInjectorImageAndNode(ctx, c, resReq)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
@@ -275,7 +371,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := getInjectorImageAndNode(ctx, c, resReq)
 		require.Error(t, err)
 	})
 
@@ -299,7 +395,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := getInjectorImageAndNode(ctx, c, resReq)
 		require.Error(t, err)
 	})
 
@@ -340,7 +436,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("200Mi"), // too big
 		})
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := getInjectorImageAndNode(ctx, c, resReq)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 
@@ -351,7 +447,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("50Mi"), // fits in 100Mi left
 		})
 
-		image, node, err := c.getInjectorImageAndNode(ctx, smallReq)
+		image, node, err := getInjectorImageAndNode(ctx, c, smallReq)
 		require.NoError(t, err)
 		require.Equal(t, "busybox", image)
 		require.Equal(t, "crowded", node)

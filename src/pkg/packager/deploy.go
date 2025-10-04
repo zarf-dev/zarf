@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/injector"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -302,7 +303,26 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+		refs := []transform.Image{}
+		for _, image := range component.Images {
+			ref, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, err
+			}
+			refs = append(refs, ref)
+		}
+		pushConfig := images.PushConfig{
+			OCIConcurrency:  opts.OCIConcurrency,
+			SourceDirectory: pkgLayout.GetImageDirPath(),
+			ImageList:       refs,
+			// The injector is always served over plainHTTP
+			PlainHTTP:  true,
+			NoChecksum: true,
+			Arch:       pkgLayout.Pkg.Build.Architecture,
+			Retries:    opts.Retries,
+			Cluster:    d.c,
+		}
+		err := injector.StartInjection(ctx, pkgLayout.DirPath(), pushConfig, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -317,7 +337,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Do cleanup for when we inject the seed registry during initialization
 	if isSeedRegistry {
-		if err := d.c.StopInjection(ctx); err != nil {
+		if err := injector.StopInjection(ctx, d.c); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
 	}
