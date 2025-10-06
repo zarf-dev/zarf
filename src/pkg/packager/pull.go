@@ -81,9 +81,9 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	if err != nil {
 		return "", err
 	}
-	defer func() {
-		err = errors.Join(err, pkgLayout.Cleanup())
-	}()
+	if err := pkgLayout.Cleanup(); err != nil {
+		return "", err
+	}
 	filename, err := pkgLayout.FileName()
 	if err != nil {
 		return "", err
