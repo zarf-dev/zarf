@@ -24,7 +24,7 @@ zarf package inspect values-files [ PACKAGE ] [flags]
       --components string           comma separated list of components to show values files for
   -h, --help                        help for values-files
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
-      --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
+      --set stringToString          [alias for --set-variables] Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
 
