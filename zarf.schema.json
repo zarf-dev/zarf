@@ -1159,16 +1159,16 @@
             "type": "string"
           },
           "type": "array",
-          "description": "Files declares the location of Values Files, it can be a file path or a URL."
+          "description": "Files declares the relative filepath of Values files."
         },
         "schema": {
           "type": "string",
-          "description": "Schema TODO doccomment"
+          "description": "Schema is a placeholder field for importing a .json.schema file for imported Values files."
         }
       },
       "additionalProperties": false,
       "type": "object",
-      "description": "ZarfValues provides top-level imports for",
+      "description": "ZarfValues imports package-level values files and validation.",
       "patternProperties": {
         "^x-": {}
       }

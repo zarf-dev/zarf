@@ -273,10 +273,10 @@ type ZarfBuildData struct {
 	Flavor string `json:"flavor,omitempty"`
 }
 
-// ZarfValues provides top-level imports for
+// ZarfValues imports package-level values files and validation.
 type ZarfValues struct {
-	// Files declares the location of Values Files, it can be a file path or a URL.
+	// Files declares the relative filepath of Values files.
 	Files []string `json:"files,omitempty"`
-	// Schema TODO doccomment
+	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
 	Schema string `json:"schema,omitempty"`
 }
