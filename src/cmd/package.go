@@ -252,7 +252,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 	// Merge setValues CLI flags
 	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, nil)
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
 
 	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
 	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
