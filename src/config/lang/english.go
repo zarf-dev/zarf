@@ -260,7 +260,6 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
 	CmdPackageCreateFlagSet                   = "[alias for --set-variables] Specify package variables to set on the command line (KEY=value)"
 	CmdPackageCreateFlagSetVariables          = "Specify package variables to set on the command line (KEY=value)"
-	CmdPackageCreateFlagSetValues             = "[alpha] Specify package values to set on the command line (KEY=value). These values are merged into the values from values files."
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
