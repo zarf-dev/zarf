@@ -397,12 +397,12 @@ func TestApply(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "missing field returns no value",
+			name: "missing field returns error",
 			s:    "echo {{ .Values.missing.field }}",
 			objects: Objects{
 				objectKeyValues: value.Values{},
 			},
-			expected: "echo <no value>",
+			wantErr: true,
 		},
 	}
 
@@ -619,7 +619,7 @@ func TestApplyToFile_SprigFunctions(t *testing.T) {
 				require.Contains(t, string(result), "PRODUCTION")          // upper of production
 				require.Contains(t, string(result), "Hello World")         // title of hello world
 				require.Contains(t, string(result), "apple,banana,cherry") // join
-				require.Contains(t, string(result), "fallback")            // default value
+				require.Contains(t, string(result), "1.0.0")               // default uses actual value
 			} else {
 				require.Equal(t, string(expectedContent), string(result))
 			}

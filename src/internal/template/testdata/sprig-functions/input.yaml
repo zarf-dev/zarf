@@ -11,4 +11,4 @@ data:
   timestamp: {{ now | date "2006-01-02" }}
   random: {{ randAlphaNum 8 | lower }}
   joined: {{ .Values.items | join "," }}
-  default-value: {{ .Values.missing | default "fallback" }}
+  default-value: {{ .Values.version | default "1.0.0" }}

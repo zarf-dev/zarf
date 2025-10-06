@@ -20,6 +20,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
+const missingKeyDefault = "missingkey=error"
+
+var defaultFuncs = sprig.TxtFuncMap()
+
 // Objects provides a map of arbitrary data to be used in the template. By convention, top level keys are capitalized
 // so users can see what fields are set by the system and which are set by user input.
 // Example:
@@ -103,7 +107,10 @@ func Apply(ctx context.Context, s string, objs Objects) (string, error) {
 	l := logger.From(ctx)
 	l.Debug("applying templates", "str", s)
 
-	tmpl, err := ttmpl.New("cmd").Funcs(sprig.TxtFuncMap()).Parse(s)
+	tmpl, err := ttmpl.New("str").
+		Funcs(defaultFuncs).
+		Option(missingKeyDefault).
+		Parse(s)
 	if err != nil {
 		return "", err
 	}
@@ -123,9 +130,10 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 		l.Debug("finished applying templates in file", "src", src, "dst", dst, "duration", time.Since(start))
 	}()
 
-	// NOTE(mkcp): We must create a template here before parsing so we can load the sprig functions.
-	tmpl := ttmpl.New(filepath.Base(src)).Funcs(sprig.TxtFuncMap())
-	tmpl, err := tmpl.ParseFiles(src)
+	tmpl, err := ttmpl.New(filepath.Base(src)).
+		Funcs(defaultFuncs).
+		Option(missingKeyDefault).
+		ParseFiles(src)
 	if err != nil {
 		return err
 	}
