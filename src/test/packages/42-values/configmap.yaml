@@ -5,3 +5,4 @@ metadata:
   namespace: default
 data:
   value: "{{ .Values.test }}"
+  cliValue: "{{ .Values.cliTest }}"

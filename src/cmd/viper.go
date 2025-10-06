@@ -92,6 +92,7 @@ const (
 	// Package deploy config keys
 
 	VPkgDeploySet        = "package.deploy.set"
+	VPkgDeploySetValues  = "package.deploy.set_values"
 	VPkgDeployComponents = "package.deploy.components"
 	VPkgDeployShasum     = "package.deploy.shasum"
 	VPkgDeployTimeout    = "package.deploy.timeout"

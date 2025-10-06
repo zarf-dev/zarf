@@ -142,7 +142,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitPullConfirm   = "Do you want to pull this init package?"
 	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
-	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdInitFlagSet          = "[alias for --set-variables] Specify deployment variables to set on the command line (KEY=value)"
+	CmdInitFlagSetVariables = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server"
@@ -257,7 +258,9 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
-	CmdPackageCreateFlagSet                   = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagSet                   = "[alias for --set-variables] Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagSetVariables          = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagSetValues             = "[alpha] Specify package values to set on the command line (KEY=value). These values are merged into the values from values files."
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
@@ -275,7 +278,9 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
-	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSet                            = "[alias for --set-variables] Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSetVariables                   = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSetValues                      = "[alpha] Specify deployment values to set on the command line (KEY=value). These values are merged into the values from values files."
 	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"

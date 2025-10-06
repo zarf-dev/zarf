@@ -25,14 +25,19 @@ func TestValues(t *testing.T) {
 	packageName := fmt.Sprintf("zarf-package-test-values-%s.tar.zst", e2e.Arch)
 	path := filepath.Join(tmpdir, packageName)
 
-	// Deploy the package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	// Deploy the package with --set-values to override one value from the file
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set-values=.cliTest=cli-override-value", "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the configmap was templated with the default value
+	// Verify the configmap field from values file is preserved
 	kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "test-values-configmap", "-o", "jsonpath='{.data.value}'")
 	require.NoError(t, err, "unable to get configmap")
 	require.Contains(t, kubectlOut, "default-value")
+
+	// Verify the cliValue configmap field was overridden by CLI
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-configmap", "-o", "jsonpath='{.data.cliValue}'")
+	require.NoError(t, err, "unable to get configmap")
+	require.Contains(t, kubectlOut, "cli-override-value")
 
 	// Verify the action configmap was templated with the action-set values
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-action-configmap", "-o", "jsonpath='{.data.json}'")

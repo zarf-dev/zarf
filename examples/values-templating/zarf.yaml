@@ -93,3 +93,17 @@ x-mdx: |
     # View the helm chart results
     kubectl get configmap -n helm-overrides
     ```
+
+  ## Overriding Values at Deploy Time
+
+  You can override values from the command line using the `--set-values` flag:
+
+    ```bash
+    # Override individual values at deploy time
+    zarf package deploy zarf-package-values-templating-*.tar.zst --confirm \
+      --features="values=true" \
+      --set-values=.app.name=my-custom-app \
+      --set-values=.app.replicas=5
+
+    # Values passed via --set-values take precedence over values from files
+    ```

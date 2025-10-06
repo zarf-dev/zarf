@@ -109,6 +109,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.differentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetVariables)
 	cmd.Flags().BoolVarP(&o.sbom, "sbom", "s", v.GetBool(VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
@@ -193,6 +194,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 type packageDeployOptions struct {
 	namespaceOverride string
 	valuesFiles       []string
+	setValues         map[string]string
 }
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
@@ -217,6 +219,8 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", v.GetStringSlice(VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
@@ -246,11 +250,22 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
 
+	// Merge setValues CLI flags
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, nil)
+
 	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
 	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
+	}
+
+	// Merge CLI --set-values into the values map
+	for k, v := range o.setValues {
+		if err := values.Set(value.Path(k), v); err != nil {
+			return fmt.Errorf("failed to set value from --set-values flag: %w", err)
+		}
 	}
 
 	cachePath, err := getCachePath(ctx)
