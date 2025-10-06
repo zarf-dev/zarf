@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -234,7 +235,15 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 }
 
 type packageDeployOptions struct {
-	namespaceOverride string
+	namespaceOverride       string
+	confirm                 bool
+	adoptExistingResources  bool
+	timeout                 time.Duration
+	retries                 int
+	setVariables            map[string]string
+	optionalComponents      string
+	shasum                  string
+	skipSignatureValidation bool
 }
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
@@ -251,18 +260,18 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 
 	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -270,8 +279,10 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
+	// TODO @austinabro321 delete any uses of this
+	config.CommonOptions.Confirm = o.confirm
 }
 
 func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
@@ -282,8 +293,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	v := getViper()
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	o.setVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -291,9 +302,9 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
+		Shasum:                  o.shasum,
 		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
@@ -309,16 +320,16 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
-		Timeout:                pkgConfig.DeployOpts.Timeout,
-		Retries:                pkgConfig.PkgOpts.Retries,
+		AdoptExistingResources: o.adoptExistingResources,
+		Timeout:                o.timeout,
+		Retries:                o.retries,
 		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		SetVariables:           o.setVariables,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents, o.confirm)
 	if err != nil {
 		return err
 	}
@@ -338,14 +349,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string, confirm bool) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
 		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	err := confirmDeploy(ctx, pkgLayout, setVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +364,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	// filter after confirmation to allow users to view the entire package interactively
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+		filters.ForDeploy(optionalComponents, !confirm),
 	)
 
 	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)

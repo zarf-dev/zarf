@@ -163,7 +163,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		StorageClass:           o.storageClass,
 		RemoteOptions:          defaultRemoteOptions(),
 	}
-	_, err = deploy(ctx, pkgLayout, opts)
+	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents, o.confirm)
 	if err != nil {
 		return err
 	}
