@@ -69,6 +69,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		if err != nil {
 			return "", fmt.Errorf("failed to load differential package: %w", err)
 		}
+		if err := pkgLayout.Cleanup(); err != nil {
+			return "", err
+		}
 		differentialPkg = pkgLayout.Pkg
 	}
 
