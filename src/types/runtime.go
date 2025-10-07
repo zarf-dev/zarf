@@ -4,17 +4,6 @@
 // Package types contains all the types used by Zarf.
 package types
 
-// RegistryOverride describes an override for a specific registry.
-type RegistryOverride struct {
-	// Source describes the source registry.
-	// May be of the form:
-	// - docker.io/library
-	// - docker.io
-	Source string
-	// Override replaces the source registry as a string prefix.
-	Override string
-}
-
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
 	// Allow insecure connections for remote packages

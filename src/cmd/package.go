@@ -24,8 +24,8 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
-	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -143,8 +143,8 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 //
 // Input is of the following form:
 // []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
-func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error) {
-	result := make([]types.RegistryOverride, len(overrides))
+func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, error) {
+	result := make([]images.RegistryOverride, len(overrides))
 	for i, mapping := range overrides {
 		source, override, found := strings.Cut(mapping, "=")
 		if !found {
@@ -159,7 +159,7 @@ func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error
 			return nil, fmt.Errorf("registry override missing value: %s", mapping)
 		}
 
-		if index := slices.IndexFunc(result, func(existing types.RegistryOverride) bool {
+		if index := slices.IndexFunc(result, func(existing images.RegistryOverride) bool {
 			return existing.Source == source
 		}); index >= 0 {
 			return nil, fmt.Errorf("registry override has duplicate source: existing index %d, new index %d, source %s", index, i, source)
@@ -170,7 +170,7 @@ func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error
 	}
 
 	// We sort these now at parse time so they are handled correctly throughout execution.
-	slices.SortFunc(result, func(a types.RegistryOverride, b types.RegistryOverride) int {
+	slices.SortFunc(result, func(a images.RegistryOverride, b images.RegistryOverride) int {
 		return -strings.Compare(a.Source, b.Source)
 	})
 
