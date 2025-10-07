@@ -100,7 +100,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables, false)
 	if err != nil {
 		return err
 	}

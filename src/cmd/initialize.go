@@ -162,8 +162,9 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		SetVariables:           o.setVariables,
 		StorageClass:           o.storageClass,
 		RemoteOptions:          defaultRemoteOptions(),
+		IsInteractive:          !o.confirm,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents, o.confirm)
+	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
 		return err
 	}

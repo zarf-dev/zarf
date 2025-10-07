@@ -61,6 +61,8 @@ type FindImagesOptions struct {
 	SkipCosign bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables or package templates
+	IsInteractive bool
 }
 
 // ComponentImageScan contains the results of FindImages for a component
@@ -98,7 +100,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if opts.RegistryURL != "" {
 		s.RegistryInfo.Address = opts.RegistryURL
 	}
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +154,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}

@@ -327,9 +327,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SetVariables:           o.setVariables,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
+		IsInteractive:          !o.confirm,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents, o.confirm)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -349,14 +350,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string, confirm bool) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
 		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, confirm)
+	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +365,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	// filter after confirmation to allow users to view the entire package interactively
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, !confirm),
+		filters.ForDeploy(optionalComponents, opts.IsInteractive),
 	)
 
 	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
@@ -380,7 +381,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, confirm bool) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
 	l := logger.From(ctx)
 
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
@@ -391,7 +392,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
-	if pkgLayout.ContainsSBOM() && !confirm {
+	if pkgLayout.ContainsSBOM() && isInteractive {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
@@ -407,13 +408,14 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
-	if confirm {
+	if !isInteractive {
 		return nil
 	}
 
 	prompt := &survey.Confirm{
 		Message: "Deploy this Zarf package?",
 	}
+	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
 		return fmt.Errorf("deployment cancelled")
 	}
@@ -756,8 +758,9 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
+		SetVariables:  o.setVariables,
+		KubeVersion:   o.kubeVersion,
+		IsInteractive: true,
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -842,8 +845,9 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
+		SetVariables:  o.setVariables,
+		KubeVersion:   o.kubeVersion,
+		IsInteractive: true,
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
