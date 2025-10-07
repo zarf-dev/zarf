@@ -178,6 +178,7 @@ func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, erro
 }
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
+	config.CommonOptions.Confirm = o.confirm
 	l := logger.From(ctx)
 	baseDir := setBaseDirectory(args)
 
@@ -211,7 +212,6 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
-		IsInteractive:           !o.confirm,
 	}
 	_, err = packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -227,7 +227,6 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 type packageDeployOptions struct {
 	namespaceOverride       string
-	confirm                 bool
 	adoptExistingResources  bool
 	timeout                 time.Duration
 	retries                 int
@@ -253,7 +252,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
@@ -320,7 +319,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SetVariables:           o.setVariables,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
-		IsInteractive:          !o.confirm,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
@@ -350,7 +348,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
+	err := confirmDeploy(ctx, pkgLayout, setVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +356,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	// filter after confirmation to allow users to view the entire package interactively
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
+		filters.ForDeploy(optionalComponents, !config.CommonOptions.Confirm),
 	)
 
 	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
@@ -374,7 +372,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
 	l := logger.From(ctx)
 
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
@@ -385,7 +383,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
-	if pkgLayout.ContainsSBOM() && isInteractive {
+	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
@@ -401,7 +399,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
-	if !isInteractive {
+	if config.CommonOptions.Confirm {
 		return nil
 	}
 
@@ -438,7 +436,6 @@ func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]strin
 type packageMirrorResourcesOptions struct {
 	mirrorImages            bool
 	mirrorRepos             bool
-	confirm                 bool
 	shasum                  string
 	noImgChecksum           bool
 	skipSignatureValidation bool
@@ -470,7 +467,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
@@ -769,9 +766,8 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables:  o.setVariables,
-		KubeVersion:   o.kubeVersion,
-		IsInteractive: true,
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -860,9 +856,8 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables:  o.setVariables,
-		KubeVersion:   o.kubeVersion,
-		IsInteractive: true,
+		SetVariables: o.setVariables,
+		KubeVersion:  o.kubeVersion,
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
@@ -1207,7 +1202,6 @@ func (o *packageListOptions) run(ctx context.Context) error {
 
 type packageRemoveOptions struct {
 	namespaceOverride       string
-	confirm                 bool
 	optionalComponents      string
 	skipSignatureValidation bool
 	ociConcurrency          int
@@ -1230,7 +1224,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
@@ -1283,7 +1277,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
-	if !o.confirm {
+	if !config.CommonOptions.Confirm {
 		prompt := &survey.Confirm{
 			Message: "Remove this Zarf package?",
 		}
@@ -1306,7 +1300,6 @@ type packagePublishOptions struct {
 	signingKeyPath          string
 	signingKeyPassword      string
 	skipSignatureValidation bool
-	confirm                 bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -1330,7 +1323,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
 }
