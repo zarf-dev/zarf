@@ -103,9 +103,10 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:       o.flavor,
-		SetVariables: o.setVariables,
-		CachePath:    cachePath,
+		Flavor:        o.flavor,
+		SetVariables:  o.setVariables,
+		CachePath:     cachePath,
+		IsInteractive: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
@@ -789,7 +790,6 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	config.CommonOptions.Confirm = true
 	baseDir := setBaseDirectory(args)
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(

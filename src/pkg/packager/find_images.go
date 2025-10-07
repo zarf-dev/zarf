@@ -84,9 +84,10 @@ type ComponentImageScan struct {
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	loadOpts := load.DefinitionOptions{
-		Flavor:       opts.Flavor,
-		SetVariables: opts.CreateSetVariables,
-		CachePath:    opts.CachePath,
+		Flavor:        opts.Flavor,
+		SetVariables:  opts.CreateSetVariables,
+		CachePath:     opts.CachePath,
+		IsInteractive: opts.IsInteractive,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

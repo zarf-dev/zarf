@@ -35,6 +35,8 @@ type CreateOptions struct {
 	CachePath               string
 	// applicable when output is an OCI registry
 	RemoteOptions
+	// IsInteractive decides if Zarf will prompt users in the CLI for empty package templates
+	IsInteractive bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
@@ -44,9 +46,10 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:       opts.Flavor,
-		SetVariables: opts.SetVariables,
-		CachePath:    opts.CachePath,
+		Flavor:        opts.Flavor,
+		SetVariables:  opts.SetVariables,
+		CachePath:     opts.CachePath,
+		IsInteractive: opts.IsInteractive,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

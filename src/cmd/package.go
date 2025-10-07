@@ -221,6 +221,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
+		IsInteractive:           !o.confirm,
 	}
 	_, err = packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table

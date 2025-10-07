@@ -59,9 +59,10 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:       opts.Flavor,
-		SetVariables: opts.CreateSetVariables,
-		CachePath:    opts.CachePath,
+		Flavor:        opts.Flavor,
+		SetVariables:  opts.CreateSetVariables,
+		CachePath:     opts.CachePath,
+		IsInteractive: false,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
