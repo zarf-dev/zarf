@@ -365,13 +365,12 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	helmOpts := helm.InstallUpgradeOptions{
-		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
 		State:          newState,
 		Cluster:        c,
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		Retries:        config.ZarfDefaultRetries,
-		IsInteractive:  !o.confirm,
 	}
 
 	// Update Zarf 'init' component Helm releases if present

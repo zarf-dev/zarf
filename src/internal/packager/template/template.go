@@ -27,12 +27,12 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
-func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
+func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
 	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
-		if isInteractive {
-			return interactive.PromptVariable(ctx, variable)
+		if config.CommonOptions.Confirm {
+			return variable.Default, nil
 		}
-		return variable.Default, nil
+		return interactive.PromptVariable(ctx, variable)
 	}
 
 	return variables.New("zarf", prompt, logger.From(ctx))

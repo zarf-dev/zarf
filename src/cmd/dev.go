@@ -103,10 +103,9 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setVariables,
-		CachePath:     cachePath,
-		IsInteractive: true,
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
+		CachePath:    cachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
@@ -170,7 +169,6 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
-		IsInteractive:      true,
 	}
 	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
@@ -248,7 +246,6 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
-		IsInteractive:      true,
 	}
 	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
@@ -682,7 +679,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		Why:                 o.why,
 		SkipCosign:          o.skipCosign,
 		CachePath:           cachePath,
-		IsInteractive:       true,
 	}
 	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
 	var lintErr *lint.LintError

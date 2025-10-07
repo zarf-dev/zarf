@@ -82,7 +82,6 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 	}
 	imagesScans, err := FindImages(ctx, tmpGeneratePath, FindImagesOptions{
 		KubeVersionOverride: opts.KubeVersion,
-		IsInteractive:       false,
 	})
 	if err != nil {
 		// purposefully not returning error here, as we can still generate the package without images

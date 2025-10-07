@@ -57,8 +57,6 @@ type InstallUpgradeOptions struct {
 	PkgName string
 	// NamespaceOverride is the namespace override to use for the chart
 	NamespaceOverride string
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables
-	IsInteractive bool
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -76,7 +74,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		zarfChart.ReleaseName = zarfChart.Name
 	}
 	if opts.VariableConfig == nil {
-		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
+		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	// Setup K8s connection.
@@ -192,7 +190,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 	if opts.VariableConfig == nil {
-		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
+		opts.VariableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)

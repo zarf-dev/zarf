@@ -25,7 +25,7 @@ import (
 // Run runs all provided actions.
 func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig(ctx, false)
+		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 
 	for _, a := range actions {

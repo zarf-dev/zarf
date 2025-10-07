@@ -28,9 +28,9 @@ import (
 
 // TemplateChart generates a helm template from a given chart.
 func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values,
-	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool) (string, error) {
+	kubeVersion string, variableConfig *variables.VariableConfig) (string, error) {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
+		variableConfig = template.GetZarfVariableConfig(ctx)
 	}
 	l := logger.From(ctx)
 	l.Debug("templating helm chart", "name", zarfChart.Name)

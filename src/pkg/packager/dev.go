@@ -49,6 +49,7 @@ type DevDeployOptions struct {
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
+	config.CommonOptions.Confirm = true
 
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
@@ -58,10 +59,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:        opts.Flavor,
-		SetVariables:  opts.CreateSetVariables,
-		CachePath:     opts.CachePath,
-		IsInteractive: false,
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -100,7 +100,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables, false)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
 	if err != nil {
 		return err
 	}

@@ -28,8 +28,6 @@ type DefinitionOptions struct {
 	SetVariables map[string]string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// IsInteractive decides if Zarf will prompt users in the CLI for empty package templates
-	IsInteractive bool
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
@@ -56,7 +54,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	if opts.SetVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
+		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
@@ -115,7 +113,7 @@ func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return false
 }
 
-func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {
+func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (v1alpha1.ZarfPackage, []string, error) {
 	templateMap := map[string]string{}
 	warnings := []string{}
 
@@ -131,7 +129,7 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 			}
 
 			_, present := setVariables[key]
-			if !present && isInteractive {
+			if !present && !config.CommonOptions.Confirm {
 				setVal, err := interactive.PromptVariable(ctx, v1alpha1.InteractiveVariable{
 					Variable: v1alpha1.Variable{Name: key},
 				})

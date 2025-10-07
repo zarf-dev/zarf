@@ -61,8 +61,6 @@ type FindImagesOptions struct {
 	SkipCosign bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables or package templates
-	IsInteractive bool
 }
 
 // ComponentImageScan contains the results of FindImages for a component
@@ -84,10 +82,9 @@ type ComponentImageScan struct {
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	loadOpts := load.DefinitionOptions{
-		Flavor:        opts.Flavor,
-		SetVariables:  opts.CreateSetVariables,
-		CachePath:     opts.CachePath,
-		IsInteractive: opts.IsInteractive,
+		Flavor:       opts.Flavor,
+		SetVariables: opts.CreateSetVariables,
+		CachePath:    opts.CachePath,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -101,7 +98,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if opts.RegistryURL != "" {
 		s.RegistryInfo.Address = opts.RegistryURL
 	}
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +152,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersionOverride)
 			if err != nil {
 				return nil, err
 			}
