@@ -186,8 +186,6 @@ func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error
 }
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
-	// TODO pass confirm through the system rather than keeping it as a global
-	config.CommonOptions.Confirm = o.confirm
 	l := logger.From(ctx)
 	baseDir := setBaseDirectory(args)
 
@@ -282,8 +280,6 @@ func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
 	}
-	// TODO @austinabro321 delete any uses of this
-	config.CommonOptions.Confirm = o.confirm
 }
 
 func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
@@ -1306,7 +1302,6 @@ func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
 	}
-	config.CommonOptions.Confirm = o.confirm
 }
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {

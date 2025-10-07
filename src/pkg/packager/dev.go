@@ -49,7 +49,6 @@ type DevDeployOptions struct {
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	config.CommonOptions.Confirm = true
 
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
