@@ -121,12 +121,6 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	err := cmd.Flags().MarkDeprecated("retries", "retries does not have any impact on package creation")
-	if err != nil {
-		logger.Default().Debug("unable to mark flag retries as deprecated", "error", err)
-	}
-
 	errOD := cmd.Flags().MarkHidden("output-directory")
 	if errOD != nil {
 		logger.Default().Debug("unable to mark flag output-directory", "error", errOD)
@@ -1438,7 +1432,6 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),

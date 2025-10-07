@@ -136,7 +136,6 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
 		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
