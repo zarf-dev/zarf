@@ -17,6 +17,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -284,7 +285,6 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type registryPruneOptions struct {
-	confirm  bool
 	insecure bool
 }
 
@@ -299,7 +299,7 @@ func newRegistryPruneCommand() *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
@@ -339,14 +339,14 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error {
-			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint)
 		})
 	}
 
-	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint)
 }
 
-func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
 	l := logger.From(ctx)
 	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
@@ -424,6 +424,7 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 		l.Info(digestRef)
 	}
 
+	confirm := config.CommonOptions.Confirm
 	if !confirm {
 		prompt := &survey.Confirm{
 			Message: "Continue with image prune?",
