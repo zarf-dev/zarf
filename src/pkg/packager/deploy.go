@@ -135,7 +135,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
-	logger.From(ctx).Debug("package values", "values", vals)
+	l.Debug("package values", "values", vals)
 
 	d := deployer{
 		vc:   variableConfig,
@@ -499,6 +499,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 }
 
 func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) (_ []state.InstalledChart, err error) {
+	l := logger.From(ctx)
 	installedCharts := []state.InstalledChart{}
 
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -540,7 +541,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
-		logger.From(ctx).Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
+		l.Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -557,7 +558,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
-		logger.From(ctx).Debug("loaded chart",
+		l.Debug("loaded chart",
 			"metadata", helmChart.Metadata,
 			"chartValues", helmChart.Values,
 			"valuesOverrides", values,
