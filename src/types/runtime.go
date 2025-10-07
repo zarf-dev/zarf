@@ -6,7 +6,7 @@ package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	// Confirm flag to skip prompts
+	// Verify that Zarf should perform an action
 	Confirm bool
 	// Allow insecure connections for remote packages
 	Insecure bool
