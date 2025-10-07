@@ -23,8 +23,6 @@ type RegistryOverride struct {
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	// Verify that Zarf should perform an action
-	Confirm bool
 	// Allow insecure connections for remote packages
 	Insecure bool
 	// Disable checking the server TLS certificate for validity
@@ -35,8 +33,6 @@ type ZarfCommonOptions struct {
 	CachePath string
 	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
 	TempDirectory string
-	// Number of concurrent layer operations to perform when interacting with a remote package
-	OCIConcurrency int
 }
 
 // ZarfPackageOptions tracks the user-defined preferences during common package operations.

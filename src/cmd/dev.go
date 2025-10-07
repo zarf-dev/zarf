@@ -282,6 +282,7 @@ type devDeployOptions struct {
 	retries                int
 	optionalComponents     string
 	noYOLO                 bool
+	ociConcurrency         int
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -316,6 +317,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
 	return cmd
 }
 
@@ -349,7 +352,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OptionalComponents: o.optionalComponents,
 		Timeout:            o.timeout,
 		Retries:            o.retries,
-		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
 	})
