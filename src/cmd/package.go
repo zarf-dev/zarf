@@ -356,7 +356,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables)
+	err := confirmDeploy(ctx, pkgLayout, setVariables, confirm)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, confirm bool) (err error) {
 	l := logger.From(ctx)
 
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
@@ -391,7 +391,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
-	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
+	if pkgLayout.ContainsSBOM() && !confirm {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
@@ -407,14 +407,13 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
-	if config.CommonOptions.Confirm {
+	if confirm {
 		return nil
 	}
 
 	prompt := &survey.Confirm{
 		Message: "Deploy this Zarf package?",
 	}
-	var confirm bool
 	if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
 		return fmt.Errorf("deployment cancelled")
 	}
