@@ -151,6 +151,19 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 // Input is of the following form:
 // []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
 func parseRegistryOverrides(overrides []string) ([]types.RegistryOverride, error) {
+	// fallback for comma parsing (specifically environment variables)
+	// otherwise we recommend atmoic overrides with multiple flag entries
+	// or a configuration file
+	if len(overrides) == 1 && strings.Contains(overrides[0], ",") {
+		parts := strings.Split(overrides[0], ",")
+		overrides = overrides[:0]
+		for _, p := range parts {
+			if s := strings.TrimSpace(p); s != "" {
+				overrides = append(overrides, s)
+			}
+		}
+	}
+
 	result := make([]types.RegistryOverride, len(overrides))
 	for i, mapping := range overrides {
 		source, override, found := strings.Cut(mapping, "=")
@@ -202,6 +215,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}
+	l.Debug("parsed registry overrides", "overrides", overrides)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {

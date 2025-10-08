@@ -393,9 +393,18 @@ func TestParseRegistryOverrides(t *testing.T) {
 				{Source: "docker.io", Override: intranetRegistry},
 			},
 		},
+		{
+			name: "comma delimited environment variable override",
+			provided: []string{
+				fmt.Sprintf("%s=%s,%s=%s", "docker.io", intranetRegistry, "registry1.dso.mil", intranetRegistry),
+			},
+			expected: []types.RegistryOverride{
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
 	}
 	for _, tc := range tests {
-		require.Len(t, tc.expected, len(tc.provided), "The expected array is not the same length as the provided array.")
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result, err := parseRegistryOverrides(tc.provided)
