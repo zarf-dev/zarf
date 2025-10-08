@@ -1,1 +1,4 @@
 test: "default-value"
+nested:
+  parent: "parent-nested-value"
+  shared: "parent-shared-value"

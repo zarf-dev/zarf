@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-import-values
+  description: Imported package with values to merge
+
+values:
+  files:
+    - import-values.yaml
+
+components:
+  - name: test-import-component
+    description: Component to be imported
+    required: true

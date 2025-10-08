@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-import-configmap
+  namespace: default
+data:
+  # Should be "default-value" from parent (parent overrides child)
+  test: "{{ .Values.test }}"
+  # Should be "from-child" (only in child)
+  imported: "{{ .Values.imported }}"
+  # Should be "parent-nested-value" (only in parent)
+  nested-parent: "{{ .Values.nested.parent }}"
+  # Should be "child-nested-value" (only in child)
+  nested-child: "{{ .Values.nested.child }}"
+  # Should be "parent-shared-value" (parent overrides child)
+  nested-shared: "{{ .Values.nested.shared }}"
