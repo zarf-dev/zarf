@@ -65,7 +65,7 @@ func TestRemoveFailedPackagedComponents(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// expect an error during deploy
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--timeout", "20s", "--retries", "1")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--timeout", "3s")
 	require.Error(t, err, stdOut, stdErr)
 
 	// check state that the installedChart is deployed and recorded in state
