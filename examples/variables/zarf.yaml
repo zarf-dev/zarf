@@ -34,35 +34,35 @@ variables:
     default: Defense Unicorns
     prompt: true
     pattern: "^[\\w\\s\\-\\.]+$"
-  # AWS_REGION sets the region to set in the modified-terraform file and sets `sensitive` so that it will not be saved in the log
-  - name: AWS_REGION
-    default: us-east-1
+  # SECRET sets the environment in the modified-config file and sets `sensitive` so that it will not be saved in the log
+  - name: SECRET
+    default: sample-secret
     sensitive: true
-  # MODIFIED_TERRAFORM sets a filepath for a terraform file to be used as the contents of a template
-  - name: MODIFIED_TERRAFORM
-    default: modified-terraform.tf
+  # MODIFIED_CONFIG sets a filepath for a config file to be used as the contents of a template
+  - name: MODIFIED_CONFIG
+    default: modified-config.json
     autoIndent: true
     sensitive: true
     type: file
 
 components:
-  # The following component templates the provided .tf file with the defined AWS_REGION
+  # The following component templates the provided config file with the defined ENVIRONMENT
   # NOTE: this component does not actually execute this file in this example
-  - name: variables-with-terraform
-    description: Change a value in a regular file with a Zarf variable. Set AWS_REGION variable to modify the file.
+  - name: variables-with-config
+    description: Change a value in a regular file with a Zarf variable. Set ENVIRONMENT variable to modify the file.
     required: true
     files:
-      - source: simple-terraform.tf
-        target: modified-terraform.tf
+      - source: simple-config.json
+        target: modified-config.json
     actions:
       onDeploy:
         after:
-          # This command uses Zarf to return the SHASUM of the terraform file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
-          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_TERRAFORM}
+          # This command uses Zarf to return the SHASUM of the config file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
+          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_CONFIG}
             # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
             mute: true
             setVariables:
-              - name: MODIFIED_TERRAFORM_SHASUM
+              - name: MODIFIED_CONFIG_SHASUM
                 # `sensitive` is set to exclude the command output from the logs
                 sensitive: true
                 # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
