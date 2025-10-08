@@ -51,8 +51,6 @@ type InstallUpgradeOptions struct {
 	AirgapMode bool
 	// Timeout for the helm install/upgrade
 	Timeout time.Duration
-	// Retries for the helm install/upgrade
-	Retries int
 	// PkgName is the name of the zarf package being installed
 	PkgName string
 	// NamespaceOverride is the namespace override to use for the chart
@@ -115,7 +113,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	}
 	if err != nil {
 		removeMsg := "if you need to remove the failed chart, use `zarf package remove`"
-		installErr := fmt.Errorf("unable to install chart after %d attempts: %w: %s", opts.Retries, err, removeMsg)
+		installErr := fmt.Errorf("unable to install chart %w: %s", err, removeMsg)
 
 		releases, err := histClient.Run(zarfChart.ReleaseName)
 		if err != nil {
