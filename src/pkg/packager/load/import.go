@@ -155,7 +155,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		// Collect values files from imported package, fixing paths to be relative to import location
 		for _, valuesFile := range importedPkg.Values.Files {
 			fixedPath := makePathRelativeTo(valuesFile, importPath)
-			childValuesFiles = append(childValuesFiles, fixedPath)
+			childValuesFiles = append(childValuesFiles, filepath.ToSlash(fixedPath))
 		}
 	}
 
