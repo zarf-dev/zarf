@@ -56,6 +56,8 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 	variables := pkg.Variables
 	constants := pkg.Constants
+	parentValuesFiles := pkg.Values.Files
+	childValuesFiles := []string{}
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
@@ -149,6 +151,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+
+		// Collect values files from imported package, fixing paths to be relative to import location
+		for _, valuesFile := range importedPkg.Values.Files {
+			fixedPath := makePathRelativeTo(valuesFile, importPath)
+			childValuesFiles = append(childValuesFiles, fixedPath)
+		}
 	}
 
 	pkg.Components = components
@@ -169,6 +177,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			pkg.Constants = append(pkg.Constants, c)
 			constMap[c.Name] = true
 		}
+	}
+
+	// Merge values files: append child (imported) values files first, then parent values files
+	// This ordering ensures parent values take precedence when parsed later
+	// (later files override earlier ones during values parsing)
+	if len(childValuesFiles) > 0 || len(parentValuesFiles) > 0 {
+		pkg.Values.Files = append(childValuesFiles, parentValuesFiles...)
 	}
 
 	l.Debug("done layout.ResolveImports",

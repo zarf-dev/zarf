@@ -64,6 +64,10 @@ func TestResolveImports(t *testing.T) {
 			name: "chart version and url properties are not overridden",
 			path: "./testdata/import/chart",
 		},
+		{
+			name: "values files are imported with correct path and precedence",
+			path: "./testdata/import/values-files",
+		},
 	}
 
 	for _, tc := range testCases {

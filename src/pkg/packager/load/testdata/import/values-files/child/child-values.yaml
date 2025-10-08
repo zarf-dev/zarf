@@ -1,0 +1,7 @@
+app:
+  name: "child-app-name"
+  version: "1.0.0"
+  replicas: 3
+database:
+  host: "child-db-host"
+  port: 5432

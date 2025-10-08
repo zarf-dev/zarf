@@ -1,0 +1,5 @@
+app:
+  name: "parent-app-name"
+  replicas: 5
+server:
+  port: 8080
