@@ -694,6 +694,30 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "union with empty source slice",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "union with empty destination slice",
+			dst: Values{
+				"items": []any{},
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -704,6 +728,15 @@ func TestMerge(t *testing.T) {
 			require.Equal(t, tt.expect, tt.dst)
 		})
 	}
+}
+
+func TestMerge_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	var nilValues Values
+	// Should not panic when calling Merge on nil receiver
+	nilValues.Merge(Values{"key": "value"})
+	require.Nil(t, nilValues)
 }
 
 func TestFill(t *testing.T) {
@@ -964,6 +997,30 @@ func TestFill(t *testing.T) {
 				"data": []any{"value1", "value2"},
 			},
 		},
+		{
+			name: "union with empty source slice",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "union with empty destination slice",
+			dst: Values{
+				"items": []any{},
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -974,4 +1031,13 @@ func TestFill(t *testing.T) {
 			require.Equal(t, tt.expect, tt.dst)
 		})
 	}
+}
+
+func TestFill_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	var nilValues Values
+	// Should not panic when calling Fill on nil receiver
+	nilValues.Fill(Values{"key": "value"})
+	require.Nil(t, nilValues)
 }
