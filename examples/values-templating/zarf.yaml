@@ -51,6 +51,13 @@ components:
           - sourcePath: ".database.host2"
             targetPath: ".config.database.host"
 
+  - name: values-import-example
+    description: This component demonstrates importing values from another package
+    required: true
+    import:
+      path: import-values
+      name: no-op
+
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
@@ -76,6 +83,21 @@ x-mdx: |
     - **Math functions**: `add`, `mul`, `max`, `min`
     - **Encoding functions**: `b64enc`, `sha256sum`
     - **Utility functions**: `repeat`, `indent`, `trunc`, `toString`
+
+  ## Values Import Example
+
+  The `values-import-example` component demonstrates how to import and merge values files from another package:
+
+  - The `import-values/` subdirectory contains a mixin package with additional values
+  - When imported, its `mixin-values.yaml` is merged with the parent's `values.yaml`
+  - **Parent values take precedence**: Values defined in the parent package override imported values
+  - **Deep merge**: Nested objects are merged recursively (e.g., `app.image.pullPolicy` is added without overwriting `app.image.tag`)
+  - **Slice union**: Arrays like `features` are combined with duplicates removed
+
+  This pattern is useful for:
+  - Providing default configurations that can be selectively overridden
+  - Creating reusable value mixins for common settings
+  - Building environment-specific packages (dev/staging/prod) that share base values
 
   ## Try It Out
 

@@ -1,0 +1,23 @@
+# Additional values that can be mixed into a parent package
+# These will be merged with the parent's values, with parent values taking precedence
+
+# Additional app configuration
+app:
+  # Provides a default description that parent can override
+  description: "A demo application"
+
+  # Additional image configuration (merged with parent)
+  image:
+    pullPolicy: "IfNotPresent"
+
+# Additional database settings
+database:
+  # Provides default connection pool settings
+  pool:
+    min: 5
+    max: 20
+
+# Additional features list (will be unioned with parent features)
+features:
+  - "caching"
+  - "monitoring"
