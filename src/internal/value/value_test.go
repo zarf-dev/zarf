@@ -481,7 +481,7 @@ func TestSet_Errors(t *testing.T) {
 	}
 }
 
-func TestDeepMerge(t *testing.T) {
+func TestMerge(t *testing.T) {
 	tests := []struct {
 		name    string
 		dst     Values
@@ -617,13 +617,360 @@ func TestDeepMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "slice values are unioned (no duplicates)",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item3", "item4"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3", "item4"},
+			},
+		},
+		{
+			name: "slice union removes duplicates",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item2", "item3"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3"},
+			},
+		},
+		{
+			name: "slice union with complex types",
+			dst: Values{
+				"configs": []any{
+					map[string]any{"name": "config1", "value": "val1"},
+				},
+			},
+			sources: []Values{
+				{
+					"configs": []any{
+						map[string]any{"name": "config2", "value": "val2"},
+						map[string]any{"name": "config1", "value": "val1"}, // duplicate
+					},
+				},
+			},
+			expect: Values{
+				"configs": []any{
+					map[string]any{"name": "config1", "value": "val1"},
+					map[string]any{"name": "config2", "value": "val2"},
+				},
+			},
+		},
+		{
+			name: "slice can be added when key doesn't exist",
+			dst: Values{
+				"existing": "value",
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"existing": "value",
+				"items":    []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "map overwrites existing slice",
+			dst: Values{
+				"data": []any{"value1", "value2"},
+			},
+			sources: []Values{
+				{
+					"data": map[string]any{
+						"key": "value",
+					},
+				},
+			},
+			expect: Values{
+				"data": map[string]any{
+					"key": "value",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tt.dst.DeepMerge(tt.sources...)
+			tt.dst.Merge(tt.sources...)
+			require.Equal(t, tt.expect, tt.dst)
+		})
+	}
+}
+
+func TestFill(t *testing.T) {
+	tests := []struct {
+		name    string
+		dst     Values
+		sources []Values
+		expect  Values
+	}{
+		{
+			name:    "fill single map with new keys",
+			dst:     Values{"key1": "value1"},
+			sources: []Values{{"key2": "value2"}},
+			expect:  Values{"key1": "value1", "key2": "value2"},
+		},
+		{
+			name: "fill multiple maps with new keys",
+			dst:  Values{"key1": "value1"},
+			sources: []Values{
+				{"key2": "value2"},
+				{"key3": "value3"},
+			},
+			expect: Values{"key1": "value1", "key2": "value2", "key3": "value3"},
+		},
+		{
+			name: "existing values are NOT overwritten",
+			dst:  Values{"key": "original"},
+			sources: []Values{
+				{"key": "first"},
+				{"key": "second"},
+			},
+			expect: Values{"key": "original"},
+		},
+		{
+			name: "nested maps fill recursively without overwriting",
+			dst: Values{
+				"app": map[string]any{
+					"name": "myapp",
+				},
+			},
+			sources: []Values{
+				{
+					"app": map[string]any{
+						"version": "1.0",
+					},
+				},
+			},
+			expect: Values{
+				"app": map[string]any{
+					"name":    "myapp",
+					"version": "1.0",
+				},
+			},
+		},
+		{
+			name: "deeply nested maps fill without overwriting",
+			dst: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu": "100m",
+						},
+					},
+				},
+			},
+			sources: []Values{
+				{
+					"deployment": map[string]any{
+						"resources": map[string]any{
+							"limits": map[string]any{
+								"memory": "128Mi",
+							},
+						},
+					},
+				},
+			},
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "100m",
+							"memory": "128Mi",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nested values in dst are preserved over source",
+			dst: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "200m",
+							"memory": "256Mi",
+						},
+					},
+				},
+			},
+			sources: []Values{
+				{
+					"deployment": map[string]any{
+						"resources": map[string]any{
+							"limits": map[string]any{
+								"cpu":    "100m",
+								"memory": "128Mi",
+							},
+							"requests": map[string]any{
+								"cpu": "50m",
+							},
+						},
+					},
+				},
+			},
+			expect: Values{
+				"deployment": map[string]any{
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "200m",
+							"memory": "256Mi",
+						},
+						"requests": map[string]any{
+							"cpu": "50m",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "non-map values do NOT overwrite",
+			dst: Values{
+				"key": map[string]any{
+					"nested": "value",
+				},
+			},
+			sources: []Values{
+				{"key": "string-value"},
+			},
+			expect: Values{
+				"key": map[string]any{
+					"nested": "value",
+				},
+			},
+		},
+		{
+			name:    "nil source is skipped",
+			dst:     Values{"key1": "value1"},
+			sources: []Values{nil, {"key2": "value2"}},
+			expect:  Values{"key1": "value1", "key2": "value2"},
+		},
+		{
+			name:    "empty sources list",
+			dst:     Values{"key": "value"},
+			sources: []Values{},
+			expect:  Values{"key": "value"},
+		},
+		{
+			name: "later sources fill gaps earlier sources couldn't",
+			dst:  Values{"key1": "value1"},
+			sources: []Values{
+				{
+					"key2": "from-first",
+					"key3": "from-first",
+				},
+				{
+					"key3": "from-second",
+					"key4": "from-second",
+				},
+			},
+			expect: Values{
+				"key1": "value1",
+				"key2": "from-first",
+				"key3": "from-first",
+				"key4": "from-second",
+			},
+		},
+		{
+			name: "partial overlap with nested structures",
+			dst: Values{
+				"app": map[string]any{
+					"name": "myapp",
+				},
+				"replicas": 5,
+			},
+			sources: []Values{
+				{
+					"app": map[string]any{
+						"name":    "other-app",
+						"version": "1.0",
+					},
+					"replicas": 3,
+					"service": map[string]any{
+						"type": "LoadBalancer",
+					},
+				},
+			},
+			expect: Values{
+				"app": map[string]any{
+					"name":    "myapp",
+					"version": "1.0",
+				},
+				"replicas": 5,
+				"service": map[string]any{
+					"type": "LoadBalancer",
+				},
+			},
+		},
+		{
+			name: "slice values are unioned in Fill",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item3", "item4"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3", "item4"},
+			},
+		},
+		{
+			name: "slice union in Fill removes duplicates",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item2", "item3"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3"},
+			},
+		},
+		{
+			name: "slice can be added to dst when key doesn't exist",
+			dst: Values{
+				"existing": "value",
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"existing": "value",
+				"items":    []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "map does not overwrite existing slice in Fill",
+			dst: Values{
+				"data": []any{"value1", "value2"},
+			},
+			sources: []Values{
+				{
+					"data": map[string]any{
+						"key": "value",
+					},
+				},
+			},
+			expect: Values{
+				"data": []any{"value1", "value2"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tt.dst.Fill(tt.sources...)
 			require.Equal(t, tt.expect, tt.dst)
 		})
 	}
