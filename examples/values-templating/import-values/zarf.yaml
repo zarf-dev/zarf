@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: mixin-values
+  description: Example mixin package that provides additional values
+
+values:
+  files:
+    - mixin-values.yaml
+
+components:
+  - name: no-op
+    description: A simple component that does nothing
+    required: true

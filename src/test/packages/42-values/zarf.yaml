@@ -8,6 +8,13 @@ values:
     - values.yaml
 
 components:
+  - name: test-import-values-component
+    description: Component that imports values from another package
+    required: true
+    import:
+      path: import
+      name: test-import-component
+
   - name: test-values-component
     required: true
     actions:
@@ -31,3 +38,7 @@ components:
         template: true
         files:
           - action-configmap.yaml
+      - name: test-import-configmap
+        template: true
+        files:
+          - import-test-configmap.yaml

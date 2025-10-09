@@ -42,6 +42,13 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get action configmap")
 	require.Contains(t, kubectlOut, "myValue")
 
+	// Verify imported values were merged correctly with parent taking precedence
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-import-configmap", "-o", "yaml")
+	require.NoError(t, err, "unable to get import configmap")
+	require.Contains(t, kubectlOut, "default-value", "parent value should override child value")
+	require.Contains(t, kubectlOut, "from-child", "child-only value should be present")
+	require.Contains(t, kubectlOut, "parent-shared-value", "parent nested value should override child nested value")
+
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

@@ -481,7 +481,7 @@ func TestSet_Errors(t *testing.T) {
 	}
 }
 
-func TestDeepMerge(t *testing.T) {
+func TestMerge(t *testing.T) {
 	tests := []struct {
 		name    string
 		dst     Values
@@ -617,14 +617,124 @@ func TestDeepMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "slice values are unioned (no duplicates)",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item3", "item4"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3", "item4"},
+			},
+		},
+		{
+			name: "slice union removes duplicates",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{"item2", "item3"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2", "item3"},
+			},
+		},
+		{
+			name: "slice union with complex types",
+			dst: Values{
+				"configs": []any{
+					map[string]any{"name": "config1", "value": "val1"},
+				},
+			},
+			sources: []Values{
+				{
+					"configs": []any{
+						map[string]any{"name": "config2", "value": "val2"},
+						map[string]any{"name": "config1", "value": "val1"}, // duplicate
+					},
+				},
+			},
+			expect: Values{
+				"configs": []any{
+					map[string]any{"name": "config1", "value": "val1"},
+					map[string]any{"name": "config2", "value": "val2"},
+				},
+			},
+		},
+		{
+			name: "slice can be added when key doesn't exist",
+			dst: Values{
+				"existing": "value",
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"existing": "value",
+				"items":    []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "map overwrites existing slice",
+			dst: Values{
+				"data": []any{"value1", "value2"},
+			},
+			sources: []Values{
+				{
+					"data": map[string]any{
+						"key": "value",
+					},
+				},
+			},
+			expect: Values{
+				"data": map[string]any{
+					"key": "value",
+				},
+			},
+		},
+		{
+			name: "union with empty source slice",
+			dst: Values{
+				"items": []any{"item1", "item2"},
+			},
+			sources: []Values{
+				{"items": []any{}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
+		{
+			name: "union with empty destination slice",
+			dst: Values{
+				"items": []any{},
+			},
+			sources: []Values{
+				{"items": []any{"item1", "item2"}},
+			},
+			expect: Values{
+				"items": []any{"item1", "item2"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			tt.dst.DeepMerge(tt.sources...)
+			tt.dst.Merge(tt.sources...)
 			require.Equal(t, tt.expect, tt.dst)
 		})
 	}
+}
+
+func TestMerge_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	var nilValues Values
+	// Should not panic when calling Merge on nil receiver
+	nilValues.Merge(Values{"key": "value"})
+	require.Nil(t, nilValues)
 }

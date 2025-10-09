@@ -90,7 +90,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 				return nil, err
 			}
 			// Done, merge new values into existing
-			m.DeepMerge(vals)
+			m.Merge(vals)
 		}
 	}
 	return m, nil
@@ -134,9 +134,12 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 // 	return nil
 // }
 
-// DeepMerge merges one or more Values maps recursively into the receiver via mutation.
+// Merge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
-func (v Values) DeepMerge(sources ...Values) {
+// When both values are maps, they are recursively merged.
+// When both values are slices, elements from source are unioned with destination,
+// For all other types, the source value overwrites the destination.
+func (v Values) Merge(sources ...Values) {
 	if v == nil {
 		return
 	}
@@ -149,11 +152,17 @@ func (v Values) DeepMerge(sources ...Values) {
 				// Both have the key, merge
 				srcMap, srcIsMap := srcVal.(map[string]any)
 				dstMap, dstIsMap := dstVal.(map[string]any)
+				srcSlice, srcIsSlice := srcVal.([]any)
+				dstSlice, dstIsSlice := dstVal.([]any)
+
 				if srcIsMap && dstIsMap {
 					// Both are maps, recur
-					Values(dstMap).DeepMerge(srcMap)
+					Values(dstMap).Merge(srcMap)
+				} else if srcIsSlice && dstIsSlice {
+					// Both are slices, union them (append + dedupe)
+					v[key] = unionSlices(dstSlice, srcSlice)
 				} else {
-					// Not both maps, src overwrites dst
+					// Not both maps or slices, src overwrites dst
 					v[key] = srcVal
 				}
 			} else {
@@ -162,6 +171,41 @@ func (v Values) DeepMerge(sources ...Values) {
 			}
 		}
 	}
+}
+
+// unionSlices combines two slices, removing duplicates.
+// It preserves the order: all elements from dst first, then new elements from src.
+// Duplicate detection uses deep equality comparison via fmt.Sprintf for simplicity.
+func unionSlices(dst, src []any) []any {
+	if len(src) == 0 {
+		return dst
+	}
+	if len(dst) == 0 {
+		return src
+	}
+
+	// Build a set of existing elements for O(n) lookup
+	seen := make(map[string]bool)
+	for _, item := range dst {
+		// Use fmt.Sprintf as a simple serialization for comparison
+		// This handles primitives, maps, and nested structures
+		key := fmt.Sprintf("%#v", item)
+		seen[key] = true
+	}
+
+	// Add unique elements from src
+	result := make([]any, len(dst), len(dst)+len(src))
+	copy(result, dst)
+
+	for _, item := range src {
+		key := fmt.Sprintf("%#v", item)
+		if !seen[key] {
+			result = append(result, item)
+			seen[key] = true
+		}
+	}
+
+	return result
 }
 
 // Extract retrieves a value from a nested Values map using dot notation path.

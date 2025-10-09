@@ -1,0 +1,8 @@
+# Values from imported package
+# These should be merged with parent, with parent taking precedence
+
+test: "child-value"
+imported: "from-child"
+nested:
+  child: "child-nested-value"
+  shared: "child-shared-value"

@@ -95,7 +95,7 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 	}
 
 	// Merge valuesOverrides into chartOverrides (valuesOverrides takes precedence)
-	chartOverrides.DeepMerge(valuesOverrides)
+	chartOverrides.Merge(valuesOverrides)
 	return chartOverrides, nil
 }
 
