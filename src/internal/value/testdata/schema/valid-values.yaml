@@ -1,0 +1,4 @@
+app:
+  name: myapp
+  replicas: 3
+enabled: true

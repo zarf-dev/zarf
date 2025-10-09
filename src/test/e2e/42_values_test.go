@@ -15,7 +15,7 @@ import (
 func TestValues(t *testing.T) {
 	t.Log("E2E: Values")
 
-	src := filepath.Join("src", "test", "packages", "42-values")
+	src := filepath.Join("src", "test", "packages", "42_values", "basic")
 	tmpdir := t.TempDir()
 
 	// Create the package
@@ -45,4 +45,37 @@ func TestValues(t *testing.T) {
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+}
+
+func TestValuesSchema(t *testing.T) {
+	t.Log("E2E: Values Schema Validation")
+
+	src := filepath.Join("src", "test", "packages", "42_values", "schema-valid")
+	tmpdir := t.TempDir()
+
+	// Valid values should pass during create
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-test-values-schema-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
+	// Valid values should pass during deploy
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify the configmap was created with schema-validated values
+	kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "test-schema-configmap", "-o", "jsonpath='{.data.replicas}'")
+	require.NoError(t, err, "unable to get configmap")
+	require.Contains(t, kubectlOut, "3")
+
+	// Remove the package
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values-schema", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Invalid values should fail during create
+	invalidSrc := filepath.Join("src", "test", "packages", "42_values", "schema-invalid")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", invalidSrc, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
+	require.Error(t, err, "package create should fail with invalid values")
+	require.Contains(t, stdErr, "schema validation failed", "error should mention schema validation")
 }

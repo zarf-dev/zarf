@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -102,6 +103,10 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		}
 	}
 
+	if err := validateValuesSchema(ctx, pkg, packagePath); err != nil {
+		return err
+	}
+
 	l.Debug("done layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"path", packagePath,
@@ -109,6 +114,35 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		"duration", time.Since(start),
 	)
 
+	return nil
+}
+
+func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string) error {
+	// Skip validation if no schema or values files are provided
+	if pkg.Values.Schema == "" || len(pkg.Values.Files) == 0 {
+		return nil
+	}
+
+	l := logger.From(ctx)
+
+	// Resolve values file paths relative to the package directory
+	valueFilePaths := make([]string, len(pkg.Values.Files))
+	for i, vf := range pkg.Values.Files {
+		valueFilePaths[i] = filepath.Join(packagePath, vf)
+	}
+
+	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to parse values files for validation: %w", err)
+	}
+
+	// Resolve schema path relative to package directory
+	schemaPath := filepath.Join(packagePath, pkg.Values.Schema)
+	if err := vals.Validate(ctx, schemaPath); err != nil {
+		return fmt.Errorf("values validation failed: %w", err)
+	}
+
+	l.Debug("values validated against schema", "schemaPath", schemaPath)
 	return nil
 }
 

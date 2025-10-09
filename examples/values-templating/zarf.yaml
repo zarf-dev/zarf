@@ -5,6 +5,7 @@ metadata:
 values:
   files:
     - values.yaml
+  schema: values.schema.json
 
 # Until Consts and Vars are fully deprecated, they'll be available in go-templates
 constants:

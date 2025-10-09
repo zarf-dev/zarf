@@ -628,3 +628,66 @@ func TestDeepMerge(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name       string
+		valuesFile string
+		schemaFile string
+	}{
+		{
+			name:       "valid values pass schema validation",
+			valuesFile: "testdata/schema/valid-values.yaml",
+			schemaFile: "testdata/schema/simple.schema.json",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
+			require.NoError(t, err)
+
+			err = vals.Validate(ctx, tt.schemaFile)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidate_Errors(t *testing.T) {
+	tests := []struct {
+		name        string
+		valuesFile  string
+		schemaFile  string
+		errContains string
+	}{
+		{
+			name:        "missing required field",
+			valuesFile:  "testdata/schema/invalid-values.yaml",
+			schemaFile:  "testdata/schema/simple.schema.json",
+			errContains: "schema validation failed",
+		},
+		{
+			name:        "nonexistent schema file",
+			valuesFile:  "testdata/schema/valid-values.yaml",
+			schemaFile:  "testdata/schema/nonexistent.schema.json",
+			errContains: "failed to load or parse schema",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
+			require.NoError(t, err)
+
+			err = vals.Validate(ctx, tt.schemaFile)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errContains)
+		})
+	}
+}
