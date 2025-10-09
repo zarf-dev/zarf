@@ -130,7 +130,7 @@ Skeleton packages are published by pointing the publish command to a directory r
 
 ## When should I clear my Zarf cache?
 
-When Zarf pulls new images or OCI artifacts, it will store locally them to speed up future uses. Over time, the cache
+When Zarf pulls new images or OCI artifacts, it will store them locally to speed up future uses. Over time, the cache
 will grow, especially if you run `zarf package create` often with a variety of packages or with many large images. The
 default location is in the home directory for the current user at `~/.zarf-cache`. Unix users can check the cache size
 with `du -sh ~/.zarf-cache` and if you'd like to free up some disk space we recommend running `zarf tools cache-clear`.
