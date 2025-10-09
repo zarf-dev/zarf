@@ -370,7 +370,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		Cluster:        c,
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
-		Retries:        config.ZarfDefaultRetries,
 		IsInteractive:  !o.confirm,
 	}
 
