@@ -163,6 +163,15 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
+	// Copy schema file if specified
+	if pkg.Values.Schema != "" {
+		l.Debug("copying values schema file to package", "schema", pkg.Values.Schema)
+		// NOTE(mkcp): values schemas should have the same copy-constraints as values files.
+		if err = copyValuesFile(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+	}
+
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
