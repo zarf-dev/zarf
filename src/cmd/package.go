@@ -112,7 +112,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
@@ -144,18 +144,6 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 // Input is of the following form:
 // []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
 func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, error) {
-	// fallback for comma parsing (specifically environment variables)
-	// only support during instances of a single override with a comma
-	if len(overrides) == 1 && strings.Contains(overrides[0], ",") {
-		parts := strings.Split(overrides[0], ",")
-		overrides = overrides[:0]
-		for _, p := range parts {
-			if s := strings.TrimSpace(p); s != "" {
-				overrides = append(overrides, s)
-			}
-		}
-	}
-
 	result := make([]images.RegistryOverride, len(overrides))
 	for i, mapping := range overrides {
 		source, override, found := strings.Cut(mapping, "=")

@@ -393,16 +393,6 @@ func TestParseRegistryOverrides(t *testing.T) {
 				{Source: "docker.io", Override: intranetRegistry},
 			},
 		},
-		{
-			name: "comma delimited environment variable override",
-			provided: []string{
-				fmt.Sprintf("%s=%s,%s=%s", "docker.io", intranetRegistry, "registry1.dso.mil", intranetRegistry),
-			},
-			expected: []images.RegistryOverride{
-				{Source: "registry1.dso.mil", Override: intranetRegistry},
-				{Source: "docker.io", Override: intranetRegistry},
-			},
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
