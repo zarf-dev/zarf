@@ -91,6 +91,14 @@ func testHelmChartsExample(t *testing.T) {
 	require.Error(t, err, stdOut, stdErr)
 	require.Contains(t, string(stdErr), "localhost:555")
 
+	// Create a test package (with multiple overrides set from an environment variable)
+	// This should fail but validates that the environment variable is correctly parsed
+	t.Setenv("ZARF_PACKAGE_CREATE_REGISTRY_OVERRIDE", "ghcr.io=localhost:555/noway,docker.io=local-proxy/registry-1.docker.io")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmpdir, "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, string(stdErr), "localhost:555/noway")
+	t.Setenv("ZARF_PACKAGE_CREATE_REGISTRY_OVERRIDE", "")
+
 	// Create the package (with a registry override (host to host) to test that as well)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmpdir, "--registry-override", "ghcr.io=docker.io", "--tmpdir", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
