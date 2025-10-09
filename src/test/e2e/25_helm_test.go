@@ -49,6 +49,8 @@ func TestHelm(t *testing.T) {
 
 	t.Run("helm charts example", testHelmChartsExample)
 
+	t.Run("helm charts example with environment registry overrides", testHelmExampleWithOverrides)
+
 	t.Run("helm escaping", testHelmEscaping)
 }
 
