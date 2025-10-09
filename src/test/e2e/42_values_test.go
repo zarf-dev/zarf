@@ -75,7 +75,7 @@ func TestValuesSchema(t *testing.T) {
 
 	// Invalid values should fail during create
 	invalidSrc := filepath.Join("src", "test", "packages", "42_values", "schema-invalid")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", invalidSrc, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
+	_, stdErr, err = e2e.Zarf(t, "package", "create", invalidSrc, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
 	require.Error(t, err, "package create should fail with invalid values")
 	require.Contains(t, stdErr, "schema validation failed", "error should mention schema validation")
 }

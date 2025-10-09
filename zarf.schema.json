@@ -424,10 +424,12 @@
     "ZarfChartValue": {
       "properties": {
         "sourcePath": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$"
         },
         "targetPath": {
-          "type": "string"
+          "type": "string",
+          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$"
         }
       },
       "additionalProperties": false,
@@ -1163,7 +1165,7 @@
         },
         "schema": {
           "type": "string",
-          "description": "Schema is a placeholder field for importing a .json.schema file for imported Values files."
+          "description": "Schema is a placeholder field for importing a .schema.json file for imported Values files."
         }
       },
       "additionalProperties": false,
