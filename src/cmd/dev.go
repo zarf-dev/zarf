@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -267,7 +268,19 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	return nil
 }
 
-type devDeployOptions struct{}
+type devDeployOptions struct {
+	createSetVariables     map[string]string
+	deploySetVariables     map[string]string
+	registryOverrides      []string
+	flavor                 string
+	registryURL            string
+	adoptExistingResources bool
+	timeout                time.Duration
+	retries                int
+	optionalComponents     string
+	noYOLO                 bool
+	ociConcurrency         int
+}
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	o := &devDeployOptions{}
@@ -280,62 +293,63 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.run,
 	}
 
-	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringArrayVar(&pkgConfig.CreateOpts.RegistryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
-	cmd.Flags().StringVar(&pkgConfig.DeployOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
+	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 	err := cmd.Flags().MarkHidden("registry-url")
 	if err != nil {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 
 	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
-	cmd.Flags().BoolVar(&pkgConfig.CreateOpts.NoYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
 	return cmd
 }
 
 func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	pkgConfig.CreateOpts.BaseDir = setBaseDirectory(args)
+	baseDir := setBaseDirectory(args)
 
 	v := getViper()
-	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+	o.createSetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	o.deploySetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
-	overrides, err := parseRegistryOverrides(pkgConfig.CreateOpts.RegistryOverrides)
+	overrides, err := parseRegistryOverrides(o.registryOverrides)
 	if err != nil {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}
 
-	err = packager.DevDeploy(ctx, pkgConfig.CreateOpts.BaseDir, packager.DevDeployOptions{
-		AirgapMode:         pkgConfig.CreateOpts.NoYOLO,
-		Flavor:             pkgConfig.CreateOpts.Flavor,
-		RegistryURL:        pkgConfig.DeployOpts.RegistryURL,
+	err = packager.DevDeploy(ctx, baseDir, packager.DevDeployOptions{
+		AirgapMode:         o.noYOLO,
+		Flavor:             o.flavor,
+		RegistryURL:        o.registryURL,
 		RegistryOverrides:  overrides,
-		CreateSetVariables: pkgConfig.CreateOpts.SetVariables,
-		DeploySetVariables: pkgConfig.PkgOpts.SetVariables,
-		OptionalComponents: pkgConfig.PkgOpts.OptionalComponents,
-		Timeout:            pkgConfig.DeployOpts.Timeout,
-		Retries:            pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
+		CreateSetVariables: o.createSetVariables,
+		DeploySetVariables: o.deploySetVariables,
+		OptionalComponents: o.optionalComponents,
+		Timeout:            o.timeout,
+		Retries:            o.retries,
+		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
 	})
@@ -427,7 +441,9 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	return os.WriteFile(generatedZarfYAMLPath, []byte(content), helpers.ReadAllWriteUser)
 }
 
-type devPatchGitOptions struct{}
+type devPatchGitOptions struct {
+	gitPushUsername string
+}
 
 func newDevPatchGitCommand() *cobra.Command {
 	o := &devPatchGitOptions{}
@@ -440,8 +456,7 @@ func newDevPatchGitCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
+	cmd.Flags().StringVar(&o.gitPushUsername, "git-account", state.ZarfGitPushUser, lang.CmdDevFlagGitAccount)
 
 	return cmd
 }
@@ -455,14 +470,10 @@ func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to read the file %s: %w", fileName, err)
 	}
-
-	gitServer := pkgConfig.InitOpts.GitServer
-	gitServer.Address = host
-
 	// Perform git url transformation via regex
 	text := string(content)
 
-	processedText := transform.MutateGitURLsInText(l.Warn, gitServer.Address, text, gitServer.PushUsername)
+	processedText := transform.MutateGitURLsInText(l.Warn, host, text, o.gitPushUsername)
 
 	// Print the differences
 	dmp := diffmatchpatch.New()
@@ -592,7 +603,16 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 	return nil
 }
 
-type devFindImagesOptions struct{}
+type devFindImagesOptions struct {
+	repoHelmChartPath   string
+	createSetVariables  map[string]string
+	flavor              string
+	deploySetVariables  map[string]string
+	kubeVersionOverride string
+	why                 string
+	skipCosign          bool
+	registryURL         string
+}
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	o := &devFindImagesOptions{}
@@ -606,10 +626,9 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	// TODO(soltysh): get rid of pkgConfig global
-	cmd.Flags().StringVarP(&pkgConfig.FindImagesOpts.RepoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
+	cmd.Flags().StringVarP(&o.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
 
 	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
@@ -619,17 +638,17 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	if err != nil {
 		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
 	}
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	// allow for the override of the default helm KubeVersion
-	cmd.Flags().StringVar(&pkgConfig.FindImagesOpts.KubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
+	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
-	cmd.Flags().StringVar(&pkgConfig.FindImagesOpts.Why, "why", "", lang.CmdDevFlagFindImagesWhy)
+	cmd.Flags().StringVar(&o.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
-	cmd.Flags().BoolVar(&pkgConfig.FindImagesOpts.SkipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	cmd.Flags().BoolVar(&o.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
 
-	cmd.Flags().StringVar(&pkgConfig.FindImagesOpts.RegistryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
+	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
 	return cmd
 }
@@ -640,10 +659,10 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	v := getViper()
 
-	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	o.createSetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.deploySetVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -651,14 +670,14 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	findImagesOptions := packager.FindImagesOptions{
-		RepoHelmChartPath:   pkgConfig.FindImagesOpts.RepoHelmChartPath,
-		RegistryURL:         pkgConfig.FindImagesOpts.RegistryURL,
-		KubeVersionOverride: pkgConfig.FindImagesOpts.KubeVersionOverride,
-		CreateSetVariables:  pkgConfig.CreateOpts.SetVariables,
-		DeploySetVariables:  pkgConfig.PkgOpts.SetVariables,
-		Flavor:              pkgConfig.CreateOpts.Flavor,
-		Why:                 pkgConfig.FindImagesOpts.Why,
-		SkipCosign:          pkgConfig.FindImagesOpts.SkipCosign,
+		RepoHelmChartPath:   o.repoHelmChartPath,
+		RegistryURL:         o.registryURL,
+		KubeVersionOverride: o.kubeVersionOverride,
+		CreateSetVariables:  o.createSetVariables,
+		DeploySetVariables:  o.deploySetVariables,
+		Flavor:              o.flavor,
+		Why:                 o.why,
+		SkipCosign:          o.skipCosign,
 		CachePath:           cachePath,
 	}
 	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
@@ -670,7 +689,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to find images: %w", err)
 	}
 
-	if pkgConfig.FindImagesOpts.Why != "" {
+	if o.why != "" {
 		var foundWhyResource bool
 		for _, scan := range imagesScans {
 			for _, whyResource := range scan.WhyResources {
@@ -680,7 +699,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 			}
 		}
 		if !foundWhyResource {
-			return fmt.Errorf("image %s not found in any charts or manifests", pkgConfig.FindImagesOpts.Why)
+			return fmt.Errorf("image %s not found in any charts or manifests", o.why)
 		}
 		return nil
 	}
@@ -745,7 +764,10 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-type devLintOptions struct{}
+type devLintOptions struct {
+	setVariables map[string]string
+	flavor       string
+}
 
 func newDevLintCommand(v *viper.Viper) *cobra.Command {
 	o := &devLintOptions{}
@@ -759,26 +781,25 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&pkgConfig.CreateOpts.SetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringVarP(&pkgConfig.CreateOpts.Flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	return cmd
 }
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	config.CommonOptions.Confirm = true
 	baseDir := setBaseDirectory(args)
 	v := getViper()
-	pkgConfig.CreateOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), pkgConfig.CreateOpts.SetVariables, strings.ToUpper)
+	o.setVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 	err = packager.Lint(ctx, baseDir, packager.LintOptions{
-		Flavor:       pkgConfig.CreateOpts.Flavor,
-		SetVariables: pkgConfig.CreateOpts.SetVariables,
+		Flavor:       o.flavor,
+		SetVariables: o.setVariables,
 		CachePath:    cachePath,
 	})
 	var lintErr *lint.LintError
