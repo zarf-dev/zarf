@@ -173,44 +173,6 @@ func (v Values) Merge(sources ...Values) {
 	}
 }
 
-// Fill fills the receiver with values from sources that don't already exist via mutation.
-// Existing values in the receiver are NEVER overwritten.
-// Later maps in the variadic arguments take precedence over earlier ones for filling gaps.
-// When both values are maps, they are recursively filled.
-// When both values are slices, elements from source are unioned with destination,
-// For all other types, the existing destination value is preserved.
-func (v Values) Fill(sources ...Values) {
-	if v == nil {
-		return
-	}
-	for _, src := range sources {
-		if src == nil {
-			continue
-		}
-		for key, srcVal := range src {
-			if dstVal, exists := v[key]; exists {
-				// Both have the key, only recur/union if both are maps or slices
-				srcMap, srcIsMap := srcVal.(map[string]any)
-				dstMap, dstIsMap := dstVal.(map[string]any)
-				srcSlice, srcIsSlice := srcVal.([]any)
-				dstSlice, dstIsSlice := dstVal.([]any)
-
-				if srcIsMap && dstIsMap {
-					// Both are maps, recur
-					Values(dstMap).Fill(srcMap)
-				} else if srcIsSlice && dstIsSlice {
-					// Both are slices, union them (append + dedupe)
-					v[key] = unionSlices(dstSlice, srcSlice)
-				}
-				// If not both maps or slices, keep existing dst value (don't overwrite)
-			} else {
-				// Key only in src, add it
-				v[key] = srcVal
-			}
-		}
-	}
-}
-
 // unionSlices combines two slices, removing duplicates.
 // It preserves the order: all elements from dst first, then new elements from src.
 // Duplicate detection uses deep equality comparison via fmt.Sprintf for simplicity.
