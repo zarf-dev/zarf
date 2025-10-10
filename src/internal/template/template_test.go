@@ -339,21 +339,37 @@ func TestObjects_WithState(t *testing.T) {
 		{
 			name: "complete state",
 			state: &state.State{
-				StorageClass: "standard",
+				ZarfAppliance: true,
+				Distro:        "k3s",
+				Architecture:  "amd64",
+				StorageClass:  "standard",
 				RegistryInfo: state.RegistryInfo{
 					Address:      "registry.example.com",
 					NodePort:     30000,
+					PushUsername: "reg-push-user",
 					PushPassword: "push-secret",
+					PullUsername: "reg-pull-user",
 					PullPassword: "pull-secret",
 				},
 				GitServer: state.GitServerInfo{
+					Address:      "https://git.example.com",
 					PushUsername: "git-push-user",
 					PushPassword: "git-push-secret",
 					PullUsername: "git-pull-user",
 					PullPassword: "git-pull-secret",
 				},
+				ArtifactServer: state.ArtifactServerInfo{
+					Address:      "https://artifacts.example.com",
+					PushUsername: "artifact-user",
+					PushToken:    "artifact-token",
+				},
 			},
 			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    true,
+					"distro":       "k3s",
+					"architecture": "amd64",
+				},
 				"storage": map[string]any{
 					"class": "standard",
 				},
@@ -361,13 +377,16 @@ func TestObjects_WithState(t *testing.T) {
 					"address":  "registry.example.com",
 					"nodePort": 30000,
 					"push": map[string]any{
+						"username": "reg-push-user",
 						"password": "push-secret",
 					},
 					"pull": map[string]any{
+						"username": "reg-pull-user",
 						"password": "pull-secret",
 					},
 				},
 				"git": map[string]any{
+					"address": "https://git.example.com",
 					"push": map[string]any{
 						"username": "git-push-user",
 						"password": "git-push-secret",
@@ -375,6 +394,13 @@ func TestObjects_WithState(t *testing.T) {
 					"pull": map[string]any{
 						"username": "git-pull-user",
 						"password": "git-pull-secret",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "https://artifacts.example.com",
+					"push": map[string]any{
+						"username": "artifact-user",
+						"token":    "artifact-token",
 					},
 				},
 			},
@@ -385,6 +411,11 @@ func TestObjects_WithState(t *testing.T) {
 				StorageClass: "fast-storage",
 			},
 			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    false,
+					"distro":       "",
+					"architecture": "",
+				},
 				"storage": map[string]any{
 					"class": "fast-storage",
 				},
@@ -392,13 +423,16 @@ func TestObjects_WithState(t *testing.T) {
 					"address":  "",
 					"nodePort": 0,
 					"push": map[string]any{
+						"username": "",
 						"password": "",
 					},
 					"pull": map[string]any{
+						"username": "",
 						"password": "",
 					},
 				},
 				"git": map[string]any{
+					"address": "",
 					"push": map[string]any{
 						"username": "",
 						"password": "",
@@ -406,6 +440,13 @@ func TestObjects_WithState(t *testing.T) {
 					"pull": map[string]any{
 						"username": "",
 						"password": "",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"token":    "",
 					},
 				},
 			},

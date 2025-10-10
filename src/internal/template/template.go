@@ -109,13 +109,18 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 }
 
 // WithState takes a state.State and makes cluster state information available in templating Objects.
-// This includes registry, git, and storage configuration that's common across all components.
+// This includes registry, git, storage, artifact, and cluster configuration that's common across all components.
 func (o Objects) WithState(s *state.State) Objects {
 	if s == nil {
 		return o
 	}
 
 	stateMap := map[string]any{
+		"cluster": map[string]any{
+			"appliance":    s.ZarfAppliance,
+			"distro":       s.Distro,
+			"architecture": s.Architecture,
+		},
 		"storage": map[string]any{
 			"class": s.StorageClass,
 		},
@@ -123,13 +128,16 @@ func (o Objects) WithState(s *state.State) Objects {
 			"address":  s.RegistryInfo.Address,
 			"nodePort": s.RegistryInfo.NodePort,
 			"push": map[string]any{
+				"username": s.RegistryInfo.PushUsername,
 				"password": s.RegistryInfo.PushPassword,
 			},
 			"pull": map[string]any{
+				"username": s.RegistryInfo.PullUsername,
 				"password": s.RegistryInfo.PullPassword,
 			},
 		},
 		"git": map[string]any{
+			"address": s.GitServer.Address,
 			"push": map[string]any{
 				"username": s.GitServer.PushUsername,
 				"password": s.GitServer.PushPassword,
@@ -137,6 +145,13 @@ func (o Objects) WithState(s *state.State) Objects {
 			"pull": map[string]any{
 				"username": s.GitServer.PullUsername,
 				"password": s.GitServer.PullPassword,
+			},
+		},
+		"artifact": map[string]any{
+			"address": s.ArtifactServer.Address,
+			"push": map[string]any{
+				"username": s.ArtifactServer.PushUsername,
+				"token":    s.ArtifactServer.PushToken,
 			},
 		},
 	}
