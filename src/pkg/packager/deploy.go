@@ -169,10 +169,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				var err error
 				d.c, err = cluster.NewWithWait(connectCtx)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
 				if err := d.verifyPackageIsDeployable(ctx, pkgLayout.Pkg); err != nil {
-					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
 			// If this package has been deployed before, increment the package generation within the secret
