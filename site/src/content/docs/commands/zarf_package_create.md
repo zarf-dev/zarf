@@ -28,6 +28,7 @@ zarf package create [ DIRECTORY ] [flags]
   -f, --flavor string                   The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                            help for create
   -m, --max-package-size int            Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
+      --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
   -o, --output string                   Specify the output (either a directory or an oci:// URL) for the created Zarf package
       --registry-override stringArray   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
   -s, --sbom                            View SBOM contents after creating the package
@@ -47,7 +48,6 @@ zarf package create [ DIRECTORY ] [flags]
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

@@ -26,7 +26,9 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --components string           Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
   -c, --confirm                     Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
   -h, --help                        help for deploy
+  -k, --key string                  Path to public key file for validating signed packages
   -n, --namespace string            [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
+      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --retries int                 Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string               Shasum of the package to deploy. Required if deploying a remote https package.
@@ -40,11 +42,9 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
   -a, --architecture string        Architecture for OCI images and Zarf packages
       --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                 Path to public key file for validating signed packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

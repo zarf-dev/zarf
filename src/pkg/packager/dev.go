@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeployOptions are the optionalParameters to DevDeploy
@@ -28,7 +28,7 @@ type DevDeployOptions struct {
 	// RegistryURL allows for an override to the Zarf state registry URL when not in airgap mode. Important for setting the ###ZARF_REGISTRY### template
 	RegistryURL string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry during package assembly
-	RegistryOverrides []types.RegistryOverride
+	RegistryOverrides []images.RegistryOverride
 	// CreateSetVariables are for package templates
 	CreateSetVariables map[string]string
 	// DeploySetVariables are for package variables

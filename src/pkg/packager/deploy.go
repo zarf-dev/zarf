@@ -544,7 +544,6 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
 		}
@@ -611,7 +610,6 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
 		}
