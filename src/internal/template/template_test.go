@@ -562,8 +562,10 @@ func TestObjects_WithSeedRegistryState(t *testing.T) {
 			}
 
 			require.Contains(t, result, objectKeyState)
-			stateMap := result[objectKeyState].(map[string]any)
-			registryMap := stateMap["registry"].(map[string]any)
+			stateMap, ok := result[objectKeyState].(map[string]any)
+			require.True(t, ok)
+			registryMap, ok := stateMap["registry"].(map[string]any)
+			require.True(t, ok)
 
 			// Verify expected fields exist
 			require.Contains(t, registryMap, "htpasswd")
@@ -572,7 +574,9 @@ func TestObjects_WithSeedRegistryState(t *testing.T) {
 
 			// Verify htpasswd has bcrypt format
 			require.NotEmpty(t, registryMap["htpasswd"])
-			require.Contains(t, registryMap["htpasswd"].(string), "$2")
+			htpasswd, ok := registryMap["htpasswd"].(string)
+			require.True(t, ok)
+			require.Contains(t, htpasswd, "$2")
 		})
 	}
 }
