@@ -98,10 +98,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		}
 	}
 
-	err = debugPrintTemplateMap(ctx, templateMap)
-	if err != nil {
-		return nil, err
-	}
+	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
 }
@@ -126,10 +123,9 @@ func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
-	return nil
 }
 
 func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {
