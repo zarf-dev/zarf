@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -35,7 +34,7 @@ type PullConfig struct {
 	DestinationDirectory  string
 	ImageList             []transform.Image
 	Arch                  string
-	RegistryOverrides     []types.RegistryOverride
+	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
@@ -55,6 +54,17 @@ type PushConfig struct {
 	InsecureSkipTLSVerify bool
 	Cluster               *cluster.Cluster
 	ResponseHeaderTimeout time.Duration
+}
+
+// RegistryOverride describes an override for a specific registry.
+type RegistryOverride struct {
+	// Source describes the source registry.
+	// May be of the form:
+	// - docker.io/library
+	// - docker.io
+	Source string
+	// Override replaces the source registry as a string prefix.
+	Override string
 }
 
 const (

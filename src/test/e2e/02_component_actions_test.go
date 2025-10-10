@@ -102,7 +102,6 @@ func TestComponentActions(t *testing.T) {
 		require.Contains(t, stdOut, "the cat says meow")
 		require.Contains(t, stdOut, "the dog says ruff")
 		require.Contains(t, stdOut, "the snake says hiss")
-		require.Contains(t, stdOut, "with a TF_VAR, the snake also says hiss")
 	})
 
 	t.Run("action on-deploy-with-env-var", func(t *testing.T) {

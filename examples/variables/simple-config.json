@@ -1,0 +1,11 @@
+{
+  "application": {
+    "name": "sample-config",
+    "secret": "###ZARF_VAR_SECRET###",
+    "settings": {
+      "logLevel": "info",
+      "maxConnections": 100,
+      "timeout": 30
+    }
+  }
+}
