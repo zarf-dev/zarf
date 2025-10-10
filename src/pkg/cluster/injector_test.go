@@ -431,7 +431,7 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 			expectedImage: "registry.k8s.io/pausetest:3.7",
 		},
 		{
-			name: "ignores pause images with invalid semver (version 2.x)",
+			name: "ignores pause images outside of 3-4 major version",
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
@@ -439,38 +439,21 @@ func TestGetInjectorDaemonsetImage(t *testing.T) {
 						Images: []corev1.ContainerImage{
 							{
 								Names:     []string{"k8s.gcr.io/my-custom-pause-app:2.9"},
-								SizeBytes: 6000000,
+								SizeBytes: 60,
 							},
 							{
-								Names:     []string{"alpine:latest"},
-								SizeBytes: 500000,
+								Names:     []string{"k8s.gcr.io/pause:3.0"},
+								SizeBytes: 1000000,
 							},
-						},
-					},
-				},
-			},
-			expectedImage: "alpine:latest",
-		},
-		{
-			name: "ignores pause images with invalid semver (version 5.x)",
-			nodes: []corev1.Node{
-				{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					Status: corev1.NodeStatus{
-						Images: []corev1.ContainerImage{
 							{
 								Names:     []string{"k8s.gcr.io/my-personal-image-with-pause:5.1"},
-								SizeBytes: 40000000,
-							},
-							{
-								Names:     []string{"alpine:latest"},
-								SizeBytes: 5000000,
+								SizeBytes: 40,
 							},
 						},
 					},
 				},
 			},
-			expectedImage: "alpine:latest",
+			expectedImage: "k8s.gcr.io/pause:3.0",
 		},
 		{
 			name: "ignores pause images over 1MiB size limit",
