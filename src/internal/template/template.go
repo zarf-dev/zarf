@@ -7,6 +7,7 @@ package template
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,9 +15,13 @@ import (
 	"time"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -37,6 +42,7 @@ const (
 	objectKeyBuild     = "Build"
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
+	objectKeyState     = "State"
 )
 
 // NewObjects instantiates an Objects map, which provides templating context. The "with" options below allow for
@@ -100,6 +106,120 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 		o.WithConstants(pkg.Constants)
 	}
 	return o
+}
+
+// WithState takes a state.State and makes cluster state information available in templating Objects.
+// This includes registry, git, and storage configuration that's common across all components.
+func (o Objects) WithState(s *state.State) Objects {
+	if s == nil {
+		return o
+	}
+
+	stateMap := map[string]any{
+		"storage": map[string]any{
+			"class": s.StorageClass,
+		},
+		"registry": map[string]any{
+			"address":  s.RegistryInfo.Address,
+			"nodePort": s.RegistryInfo.NodePort,
+			"push": map[string]any{
+				"password": s.RegistryInfo.PushPassword,
+			},
+			"pull": map[string]any{
+				"password": s.RegistryInfo.PullPassword,
+			},
+		},
+		"git": map[string]any{
+			"push": map[string]any{
+				"username": s.GitServer.PushUsername,
+				"password": s.GitServer.PushPassword,
+			},
+			"pull": map[string]any{
+				"username": s.GitServer.PullUsername,
+				"password": s.GitServer.PullPassword,
+			},
+		},
+	}
+
+	o[objectKeyState] = stateMap
+	return o
+}
+
+// WithAgentState adds zarf-agent component state including TLS certificates.
+func (o Objects) WithAgentState(s *state.State) Objects {
+	if s == nil {
+		return o
+	}
+
+	// Ensure State map exists
+	stateMap, ok := o[objectKeyState].(map[string]any)
+	if !ok {
+		stateMap = make(map[string]any)
+		o[objectKeyState] = stateMap
+	}
+
+	stateMap["agent"] = map[string]any{
+		"tls": map[string]any{
+			"ca":   base64.StdEncoding.EncodeToString(s.AgentTLS.CA),
+			"cert": base64.StdEncoding.EncodeToString(s.AgentTLS.Cert),
+			"key":  base64.StdEncoding.EncodeToString(s.AgentTLS.Key),
+		},
+	}
+
+	return o
+}
+
+// WithSeedRegistryState adds seed registry and registry component state including htpasswd and secrets.
+func (o Objects) WithSeedRegistryState(s *state.State) Objects {
+	if s == nil {
+		return o
+	}
+
+	// Ensure State map exists
+	stateMap, ok := o[objectKeyState].(map[string]any)
+	if !ok {
+		stateMap = make(map[string]any)
+		o[objectKeyState] = stateMap
+	}
+
+	// Ensure registry map exists
+	registryMap, ok := stateMap["registry"].(map[string]any)
+	if !ok {
+		registryMap = make(map[string]any)
+		stateMap["registry"] = registryMap
+	}
+
+	htpasswd, err := generateHtpasswd(&s.RegistryInfo)
+	if err != nil {
+		// Log error but don't fail - consistent with GetZarfTemplates behavior
+		registryMap["htpasswd"] = ""
+	} else {
+		registryMap["htpasswd"] = htpasswd
+	}
+	registryMap["seed"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
+	registryMap["secret"] = s.RegistryInfo.Secret
+
+	return o
+}
+
+// generateHtpasswd returns an htpasswd string for the given RegistryInfo.
+func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
+	// Only calculate this for internal registries to allow longer external passwords
+	if regInfo.IsInternal() {
+		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
+		if err != nil {
+			return "", fmt.Errorf("error generating htpasswd string: %w", err)
+		}
+
+		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
+		if err != nil {
+			return "", fmt.Errorf("error generating htpasswd string: %w", err)
+		}
+
+		return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
+	}
+
+	return "", nil
 }
 
 // Apply takes a string, fills in the templates with the given Objects, and returns a new string.
