@@ -55,7 +55,7 @@ type InstallUpgradeOptions struct {
 	PkgName string
 	// NamespaceOverride is the namespace override to use for the chart
 	NamespaceOverride string
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 

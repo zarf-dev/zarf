@@ -35,7 +35,7 @@ type CreateOptions struct {
 	CachePath               string
 	// applicable when output is an OCI registry
 	RemoteOptions
-	// IsInteractive decides if Zarf will prompt users in the CLI for empty package templates
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 

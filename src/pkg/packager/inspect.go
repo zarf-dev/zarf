@@ -42,8 +42,9 @@ type Resource struct {
 
 // InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
-	SetVariables  map[string]string
-	KubeVersion   string
+	SetVariables map[string]string
+	KubeVersion  string
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 
@@ -176,7 +177,7 @@ type InspectDefinitionResourcesOptions struct {
 	KubeVersion        string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 
@@ -225,7 +226,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersion, false)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}

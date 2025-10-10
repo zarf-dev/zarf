@@ -61,7 +61,7 @@ type FindImagesOptions struct {
 	SkipCosign bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables or package templates
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 

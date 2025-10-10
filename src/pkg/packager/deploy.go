@@ -63,7 +63,7 @@ type DeployOptions struct {
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap map[string]map[string]map[string]interface{}
-	// IsInteractive decides if Zarf will prompt users in the CLI for input such as variables
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 

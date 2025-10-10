@@ -28,7 +28,7 @@ type DefinitionOptions struct {
 	SetVariables map[string]string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
-	// IsInteractive decides if Zarf will prompt users in the CLI for empty package templates
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 }
 
