@@ -161,18 +161,22 @@ func (o Objects) WithState(s *state.State) Objects {
 }
 
 // WithAgentState adds zarf-agent component state including TLS certificates.
+// This method calls WithState internally, so they should not be chained together.
+// WithAgentState and WithSeedRegistryState are mutually exclusive - use one or the other, not both.
 func (o Objects) WithAgentState(s *state.State) Objects {
 	if s == nil {
 		return o
 	}
 
-	// Ensure State map exists
+	// First populate base state
+	o = o.WithState(s)
+
+	// Then add agent-specific state
 	stateMap, ok := o[objectKeyState].(map[string]any)
 	if !ok {
-		stateMap = make(map[string]any)
-		o[objectKeyState] = stateMap
+		// This should never happen since WithState was just called, but satisfy the linter
+		return o
 	}
-
 	stateMap["agent"] = map[string]any{
 		"tls": map[string]any{
 			"ca":   base64.StdEncoding.EncodeToString(s.AgentTLS.CA),
@@ -185,23 +189,26 @@ func (o Objects) WithAgentState(s *state.State) Objects {
 }
 
 // WithSeedRegistryState adds seed registry and registry component state including htpasswd and secrets.
+// This method calls WithState internally, so they should not be chained together.
+// WithAgentState and WithSeedRegistryState are mutually exclusive - use one or the other, not both.
 func (o Objects) WithSeedRegistryState(s *state.State) Objects {
 	if s == nil {
 		return o
 	}
 
-	// Ensure State map exists
+	// First populate base state
+	o = o.WithState(s)
+
+	// Then add seed registry-specific state
 	stateMap, ok := o[objectKeyState].(map[string]any)
 	if !ok {
-		stateMap = make(map[string]any)
-		o[objectKeyState] = stateMap
+		// This should never happen since WithState was just called, but satisfy the linter
+		return o
 	}
-
-	// Ensure registry map exists
 	registryMap, ok := stateMap["registry"].(map[string]any)
 	if !ok {
-		registryMap = make(map[string]any)
-		stateMap["registry"] = registryMap
+		// This should never happen since WithState was just called, but satisfy the linter
+		return o
 	}
 
 	htpasswd, err := generateHtpasswd(&s.RegistryInfo)

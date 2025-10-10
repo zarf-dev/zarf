@@ -494,6 +494,44 @@ func TestObjects_WithAgentState(t *testing.T) {
 				},
 			},
 			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    false,
+					"distro":       "",
+					"architecture": "",
+				},
+				"storage": map[string]any{
+					"class": "",
+				},
+				"registry": map[string]any{
+					"address":  "",
+					"nodePort": 0,
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"git": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"token":    "",
+					},
+				},
 				"agent": map[string]any{
 					"tls": map[string]any{
 						"ca":   base64.StdEncoding.EncodeToString(caCert),
