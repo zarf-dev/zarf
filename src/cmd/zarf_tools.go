@@ -222,6 +222,7 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 }
 
 type updateCredsOptions struct {
+	confirm        bool
 	gitServer      state.GitServerInfo
 	registryInfo   state.RegistryInfo
 	artifactServer state.ArtifactServerInfo
@@ -241,7 +242,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -314,7 +315,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 
 	printCredentialUpdates(ctx, oldState, newState, args)
 
-	confirm := config.CommonOptions.Confirm
+	confirm := o.confirm
 
 	if !confirm {
 		prompt := &survey.Confirm{
@@ -364,11 +365,12 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	helmOpts := helm.InstallUpgradeOptions{
-		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
 		State:          newState,
 		Cluster:        c,
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
+		IsInteractive:  !o.confirm,
 	}
 
 	// Update Zarf 'init' component Helm releases if present
