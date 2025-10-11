@@ -113,7 +113,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 				continue
 			}
 
-			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
+			resourceNotFound := strings.Contains(stderr, "No resources found")
 			if resourceNotFound {
 				l.Debug("resource not found", "error", err)
 				continue
