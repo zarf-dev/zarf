@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"al.essio.dev/pkg/shellescape"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -45,6 +46,8 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	// Check if waitType is JSONPath or condition
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
+		// Ensure any conditions aren't shell escaped
+		condition = shellescape.Quote(condition)
 	} else {
 		waitType = "condition="
 	}
@@ -128,7 +131,10 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if _, _, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
+			waitCmd := append(shellArgs, zarfKubectlWait)
+			waitStdout, waitStderr, err := exec.Cmd(shell, waitCmd...)
+			l.Debug("wait done", "cmd", waitCmd, "stdout", waitStdout, "stderr", waitStderr, "error", err)
+			if err != nil {
 				l.Debug("wait error", "error", err)
 				continue
 			}

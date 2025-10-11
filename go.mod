@@ -9,6 +9,7 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
 require (
+	al.essio.dev/pkg/shellescape v1.6.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
