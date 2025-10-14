@@ -22,6 +22,10 @@ components:
             setValues:
               - key: .yaml
                 type: yaml
+      onRemove:
+        before:
+          - cmd: echo "{{ .Values.test }}" > /tmp/zarf-remove-test.txt
+          - cmd: echo "{{ .Values.removeKey }}" > /tmp/zarf-remove-custom.txt
     manifests:
       - name: test-configmap
         template: true

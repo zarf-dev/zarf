@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -42,7 +43,18 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get action configmap")
 	require.Contains(t, kubectlOut, "myValue")
 
-	// Remove the package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
+	// Remove the package with values
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--set-values", "removeKey=custom-remove-value")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify the remove actions used the values correctly
+	// First file should have the default value from values.yaml
+	defaultContentBytes, err := os.ReadFile("/tmp/zarf-remove-test.txt")
+	require.NoError(t, err, "unable to read /tmp/zarf-remove-test.txt")
+	require.Contains(t, string(defaultContentBytes), "default-value", "remove action should have templated default value from values.yaml")
+
+	// Second file should have the custom value from --set-values
+	customContentBytes, err := os.ReadFile("/tmp/zarf-remove-custom.txt")
+	require.NoError(t, err, "unable to read /tmp/zarf-remove-custom.txt")
+	require.Contains(t, string(customContentBytes), "custom-remove-value", "remove action should have templated value from --set-values")
 }
