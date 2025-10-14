@@ -1,0 +1,3 @@
+config:
+  replicas: 10
+  environment: invalid

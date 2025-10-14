@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-schema-configmap
+data:
+  replicas: "{{ .Values.config.replicas }}"
+  environment: "{{ .Values.config.environment }}"
