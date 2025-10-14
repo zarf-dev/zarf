@@ -11,11 +11,11 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"al.essio.dev/pkg/shellescape"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -28,6 +28,20 @@ func isJSONPathWaitType(condition string) bool {
 	}
 
 	return true
+}
+
+var shellRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
+
+func ShellQuote(s string) string {
+	if len(s) == 0 {
+		return "''"
+	}
+
+	if shellRegex.MatchString(s) {
+		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
+	}
+
+	return s
 }
 
 // ExecuteWait executes the wait-for command.
@@ -47,7 +61,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
 		// Ensure any conditions aren't shell escaped
-		condition = shellescape.Quote(condition)
+		condition = ShellQuote(condition)
 	} else {
 		waitType = "condition="
 	}
