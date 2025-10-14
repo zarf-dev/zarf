@@ -257,3 +257,147 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
 }
+
+func TestContainsReservedFilename(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "normal filename is allowed",
+			path: "values/my-values.yaml",
+		},
+		{
+			name: "filename containing reserved name is allowed",
+			path: "my-zarf.yaml",
+		},
+		{
+			name: "path with multiple segments is allowed",
+			path: "foo/bar/baz/file.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := layout.ContainsReservedFilename(tt.path)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestContainsReservedFilename_Errors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "zarf.yaml is reserved",
+			path: "zarf.yaml",
+		},
+		{
+			name: "zarf.yaml in subdirectory is reserved",
+			path: "foo/bar/zarf.yaml",
+		},
+		{
+			name: "zarf.yaml.sig is reserved",
+			path: "zarf.yaml.sig",
+		},
+		{
+			name: "checksums.txt is reserved",
+			path: "checksums.txt",
+		},
+		{
+			name: "checksums.txt in subdirectory is reserved",
+			path: "values/checksums.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := layout.ContainsReservedFilename(tt.path)
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestContainsReservedPackageDir(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "normal path is allowed",
+			path: "values/my-values.yaml",
+		},
+		{
+			name: "path containing reserved name substring is allowed",
+			path: "my-images/file.txt",
+		},
+		{
+			name: "deeply nested normal path is allowed",
+			path: "foo/bar/baz/file.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := layout.ContainsReservedPackageDir(tt.path)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestContainsReservedPackageDir_Errors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "images directory is reserved",
+			path: "images",
+		},
+		{
+			name: "path starting with images is reserved",
+			path: "images/foo.txt",
+		},
+		{
+			name: "components directory is reserved",
+			path: "components",
+		},
+		{
+			name: "path starting with components is reserved",
+			path: "components/foo/bar.yaml",
+		},
+		{
+			name: "zarf-sbom directory is reserved",
+			path: "zarf-sbom",
+		},
+		{
+			name: "path starting with zarf-sbom is reserved",
+			path: "zarf-sbom/sbom.json",
+		},
+		{
+			name: "path with reserved dir in middle is reserved",
+			path: "foo/images/bar.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := layout.ContainsReservedPackageDir(tt.path)
+			require.Error(t, err)
+		})
+	}
+}
