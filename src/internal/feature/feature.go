@@ -33,7 +33,7 @@ var User Mode = "user"
 type Name string
 
 // Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,
-// and any commentary or context appropriate for its stage. Descirptions are mutable, and are intended to be updated
+// and any commentary or context appropriate for its stage. Descriptions are mutable, and are intended to be updated
 // throughout the feature's development lifecycle.
 type Description string
 
