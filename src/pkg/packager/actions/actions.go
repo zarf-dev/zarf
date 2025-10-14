@@ -29,7 +29,7 @@ import (
 // Run runs all provided actions.
 func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	if variableConfig == nil {
-		variableConfig = ptmpl.GetZarfVariableConfig(ctx)
+		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
 	for _, a := range actions {

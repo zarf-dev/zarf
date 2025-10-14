@@ -69,6 +69,8 @@ type DeployOptions struct {
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
+	IsInteractive bool
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -113,7 +115,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -198,10 +200,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				var err error
 				d.c, err = cluster.NewWithWait(connectCtx)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
 				if err := d.verifyPackageIsDeployable(ctx, pkgLayout.Pkg); err != nil {
-					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
 			// If this package has been deployed before, increment the package generation within the secret
@@ -550,9 +552,9 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
+			IsInteractive:          opts.IsInteractive,
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
 		if err != nil {
@@ -638,9 +640,9 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
+			IsInteractive:          opts.IsInteractive,
 		}
 
 		// Install the chart.

@@ -21,13 +21,13 @@ require (
 	github.com/derailed/k9s v0.50.9
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
-	github.com/docker/docker v28.4.0+incompatible
+	github.com/docker/docker v28.5.0+incompatible
 	github.com/fairwindsops/pluto/v5 v5.22.5
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
-	github.com/fluxcd/pkg/apis/meta v1.21.0
-	github.com/fluxcd/source-controller/api v1.7.0
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/fluxcd/pkg/apis/meta v1.22.0
+	github.com/fluxcd/source-controller/api v1.7.1
+	github.com/go-git/go-git/v5 v5.16.3
 	github.com/goccy/go-yaml v1.18.0
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-cz/devslog v0.0.15
@@ -40,7 +40,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/pterm/pterm v0.12.81
 	github.com/sergi/go-diff v1.4.0
-	github.com/sigstore/cosign/v2 v2.6.0
+	github.com/sigstore/cosign/v2 v2.6.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3
@@ -50,9 +50,9 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.42.0
+	golang.org/x/crypto v0.43.0
 	golang.org/x/sync v0.17.0
-	golang.org/x/term v0.35.0
+	golang.org/x/term v0.36.0
 	helm.sh/helm/v3 v3.18.4
 	k8s.io/api v0.34.1
 	k8s.io/apimachinery v0.34.1
@@ -177,10 +177,10 @@ require (
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sigstore/rekor-tiles v0.1.11 // indirect
-	github.com/sigstore/sigstore-go v1.1.2 // indirect
+	github.com/sigstore/sigstore-go v1.1.3 // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect
 	github.com/spdx/gordf v0.0.0-20201111095634-7098f93598fb // indirect
-	github.com/theupdateframework/go-tuf/v2 v2.1.1 // indirect
+	github.com/theupdateframework/go-tuf/v2 v2.2.0 // indirect
 	github.com/theupdateframework/notary v0.7.0 // indirect
 	github.com/transparency-dev/formats v0.0.0-20250421220931-bb8ad4d07c26 // indirect
 	github.com/transparency-dev/tessera v1.0.0-rc3 // indirect
@@ -354,7 +354,7 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v28.4.0+incompatible
+	github.com/docker/cli v28.5.0+incompatible
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
@@ -593,10 +593,10 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b // indirect
 	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/oauth2 v0.31.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/api v0.248.0 // indirect
@@ -612,10 +612,10 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/gorm v1.30.0 // indirect
-	k8s.io/apiextensions-apiserver v0.34.0 // indirect
-	k8s.io/apiserver v0.34.0 // indirect
+	k8s.io/apiextensions-apiserver v0.34.1 // indirect
+	k8s.io/apiserver v0.34.1 // indirect
 	k8s.io/cli-runtime v0.34.1 // indirect
-	k8s.io/component-helpers v0.34.1 // indirect
+	k8s.io/component-helpers v0.34.1
 	k8s.io/kube-openapi v0.0.0-20250710124328-f3f2b991d03b // indirect
 	k8s.io/metrics v0.34.1 // indirect
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
@@ -623,7 +623,7 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 	modernc.org/sqlite v1.39.0
-	sigs.k8s.io/controller-runtime v0.22.1
+	sigs.k8s.io/controller-runtime v0.22.3
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/kustomize/kustomize/v5 v5.7.1 // indirect
 	sigs.k8s.io/release-utils v0.12.1 // indirect

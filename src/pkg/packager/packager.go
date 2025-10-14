@@ -24,8 +24,8 @@ type RemoteOptions struct {
 	InsecureSkipTLSVerify bool
 }
 
-func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (*variables.VariableConfig, error) {
-	variableConfig := template.GetZarfVariableConfig(ctx)
+func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (*variables.VariableConfig, error) {
+	variableConfig := template.GetZarfVariableConfig(ctx, isInteractive)
 	variableConfig.SetConstants(pkg.Constants)
 	if err := variableConfig.PopulateVariables(pkg.Variables, setVariables); err != nil {
 		return nil, err

@@ -47,7 +47,7 @@ type PullOptions struct {
 }
 
 // Pull takes a source URL and destination directory, fetches the Zarf package from the given sources, and returns the path to the fetched package.
-func Pull(ctx context.Context, source, destination string, opts PullOptions) (string, error) {
+func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ string, err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -79,6 +79,9 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (st
 		CachePath:               opts.CachePath,
 	})
 	if err != nil {
+		return "", err
+	}
+	if err := pkgLayout.Cleanup(); err != nil {
 		return "", err
 	}
 	filename, err := pkgLayout.FileName()

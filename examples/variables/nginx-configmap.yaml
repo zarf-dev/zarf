@@ -20,11 +20,11 @@ data:
       <body>
         <!-- Test two separate variables on the same line -->
         <h1>Welcome to the ###ZARF_VAR_SITE_NAME###!</h1><h2>Brought to you by ###ZARF_VAR_ORGANIZATION###.</h2>
-        <p>Below is a Terraform File templated by Zarf</p>
+        <p>Below is a Config File templated by Zarf</p>
         <pre>
-          ###ZARF_VAR_MODIFIED_TERRAFORM###
+          ###ZARF_VAR_MODIFIED_CONFIG###
         </pre>
-        <pre>File SHASUM: ###ZARF_VAR_MODIFIED_TERRAFORM_SHASUM###</pre>
+        <pre>File SHASUM: ###ZARF_VAR_MODIFIED_CONFIG_SHASUM###</pre>
         ###ZARF_VAR_OPTIONAL_FOOTER###
       </body>
     </html>
