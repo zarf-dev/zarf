@@ -1228,6 +1228,8 @@ type packageRemoveOptions struct {
 	skipSignatureValidation bool
 	ociConcurrency          int
 	publicKeyPath           string
+	valuesFiles             []string
+	setValues               map[string]string
 }
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
@@ -1250,6 +1252,8 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, "Path to values file(s) for removal actions")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 
 	return cmd
 }
@@ -1267,6 +1271,25 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	vals, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := vals.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(o.optionalComponents),
@@ -1293,6 +1316,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Cluster:           c,
 		Timeout:           config.ZarfDefaultTimeout,
 		NamespaceOverride: o.namespaceOverride,
+		Values:            vals,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	err = utils.ColorPrintYAML(pkg, nil, false)

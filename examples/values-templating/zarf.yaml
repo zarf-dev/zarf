@@ -21,6 +21,15 @@ components:
     images:
       # NOTE: Pkgtemplates aren't yet available with value and go-templates.
       - "nginx:latest"
+    actions:
+      onRemove:
+        before:
+          - cmd: |
+              echo "============================================"
+              echo "Removing {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+              echo "Organization: {{ .Values.site.organization }}"
+              echo "============================================"
     manifests:
       - name: values-with-nginx
         # Enables go-templating within the files.
@@ -92,4 +101,7 @@ x-mdx: |
 
     # View the helm chart results
     kubectl get configmap -n helm-overrides
+
+    # Remove the package with values templating in remove actions
+    zarf package remove values-templating --confirm --features="values=true"
     ```
