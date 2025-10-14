@@ -287,7 +287,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage) ([]Resource, error) {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage) (_ []Resource, err error) {
 	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
@@ -295,7 +295,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 	manifestPath := filepath.Join(baseComponentDir, string(layout.ManifestsComponentDir))
 
 	var resources []Resource
-	err := filepath.Walk(manifestPath, func(manifestFile string, info os.FileInfo, err error) error {
+	err = filepath.Walk(manifestPath, func(manifestFile string, info os.FileInfo, err error) (err2 error) {
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,10 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 			if err != nil {
 				return fmt.Errorf("unable to create temp directory: %w", err)
 			}
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				rErr := os.RemoveAll(tmpDir)
+				err2 = errors.Join(err2, rErr)
+			}()
 
 			tmpFile := filepath.Join(tmpDir, filepath.Base(manifestFile))
 			if err := tmpl.ApplyToFile(ctx, manifestFile, tmpFile, objs); err != nil {
@@ -344,13 +347,13 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 			Name:         manifestFile,
 			ResourceType: ManifestResource,
 		})
-		return nil
+		return err2
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return resources, nil
+	return resources, err
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
