@@ -9,12 +9,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	tmpl "github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -176,6 +179,8 @@ func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableCon
 type InspectDefinitionResourcesOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
+	ValuesFiles        []string
+	SetValues          map[string]string
 	Flavor             string
 	KubeVersion        string
 	// CachePath is used to cache layers from skeleton package pulls
@@ -205,6 +210,24 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
+	// Parse values from files
+	vals, err := value.ParseFiles(ctx, opts.ValuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range opts.SetValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := vals.Set(path, val); err != nil {
+			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -229,7 +252,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, packagePath, compBuildPath, variableConfig, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}
@@ -253,7 +276,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}
@@ -264,7 +287,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig) ([]Resource, error) {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage) ([]Resource, error) {
 	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
@@ -272,23 +295,53 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 	manifestPath := filepath.Join(baseComponentDir, string(layout.ManifestsComponentDir))
 
 	var resources []Resource
-	err := filepath.Walk(manifestPath, func(manifest string, info os.FileInfo, err error) error {
+	err := filepath.Walk(manifestPath, func(manifestFile string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
 			return nil
 		}
-		if err := variableConfig.ReplaceTextTemplate(manifest); err != nil {
+
+		// First apply ###ZARF_VAR_*### and ###ZARF_CONST_*### templating
+		if err := variableConfig.ReplaceTextTemplate(manifestFile); err != nil {
 			return fmt.Errorf("error templating the manifest: %w", err)
 		}
-		content, err := os.ReadFile(manifest)
-		if err != nil {
-			return err
+
+		// Then apply Go template templating if manifest.Template is enabled
+		var content []byte
+		if manifest.IsTemplate() {
+			// Create template objects with values, metadata, build, constants, and variables
+			objs := tmpl.NewObjects(vals).
+				WithPackage(pkg).
+				WithVariables(variableConfig.GetSetVariableMap())
+
+			// Create a temp file for the output
+			tmpDir, err := os.MkdirTemp("", "zarf-inspect-*")
+			if err != nil {
+				return fmt.Errorf("unable to create temp directory: %w", err)
+			}
+			defer os.RemoveAll(tmpDir)
+
+			tmpFile := filepath.Join(tmpDir, filepath.Base(manifestFile))
+			if err := tmpl.ApplyToFile(ctx, manifestFile, tmpFile, objs); err != nil {
+				return fmt.Errorf("error applying Go templates to manifest: %w", err)
+			}
+
+			content, err = os.ReadFile(tmpFile)
+			if err != nil {
+				return fmt.Errorf("unable to read templated manifest: %w", err)
+			}
+		} else {
+			content, err = os.ReadFile(manifestFile)
+			if err != nil {
+				return err
+			}
 		}
+
 		resources = append(resources, Resource{
 			Content:      string(content),
-			Name:         manifest,
+			Name:         manifestFile,
 			ResourceType: ManifestResource,
 		})
 		return nil
@@ -301,21 +354,21 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
-func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, kubeVersion string, isInteractive bool) (Resource, chartutil.Values, error) {
+func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, kubeVersion string, isInteractive bool) (Resource, chartutil.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
 	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath); err != nil {
 		return Resource{}, chartutil.Values{}, err
 	}
 
-	chartOverrides := make(map[string]any)
-	for _, variable := range zarfChart.Variables {
-		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-				return Resource{}, chartutil.Values{}, fmt.Errorf("unable to merge path and value into map: %w", err)
-			}
-		}
+	// Generate chart overrides using values
+	chartOverrides, err := generateValuesOverrides(ctx, zarfChart, componentName, overrideOpts{
+		variableConfig:     variableConfig,
+		values:             vals,
+		valuesOverridesMap: ValuesOverrides{},
+	})
+	if err != nil {
+		return Resource{}, chartutil.Values{}, err
 	}
 
 	valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
