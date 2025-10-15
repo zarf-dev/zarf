@@ -9,7 +9,7 @@ require (
 	github.com/zarf-dev/zarf v0.0.0-local // grabbed from local
 )
 
-require github.com/wk8/go-ordered-map/v2 v2.1.8
+require github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 
 require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect

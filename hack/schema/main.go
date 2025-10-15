@@ -9,7 +9,6 @@ import (
 	"runtime"
 
 	"github.com/invopop/jsonschema"
-	orderedmap "github.com/wk8/go-ordered-map/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
@@ -42,35 +41,31 @@ func genSchemas() (string, error) {
 	}
 	schemaV1Beta1 := reflectorV1Beta1.Reflect(&v1beta1.ZarfPackage{})
 
-	// Create ordered maps for the if conditions
-	propsV1Alpha1 := orderedmap.New[string, *jsonschema.Schema]()
-	propsV1Alpha1.Set("apiVersion", &jsonschema.Schema{
-		Const: "zarf.dev/v1alpha1",
-	})
-
-	propsV1Beta1 := orderedmap.New[string, *jsonschema.Schema]()
-	propsV1Beta1.Set("apiVersion", &jsonschema.Schema{
-		Const: "zarf.dev/v1beta1",
-	})
-
-	// Create a combined schema using if/then/else based on apiVersion
-	combinedSchema := &jsonschema.Schema{
-		Version:     "https://json-schema.org/draft/2020-12/schema",
-		Title:       "Zarf Package Schema",
-		Description: "Schema for Zarf packages supporting multiple API versions",
+	schema := &jsonschema.Schema{
 		If: &jsonschema.Schema{
-			Properties: propsV1Alpha1,
+			Properties: jsonschema.NewProperties(),
 		},
 		Then: schemaV1Alpha1,
 		Else: &jsonschema.Schema{
 			If: &jsonschema.Schema{
-				Properties: propsV1Beta1,
+				Properties: jsonschema.NewProperties(),
 			},
 			Then: schemaV1Beta1,
 		},
+		Version: jsonschema.Version,
 	}
 
-	output, err := json.MarshalIndent(combinedSchema, "", "  ")
+	schema.If.Properties.Set("apiVersion", &jsonschema.Schema{
+		Type: "string",
+		Enum: []any{"zarf.dev/v1alpha1"},
+	})
+
+	schema.Else.If.Properties.Set("apiVersion", &jsonschema.Schema{
+		Type: "string",
+		Enum: []any{"zarf.dev/v1beta1"},
+	})
+
+	output, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("unable to generate the Zarf config schema: %w", err)
 	}

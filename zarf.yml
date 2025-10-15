@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=./zarf.schema.json
-apiVersion: zarf.dev/v1alpha1
+apiVersion: zarf.dev/v1beta1
 kind: ZarfInitConfig
 metadata:
   name: init

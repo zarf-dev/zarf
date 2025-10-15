@@ -3,8 +3,14 @@
   "if": {
     "properties": {
       "apiVersion": {
-        "const": "zarf.dev/v1alpha1"
+        "type": "string",
+        "enum": [
+          "zarf.dev/v1alpha1"
+        ]
       }
+    },
+    "patternProperties": {
+      "^x-": {}
     }
   },
   "then": {
@@ -70,7 +76,7 @@
             "type": "string",
             "description": "Comma-separated list of package authors (including contact info).",
             "examples": [
-              "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+              "Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"
             ]
           },
           "documentation": {
@@ -106,7 +112,10 @@
         "required": [
           "name"
         ],
-        "description": "Package metadata."
+        "description": "Package metadata.",
+        "patternProperties": {
+          "^x-": {}
+        }
       },
       "build": {
         "properties": {
@@ -177,7 +186,10 @@
           "timestamp",
           "version"
         ],
-        "description": "Zarf-generated package build data."
+        "description": "Zarf-generated package build data.",
+        "patternProperties": {
+          "^x-": {}
+        }
       },
       "components": {
         "items": {
@@ -234,7 +246,10 @@
                   },
                   "additionalProperties": false,
                   "type": "object",
-                  "description": "Only deploy component to specified clusters."
+                  "description": "Only deploy component to specified clusters.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "flavor": {
                   "type": "string",
@@ -243,7 +258,10 @@
               },
               "additionalProperties": false,
               "type": "object",
-              "description": "Filter when this component is included in package creation or deployment."
+              "description": "Filter when this component is included in package creation or deployment.",
+              "patternProperties": {
+                "^x-": {}
+              }
             },
             "group": {
               "type": "string",
@@ -267,7 +285,10 @@
               },
               "additionalProperties": false,
               "type": "object",
-              "description": "Import a component from another Zarf package."
+              "description": "Import a component from another Zarf package.",
+              "patternProperties": {
+                "^x-": {}
+              }
             },
             "manifests": {
               "items": {
@@ -308,7 +329,10 @@
                 "required": [
                   "name"
                 ],
-                "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart."
+                "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "type": "array",
               "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy."
@@ -391,7 +415,10 @@
                         "description",
                         "path"
                       ],
-                      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides."
+                      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "type": "array",
                     "description": "[alpha] List of variables to set in the Helm chart."
@@ -406,7 +433,10 @@
                 "required": [
                   "name"
                 ],
-                "description": "ZarfChart defines a helm chart to be deployed."
+                "description": "ZarfChart defines a helm chart to be deployed.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "type": "array",
               "description": "Helm charts to install during package deploy."
@@ -448,7 +478,10 @@
                       "container",
                       "path"
                     ],
-                    "description": "The target pod + container to inject the data into."
+                    "description": "The target pod + container to inject the data into.",
+                    "patternProperties": {
+                      "^x-": {}
+                    }
                   },
                   "compress": {
                     "type": "boolean",
@@ -461,7 +494,10 @@
                   "source",
                   "target"
                 ],
-                "description": "ZarfDataInjection is a data-injection definition."
+                "description": "ZarfDataInjection is a data-injection definition.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "type": "array",
               "description": "Datasets to inject into a container in the target cluster."
@@ -503,7 +539,10 @@
                   "source",
                   "target"
                 ],
-                "description": "ZarfFile defines a file to deploy."
+                "description": "ZarfFile defines a file to deploy.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "type": "array",
               "description": "Files or folders to place on disk during package deployment."
@@ -560,7 +599,10 @@
               },
               "additionalProperties": false,
               "type": "object",
-              "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
+              "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0.",
+              "patternProperties": {
+                "^x-": {}
+              }
             },
             "actions": {
               "properties": {
@@ -595,7 +637,7 @@
                           "properties": {
                             "windows": {
                               "type": "string",
-                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                               "examples": [
                                 "powershell",
                                 "cmd",
@@ -630,12 +672,18 @@
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         }
                       },
                       "additionalProperties": false,
                       "type": "object",
-                      "description": "Default configuration for all actions in this set."
+                      "description": "Default configuration for all actions in this set.",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "before": {
                       "items": {
@@ -671,7 +719,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -706,7 +754,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -747,7 +798,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -795,7 +849,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -831,17 +888,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the start of an operation."
@@ -880,7 +946,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -915,7 +981,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -956,7 +1025,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -1004,7 +1076,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -1040,17 +1115,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the end of an operation."
@@ -1089,7 +1173,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -1124,7 +1208,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -1165,7 +1252,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -1213,7 +1303,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -1249,17 +1342,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations succeed."
@@ -1298,7 +1400,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -1333,7 +1435,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -1374,7 +1479,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -1422,7 +1530,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -1458,17 +1569,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations fail."
@@ -1476,7 +1596,10 @@
                   },
                   "additionalProperties": false,
                   "type": "object",
-                  "description": "Actions to run during package creation."
+                  "description": "Actions to run during package creation.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "onDeploy": {
                   "properties": {
@@ -1509,7 +1632,7 @@
                           "properties": {
                             "windows": {
                               "type": "string",
-                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                               "examples": [
                                 "powershell",
                                 "cmd",
@@ -1544,12 +1667,18 @@
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         }
                       },
                       "additionalProperties": false,
                       "type": "object",
-                      "description": "Default configuration for all actions in this set."
+                      "description": "Default configuration for all actions in this set.",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "before": {
                       "items": {
@@ -1585,7 +1714,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -1620,7 +1749,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -1661,7 +1793,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -1709,7 +1844,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -1745,17 +1883,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the start of an operation."
@@ -1794,7 +1941,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -1829,7 +1976,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -1870,7 +2020,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -1918,7 +2071,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -1954,17 +2110,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the end of an operation."
@@ -2003,7 +2168,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -2038,7 +2203,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -2079,7 +2247,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -2127,7 +2298,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -2163,17 +2337,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations succeed."
@@ -2212,7 +2395,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -2247,7 +2430,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -2288,7 +2474,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -2336,7 +2525,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -2372,17 +2564,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations fail."
@@ -2390,7 +2591,10 @@
                   },
                   "additionalProperties": false,
                   "type": "object",
-                  "description": "Actions to run during package deployment."
+                  "description": "Actions to run during package deployment.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "onRemove": {
                   "properties": {
@@ -2423,7 +2627,7 @@
                           "properties": {
                             "windows": {
                               "type": "string",
-                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                              "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                               "examples": [
                                 "powershell",
                                 "cmd",
@@ -2458,12 +2662,18 @@
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         }
                       },
                       "additionalProperties": false,
                       "type": "object",
-                      "description": "Default configuration for all actions in this set."
+                      "description": "Default configuration for all actions in this set.",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "before": {
                       "items": {
@@ -2499,7 +2709,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -2534,7 +2744,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -2575,7 +2788,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -2623,7 +2839,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -2659,17 +2878,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the start of an operation."
@@ -2708,7 +2936,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -2743,7 +2971,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -2784,7 +3015,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -2832,7 +3066,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -2868,17 +3105,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run at the end of an operation."
@@ -2917,7 +3163,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -2952,7 +3198,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -2993,7 +3242,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -3041,7 +3293,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -3077,17 +3332,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations succeed."
@@ -3126,7 +3390,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -3161,7 +3425,10 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "setVariable": {
                             "type": "string",
@@ -3202,7 +3469,10 @@
                               "required": [
                                 "name"
                               ],
-                              "description": "Variable represents a variable that has a value set programmatically"
+                              "description": "Variable represents a variable that has a value set programmatically",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "type": "array",
                             "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -3250,7 +3520,10 @@
                                   "kind",
                                   "name"
                                 ],
-                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "network": {
                                 "properties": {
@@ -3286,17 +3559,26 @@
                                   "protocol",
                                   "address"
                                 ],
-                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               }
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                            "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                        "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "Actions to run if all operations fail."
@@ -3304,12 +3586,18 @@
                   },
                   "additionalProperties": false,
                   "type": "object",
-                  "description": "Actions to run during package removal."
+                  "description": "Actions to run during package removal.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 }
               },
               "additionalProperties": false,
               "type": "object",
-              "description": "Custom commands to run at various stages of a package lifecycle."
+              "description": "Custom commands to run at various stages of a package lifecycle.",
+              "patternProperties": {
+                "^x-": {}
+              }
             },
             "healthChecks": {
               "items": {
@@ -3339,7 +3627,10 @@
                   "namespace",
                   "name"
                 ],
-                "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version."
+                "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "type": "array",
               "description": "List of resources to health check after deployment"
@@ -3350,7 +3641,10 @@
           "required": [
             "name"
           ],
-          "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf."
+          "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf.",
+          "patternProperties": {
+            "^x-": {}
+          }
         },
         "type": "array",
         "minItems": 1,
@@ -3387,7 +3681,10 @@
             "name",
             "value"
           ],
-          "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions."
+          "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions.",
+          "patternProperties": {
+            "^x-": {}
+          }
         },
         "type": "array",
         "description": "Constant template values applied on deploy for K8s resources."
@@ -3438,7 +3735,10 @@
           "required": [
             "name"
           ],
-          "description": "InteractiveVariable is a variable that can be used to prompt a user for more information"
+          "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
+          "patternProperties": {
+            "^x-": {}
+          }
         },
         "type": "array",
         "description": "Variable template values applied on deploy for K8s resources."
@@ -3450,14 +3750,23 @@
       "kind",
       "components"
     ],
-    "description": "ZarfPackage the top-level structure of a Zarf config file."
+    "description": "ZarfPackage the top-level structure of a Zarf config file.",
+    "patternProperties": {
+      "^x-": {}
+    }
   },
   "else": {
     "if": {
       "properties": {
         "apiVersion": {
-          "const": "zarf.dev/v1beta1"
+          "type": "string",
+          "enum": [
+            "zarf.dev/v1beta1"
+          ]
         }
+      },
+      "patternProperties": {
+        "^x-": {}
       }
     },
     "then": {
@@ -3520,7 +3829,10 @@
           "required": [
             "name"
           ],
-          "description": "Package metadata."
+          "description": "Package metadata.",
+          "patternProperties": {
+            "^x-": {}
+          }
         },
         "build": {
           "properties": {
@@ -3595,7 +3907,10 @@
             "timestamp",
             "version"
           ],
-          "description": "Zarf-generated package build data."
+          "description": "Zarf-generated package build data.",
+          "patternProperties": {
+            "^x-": {}
+          }
         },
         "components": {
           "items": {
@@ -3652,7 +3967,10 @@
                     },
                     "additionalProperties": false,
                     "type": "object",
-                    "description": "Only deploy component to specified clusters."
+                    "description": "Only deploy component to specified clusters.",
+                    "patternProperties": {
+                      "^x-": {}
+                    }
                   },
                   "flavor": {
                     "type": "string",
@@ -3661,7 +3979,10 @@
                 },
                 "additionalProperties": false,
                 "type": "object",
-                "description": "Filter when this component is included in package creation or deployment."
+                "description": "Filter when this component is included in package creation or deployment.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "import": {
                 "properties": {
@@ -3681,7 +4002,10 @@
                 },
                 "additionalProperties": false,
                 "type": "object",
-                "description": "Import a component from another Zarf package."
+                "description": "Import a component from another Zarf package.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "manifests": {
                 "items": {
@@ -3722,7 +4046,10 @@
                   "required": [
                     "name"
                   ],
-                  "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart."
+                  "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "type": "array",
                 "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy."
@@ -3750,7 +4077,10 @@
                       "required": [
                         "url"
                       ],
-                      "description": "The Helm repo where the chart is stored"
+                      "description": "The Helm repo where the chart is stored",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "git": {
                       "properties": {
@@ -3768,7 +4098,10 @@
                       "required": [
                         "url"
                       ],
-                      "description": "The Git repo where the chart is stored"
+                      "description": "The Git repo where the chart is stored",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "local": {
                       "properties": {
@@ -3779,7 +4112,10 @@
                       },
                       "additionalProperties": false,
                       "type": "object",
-                      "description": "The local path where the chart is stored"
+                      "description": "The local path where the chart is stored",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "oci": {
                       "properties": {
@@ -3793,7 +4129,10 @@
                       "required": [
                         "url"
                       ],
-                      "description": "The OCI registry where the chart is stored"
+                      "description": "The OCI registry where the chart is stored",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "version": {
                       "type": "string",
@@ -3842,7 +4181,10 @@
                           "description",
                           "path"
                         ],
-                        "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides."
+                        "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "type": "array",
                       "description": "[alpha] List of variables to set in the Helm chart."
@@ -3853,7 +4195,10 @@
                   "required": [
                     "name"
                   ],
-                  "description": "ZarfChart defines a helm chart to be deployed."
+                  "description": "ZarfChart defines a helm chart to be deployed.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "type": "array",
                 "description": "Helm charts to install during package deploy."
@@ -3895,7 +4240,10 @@
                         "container",
                         "path"
                       ],
-                      "description": "The target pod + container to inject the data into."
+                      "description": "The target pod + container to inject the data into.",
+                      "patternProperties": {
+                        "^x-": {}
+                      }
                     },
                     "compress": {
                       "type": "boolean",
@@ -3908,7 +4256,10 @@
                     "source",
                     "target"
                   ],
-                  "description": "ZarfDataInjection is a data-injection definition."
+                  "description": "ZarfDataInjection is a data-injection definition.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "type": "array",
                 "description": "Datasets to inject into a container in the target cluster."
@@ -3950,7 +4301,10 @@
                     "source",
                     "target"
                   ],
-                  "description": "ZarfFile defines a file to deploy."
+                  "description": "ZarfFile defines a file to deploy.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "type": "array",
                 "description": "Files or folders to place on disk during package deployment."
@@ -3990,7 +4344,10 @@
                             "required": [
                               "Duration"
                             ],
-                            "description": "Default timeout in seconds for commands (default no timeout)."
+                            "description": "Default timeout in seconds for commands (default no timeout).",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "retries": {
                             "type": "integer",
@@ -4011,7 +4368,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -4046,12 +4403,18 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "Default configuration for all actions in this set."
+                        "description": "Default configuration for all actions in this set.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "before": {
                         "items": {
@@ -4071,7 +4434,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -4096,7 +4462,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -4131,7 +4497,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -4167,7 +4536,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -4215,7 +4587,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -4251,17 +4626,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the start of an operation."
@@ -4284,7 +4668,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -4309,7 +4696,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -4344,7 +4731,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -4380,7 +4770,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -4428,7 +4821,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -4464,17 +4860,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the end of an operation."
@@ -4497,7 +4902,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -4522,7 +4930,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -4557,7 +4965,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -4593,7 +5004,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -4641,7 +5055,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -4677,17 +5094,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations succeed."
@@ -4710,7 +5136,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -4735,7 +5164,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -4770,7 +5199,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -4806,7 +5238,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -4854,7 +5289,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -4890,17 +5328,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations fail."
@@ -4908,7 +5355,10 @@
                     },
                     "additionalProperties": false,
                     "type": "object",
-                    "description": "Actions to run during package creation."
+                    "description": "Actions to run during package creation.",
+                    "patternProperties": {
+                      "^x-": {}
+                    }
                   },
                   "onDeploy": {
                     "properties": {
@@ -4929,7 +5379,10 @@
                             "required": [
                               "Duration"
                             ],
-                            "description": "Default timeout in seconds for commands (default no timeout)."
+                            "description": "Default timeout in seconds for commands (default no timeout).",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "retries": {
                             "type": "integer",
@@ -4950,7 +5403,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -4985,12 +5438,18 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "Default configuration for all actions in this set."
+                        "description": "Default configuration for all actions in this set.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "before": {
                         "items": {
@@ -5010,7 +5469,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -5035,7 +5497,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -5070,7 +5532,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -5106,7 +5571,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -5154,7 +5622,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -5190,17 +5661,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the start of an operation."
@@ -5223,7 +5703,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -5248,7 +5731,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -5283,7 +5766,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -5319,7 +5805,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -5367,7 +5856,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -5403,17 +5895,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the end of an operation."
@@ -5436,7 +5937,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -5461,7 +5965,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -5496,7 +6000,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -5532,7 +6039,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -5580,7 +6090,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -5616,17 +6129,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations succeed."
@@ -5649,7 +6171,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -5674,7 +6199,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -5709,7 +6234,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -5745,7 +6273,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -5793,7 +6324,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -5829,17 +6363,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations fail."
@@ -5847,7 +6390,10 @@
                     },
                     "additionalProperties": false,
                     "type": "object",
-                    "description": "Actions to run during package deployment."
+                    "description": "Actions to run during package deployment.",
+                    "patternProperties": {
+                      "^x-": {}
+                    }
                   },
                   "onRemove": {
                     "properties": {
@@ -5868,7 +6414,10 @@
                             "required": [
                               "Duration"
                             ],
-                            "description": "Default timeout in seconds for commands (default no timeout)."
+                            "description": "Default timeout in seconds for commands (default no timeout).",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           },
                           "retries": {
                             "type": "integer",
@@ -5889,7 +6438,7 @@
                             "properties": {
                               "windows": {
                                 "type": "string",
-                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                 "examples": [
                                   "powershell",
                                   "cmd",
@@ -5924,12 +6473,18 @@
                             },
                             "additionalProperties": false,
                             "type": "object",
-                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                            "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                            "patternProperties": {
+                              "^x-": {}
+                            }
                           }
                         },
                         "additionalProperties": false,
                         "type": "object",
-                        "description": "Default configuration for all actions in this set."
+                        "description": "Default configuration for all actions in this set.",
+                        "patternProperties": {
+                          "^x-": {}
+                        }
                       },
                       "before": {
                         "items": {
@@ -5949,7 +6504,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -5974,7 +6532,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -6009,7 +6567,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -6045,7 +6606,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -6093,7 +6657,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -6129,17 +6696,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the start of an operation."
@@ -6162,7 +6738,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -6187,7 +6766,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -6222,7 +6801,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -6258,7 +6840,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -6306,7 +6891,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -6342,17 +6930,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run at the end of an operation."
@@ -6375,7 +6972,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -6400,7 +7000,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -6435,7 +7035,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -6471,7 +7074,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -6519,7 +7125,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -6555,17 +7164,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations succeed."
@@ -6588,7 +7206,10 @@
                               "required": [
                                 "Duration"
                               ],
-                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
+                              "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "retries": {
                               "type": "integer",
@@ -6613,7 +7234,7 @@
                               "properties": {
                                 "windows": {
                                   "type": "string",
-                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+                                  "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -> New-Item)",
                                   "examples": [
                                     "powershell",
                                     "cmd",
@@ -6648,7 +7269,10 @@
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+                              "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             },
                             "setVariables": {
                               "items": {
@@ -6684,7 +7308,10 @@
                                 "required": [
                                   "name"
                                 ],
-                                "description": "Variable represents a variable that has a value set programmatically"
+                                "description": "Variable represents a variable that has a value set programmatically",
+                                "patternProperties": {
+                                  "^x-": {}
+                                }
                               },
                               "type": "array",
                               "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package."
@@ -6732,7 +7359,10 @@
                                     "kind",
                                     "name"
                                   ],
-                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 },
                                 "network": {
                                   "properties": {
@@ -6768,17 +7398,26 @@
                                     "protocol",
                                     "address"
                                   ],
-                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+                                  "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified.",
+                                  "patternProperties": {
+                                    "^x-": {}
+                                  }
                                 }
                               },
                               "additionalProperties": false,
                               "type": "object",
-                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+                              "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.",
+                              "patternProperties": {
+                                "^x-": {}
+                              }
                             }
                           },
                           "additionalProperties": false,
                           "type": "object",
-                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation."
+                          "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+                          "patternProperties": {
+                            "^x-": {}
+                          }
                         },
                         "type": "array",
                         "description": "Actions to run if all operations fail."
@@ -6786,12 +7425,18 @@
                     },
                     "additionalProperties": false,
                     "type": "object",
-                    "description": "Actions to run during package removal."
+                    "description": "Actions to run during package removal.",
+                    "patternProperties": {
+                      "^x-": {}
+                    }
                   }
                 },
                 "additionalProperties": false,
                 "type": "object",
-                "description": "Custom commands to run at various stages of a package lifecycle."
+                "description": "Custom commands to run at various stages of a package lifecycle.",
+                "patternProperties": {
+                  "^x-": {}
+                }
               },
               "healthChecks": {
                 "items": {
@@ -6821,7 +7466,10 @@
                     "namespace",
                     "name"
                   ],
-                  "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version."
+                  "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.",
+                  "patternProperties": {
+                    "^x-": {}
+                  }
                 },
                 "type": "array",
                 "description": "List of resources to health check after deployment"
@@ -6832,7 +7480,10 @@
             "required": [
               "name"
             ],
-            "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf."
+            "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf.",
+            "patternProperties": {
+              "^x-": {}
+            }
           },
           "type": "array",
           "minItems": 1,
@@ -6869,7 +7520,10 @@
               "name",
               "value"
             ],
-            "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions."
+            "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions.",
+            "patternProperties": {
+              "^x-": {}
+            }
           },
           "type": "array",
           "description": "Constant template values applied on deploy for K8s resources."
@@ -6920,7 +7574,10 @@
             "required": [
               "name"
             ],
-            "description": "InteractiveVariable is a variable that can be used to prompt a user for more information"
+            "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
+            "patternProperties": {
+              "^x-": {}
+            }
           },
           "type": "array",
           "description": "Variable template values applied on deploy for K8s resources."
@@ -6932,9 +7589,10 @@
         "kind",
         "components"
       ],
-      "description": "ZarfPackage the top-level structure of a Zarf config file."
+      "description": "ZarfPackage the top-level structure of a Zarf config file.",
+      "patternProperties": {
+        "^x-": {}
+      }
     }
-  },
-  "title": "Zarf Package Schema",
-  "description": "Schema for Zarf packages supporting multiple API versions"
+  }
 }
