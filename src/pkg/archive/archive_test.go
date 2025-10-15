@@ -129,19 +129,24 @@ func TestCompressDecompressRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		sourceDir  string
-		expectFile string
+		name        string
+		sourceDir   string
+		expectFiles []string
 	}{
 		{
-			name:       "simple directory",
-			sourceDir:  filepath.Join("testdata", "round-trip", "simple"),
-			expectFile: "file.txt",
+			name:      "simple directory",
+			sourceDir: filepath.Join("testdata", "round-trip", "simple"),
+			expectFiles: []string{
+				"file.txt",
+			},
 		},
 		{
-			name:       "nested directory",
-			sourceDir:  filepath.Join("testdata", "round-trip", "nested"),
-			expectFile: "file.txt",
+			name:      "nested directory",
+			sourceDir: filepath.Join("testdata", "round-trip", "nested"),
+			expectFiles: []string{
+				"file.txt",
+				filepath.Join("subdir", "nested-file.txt"),
+			},
 		},
 	}
 
@@ -149,15 +154,21 @@ func TestCompressDecompressRoundTrip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
+			// compress
 			compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
 			err := Compress(t.Context(), []string{tc.sourceDir}, compressDst, CompressOpts{})
 			require.NoError(t, err)
 
+			// decompress
 			decompressDst := t.TempDir()
 			err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
 			require.NoError(t, err)
 
-			require.FileExists(t, filepath.Join(decompressDst, tc.expectFile))
+			// verify files are extracted in the expected location
+			for _, expectedFile := range tc.expectFiles {
+				actualPath := filepath.Join(decompressDst, expectedFile)
+				require.FileExists(t, actualPath)
+			}
 		})
 	}
 }
