@@ -126,24 +126,40 @@ func TestCompress(t *testing.T) {
 }
 
 func TestCompressDecompressRoundTrip(t *testing.T) {
-	compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
-	err := Compress(t.Context(), []string{filepath.Join("testdata", "round-trip", "simple")}, compressDst, CompressOpts{})
-	require.NoError(t, err)
-	decompressDst := t.TempDir()
-	// decompressDst := filepath.Join("testdata-new")
-	err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(decompressDst, "file.txt"))
-}
-func TestCompressDecompressRoundTrip2(t *testing.T) {
-	compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
-	err := Compress(t.Context(), []string{filepath.Join("testdata", "round-trip", "nested")}, compressDst, CompressOpts{})
-	require.NoError(t, err)
-	// decompressDst := t.TempDir()
-	decompressDst := filepath.Join("testdata-new2")
-	err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
-	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(decompressDst, "file.txt"))
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		sourceDir  string
+		expectFile string
+	}{
+		{
+			name:       "simple directory",
+			sourceDir:  filepath.Join("testdata", "round-trip", "simple"),
+			expectFile: "file.txt",
+		},
+		{
+			name:       "nested directory",
+			sourceDir:  filepath.Join("testdata", "round-trip", "nested"),
+			expectFile: "file.txt",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
+			err := Compress(t.Context(), []string{tc.sourceDir}, compressDst, CompressOpts{})
+			require.NoError(t, err)
+
+			decompressDst := t.TempDir()
+			err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
+			require.NoError(t, err)
+
+			require.FileExists(t, filepath.Join(decompressDst, tc.expectFile))
+		})
+	}
 }
 
 func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
