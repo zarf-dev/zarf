@@ -353,11 +353,11 @@ func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Va
 			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
 		}
 		val = parsed
-	case v1alpha1.SetValueString:
-		val = output
-	default:
+	case v1alpha1.SetValueString, "":
 		// Empty Type behaves as v1alpha1.SetValueString
 		val = output
+	default:
+		return fmt.Errorf("unknown setValue type %q for key %q", setValue.Type, setValue.Key)
 	}
 	return values.Set(value.Path(setValue.Key), val)
 }

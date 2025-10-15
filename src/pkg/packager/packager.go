@@ -40,7 +40,7 @@ type overrideOpts struct {
 
 // generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
 // Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
-func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
+func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
 	chartOverrides := make(value.Values)
 	valuesOverrides := make(map[string]any)
 
