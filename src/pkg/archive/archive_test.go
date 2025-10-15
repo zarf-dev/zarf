@@ -130,20 +130,36 @@ func TestCompressDecompressRoundTrip(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		sourceDir   string
+		sourceDirs  []string
 		expectFiles []string
 	}{
 		{
-			name:      "simple directory",
-			sourceDir: filepath.Join("testdata", "round-trip", "simple"),
+			name: "simple directory",
+			sourceDirs: []string{
+				filepath.Join("testdata", "round-trip", "simple"),
+			},
 			expectFiles: []string{
-				"file.txt",
+				"simple-file.txt",
 			},
 		},
 		{
-			name:      "nested directory",
-			sourceDir: filepath.Join("testdata", "round-trip", "nested"),
+			name: "nested directory",
+			sourceDirs: []string{
+				filepath.Join("testdata", "round-trip", "nested"),
+			},
 			expectFiles: []string{
+				"file.txt",
+				filepath.Join("subdir", "nested-file.txt"),
+			},
+		},
+		{
+			name: "multiple directories",
+			sourceDirs: []string{
+				filepath.Join("testdata", "round-trip", "simple"),
+				filepath.Join("testdata", "round-trip", "nested"),
+			},
+			expectFiles: []string{
+				"simple-file.txt",
 				"file.txt",
 				filepath.Join("subdir", "nested-file.txt"),
 			},
@@ -154,12 +170,10 @@ func TestCompressDecompressRoundTrip(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			// compress
 			compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
-			err := Compress(t.Context(), []string{tc.sourceDir}, compressDst, CompressOpts{})
+			err := Compress(t.Context(), tc.sourceDirs, compressDst, CompressOpts{})
 			require.NoError(t, err)
 
-			// decompress
 			decompressDst := t.TempDir()
 			err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
 			require.NoError(t, err)
