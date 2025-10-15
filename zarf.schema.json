@@ -173,7 +173,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template."
+          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template. Defaults to SetValueString behavior when empty."
         }
       },
       "additionalProperties": false,
