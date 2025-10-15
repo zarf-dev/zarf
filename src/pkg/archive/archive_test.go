@@ -125,6 +125,27 @@ func TestCompress(t *testing.T) {
 	}
 }
 
+func TestCompressDecompressRoundTrip(t *testing.T) {
+	compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
+	err := Compress(t.Context(), []string{filepath.Join("testdata", "round-trip", "simple")}, compressDst, CompressOpts{})
+	require.NoError(t, err)
+	decompressDst := t.TempDir()
+	// decompressDst := filepath.Join("testdata-new")
+	err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(decompressDst, "file.txt"))
+}
+func TestCompressDecompressRoundTrip2(t *testing.T) {
+	compressDst := filepath.Join(t.TempDir(), "archive.tar.zst")
+	err := Compress(t.Context(), []string{filepath.Join("testdata", "round-trip", "nested")}, compressDst, CompressOpts{})
+	require.NoError(t, err)
+	// decompressDst := t.TempDir()
+	decompressDst := filepath.Join("testdata-new2")
+	err = Decompress(t.Context(), compressDst, decompressDst, DecompressOpts{})
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(decompressDst, "file.txt"))
+}
+
 func TestCompressAndDecompress_MultipleFormats(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
