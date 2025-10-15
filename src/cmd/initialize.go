@@ -42,6 +42,7 @@ type initOptions struct {
 	retries                 int
 	publicKeyPath           string
 	skipSignatureValidation bool
+	confirm                 bool
 	ociConcurrency          int
 }
 
@@ -68,7 +69,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
@@ -175,6 +176,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		StorageClass:           o.storageClass,
 		InjectorHostPort:       o.injectorHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
+		IsInteractive:          !o.confirm,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -221,7 +223,7 @@ func (o *initOptions) findInitPackage(ctx context.Context, initPackageName strin
 		return filepath.Join(absCachePath, initPackageName), nil
 	}
 
-	if config.CommonOptions.Confirm {
+	if o.confirm {
 		return "", lang.ErrInitNotFound
 	}
 

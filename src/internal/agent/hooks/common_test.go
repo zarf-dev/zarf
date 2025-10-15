@@ -31,7 +31,7 @@ const (
 	// --service-node-port-range is not overridden.
 	defaultNodePortMin = 30000
 	defaultNodePortMax = 32767
-	// Hard safety cap so we never spin forever if someone mis-configures a range.
+	// Hard safety cap so we never spin forever if someone misconfigures a range.
 	maxAttemptsFactor = 2
 )
 

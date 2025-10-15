@@ -1,7 +1,7 @@
 # Zarf Contributor Ladder
 
 This document outlines the various contributor roles in the Zarf project, along with their respective prerequisites and responsibilities.
-It also defines the process by which users can change roles.  These roles are progressive, in that responsibilites, prerequisites, and privileges stack.
+It also defines the process by which users can change roles.  These roles are progressive, in that responsibilities, prerequisites, and privileges stack.
 
 - [Roles](#roles)
   - [Community Participants](#community-participants-aka-zarf-enthusiasts)
