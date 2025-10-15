@@ -201,15 +201,7 @@ func (p *PackageLayout) Archive(ctx context.Context, dirPath string, maxPackageS
 	}
 
 	logger.From(ctx).Info("writing package to disk", "path", tarballPath)
-	files, err := os.ReadDir(p.dirPath)
-	if err != nil {
-		return "", err
-	}
-	var filePaths []string
-	for _, file := range files {
-		filePaths = append(filePaths, filepath.Join(p.dirPath, file.Name()))
-	}
-	err = archive.Compress(ctx, filePaths, tarballPath, archive.CompressOpts{})
+	err = archive.Compress(ctx, []string{p.dirPath}, tarballPath, archive.CompressOpts{})
 	if err != nil {
 		return "", fmt.Errorf("unable to create package: %w", err)
 	}
