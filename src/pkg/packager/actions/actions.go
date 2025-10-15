@@ -113,7 +113,6 @@ retryCmd:
 			// Try running the command and continue the retry loop if it fails.
 			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
-				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
 			}
 			l.Info("action succeeded", "cmd", cmdEscaped)
@@ -168,6 +167,7 @@ retryCmd:
 			ctx, cancel := context.WithTimeout(ctx, duration)
 			defer cancel()
 			if err := tryCmd(ctx); err != nil {
+				l.Warn("action failed", "cmd", cmdEscaped, "err", err.Error())
 				continue retryCmd
 			}
 
@@ -356,7 +356,8 @@ func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Va
 	case v1alpha1.SetValueString:
 		val = output
 	default:
-		return fmt.Errorf("unknown setValue type: %s", setValue.Type)
+		// Empty Type behaves as v1alpha1.SetValueString
+		val = output
 	}
 	return values.Set(value.Path(setValue.Key), val)
 }

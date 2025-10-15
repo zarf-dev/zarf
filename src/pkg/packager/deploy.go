@@ -161,6 +161,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	deployResult := DeployResult{
 		DeployedComponents: deployedComponents,
 		VariableConfig:     d.vc,
+		Values:             d.vals,
 	}
 	return deployResult, nil
 }

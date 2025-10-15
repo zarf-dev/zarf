@@ -11,7 +11,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -70,14 +69,7 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 		// Extract value from source path in values
 		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
 		if err != nil {
-			// Log warning but don't fail - source path might not exist
-			logger.From(ctx).Warn("unable to extract value from path",
-				"path", chartValue.SourcePath,
-				"error", err,
-				"component", componentName,
-				"chart", chart.Name,
-			)
-			continue
+			return nil, fmt.Errorf("unable to extract value source: %w", err)
 		}
 
 		// Set value at targetPath in chart overrides
