@@ -1,3 +1,4 @@
+apiVersion: zarf.dev/v1alpha1
 kind: ZarfInitConfig
 metadata:
   name: init

@@ -10,11 +10,10 @@ import (
 
 	"github.com/invopop/jsonschema"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 func genSchema() (string, error) {
-	reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
-
 	// AddGoComments breaks if called with a absolute path, so we move to the directory of the go executable
 	// then use a relative path to the package
 	_, filename, _, ok := runtime.Caller(1)
@@ -26,14 +25,33 @@ func genSchema() (string, error) {
 		return "", err
 	}
 
-	typePackagePath := filepath.Join("..", "..", "src", "api", "v1alpha1")
-
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf/hack/schema", typePackagePath); err != nil {
+	// Generate v1alpha1 schema
+	reflectorV1Alpha1 := jsonschema.Reflector{ExpandedStruct: true}
+	typePackagePathV1Alpha1 := filepath.Join("..", "..", "src", "api", "v1alpha1")
+	if err := reflectorV1Alpha1.AddGoComments("github.com/zarf-dev/zarf/hack/schema", typePackagePathV1Alpha1); err != nil {
 		return "", err
 	}
+	schemaV1Alpha1 := reflectorV1Alpha1.Reflect(&v1alpha1.ZarfPackage{})
 
-	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
-	output, err := json.MarshalIndent(schema, "", "  ")
+	// Generate v1beta1 schema
+	reflectorV1Beta1 := jsonschema.Reflector{ExpandedStruct: true}
+	typePackagePathV1Beta1 := filepath.Join("..", "..", "src", "api", "v1beta1")
+	if err := reflectorV1Beta1.AddGoComments("github.com/zarf-dev/zarf/hack/schema", typePackagePathV1Beta1); err != nil {
+		return "", err
+	}
+	schemaV1Beta1 := reflectorV1Beta1.Reflect(&v1beta1.ZarfPackage{})
+
+	// Create a combined schema using oneOf based on apiVersion
+	combinedSchema := &jsonschema.Schema{
+		Title:       "Zarf Package Schema",
+		Description: "Schema for Zarf packages supporting multiple API versions",
+		OneOf: []*jsonschema.Schema{
+			schemaV1Alpha1,
+			schemaV1Beta1,
+		},
+	}
+
+	output, err := json.MarshalIndent(combinedSchema, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("unable to generate the Zarf config schema: %w", err)
 	}
