@@ -169,6 +169,52 @@ func TestPodMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "pod with volume image",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: nil,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					Volumes: []corev1.Volume{
+						{Name: "image",
+							VolumeSource: corev1.VolumeSource{
+								Image: &corev1.ImageVolumeSource{
+									Reference: "quay.io/crio/artifact:v1",
+								},
+							},
+						},
+					},
+				},
+			}, ""),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/imagePullSecrets",
+					[]corev1.LocalObjectReference{{Name: config.ZarfImagePullSecretName}},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/containers/0/image",
+					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/volume/0/image/reference",
+					"127.0.0.1:31999/crio/artifact:v1-zarf-2568457951",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{"zarf-agent": "patched"},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/annotations",
+					map[string]string{
+						"zarf.dev/original-image-nginx":                    "nginx",
+						"zarf.dev/original-image-quay.io/crio/artifact:v1": "quay.io/crio/artifact:v1",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
