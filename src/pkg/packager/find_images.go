@@ -410,6 +410,11 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 			imgMap[container.Image] = true
 		}
 	}
+	for _, volume := range pod.Volumes {
+		if volume.Image != nil && reference.ReferenceRegexp.MatchString(volume.Image.Reference) {
+			imgMap[volume.Image.Reference] = true
+		}
+	}
 	return imgMap
 }
 

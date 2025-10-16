@@ -177,6 +177,22 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "pod volume image",
+			packagePath: "./testdata/find-images/pod-volume-image",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+						"quay.io/crio/artifact:v1",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
