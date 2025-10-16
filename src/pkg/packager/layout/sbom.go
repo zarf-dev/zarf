@@ -67,12 +67,12 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		return err
 	}
 
-	for _, refInfo := range images {
+	for index, refInfo := range images {
 		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
-		l.Info("creating image SBOM", "reference", refInfo.Reference)
+		l.Info("creating image SBOM", "index", (index + 1), "count", len(images), "reference", refInfo.Reference)
 		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
@@ -194,8 +194,8 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	}
 	catalog := pkg.NewCollection()
 	relationships := []artifact.Relationship{}
-	for _, sbomFile := range sbomFiles {
-		l.Info("creating file SBOMs", "file", sbomFile)
+	for index, sbomFile := range sbomFiles {
+		l.Info("creating file SBOMs", "index", (index + 1), "count", len(sbomFiles), "file", sbomFile)
 		fileSrc, err := filesource.NewFromPath(sbomFile)
 		if err != nil {
 			return nil, err
