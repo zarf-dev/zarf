@@ -30,14 +30,18 @@ func isJSONPathWaitType(condition string) bool {
 	return true
 }
 
-var shellRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
+// unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
+var unsafeShellCharsRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
 
-func ShellQuote(s string) string {
+// Source: https://github.com/alessio/shellescape/blob/v1.6.0/shellescape.go#L30-L42
+// SPDX-License-Identifier: MIT
+// Minor edits: Simplified for use case
+func shellQuote(s string) string {
 	if len(s) == 0 {
 		return "''"
 	}
 
-	if shellRegex.MatchString(s) {
+	if unsafeShellCharsRegex.MatchString(s) {
 		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
 	}
 
@@ -61,7 +65,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
 		// Ensure any conditions aren't shell escaped
-		condition = ShellQuote(condition)
+		condition = shellQuote(condition)
 	} else {
 		waitType = "condition="
 	}
