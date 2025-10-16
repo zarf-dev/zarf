@@ -20,7 +20,7 @@ components:
     required: true
     images:
       # NOTE: Pkgtemplates aren't yet available with value and go-templates.
-      - "nginx:latest"
+      - "docker.io/library/nginx:1.29.2"
     manifests:
       - name: values-with-nginx
         # Enables go-templating within the files.

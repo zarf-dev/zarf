@@ -89,7 +89,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	// Apply go-templates in cmds
 	cmd, err = template.Apply(ctx, cmd, tmplObjs)
 	if err != nil {
-		l.Error("could not template cmd", "cmd", cmdEscaped, "err", err.Error())
+		return fmt.Errorf("could not tempalte cmd %s: %w", cmdEscaped, err)
 	}
 
 	l.Info("running command", "cmd", cmdEscaped)
