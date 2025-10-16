@@ -124,6 +124,8 @@ type devInspectManifestsOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -149,6 +151,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -167,6 +171,8 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		ValuesFiles:        o.valuesFiles,
+		SetValues:          o.setValues,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -201,6 +207,8 @@ type devInspectValuesFilesOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -227,6 +235,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -245,6 +255,8 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		ValuesFiles:        o.valuesFiles,
+		SetValues:          o.setValues,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
