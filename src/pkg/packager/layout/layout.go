@@ -5,9 +5,7 @@
 package layout
 
 import (
-	"fmt"
 	"path/filepath"
-	"strings"
 )
 
 // Constants used in the default package layout.
@@ -48,29 +46,3 @@ const (
 	DataComponentDir      ComponentDir = "data"
 	ValuesComponentDir    ComponentDir = "values"
 )
-
-// ContainsReservedFilename checks if a path uses a reserved Zarf filename
-func ContainsReservedFilename(path string) error {
-	base := filepath.Base(filepath.Clean(path))
-	switch base {
-	case ZarfYAML, Signature, Checksums:
-		return fmt.Errorf("path cannot use reserved filename: %s", base)
-	}
-	return nil
-}
-
-// ContainsReservedPackageDir checks if a path traverses reserved package directories
-func ContainsReservedPackageDir(path string) error {
-	cleaned := filepath.Clean(path)
-	parts := strings.Split(cleaned, string(filepath.Separator))
-
-	reservedDirs := []string{ImagesDir, ComponentsDir, SBOMDir}
-	for _, part := range parts {
-		for _, reserved := range reservedDirs {
-			if part == reserved {
-				return fmt.Errorf("path cannot traverse reserved directory: %s", reserved)
-			}
-		}
-	}
-	return nil
-}
