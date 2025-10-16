@@ -395,7 +395,6 @@ func TestParseRegistryOverrides(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		require.Len(t, tc.expected, len(tc.provided), "The expected array is not the same length as the provided array.")
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result, err := parseRegistryOverrides(tc.provided)
