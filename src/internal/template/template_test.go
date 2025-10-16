@@ -6,6 +6,7 @@ package template
 
 import (
 	"context"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/value"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -323,6 +326,295 @@ func TestObjects_WithVariables(t *testing.T) {
 			objects := make(Objects)
 			result := objects.WithVariables(tt.variables)
 			require.Equal(t, tt.expected, result[objectKeyVariables])
+		})
+	}
+}
+
+func TestObjects_WithState(t *testing.T) {
+	tests := []struct {
+		name     string
+		state    *state.State
+		expected map[string]any
+	}{
+		{
+			name: "complete state",
+			state: &state.State{
+				ZarfAppliance: true,
+				Distro:        "k3s",
+				Architecture:  "amd64",
+				StorageClass:  "standard",
+				RegistryInfo: state.RegistryInfo{
+					Address:      "registry.example.com",
+					NodePort:     30000,
+					PushUsername: "reg-push-user",
+					PushPassword: "push-secret",
+					PullUsername: "reg-pull-user",
+					PullPassword: "pull-secret",
+				},
+				GitServer: state.GitServerInfo{
+					Address:      "https://git.example.com",
+					PushUsername: "git-push-user",
+					PushPassword: "git-push-secret",
+					PullUsername: "git-pull-user",
+					PullPassword: "git-pull-secret",
+				},
+				ArtifactServer: state.ArtifactServerInfo{
+					Address:      "https://artifacts.example.com",
+					PushUsername: "artifact-user",
+					PushToken:    "artifact-token",
+				},
+			},
+			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    true,
+					"distro":       "k3s",
+					"architecture": "amd64",
+				},
+				"storage": map[string]any{
+					"class": "standard",
+				},
+				"registry": map[string]any{
+					"address":  "registry.example.com",
+					"nodePort": 30000,
+					"push": map[string]any{
+						"username": "reg-push-user",
+						"password": "push-secret",
+					},
+					"pull": map[string]any{
+						"username": "reg-pull-user",
+						"password": "pull-secret",
+					},
+				},
+				"git": map[string]any{
+					"address": "https://git.example.com",
+					"push": map[string]any{
+						"username": "git-push-user",
+						"password": "git-push-secret",
+					},
+					"pull": map[string]any{
+						"username": "git-pull-user",
+						"password": "git-pull-secret",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "https://artifacts.example.com",
+					"push": map[string]any{
+						"username": "artifact-user",
+						"token":    "artifact-token",
+					},
+				},
+			},
+		},
+		{
+			name: "minimal state",
+			state: &state.State{
+				StorageClass: "fast-storage",
+			},
+			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    false,
+					"distro":       "",
+					"architecture": "",
+				},
+				"storage": map[string]any{
+					"class": "fast-storage",
+				},
+				"registry": map[string]any{
+					"address":  "",
+					"nodePort": 0,
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"git": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"token":    "",
+					},
+				},
+			},
+		},
+		{
+			name:     "nil state returns unchanged",
+			state:    nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := make(Objects)
+			result := objects.WithState(tt.state)
+
+			if tt.expected == nil {
+				require.NotContains(t, result, objectKeyState)
+				return
+			}
+
+			require.Contains(t, result, objectKeyState)
+			require.Equal(t, tt.expected, result[objectKeyState])
+		})
+	}
+}
+
+func TestObjects_WithAgentState(t *testing.T) {
+	caCert := []byte("test-ca-cert")
+	cert := []byte("test-cert")
+	key := []byte("test-key")
+
+	tests := []struct {
+		name     string
+		state    *state.State
+		expected map[string]any
+	}{
+		{
+			name: "with agent TLS",
+			state: &state.State{
+				AgentTLS: pki.GeneratedPKI{
+					CA:   caCert,
+					Cert: cert,
+					Key:  key,
+				},
+			},
+			expected: map[string]any{
+				"cluster": map[string]any{
+					"appliance":    false,
+					"distro":       "",
+					"architecture": "",
+				},
+				"storage": map[string]any{
+					"class": "",
+				},
+				"registry": map[string]any{
+					"address":  "",
+					"nodePort": 0,
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"git": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"password": "",
+					},
+					"pull": map[string]any{
+						"username": "",
+						"password": "",
+					},
+				},
+				"artifact": map[string]any{
+					"address": "",
+					"push": map[string]any{
+						"username": "",
+						"token":    "",
+					},
+				},
+				"agent": map[string]any{
+					"tls": map[string]any{
+						"ca":   base64.StdEncoding.EncodeToString(caCert),
+						"cert": base64.StdEncoding.EncodeToString(cert),
+						"key":  base64.StdEncoding.EncodeToString(key),
+					},
+				},
+			},
+		},
+		{
+			name:     "nil state returns unchanged",
+			state:    nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := make(Objects)
+			result := objects.WithAgentState(tt.state)
+
+			if tt.expected == nil {
+				require.NotContains(t, result, objectKeyState)
+				return
+			}
+
+			require.Contains(t, result, objectKeyState)
+			require.Equal(t, tt.expected, result[objectKeyState])
+		})
+	}
+}
+
+func TestObjects_WithSeedRegistryState(t *testing.T) {
+	tests := []struct {
+		name  string
+		state *state.State
+	}{
+		{
+			name: "with internal registry",
+			state: &state.State{
+				RegistryInfo: state.RegistryInfo{
+					Address:      "127.0.0.1:31999",
+					NodePort:     31999,
+					PushUsername: "zarf-push",
+					PushPassword: "push-pass",
+					PullUsername: "zarf-pull",
+					PullPassword: "pull-pass",
+					Secret:       "registry-secret-value",
+				},
+			},
+		},
+		{
+			name:  "nil state returns unchanged",
+			state: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			objects := make(Objects)
+			result := objects.WithSeedRegistryState(tt.state)
+
+			if tt.state == nil {
+				require.NotContains(t, result, objectKeyState)
+				return
+			}
+
+			require.Contains(t, result, objectKeyState)
+			stateMap, ok := result[objectKeyState].(map[string]any)
+			require.True(t, ok)
+			registryMap, ok := stateMap["registry"].(map[string]any)
+			require.True(t, ok)
+
+			// Verify expected fields exist
+			require.Contains(t, registryMap, "htpasswd")
+			require.Contains(t, registryMap, "seed")
+			require.Contains(t, registryMap, "secret")
+
+			// Verify htpasswd has bcrypt format
+			require.NotEmpty(t, registryMap["htpasswd"])
+			htpasswd, ok := registryMap["htpasswd"].(string)
+			require.True(t, ok)
+			require.Contains(t, htpasswd, "$2")
 		})
 	}
 }
