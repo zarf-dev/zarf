@@ -907,14 +907,6 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 		return fmt.Errorf("values file path %s escapes package directory", file)
 	}
 
-	// Validate destination doesn't use reserved paths
-	if err := ContainsReservedFilename(cleanFile); err != nil {
-		return fmt.Errorf("invalid values file destination %s: %w", file, err)
-	}
-	if err := ContainsReservedPackageDir(cleanFile); err != nil {
-		return fmt.Errorf("invalid values file destination %s: %w", file, err)
-	}
-
 	//Copy file to pre-archive package - destination includes ValuesDir
 	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
 	l.Debug("copying values file", "src", src, "dst", dst)
