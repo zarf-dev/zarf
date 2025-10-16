@@ -626,3 +626,499 @@ func TestApplyToFile_SprigFunctions(t *testing.T) {
 		})
 	}
 }
+
+func TestToYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test", "value": 123},
+			expected: "name: test\nvalue: 123",
+		},
+		{
+			name:     "nested map",
+			input:    map[string]any{"app": map[string]any{"name": "test", "port": 8080}},
+			expected: "app:\n  name: test\n  port: 8080",
+		},
+		{
+			name:     "array",
+			input:    []string{"one", "two", "three"},
+			expected: "- one\n- two\n- three",
+		},
+		{
+			name:     "string",
+			input:    "hello world",
+			expected: "hello world",
+		},
+		{
+			name:     "number",
+			input:    42,
+			expected: "42",
+		},
+		{
+			name:     "boolean",
+			input:    true,
+			expected: "true",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toYAML(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMustToYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test", "value": 123},
+			expected: "name: test\nvalue: 123",
+		},
+		{
+			name:     "nested map",
+			input:    map[string]any{"app": map[string]any{"name": "test"}},
+			expected: "app:\n  name: test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := mustToYAML(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestToYAMLPretty(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test", "value": 123},
+			expected: "name: test\nvalue: 123",
+		},
+		{
+			name: "nested map",
+			input: map[string]any{
+				"app": map[string]any{
+					"name": "test",
+					"config": map[string]any{
+						"port":    8080,
+						"enabled": true,
+					},
+				},
+			},
+			expected: "app:\n  name: test\n  config:\n    port: 8080\n    enabled: true",
+		},
+		{
+			name:     "array",
+			input:    []string{"one", "two", "three"},
+			expected: "- one\n- two\n- three",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toYAMLPretty(tt.input)
+			// Use YAMLEq to compare YAML semantically (ignores key order)
+			require.YAMLEq(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "simple map",
+			input:    "name: test\nvalue: 123",
+			expected: map[string]interface{}{"name": "test", "value": uint64(123)},
+		},
+		{
+			name:  "nested map",
+			input: "app:\n  name: test\n  port: 8080",
+			expected: map[string]interface{}{
+				"app": map[string]interface{}{"name": "test", "port": uint64(8080)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromYAML(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromYAML_Errors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "invalid yaml syntax",
+			input: "invalid: yaml: with: bad: indentation",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromYAML(tt.input)
+			errMsg, ok := result["Error"]
+			require.True(t, ok, "expected Error key in result map")
+			require.Contains(t, errMsg, "yaml:")
+		})
+	}
+}
+
+func TestFromYAMLArray(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []interface{}
+	}{
+		{
+			name:     "simple array",
+			input:    "- one\n- two\n- three",
+			expected: []interface{}{"one", "two", "three"},
+		},
+		{
+			name:     "number array",
+			input:    "- 1\n- 2\n- 3",
+			expected: []interface{}{uint64(1), uint64(2), uint64(3)},
+		},
+		{
+			name:     "mixed array",
+			input:    "- 1\n- two\n- true",
+			expected: []interface{}{uint64(1), "two", true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromYAMLArray(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromYAMLArray_Errors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "not an array",
+			input: "invalid: not an array",
+		},
+		{
+			name:  "object instead of array",
+			input: "key: value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromYAMLArray(tt.input)
+			require.Len(t, result, 1, "expected single error message in array")
+			errMsg, ok := result[0].(string)
+			require.True(t, ok, "expected error message to be a string")
+			require.NotEmpty(t, errMsg, "expected non-empty error message")
+		})
+	}
+}
+
+func TestToJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test", "value": 123},
+			expected: `{"name":"test","value":123}`,
+		},
+		{
+			name:     "nested map",
+			input:    map[string]any{"app": map[string]any{"name": "test"}},
+			expected: `{"app":{"name":"test"}}`,
+		},
+		{
+			name:     "array",
+			input:    []string{"one", "two", "three"},
+			expected: `["one","two","three"]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toJSON(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMustToJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test"},
+			expected: `{"name":"test"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := mustToJSON(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "simple object",
+			input:    `{"name":"test","value":123}`,
+			expected: map[string]interface{}{"name": "test", "value": float64(123)},
+		},
+		{
+			name:  "nested object",
+			input: `{"app":{"name":"test"}}`,
+			expected: map[string]interface{}{
+				"app": map[string]interface{}{"name": "test"},
+			},
+		},
+		{
+			name:     "object with array",
+			input:    `{"items":["a","b","c"]}`,
+			expected: map[string]interface{}{"items": []interface{}{"a", "b", "c"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromJSON(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromJSON_Errors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "invalid json syntax",
+			input: `{invalid json}`,
+		},
+		{
+			name:  "unclosed brace",
+			input: `{"key":"value"`,
+		},
+		{
+			name:  "trailing comma",
+			input: `{"key":"value",}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromJSON(tt.input)
+			errMsg, ok := result["Error"]
+			require.True(t, ok, "expected Error key in result map")
+			require.NotEmpty(t, errMsg)
+		})
+	}
+}
+
+func TestFromJSONArray(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []interface{}
+	}{
+		{
+			name:     "simple array",
+			input:    `["one","two","three"]`,
+			expected: []interface{}{"one", "two", "three"},
+		},
+		{
+			name:     "number array",
+			input:    `[1,2,3]`,
+			expected: []interface{}{float64(1), float64(2), float64(3)},
+		},
+		{
+			name:     "mixed type array",
+			input:    `[1,"two",true,null]`,
+			expected: []interface{}{float64(1), "two", true, nil},
+		},
+		{
+			name:     "nested arrays",
+			input:    `[[1,2],[3,4]]`,
+			expected: []interface{}{[]interface{}{float64(1), float64(2)}, []interface{}{float64(3), float64(4)}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromJSONArray(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromJSONArray_Errors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "object instead of array",
+			input: `{not an array}`,
+		},
+		{
+			name:  "unclosed bracket",
+			input: `["one","two"`,
+		},
+		{
+			name:  "invalid json",
+			input: `[1,2,]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromJSONArray(tt.input)
+			require.Len(t, result, 1, "expected single error message in array")
+			errMsg, ok := result[0].(string)
+			require.True(t, ok, "expected error message to be a string")
+			require.NotEmpty(t, errMsg)
+		})
+	}
+}
+
+func TestToTOML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+	}{
+		{
+			name:     "simple map",
+			input:    map[string]any{"name": "test", "value": 123},
+			expected: "name = \"test\"\nvalue = 123\n",
+		},
+		{
+			name: "nested map",
+			input: map[string]any{
+				"database": map[string]any{
+					"host": "localhost",
+					"port": 5432,
+				},
+			},
+			expected: "[database]\n  host = \"localhost\"\n  port = 5432\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toTOML(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromTOML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected map[string]interface{}
+	}{
+		{
+			name:     "simple map",
+			input:    "name = \"test\"\nvalue = 123",
+			expected: map[string]interface{}{"name": "test", "value": int64(123)},
+		},
+		{
+			name:  "nested map",
+			input: "[database]\nhost = \"localhost\"\nport = 5432",
+			expected: map[string]interface{}{
+				"database": map[string]interface{}{
+					"host": "localhost",
+					"port": int64(5432),
+				},
+			},
+		},
+		{
+			name:  "array in toml",
+			input: "items = [\"a\", \"b\", \"c\"]",
+			expected: map[string]interface{}{
+				"items": []interface{}{"a", "b", "c"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromTOML(tt.input)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestFromTOML_Errors(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{
+			name:  "invalid toml syntax",
+			input: "invalid toml content",
+		},
+		{
+			name:  "missing equals",
+			input: "key value",
+		},
+		{
+			name:  "unclosed quote",
+			input: "name = \"test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := fromTOML(tt.input)
+			errMsg, ok := result["Error"]
+			require.True(t, ok, "expected Error key in result map")
+			require.Contains(t, errMsg, "toml:")
+		})
+	}
+}
