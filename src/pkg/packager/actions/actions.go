@@ -6,6 +6,7 @@ package actions
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -14,8 +15,11 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
@@ -23,13 +27,13 @@ import (
 )
 
 // Run runs all provided actions.
-func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, actions []v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	if variableConfig == nil {
-		variableConfig = template.GetZarfVariableConfig(ctx, false)
+		variableConfig = ptmpl.GetZarfVariableConfig(ctx, false)
 	}
 
 	for _, a := range actions {
-		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig); err != nil {
+		if err := runAction(ctx, basePath, defaultCfg, a, variableConfig, values); err != nil {
 			return err
 		}
 	}
@@ -37,12 +41,16 @@ func Run(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponent
 }
 
 // Run commands that a component has provided.
-func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
+func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfComponentActionDefaults, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, values value.Values) error {
 	var cmdEscaped string
 	var err error
 	cmd := action.Cmd
 	l := logger.From(ctx)
 	start := time.Now()
+
+	tmplObjs := template.NewObjects(values).
+		WithConstants(variableConfig.GetConstants()).
+		WithVariables(variableConfig.GetSetVariableMap())
 
 	// If the action is a wait, convert it to a command.
 	if action.Wait != nil {
@@ -78,6 +86,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
 
+	// Apply go-templates in cmds
+	cmd, err = template.Apply(ctx, cmd, tmplObjs)
+	if err != nil {
+		return fmt.Errorf("could not tempalte cmd %s: %w", cmdEscaped, err)
+	}
+
 	l.Info("running command", "cmd", cmdEscaped)
 
 	actionDefaults := actionGetCfg(ctx, defaultCfg, action, variableConfig.GetAllTemplates())
@@ -99,7 +113,6 @@ retryCmd:
 			// Try running the command and continue the retry loop if it fails.
 			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
-				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
 			}
 			l.Info("action succeeded", "cmd", cmdEscaped)
@@ -110,6 +123,13 @@ retryCmd:
 			for _, v := range action.SetVariables {
 				variableConfig.SetVariable(v.Name, outTrimmed, v.Sensitive, v.AutoIndent, v.Type)
 				if err := variableConfig.CheckVariablePattern(v.Name, v.Pattern); err != nil {
+					return err
+				}
+			}
+
+			// If an output value is defined, parse the result and set it to values map.
+			for _, v := range action.SetValues {
+				if err := parseAndSetValue(outTrimmed, v, values); err != nil {
 					return err
 				}
 			}
@@ -147,6 +167,7 @@ retryCmd:
 			ctx, cancel := context.WithTimeout(ctx, duration)
 			defer cancel()
 			if err := tryCmd(ctx); err != nil {
+				l.Warn("action failed", "cmd", cmdEscaped, "err", err.Error())
 				continue retryCmd
 			}
 
@@ -314,4 +335,29 @@ func MatchAllRegex(regex *regexp.Regexp, str string) []func(string) string {
 		})
 	}
 	return funcs
+}
+
+// parseAndSetValue parses the output string according to the setValue type and sets it in the values map.
+func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Values) error {
+	var val any
+	switch setValue.Type {
+	case v1alpha1.SetValueYAML:
+		var parsed any
+		if err := yaml.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse YAML output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case v1alpha1.SetValueJSON:
+		var parsed any
+		if err := json.Unmarshal([]byte(output), &parsed); err != nil {
+			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
+		}
+		val = parsed
+	case v1alpha1.SetValueString, "":
+		// Empty Type behaves as v1alpha1.SetValueString
+		val = output
+	default:
+		return fmt.Errorf("unknown setValue type %q for key %q", setValue.Type, setValue.Key)
+	}
+	return values.Set(value.Path(setValue.Key), val)
 }

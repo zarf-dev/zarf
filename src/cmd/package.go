@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"oras.land/oras-go/v2/registry"
 
@@ -214,7 +215,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
 	}
-	_, err = packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -223,10 +224,12 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create package: %w", err)
 	}
+	l.Debug("package created", "path", pkgPath)
 	return nil
 }
 
 type packageDeployOptions struct {
+	valuesFiles             []string
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
@@ -262,6 +265,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
@@ -290,6 +294,13 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
+	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
+
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -314,6 +325,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
+		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
@@ -744,6 +756,8 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
@@ -835,6 +849,8 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)

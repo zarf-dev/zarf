@@ -8,11 +8,14 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
+
+// ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
+type ValuesOverrides map[string]map[string]map[string]any
 
 // RemoteOptions are common options when calling a remote
 type RemoteOptions struct {
@@ -29,29 +32,63 @@ func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, s
 	return variableConfig, nil
 }
 
-func generateValuesOverrides(chart v1alpha1.ZarfChart, componentName string, variableConfig *variables.VariableConfig, valuesOverridesMap map[string]map[string]map[string]interface{}) (map[string]any, error) {
+type overrideOpts struct {
+	variableConfig     *variables.VariableConfig
+	values             value.Values
+	valuesOverridesMap ValuesOverrides
+}
+
+// generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
+// Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
+func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
+	chartOverrides := make(value.Values)
 	valuesOverrides := make(map[string]any)
-	chartOverrides := make(map[string]any)
 
 	for _, variable := range chart.Variables {
-		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
-			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
-			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-				return nil, fmt.Errorf("unable to merge path and value into map: %w", err)
+		if setVar, ok := opts.variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
+			// Add leading dot to variable.Path to create a valid value.Path
+			path := "." + variable.Path
+			if err := chartOverrides.Set(value.Path(path), setVar.Value); err != nil {
+				return nil, fmt.Errorf("unable to set value at path %s: %w", path, err)
 			}
 		}
 	}
 
+	// Map ChartValues' Source to Target
+	for _, chartValue := range chart.Values {
+		if chartValue.SourcePath == "" || chartValue.TargetPath == "" {
+			return nil, fmt.Errorf("sourcePath \"%s\" and targetPath \"%s\" must not be empty", chartValue.SourcePath, chartValue.TargetPath)
+		}
+		if chartValue.SourcePath[0] != '.' {
+			return nil, fmt.Errorf("sourcePath \"%s\" must start with a dot", chartValue.SourcePath)
+		}
+		if chartValue.TargetPath[0] != '.' {
+			return nil, fmt.Errorf("targetPath \"%s\" must start with a dot", chartValue.TargetPath)
+		}
+
+		// Extract value from source path in values
+		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
+		if err != nil {
+			return nil, fmt.Errorf("unable to extract value source: %w", err)
+		}
+
+		// Set value at targetPath in chart overrides
+		if err := chartOverrides.Set(value.Path(chartValue.TargetPath), sourceValue); err != nil {
+			return nil, fmt.Errorf("unable to map value from %s to %s: %w",
+				chartValue.SourcePath, chartValue.TargetPath, err)
+		}
+	}
+
 	// Apply any direct overrides specified in the deployment options for this component and chart
-	if componentOverrides, ok := valuesOverridesMap[componentName]; ok {
+	if componentOverrides, ok := opts.valuesOverridesMap[componentName]; ok {
 		if chartSpecificOverrides, ok := componentOverrides[chart.Name]; ok {
 			valuesOverrides = chartSpecificOverrides
 		}
 	}
 
-	// Merge chartOverrides into valuesOverrides to ensure all overrides are applied.
-	// This corrects the logic to ensure that chartOverrides and valuesOverrides are merged correctly.
-	return helpers.MergeMapRecursive(chartOverrides, valuesOverrides), nil
+	// Merge valuesOverrides into chartOverrides (valuesOverrides takes precedence)
+	chartOverrides.DeepMerge(valuesOverrides)
+	return chartOverrides, nil
 }
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-test-app
+  labels:
+    environment: PRODUCTION
+    version: "1.0.0"
+data:
+  message: "Hello World"
+  hash: 1307990e6ba5ca145eb35e99182a9bec46531bc54ddf656a602c780fa0240dee
+  timestamp: "2023-01-01"
+  random: abc12345
+  joined: "apple,banana,cherry"
+  default-value: "fallback"
