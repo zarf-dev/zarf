@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package packager contains operations for working with helm charts.
 package packager
 
 import (
@@ -10,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
+// PruneOptions are the options for Prune
 type PruneOptions struct {
 	Cluster           *cluster.Cluster
 	Component         string
@@ -19,6 +24,7 @@ type PruneOptions struct {
 	Pending           bool
 }
 
+// PruneStateResult is the result of GetPruneableCharts
 type PruneStateResult struct {
 	PruneableCharts map[string][]state.InstalledChart
 }

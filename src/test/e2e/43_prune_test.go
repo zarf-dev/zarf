@@ -65,10 +65,11 @@ func TestPrunePackageCharts(t *testing.T) {
 	var activeCount, orphanedCount int
 	var orphanedChartName string
 	for _, chart := range deployedPackageV2.DeployedComponents[0].InstalledCharts {
-		if chart.State == state.ChartStateActive {
+		switch chart.State {
+		case state.ChartStateActive:
 			activeCount++
 			require.Equal(t, "chart-to-keep", chart.ChartName)
-		} else if chart.State == state.ChartStateOrphaned {
+		case state.ChartStateOrphaned:
 			orphanedCount++
 			orphanedChartName = chart.ChartName
 			require.Equal(t, "chart-to-remove", chart.ChartName)

@@ -1456,7 +1456,6 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	logger.From(ctx).Info("successfully pruned orphaned charts and updated package state")
 
 	return nil
-
 }
 
 type packagePublishOptions struct {
