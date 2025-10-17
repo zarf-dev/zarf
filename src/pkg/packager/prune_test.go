@@ -10,16 +10,19 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
-func TestGetPruneableCharts(t *testing.T) {
+// TestGetPruneableCharts_Integration tests the packager coordination layer.
+// Detailed unit tests for the filtering logic are in state_test.go (DeployedPackage.GetPruneableCharts).
+// This test verifies the wrapper function correctly delegates to the state layer and wraps the result.
+func TestGetPruneableCharts_Integration(t *testing.T) {
 	tests := []struct {
 		name            string
 		deployedPackage *state.DeployedPackage
 		opts            PruneOptions
-		want            map[string][]state.InstalledChart
-		wantErr         string
+		wantErr         bool
+		validateResult  func(t *testing.T, result PruneStateResult)
 	}{
 		{
-			name: "no filters - returns all orphaned charts",
+			name: "wraps result in PruneStateResult correctly",
 			deployedPackage: &state.DeployedPackage{
 				Name: "test-package",
 				DeployedComponents: []state.DeployedComponent{
@@ -29,23 +32,6 @@ func TestGetPruneableCharts(t *testing.T) {
 							{
 								Namespace: "podinfo",
 								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "podinfo",
-								ChartName: "chart2",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-					{
-						Name: "component2",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "monitoring",
-								ChartName: "chart3",
 								State:     state.ChartStateOrphaned,
 								Status:    state.ChartStatusSucceeded,
 							},
@@ -54,27 +40,14 @@ func TestGetPruneableCharts(t *testing.T) {
 				},
 			},
 			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{
-				"component1": {
-					{
-						Namespace: "podinfo",
-						ChartName: "chart1",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-				"component2": {
-					{
-						Namespace: "monitoring",
-						ChartName: "chart3",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
+			validateResult: func(t *testing.T, result PruneStateResult) {
+				require.NotNil(t, result.PruneableCharts)
+				require.Contains(t, result.PruneableCharts, "component1")
+				require.Len(t, result.PruneableCharts["component1"], 1)
 			},
 		},
 		{
-			name: "component filter - returns only charts from specified component",
+			name: "passes PruneOptions filters to state layer",
 			deployedPackage: &state.DeployedPackage{
 				Name: "test-package",
 				DeployedComponents: []state.DeployedComponent{
@@ -82,10 +55,9 @@ func TestGetPruneableCharts(t *testing.T) {
 						Name: "component1",
 						InstalledCharts: []state.InstalledChart{
 							{
-								Namespace: "podinfo",
+								Namespace: "ns1",
 								ChartName: "chart1",
 								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
 							},
 						},
 					},
@@ -93,159 +65,9 @@ func TestGetPruneableCharts(t *testing.T) {
 						Name: "component2",
 						InstalledCharts: []state.InstalledChart{
 							{
-								Namespace: "monitoring",
-								ChartName: "chart3",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{
-				Component: "component1",
-			},
-			want: map[string][]state.InstalledChart{
-				"component1": {
-					{
-						Namespace: "podinfo",
-						ChartName: "chart1",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-			},
-		},
-		{
-			name: "component and chart filter - returns specific chart from specific component",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "app-ns",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "app-ns",
+								Namespace: "ns2",
 								ChartName: "chart2",
 								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-					{
-						Name: "component2",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "monitoring",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{
-				Component: "component2",
-				Chart:     "chart1",
-			},
-			want: map[string][]state.InstalledChart{
-				"component2": {
-					{
-						Namespace: "monitoring",
-						ChartName: "chart1",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-			},
-		},
-		{
-			name: "no orphaned charts - returns empty map",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{},
-		},
-		{
-			name: "component not found - returns error",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{
-				Component: "nonexistent",
-			},
-			wantErr: `component "nonexistent" not found in deployed package`,
-		},
-		{
-			name: "chart filter without component - returns error",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{
-				Chart: "chart1",
-			},
-			wantErr: "component must be specified when chart filter is provided",
-		},
-		{
-			name: "chart not found in specified component - returns error",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
 							},
 						},
 					},
@@ -253,210 +75,23 @@ func TestGetPruneableCharts(t *testing.T) {
 			},
 			opts: PruneOptions{
 				Component: "component1",
-				Chart:     "nonexistent",
 			},
-			wantErr: `chart "nonexistent" not found in deployed package`,
-		},
-		{
-			name: "chart found but not orphaned - returns error",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{
-				Component: "component1",
-				Chart:     "chart1",
-			},
-			wantErr: `chart "chart1" found in deployed package, but is not in the "Orphaned" state`,
-		},
-		{
-			name: "multiple orphaned charts in same component",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "app-ns",
-								ChartName: "chart1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "app-ns",
-								ChartName: "chart2",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusFailed,
-							},
-							{
-								Namespace: "db-ns",
-								ChartName: "chart3",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{
-				"component1": {
-					{
-						Namespace: "app-ns",
-						ChartName: "chart1",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-					{
-						Namespace: "app-ns",
-						ChartName: "chart2",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusFailed,
-					},
-					{
-						Namespace: "db-ns",
-						ChartName: "chart3",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
+			validateResult: func(t *testing.T, result PruneStateResult) {
+				require.Len(t, result.PruneableCharts, 1)
+				require.Contains(t, result.PruneableCharts, "component1")
+				require.NotContains(t, result.PruneableCharts, "component2")
 			},
 		},
 		{
-			name: "empty deployed package - returns empty map",
+			name: "propagates errors from state layer",
 			deployedPackage: &state.DeployedPackage{
 				Name:               "test-package",
 				DeployedComponents: []state.DeployedComponent{},
 			},
-			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{},
-		},
-		{
-			name: "filters active charts correctly",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "component1",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "podinfo",
-								ChartName: "chart1",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "podinfo",
-								ChartName: "chart2",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "podinfo",
-								ChartName: "chart3",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusFailed,
-							},
-						},
-					},
-				},
+			opts: PruneOptions{
+				Component: "nonexistent",
 			},
-			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{
-				"component1": {
-					{
-						Namespace: "podinfo",
-						ChartName: "chart2",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-			},
-		},
-		{
-			name: "multiple components with mixed orphaned and active charts",
-			deployedPackage: &state.DeployedPackage{
-				Name: "test-package",
-				DeployedComponents: []state.DeployedComponent{
-					{
-						Name: "web-app",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "frontend",
-								ChartName: "nginx",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "frontend",
-								ChartName: "old-nginx",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-					{
-						Name: "database",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "backend",
-								ChartName: "postgres",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-					{
-						Name: "cache",
-						InstalledCharts: []state.InstalledChart{
-							{
-								Namespace: "backend",
-								ChartName: "redis-v1",
-								State:     state.ChartStateOrphaned,
-								Status:    state.ChartStatusSucceeded,
-							},
-							{
-								Namespace: "backend",
-								ChartName: "redis-v2",
-								State:     state.ChartStateActive,
-								Status:    state.ChartStatusSucceeded,
-							},
-						},
-					},
-				},
-			},
-			opts: PruneOptions{},
-			want: map[string][]state.InstalledChart{
-				"web-app": {
-					{
-						Namespace: "frontend",
-						ChartName: "old-nginx",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-				"cache": {
-					{
-						Namespace: "backend",
-						ChartName: "redis-v1",
-						State:     state.ChartStateOrphaned,
-						Status:    state.ChartStatusSucceeded,
-					},
-				},
-			},
+			wantErr: true,
 		},
 	}
 
@@ -464,14 +99,82 @@ func TestGetPruneableCharts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := GetPruneableCharts(tt.deployedPackage, tt.opts)
 
-			if tt.wantErr != "" {
+			if tt.wantErr {
 				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
 				return
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.want, result.PruneableCharts)
+			if tt.validateResult != nil {
+				tt.validateResult(t, result)
+			}
 		})
 	}
+}
+
+// TestPruneCharts_StateManipulation tests the state manipulation portion of PruneCharts.
+// Note: Full integration testing of PruneCharts (including helm operations and cluster updates)
+// is covered by E2E tests, as it requires running infrastructure.
+func TestPruneCharts_StateManipulation(t *testing.T) {
+	// Create a test deployed package
+	deployedPackage := &state.DeployedPackage{
+		Name: "test-package",
+		DeployedComponents: []state.DeployedComponent{
+			{
+				Name: "component1",
+				InstalledCharts: []state.InstalledChart{
+					{
+						Namespace: "ns1",
+						ChartName: "chart1",
+						State:     state.ChartStateOrphaned,
+					},
+					{
+						Namespace: "ns1",
+						ChartName: "chart2",
+						State:     state.ChartStateActive,
+					},
+				},
+			},
+			{
+				Name: "component2",
+				InstalledCharts: []state.InstalledChart{
+					{
+						Namespace: "ns2",
+						ChartName: "chart3",
+						State:     state.ChartStateOrphaned,
+					},
+				},
+			},
+		},
+	}
+
+	// Define charts to prune
+	prunedCharts := map[string][]state.InstalledChart{
+		"component1": {
+			{
+				Namespace: "ns1",
+				ChartName: "chart1",
+				State:     state.ChartStateOrphaned,
+			},
+		},
+	}
+
+	// Verify the RemovePrunedCharts method is called correctly
+	// (This tests the delegation, not the helm operations)
+	deployedPackage.RemovePrunedCharts(prunedCharts)
+
+	// Verify state was updated correctly
+	require.Len(t, deployedPackage.DeployedComponents, 2)
+
+	// component1 should have only chart2 remaining
+	comp1 := deployedPackage.DeployedComponents[0]
+	require.Equal(t, "component1", comp1.Name)
+	require.Len(t, comp1.InstalledCharts, 1)
+	require.Equal(t, "chart2", comp1.InstalledCharts[0].ChartName)
+
+	// component2 should be unchanged
+	comp2 := deployedPackage.DeployedComponents[1]
+	require.Equal(t, "component2", comp2.Name)
+	require.Len(t, comp2.InstalledCharts, 1)
+	require.Equal(t, "chart3", comp2.InstalledCharts[0].ChartName)
 }

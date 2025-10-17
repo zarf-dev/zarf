@@ -456,3 +456,323 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 		})
 	}
 }
+
+func TestDeployedPackage_GetPruneableCharts(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		deployedPackage *DeployedPackage
+		componentFilter string
+		chartFilter     string
+		wantCharts      map[string][]InstalledChart
+		wantErr         string
+	}{
+		{
+			name: "no filters - returns all orphaned charts",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+							{Namespace: "ns1", ChartName: "chart2", State: ChartStateActive},
+						},
+					},
+					{
+						Name: "comp2",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns2", ChartName: "chart3", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			componentFilter: "",
+			chartFilter:     "",
+			wantCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned}},
+				"comp2": {{Namespace: "ns2", ChartName: "chart3", State: ChartStateOrphaned}},
+			},
+		},
+		{
+			name: "component filter - returns only charts from specified component",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+						},
+					},
+					{
+						Name: "comp2",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns2", ChartName: "chart2", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			componentFilter: "comp1",
+			chartFilter:     "",
+			wantCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned}},
+			},
+		},
+		{
+			name: "component and chart filter - returns specific chart",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+							{Namespace: "ns1", ChartName: "chart2", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			componentFilter: "comp1",
+			chartFilter:     "chart1",
+			wantCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned}},
+			},
+		},
+		{
+			name: "no orphaned charts - returns empty map",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive},
+						},
+					},
+				},
+			},
+			componentFilter: "",
+			chartFilter:     "",
+			wantCharts:      map[string][]InstalledChart{},
+		},
+		{
+			name: "component not found - returns error",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{Name: "comp1", InstalledCharts: []InstalledChart{}},
+				},
+			},
+			componentFilter: "nonexistent",
+			chartFilter:     "",
+			wantErr:         "component \"nonexistent\" not found in deployed package",
+		},
+		{
+			name: "chart filter without component - returns error",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{},
+			},
+			componentFilter: "",
+			chartFilter:     "chart1",
+			wantErr:         "component must be specified when chart filter is provided",
+		},
+		{
+			name: "chart not found in component - returns error",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			componentFilter: "comp1",
+			chartFilter:     "nonexistent",
+			wantErr:         "chart \"nonexistent\" not found in deployed package",
+		},
+		{
+			name: "chart found but not orphaned - returns error",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive},
+						},
+					},
+				},
+			},
+			componentFilter: "comp1",
+			chartFilter:     "chart1",
+			wantErr:         "chart \"chart1\" found in deployed package, but is not in the \"Orphaned\" state",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := tt.deployedPackage.GetPruneableCharts(tt.componentFilter, tt.chartFilter)
+
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.wantCharts, result)
+		})
+	}
+}
+
+func TestDeployedPackage_RemovePrunedCharts(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name            string
+		deployedPackage *DeployedPackage
+		prunedCharts    map[string][]InstalledChart
+		expectedCharts  map[string][]InstalledChart
+	}{
+		{
+			name: "removes specified charts from component",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+							{Namespace: "ns1", ChartName: "chart2", State: ChartStateActive},
+							{Namespace: "ns1", ChartName: "chart3", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			prunedCharts: map[string][]InstalledChart{
+				"comp1": {
+					{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+					{Namespace: "ns1", ChartName: "chart3", State: ChartStateOrphaned},
+				},
+			},
+			expectedCharts: map[string][]InstalledChart{
+				"comp1": {
+					{Namespace: "ns1", ChartName: "chart2", State: ChartStateActive},
+				},
+			},
+		},
+		{
+			name: "removes charts from multiple components",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+							{Namespace: "ns1", ChartName: "chart2", State: ChartStateActive},
+						},
+					},
+					{
+						Name: "comp2",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns2", ChartName: "chart3", State: ChartStateOrphaned},
+							{Namespace: "ns2", ChartName: "chart4", State: ChartStateActive},
+						},
+					},
+				},
+			},
+			prunedCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned}},
+				"comp2": {{Namespace: "ns2", ChartName: "chart3", State: ChartStateOrphaned}},
+			},
+			expectedCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart2", State: ChartStateActive}},
+				"comp2": {{Namespace: "ns2", ChartName: "chart4", State: ChartStateActive}},
+			},
+		},
+		{
+			name: "does nothing if component not in pruned list",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive},
+						},
+					},
+					{
+						Name: "comp2",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns2", ChartName: "chart2", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			prunedCharts: map[string][]InstalledChart{
+				"comp2": {{Namespace: "ns2", ChartName: "chart2", State: ChartStateOrphaned}},
+			},
+			expectedCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive}},
+				"comp2": {},
+			},
+		},
+		{
+			name: "removes all charts from component",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned},
+						},
+					},
+				},
+			},
+			prunedCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateOrphaned}},
+			},
+			expectedCharts: map[string][]InstalledChart{
+				"comp1": {},
+			},
+		},
+		{
+			name: "handles empty pruned charts map",
+			deployedPackage: &DeployedPackage{
+				DeployedComponents: []DeployedComponent{
+					{
+						Name: "comp1",
+						InstalledCharts: []InstalledChart{
+							{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive},
+						},
+					},
+				},
+			},
+			prunedCharts: map[string][]InstalledChart{},
+			expectedCharts: map[string][]InstalledChart{
+				"comp1": {{Namespace: "ns1", ChartName: "chart1", State: ChartStateActive}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create a copy to avoid modifying the test data
+			testPackage := &DeployedPackage{
+				DeployedComponents: make([]DeployedComponent, len(tt.deployedPackage.DeployedComponents)),
+			}
+			copy(testPackage.DeployedComponents, tt.deployedPackage.DeployedComponents)
+
+			testPackage.RemovePrunedCharts(tt.prunedCharts)
+
+			// Verify each component has the expected charts
+			for i, component := range testPackage.DeployedComponents {
+				expectedCharts := tt.expectedCharts[component.Name]
+				require.ElementsMatch(t, expectedCharts, component.InstalledCharts,
+					"component %s charts mismatch at index %d", component.Name, i)
+			}
+		})
+	}
+}
