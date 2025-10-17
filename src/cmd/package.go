@@ -1322,9 +1322,13 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 // This command prunes helm charts that may be orphaned or otherwise in a pending state and required explicit cleanup
 // This command expects a package / package-name as an argument with the ability to filter by component and chart
 type packagePruneOptions struct {
-	namespaceOverride string
-	component         string
-	chart             string
+	namespaceOverride       string
+	component               string
+	chart                   string
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
+	confirm                 bool
 }
 
 func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
@@ -1340,11 +1344,13 @@ func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
 		ValidArgsFunction: getPackageCompletionArgs,
 	}
 
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePruneFlagConfirm)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePruneFlagConfirm)
 	cmd.Flags().StringVar(&o.component, "component", "", lang.CmdPackagePruneFlagComponent)
 	cmd.Flags().StringVar(&o.chart, "chart", "", lang.CmdPackagePruneFlagChart)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackagePruneFlagNamespace)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -1352,7 +1358,7 @@ func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
 func (o *packagePruneOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 }
 
@@ -1371,11 +1377,11 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filter,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -1431,7 +1437,7 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	message.Table(header, tableData)
 
-	if !config.CommonOptions.Confirm {
+	if !o.confirm {
 		prompt := &survey.Confirm{
 			Message: fmt.Sprintf("Prune %d orphaned chart(s)?", totalCharts),
 		}
