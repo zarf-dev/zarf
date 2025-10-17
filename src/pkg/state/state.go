@@ -59,7 +59,6 @@ const (
 const (
 	ChartStateActive   ChartState = "Active"   // In use, operational or attempted operational
 	ChartStateOrphaned ChartState = "Orphaned" // Detached from operational concerns
-	ChartStatePending  ChartState = "Pending"  // Future installs/cleanup scheduled
 )
 
 // Values during setup of the initial zarf state
@@ -457,23 +456,15 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 	for _, chart := range installedCharts {
 		k := key(chart)
 		seen[k] = struct{}{}
-		// Mark as pending if chart did not deploy successfully
-		pending := chart.Status != ChartStatusSucceeded
 
 		if _, ok := lookup[k]; ok {
 			existingChart := lookup[k]
 			existingChart.ConnectStrings = chart.ConnectStrings
 			existingChart.Status = chart.Status
 			existingChart.State = ChartStateActive
-			if pending {
-				existingChart.State = ChartStatePending
-			}
 			lookup[k] = existingChart
 		} else {
 			chart.State = ChartStateActive
-			if pending {
-				chart.State = ChartStatePending
-			}
 			lookup[k] = chart
 		}
 	}

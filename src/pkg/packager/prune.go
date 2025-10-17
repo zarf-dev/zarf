@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -20,49 +19,51 @@ type PruneOptions struct {
 	Pending           bool
 }
 
-// GetPruneableCharts returns a list of installed charts that can be pruned
-func GetPruneableCharts(ctx context.Context, pkg v1alpha1.ZarfPackage, opts PruneOptions) ([]state.InstalledChart, error) {
-	deployedPackage, err := opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
-	if err != nil {
-		return nil, err
+type PruneStateResult struct {
+	PruneableCharts map[string][]state.InstalledChart
+}
+
+// GetPruneableCharts returns a list of installed charts that can be pruned per component
+func GetPruneableCharts(deployedPackage *state.DeployedPackage, opts PruneOptions) (PruneStateResult, error) {
+	// Validate that if chart is specified, component must also be specified
+	if opts.Chart != "" && opts.Component == "" {
+		return PruneStateResult{}, fmt.Errorf("component must be specified when chart filter is provided")
 	}
 
-	// Determine if we can prune by component and chart
-	if opts.Component != "" && opts.Chart != "" {
-		return getPruneableChartsByComponentAndChart(ctx, *deployedPackage, opts.Component, opts.Chart)
-	}
-	// Otherwise determine all pruneable charts
-	pruneableCharts := make([]state.InstalledChart, 0, len(deployedPackage.DeployedComponents))
+	pruneableCharts := make(map[string][]state.InstalledChart, 0)
+	foundComponent := opts.Component == ""
+	foundChart := opts.Chart == ""
 
 	for _, component := range deployedPackage.DeployedComponents {
+		if opts.Component != "" && component.Name != opts.Component {
+			continue
+		}
+		foundComponent = true
 		for _, chart := range component.InstalledCharts {
-			if opts.Pending {
-				if chart.State == state.ChartStatePending {
-					pruneableCharts = append(pruneableCharts, chart)
-				}
+			if opts.Chart != "" && chart.ChartName != opts.Chart {
+				continue
 			}
+			foundChart = true
 			if chart.State == state.ChartStateOrphaned {
-				pruneableCharts = append(pruneableCharts, chart)
+				pruneableCharts[component.Name] = append(pruneableCharts[component.Name], chart)
 			}
 		}
 	}
-	return pruneableCharts, nil
-}
-
-func getPruneableChartsByComponentAndChart(ctx context.Context, pkg state.DeployedPackage, component string, chart string) ([]state.InstalledChart, error) {
-	for _, deployedComponent := range pkg.DeployedComponents {
-		if deployedComponent.Name == component {
-			for _, installedChart := range deployedComponent.InstalledCharts {
-				if installedChart.ChartName == chart {
-					return []state.InstalledChart{installedChart}, nil
-				}
-			}
-		}
+	// Validate filters matched something
+	if opts.Component != "" && !foundComponent {
+		return PruneStateResult{}, fmt.Errorf("component %q not found in deployed package", opts.Component)
 	}
-	return nil, fmt.Errorf("no installed chart found for component %s and chart %s", component, chart)
+	if opts.Chart != "" && !foundChart {
+		return PruneStateResult{}, fmt.Errorf("chart %q not found in deployed package", opts.Chart)
+	}
+	if opts.Chart != "" && foundChart && len(pruneableCharts) == 0 {
+		return PruneStateResult{}, fmt.Errorf("chart %q found in deployed package, but is not in the %q state", opts.Chart, state.ChartStateOrphaned)
+	}
+
+	return PruneStateResult{PruneableCharts: pruneableCharts}, nil
 }
 
-func Prune(ctx context.Context, charts []state.InstalledChart, opts PruneOptions) error {
+func PruneCharts(ctx context.Context, charts []state.InstalledChart, opts PruneOptions) error {
 	for _, chart := range charts {
 		err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
 		if err != nil {

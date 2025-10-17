@@ -441,7 +441,7 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 				{
 					Namespace: "default",
 					ChartName: "chart3",
-					State:     ChartStatePending,
+					State:     ChartStateActive,
 					Status:    ChartStatusFailed,
 				},
 			},

@@ -296,6 +296,13 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
 
+	CmdPackagePruneShort          = "Prunes orphaned Helm charts from a deployed Zarf package"
+	CmdPackagePruneLong           = "Removes Helm charts that are in an orphaned state from a deployed Zarf package. Charts become orphaned when they are removed from a package definition but remain installed in the cluster."
+	CmdPackagePruneFlagConfirm    = "Confirms the prune action to prevent accidental deletions"
+	CmdPackagePruneFlagComponent  = "Specify the name of a component to prune charts from. If not specified, all components will be considered."
+	CmdPackagePruneFlagChart      = "Specify the name of a chart to prune. If not specified, all orphaned charts within the component(s) will be pruned."
+	CmdPackagePruneFlagNamespace  = "[Alpha] Override the namespace for package pruning. Applicable only to packages deployed using the namespace flag."
+
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
 # Publish a package to a remote registry
