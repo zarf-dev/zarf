@@ -290,6 +290,27 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		}
 	}
 
+	// Check for orphaned charts in the deployed components
+	for _, component := range deployedComponents {
+		var orphanedCharts []state.InstalledChart
+		for _, chart := range component.InstalledCharts {
+			if chart.State == state.ChartStateOrphaned {
+				orphanedCharts = append(orphanedCharts, chart)
+			}
+		}
+
+		if len(orphanedCharts) > 0 {
+			chartNames := make([]string, len(orphanedCharts))
+			for i, chart := range orphanedCharts {
+				chartNames[i] = fmt.Sprintf("%s/%s", chart.Namespace, chart.ChartName)
+			}
+			l.Warn("component has orphaned charts that can be pruned",
+				"component", component.Name,
+				"charts", strings.Join(chartNames, ", "),
+				"hint", fmt.Sprintf("Run 'zarf package prune %s --component=%s' to remove them", pkgLayout.Pkg.Metadata.Name, component.Name))
+		}
+	}
+
 	return deployedComponents, nil
 }
 
