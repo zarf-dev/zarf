@@ -34,7 +34,7 @@ type PullConfig struct {
 	DestinationDirectory  string
 	ImageList             []transform.Image
 	Arch                  string
-	RegistryOverrides     map[string]string
+	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
@@ -54,6 +54,17 @@ type PushConfig struct {
 	InsecureSkipTLSVerify bool
 	Cluster               *cluster.Cluster
 	ResponseHeaderTimeout time.Duration
+}
+
+// RegistryOverride describes an override for a specific registry.
+type RegistryOverride struct {
+	// Source describes the source registry.
+	// May be of the form:
+	// - docker.io/library
+	// - docker.io
+	Source string
+	// Override replaces the source registry as a string prefix.
+	Override string
 }
 
 const (

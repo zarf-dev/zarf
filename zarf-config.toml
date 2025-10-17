@@ -11,4 +11,4 @@ registry_image = 'library/registry'
 registry_image_tag = '3.0.0'
 
 # The image reference to use for the optional git-server Zarf deploys
-gitea_image = 'gitea/gitea:1.21.5-rootless'
+gitea_image = 'ghcr.io/go-gitea/gitea:1.24.6-rootless'

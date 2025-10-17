@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -314,6 +315,128 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
 			require.NoError(t, err)
 			require.Equal(t, expectedYAMLs, actualYAMLs)
+		})
+	}
+}
+
+// TestParseRegistryOverrides ensures that ordering is maintained for registry overrides.
+func TestParseRegistryOverrides(t *testing.T) {
+	t.Parallel()
+	const intranetRegistry = "docker.example.com/repo"
+	tests := []struct {
+		name     string
+		provided []string
+		expected []images.RegistryOverride
+	}{
+		{
+			name:     "single override",
+			provided: []string{"docker.io=" + intranetRegistry},
+			expected: []images.RegistryOverride{
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "multiple override",
+			provided: []string{
+				"docker.io=" + intranetRegistry,
+				"registry1.dso.mil=" + intranetRegistry,
+				"ghcr.io=" + intranetRegistry,
+				"quay.io=" + intranetRegistry,
+			},
+			expected: []images.RegistryOverride{
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "quay.io", Override: intranetRegistry},
+				{Source: "ghcr.io", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "prefix override",
+			provided: []string{
+				"docker.io/library=" + intranetRegistry,
+				"docker.io=" + intranetRegistry,
+			},
+			expected: []images.RegistryOverride{
+				{Source: "docker.io/library", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "multiple prefix override",
+			provided: []string{
+				"docker.io/library=" + intranetRegistry,
+				"docker.io=" + intranetRegistry,
+				"registry1.dso.mil/libary=" + intranetRegistry,
+				"registry1.dso.mil=" + intranetRegistry,
+			},
+			expected: []images.RegistryOverride{
+				{Source: "registry1.dso.mil/libary", Override: intranetRegistry},
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "docker.io/library", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+		{
+			name: "prefix override with multiple standard",
+			provided: []string{
+				"docker.io/library=" + intranetRegistry,
+				"docker.io=" + intranetRegistry,
+				"registry1.dso.mil=" + intranetRegistry,
+				"ghcr.io=" + intranetRegistry,
+				"quay.io=" + intranetRegistry,
+			},
+			expected: []images.RegistryOverride{
+				{Source: "registry1.dso.mil", Override: intranetRegistry},
+				{Source: "quay.io", Override: intranetRegistry},
+				{Source: "ghcr.io", Override: intranetRegistry},
+				{Source: "docker.io/library", Override: intranetRegistry},
+				{Source: "docker.io", Override: intranetRegistry},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := parseRegistryOverrides(tc.provided)
+			require.NoError(t, err)
+			for index, element := range result {
+				require.Equal(t, tc.expected[index], element, "Element at index failed to match: %d", index)
+			}
+		})
+	}
+
+	errorTests := []struct {
+		name          string
+		provided      []string
+		errorContents string
+	}{
+		{
+			name:          "error: invalid mapping",
+			provided:      []string{"docker.io:" + intranetRegistry},
+			errorContents: "registry override missing '='",
+		},
+		{
+			name:          "error: invalid source",
+			provided:      []string{"=" + intranetRegistry},
+			errorContents: "registry override missing source",
+		},
+		{
+			name:          "error: invalid override",
+			provided:      []string{"docker.io="},
+			errorContents: "registry override missing value",
+		},
+		{
+			name:          "error: duplicate source",
+			provided:      []string{"docker.io=" + intranetRegistry, "docker.io=" + intranetRegistry},
+			errorContents: "registry override has duplicate source: existing index 0, new index 1, source docker.io",
+		},
+	}
+
+	for _, tc := range errorTests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := parseRegistryOverrides(tc.provided)
+			require.ErrorContains(t, err, tc.errorContents)
 		})
 	}
 }

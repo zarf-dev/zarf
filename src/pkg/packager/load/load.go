@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -28,16 +29,19 @@ type DefinitionOptions struct {
 	SetVariables map[string]string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
+	IsInteractive bool
 }
 
-// PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
+// PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
 		"flavor", opts.Flavor,
-		"setVariables", opts.SetVariables)
+		"setVariables", opts.SetVariables,
+	)
 
 	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, layout.ZarfYAML))
@@ -53,8 +57,14 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+
+	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	if opts.SetVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables)
+		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
@@ -113,7 +123,7 @@ func hasFlavoredComponent(pkg v1alpha1.ZarfPackage, flavor string) bool {
 	return false
 }
 
-func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string) (v1alpha1.ZarfPackage, []string, error) {
+func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariables map[string]string, isInteractive bool) (v1alpha1.ZarfPackage, []string, error) {
 	templateMap := map[string]string{}
 	warnings := []string{}
 
@@ -129,7 +139,7 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 			}
 
 			_, present := setVariables[key]
-			if !present && !config.CommonOptions.Confirm {
+			if !present && isInteractive {
 				setVal, err := interactive.PromptVariable(ctx, v1alpha1.InteractiveVariable{
 					Variable: v1alpha1.Variable{Name: key},
 				})

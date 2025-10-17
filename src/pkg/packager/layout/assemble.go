@@ -24,7 +24,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -34,7 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	actions2 "github.com/zarf-dev/zarf/src/pkg/packager/actions"
+	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -45,7 +44,7 @@ type AssembleOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  map[string]string
+	RegistryOverrides  []images.RegistryOverride
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
@@ -154,6 +153,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		err := generateSBOM(ctx, pkg, buildPath, sbomImageList, opts.CachePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate SBOM: %w", err)
+		}
+	}
+
+	l.Debug("copying values files to package", "files", pkg.Values.Files)
+	for _, file := range pkg.Values.Files {
+		if err = copyValuesFile(ctx, file, packagePath, buildPath); err != nil {
+			return nil, err
 		}
 	}
 
@@ -274,7 +280,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -417,7 +423,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions2.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -690,7 +696,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides map[string]string) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -721,7 +727,13 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	pkg.Build.RegistryOverrides = registryOverrides
+	// We lose the ordering for the user-provided registry overrides.
+	overrides := make(map[string]string, len(registryOverrides))
+	for i := range registryOverrides {
+		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
+	}
+
+	pkg.Build.RegistryOverrides = overrides
 
 	return pkg
 }
@@ -874,4 +886,38 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 
 		return nil
 	})
+}
+
+func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+
+	// Process local values file
+	src := file
+	if !filepath.IsAbs(src) {
+		src = filepath.Join(packagePath, ValuesDir, file)
+	}
+	// Validate src
+	if _, err := os.Stat(src); err != nil {
+		return fmt.Errorf("unable to access values file %s: %w", src, err)
+	}
+
+	// Ensure relative paths don't munge the destination and write outside of the package tmpdir
+	cleanFile := filepath.Clean(file)
+	if strings.HasPrefix(cleanFile, "..") {
+		return fmt.Errorf("values file path %s escapes package directory", file)
+	}
+
+	//Copy file to pre-archive package - destination includes ValuesDir
+	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
+	l.Debug("copying values file", "src", src, "dst", dst)
+	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		return fmt.Errorf("failed to copy values file %s: %w", src, err)
+	}
+
+	// Set appropriate file permissions
+	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	}
+
+	return nil
 }

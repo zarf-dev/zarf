@@ -33,7 +33,7 @@ var User Mode = "user"
 type Name string
 
 // Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,
-// and any commentary or context appropriate for its stage. Descirptions are mutable, and are intended to be updated
+// and any commentary or context appropriate for its stage. Descriptions are mutable, and are intended to be updated
 // throughout the feature's development lifecycle.
 type Description string
 
@@ -204,6 +204,7 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 var (
 	// AxolotlMode declares the "axolotl-mode" feature
 	AxolotlMode Name = "axolotl-mode"
+	Values      Name = "values"
 )
 
 func init() {
@@ -223,6 +224,15 @@ func init() {
 				"This fun feature is intended to help with testing feature flags.",
 			Enabled: false,
 			Since:   "v0.60.0",
+			Stage:   Alpha,
+		},
+		{
+			Name: Values,
+			Description: "Enabling \"values\" allows for Helm-like values files to be imported. Values are intended to" +
+				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
+				"alternative to Variables .",
+			Enabled: false,
+			Since:   "v0.64.0",
 			Stage:   Alpha,
 		},
 	}

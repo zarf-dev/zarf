@@ -27,12 +27,12 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
-func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
+func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
 	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
-		if config.CommonOptions.Confirm {
-			return variable.Default, nil
+		if isInteractive {
+			return interactive.PromptVariable(ctx, variable)
 		}
-		return interactive.PromptVariable(ctx, variable)
+		return variable.Default, nil
 	}
 
 	return variables.New("zarf", prompt, logger.From(ctx))
@@ -98,10 +98,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		}
 	}
 
-	err = debugPrintTemplateMap(ctx, templateMap)
-	if err != nil {
-		return nil, err
-	}
+	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
 }
@@ -126,10 +123,9 @@ func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
-	return nil
 }
 
 func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {

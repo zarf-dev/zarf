@@ -17,12 +17,15 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"oras.land/oras-go/v2/registry"
 
@@ -49,14 +52,10 @@ func newPackageCommand() *cobra.Command {
 
 	v := getViper()
 
-	persistentFlags := cmd.PersistentFlags()
-	persistentFlags.IntVar(&config.CommonOptions.OCIConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	persistentFlags.StringVarP(&pkgConfig.PkgOpts.PublicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-
 	cmd.AddCommand(newPackageCreateCommand(v))
 	cmd.AddCommand(newPackageDeployCommand(v))
 	cmd.AddCommand(newPackageMirrorResourcesCommand(v))
-	cmd.AddCommand(newPackageInspectCommand())
+	cmd.AddCommand(newPackageInspectCommand(v))
 	cmd.AddCommand(newPackageRemoveCommand(v))
 	cmd.AddCommand(newPackageListCommand())
 	cmd.AddCommand(newPackagePublishCommand(v))
@@ -75,10 +74,11 @@ type packageCreateOptions struct {
 	sbomOutput              string
 	skipSBOM                bool
 	maxPackageSizeMB        int
-	registryOverrides       map[string]string
+	registryOverrides       []string
 	signingKeyPath          string
 	signingKeyPassword      string
 	flavor                  string
+	ociConcurrency          int
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -98,6 +98,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageCreateFlagConfirm)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
 	outputDirectory := v.GetString("package.create.output_directory")
 	output := v.GetString(VPkgCreateOutput)
@@ -113,7 +114,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
-	cmd.Flags().StringToStringVar(&o.registryOverrides, "registry-override", v.GetStringMapString(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
+	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
@@ -121,12 +122,6 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
-
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	err := cmd.Flags().MarkDeprecated("retries", "retries does not have any impact on package creation")
-	if err != nil {
-		logger.Default().Debug("unable to mark flag retries as deprecated", "error", err)
-	}
 
 	errOD := cmd.Flags().MarkHidden("output-directory")
 	if errOD != nil {
@@ -144,9 +139,47 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
+// Converts registry overrides to a structured type.
+// The result will be sorted in descending order.
+// Descending order guarantees the longest prefix will be sorted toward the beginning.
+//
+// Input is of the following form:
+// []string{"docker.io/library=docker.example.com", "docker.io=docker.example.com"}
+func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, error) {
+	result := make([]images.RegistryOverride, len(overrides))
+	for i, mapping := range overrides {
+		source, override, found := strings.Cut(mapping, "=")
+		if !found {
+			return nil, fmt.Errorf("registry override missing '=': %s", mapping)
+		}
+
+		if source == "" {
+			return nil, fmt.Errorf("registry override missing source: %s", mapping)
+		}
+
+		if override == "" {
+			return nil, fmt.Errorf("registry override missing value: %s", mapping)
+		}
+
+		if index := slices.IndexFunc(result, func(existing images.RegistryOverride) bool {
+			return existing.Source == source
+		}); index >= 0 {
+			return nil, fmt.Errorf("registry override has duplicate source: existing index %d, new index %d, source %s", index, i, source)
+		}
+
+		result[i].Source = source
+		result[i].Override = override
+	}
+
+	// We sort these now at parse time so they are handled correctly throughout execution.
+	slices.SortFunc(result, func(a images.RegistryOverride, b images.RegistryOverride) int {
+		return -strings.Compare(a.Source, b.Source)
+	})
+
+	return result, nil
+}
+
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
-	// TODO pass confirm through the system rather than keeping it as a global
-	config.CommonOptions.Confirm = o.confirm
 	l := logger.From(ctx)
 	baseDir := setBaseDirectory(args)
 
@@ -158,6 +191,11 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	overrides, err := parseRegistryOverrides(o.registryOverrides)
+	if err != nil {
+		return fmt.Errorf("error parsing registry override: %w", err)
+	}
+	l.Debug("parsed registry overrides", "overrides", overrides)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -165,19 +203,20 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	}
 	opt := packager.CreateOptions{
 		Flavor:                  o.flavor,
-		RegistryOverrides:       o.registryOverrides,
+		RegistryOverrides:       overrides,
 		SigningKeyPath:          o.signingKeyPath,
 		SigningKeyPassword:      o.signingKeyPassword,
 		SetVariables:            o.setVariables,
 		MaxPackageSizeMB:        o.maxPackageSizeMB,
 		SBOMOut:                 o.sbomOutput,
 		SkipSBOM:                o.skipSBOM,
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		DifferentialPackagePath: o.differentialPackagePath,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
+		IsInteractive:           !o.confirm,
 	}
-	_, err = packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -186,11 +225,23 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create package: %w", err)
 	}
+	l.Debug("package created", "path", pkgPath)
 	return nil
 }
 
 type packageDeployOptions struct {
-	namespaceOverride string
+	valuesFiles             []string
+	namespaceOverride       string
+	confirm                 bool
+	adoptExistingResources  bool
+	timeout                 time.Duration
+	retries                 int
+	setVariables            map[string]string
+	optionalComponents      string
+	shasum                  string
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
@@ -207,18 +258,21 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
 	// Always require adopt-existing-resources flag (no viper)
-	cmd.Flags().BoolVar(&pkgConfig.DeployOpts.AdoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	cmd.Flags().DurationVar(&pkgConfig.DeployOpts.Timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
+	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&pkgConfig.PkgOpts.SetVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
+	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -226,7 +280,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 }
 
@@ -238,8 +292,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	v := getViper()
-	pkgConfig.PkgOpts.SetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), pkgConfig.PkgOpts.SetVariables, strings.ToUpper)
+	o.setVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+
+	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
+	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -247,12 +308,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Shasum:                  o.shasum,
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -265,16 +326,18 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}()
 
 	deployOpts := packager.DeployOptions{
-		AdoptExistingResources: pkgConfig.DeployOpts.AdoptExistingResources,
-		Timeout:                pkgConfig.DeployOpts.Timeout,
-		Retries:                pkgConfig.PkgOpts.Retries,
-		OCIConcurrency:         config.CommonOptions.OCIConcurrency,
-		SetVariables:           pkgConfig.PkgOpts.SetVariables,
+		Values:                 values,
+		AdoptExistingResources: o.adoptExistingResources,
+		Timeout:                o.timeout,
+		Retries:                o.retries,
+		OCIConcurrency:         o.ociConcurrency,
+		SetVariables:           o.setVariables,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
+		IsInteractive:          !o.confirm,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
 	if err != nil {
 		return err
 	}
@@ -294,14 +357,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
 		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, pkgConfig.PkgOpts.SetVariables)
+	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +372,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	// filter after confirmation to allow users to view the entire package interactively
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(pkgConfig.PkgOpts.OptionalComponents, !config.CommonOptions.Confirm),
+		filters.ForDeploy(optionalComponents, opts.IsInteractive),
 	)
 
 	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
@@ -325,7 +388,7 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 	return result.DeployedComponents, nil
 }
 
-func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string) (err error) {
+func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVariables map[string]string, isInteractive bool) (err error) {
 	l := logger.From(ctx)
 
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
@@ -336,7 +399,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
-	if pkgLayout.ContainsSBOM() && !config.CommonOptions.Confirm {
+	if pkgLayout.ContainsSBOM() && isInteractive {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return err
@@ -352,7 +415,7 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		l.Info("this package has SBOMs available for review in a temporary directory", "directory", SBOMPath)
 	}
 
-	if config.CommonOptions.Confirm {
+	if !isInteractive {
 		return nil
 	}
 
@@ -387,8 +450,18 @@ func getPackageYAMLHints(pkg v1alpha1.ZarfPackage, setVariables map[string]strin
 }
 
 type packageMirrorResourcesOptions struct {
-	mirrorImages bool
-	mirrorRepos  bool
+	mirrorImages            bool
+	mirrorRepos             bool
+	confirm                 bool
+	shasum                  string
+	noImgChecksum           bool
+	skipSignatureValidation bool
+	retries                 int
+	optionalComponents      string
+	gitServer               state.GitServerInfo
+	registryInfo            state.RegistryInfo
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
@@ -411,24 +484,26 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageDeployFlagConfirm)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
-	cmd.Flags().BoolVar(&pkgConfig.MirrorOpts.NoImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
+	cmd.Flags().BoolVar(&o.noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
-	cmd.Flags().IntVar(&pkgConfig.PkgOpts.Retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
 
 	// Flags for using an external Git server
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.GitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
+	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
+	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
 
 	// Flags for using an external registry
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
-	cmd.Flags().StringVar(&pkgConfig.InitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
+	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
+	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 
 	// Flags for specifying which resources to mirror
 	cmd.Flags().BoolVar(&o.mirrorImages, "images", false, "mirror only the images")
@@ -441,7 +516,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 
 	// post flag validation - perform both if neither were set
@@ -460,7 +535,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
+		filters.BySelectState(o.optionalComponents),
 	)
 
 	cachePath, err := getCachePath(ctx)
@@ -469,12 +544,12 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		Shasum:                  o.shasum,
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filter,
 		Architecture:            config.GetArch(),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -504,7 +579,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	if o.mirrorImages && images > 0 {
 		logger.From(ctx).Info("mirroring images", "images", images)
-		if pkgConfig.InitOpts.RegistryInfo.Address == "" {
+		if o.registryInfo.Address == "" {
 			// if empty flag & zarf state available - execute
 			// otherwise return error
 			if c == nil {
@@ -515,16 +590,16 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 				return fmt.Errorf("no registry URL provided and no zarf state found")
 			}
 			logger.From(ctx).Debug("no registry URL provided, using zarf state", "address", state.RegistryInfo.Address)
-			pkgConfig.InitOpts.RegistryInfo = state.RegistryInfo
+			o.registryInfo = state.RegistryInfo
 		}
 		mirrorOpt := packager.ImagePushOptions{
 			Cluster:         c,
-			NoImageChecksum: pkgConfig.MirrorOpts.NoImgChecksum,
-			Retries:         pkgConfig.PkgOpts.Retries,
-			OCIConcurrency:  config.CommonOptions.OCIConcurrency,
+			NoImageChecksum: o.noImgChecksum,
+			Retries:         o.retries,
+			OCIConcurrency:  o.ociConcurrency,
 			RemoteOptions:   defaultRemoteOptions(),
 		}
-		err = packager.PushImagesToRegistry(ctx, pkgLayout, pkgConfig.InitOpts.RegistryInfo, mirrorOpt)
+		err = packager.PushImagesToRegistry(ctx, pkgLayout, o.registryInfo, mirrorOpt)
 		if err != nil {
 			return err
 		}
@@ -536,7 +611,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	if o.mirrorRepos && repos > 0 {
 		logger.From(ctx).Info("mirroring repos", "repos", repos)
-		if pkgConfig.InitOpts.GitServer.Address == "" {
+		if o.gitServer.Address == "" {
 			if c == nil {
 				return fmt.Errorf("no cluster connection detected - unable to obtain state")
 			}
@@ -545,14 +620,14 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 				return fmt.Errorf("no git URL provided and no zarf state found")
 			}
 			logger.From(ctx).Debug("no git URL provided, using zarf state", "address", state.GitServer.Address)
-			pkgConfig.InitOpts.GitServer = state.GitServer
+			o.gitServer = state.GitServer
 		}
 
 		mirrorOpt := packager.RepoPushOptions{
 			Cluster: c,
-			Retries: pkgConfig.PkgOpts.Retries,
+			Retries: o.retries,
 		}
-		err = packager.PushReposToRepository(ctx, pkgLayout, pkgConfig.InitOpts.GitServer, mirrorOpt)
+		err = packager.PushReposToRepository(ctx, pkgLayout, o.gitServer, mirrorOpt)
 		if err != nil {
 			return err
 		}
@@ -560,9 +635,15 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	return nil
 }
 
-type packageInspectOptions struct{}
+type packageInspectOptions struct {
+	sbomOutputDir           string
+	listImages              bool
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
+}
 
-func newPackageInspectCommand() *cobra.Command {
+func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	o := &packageInspectOptions{}
 	cmd := &cobra.Command{
 		Use:     "inspect [ PACKAGE_SOURCE ]",
@@ -574,15 +655,17 @@ func newPackageInspectCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.AddCommand(newPackageInspectSBOMCommand())
-	cmd.AddCommand(newPackageInspectImagesCommand())
-	cmd.AddCommand(newPackageInspectShowManifestsCommand())
-	cmd.AddCommand(newPackageInspectDefinitionCommand())
-	cmd.AddCommand(newPackageInspectValuesFilesCommand())
+	cmd.AddCommand(newPackageInspectSBOMCommand(v))
+	cmd.AddCommand(newPackageInspectImagesCommand(v))
+	cmd.AddCommand(newPackageInspectShowManifestsCommand(v))
+	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
+	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
 
-	cmd.Flags().StringVar(&pkgConfig.InspectOpts.SBOMOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	cmd.Flags().BoolVar(&pkgConfig.InspectOpts.ListImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().StringVar(&o.sbomOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
+	cmd.Flags().BoolVar(&o.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -590,7 +673,7 @@ func newPackageInspectCommand() *cobra.Command {
 func (o *packageInspectOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 }
 
@@ -598,27 +681,33 @@ func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
 
-	if pkgConfig.InspectOpts.ListImages && pkgConfig.InspectOpts.SBOMOutputDir != "" {
+	if o.listImages && o.sbomOutputDir != "" {
 		return fmt.Errorf("cannot use --sbom-out and --list-images at the same time")
 	}
 
-	if pkgConfig.InspectOpts.SBOMOutputDir != "" {
+	if o.sbomOutputDir != "" {
 		sbomOpts := packageInspectSBOMOptions{
-			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			outputDir:               pkgConfig.InspectOpts.SBOMOutputDir,
+			skipSignatureValidation: o.skipSignatureValidation,
+			outputDir:               o.sbomOutputDir,
+			ociConcurrency:          o.ociConcurrency,
+			publicKeyPath:           o.publicKeyPath,
 		}
 		return sbomOpts.run(cmd, args)
 	}
 
-	if pkgConfig.InspectOpts.ListImages {
+	if o.listImages {
 		imagesOpts := packageInspectImagesOptions{
-			skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+			skipSignatureValidation: o.skipSignatureValidation,
+			ociConcurrency:          o.ociConcurrency,
+			publicKeyPath:           o.publicKeyPath,
 		}
 		return imagesOpts.run(cmd, args)
 	}
 
 	definitionOpts := packageInspectDefinitionOptions{
-		skipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		skipSignatureValidation: o.skipSignatureValidation,
+		ociConcurrency:          o.ociConcurrency,
+		publicKeyPath:           o.publicKeyPath,
 	}
 	return definitionOpts.run(cmd, args)
 }
@@ -629,6 +718,8 @@ type packageInspectValuesFilesOptions struct {
 	kubeVersion             string
 	setVariables            map[string]string
 	outputWriter            io.Writer
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
@@ -637,7 +728,7 @@ func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
 	}
 }
 
-func newPackageInspectValuesFilesCommand() *cobra.Command {
+func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectValuesFilesOptions()
 	cmd := &cobra.Command{
 		Use:   "values-files [ PACKAGE ]",
@@ -650,6 +741,8 @@ func newPackageInspectValuesFilesCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
@@ -664,6 +757,8 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
@@ -673,11 +768,11 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		LayersSelector:          zoci.ComponentLayers,
 		Filter:                  filters.BySelectState(o.components),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -690,8 +785,9 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
+		SetVariables:  o.setVariables,
+		KubeVersion:   o.kubeVersion,
+		IsInteractive: true,
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -716,6 +812,8 @@ type packageInspectManifestsOptions struct {
 	kubeVersion             string
 	setVariables            map[string]string
 	outputWriter            io.Writer
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
@@ -724,7 +822,7 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 	}
 }
 
-func newPackageInspectShowManifestsCommand() *cobra.Command {
+func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
 		Use:   "manifests [ PACKAGE ]",
@@ -736,6 +834,8 @@ func newPackageInspectShowManifestsCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
@@ -750,6 +850,8 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		return err
 	}
 	v := getViper()
+
+	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
 	cachePath, err := getCachePath(ctx)
@@ -759,11 +861,11 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		LayersSelector:          zoci.ComponentLayers,
 		Filter:                  filters.BySelectState(o.components),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -776,8 +878,9 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}()
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
-		SetVariables: o.setVariables,
-		KubeVersion:  o.kubeVersion,
+		SetVariables:  o.setVariables,
+		KubeVersion:   o.kubeVersion,
+		IsInteractive: true,
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
@@ -805,6 +908,8 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 type packageInspectSBOMOptions struct {
 	skipSignatureValidation bool
 	outputDir               string
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
@@ -815,7 +920,7 @@ func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 }
 
 // newPackageInspectSBOMCommand creates the `package inspect sbom` sub-command.
-func newPackageInspectSBOMCommand() *cobra.Command {
+func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
 		Use:   "sbom [ PACKAGE ]",
@@ -824,6 +929,8 @@ func newPackageInspectSBOMCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
 
@@ -845,11 +952,11 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 
 	loadOpts := packager.LoadOptions{
 		Architecture:            config.GetArch(),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		LayersSelector:          zoci.SbomLayers,
 		Filter:                  filters.Empty(),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -878,6 +985,8 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 type packageInspectImagesOptions struct {
 	namespaceOverride       string
 	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageInspectImagesOptions() *packageInspectImagesOptions {
@@ -886,7 +995,7 @@ func newPackageInspectImagesOptions() *packageInspectImagesOptions {
 	}
 }
 
-func newPackageInspectImagesCommand() *cobra.Command {
+func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectImagesOptions()
 	cmd := &cobra.Command{
 		Use:   "images [ PACKAGE_SOURCE ]",
@@ -895,6 +1004,8 @@ func newPackageInspectImagesCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
@@ -919,8 +1030,8 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -947,6 +1058,8 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 type packageInspectDefinitionOptions struct {
 	namespaceOverride       string
 	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
@@ -955,7 +1068,7 @@ func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
 	}
 }
 
-func newPackageInspectDefinitionCommand() *cobra.Command {
+func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDefinitionOptions()
 	cmd := &cobra.Command{
 		Use:   "definition [ PACKAGE_SOURCE ]",
@@ -964,6 +1077,8 @@ func newPackageInspectDefinitionCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 
@@ -988,8 +1103,8 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filters.Empty(),
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -1109,7 +1224,12 @@ func (o *packageListOptions) run(ctx context.Context) error {
 }
 
 type packageRemoveOptions struct {
-	namespaceOverride string
+	namespaceOverride       string
+	confirm                 bool
+	optionalComponents      string
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
@@ -1126,10 +1246,12 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 		ValidArgsFunction: getPackageCompletionArgs,
 	}
 
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.OptionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
@@ -1137,7 +1259,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 func (o *packageRemoveOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 }
 
@@ -1149,7 +1271,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
-		filters.BySelectState(pkgConfig.PkgOpts.OptionalComponents),
+		filters.BySelectState(o.optionalComponents),
 	)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -1157,11 +1279,11 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	}
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
 		Filter:                  filter,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -1179,7 +1301,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
-	if !config.CommonOptions.Confirm {
+	if !o.confirm {
 		prompt := &survey.Confirm{
 			Message: "Remove this Zarf package?",
 		}
@@ -1331,8 +1453,14 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packagePublishOptions struct {
-	flavor  string
-	retries int
+	flavor                  string
+	retries                 int
+	signingKeyPath          string
+	signingKeyPassword      string
+	skipSignatureValidation bool
+	confirm                 bool
+	ociConcurrency          int
+	publicKeyPath           string
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1347,12 +1475,14 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
-	cmd.Flags().StringVar(&pkgConfig.PublishOpts.SigningKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 
 	return cmd
 }
@@ -1360,7 +1490,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
-		pkgConfig.PkgOpts.SkipSignatureValidation = true
+		o.skipSignatureValidation = true
 	}
 }
 
@@ -1392,9 +1522,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
 		skeletonOpts := packager.PublishSkeletonOptions{
-			OCIConcurrency:     config.CommonOptions.OCIConcurrency,
-			SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
-			SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+			OCIConcurrency:     o.ociConcurrency,
+			SigningKeyPath:     o.signingKeyPath,
+			SigningKeyPassword: o.signingKeyPassword,
 			Retries:            o.retries,
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
@@ -1404,9 +1534,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath == "" {
+	if helpers.IsOCIURL(packageSource) && o.signingKeyPath == "" {
 		ociOpts := packager.PublishFromOCIOptions{
-			OCIConcurrency: config.CommonOptions.OCIConcurrency,
+			OCIConcurrency: o.ociConcurrency,
 			Architecture:   config.GetArch(),
 			RemoteOptions:  defaultRemoteOptions(),
 			Retries:        o.retries,
@@ -1429,7 +1559,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
 
-	if helpers.IsOCIURL(packageSource) && pkgConfig.PublishOpts.SigningKeyPath != "" {
+	if helpers.IsOCIURL(packageSource) && o.signingKeyPath != "" {
 		l.Info("pulling source package locally to sign", "reference", packageSource)
 		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 		if err != nil {
@@ -1440,10 +1570,10 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		}()
 
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
-			SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-			PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+			SkipSignatureValidation: o.skipSignatureValidation,
+			PublicKeyPath:           o.publicKeyPath,
 			Architecture:            config.GetArch(),
-			OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+			OCIConcurrency:          o.ociConcurrency,
 			RemoteOptions:           defaultRemoteOptions(),
 			CachePath:               cachePath,
 		})
@@ -1454,12 +1584,11 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  pkgConfig.PkgOpts.Shasum,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
@@ -1472,9 +1601,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}()
 
 	publishPackageOpts := packager.PublishPackageOptions{
-		OCIConcurrency:     config.CommonOptions.OCIConcurrency,
-		SigningKeyPath:     pkgConfig.PublishOpts.SigningKeyPath,
-		SigningKeyPassword: pkgConfig.PublishOpts.SigningKeyPassword,
+		OCIConcurrency:     o.ociConcurrency,
+		SigningKeyPath:     o.signingKeyPath,
+		SigningKeyPassword: o.signingKeyPassword,
 		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
@@ -1483,7 +1612,13 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	return err
 }
 
-type packagePullOptions struct{}
+type packagePullOptions struct {
+	shasum                  string
+	outputDirectory         string
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
+}
 
 func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	o := &packagePullOptions{}
@@ -1496,16 +1631,18 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&pkgConfig.PkgOpts.Shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
-	cmd.Flags().StringVarP(&pkgConfig.PullOpts.OutputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
-	cmd.Flags().BoolVar(&pkgConfig.PkgOpts.SkipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
+	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	return cmd
 }
 
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	srcURL := args[0]
-	outputDir := pkgConfig.PullOpts.OutputDirectory
+	outputDir := o.outputDirectory
 	ctx := cmd.Context()
 	if outputDir == "" {
 		wd, err := os.Getwd()
@@ -1519,11 +1656,11 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
-		SHASum:                  pkgConfig.PkgOpts.Shasum,
-		SkipSignatureValidation: pkgConfig.PkgOpts.SkipSignatureValidation,
-		PublicKeyPath:           pkgConfig.PkgOpts.PublicKeyPath,
+		SHASum:                  o.shasum,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		PublicKeyPath:           o.publicKeyPath,
 		Architecture:            config.GetArch(),
-		OCIConcurrency:          config.CommonOptions.OCIConcurrency,
+		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	})
