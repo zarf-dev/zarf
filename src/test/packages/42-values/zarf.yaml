@@ -22,6 +22,12 @@ components:
             setValues:
               - key: .yaml
                 type: yaml
+          # Test that template: false prevents Zarf from processing go-templates
+          - cmd: echo 'template={{ .shouldNotBeProcessed }}'
+            template: false
+            setValues:
+              - key: .rawTemplate
+                type: string
     manifests:
       - name: test-configmap
         template: true
@@ -31,3 +37,7 @@ components:
         template: true
         files:
           - action-configmap.yaml
+      - name: test-raw-template-configmap
+        template: true
+        files:
+          - raw-template-configmap.yaml
