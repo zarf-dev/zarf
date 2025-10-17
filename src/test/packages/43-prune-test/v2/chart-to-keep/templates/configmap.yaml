@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chart-to-keep-config
+  namespace: {{ .Release.Namespace }}
+data:
+  message: "This chart should be kept"

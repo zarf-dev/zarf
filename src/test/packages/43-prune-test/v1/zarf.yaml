@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: prune-test
+  version: 0.0.1
+
+components:
+  - name: test-component
+    required: true
+    charts:
+      - name: chart-to-keep
+        version: 1.0.0
+        namespace: prune-test
+        localPath: chart-to-keep
+      - name: chart-to-remove
+        version: 1.0.0
+        namespace: prune-test
+        localPath: chart-to-remove

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: chart-to-remove
+description: A Helm chart that will be removed to test pruning
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
