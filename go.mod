@@ -38,7 +38,7 @@ require (
 	github.com/phsym/console-slog v0.3.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/pterm/pterm v0.12.81
+	github.com/pterm/pterm v0.12.82
 	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v2 v2.6.1
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
