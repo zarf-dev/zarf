@@ -63,12 +63,43 @@ func GetPruneableCharts(deployedPackage *state.DeployedPackage, opts PruneOption
 	return PruneStateResult{PruneableCharts: pruneableCharts}, nil
 }
 
-func PruneCharts(ctx context.Context, charts []state.InstalledChart, opts PruneOptions) error {
-	for _, chart := range charts {
-		err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
-		if err != nil {
-			return err
+// PruneCharts removes the specified charts from the cluster and updates the deployed package state
+func PruneCharts(ctx context.Context, deployedPackage *state.DeployedPackage, pruneableCharts map[string][]state.InstalledChart, opts PruneOptions) error {
+	// Prune charts from cluster and update state for each component
+	for compIdx, component := range deployedPackage.DeployedComponents {
+		prunedCharts, exists := pruneableCharts[component.Name]
+		if !exists {
+			continue
 		}
+
+		// Create a set of pruned chart names for quick lookup
+		prunedChartNames := make(map[string]bool)
+
+		// Remove each chart from the cluster
+		for _, chart := range prunedCharts {
+			err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
+			if err != nil {
+				return fmt.Errorf("failed to remove chart %s from component %s: %w", chart.ChartName, component.Name, err)
+			}
+			prunedChartNames[chart.ChartName] = true
+		}
+
+		// Filter out pruned charts from the component's installed charts list
+		var remainingCharts []state.InstalledChart
+		for _, chart := range component.InstalledCharts {
+			if !prunedChartNames[chart.ChartName] {
+				remainingCharts = append(remainingCharts, chart)
+			}
+		}
+
+		deployedPackage.DeployedComponents[compIdx].InstalledCharts = remainingCharts
 	}
+
+	// Save the updated state back to the cluster
+	err := opts.Cluster.UpdateDeployedPackage(ctx, *deployedPackage)
+	if err != nil {
+		return fmt.Errorf("unable to update deployed package state: %w", err)
+	}
+
 	return nil
 }

@@ -1447,12 +1447,13 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	for _, charts := range pruneState.PruneableCharts {
-		err = packager.PruneCharts(ctx, charts, pruneOpt)
-		if err != nil {
-			return err
-		}
+	// Prune the charts and update state
+	err = packager.PruneCharts(ctx, deployedPackage, pruneState.PruneableCharts, pruneOpt)
+	if err != nil {
+		return fmt.Errorf("failed to prune charts: %w", err)
 	}
+
+	logger.From(ctx).Info("successfully pruned orphaned charts and updated package state")
 
 	return nil
 
