@@ -1,0 +1,17 @@
+  # yaml-language-server: $schema=https://raw.githubusercontent.com/zarf-dev/zarf/v0.63.0/zarf.schema.json
+kind: ZarfPackageConfig
+
+metadata:
+  name: argocd
+  description: auto-generated using `zarf dev generate`
+  version: 8.6.1-bb.0
+
+components:
+  - name: argocd
+    required: true
+    charts:
+      - name: argocd
+        version: 8.6.1-bb.0
+        url: https://repo1.dso.mil/big-bang/product/packages/argocd.git
+        gitPath: chart
+        namespace: argocd
