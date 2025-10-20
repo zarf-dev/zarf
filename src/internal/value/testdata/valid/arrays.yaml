@@ -1,0 +1,13 @@
+items:
+  - name: item1
+    count: 5
+    enabled: true
+  - name: item2
+    count: 10
+    enabled: false
+numbers: [1, 2, 3, 4, 5]
+mixed:
+  string: "hello"
+  number: 42
+  boolean: true
+  float: 3.14

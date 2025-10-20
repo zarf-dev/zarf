@@ -16,6 +16,7 @@ const (
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
+	ValuesDir     = "values"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"

@@ -99,6 +99,7 @@ const (
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
+	VPkgDeployValues     = "package.deploy.values"
 
 	// Package publish config keys
 

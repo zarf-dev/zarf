@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
@@ -32,14 +33,15 @@ type DefinitionOptions struct {
 	IsInteractive bool
 }
 
-// PackageDefinition returns a validated package definition after flavors, imports, and variables are applied.
+// PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
 		"flavor", opts.Flavor,
-		"setVariables", opts.SetVariables)
+		"setVariables", opts.SetVariables,
+	)
 
 	// Load PackageConfig from disk
 	b, err := os.ReadFile(filepath.Join(packagePath, layout.ZarfYAML))
@@ -55,6 +57,12 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+
+	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {

@@ -205,6 +205,7 @@ const (
 	// AxolotlMode declares the "axolotl-mode" feature
 	AxolotlMode   Name = "axolotl-mode"
 	RegistryProxy Name = "registry-proxy"
+	Values        Name = "values"
 )
 
 func init() {
@@ -228,10 +229,19 @@ func init() {
 		},
 		{
 			Name:        RegistryProxy,
-			Description: "Enables setting Zarf init with the registry proxy flag",
+			Description: "Enables the registry proxy feature during Zarf init",
 			Enabled:     false,
-			Since:       "v0.63.0",
+			Since:       "v0.65.0",
 			Stage:       Alpha,
+		},
+		{
+			Name: Values,
+			Description: "Enabling \"values\" allows for Helm-like values files to be imported. Values are intended to" +
+				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
+				"alternative to Variables .",
+			Enabled: false,
+			Since:   "v0.64.0",
+			Stage:   Alpha,
 		},
 	}
 
