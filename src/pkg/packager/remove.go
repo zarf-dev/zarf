@@ -14,7 +14,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/feature"
-	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -57,10 +56,6 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		return fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
-
-	// Create variable config for constants and templating
-	variableConfig := ptmpl.GetZarfVariableConfig(ctx, false)
-	variableConfig.SetConstants(pkg.Constants)
 
 	vals := opts.Values
 	if vals == nil {
