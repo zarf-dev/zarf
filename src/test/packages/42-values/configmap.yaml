@@ -5,3 +5,7 @@ metadata:
   namespace: default
 data:
   value: "{{ .Values.test }}"
+<<<<<<< HEAD
+=======
+  additional: "{{ .Values.additional }}"
+>>>>>>> fb70fccdbd8292099bd234647980c02e7a2311bf

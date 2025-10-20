@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: "docker.io/library/nginx:1.29.2"
         ports:
         - containerPort: 80
           name: http

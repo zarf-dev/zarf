@@ -173,7 +173,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template."
+          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template. Defaults to SetValueString behavior when empty."
         }
       },
       "additionalProperties": false,
@@ -627,6 +627,10 @@
         "wait": {
           "$ref": "#/$defs/ZarfComponentActionWait",
           "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+        },
+        "template": {
+          "type": "boolean",
+          "description": "Disable go-template processing on the cmd field. This is useful when the cmd contains go-templates that should be passed to another system."
         }
       },
       "additionalProperties": false,

@@ -11,7 +11,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -41,7 +40,7 @@ type overrideOpts struct {
 
 // generateValuesOverrides generates a map of values to override for a given chart and component, with precedence of:
 // Zarf Variable overrides -> Zarf value overrides -> direct API helm-value overrides.
-func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
+func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, componentName string, opts overrideOpts) (map[string]any, error) {
 	chartOverrides := make(value.Values)
 	valuesOverrides := make(map[string]any)
 
@@ -70,14 +69,7 @@ func generateValuesOverrides(ctx context.Context, chart v1alpha1.ZarfChart, comp
 		// Extract value from source path in values
 		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
 		if err != nil {
-			// Log warning but don't fail - source path might not exist
-			logger.From(ctx).Warn("unable to extract value from path",
-				"path", chartValue.SourcePath,
-				"error", err,
-				"component", componentName,
-				"chart", chart.Name,
-			)
-			continue
+			return nil, fmt.Errorf("unable to extract value source: %w", err)
 		}
 
 		// Set value at targetPath in chart overrides

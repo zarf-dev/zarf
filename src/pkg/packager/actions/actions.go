@@ -85,11 +85,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	} else {
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
-
-	// Apply go-templates in cmds
-	cmd, err = template.Apply(ctx, cmd, tmplObjs)
-	if err != nil {
-		l.Error("could not template cmd", "cmd", cmdEscaped, "err", err.Error())
+	// Apply go-templates in cmds if templating is enabled
+	if action.ShouldTemplate() {
+		cmd, err = template.Apply(ctx, cmd, tmplObjs)
+		if err != nil {
+			return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
+		}
 	}
 
 	l.Info("running command", "cmd", cmdEscaped)
@@ -113,7 +114,6 @@ retryCmd:
 			// Try running the command and continue the retry loop if it fails.
 			stdout, _, err := actionRun(ctx, actionDefaults, cmd)
 			if err != nil {
-				l.Warn("action failed", "cmd", cmdEscaped)
 				return err
 			}
 			l.Info("action succeeded", "cmd", cmdEscaped)
@@ -168,6 +168,7 @@ retryCmd:
 			ctx, cancel := context.WithTimeout(ctx, duration)
 			defer cancel()
 			if err := tryCmd(ctx); err != nil {
+				l.Warn("action failed", "cmd", cmdEscaped, "err", err.Error())
 				continue retryCmd
 			}
 
@@ -353,10 +354,11 @@ func parseAndSetValue(output string, setValue v1alpha1.SetValue, values value.Va
 			return fmt.Errorf("failed to parse JSON output for setValue %q: %w", setValue.Key, err)
 		}
 		val = parsed
-	case v1alpha1.SetValueString:
+	case v1alpha1.SetValueString, "":
+		// Empty Type behaves as v1alpha1.SetValueString
 		val = output
 	default:
-		return fmt.Errorf("unknown setValue type: %s", setValue.Type)
+		return fmt.Errorf("unknown setValue type %q for key %q", setValue.Type, setValue.Key)
 	}
 	return values.Set(value.Path(setValue.Key), val)
 }

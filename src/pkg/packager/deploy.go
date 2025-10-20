@@ -129,7 +129,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
 	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), vf)
+		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
 	}
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
 	if err != nil {
@@ -161,6 +161,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	deployResult := DeployResult{
 		DeployedComponents: deployedComponents,
 		VariableConfig:     d.vc,
+		Values:             d.vals,
 	}
 	return deployResult, nil
 }
