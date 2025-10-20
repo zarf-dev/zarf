@@ -206,7 +206,7 @@ type SetValue struct {
 	// Value is the current value at the key.
 	Value any `json:"value,omitempty"`
 	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
-	// inserting the value into the template.
+	// inserting the value into the template. Defaults to SetValueString behavior when empty.
 	Type SetValueType `json:"type,omitempty"`
 }
 

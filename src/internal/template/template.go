@@ -22,8 +22,6 @@ import (
 
 const missingKeyDefault = "missingkey=error"
 
-var defaultFuncs = sprig.TxtFuncMap()
-
 // Objects provides a map of arbitrary data to be used in the template. By convention, top level keys are capitalized
 // so users can see what fields are set by the system and which are set by user input.
 // Example:
@@ -108,7 +106,7 @@ func Apply(ctx context.Context, s string, objs Objects) (string, error) {
 	l.Debug("applying templates", "str", s)
 
 	tmpl, err := ttmpl.New("str").
-		Funcs(defaultFuncs).
+		Funcs(funcMap()).
 		Option(missingKeyDefault).
 		Parse(s)
 	if err != nil {
@@ -131,7 +129,7 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	}()
 
 	tmpl, err := ttmpl.New(filepath.Base(src)).
-		Funcs(defaultFuncs).
+		Funcs(funcMap()).
 		Option(missingKeyDefault).
 		ParseFiles(src)
 	if err != nil {
@@ -153,4 +151,12 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	// Apply template and write to destination
 	err = tmpl.Execute(f, objs)
 	return err
+}
+
+func funcMap() ttmpl.FuncMap {
+	m := sprig.TxtFuncMap()
+	delete(m, "env")
+	delete(m, "expandenv")
+	// TODO(mkcp): Add additional functions from Helm
+	return m
 }

@@ -66,6 +66,7 @@ release:
   github:
     owner: zarf-dev
     name: zarf
+  name_template: "v{{ .Version }}"
   prerelease: auto
   mode: append
   extra_files:

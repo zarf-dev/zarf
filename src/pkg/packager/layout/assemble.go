@@ -894,7 +894,7 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	// Process local values file
 	src := file
 	if !filepath.IsAbs(src) {
-		src = filepath.Join(packagePath, file)
+		src = filepath.Join(packagePath, ValuesDir, file)
 	}
 	// Validate src
 	if _, err := os.Stat(src); err != nil {
@@ -907,16 +907,8 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 		return fmt.Errorf("values file path %s escapes package directory", file)
 	}
 
-	// Validate destination doesn't use reserved paths
-	if err := ContainsReservedFilename(cleanFile); err != nil {
-		return fmt.Errorf("invalid values file destination %s: %w", file, err)
-	}
-	if err := ContainsReservedPackageDir(cleanFile); err != nil {
-		return fmt.Errorf("invalid values file destination %s: %w", file, err)
-	}
-
-	//Copy file to pre-archive package
-	dst := filepath.Join(buildPath, cleanFile)
+	//Copy file to pre-archive package - destination includes ValuesDir
+	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
 	l.Debug("copying values file", "src", src, "dst", dst)
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy values file %s: %w", src, err)

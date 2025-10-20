@@ -124,16 +124,6 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 	return m, nil
 }
 
-// CheckSchema_Stub is intended to take a JSON schema and validate it against the values file(s).
-// TODO: implement public
-// TODO: Some open design questions:
-// - Do we take a json or byte array, a map[string]any, or a specific json.schema type?
-// - Do we want to return a list of errors, some specific schema fail datatype, or some other type?
-// - Surely there's libraries for this which have their own opinionated inputs for the schema and return types
-// func checkSchemaStub(_ Values, _ string) []error {
-// 	return nil
-// }
-
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
 // Later maps in the variadic arguments take precedence over earlier ones.
 func (v Values) DeepMerge(sources ...Values) {
