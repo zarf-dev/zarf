@@ -73,8 +73,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
-	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", string(state.RegistryModeNodePort),
-		fmt.Sprintf("how to access the registry (valid values: %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy))
+	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
+		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
 		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
 	// While this feature is in early alpha we will hide the flags
@@ -124,6 +124,15 @@ func newInitCommand() *cobra.Command {
 
 func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	if o.registryInfo.RegistryMode == "" {
+		if o.registryInfo.Address == "" {
+			o.registryInfo.RegistryMode = state.RegistryModeNodePort
+		} else {
+			o.registryInfo.RegistryMode = state.RegistryModeExternal
+		}
+	}
+
 	if err := o.validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
@@ -329,10 +338,9 @@ func (o *initOptions) validateInitFlags() error {
 
 	if o.registryInfo.RegistryMode != "" {
 		if o.registryInfo.RegistryMode != state.RegistryModeNodePort &&
-			o.registryInfo.RegistryMode != state.RegistryModeProxy {
-			return fmt.Errorf("invalid registry mode %q, must be %q or %q", o.registryInfo.RegistryMode,
-				state.RegistryModeNodePort,
-				state.RegistryModeProxy)
+			o.registryInfo.RegistryMode != state.RegistryModeProxy && o.registryInfo.RegistryMode != state.RegistryModeExternal {
+			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
+				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
 	}
 

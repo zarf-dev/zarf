@@ -217,6 +217,8 @@ const (
 	RegistryModeNodePort RegistryMode = "nodeport"
 	// RegistryModeProxy accesses the registry via DaemonSet proxy
 	RegistryModeProxy RegistryMode = "proxy"
+	// RegistryModeExternal is used when the user has an external registry
+	RegistryModeExternal RegistryMode = "external"
 )
 
 // RegistryInfo contains information Zarf uses to communicate with a container registry to push/pull images.
@@ -235,12 +237,16 @@ type RegistryInfo struct {
 	NodePort int `json:"nodePort"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
-	// RegistryMode defines how the registry is accessed (nodeport or proxy)
+	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
 	RegistryMode RegistryMode `json:"registryMode"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
+	if ri.RegistryMode != "" {
+		return ri.RegistryMode != RegistryModeExternal
+	}
+	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
 }
@@ -249,8 +255,13 @@ func (ri RegistryInfo) IsInternal() bool {
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
 
+	// If registry mode is empty, then default to nodeport if internal, or set as external if address is set
 	if ri.RegistryMode == "" {
-		ri.RegistryMode = RegistryModeNodePort
+		if ri.Address == "" {
+			ri.RegistryMode = RegistryModeNodePort
+		} else {
+			ri.RegistryMode = RegistryModeExternal
+		}
 	}
 
 	if ri.NodePort == 0 && ri.Address == "" {

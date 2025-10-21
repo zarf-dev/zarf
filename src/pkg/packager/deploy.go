@@ -302,7 +302,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
-	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -329,7 +328,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+	if !opts.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
 		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
 		return nil, nil
 	}
