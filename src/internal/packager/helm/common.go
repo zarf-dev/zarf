@@ -75,6 +75,11 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 
 // StandardName generates a predictable full path for a helm chart for Zarf.
 func StandardName(destination string, chart v1alpha1.ZarfChart) string {
+	// Note: It is currently impossible for chart.Version to be empty, however in the future schemas chart.Version will no longer be required
+	// this makes empty versions in created packages compatible for deploy v0.65.0 onward
+	if chart.Version == "" {
+		filepath.Join(destination, chart.Name)
+	}
 	return filepath.Join(destination, chart.Name+"-"+chart.Version)
 }
 
