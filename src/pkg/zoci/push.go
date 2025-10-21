@@ -101,6 +101,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 				return cfgErr
 			}
 
+			//TODO: ewyles WIP -- this line fails in the case of issue https://github.com/zarf-dev/zarf/issues/4148
 			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 			if packErr != nil {
 				return packErr
