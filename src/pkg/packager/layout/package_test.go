@@ -8,10 +8,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -199,4 +201,41 @@ func TestPackageFileName(t *testing.T) {
 			require.Equal(t, tt.expected, actual)
 		})
 	}
+}
+
+func TestPackageLayoutSignPackage(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, ZarfYAML)
+	signedPath := filepath.Join(tmpDir, Signature)
+
+	err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+	require.NoError(t, err)
+
+	// Create a minimal PackageLayout for testing
+	pkgLayout := &PackageLayout{dirPath: tmpDir}
+
+	// Test 1: Wrong password
+	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+		return []byte("wrongpassword"), nil
+	})
+	opts := utils.DefaultSignBlobOptions()
+	opts.KeyRef = "./testdata/cosign.key"
+	opts.PassFunc = passFunc
+	err = pkgLayout.SignPackage(ctx, opts)
+	require.EqualError(t, err, "reading key: decrypt: encrypted: decryption failed")
+	require.NoFileExists(t, signedPath)
+
+	// Test 2: Correct password
+	passFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
+		return []byte("test"), nil
+	})
+	opts = utils.DefaultSignBlobOptions()
+	opts.KeyRef = "./testdata/cosign.key"
+	opts.PassFunc = passFunc
+	err = pkgLayout.SignPackage(ctx, opts)
+	require.NoError(t, err)
+	require.FileExists(t, signedPath)
 }

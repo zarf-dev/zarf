@@ -10,10 +10,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // SignOptions are the options used when signing an existing package.
@@ -93,7 +95,18 @@ func SignExistingPackage(
 	// This creates a new zarf.yaml.sig without modifying any checksums
 	// The signature file is intentionally excluded from checksums.txt
 	l.Info("signing package with provided key")
-	err = pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword)
+
+	// Create a password function for encrypted keys
+	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+		return []byte(opts.SigningKeyPassword), nil
+	})
+
+	// Build cosign sign options from packager sign options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.PassFunc = passFunc
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to sign package: %w", err)
 	}

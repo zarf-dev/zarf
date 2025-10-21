@@ -124,9 +124,25 @@ func (p *PackageLayout) ContainsSBOM() bool {
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
 }
 
-// SignPackage signs the zarf package
-func (p *PackageLayout) SignPackage(signingKeyPath, signingKeyPassword string) error {
-	return signPackage(p.dirPath, signingKeyPath, signingKeyPassword)
+// SignPackage signs the zarf package using cosign with the provided options.
+// If the options do not indicate signing should be performed (no key material configured),
+// this is a no-op and returns nil.
+func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) error {
+	l := logger.From(ctx)
+
+	// Check if signing should be performed based on the options
+	if !opts.ShouldSign() {
+		l.Info("skipping package signing (no signing key material configured)")
+		return nil
+	}
+
+	// Set the output signature path to the package layout's signature file
+	// NOTE: here is where zarf will orchestrate changes in signing behaviors to the package
+	opts.OutputSignature = filepath.Join(p.dirPath, Signature)
+
+	zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
+	_, err := utils.CosignSignBlobWithOptions(ctx, zarfYAMLPath, opts)
+	return err
 }
 
 // GetSBOM outputs the SBOM data from the package to the given destination path.
