@@ -48,6 +48,11 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get action configmap")
 	require.Contains(t, kubectlOut, "myValue")
 
+	// Verify the raw template configmap was NOT processed by Zarf (template: false)
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-raw-template-configmap", "-o", "jsonpath='{.data.rawTemplate}'")
+	require.NoError(t, err, "unable to get raw template configmap")
+	require.Contains(t, kubectlOut, "template={{ .shouldNotBeProcessed }}")
+
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "values", "values.yaml")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
@@ -59,11 +64,6 @@ func TestValues(t *testing.T) {
 
 	// Check that the custom value from --set-values was templated
 	require.Contains(t, stdOut, "REMOVE_CUSTOM_VALUE=custom-remove-value", "remove action should have templated value from --set-values")
-
-	// Verify the raw template configmap was NOT processed by Zarf (template: false)
-	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-raw-template-configmap", "-o", "jsonpath='{.data.rawTemplate}'")
-	require.NoError(t, err, "unable to get raw template configmap")
-	require.Contains(t, kubectlOut, "template={{ .shouldNotBeProcessed }}")
 
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
