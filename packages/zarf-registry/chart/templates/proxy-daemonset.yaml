@@ -1,0 +1,65 @@
+{{ if .Values.proxy.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: zarf-registry-proxy
+spec:
+  selector:
+    matchLabels:
+      app: zarf-registry-proxy
+  template:
+    metadata:
+      labels:
+        app: zarf-registry-proxy
+        # Don't mutate this pod
+        zarf.dev/agent: ignore
+    spec:
+      priorityClassName: system-node-critical
+      containers:
+        - args:
+          {{ if .Values.ipv6Only }}
+            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - tcp6:{{ template "docker-registry.fullname" . }}:5000
+          {{- else }}
+            - tcp4-listen:{{ .Values.service.nodePort }},reuseaddr,fork
+            - tcp4:{{ template "docker-registry.fullname" . }}:5000
+          {{- end }}
+          image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
+          imagePullPolicy: IfNotPresent
+          name: zarf-registry-proxy
+          ports:
+            - containerPort: {{ .Values.service.nodePort }}
+            {{- if eq (include "proxy.hostNetwork" .) "false" }}
+              hostPort: {{ .Values.service.nodePort }}
+              hostIP: "127.0.0.1"
+            {{- end }}
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+    # IPV6 does not support rewriting packets to localhost so it needs to use hostNetwork over hostPort
+    {{- if eq (include "proxy.hostNetwork" .) "true" }}
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+    {{- end }}
+    {{- with .Values.proxy.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+      securityContext:
+        fsGroup: 2000
+        runAsGroup: 2000
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+{{- end }}

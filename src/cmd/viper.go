@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -58,6 +59,7 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
+	InjectorHostPort      = "init.registry.injector_hostport"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
 	VInitRegistryPushPass = "init.registry.push_password"
@@ -220,6 +222,8 @@ func setDefaults() {
 	// Package defaults that are non-zero values
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
+
+	v.SetDefault(InjectorHostPort, state.ZarfInjectorHostPort)
 
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
