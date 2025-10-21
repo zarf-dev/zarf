@@ -311,6 +311,27 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
 	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
 
+	CmdPackageSignShort   = "Signs an existing Zarf package"
+	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
+	CmdPackageSignExample = `
+# Sign an unsigned package
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
+
+# Re-sign with a new key (overwrite existing signature)
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./new-key.pem --overwrite
+
+# Sign a package from an OCI registry
+$ zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-key.pem --output ./signed/
+
+# Sign with a cloud KMS key
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
+`
+	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
+	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
+	CmdPackageSignFlagOutput         = "Output directory for the signed package (default: same directory as source package)"
+	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
+	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
 # Pull a package matching the current architecture

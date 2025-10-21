@@ -105,6 +105,13 @@ const (
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
 	VPkgPublishRetries            = "package.publish.retries"
 
+	// Package sign config keys
+
+	VPkgSignSigningKey         = "package.sign.signing_key"
+	VPkgSignSigningKeyPassword = "package.sign.signing_key_password"
+	VPkgSignOutput             = "package.sign.output"
+	VPkgSignOverwrite          = "package.sign.overwrite"
+
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"

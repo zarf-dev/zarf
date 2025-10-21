@@ -60,6 +60,7 @@ func newPackageCommand() *cobra.Command {
 	cmd.AddCommand(newPackageListCommand())
 	cmd.AddCommand(newPackagePublishCommand(v))
 	cmd.AddCommand(newPackagePullCommand(v))
+	cmd.AddCommand(newPackageSignCommand(v))
 
 	return cmd
 }
@@ -1533,6 +1534,89 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	logger.From(cmd.Context()).Info("package downloaded successful", "path", packagePath)
+	return nil
+}
+
+type packageSignOptions struct {
+	signingKeyPath          string
+	signingKeyPassword      string
+	publicKeyPath           string
+	skipSignatureValidation bool
+	overwrite               bool
+	output                  string
+	ociConcurrency          int
+}
+
+func newPackageSignCommand(v *viper.Viper) *cobra.Command {
+	o := &packageSignOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "sign PACKAGE_SOURCE",
+		Aliases: []string{"s"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdPackageSignShort,
+		Long:    lang.CmdPackageSignLong,
+		Example: lang.CmdPackageSignExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgSignSigningKeyPassword), lang.CmdPackageSignFlagSigningKeyPass)
+	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgSignOutput), lang.CmdPackageSignFlagOutput)
+	cmd.Flags().BoolVar(&o.overwrite, "overwrite", v.GetBool(VPkgSignOverwrite), lang.CmdPackageSignFlagOverwrite)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
+	return cmd
+}
+
+func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	packageSource := args[0]
+
+	if o.signingKeyPath == "" {
+		return errors.New("--signing-key is required")
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	opts := packager.SignOptions{
+		SigningKeyPath:          o.signingKeyPath,
+		SigningKeyPassword:      o.signingKeyPassword,
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Overwrite:               o.overwrite,
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+
+	outputDir := o.output
+	if outputDir == "" {
+		// Default to the directory containing the source package
+		if helpers.IsOCIURL(packageSource) {
+			// For OCI sources, use current working directory
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			outputDir = wd
+		} else {
+			// For file sources, use the same directory as the source
+			outputDir = filepath.Dir(packageSource)
+		}
+	}
+
+	signedPath, err := packager.SignExistingPackage(ctx, packageSource, outputDir, opts)
+	if err != nil {
+		return fmt.Errorf("failed to sign package: %w", err)
+	}
+
+	logger.From(ctx).Info("package signed successfully", "path", signedPath)
 	return nil
 }
 
