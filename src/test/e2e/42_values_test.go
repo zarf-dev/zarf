@@ -49,7 +49,7 @@ func TestValues(t *testing.T) {
 	require.Contains(t, kubectlOut, "myValue")
 
 	// Remove the package with values
-	valuesFile := filepath.Join(src, "values.yaml")
+	valuesFile := filepath.Join(src, "values", "values.yaml")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
 	require.NoError(t, err, stdOut, stdErr)
 
