@@ -252,9 +252,10 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	if ri.RegistryMode == "" {
 		ri.RegistryMode = RegistryModeNodePort
 	}
-	// Set default NodePort if none was provided and the registry is internal
+
 	if ri.NodePort == 0 && ri.Address == "" {
 		switch ri.RegistryMode {
+		// Set default NodePort if none was provided and the registry is internal
 		case RegistryModeNodePort:
 			ri.NodePort = ZarfInClusterContainerRegistryNodePort
 		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
