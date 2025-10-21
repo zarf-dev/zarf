@@ -62,6 +62,7 @@ components:
               echo "This {{ .wontBeProcessed }} stays as-is"
             template: false
 
+
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
