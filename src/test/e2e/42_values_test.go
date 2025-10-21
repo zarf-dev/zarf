@@ -64,8 +64,4 @@ func TestValues(t *testing.T) {
 
 	// Check that the custom value from --set-values was templated
 	require.Contains(t, stdOut, "REMOVE_CUSTOM_VALUE=custom-remove-value", "remove action should have templated value from --set-values")
-
-	// Remove the package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
 }
