@@ -85,6 +85,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	} else {
 		cmdEscaped = helpers.Truncate(cmd, 60, false)
 	}
+
 	// Apply go-templates in cmds if templating is enabled
 	if action.ShouldTemplate() {
 		cmd, err = template.Apply(ctx, cmd, tmplObjs)
