@@ -76,11 +76,16 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 
 	imagesWithOverride := []imageWithOverride{}
+	// Iterate over all images, marking each one as overridden.
 	for _, img := range cfg.ImageList {
 		overriddenImage := img
-		for k, v := range cfg.RegistryOverrides {
-			if strings.HasPrefix(img.Reference, k) {
-				overriddenImage.Reference = strings.Replace(img.Reference, k, v, 1)
+		for _, v := range cfg.RegistryOverrides {
+			if strings.HasPrefix(img.Reference, v.Source) {
+				// If we have an override, the first override wins.
+				// Doing so allows earlier, longer prefixes (such as docker.io/library)
+				// to supersede shorter prefixes (such as docker.io).
+				overriddenImage.Reference = strings.Replace(img.Reference, v.Source, v.Override, 1)
+				break
 			}
 		}
 		imagesWithOverride = append(imagesWithOverride, imageWithOverride{
@@ -195,7 +200,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				fetchOpts.FetchOptions.TargetPlatform = platform
 				desc, b, err = oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
 				if err != nil {
-					return fmt.Errorf("failed to fetch image with architecture %s: %w", platform.Architecture, err)
+					return fmt.Errorf("failed to fetch image %s with architecture %s: %w", image.overridden.Reference, platform.Architecture, err)
 				}
 			}
 

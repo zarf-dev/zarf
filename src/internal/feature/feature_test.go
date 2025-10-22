@@ -339,7 +339,7 @@ func TestGet_Errors(t *testing.T) {
 		fName     Name
 	}{
 		{
-			name:      "retrieving non-existant key errors",
+			name:      "retrieving non-existent key errors",
 			defaultFs: []Feature{},
 			userFs:    []Feature{},
 			fName:     "this-key-should-not-be-found",
@@ -407,7 +407,7 @@ func TestGetUser_Errors(t *testing.T) {
 		fName    Name
 	}{
 		{
-			name:     "retrieving non-existant key errors",
+			name:     "retrieving non-existent key errors",
 			features: []Feature{},
 			fName:    "this-key-should-not-be-found",
 		},
@@ -473,7 +473,7 @@ func TestGetDefault_Errors(t *testing.T) {
 		fName    Name
 	}{
 		{
-			name:     "retrieving non-existant key errors",
+			name:     "retrieving non-existent key errors",
 			features: []Feature{},
 			fName:    "this-key-should-not-be-found",
 		},

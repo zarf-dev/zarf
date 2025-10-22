@@ -206,7 +206,7 @@ type SetValue struct {
 	// Value is the current value at the key.
 	Value any `json:"value,omitempty"`
 	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
-	// inserting the value into the template.
+	// inserting the value into the template. Defaults to SetValueString behavior when empty.
 	Type SetValueType `json:"type,omitempty"`
 }
 
@@ -277,6 +277,6 @@ type ZarfBuildData struct {
 type ZarfValues struct {
 	// Files declares the relative filepath of Values files.
 	Files []string `json:"files,omitempty"`
-	// Schema is a placeholder field for importing a .schema.json file for imported Values files.
+	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
 	Schema string `json:"schema,omitempty"`
 }

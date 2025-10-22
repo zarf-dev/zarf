@@ -33,7 +33,7 @@ var User Mode = "user"
 type Name string
 
 // Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,
-// and any commentary or context appropriate for its stage. Descirptions are mutable, and are intended to be updated
+// and any commentary or context appropriate for its stage. Descriptions are mutable, and are intended to be updated
 // throughout the feature's development lifecycle.
 type Description string
 
@@ -201,10 +201,11 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 }
 
 // List of feature names
-var (
+const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode Name = "axolotl-mode"
-	Values      Name = "values"
+	AxolotlMode   Name = "axolotl-mode"
+	RegistryProxy Name = "registry-proxy"
+	Values        Name = "values"
 )
 
 func init() {
@@ -225,6 +226,13 @@ func init() {
 			Enabled: false,
 			Since:   "v0.60.0",
 			Stage:   Alpha,
+		},
+		{
+			Name:        RegistryProxy,
+			Description: "Enables the registry proxy feature during Zarf init",
+			Enabled:     false,
+			Since:       "v0.65.0",
+			Stage:       Alpha,
 		},
 		{
 			Name: Values,

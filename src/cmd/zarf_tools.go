@@ -17,7 +17,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/sigstore/cosign/v2/pkg/cosign"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -33,12 +33,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-)
-
-var (
-	subAltNames         []string
-	outputDirectory     string
-	updateCredsInitOpts cluster.InitStateOptions
 )
 
 const (
@@ -227,10 +221,15 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 	}
 }
 
-type updateCredsOptions struct{}
+type updateCredsOptions struct {
+	confirm        bool
+	gitServer      state.GitServerInfo
+	registryInfo   state.RegistryInfo
+	artifactServer state.ArtifactServerInfo
+}
 
 func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
-	o := updateCredsOptions{}
+	o := &updateCredsOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "update-creds",
@@ -243,26 +242,26 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVarP(&config.CommonOptions.Confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
 
 	// Flags for using an external Git server
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.GitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
+	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
+	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
+	cmd.Flags().StringVar(&o.gitServer.PushPassword, "git-push-password", v.GetString(VInitGitPushPass), lang.CmdInitFlagGitPushPass)
+	cmd.Flags().StringVar(&o.gitServer.PullUsername, "git-pull-username", v.GetString(VInitGitPullUser), lang.CmdInitFlagGitPullUser)
+	cmd.Flags().StringVar(&o.gitServer.PullPassword, "git-pull-password", v.GetString(VInitGitPullPass), lang.CmdInitFlagGitPullPass)
 
 	// Flags for using an external registry
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.RegistryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
+	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
+	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
+	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
+	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
+	cmd.Flags().StringVar(&o.registryInfo.PullPassword, "registry-pull-password", v.GetString(VInitRegistryPullPass), lang.CmdInitFlagRegPullPass)
 
 	// Flags for using an external artifact server
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
-	cmd.Flags().StringVar(&updateCredsInitOpts.ArtifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
+	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
+	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
 	cmd.Flags().SortFlags = true
 
@@ -304,9 +303,9 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return errors.New("zarf state secret did not load properly")
 	}
 	opts := state.MergeOptions{
-		GitServer:      updateCredsInitOpts.GitServer,
-		RegistryInfo:   updateCredsInitOpts.RegistryInfo,
-		ArtifactServer: updateCredsInitOpts.ArtifactServer,
+		GitServer:      o.gitServer,
+		RegistryInfo:   o.registryInfo,
+		ArtifactServer: o.artifactServer,
 		Services:       args,
 	}
 	newState, err := state.Merge(oldState, opts)
@@ -316,7 +315,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 
 	printCredentialUpdates(ctx, oldState, newState, args)
 
-	confirm := config.CommonOptions.Confirm
+	confirm := o.confirm
 
 	if !confirm {
 		prompt := &survey.Confirm{
@@ -366,12 +365,12 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	helmOpts := helm.InstallUpgradeOptions{
-		VariableConfig: template.GetZarfVariableConfig(cmd.Context()),
+		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
 		State:          newState,
 		Cluster:        c,
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
-		Retries:        config.ZarfDefaultRetries,
+		IsInteractive:  !o.confirm,
 	}
 
 	// Update Zarf 'init' component Helm releases if present
@@ -471,7 +470,8 @@ func (o *clearCacheOptions) run(cmd *cobra.Command, _ []string) error {
 }
 
 type downloadInitOptions struct {
-	version string
+	version         string
+	outputDirectory string
 }
 
 func newDownloadInitCommand() *cobra.Command {
@@ -483,7 +483,7 @@ func newDownloadInitCommand() *cobra.Command {
 		RunE:  o.run,
 	}
 
-	cmd.Flags().StringVarP(&outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
+	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", "", lang.CmdToolsDownloadInitFlagOutputDirectory)
 	cmd.Flags().StringVarP(&o.version, "version", "v", o.version, "Specify version to download (defaults to current CLI version)")
 	return cmd
 }
@@ -506,12 +506,12 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	// Add the oci:// prefix
 	url = fmt.Sprintf("oci://%s", url)
 
-	if outputDirectory == "" {
+	if o.outputDirectory == "" {
 		wd, err := os.Getwd()
 		if err != nil {
 			return err
 		}
-		outputDirectory = wd
+		o.outputDirectory = wd
 	}
 
 	cachePath, err := getCachePath(ctx)
@@ -524,7 +524,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 		CachePath:    cachePath,
 	}
 
-	packagePath, err := packager.Pull(ctx, url, outputDirectory, pullOptions)
+	packagePath, err := packager.Pull(ctx, url, o.outputDirectory, pullOptions)
 	if err != nil {
 		return fmt.Errorf("unable to download the init package: %w", err)
 	}
@@ -533,7 +533,9 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-type genPKIOptions struct{}
+type genPKIOptions struct {
+	subAltNames []string
+}
 
 func newGenPKICommand() *cobra.Command {
 	o := &genPKIOptions{}
@@ -546,13 +548,13 @@ func newGenPKICommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringArrayVar(&subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
+	cmd.Flags().StringArrayVar(&o.subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
 
 	return cmd
 }
 
 func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
-	pki, err := pki.GeneratePKI(args[0], subAltNames...)
+	pki, err := pki.GeneratePKI(args[0], o.subAltNames...)
 	if err != nil {
 		return err
 	}

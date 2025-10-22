@@ -62,13 +62,16 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer      state.GitServerInfo
-	RegistryInfo   state.RegistryInfo
-	ArtifactServer state.ArtifactServerInfo
-	StorageClass   string
+	GitServer        state.GitServerInfo
+	RegistryInfo     state.RegistryInfo
+	ArtifactServer   state.ArtifactServerInfo
+	StorageClass     string
+	InjectorHostPort int
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
+	IsInteractive bool
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -90,6 +93,12 @@ type DeployResult struct {
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
+	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
+	}
+	if opts.InjectorHostPort == 0 {
+		opts.InjectorHostPort = state.ZarfInjectorHostPort
+	}
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
 	start := time.Now()
@@ -113,7 +122,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		return DeployResult{}, err
 	}
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -127,7 +136,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
 	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), vf)
+		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
 	}
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
 	if err != nil {
@@ -139,7 +148,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Validate merged values against schema if provided
 	if pkgLayout.Pkg.Values.Schema != "" {
-		schemaPath := filepath.Join(pkgLayout.DirPath(), pkgLayout.Pkg.Values.Schema)
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, pkgLayout.Pkg.Values.Schema)
 		if err := vals.Validate(ctx, schemaPath); err != nil {
 			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
 		}
@@ -168,6 +177,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	deployResult := DeployResult{
 		DeployedComponents: deployedComponents,
 		VariableConfig:     d.vc,
+		Values:             d.vals,
 	}
 	return deployResult, nil
 }
@@ -207,10 +217,10 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				var err error
 				d.c, err = cluster.NewWithWait(connectCtx)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
 				if err := d.verifyPackageIsDeployable(ctx, pkgLayout.Pkg); err != nil {
-					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
 			// If this package has been deployed before, increment the package generation within the secret
@@ -301,7 +311,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
-	hasExternalRegistry := opts.RegistryInfo.Address != ""
 	isSeedRegistry := component.Name == "zarf-seed-registry"
 	isRegistry := component.Name == "zarf-registry"
 	isInjector := component.Name == "zarf-injector"
@@ -328,7 +337,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	if hasExternalRegistry && (isSeedRegistry || isInjector || isRegistry) {
+	if !opts.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
 		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
 		return nil, nil
 	}
@@ -340,8 +349,29 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
-		err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
-		if err != nil {
+		switch d.s.RegistryInfo.RegistryMode {
+		case state.RegistryModeProxy:
+			var err error
+			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
+			if err != nil {
+				return nil, err
+			}
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
+			if err != nil {
+				return nil, err
+			}
+			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
+			d.s.InjectorInfo.PayLoadShaSum = shasum
+			d.s.InjectorInfo.Port = opts.InjectorHostPort
+		case state.RegistryModeNodePort:
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			if err != nil {
+				return nil, err
+			}
+			d.s.InjectorInfo.Port = seedPort
+		}
+		// Save the injector updates to state
+		if err := d.c.SaveState(ctx, d.s); err != nil {
 			return nil, err
 		}
 	}
@@ -354,7 +384,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	}
 
 	// Do cleanup for when we inject the seed registry during initialization
-	if isSeedRegistry {
+	if isSeedRegistry && d.s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
 		if err := d.c.StopInjection(ctx); err != nil {
 			return nil, fmt.Errorf("failed to delete injector resources: %w", err)
 		}
@@ -559,9 +589,9 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
+			IsInteractive:          opts.IsInteractive,
 		}
 		helmChart, values, err := helm.LoadChartData(chart, chartDir, valuesDir, valuesOverrides)
 		if err != nil {
@@ -647,9 +677,9 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 			Cluster:                d.c,
 			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
 			Timeout:                opts.Timeout,
-			Retries:                opts.Retries,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
+			IsInteractive:          opts.IsInteractive,
 		}
 
 		// Install the chart.

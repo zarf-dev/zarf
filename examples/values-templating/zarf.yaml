@@ -5,7 +5,6 @@ metadata:
 values:
   files:
     - values.yaml
-  schema: values.schema.json
 
 # Until Consts and Vars are fully deprecated, they'll be available in go-templates
 constants:
@@ -21,7 +20,7 @@ components:
     required: true
     images:
       # NOTE: Pkgtemplates aren't yet available with value and go-templates.
-      - "nginx:latest"
+      - "docker.io/library/nginx:1.29.2"
     manifests:
       - name: values-with-nginx
         # Enables go-templating within the files.
@@ -51,6 +50,17 @@ components:
           # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
           - sourcePath: ".database.host2"
             targetPath: ".config.database.host"
+
+  - name: actions-with-raw-templates
+    description: "This component demonstrates using template: false to pass go-template syntax to external tools"
+    required: true
+    actions:
+      onCreate:
+        after:
+          # You can disable templating when you need to pass go-template syntax to another tool that uses {{ }} delimiters
+          - cmd: |
+              echo "This {{ .wontBeProcessed }} stays as-is"
+            template: false
 
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI

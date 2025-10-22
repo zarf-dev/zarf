@@ -16,7 +16,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
-	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -123,44 +122,6 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 		}
 	}
 	return m, nil
-}
-
-// Validate validates the Values against a JSON schema file.
-// The schemaPath should be a relative or absolute path to a .json or .schema file containing a JSON Schema.
-// Returns a SchemaValidationError if validation fails, nil if validation passes.
-func (v Values) Validate(ctx context.Context, schemaPath string) error {
-	l := logger.From(ctx)
-	start := time.Now()
-	defer func() {
-		l.Debug("schema validation complete",
-			"duration", time.Since(start),
-			"schemaPath", schemaPath)
-	}()
-
-	// Load the schema from file
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
-
-	// Convert Values to a document for validation
-	documentLoader := gojsonschema.NewGoLoader(v)
-
-	// Validate
-	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
-	if err != nil {
-		return &SchemaValidationError{
-			SchemaPath: schemaPath,
-			Err:        fmt.Errorf("failed to load or parse schema: %w", err),
-		}
-	}
-
-	// Check if validation passed
-	if !result.Valid() {
-		return &SchemaValidationError{
-			SchemaPath: schemaPath,
-			Errors:     result.Errors(),
-		}
-	}
-
-	return nil
 }
 
 // DeepMerge merges one or more Values maps recursively into the receiver via mutation.
@@ -297,28 +258,5 @@ func (e *YAMLDecodeError) Error() string {
 }
 
 func (e *YAMLDecodeError) Unwrap() error {
-	return e.Err
-}
-
-// SchemaValidationError represents an error when JSON schema validation fails
-type SchemaValidationError struct {
-	SchemaPath string
-	Err        error
-	Errors     []gojsonschema.ResultError
-}
-
-func (e *SchemaValidationError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("schema validation failed for %s: %v", e.SchemaPath, e.Err)
-	}
-
-	var errMsgs []string
-	for _, err := range e.Errors {
-		errMsgs = append(errMsgs, fmt.Sprintf("  - %s: %s", err.Field(), err.Description()))
-	}
-	return fmt.Sprintf("schema validation failed for %s:\n%s", e.SchemaPath, strings.Join(errMsgs, "\n"))
-}
-
-func (e *SchemaValidationError) Unwrap() error {
 	return e.Err
 }

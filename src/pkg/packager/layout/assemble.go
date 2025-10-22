@@ -22,8 +22,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -44,7 +44,7 @@ type AssembleOptions struct {
 	// Flavor causes the package to only include components with a matching `.components[x].only.flavor` or no flavor `.components[x].only.flavor` specified
 	Flavor string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry
-	RegistryOverrides  map[string]string
+	RegistryOverrides  []images.RegistryOverride
 	SigningKeyPath     string
 	SigningKeyPassword string
 	SkipSBOM           bool
@@ -705,7 +705,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides map[string]string) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
 	now := time.Now()
 	// Just use $USER env variable to avoid CGO issue.
 	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
@@ -736,7 +736,13 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	pkg.Build.RegistryOverrides = registryOverrides
+	// We lose the ordering for the user-provided registry overrides.
+	overrides := make(map[string]string, len(registryOverrides))
+	for i := range registryOverrides {
+		overrides[registryOverrides[i].Source] = registryOverrides[i].Override
+	}
+
+	pkg.Build.RegistryOverrides = overrides
 
 	return pkg
 }
@@ -897,7 +903,7 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	// Process local values file
 	src := file
 	if !filepath.IsAbs(src) {
-		src = filepath.Join(packagePath, file)
+		src = filepath.Join(packagePath, ValuesDir, file)
 	}
 	// Validate src
 	if _, err := os.Stat(src); err != nil {
@@ -909,8 +915,9 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	if strings.HasPrefix(cleanFile, "..") {
 		return fmt.Errorf("values file path %s escapes package directory", file)
 	}
-	//Copy file to pre-archive package
-	dst := filepath.Join(buildPath, cleanFile)
+
+	//Copy file to pre-archive package - destination includes ValuesDir
+	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
 	l.Debug("copying values file", "src", src, "dst", dst)
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy values file %s: %w", src, err)

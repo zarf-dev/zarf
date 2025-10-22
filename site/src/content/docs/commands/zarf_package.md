@@ -13,9 +13,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 ### Options
 
 ```
-  -h, --help                  help for package
-  -k, --key string            Path to public key file for validating signed packages
-      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -h, --help   help for package
 ```
 
 ### Options inherited from parent commands
