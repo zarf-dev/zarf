@@ -54,14 +54,15 @@ func TestValues(t *testing.T) {
 	require.Contains(t, kubectlOut, "template={{ .shouldNotBeProcessed }}")
 
 	// Remove the package with values
-	valuesFile := filepath.Join(src, "values", "values.yaml")
+	valuesFile := filepath.Join(src, "override-values.yaml")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the remove actions used the values correctly
-	// Check that the default value from values.yaml was templated
-	require.Contains(t, stdOut, "REMOVE_TEST_VALUE=default-value", "remove action should have templated default value from values.yaml")
-
+	// Check that the default value from embedded values.yaml was templated (not present in override-values.yaml)
+	require.Contains(t, stdOut, "REMOVE_DEFAULT_VALUE=default-remove-value", "remove action should have templated the default value from embedded values.yaml")
+	// Check that the override-value from override-values.yaml was templated
+	require.Contains(t, stdOut, "REMOVE_TEST_VALUE=override-value", "remove action should have templated the override value from override-values.yaml")
 	// Check that the custom value from --set-values was templated
 	require.Contains(t, stdOut, "REMOVE_CUSTOM_VALUE=custom-remove-value", "remove action should have templated value from --set-values")
 }
