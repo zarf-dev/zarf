@@ -118,8 +118,8 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			// Validate operational requirements for imported package
-			if err := pkgvalidate.ValidateOperationRequirements(importedPkg, v1alpha1.OperationImport); err != nil {
+			// Validate skeleton package is compatible with new package
+			if err := pkgvalidate.ValidateOperationRequirements(importedPkg); err != nil {
 				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported package from %s does not meet operational requirements: %w", component.Import.URL, err)
 			}
 		}

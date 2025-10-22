@@ -135,7 +135,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 
 	// Validate operational requirements after input validation
-	if err := validate.ValidateOperationRequirements(pkgLayout.Pkg, v1alpha1.OperationPublish); err != nil {
+	if err := validate.ValidateOperationRequirements(pkgLayout.Pkg); err != nil {
 		return registry.Reference{}, err
 	}
 

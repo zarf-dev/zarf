@@ -21,7 +21,6 @@ func TestValidateOperationRequirements(t *testing.T) {
 	tests := []struct {
 		name        string
 		pkg         v1alpha1.ZarfPackage
-		operation   v1alpha1.PackageOperation
 		cliVersion  string
 		expectError bool
 	}{
@@ -32,77 +31,38 @@ func TestValidateOperationRequirements(t *testing.T) {
 					OperationRequirements: []v1alpha1.OperationRequirement{},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  "v0.64.0",
 			expectError: false,
 		},
 		{
-			name: "requirement met for deploy",
+			name: "requirement met",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
 					OperationRequirements: []v1alpha1.OperationRequirement{
 						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "values field requires v0.65.0+",
+							Version: "v0.65.0",
+							Reason:  "values field requires v0.65.0+",
 						},
 					},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  "v0.66.0",
 			expectError: false,
 		},
 		{
-			name: "requirement not met for deploy",
+			name: "requirement not met",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
 					OperationRequirements: []v1alpha1.OperationRequirement{
 						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "values field requires v0.65.0+",
+							Version: "v0.65.0",
+							Reason:  "values field requires v0.65.0+",
 						},
 					},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  "v0.64.0",
 			expectError: true,
-		},
-		{
-			name: "requirement applies to all operations",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
-						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{}, // Empty means applies to all
-							Reason:     "package structure changed",
-						},
-					},
-				},
-			},
-			operation:   v1alpha1.OperationPublish,
-			cliVersion:  "v0.64.0",
-			expectError: true,
-		},
-		{
-			name: "requirement applies to different operation",
-			pkg: v1alpha1.ZarfPackage{
-				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
-						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "deploy-specific requirement",
-						},
-					},
-				},
-			},
-			operation:   v1alpha1.OperationPublish,
-			cliVersion:  "v0.64.0",
-			expectError: false,
 		},
 		{
 			name: "multiple requirements with one not met",
@@ -110,19 +70,16 @@ func TestValidateOperationRequirements(t *testing.T) {
 				Build: v1alpha1.ZarfBuildData{
 					OperationRequirements: []v1alpha1.OperationRequirement{
 						{
-							Version:    "v0.60.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "older requirement",
+							Version: "v0.60.0",
+							Reason:  "older requirement",
 						},
 						{
-							Version:    "v0.70.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "newer requirement",
+							Version: "v0.70.0",
+							Reason:  "newer requirement",
 						},
 					},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  "v0.65.0",
 			expectError: true,
 		},
@@ -132,14 +89,12 @@ func TestValidateOperationRequirements(t *testing.T) {
 				Build: v1alpha1.ZarfBuildData{
 					OperationRequirements: []v1alpha1.OperationRequirement{
 						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "should be skipped in dev mode",
+							Version: "v0.65.0",
+							Reason:  "should be skipped in dev mode",
 						},
 					},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  config.UnsetCLIVersion,
 			expectError: false,
 		},
@@ -149,14 +104,12 @@ func TestValidateOperationRequirements(t *testing.T) {
 				Build: v1alpha1.ZarfBuildData{
 					OperationRequirements: []v1alpha1.OperationRequirement{
 						{
-							Version:    "v0.65.0",
-							Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-							Reason:     "exact version match",
+							Version: "v0.65.0",
+							Reason:  "exact version match",
 						},
 					},
 				},
 			},
-			operation:   v1alpha1.OperationDeploy,
 			cliVersion:  "v0.65.0",
 			expectError: false,
 		},
@@ -165,7 +118,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.CLIVersion = tt.cliVersion
-			err := ValidateOperationRequirements(tt.pkg, tt.operation)
+			err := ValidateOperationRequirements(tt.pkg)
 			if tt.expectError {
 				require.Error(t, err)
 				// Verify it's the right type of error
@@ -182,18 +135,15 @@ func TestOperationRequirementsError(t *testing.T) {
 	err := &OperationRequirementsError{
 		Requirements: []v1alpha1.OperationRequirement{
 			{
-				Version:    "v0.65.0",
-				Operations: []v1alpha1.PackageOperation{v1alpha1.OperationDeploy},
-				Reason:     "values field requires v0.65.0+",
+				Version: "v0.65.0",
+				Reason:  "values field requires v0.65.0+",
 			},
 		},
 		CurrentVersion: "v0.64.0",
-		Operation:      v1alpha1.OperationDeploy,
 	}
 
 	errMsg := err.Error()
 	require.Contains(t, errMsg, "v0.64.0")
 	require.Contains(t, errMsg, "v0.65.0")
 	require.Contains(t, errMsg, "values field requires v0.65.0+")
-	require.Contains(t, errMsg, "deploy")
 }

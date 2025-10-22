@@ -245,24 +245,10 @@ type ZarfMetadata struct {
 	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
-// PackageOperation represents operations that can be performed on a Zarf package
-type PackageOperation string
-
-const (
-	// OperationDeploy represents deploying a package to a cluster
-	OperationDeploy PackageOperation = "deploy"
-	// OperationImport represents importing package components
-	OperationImport PackageOperation = "import"
-	// OperationPublish represents publishing a package to a registry
-	OperationPublish PackageOperation = "publish"
-)
-
-// OperationRequirement specifies minimum version requirements for package operations
+// OperationRequirement specifies minimum version requirements for the package
 type OperationRequirement struct {
-	// The minimum version of the Zarf CLI required for this operation
+	// The minimum version of the Zarf CLI required to use this package
 	Version string `json:"version" jsonschema:"required"`
-	// List of operations this requirement applies to. If empty, applies to all operations.
-	Operations []PackageOperation `json:"operations,omitempty"`
 	// Explanation for why this version is required
 	Reason string `json:"reason,omitempty"`
 }

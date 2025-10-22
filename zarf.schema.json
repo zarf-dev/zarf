@@ -166,14 +166,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "description": "The minimum version of the Zarf CLI required for this operation"
-        },
-        "operations": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array",
-          "description": "List of operations this requirement applies to. If empty, applies to all operations."
+          "description": "The minimum version of the Zarf CLI required to use this package"
         },
         "reason": {
           "type": "string",
@@ -185,7 +178,7 @@
       "required": [
         "version"
       ],
-      "description": "OperationRequirement specifies minimum version requirements for package operations",
+      "description": "OperationRequirement specifies minimum version requirements for the package",
       "patternProperties": {
         "^x-": {}
       }
