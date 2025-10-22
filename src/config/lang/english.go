@@ -320,15 +320,18 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./privat
 # Re-sign with a new key (overwrite existing signature)
 $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./new-key.pem --overwrite
 
-# Sign a package from an OCI registry
+# Sign a package from an OCI registry and output to local directory
 $ zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-key.pem --output ./signed/
+
+# Sign a package and publish directly to OCI registry
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
 
 # Sign with a cloud KMS key
 $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 `
 	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
 	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
-	CmdPackageSignFlagOutput         = "Output directory for the signed package (default: same directory as source package)"
+	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
 	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
 

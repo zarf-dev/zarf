@@ -9,13 +9,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"oras.land/oras-go/v2/registry"
 )
 
 // SignOptions are the options used when signing an existing package.
@@ -32,6 +35,8 @@ type SignOptions struct {
 	Overwrite bool
 	// OCIConcurrency is the number of concurrent OCI operations
 	OCIConcurrency int
+	// Retries is the number of retries to attempt when publishing to OCI
+	Retries int
 	RemoteOptions
 	// CachePath is the path to the cache directory
 	CachePath string
@@ -39,11 +44,15 @@ type SignOptions struct {
 
 // SignExistingPackage signs an existing Zarf package with the provided signing key.
 // It loads the package, optionally verifies any existing signature, removes the old signature,
-// signs the zarf.yaml file, and archives the signed package to the output directory.
+// signs the zarf.yaml file, and either archives to a directory or publishes to an OCI registry.
+//
+// The outputDest parameter can be:
+//   - A local directory path (e.g., "./output" or "/tmp/signed")
+//   - An OCI registry URL (e.g., "oci://ghcr.io/my-org/packages")
 func SignExistingPackage(
 	ctx context.Context,
 	packageSource string,
-	outputDir string,
+	outputDest string,
 	opts SignOptions,
 ) (string, error) {
 	l := logger.From(ctx)
@@ -92,8 +101,6 @@ func SignExistingPackage(
 	}
 
 	// Sign the package
-	// This creates a new zarf.yaml.sig without modifying any checksums
-	// The signature file is intentionally excluded from checksums.txt
 	l.Info("signing package with provided key")
 
 	// Create a password function for encrypted keys
@@ -111,9 +118,45 @@ func SignExistingPackage(
 		return "", fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	// Archive to output directory (includes the new signature)
-	l.Info("archiving signed package")
-	signedPath, err := pkgLayout.Archive(ctx, outputDir, 0)
+	// Check if output destination is an OCI registry
+	if helpers.IsOCIURL(outputDest) {
+		l.Info("publishing signed package to OCI registry", "destination", outputDest)
+
+		// Parse the OCI reference
+		trimmed := strings.TrimPrefix(outputDest, helpers.OCIURLPrefix)
+		parts := strings.Split(trimmed, "/")
+		dstRef := registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+
+		// Validate the registry reference
+		if err := dstRef.ValidateRegistry(); err != nil {
+			return "", fmt.Errorf("invalid OCI registry URL: %w", err)
+		}
+
+		// Publish the signed package to OCI
+		publishOpts := PublishPackageOptions{
+			OCIConcurrency:     opts.OCIConcurrency,
+			SigningKeyPath:     "", // Already signed, don't re-sign
+			SigningKeyPassword: "",
+			Retries:            opts.Retries,
+			RemoteOptions:      opts.RemoteOptions,
+		}
+
+		pubRef, err := PublishPackage(ctx, pkgLayout, dstRef, publishOpts)
+		if err != nil {
+			return "", fmt.Errorf("failed to publish signed package to OCI: %w", err)
+		}
+
+		refString := pubRef.String()
+		l.Info("package signed and published successfully", "reference", refString)
+		return refString, nil
+	}
+
+	// Archive to local directory (includes the new signature)
+	l.Info("archiving signed package to local directory", "directory", outputDest)
+	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
 	if err != nil {
 		return "", fmt.Errorf("failed to archive signed package: %w", err)
 	}

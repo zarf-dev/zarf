@@ -1545,6 +1545,7 @@ type packageSignOptions struct {
 	overwrite               bool
 	output                  string
 	ociConcurrency          int
+	retries                 int
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1567,6 +1568,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 
 	return cmd
 }
@@ -1591,12 +1593,13 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Overwrite:               o.overwrite,
 		OCIConcurrency:          o.ociConcurrency,
+		Retries:                 o.retries,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 	}
 
-	outputDir := o.output
-	if outputDir == "" {
+	outputDest := o.output
+	if outputDest == "" {
 		// Default to the directory containing the source package
 		if helpers.IsOCIURL(packageSource) {
 			// For OCI sources, use current working directory
@@ -1604,14 +1607,14 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			outputDir = wd
+			outputDest = wd
 		} else {
 			// For file sources, use the same directory as the source
-			outputDir = filepath.Dir(packageSource)
+			outputDest = filepath.Dir(packageSource)
 		}
 	}
 
-	signedPath, err := packager.SignExistingPackage(ctx, packageSource, outputDir, opts)
+	signedPath, err := packager.SignExistingPackage(ctx, packageSource, outputDest, opts)
 	if err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
