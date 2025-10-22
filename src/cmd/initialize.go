@@ -81,14 +81,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().MarkHidden("registry-mode")
 	cmd.Flags().MarkHidden("injector-hostport")
 
-	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
-		fmt.Sprintf("how to access the registry (valid values: %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy))
-	cmd.Flags().IntVar(&o.injectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
-		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
-	// While this feature is in early alpha we will hide the flags
-	cmd.Flags().MarkHidden("registry-mode")
-	cmd.Flags().MarkHidden("injector-hostport")
-
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
 	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
