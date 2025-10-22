@@ -36,6 +36,7 @@ type initOptions struct {
 	gitServer               state.GitServerInfo
 	registryInfo            state.RegistryInfo
 	artifactServer          state.ArtifactServerInfo
+	injectorHostPort        int
 	adoptExistingResources  bool
 	timeout                 time.Duration
 	retries                 int
@@ -72,6 +73,14 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
+	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
+		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
+	cmd.Flags().IntVar(&o.injectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
+		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
+	// While this feature is in early alpha we will hide the flags
+	cmd.Flags().MarkHidden("registry-mode")
+	cmd.Flags().MarkHidden("injector-hostport")
+
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
 	cmd.Flags().StringVar(&o.gitServer.PushUsername, "git-push-username", v.GetString(VInitGitPushUser), lang.CmdInitFlagGitPushUser)
@@ -103,6 +112,11 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
+	// If an external registry is used then don't allow users to configure the internal registry / injector
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
+
 	cmd.Flags().SortFlags = true
 
 	return cmd
@@ -110,6 +124,15 @@ func newInitCommand() *cobra.Command {
 
 func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
+
+	if o.registryInfo.RegistryMode == "" {
+		if o.registryInfo.Address == "" {
+			o.registryInfo.RegistryMode = state.RegistryModeNodePort
+		} else {
+			o.registryInfo.RegistryMode = state.RegistryModeExternal
+		}
+	}
+
 	if err := o.validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
@@ -160,6 +183,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         o.ociConcurrency,
 		SetVariables:           o.setVariables,
 		StorageClass:           o.storageClass,
+		InjectorHostPort:       o.injectorHostPort,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 	}
@@ -285,7 +309,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
-		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds registry`")
+		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
 	return nil
 }
@@ -311,5 +335,14 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf(lang.CmdInitErrValidateArtifact)
 		}
 	}
+
+	if o.registryInfo.RegistryMode != "" {
+		if o.registryInfo.RegistryMode != state.RegistryModeNodePort &&
+			o.registryInfo.RegistryMode != state.RegistryModeProxy && o.registryInfo.RegistryMode != state.RegistryModeExternal {
+			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
+				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
+		}
+	}
+
 	return nil
 }

@@ -306,6 +306,17 @@ type ZarfComponentAction struct {
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 	Wait *ZarfComponentActionWait `json:"wait,omitempty"`
+	// Disable go-template processing on the cmd field. This is useful when the cmd contains go-templates that should be passed to another system.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns if the action cmd should be templated or not.
+func (a ZarfComponentAction) ShouldTemplate() bool {
+	if a.Template != nil {
+		return *a.Template
+	}
+	// Default to true
+	return true
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
