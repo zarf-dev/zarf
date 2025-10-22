@@ -348,4 +348,400 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEqual(t, "old signature", string(content))
 	})
+
+	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		signedPath := filepath.Join(tmpDir, Signature)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Empty options - no signing key material configured
+		opts := utils.SignBlobOptions{}
+
+		// Should skip signing without error
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+		require.NoFileExists(t, signedPath)
+		require.Nil(t, pkgLayout.Pkg.Build.Signed)
+	})
+
+	t.Run("dirPath is file not directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "somefile.txt")
+		err := os.WriteFile(filePath, []byte("content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: filePath,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "is not a directory")
+	})
+
+	t.Run("input options not mutated", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+		opts.OutputSignature = "/some/custom/path.sig"
+
+		// Store original value
+		originalOutputSignature := opts.OutputSignature
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		// Verify input options were not modified
+		require.Equal(t, originalOutputSignature, opts.OutputSignature)
+		require.NotEqual(t, opts.OutputSignature, filepath.Join(tmpDir, Signature))
+	})
+
+	t.Run("Signed field not set on error", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Wrong password should cause signing to fail
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("wrongpassword"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.Error(t, err)
+
+		// Verify Signed field was not set
+		require.Nil(t, pkgLayout.Pkg.Build.Signed)
+	})
+
+	t.Run("Signed field set to true on success", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		// Verify Signed field is set to true
+		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
+		require.True(t, *pkgLayout.Pkg.Build.Signed)
+	})
+
+	t.Run("preserves existing Signed value on skip", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		existingSigned := false
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
+					Signed: &existingSigned,
+				},
+			},
+		}
+
+		// Empty options - should skip signing
+		opts := utils.SignBlobOptions{}
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		// Verify Signed field preserved
+		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
+		require.False(t, *pkgLayout.Pkg.Build.Signed)
+	})
+}
+
+// TestPackageLayoutSignPackageValidation uses table-driven tests for validation scenarios
+func TestPackageLayoutSignPackageValidation(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	tests := []struct {
+		name           string
+		setupFunc      func(t *testing.T) (*PackageLayout, utils.SignBlobOptions)
+		expectedErr    string
+		expectSigned   bool
+		expectSignFile bool
+	}{
+		{
+			name: "package with existing false Signed value gets updated on success",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+
+				existingSigned := false
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg: v1alpha1.ZarfPackage{
+						Build: v1alpha1.ZarfBuildData{
+							Signed: &existingSigned,
+						},
+					},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "",
+			expectSigned:   true,
+			expectSignFile: true,
+		},
+		{
+			name: "package with existing true Signed value gets overwritten",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+
+				existingSigned := true
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg: v1alpha1.ZarfPackage{
+						Build: v1alpha1.ZarfBuildData{
+							Signed: &existingSigned,
+						},
+					},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "",
+			expectSigned:   true,
+			expectSignFile: true,
+		},
+		{
+			name: "invalid key path",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg:     v1alpha1.ZarfPackage{},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "/nonexistent/key.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "no such file or directory",
+			expectSigned:   false,
+			expectSignFile: false,
+		},
+		{
+			name: "zarf.yaml exists but is a directory",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				// Create zarf.yaml as a directory instead of file
+				zarfYAMLDir := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.Mkdir(zarfYAMLDir, 0o755))
+
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg:     v1alpha1.ZarfPackage{},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "is a directory",
+			expectSigned:   false,
+			expectSignFile: false,
+		},
+		{
+			name: "sign with different password-protected key",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("test content"), 0o644))
+
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg:     v1alpha1.ZarfPackage{},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "",
+			expectSigned:   true,
+			expectSignFile: true,
+		},
+		{
+			name: "passFunc returns error",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg:     v1alpha1.ZarfPackage{},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return nil, os.ErrPermission
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "permission denied",
+			expectSigned:   false,
+			expectSignFile: false,
+		},
+		{
+			name: "empty package metadata still signs",
+			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+				tmpDir := t.TempDir()
+				yamlPath := filepath.Join(tmpDir, ZarfYAML)
+				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+
+				layout := &PackageLayout{
+					dirPath: tmpDir,
+					Pkg: v1alpha1.ZarfPackage{
+						Metadata: v1alpha1.ZarfMetadata{},
+						Build:    v1alpha1.ZarfBuildData{},
+					},
+				}
+
+				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+					return []byte("test"), nil
+				})
+				opts := utils.DefaultSignBlobOptions()
+				opts.KeyRef = "./testdata/cosign.key"
+				opts.PassFunc = passFunc
+
+				return layout, opts
+			},
+			expectedErr:    "",
+			expectSigned:   true,
+			expectSignFile: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			layout, opts := tt.setupFunc(t)
+
+			err := layout.SignPackage(ctx, opts)
+
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				if !tt.expectSigned {
+					// On error, Signed should not be set to true
+					if layout.Pkg.Build.Signed != nil {
+						require.False(t, *layout.Pkg.Build.Signed)
+					}
+				}
+				return
+			}
+
+			require.NoError(t, err)
+
+			if tt.expectSigned {
+				require.NotNil(t, layout.Pkg.Build.Signed)
+				require.True(t, *layout.Pkg.Build.Signed)
+			}
+
+			if tt.expectSignFile {
+				signPath := filepath.Join(layout.dirPath, Signature)
+				require.FileExists(t, signPath)
+			}
+		})
+	}
 }
