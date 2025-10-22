@@ -126,7 +126,11 @@ func (p *PackageLayout) ContainsSBOM() bool {
 
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
-// this is a no-op and returns nil. This allows for extensibility in the future.
+// this is a no-op and returns nil.
+//
+// This function validates the package layout state and will warn if overwriting an existing
+// signature. Callers are responsible for handling signature verification and removal if
+// re-signing requires different validation logic.
 func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) error {
 	l := logger.From(ctx)
 
@@ -136,14 +140,39 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return nil
 	}
 
-	// Set the output signature path to the package layout's signature file
-	// NOTE: here is where zarf will orchestrate changes in signing behaviors to the package
-	opts.OutputSignature = filepath.Join(p.dirPath, Signature)
+	// Validate package layout state
+	if p.dirPath == "" {
+		return errors.New("invalid package layout: dirPath is empty")
+	}
+	if info, err := os.Stat(p.dirPath); err != nil {
+		return fmt.Errorf("invalid package layout directory: %w", err)
+	} else if !info.IsDir() {
+		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
+	}
 
+	// Verify zarf.yaml exists before signing
 	zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	_, err := utils.CosignSignBlobWithOptions(ctx, zarfYAMLPath, opts)
+	if _, err := os.Stat(zarfYAMLPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("cannot sign package: %s not found in package layout", ZarfYAML)
+		}
+		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
+	}
+
+	// Make a copy of opts to avoid mutating the input
+	signOpts := opts
+	signOpts.OutputSignature = filepath.Join(p.dirPath, Signature)
+
+	// Check if signature already exists and warn
+	if _, err := os.Stat(signOpts.OutputSignature); err == nil {
+		l.Warn("overwriting existing package signature", "path", signOpts.OutputSignature)
+	}
+
+	// Perform the signing operation
+	_, err := utils.CosignSignBlobWithOptions(ctx, zarfYAMLPath, signOpts)
 	if err == nil {
-		p.Pkg.Build.Signed = true
+		signed := true
+		p.Pkg.Build.Signed = &signed
 	}
 	return err
 }

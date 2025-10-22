@@ -272,7 +272,7 @@ type ZarfBuildData struct {
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed
-	Signed bool `json:"signed,omitempty"`
+	Signed *bool `json:"signed,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.

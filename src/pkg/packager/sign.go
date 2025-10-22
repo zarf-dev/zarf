@@ -85,7 +85,7 @@ func SignExistingPackage(
 		}
 	}()
 
-	// Check for existing signature
+	// Check for existing signature and handle overwrite logic
 	sigPath := filepath.Join(pkgLayout.DirPath(), layout.Signature)
 	_, err = os.Stat(sigPath)
 	sigExists := err == nil
@@ -94,14 +94,16 @@ func SignExistingPackage(
 		return "", errors.New("package is already signed, use --overwrite to re-sign")
 	}
 
-	if sigExists {
-		l.Info("removing existing signature")
+	// If signature exists and overwrite is allowed, remove it before re-signing
+	// This ensures clean re-signing when a different key is used
+	if sigExists && opts.Overwrite {
+		l.Info("removing existing signature for re-signing")
 		if err := os.Remove(sigPath); err != nil {
 			return "", fmt.Errorf("failed to remove old signature: %w", err)
 		}
 	}
 
-	// Sign the package
+	// Sign the package (validation happens in layout.SignPackage)
 	l.Info("signing package with provided key")
 
 	// Create a password function for encrypted keys
