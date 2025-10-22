@@ -493,7 +493,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	oldValuesFiles := chart.ValuesFiles
 	valuesFiles := []string{}
 	for _, v := range chart.ValuesFiles {
-		if !filepath.IsAbs(v) {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
 			v = filepath.Join(packagePath, v)
 		}
 		valuesFiles = append(valuesFiles, v)
@@ -548,7 +548,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				path = filepath.Join(packagePath, path)
 			}
 			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+				return fmt.Errorf("unable to copy chart values file for assembling skeleton component %s: %w", path, err)
 			}
 		}
 	}

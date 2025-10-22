@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -229,21 +231,32 @@ func TestPackageInspectManifests(t *testing.T) {
 		})
 	}
 }
+func newYAMLFileServer(t *testing.T, path string) *httptest.Server {
+	t.Helper()
+	abs, err := filepath.Abs(path)
+	require.NoError(t, err)
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		http.ServeFile(w, r, abs)
+	}))
+}
+
+type ValuesFilesTestData struct {
+	name           string
+	components     string
+	definitionDir  string
+	expectedOutput string
+	packageName    string
+	setVariables   map[string]string
+	kubeVersion    string
+	expectedErr    string
+}
 
 func TestPackageInspectValuesFiles(t *testing.T) {
 	t.Parallel()
 	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
-	tests := []struct {
-		name           string
-		components     string
-		definitionDir  string
-		expectedOutput string
-		packageName    string
-		setVariables   map[string]string
-		kubeVersion    string
-		expectedErr    string
-	}{
+	tests := []ValuesFilesTestData{
 		{
 			name:           "chart inspect",
 			packageName:    "chart",
@@ -280,43 +293,78 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			tmpdir := t.TempDir()
 
-			// Create package
-			createOpts := packageCreateOptions{
-				confirm: true,
-				output:  tmpdir,
-			}
-			err := createOpts.run(context.Background(), []string{tc.definitionDir})
-			require.NoError(t, err)
-
-			// Inspect values files
-			buf := new(bytes.Buffer)
-			opts := packageInspectValuesFilesOptions{
-				outputWriter: buf,
-				kubeVersion:  tc.kubeVersion,
-				setVariables: tc.setVariables,
-				components:   tc.components,
-			}
-			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
-			if tc.expectedErr != "" {
-				require.ErrorContains(t, err, tc.expectedErr)
-				return
-			}
-			require.NoError(t, err)
-
-			// validate
-			expected, err := os.ReadFile(tc.expectedOutput)
-			require.NoError(t, err)
-			// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
-			expectedYAMLs, err := utils.SplitYAMLToString(expected)
-			require.NoError(t, err)
-			actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
-			require.NoError(t, err)
-			require.Equal(t, expectedYAMLs, actualYAMLs)
+			checkPackageValuesInspectFiles(t, tc)
 		})
 	}
+}
+
+func TestPackageInspectRemoteValuesFiles(t *testing.T) {
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+	// set up a test http server that serves test values file:
+	remoteValuesFile := filepath.Join("testdata", "inspect-values-files", "chart-remote", "remote-values", "values.yaml")
+	fileServer := newYAMLFileServer(t, remoteValuesFile)
+	url := fileServer.URL + "/values.yaml"
+	defer fileServer.Close()
+
+	// Prepare zarf.yaml in-place in chart-remote by templating zarf-template.yaml
+	srcDir := filepath.Join("testdata", "inspect-values-files", "chart-remote")
+	tmplPath := filepath.Join(srcDir, "zarf-template.yaml")
+	b, err := os.ReadFile(tmplPath)
+	require.NoError(t, err)
+	zarfContent := strings.ReplaceAll(string(b), "VALUES_YAML_URL", url)
+	require.NoError(t, os.WriteFile(filepath.Join(srcDir, "zarf.yaml"), []byte(zarfContent), 0o644))
+	test := ValuesFilesTestData{
+		name:           "chart inspect with remote values URL",
+		packageName:    "chart",
+		definitionDir:  srcDir,
+		expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-remote", "expected.yaml"),
+		kubeVersion:    "1.25",
+		setVariables: map[string]string{
+			"REPLICAS":    "2",
+			"DESCRIPTION": ".chart.variables takes priority",
+			"PORT":        "8888",
+		},
+	}
+
+	checkPackageValuesInspectFiles(t, test)
+}
+
+func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
+	tmpdir := t.TempDir()
+	// Create package
+	createOpts := packageCreateOptions{
+		confirm: true,
+		output:  tmpdir,
+	}
+	err := createOpts.run(context.Background(), []string{tc.definitionDir})
+	require.NoError(t, err)
+
+	// Inspect values files
+	buf := new(bytes.Buffer)
+	opts := packageInspectValuesFilesOptions{
+		outputWriter: buf,
+		kubeVersion:  tc.kubeVersion,
+		setVariables: tc.setVariables,
+		components:   tc.components,
+	}
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+	err = opts.run(context.Background(), []string{packagePath})
+	if tc.expectedErr != "" {
+		require.ErrorContains(t, err, tc.expectedErr)
+		return
+	}
+	require.NoError(t, err)
+
+	// validate
+	expected, err := os.ReadFile(tc.expectedOutput)
+	require.NoError(t, err)
+	// Since we have multiple yamls split by the --- syntax we have to split them to accurately test
+	expectedYAMLs, err := utils.SplitYAMLToString(expected)
+	require.NoError(t, err)
+	actualYAMLs, err := utils.SplitYAMLToString(buf.Bytes())
+	require.NoError(t, err)
+	require.Equal(t, expectedYAMLs, actualYAMLs)
 }
 
 // TestParseRegistryOverrides ensures that ordering is maintained for registry overrides.
