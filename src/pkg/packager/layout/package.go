@@ -126,7 +126,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
-// this is a no-op and returns nil.
+// this is a no-op and returns nil. This allows for extensibility in the future.
 func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) error {
 	l := logger.From(ctx)
 
@@ -142,6 +142,9 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 	_, err := utils.CosignSignBlobWithOptions(ctx, zarfYAMLPath, opts)
+	if err == nil {
+		p.Pkg.Build.Signed = true
+	}
 	return err
 }
 

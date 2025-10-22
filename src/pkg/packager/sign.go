@@ -58,6 +58,7 @@ func SignExistingPackage(
 	l := logger.From(ctx)
 
 	// Validate required options
+	// Note: This should be removed when broader signing strategies are available
 	if opts.SigningKeyPath == "" {
 		return "", errors.New("signing key path is required")
 	}
