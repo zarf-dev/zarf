@@ -22,6 +22,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -1575,6 +1576,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 
 func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	l := logger.From(ctx)
 	packageSource := args[0]
 
 	if o.signingKeyPath == "" {
@@ -1586,18 +1588,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	opts := packager.SignOptions{
-		SigningKeyPath:          o.signingKeyPath,
-		SigningKeyPassword:      o.signingKeyPassword,
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Overwrite:               o.overwrite,
-		OCIConcurrency:          o.ociConcurrency,
-		Retries:                 o.retries,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
-	}
-
+	// Determine output destination
 	outputDest := o.output
 	if outputDest == "" {
 		// Default to the directory containing the source package
@@ -1614,12 +1605,103 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	signedPath, err := packager.SignExistingPackage(ctx, packageSource, outputDest, opts)
+	// Load the package
+	loadOpts := packager.LoadOptions{
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+
+	l.Info("loading package", "source", packageSource)
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
+			l.Warn("failed to cleanup package layout", "error", cleanupErr)
+		}
+	}()
+
+	// Check for existing signature and handle overwrite logic
+	sigPath := filepath.Join(pkgLayout.DirPath(), layout.Signature)
+	_, err = os.Stat(sigPath)
+	sigExists := err == nil
+
+	if sigExists && !o.overwrite {
+		return errors.New("package is already signed, use --overwrite to re-sign")
+	}
+
+	if sigExists && o.overwrite {
+		l.Info("removing existing signature for re-signing")
+		if err := os.Remove(sigPath); err != nil {
+			return fmt.Errorf("failed to remove old signature: %w", err)
+		}
+	}
+
+	// Sign the package
+	l.Info("signing package with provided key")
+
+	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+		return []byte(o.signingKeyPassword), nil
+	})
+
+	// Here we will merge future sign options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = o.signingKeyPath
+	signOpts.PassFunc = passFunc
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	logger.From(ctx).Info("package signed successfully", "path", signedPath)
+	// Handle output - OCI or local file
+	if helpers.IsOCIURL(outputDest) {
+		l.Info("publishing signed package to OCI registry", "destination", outputDest)
+
+		// Parse the OCI reference
+		trimmed := strings.TrimPrefix(outputDest, helpers.OCIURLPrefix)
+		parts := strings.Split(trimmed, "/")
+		dstRef := registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+
+		if err := dstRef.ValidateRegistry(); err != nil {
+			return fmt.Errorf("invalid OCI registry URL: %w", err)
+		}
+
+		// Publish the signed package to OCI
+		publishOpts := packager.PublishPackageOptions{
+			OCIConcurrency:     o.ociConcurrency,
+			SigningKeyPath:     "", // Already signed, don't re-sign - maybe remove?
+			SigningKeyPassword: "",
+			Retries:            o.retries,
+			RemoteOptions:      defaultRemoteOptions(),
+		}
+
+		pubRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, publishOpts)
+		if err != nil {
+			return fmt.Errorf("failed to publish signed package to OCI: %w", err)
+		}
+
+		l.Info("package signed and published successfully", "reference", pubRef.String())
+		return nil
+	}
+
+	// Archive to local directory
+	l.Info("archiving signed package to local directory", "directory", outputDest)
+	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
+	if err != nil {
+		return fmt.Errorf("failed to archive signed package: %w", err)
+	}
+
+	l.Info("package signed successfully", "path", signedPath)
 	return nil
 }
 
