@@ -147,3 +147,32 @@ func TestOperationRequirementsError(t *testing.T) {
 	require.Contains(t, errMsg, "v0.65.0")
 	require.Contains(t, errMsg, "values field requires v0.65.0+")
 }
+
+func TestOperationRequirementsError_HighestVersion(t *testing.T) {
+	err := &OperationRequirementsError{
+		Requirements: []v1alpha1.OperationRequirement{
+			{
+				Version: "v0.60.0",
+				Reason:  "older requirement",
+			},
+			{
+				Version: "v0.70.0",
+				Reason:  "newer requirement",
+			},
+			{
+				Version: "v0.65.0",
+				Reason:  "middle requirement",
+			},
+		},
+		CurrentVersion: "v0.64.0",
+	}
+
+	errMsg := err.Error()
+	// Should display the highest version (v0.70.0)
+	require.Contains(t, errMsg, "v0.70.0")
+	require.Contains(t, errMsg, "v0.64.0")
+	// Should include all reasons
+	require.Contains(t, errMsg, "older requirement")
+	require.Contains(t, errMsg, "newer requirement")
+	require.Contains(t, errMsg, "middle requirement")
+}

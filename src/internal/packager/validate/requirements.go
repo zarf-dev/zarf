@@ -19,8 +19,21 @@ type OperationRequirementsError struct {
 }
 
 func (e *OperationRequirementsError) Error() string {
-	msg := fmt.Sprintf("package requires Zarf CLI version '%s' or higher (current version: '%s'):\n",
-		e.Requirements[0].Version, e.CurrentVersion)
+	// Find the highest version requirement
+	highestVersion := e.Requirements[0].Version
+	var highestSemver *semver.Version
+
+	for _, req := range e.Requirements {
+		if v, err := semver.NewVersion(req.Version); err == nil {
+			if highestSemver == nil || v.GreaterThan(highestSemver) {
+				highestSemver = v
+				highestVersion = req.Version
+			}
+		}
+	}
+
+	msg := fmt.Sprintf("package requires Zarf version '%s' (current version: '%s'):\n",
+		highestVersion, e.CurrentVersion)
 	for _, req := range e.Requirements {
 		if req.Reason != "" {
 			msg += fmt.Sprintf("  Reason: %s\n", req.Reason)
