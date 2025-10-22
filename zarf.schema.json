@@ -162,6 +162,34 @@
         "^x-": {}
       }
     },
+    "OperationRequirement": {
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The minimum version of the Zarf CLI required for this operation"
+        },
+        "operations": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "List of operations this requirement applies to. If empty, applies to all operations."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Explanation for why this version is required"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "description": "OperationRequirement specifies minimum version requirements for package operations",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "SetValue": {
       "properties": {
         "key": {
@@ -323,6 +351,13 @@
         "flavor": {
           "type": "string",
           "description": "The flavor of Zarf used to build this package."
+        },
+        "operationRequirements": {
+          "items": {
+            "$ref": "#/$defs/OperationRequirement"
+          },
+          "type": "array",
+          "description": "Requirements for specific package operations."
         }
       },
       "additionalProperties": false,

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mholt/archives"
+	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/validate"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -116,6 +117,10 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			importedPkg, err = remote.FetchZarfYAML(ctx)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
+			}
+			// Validate operational requirements for imported package
+			if err := pkgvalidate.ValidateOperationRequirements(importedPkg, v1alpha1.OperationImport); err != nil {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported package from %s does not meet operational requirements: %w", component.Import.URL, err)
 			}
 		}
 

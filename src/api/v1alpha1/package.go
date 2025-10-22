@@ -245,6 +245,28 @@ type ZarfMetadata struct {
 	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
+// PackageOperation represents operations that can be performed on a Zarf package
+type PackageOperation string
+
+const (
+	// OperationDeploy represents deploying a package to a cluster
+	OperationDeploy PackageOperation = "deploy"
+	// OperationImport represents importing package components
+	OperationImport PackageOperation = "import"
+	// OperationPublish represents publishing a package to a registry
+	OperationPublish PackageOperation = "publish"
+)
+
+// OperationRequirement specifies minimum version requirements for package operations
+type OperationRequirement struct {
+	// The minimum version of the Zarf CLI required for this operation
+	Version string `json:"version" jsonschema:"required"`
+	// List of operations this requirement applies to. If empty, applies to all operations.
+	Operations []PackageOperation `json:"operations,omitempty"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
+}
+
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package.
@@ -271,6 +293,8 @@ type ZarfBuildData struct {
 	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+	// Requirements for specific package operations.
+	OperationRequirements []OperationRequirement `json:"operationRequirements,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.

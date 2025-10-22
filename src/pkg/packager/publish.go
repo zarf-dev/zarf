@@ -11,6 +11,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/validate"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -131,6 +132,11 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 	if pkgLayout == nil {
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
+	}
+
+	// Validate operational requirements after input validation
+	if err := validate.ValidateOperationRequirements(pkgLayout.Pkg, v1alpha1.OperationPublish); err != nil {
+		return registry.Reference{}, err
 	}
 
 	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
