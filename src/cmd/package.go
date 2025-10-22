@@ -1339,7 +1339,6 @@ func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
 		Args:              cobra.MaximumNArgs(1),
 		Short:             lang.CmdPackagePruneShort,
 		Long:              lang.CmdPackagePruneLong,
-		PreRun:            o.preRun,
 		RunE:              o.run,
 		ValidArgsFunction: getPackageCompletionArgs,
 	}
@@ -1355,13 +1354,6 @@ func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packagePruneOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-}
-
 func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
@@ -1375,7 +1367,10 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	c, _ := cluster.New(ctx) //nolint:errcheck
+	c, err := cluster.New(ctx)
+	if err != nil {
+		return err
+	}
 	loadOpts := packager.LoadOptions{
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Architecture:            config.GetArch(),
@@ -1397,22 +1392,19 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	pruneOpt := packager.PruneOptions{
-		Cluster:           c,
-		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespaceOverride,
-		Component:         o.component,
-		Chart:             o.chart,
+		Cluster:   c,
+		Timeout:   config.ZarfDefaultTimeout,
+		Component: o.component,
+		Chart:     o.chart,
 	}
 
-	// First get all applicable orphaned or pending resources based on the component filter
-	pruneState, err := packager.GetPruneableCharts(deployedPackage, pruneOpt)
+	prunableCharts, err := deployedPackage.GetPrunableCharts(o.component, o.chart)
 	if err != nil {
 		return err
 	}
-
 	// Check if there are any charts to prune
 	totalCharts := 0
-	for _, charts := range pruneState.PruneableCharts {
+	for _, charts := range prunableCharts {
 		totalCharts += len(charts)
 	}
 	if totalCharts == 0 {
@@ -1424,7 +1416,7 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	logger.From(ctx).Info("the following orphaned charts will be pruned")
 	header := []string{"Component", "Chart Name", "Namespace", "Status", "State"}
 	var tableData [][]string
-	for componentName, charts := range pruneState.PruneableCharts {
+	for componentName, charts := range prunableCharts {
 		for _, chart := range charts {
 			tableData = append(tableData, []string{
 				componentName,
@@ -1448,7 +1440,7 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prune the charts and update state
-	err = packager.PruneCharts(ctx, deployedPackage, pruneState.PruneableCharts, pruneOpt)
+	err = packager.PruneCharts(ctx, deployedPackage, prunableCharts, pruneOpt)
 	if err != nil {
 		return fmt.Errorf("failed to prune charts: %w", err)
 	}

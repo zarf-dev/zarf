@@ -405,16 +405,16 @@ func (d *DeployedPackage) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
 }
 
-// GetPruneableCharts returns a map of component names to lists of charts that can be pruned,
+// GetPrunableCharts returns a map of component names to lists of charts that can be pruned,
 // filtered by the provided component and chart names. If componentFilter is empty, all components
 // are searched. If chartFilter is empty, all charts are searched.
-func (d *DeployedPackage) GetPruneableCharts(componentFilter, chartFilter string) (map[string][]InstalledChart, error) {
+func (d *DeployedPackage) GetPrunableCharts(componentFilter, chartFilter string) (map[string][]InstalledChart, error) {
 	// Validate that if chart is specified, component must also be specified
 	if chartFilter != "" && componentFilter == "" {
 		return nil, fmt.Errorf("component must be specified when chart filter is provided")
 	}
 
-	pruneableCharts := make(map[string][]InstalledChart, 0)
+	prunableCharts := make(map[string][]InstalledChart, 0)
 	foundComponent := componentFilter == ""
 	foundChart := chartFilter == ""
 
@@ -429,7 +429,7 @@ func (d *DeployedPackage) GetPruneableCharts(componentFilter, chartFilter string
 			}
 			foundChart = true
 			if chart.State == ChartStateOrphaned {
-				pruneableCharts[component.Name] = append(pruneableCharts[component.Name], chart)
+				prunableCharts[component.Name] = append(prunableCharts[component.Name], chart)
 			}
 		}
 	}
@@ -441,11 +441,11 @@ func (d *DeployedPackage) GetPruneableCharts(componentFilter, chartFilter string
 	if chartFilter != "" && !foundChart {
 		return nil, fmt.Errorf("chart %q not found in deployed package", chartFilter)
 	}
-	if chartFilter != "" && foundChart && len(pruneableCharts) == 0 {
+	if chartFilter != "" && foundChart && len(prunableCharts) == 0 {
 		return nil, fmt.Errorf("chart %q found in deployed package, but is not in the %q state", chartFilter, ChartStateOrphaned)
 	}
 
-	return pruneableCharts, nil
+	return prunableCharts, nil
 }
 
 // RemovePrunedCharts updates the DeployedPackage's state by removing the specified charts

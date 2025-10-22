@@ -457,7 +457,7 @@ func TestMergeInstalledChartsForComponent(t *testing.T) {
 	}
 }
 
-func TestDeployedPackage_GetPruneableCharts(t *testing.T) {
+func TestDeployedPackage_GetPrunableCharts(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -612,7 +612,7 @@ func TestDeployedPackage_GetPruneableCharts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := tt.deployedPackage.GetPruneableCharts(tt.componentFilter, tt.chartFilter)
+			result, err := tt.deployedPackage.GetPrunableCharts(tt.componentFilter, tt.chartFilter)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)
