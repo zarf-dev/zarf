@@ -14,7 +14,7 @@ spec:
         # Don't mutate this pod
         zarf.dev/agent: ignore
     spec:
-      priorityClassName: system-node-criticalM
+      priorityClassName: system-node-critical
       containers:
         - args:
           {{ if .Values.ipv6Only }}
@@ -23,6 +23,7 @@ spec:
           {{- else }}
             - TCP4-LISTEN:{{ .Values.service.nodePort }},reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1
+          {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
