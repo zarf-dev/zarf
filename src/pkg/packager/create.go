@@ -11,19 +11,18 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
 type CreateOptions struct {
 	Flavor                  string
-	RegistryOverrides       []types.RegistryOverride
+	RegistryOverrides       []images.RegistryOverride
 	SigningKeyPath          string
 	SigningKeyPassword      string
 	SetVariables            map[string]string
@@ -35,6 +34,8 @@ type CreateOptions struct {
 	CachePath               string
 	// applicable when output is an OCI registry
 	RemoteOptions
+	// IsInteractive decides if Zarf can interactively prompt users through the CLI
+	IsInteractive bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
@@ -44,9 +45,10 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:       opts.Flavor,
-		SetVariables: opts.SetVariables,
-		CachePath:    opts.CachePath,
+		Flavor:        opts.Flavor,
+		SetVariables:  opts.SetVariables,
+		CachePath:     opts.CachePath,
+		IsInteractive: opts.IsInteractive,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -65,6 +67,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to load differential package: %w", err)
+		}
+		if err := pkgLayout.Cleanup(); err != nil {
+			return "", err
 		}
 		differentialPkg = pkgLayout.Pkg
 	}

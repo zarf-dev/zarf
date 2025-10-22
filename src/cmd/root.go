@@ -21,12 +21,9 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 var (
-	// Default global config for the packager
-	pkgConfig = types.PackagerConfig{}
 	// Features is a string map of feature names to enabled state.
 	// Example: "foo=true,bar=false,baz=true"
 	features map[string]string

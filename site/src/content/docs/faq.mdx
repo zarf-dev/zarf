@@ -127,3 +127,11 @@ A `skeleton` package is a bare-bones Zarf package definition alongside its assoc
 Skeleton packages have not been run through the `zarf package create` process yet, and thus do not have any remote resources included (no images, repos, or remote manifests and files) thereby retaining any [create-time package configuration templates](/ref/values) as they were defined in the original `zarf.yaml` (i.e. untemplated).
 
 Skeleton packages are published by pointing the publish command to a directory rather than a tarball, e.g. `zarf package publish my-package/`
+
+## When should I clear my Zarf cache?
+
+When Zarf pulls new images or OCI artifacts, it will store them locally to speed up future uses. Over time, the cache
+will grow, especially if you run `zarf package create` often with a variety of packages or with many large images. The
+default location is in the home directory for the current user at `~/.zarf-cache`. Unix users can check the cache size
+with `du -sh ~/.zarf-cache` and if you'd like to free up some disk space we recommend running `zarf tools cache-clear`.
+How often you clear your cache will depend on your disk space and network needs.

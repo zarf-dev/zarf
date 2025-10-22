@@ -14,6 +14,7 @@ spec:
         # Don't mutate this pod
         zarf.dev/agent: ignore
     spec:
+      priorityClassName: system-node-critical
       containers:
         - name: injector
           image: "{{ .Values.proxy.injector.image }}"
@@ -37,6 +38,13 @@ spec:
             periodSeconds: 2
             successThreshold: 1
             timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 256Mi
           volumeMounts:
             - mountPath: /zarf-init/zarf-injector
               name: init

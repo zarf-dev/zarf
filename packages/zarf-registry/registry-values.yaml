@@ -18,8 +18,8 @@ proxy:
   tolerations:
     ###ZARF_VAR_PROXY_TOLERATIONS###
   image:
-    repository: "###ZARF_SEED_REGISTRY###/alpine/socat"
-    tag: "1.8.0.3"
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_PROXY_IMAGE_TAG###"
   registry:
     image:
       repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"

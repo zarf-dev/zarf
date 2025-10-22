@@ -17,12 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -326,12 +326,12 @@ func TestParseRegistryOverrides(t *testing.T) {
 	tests := []struct {
 		name     string
 		provided []string
-		expected []types.RegistryOverride
+		expected []images.RegistryOverride
 	}{
 		{
 			name:     "single override",
 			provided: []string{"docker.io=" + intranetRegistry},
-			expected: []types.RegistryOverride{
+			expected: []images.RegistryOverride{
 				{Source: "docker.io", Override: intranetRegistry},
 			},
 		},
@@ -343,7 +343,7 @@ func TestParseRegistryOverrides(t *testing.T) {
 				"ghcr.io=" + intranetRegistry,
 				"quay.io=" + intranetRegistry,
 			},
-			expected: []types.RegistryOverride{
+			expected: []images.RegistryOverride{
 				{Source: "registry1.dso.mil", Override: intranetRegistry},
 				{Source: "quay.io", Override: intranetRegistry},
 				{Source: "ghcr.io", Override: intranetRegistry},
@@ -356,7 +356,7 @@ func TestParseRegistryOverrides(t *testing.T) {
 				"docker.io/library=" + intranetRegistry,
 				"docker.io=" + intranetRegistry,
 			},
-			expected: []types.RegistryOverride{
+			expected: []images.RegistryOverride{
 				{Source: "docker.io/library", Override: intranetRegistry},
 				{Source: "docker.io", Override: intranetRegistry},
 			},
@@ -369,7 +369,7 @@ func TestParseRegistryOverrides(t *testing.T) {
 				"registry1.dso.mil/libary=" + intranetRegistry,
 				"registry1.dso.mil=" + intranetRegistry,
 			},
-			expected: []types.RegistryOverride{
+			expected: []images.RegistryOverride{
 				{Source: "registry1.dso.mil/libary", Override: intranetRegistry},
 				{Source: "registry1.dso.mil", Override: intranetRegistry},
 				{Source: "docker.io/library", Override: intranetRegistry},
@@ -385,7 +385,7 @@ func TestParseRegistryOverrides(t *testing.T) {
 				"ghcr.io=" + intranetRegistry,
 				"quay.io=" + intranetRegistry,
 			},
-			expected: []types.RegistryOverride{
+			expected: []images.RegistryOverride{
 				{Source: "registry1.dso.mil", Override: intranetRegistry},
 				{Source: "quay.io", Override: intranetRegistry},
 				{Source: "ghcr.io", Override: intranetRegistry},
@@ -395,7 +395,6 @@ func TestParseRegistryOverrides(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		require.Len(t, tc.expected, len(tc.provided), "The expected array is not the same length as the provided array.")
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result, err := parseRegistryOverrides(tc.provided)

@@ -1,0 +1,43 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values
+  description: Minimal test package for values feature
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: test-values-component
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo '{"myKey":"myValue"}'
+            setValues:
+              - key: .json
+                type: json
+          - cmd: >
+              echo 'myKey: myValue'
+            setValues:
+              - key: .yaml
+                type: yaml
+          # Test that template: false prevents Zarf from processing go-templates
+          - cmd: echo 'template={{ .shouldNotBeProcessed }}'
+            template: false
+            setValues:
+              - key: .rawTemplate
+                type: string
+    manifests:
+      - name: test-configmap
+        template: true
+        files:
+          - configmap.yaml
+      - name: test-action-configmap
+        template: true
+        files:
+          - action-configmap.yaml
+      - name: test-raw-template-configmap
+        template: true
+        files:
+          - raw-template-configmap.yaml

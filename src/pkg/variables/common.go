@@ -42,3 +42,8 @@ func (vc *VariableConfig) SetApplicationTemplates(applicationTemplates map[strin
 func (vc *VariableConfig) SetConstants(constants []v1alpha1.Constant) {
 	vc.constants = constants
 }
+
+// GetConstants fetches the package constants.
+func (vc *VariableConfig) GetConstants() []v1alpha1.Constant {
+	return vc.constants
+}
