@@ -1,3 +1,2 @@
 test: "default-value"
 additional: "not-set"
-removeDefault: "default-remove-value"

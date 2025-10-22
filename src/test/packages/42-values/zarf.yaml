@@ -31,7 +31,6 @@ components:
       onRemove:
         before:
           - cmd: echo "REMOVE_TEST_VALUE={{ .Values.test }}"
-          - cmd: echo "REMOVE_DEFAULT_VALUE={{ .Values.removeDefault }}"
           - cmd: echo "REMOVE_CUSTOM_VALUE={{ .Values.removeKey }}"
     manifests:
       - name: test-configmap

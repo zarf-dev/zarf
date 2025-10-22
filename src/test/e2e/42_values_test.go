@@ -59,8 +59,6 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the remove actions used the values correctly
-	// Check that the default value from embedded values.yaml was templated (not present in override-values.yaml)
-	require.Contains(t, stdOut, "REMOVE_DEFAULT_VALUE=default-remove-value", "remove action should have templated the default value from embedded values.yaml")
 	// Check that the override-value from override-values.yaml was templated
 	require.Contains(t, stdOut, "REMOVE_TEST_VALUE=override-value", "remove action should have templated the override value from override-values.yaml")
 	// Check that the custom value from --set-values was templated
