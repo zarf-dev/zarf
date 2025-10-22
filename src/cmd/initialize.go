@@ -117,6 +117,11 @@ func newInitCommand() *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 
+	// If an external registry is used then don't allow users to configure the internal registry / injector
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
+
 	cmd.Flags().SortFlags = true
 
 	return cmd
