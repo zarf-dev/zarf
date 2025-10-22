@@ -1392,10 +1392,8 @@ func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	pruneOpt := packager.PruneOptions{
-		Cluster:   c,
-		Timeout:   config.ZarfDefaultTimeout,
-		Component: o.component,
-		Chart:     o.chart,
+		Cluster: c,
+		Timeout: config.ZarfDefaultTimeout,
 	}
 
 	prunableCharts, err := deployedPackage.GetPrunableCharts(o.component, o.chart)

@@ -16,11 +16,8 @@ import (
 
 // PruneOptions are the options for Prune
 type PruneOptions struct {
-	Cluster   *cluster.Cluster
-	Component string
-	Chart     string
-	Timeout   time.Duration
-	Pending   bool
+	Cluster *cluster.Cluster
+	Timeout time.Duration
 }
 
 // PruneCharts removes the specified charts from the cluster and updates the deployed package state.
