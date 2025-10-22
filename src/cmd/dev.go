@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -168,11 +169,29 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
-		ValuesFiles:        o.valuesFiles,
-		SetValues:          o.setValues,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -252,11 +271,29 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
-		ValuesFiles:        o.valuesFiles,
-		SetValues:          o.setValues,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -179,10 +178,11 @@ func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableCon
 type InspectDefinitionResourcesOptions struct {
 	CreateSetVariables map[string]string
 	DeploySetVariables map[string]string
-	ValuesFiles        []string
-	SetValues          map[string]string
-	Flavor             string
-	KubeVersion        string
+	// Values are values passed in at inspect time. They can come from the CLI, user configuration, or set directly by
+	// API callers.
+	value.Values
+	Flavor      string
+	KubeVersion string
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -210,24 +210,6 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
-	// Parse values from files
-	vals, err := value.ParseFiles(ctx, opts.ValuesFiles, value.ParseFilesOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range opts.SetValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := vals.Set(path, val); err != nil {
-			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
-	}
-
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -252,7 +234,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, opts.Values, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}
@@ -276,7 +258,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, opts.Values, pkg)
 			if err != nil {
 				return nil, err
 			}
