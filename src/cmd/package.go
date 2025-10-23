@@ -78,7 +78,7 @@ type packageCreateOptions struct {
 	signingKeyPassword      string
 	flavor                  string
 	ociConcurrency          int
-	BypassVersionCheck      bool
+	bypassVersionCheck      bool
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -116,7 +116,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
+	cmd.Flags().BoolVar(&o.bypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
@@ -217,7 +217,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
-		BypassVersionCheck:      o.BypassVersionCheck,
+		BypassVersionCheck:      o.bypassVersionCheck,
 	}
 	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -1337,6 +1337,7 @@ type packagePublishOptions struct {
 	confirm                 bool
 	ociConcurrency          int
 	publicKeyPath           string
+	bypassVersionCheck      bool
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1359,6 +1360,8 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVar(&o.bypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when publishing the package")
+	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	return cmd
 }
@@ -1405,6 +1408,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			RemoteOptions:      defaultRemoteOptions(),
 			CachePath:          cachePath,
 			Flavor:             o.flavor,
+			BypassVersionCheck: o.bypassVersionCheck,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err

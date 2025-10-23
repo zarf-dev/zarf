@@ -121,7 +121,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if !BypassVersionCheck {
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements %w. If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
 				}
 			}
 		}

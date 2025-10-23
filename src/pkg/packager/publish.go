@@ -11,7 +11,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/validate"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -108,8 +107,6 @@ type PublishPackageOptions struct {
 	SigningKeyPassword string
 	// Retries specifies the number of retries to use
 	Retries int
-	// BypassVersionCheck skips version requirement validation
-	BypassVersionCheck bool
 	RemoteOptions
 }
 
@@ -134,13 +131,6 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 	if pkgLayout == nil {
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
-	}
-
-	// Validate operational requirements after input validation
-	if !opts.BypassVersionCheck {
-		if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
-			return registry.Reference{}, fmt.Errorf("%w. If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
-		}
 	}
 
 	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
@@ -174,6 +164,8 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
+	// BypassVersionCheck skips version requirement validation
+	BypassVersionCheck bool
 	RemoteOptions
 }
 
@@ -203,8 +195,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath: opts.CachePath,
-		Flavor:    opts.Flavor,
+		CachePath:          opts.CachePath,
+		Flavor:             opts.Flavor,
+		BypassVersionCheck: opts.BypassVersionCheck,
 	})
 	if err != nil {
 		return registry.Reference{}, err

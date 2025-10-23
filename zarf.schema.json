@@ -162,27 +162,6 @@
         "^x-": {}
       }
     },
-    "OperationRequirement": {
-      "properties": {
-        "version": {
-          "type": "string",
-          "description": "The minimum version of the Zarf CLI required to use this package"
-        },
-        "reason": {
-          "type": "string",
-          "description": "Explanation for why this version is required"
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "version"
-      ],
-      "description": "OperationRequirement specifies minimum version requirements for the package",
-      "patternProperties": {
-        "^x-": {}
-      }
-    },
     "SetValue": {
       "properties": {
         "key": {
@@ -286,6 +265,27 @@
         "^x-": {}
       }
     },
+    "VersionRequirement": {
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "The minimum version of the Zarf CLI required to use this package"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Explanation for why this version is required"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "version"
+      ],
+      "description": "VersionRequirement specifies minimum version requirements for the package",
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "ZarfBuildData": {
       "properties": {
         "terminal": {
@@ -337,17 +337,13 @@
           "type": "array",
           "description": "List of components that were not included in this package due to differential packaging."
         },
-        "lastNonBreakingVersion": {
-          "type": "string",
-          "description": "The minimum version of Zarf that does not have breaking package structure changes."
-        },
         "flavor": {
           "type": "string",
           "description": "The flavor of Zarf used to build this package."
         },
-        "operationRequirements": {
+        "versionRequirements": {
           "items": {
-            "$ref": "#/$defs/OperationRequirement"
+            "$ref": "#/$defs/VersionRequirement"
           },
           "type": "array",
           "description": "Requirements for specific package operations."

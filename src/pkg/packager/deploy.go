@@ -99,7 +99,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	// Validate operational requirements before proceeding
 	if !opts.BypassVersionCheck {
 		if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
-			return DeployResult{}, fmt.Errorf("%w. If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
+			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
 
