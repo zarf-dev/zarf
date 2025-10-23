@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/stretchr/testify/require"
 
@@ -256,7 +257,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.PassFunc = passFunc
 
 		err = pkgLayout.SignPackage(ctx, opts)
-		require.EqualError(t, err, "reading key: decrypt: encrypted: decryption failed")
+		require.ErrorContains(t, err, "failed to sign package")
+		require.ErrorContains(t, err, "reading key: decrypt: encrypted: decryption failed")
 		require.NoFileExists(t, signedPath)
 	})
 
@@ -506,6 +508,66 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		// Verify Signed field preserved
 		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
 		require.False(t, *pkgLayout.Pkg.Build.Signed)
+	})
+
+	t.Run("zarf.yaml updated with signed:true after signing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		// Create initial zarf.yaml with a valid package
+		initialPkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name:    "test-package",
+				Version: "1.0.0",
+			},
+			Build: v1alpha1.ZarfBuildData{
+				Architecture: "amd64",
+			},
+		}
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     initialPkg,
+		}
+
+		// Marshal and write initial package (without signed field)
+		b, err := goyaml.Marshal(initialPkg)
+		require.NoError(t, err)
+		err = os.WriteFile(yamlPath, b, 0o644)
+		require.NoError(t, err)
+
+		// Sign the package
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		// Verify signature file exists
+		signaturePath := filepath.Join(tmpDir, Signature)
+		require.FileExists(t, signaturePath)
+
+		// Read the zarf.yaml from disk
+		updatedBytes, err := os.ReadFile(yamlPath)
+		require.NoError(t, err)
+
+		// Parse it back
+		var updatedPkg v1alpha1.ZarfPackage
+		err = goyaml.Unmarshal(updatedBytes, &updatedPkg)
+		require.NoError(t, err)
+
+		// Verify that signed:true is now in the file on disk
+		require.NotNil(t, updatedPkg.Build.Signed, "zarf.yaml should contain signed field")
+		require.True(t, *updatedPkg.Build.Signed, "zarf.yaml should have signed:true")
+
+		// Also verify in-memory state matches
+		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
+		require.True(t, *pkgLayout.Pkg.Build.Signed)
 	})
 }
 
