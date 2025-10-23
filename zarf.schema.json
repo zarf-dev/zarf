@@ -269,7 +269,7 @@
       "properties": {
         "version": {
           "type": "string",
-          "description": "The minimum version of the Zarf CLI required to use this package"
+          "description": "The minimum version of Zarf required to use this package"
         },
         "reason": {
           "type": "string",

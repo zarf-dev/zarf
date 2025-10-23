@@ -284,7 +284,7 @@ type devDeployOptions struct {
 	optionalComponents     string
 	noYOLO                 bool
 	ociConcurrency         int
-	BypassVersionCheck     bool
+	bypassVersionCheck     bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -320,7 +320,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
+	cmd.Flags().BoolVar(&o.bypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	return cmd
@@ -359,6 +359,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
+		BypassVersionCheck: o.bypassVersionCheck,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {

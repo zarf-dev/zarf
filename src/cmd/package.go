@@ -1234,7 +1234,7 @@ type packageRemoveOptions struct {
 	confirm                 bool
 	optionalComponents      string
 	skipSignatureValidation bool
-	BypassVersionCheck      bool
+	bypassVersionCheck      bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -1259,7 +1259,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when removing the package")
+	cmd.Flags().BoolVar(&o.bypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	return cmd
@@ -1304,7 +1304,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Cluster:            c,
 		Timeout:            config.ZarfDefaultTimeout,
 		NamespaceOverride:  o.namespaceOverride,
-		BypassVersionCheck: o.BypassVersionCheck,
+		BypassVersionCheck: o.bypassVersionCheck,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	err = utils.ColorPrintYAML(pkg, nil, false)

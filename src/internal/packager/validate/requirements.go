@@ -36,7 +36,7 @@ func (e *VersionRequirementsError) Error() string {
 		highestVersion, e.CurrentVersion)
 	for _, req := range e.Requirements {
 		if req.Reason != "" {
-			msg += fmt.Sprintf("  Reason: %s\n", req.Reason)
+			msg += fmt.Sprintf("Reason: %s\n", req.Reason)
 		}
 	}
 	return msg

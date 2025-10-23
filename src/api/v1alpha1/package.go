@@ -283,7 +283,7 @@ type ZarfValues struct {
 
 // VersionRequirement specifies minimum version requirements for the package
 type VersionRequirement struct {
-	// The minimum version of the Zarf CLI required to use this package
+	// The minimum version of Zarf required to use this package
 	Version string `json:"version" jsonschema:"required"`
 	// Explanation for why this version is required
 	Reason string `json:"reason,omitempty"`
