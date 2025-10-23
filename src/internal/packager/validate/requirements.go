@@ -42,8 +42,7 @@ func (e *OperationRequirementsError) Error() string {
 	return msg
 }
 
-// ValidateOperationRequirements checks if the current Zarf CLI version meets the operational requirements.
-// Returns an error if requirements are not met.
+// ValidateOperationRequirements checks if the config.CLIVersion meets the operational requirements.
 func ValidateOperationRequirements(pkg v1alpha1.ZarfPackage) error {
 	if len(pkg.Build.OperationRequirements) == 0 {
 		return nil
@@ -51,7 +50,6 @@ func ValidateOperationRequirements(pkg v1alpha1.ZarfPackage) error {
 
 	currentVersion := config.CLIVersion
 	if currentVersion == config.UnsetCLIVersion {
-		// In development mode, skip version validation
 		return nil
 	}
 
