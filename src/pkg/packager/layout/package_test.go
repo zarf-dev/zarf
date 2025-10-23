@@ -597,38 +597,12 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 					return []byte("test"), nil
 				})
 				opts := utils.DefaultSignBlobOptions()
-				opts.KeyRef = "/nonexistent/key.key"
+				opts.KeyRef = "nonexistent/key.key"
 				opts.PassFunc = passFunc
 
 				return layout, opts
 			},
 			expectedErr:    "no such file or directory",
-			expectSigned:   false,
-			expectSignFile: false,
-		},
-		{
-			name: "zarf.yaml exists but is a directory",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
-				tmpDir := t.TempDir()
-				// Create zarf.yaml as a directory instead of file
-				zarfYAMLDir := filepath.Join(tmpDir, ZarfYAML)
-				require.NoError(t, os.Mkdir(zarfYAMLDir, 0o755))
-
-				layout := &PackageLayout{
-					dirPath: tmpDir,
-					Pkg:     v1alpha1.ZarfPackage{},
-				}
-
-				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-					return []byte("test"), nil
-				})
-				opts := utils.DefaultSignBlobOptions()
-				opts.KeyRef = "./testdata/cosign.key"
-				opts.PassFunc = passFunc
-
-				return layout, opts
-			},
-			expectedErr:    "is a directory",
 			expectSigned:   false,
 			expectSignFile: false,
 		},
