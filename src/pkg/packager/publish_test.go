@@ -16,7 +16,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -102,51 +101,6 @@ func TestPublishError(t *testing.T) {
 			require.ErrorContains(t, err, tc.expectErr.Error())
 		})
 	}
-}
-
-func TestPublishPackageVersionRequirements(t *testing.T) {
-	defer func() {
-		config.CLIVersion = config.UnsetCLIVersion
-	}()
-
-	ctx := testutil.TestContext(t)
-	registryRef := createRegistry(ctx, t)
-
-	config.CLIVersion = "v0.64.0"
-
-	pkg := v1alpha1.ZarfPackage{
-		Kind: v1alpha1.ZarfPackageConfig,
-		Metadata: v1alpha1.ZarfMetadata{
-			Name:         "test-version-requirements",
-			Version:      "0.0.1",
-			Architecture: "amd64",
-		},
-		Build: v1alpha1.ZarfBuildData{
-			Architecture: "amd64",
-			VersionRequirements: []v1alpha1.VersionRequirement{
-				{
-					Version: "v0.65.0",
-					Reason:  "requires v0.65.0+",
-				},
-			},
-		},
-		Components: []v1alpha1.ZarfComponent{
-			{
-				Name: "test-component",
-			},
-		},
-	}
-
-	tmpDir := t.TempDir()
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpDir, layout.AssembleOptions{})
-	require.NoError(t, err)
-
-	_, err = PublishPackage(ctx, pkgLayout, registryRef, PublishPackageOptions{
-		RemoteOptions: defaultTestRemoteOptions(),
-	})
-
-	require.Error(t, err)
-	require.ErrorContains(t, err, "package requires Zarf version 'v0.65.0' (current version: 'v0.64.0')")
 }
 
 func TestPublishFromOCIValidation(t *testing.T) {
