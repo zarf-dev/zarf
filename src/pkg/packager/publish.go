@@ -108,6 +108,8 @@ type PublishPackageOptions struct {
 	SigningKeyPassword string
 	// Retries specifies the number of retries to use
 	Retries int
+	// BypassVersionCheck skips version requirement validation
+	BypassVersionCheck bool
 	RemoteOptions
 }
 
@@ -135,8 +137,10 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 
 	// Validate operational requirements after input validation
-	if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
-		return registry.Reference{}, err
+	if !opts.BypassVersionCheck {
+		if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
+			return registry.Reference{}, fmt.Errorf("%w. If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
+		}
 	}
 
 	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {

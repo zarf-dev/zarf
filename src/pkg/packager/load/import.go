@@ -36,7 +36,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, BypassVersionCheck bool) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -97,7 +97,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath, BypassVersionCheck)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -118,9 +118,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			// Validate skeleton package is compatible with new package
-			if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
-				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported package from %s does not meet operational requirements: %w", component.Import.URL, err)
+			if !BypassVersionCheck {
+				// Validate skeleton package is compatible with new package
+				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements %w. If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+				}
 			}
 		}
 

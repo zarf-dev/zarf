@@ -36,6 +36,8 @@ type CreateOptions struct {
 	RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// BypassVersionCheck skips version requirement validation
+	BypassVersionCheck bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package

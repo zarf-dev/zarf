@@ -31,6 +31,8 @@ type DefinitionOptions struct {
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// BypassVersionCheck skips version requirement validation
+	BypassVersionCheck bool
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -53,7 +55,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath)
+	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.BypassVersionCheck)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}

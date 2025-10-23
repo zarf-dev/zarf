@@ -78,6 +78,7 @@ type packageCreateOptions struct {
 	signingKeyPassword      string
 	flavor                  string
 	ociConcurrency          int
+	BypassVersionCheck      bool
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -115,6 +116,8 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVarP(&o.maxPackageSizeMB, "max-package-size", "m", v.GetInt(VPkgCreateMaxPackageSize), lang.CmdPackageCreateFlagMaxPackageSize)
 	cmd.Flags().StringSliceVar(&o.registryOverrides, "registry-override", GetStringSlice(v, VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
@@ -214,6 +217,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
+		BypassVersionCheck:      o.BypassVersionCheck,
 	}
 	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -239,6 +243,7 @@ type packageDeployOptions struct {
 	optionalComponents      string
 	shasum                  string
 	skipSignatureValidation bool
+	BypassVersionCheck      bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -272,6 +277,8 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	return cmd
 }
@@ -334,6 +341,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
+		BypassVersionCheck:     o.BypassVersionCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
@@ -665,7 +673,6 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.sbomOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
 	cmd.Flags().BoolVar(&o.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-
 	return cmd
 }
 
@@ -1227,6 +1234,7 @@ type packageRemoveOptions struct {
 	confirm                 bool
 	optionalComponents      string
 	skipSignatureValidation bool
+	BypassVersionCheck      bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -1251,6 +1259,8 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.BypassVersionCheck, "bypass-version-check", false, "Ignore version requirements when removing the package")
+	_ = cmd.Flags().MarkHidden("bypass-version-check")
 
 	return cmd
 }
@@ -1291,9 +1301,10 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	removeOpt := packager.RemoveOptions{
-		Cluster:           c,
-		Timeout:           config.ZarfDefaultTimeout,
-		NamespaceOverride: o.namespaceOverride,
+		Cluster:            c,
+		Timeout:            config.ZarfDefaultTimeout,
+		NamespaceOverride:  o.namespaceOverride,
+		BypassVersionCheck: o.BypassVersionCheck,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	err = utils.ColorPrintYAML(pkg, nil, false)
