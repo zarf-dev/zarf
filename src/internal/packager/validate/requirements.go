@@ -53,8 +53,7 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 		return nil
 	}
 
-	// Parse current CLI version
-	currentSemver, err := semver.NewVersion(currentVersion)
+	currentVer, err := semver.NewVersion(currentVersion)
 	if err != nil {
 		return fmt.Errorf("failed to parse current Zarf version '%s': %w", currentVersion, err)
 	}
@@ -62,14 +61,12 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 	var unmetRequirements []v1alpha1.VersionRequirement
 
 	for _, req := range pkg.Build.VersionRequirements {
-		// Parse required version
-		requiredSemver, err := semver.NewVersion(req.Version)
+		requiredVer, err := semver.NewVersion(req.Version)
 		if err != nil {
 			return fmt.Errorf("failed to parse required version '%s': %w", req.Version, err)
 		}
 
-		// Check if current version meets the requirement
-		if currentSemver.LessThan(requiredSemver) {
+		if currentVer.LessThan(requiredVer) {
 			unmetRequirements = append(unmetRequirements, req)
 		}
 	}

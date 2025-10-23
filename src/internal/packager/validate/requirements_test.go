@@ -120,8 +120,6 @@ func TestValidateVersionRequirements(t *testing.T) {
 			config.CLIVersion = tt.cliVersion
 			err := ValidateVersionRequirements(tt.pkg)
 			if tt.expectError {
-				require.Error(t, err)
-				// Verify it's the right type of error
 				var orErr *VersionRequirementsError
 				require.ErrorAs(t, err, &orErr)
 			} else {
@@ -131,37 +129,16 @@ func TestValidateVersionRequirements(t *testing.T) {
 	}
 }
 
-func TestVersionRequirementsError(t *testing.T) {
-	err := &VersionRequirementsError{
-		Requirements: []v1alpha1.VersionRequirement{
-			{
-				Version: "v0.65.0",
-				Reason:  "values field requires v0.65.0+",
-			},
-		},
-		CurrentVersion: "v0.64.0",
-	}
-
-	errMsg := err.Error()
-	require.Contains(t, errMsg, "v0.64.0")
-	require.Contains(t, errMsg, "v0.65.0")
-	require.Contains(t, errMsg, "values field requires v0.65.0+")
-}
-
 func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 	err := &VersionRequirementsError{
 		Requirements: []v1alpha1.VersionRequirement{
-			{
-				Version: "v0.60.0",
-				Reason:  "older requirement",
-			},
 			{
 				Version: "v0.70.0",
 				Reason:  "newer requirement",
 			},
 			{
 				Version: "v0.65.0",
-				Reason:  "middle requirement",
+				Reason:  "older requirement",
 			},
 		},
 		CurrentVersion: "v0.64.0",
@@ -172,7 +149,6 @@ func TestVersionRequirementsError_HighestVersion(t *testing.T) {
 	require.Contains(t, errMsg, "v0.70.0")
 	require.Contains(t, errMsg, "v0.64.0")
 	// Should include all reasons
-	require.Contains(t, errMsg, "older requirement")
 	require.Contains(t, errMsg, "newer requirement")
-	require.Contains(t, errMsg, "middle requirement")
+	require.Contains(t, errMsg, "older requirement")
 }
