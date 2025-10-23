@@ -12,13 +12,13 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 )
 
-// OperationRequirementsError is returned when operational requirements are not met
-type OperationRequirementsError struct {
-	Requirements   []v1alpha1.OperationRequirement
+// VersionRequirementsError is returned when operational requirements are not met
+type VersionRequirementsError struct {
+	Requirements   []v1alpha1.VersionRequirement
 	CurrentVersion string
 }
 
-func (e *OperationRequirementsError) Error() string {
+func (e *VersionRequirementsError) Error() string {
 	// Find the highest version requirement
 	highestVersion := e.Requirements[0].Version
 	var highestSemver *semver.Version
@@ -42,9 +42,9 @@ func (e *OperationRequirementsError) Error() string {
 	return msg
 }
 
-// ValidateOperationRequirements checks if the config.CLIVersion meets the operational requirements.
-func ValidateOperationRequirements(pkg v1alpha1.ZarfPackage) error {
-	if len(pkg.Build.OperationRequirements) == 0 {
+// ValidateVersionRequirements checks if the config.CLIVersion meets the operational requirements.
+func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
+	if len(pkg.Build.VersionRequirements) == 0 {
 		return nil
 	}
 
@@ -59,9 +59,9 @@ func ValidateOperationRequirements(pkg v1alpha1.ZarfPackage) error {
 		return fmt.Errorf("failed to parse current Zarf version '%s': %w", currentVersion, err)
 	}
 
-	var unmetRequirements []v1alpha1.OperationRequirement
+	var unmetRequirements []v1alpha1.VersionRequirement
 
-	for _, req := range pkg.Build.OperationRequirements {
+	for _, req := range pkg.Build.VersionRequirements {
 		// Parse required version
 		requiredSemver, err := semver.NewVersion(req.Version)
 		if err != nil {
@@ -75,7 +75,7 @@ func ValidateOperationRequirements(pkg v1alpha1.ZarfPackage) error {
 	}
 
 	if len(unmetRequirements) > 0 {
-		return &OperationRequirementsError{
+		return &VersionRequirementsError{
 			Requirements:   unmetRequirements,
 			CurrentVersion: currentVersion,
 		}

@@ -95,7 +95,7 @@ type DeployResult struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	// Validate operational requirements before proceeding
-	if err := validate.ValidateOperationRequirements(pkgLayout.Pkg); err != nil {
+	if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
 		return DeployResult{}, err
 	}
 

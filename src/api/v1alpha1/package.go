@@ -245,14 +245,6 @@ type ZarfMetadata struct {
 	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
-// OperationRequirement specifies minimum version requirements for the package
-type OperationRequirement struct {
-	// The minimum version of the Zarf CLI required to use this package
-	Version string `json:"version" jsonschema:"required"`
-	// Explanation for why this version is required
-	Reason string `json:"reason,omitempty"`
-}
-
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package.
@@ -275,12 +267,10 @@ type ZarfBuildData struct {
 	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
-	// The minimum version of Zarf that does not have breaking package structure changes.
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Requirements for specific package operations.
-	OperationRequirements []OperationRequirement `json:"operationRequirements,omitempty"`
+	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.
@@ -289,4 +279,12 @@ type ZarfValues struct {
 	Files []string `json:"files,omitempty"`
 	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
 	Schema string `json:"schema,omitempty"`
+}
+
+// VersionRequirement specifies minimum version requirements for the package
+type VersionRequirement struct {
+	// The minimum version of the Zarf CLI required to use this package
+	Version string `json:"version" jsonschema:"required"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 )
 
-func TestValidateOperationRequirements(t *testing.T) {
+func TestValidateVersionRequirements(t *testing.T) {
 	// Save original CLI version and restore after test
 	originalVersion := config.CLIVersion
 	defer func() {
@@ -28,7 +28,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "no requirements",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{},
+					VersionRequirements: []v1alpha1.VersionRequirement{},
 				},
 			},
 			cliVersion:  "v0.64.0",
@@ -38,7 +38,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "requirement met",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
+					VersionRequirements: []v1alpha1.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "values field requires v0.65.0+",
@@ -53,7 +53,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "requirement not met",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
+					VersionRequirements: []v1alpha1.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "values field requires v0.65.0+",
@@ -68,7 +68,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "multiple requirements with one not met",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
+					VersionRequirements: []v1alpha1.VersionRequirement{
 						{
 							Version: "v0.60.0",
 							Reason:  "older requirement",
@@ -87,7 +87,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "development version skips validation",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
+					VersionRequirements: []v1alpha1.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "should be skipped in dev mode",
@@ -102,7 +102,7 @@ func TestValidateOperationRequirements(t *testing.T) {
 			name: "requirement met at exact version",
 			pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					OperationRequirements: []v1alpha1.OperationRequirement{
+					VersionRequirements: []v1alpha1.VersionRequirement{
 						{
 							Version: "v0.65.0",
 							Reason:  "exact version match",
@@ -118,11 +118,11 @@ func TestValidateOperationRequirements(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			config.CLIVersion = tt.cliVersion
-			err := ValidateOperationRequirements(tt.pkg)
+			err := ValidateVersionRequirements(tt.pkg)
 			if tt.expectError {
 				require.Error(t, err)
 				// Verify it's the right type of error
-				var orErr *OperationRequirementsError
+				var orErr *VersionRequirementsError
 				require.ErrorAs(t, err, &orErr)
 			} else {
 				require.NoError(t, err)
@@ -131,9 +131,9 @@ func TestValidateOperationRequirements(t *testing.T) {
 	}
 }
 
-func TestOperationRequirementsError(t *testing.T) {
-	err := &OperationRequirementsError{
-		Requirements: []v1alpha1.OperationRequirement{
+func TestVersionRequirementsError(t *testing.T) {
+	err := &VersionRequirementsError{
+		Requirements: []v1alpha1.VersionRequirement{
 			{
 				Version: "v0.65.0",
 				Reason:  "values field requires v0.65.0+",
@@ -148,9 +148,9 @@ func TestOperationRequirementsError(t *testing.T) {
 	require.Contains(t, errMsg, "values field requires v0.65.0+")
 }
 
-func TestOperationRequirementsError_HighestVersion(t *testing.T) {
-	err := &OperationRequirementsError{
-		Requirements: []v1alpha1.OperationRequirement{
+func TestVersionRequirementsError_HighestVersion(t *testing.T) {
+	err := &VersionRequirementsError{
+		Requirements: []v1alpha1.VersionRequirement{
 			{
 				Version: "v0.60.0",
 				Reason:  "older requirement",
