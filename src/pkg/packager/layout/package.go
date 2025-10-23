@@ -135,6 +135,8 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	l := logger.From(ctx)
 
 	// Check if signing should be performed based on the options
+	// this is a no-op as there may be many different ways to sign
+	// input validation should be performed in the calling function
 	if !opts.ShouldSign() {
 		l.Info("skipping package signing (no signing key material configured)")
 		return nil

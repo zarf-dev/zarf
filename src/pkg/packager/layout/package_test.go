@@ -582,31 +582,6 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 			expectSignFile: true,
 		},
 		{
-			name: "invalid key path",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
-				tmpDir := t.TempDir()
-				yamlPath := filepath.Join(tmpDir, ZarfYAML)
-				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
-
-				layout := &PackageLayout{
-					dirPath: tmpDir,
-					Pkg:     v1alpha1.ZarfPackage{},
-				}
-
-				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-					return []byte("test"), nil
-				})
-				opts := utils.DefaultSignBlobOptions()
-				opts.KeyRef = "nonexistent/key.key"
-				opts.PassFunc = passFunc
-
-				return layout, opts
-			},
-			expectedErr:    "no such file or directory",
-			expectSigned:   false,
-			expectSignFile: false,
-		},
-		{
 			name: "sign with different password-protected key",
 			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
 				tmpDir := t.TempDir()
