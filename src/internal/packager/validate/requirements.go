@@ -14,26 +14,14 @@ import (
 
 // VersionRequirementsError is returned when operational requirements are not met
 type VersionRequirementsError struct {
-	Requirements   []v1alpha1.VersionRequirement
-	CurrentVersion string
+	RequiredVersion string
+	Requirements    []v1alpha1.VersionRequirement
+	CurrentVersion  string
 }
 
 func (e *VersionRequirementsError) Error() string {
-	// Find the highest version requirement
-	highestVersion := e.Requirements[0].Version
-	var highestSemver *semver.Version
-
-	for _, req := range e.Requirements {
-		if v, err := semver.NewVersion(req.Version); err == nil {
-			if highestSemver == nil || v.GreaterThan(highestSemver) {
-				highestSemver = v
-				highestVersion = req.Version
-			}
-		}
-	}
-
 	msg := fmt.Sprintf("package requires Zarf version '%s' (current version: '%s'):\n",
-		highestVersion, e.CurrentVersion)
+		e.RequiredVersion, e.CurrentVersion)
 	for _, req := range e.Requirements {
 		if req.Reason != "" {
 			msg += fmt.Sprintf("Reason: %s\n", req.Reason)
@@ -71,10 +59,24 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 
+	// Find the highest version requirement
+	highestVersion := unmetRequirements[0].Version
+	var highestSemver *semver.Version
+
+	for _, req := range unmetRequirements {
+		if v, err := semver.NewVersion(req.Version); err == nil {
+			if highestSemver == nil || v.GreaterThan(highestSemver) {
+				highestSemver = v
+				highestVersion = req.Version
+			}
+		}
+	}
+
 	if len(unmetRequirements) > 0 {
 		return &VersionRequirementsError{
-			Requirements:   unmetRequirements,
-			CurrentVersion: currentVersion,
+			RequiredVersion: highestVersion,
+			Requirements:    unmetRequirements,
+			CurrentVersion:  currentVersion,
 		}
 	}
 
