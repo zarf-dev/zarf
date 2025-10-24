@@ -320,11 +320,7 @@ func TestPackageInspectRemoteValuesFiles(t *testing.T) {
 		definitionDir:  srcDir,
 		expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-remote", "expected.yaml"),
 		kubeVersion:    "1.25",
-		setVariables: map[string]string{
-			"REPLICAS":    "2",
-			"DESCRIPTION": ".chart.variables takes priority",
-			"PORT":        "8888",
-		},
+		setVariables:   map[string]string{},
 	}
 
 	checkPackageValuesInspectFiles(t, test)

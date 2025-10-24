@@ -1,4 +1,0 @@
-image:
-  pullPolicy: IfNotPresent
-description: "this should be overwritten by .chart.variables"
-port: 8888
