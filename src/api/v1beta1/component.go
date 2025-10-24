@@ -238,8 +238,6 @@ type ZarfComponentActionSet struct {
 	Before []ZarfComponentAction `json:"before,omitempty"`
 	// Actions to run at the end of an operation.
 	After []ZarfComponentAction `json:"after,omitempty"`
-	// Actions to run if all operations succeed.
-	OnSuccess []ZarfComponentAction `json:"onSuccess,omitempty"`
 	// Actions to run if all operations fail.
 	OnFailure []ZarfComponentAction `json:"onFailure,omitempty"`
 }
