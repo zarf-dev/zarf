@@ -124,7 +124,7 @@ type ZarfChart struct {
 	// The version of the chart. This field is removed for the schema, but kept as a backwards compatibility shim so v1alpha1 packages can be converted to v1beta1
 	version string
 	// The Helm repo where the chart is stored
-	Helm *HelmRepoSource `json:"helm,omitempty"`
+	HelmRepo *HelmRepoSource `json:"helmRepo,omitempty"`
 	// The Git repo where the chart is stored
 	Git *GitRepoSource `json:"git,omitempty"`
 	// The local path where the chart is stored
