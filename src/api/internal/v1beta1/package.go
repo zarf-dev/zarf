@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package
 package v1beta1
 
 import (
 	"fmt"
 	"regexp"
+	"time"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -19,6 +20,23 @@ const (
 	FileVariableType VariableType = "file"
 )
 
+var (
+	// IsUppercaseNumberUnderscore is a regex for uppercase, numbers and underscores.
+	// https://regex101.com/r/tfsEuZ/1
+	IsUppercaseNumberUnderscore = regexp.MustCompile(`^[A-Z0-9_]+$`).MatchString
+)
+
+// BuildTimestampFormat is the timestamp format used for ZarfBuildData.Timestamp
+const BuildTimestampFormat = time.RFC1123Z
+
+// Zarf looks for these strings in zarf.yaml to make dynamic changes
+const (
+	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
+	ZarfPackageVariablePrefix = "###ZARF_PKG_VAR_"
+	ZarfPackageArch           = "###ZARF_PKG_ARCH###"
+	ZarfComponentName         = "###ZARF_COMPONENT_NAME###"
+)
+
 // ZarfPackageKind is an enum of the different kinds of Zarf packages.
 type ZarfPackageKind string
 
@@ -28,18 +46,16 @@ const (
 	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
 	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
 	// APIVersion the api version of this package.
-	APIVersion string = "zarf.dev/v1beta1"
+	APIVersion string = "v1beta1"
 )
 
-// ZarfPackageTemplatePrefix is the prefix for package templates.
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-)
+// SkeletonArch is a special architecture used for skeleton packages
+const SkeletonArch = "skeleton"
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1beta1"`
+	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=v1beta1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
@@ -52,6 +68,8 @@ type ZarfPackage struct {
 	Constants []Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources.
 	Variables []InteractiveVariable `json:"variables,omitempty"`
+	// Values imports Zarf values files for templating and overriding Helm values.
+	Values ZarfValues `json:"values,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -72,11 +90,47 @@ func (pkg ZarfPackage) HasImages() bool {
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+		if len(c.Images) > 0 || len(c.Files) > 0 {
 			return true
 		}
 	}
 	return false
+}
+
+// UniqueNamespaceCount returns the number of unique namespaces in the package.
+func (pkg ZarfPackage) UniqueNamespaceCount() int {
+	uniqueNamespaces := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			uniqueNamespaces[chart.Namespace] = struct{}{}
+		}
+		for _, manifest := range component.Manifests {
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
+		}
+	}
+	return len(uniqueNamespaces)
+}
+
+// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
+func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
+	for i := range pkg.Components {
+		comp := pkg.Components[i]
+		for j := range comp.Charts {
+			comp.Charts[j].Namespace = namespace
+		}
+		for k := range comp.Manifests {
+			comp.Manifests[k].Namespace = namespace
+		}
+	}
+}
+
+// AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
+func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
+	if pkg.Metadata.AllowNamespaceOverride != nil {
+		return *pkg.Metadata.AllowNamespaceOverride
+	}
+	// defaulting to allowing package namespace to be overridden
+	return true
 }
 
 // Variable represents a variable that has a value set programmatically
@@ -118,13 +172,6 @@ type Constant struct {
 	Pattern string `json:"pattern,omitempty"`
 }
 
-// SetVariable tracks internal variables that have been set during this run of Zarf
-type SetVariable struct {
-	Variable `json:",inline"`
-	// The value the variable is currently set with
-	Value string `json:"value"`
-}
-
 // Validate runs all validation checks on a package constant.
 func (c Constant) Validate() error {
 	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
@@ -133,26 +180,60 @@ func (c Constant) Validate() error {
 	return nil
 }
 
+// SetVariable tracks internal variables that have been set during this run of Zarf
+type SetVariable struct {
+	Variable `json:",inline"`
+	// The value the variable is currently set with
+	Value string `json:"value"`
+}
+
+// SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
+type SetValueType string
+
+// SetValueYAML enables YAML parsing.
+var SetValueYAML = SetValueType("yaml")
+
+// SetValueJSON enables JSON parsing.
+var SetValueJSON = SetValueType("json")
+
+// SetValueString sets the raw value.
+var SetValueString = SetValueType("string")
+
+// SetValue declares a value that can be set during a package deploy.
+type SetValue struct {
+	// Key represents which value to assign to.
+	Key string `json:"key,omitempty"`
+	// Value is the current value at the key.
+	Value any `json:"value,omitempty"`
+	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
+	// inserting the value into the template. Defaults to SetValueString behavior when empty.
+	Type SetValueType `json:"type,omitempty"`
+}
+
 // ZarfMetadata lists information about the current ZarfPackage.
 type ZarfMetadata struct {
 	// Name to identify this Zarf package.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
+	// Additional information about this package.
+	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
 	Version string `json:"version,omitempty"`
 	// Disable compression of this package.
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
-	// Default to true, when false components cannot have images or git repos as they will be pulled from the internet
+	// Airgap: True indicates package designed for airgap/disconnected environments. False enables YOLO mode for connected environments. Defaults to true.
 	Airgap *bool `json:"airgap,omitempty"`
-	// Annotations are key-value pairs that can be used to store metadata about the package.
+	// Annotations contains arbitrary metadata about the package.
+	// Users are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md
+	// Common annotations: url, image, authors, documentation, source, vendor
 	Annotations map[string]string `json:"annotations,omitempty"`
+	// AllowNamespaceOverride controls whether a package's namespace may be overridden.
+	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
-	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
-	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 	// The machine name that created this package.
 	Terminal string `json:"terminal"`
 	// The username who created this package.
@@ -173,8 +254,26 @@ type ZarfBuildData struct {
 	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
-	// The minimum version of Zarf that does not have breaking package structure changes.
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+	// Requirements for specific package operations.
+	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+}
+
+// ZarfValues imports package-level values files and validation.
+type ZarfValues struct {
+	// Files declares the relative filepath of Values files.
+	Files []string `json:"files,omitempty"`
+	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
+	Schema string `json:"schema,omitempty"`
+}
+
+// VersionRequirement specifies minimum version requirements for the package
+type VersionRequirement struct {
+	// The minimum version of Zarf required to use this package
+	Version string `json:"version" jsonschema:"required"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
 }
