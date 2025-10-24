@@ -30,6 +30,32 @@ func (e *VersionRequirementsError) Error() string {
 	return msg
 }
 
+// calculateRequiredVersion finds the highest version from a list of version requirements
+func calculateRequiredVersion(requirements []v1alpha1.VersionRequirement) (string, error) {
+	if len(requirements) == 0 {
+		return "", nil
+	}
+
+	highestVersion := requirements[0].Version
+	highestSemver, err := semver.NewVersion(highestVersion)
+	if err != nil {
+		return "", err
+	}
+
+	for _, req := range requirements[1:] {
+		v, err := semver.NewVersion(req.Version)
+		if err != nil {
+			return "", err
+		}
+		if v.GreaterThan(highestSemver) {
+			highestSemver = v
+			highestVersion = req.Version
+		}
+	}
+
+	return highestVersion, nil
+}
+
 // ValidateVersionRequirements checks if the config.CLIVersion meets the operational requirements.
 func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 	if len(pkg.Build.VersionRequirements) == 0 {
@@ -59,26 +85,19 @@ func ValidateVersionRequirements(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 
+	if len(unmetRequirements) == 0 {
+		return nil
+	}
+
 	// Find the highest version requirement
-	highestVersion := unmetRequirements[0].Version
-	var highestSemver *semver.Version
-
-	for _, req := range unmetRequirements {
-		if v, err := semver.NewVersion(req.Version); err == nil {
-			if highestSemver == nil || v.GreaterThan(highestSemver) {
-				highestSemver = v
-				highestVersion = req.Version
-			}
-		}
+	highestVersion, err := calculateRequiredVersion(unmetRequirements)
+	if err != nil {
+		return err
 	}
 
-	if len(unmetRequirements) > 0 {
-		return &VersionRequirementsError{
-			RequiredVersion: highestVersion,
-			Requirements:    unmetRequirements,
-			CurrentVersion:  currentVersion,
-		}
+	return &VersionRequirementsError{
+		RequiredVersion: highestVersion,
+		Requirements:    unmetRequirements,
+		CurrentVersion:  currentVersion,
 	}
-
-	return nil
 }

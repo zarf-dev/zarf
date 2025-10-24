@@ -130,25 +130,66 @@ func TestValidateVersionRequirements(t *testing.T) {
 }
 
 func TestVersionRequirementsError_HighestVersion(t *testing.T) {
-	err := &VersionRequirementsError{
-		Requirements: []v1alpha1.VersionRequirement{
-			{
-				Version: "v0.70.0",
-				Reason:  "newer requirement",
+	tests := []struct {
+		name         string
+		requirements []v1alpha1.VersionRequirement
+		expected     string
+		expectError  bool
+	}{
+		{
+			name: "multiple versions",
+			requirements: []v1alpha1.VersionRequirement{
+				{
+					Version: "v0.70.0",
+					Reason:  "newer requirement",
+				},
+				{
+					Version: "v0.65.0",
+					Reason:  "older requirement",
+				},
 			},
-			{
-				Version: "v0.65.0",
-				Reason:  "older requirement",
-			},
+			expected:    "v0.70.0",
+			expectError: false,
 		},
-		CurrentVersion: "v0.64.0",
+		{
+			name: "single version",
+			requirements: []v1alpha1.VersionRequirement{
+				{
+					Version: "v0.65.0",
+					Reason:  "single requirement",
+				},
+			},
+			expected:    "v0.65.0",
+			expectError: false,
+		},
+		{
+			name:         "empty requirements",
+			requirements: []v1alpha1.VersionRequirement{},
+			expected:     "",
+			expectError:  false,
+		},
+		{
+			name: "invalid version",
+			requirements: []v1alpha1.VersionRequirement{
+				{
+					Version: "invalid",
+					Reason:  "bad version",
+				},
+			},
+			expected:    "",
+			expectError: true,
+		},
 	}
 
-	errMsg := err.Error()
-	// Should display the highest version (v0.70.0)
-	require.Contains(t, errMsg, "v0.70.0")
-	require.Contains(t, errMsg, "v0.64.0")
-	// Should include all reasons
-	require.Contains(t, errMsg, "newer requirement")
-	require.Contains(t, errMsg, "older requirement")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := calculateRequiredVersion(tt.requirements)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
+			}
+		})
+	}
 }
