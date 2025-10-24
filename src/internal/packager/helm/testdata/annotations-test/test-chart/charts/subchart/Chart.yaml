@@ -1,0 +1,11 @@
+apiVersion: v2
+name: subchart
+version: 1.0.0
+description: Subchart with conditional images
+annotations:
+  helm.sh/images: |
+    - name: postgres
+      image: docker.io/library/postgres:15
+      condition: postgres.enabled
+    - name: memcached
+      image: docker.io/library/memcached:1.6

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: test-annotations
+version: 1.0.0
+description: Test chart for helm.sh/images annotations with dependencies
+annotations:
+  helm.sh/images: |
+    - name: nginx
+      image: docker.io/library/nginx:1.25.0
+    - name: redis
+      image: docker.io/library/redis:7.0
+      condition: redis.enabled
+    - name: busybox
+      image: docker.io/library/busybox:1.36
+dependencies:
+  - name: subchart
+    version: 1.0.0
+    repository: file://./charts/subchart
