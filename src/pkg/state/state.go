@@ -65,6 +65,12 @@ const (
 	ChartStatusFailed    ChartStatus = "Failed"
 )
 
+// ChartState is the state of a Helm Chart release
+const (
+	ChartStateActive   ChartState = "Active"   // In use, operational or attempted operational
+	ChartStateOrphaned ChartState = "Orphaned" // Detached from operational concerns
+)
+
 // Values during setup of the initial zarf state
 const (
 	ZarfGeneratedPasswordLen               = 24
@@ -464,6 +470,76 @@ func (d *DeployedPackage) GetSecretName() string {
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
 }
 
+// GetPrunableCharts returns a map of component names to lists of charts that can be pruned,
+// filtered by the provided component and chart names. If componentFilter is empty, all components
+// are searched. If chartFilter is empty, all charts are searched.
+func (d *DeployedPackage) GetPrunableCharts(componentFilter, chartFilter string) (map[string][]InstalledChart, error) {
+	// Validate that if chart is specified, component must also be specified
+	if chartFilter != "" && componentFilter == "" {
+		return nil, fmt.Errorf("component must be specified when chart filter is provided")
+	}
+
+	prunableCharts := make(map[string][]InstalledChart, 0)
+	foundComponent := componentFilter == ""
+	foundChart := chartFilter == ""
+
+	for _, component := range d.DeployedComponents {
+		if componentFilter != "" && component.Name != componentFilter {
+			continue
+		}
+		foundComponent = true
+		for _, chart := range component.InstalledCharts {
+			if chartFilter != "" && chart.ChartName != chartFilter {
+				continue
+			}
+			foundChart = true
+			if chart.State == ChartStateOrphaned {
+				prunableCharts[component.Name] = append(prunableCharts[component.Name], chart)
+			}
+		}
+	}
+
+	// Validate filters matched something
+	if componentFilter != "" && !foundComponent {
+		return nil, fmt.Errorf("component %q not found in deployed package", componentFilter)
+	}
+	if chartFilter != "" && !foundChart {
+		return nil, fmt.Errorf("chart %q not found in deployed package", chartFilter)
+	}
+	if chartFilter != "" && foundChart && len(prunableCharts) == 0 {
+		return nil, fmt.Errorf("chart %q found in deployed package, but is not in the %q state", chartFilter, ChartStateOrphaned)
+	}
+
+	return prunableCharts, nil
+}
+
+// RemovePrunedCharts updates the DeployedPackage's state by removing the specified charts
+// from their respective components' InstalledCharts lists.
+func (d *DeployedPackage) RemovePrunedCharts(prunedCharts map[string][]InstalledChart) {
+	for compIdx, component := range d.DeployedComponents {
+		chartsToRemove, exists := prunedCharts[component.Name]
+		if !exists {
+			continue
+		}
+
+		// Create a set of chart names to remove for quick lookup
+		removeSet := make(map[string]bool)
+		for _, chart := range chartsToRemove {
+			removeSet[chart.ChartName] = true
+		}
+
+		// Filter out the charts that should be removed
+		var remainingCharts []InstalledChart
+		for _, chart := range component.InstalledCharts {
+			if !removeSet[chart.ChartName] {
+				remainingCharts = append(remainingCharts, chart)
+			}
+		}
+
+		d.DeployedComponents[compIdx].InstalledCharts = remainingCharts
+	}
+}
+
 // ConnectString contains information about a connection made with Zarf connect.
 type ConnectString struct {
 	// Descriptive text that explains what the resource you would be connecting to is used for
@@ -486,12 +562,16 @@ type DeployedComponent struct {
 // ChartStatus is the status of a Helm Chart release
 type ChartStatus string
 
+// ChartState contains information about a Helm Chart that has been deployed to a cluster
+type ChartState string
+
 // InstalledChart contains information about a Helm Chart that has been deployed to a cluster.
 type InstalledChart struct {
 	Namespace      string         `json:"namespace"`
 	ChartName      string         `json:"chartName"`
 	ConnectStrings ConnectStrings `json:"connectStrings,omitempty"`
 	Status         ChartStatus    `json:"status"`
+	State          ChartState     `json:"tracking"`
 }
 
 // MergeInstalledChartsForComponent merges the provided existing charts with the provided installed charts.
@@ -505,7 +585,7 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 		lookup[key(chart)] = chart
 	}
 
-	// Track which keys are still present in newCharts
+	// Track which keys are still present in new charts
 	seen := make(map[string]struct{}, len(installedCharts)+len(existingCharts))
 
 	for _, chart := range installedCharts {
@@ -516,8 +596,10 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 			existingChart := lookup[k]
 			existingChart.ConnectStrings = chart.ConnectStrings
 			existingChart.Status = chart.Status
+			existingChart.State = ChartStateActive
 			lookup[k] = existingChart
 		} else {
+			chart.State = ChartStateActive
 			lookup[k] = chart
 		}
 	}
@@ -526,6 +608,7 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 	if !partial {
 		for k, chart := range lookup {
 			if _, ok := seen[k]; !ok {
+				chart.State = ChartStateOrphaned
 				lookup[k] = chart
 			}
 		}
