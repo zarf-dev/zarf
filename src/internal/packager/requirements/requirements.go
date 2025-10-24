@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package validate provides validation functions for package operations
-package validate
+// Package requirements validates that Zarf meets the version requirements defined by the package
+package requirements
 
 import (
 	"fmt"

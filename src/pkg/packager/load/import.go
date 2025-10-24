@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/mholt/archives"
-	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/validate"
+	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"

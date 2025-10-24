@@ -23,8 +23,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/packager/validate"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -98,7 +98,7 @@ type DeployResult struct {
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}

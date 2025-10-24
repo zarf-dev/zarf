@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/internal/packager/validate"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -41,7 +41,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
-		if err := validate.ValidateVersionRequirements(pkg); err != nil {
+		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
 		}
 	}
