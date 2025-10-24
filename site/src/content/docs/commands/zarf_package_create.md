@@ -24,7 +24,7 @@ zarf package create [ DIRECTORY ] [flags]
 
 ```
   -c, --confirm                     Confirm package creation without prompting
-      --differential string         [beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
+      --differential string         Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
   -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                        help for create
   -m, --max-package-size int        Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
