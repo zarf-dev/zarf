@@ -26,6 +26,8 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool) err
 		buildOptions.LoadRestrictions = krustytypes.LoadRestrictionsNone
 	}
 
+	buildOptions.PluginConfig = krustytypes.MakePluginConfig(krustytypes.PluginRestrictionsNone, krustytypes.BploUseStaticallyLinked)
+
 	kustomizer := krusty.MakeKustomizer(buildOptions)
 
 	// Try to build the kustomization
