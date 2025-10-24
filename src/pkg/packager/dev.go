@@ -42,8 +42,8 @@ type DevDeployOptions struct {
 	// These fields are only used if in airgap mode as they are relevant to requests from the git-server / registry
 	OCIConcurrency int
 	CachePath      string
-	// BypassVersionCheck skips version requirement validation
-	BypassVersionCheck bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 	RemoteOptions
 }
 
@@ -60,11 +60,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:             opts.Flavor,
-		SetVariables:       opts.CreateSetVariables,
-		CachePath:          opts.CachePath,
-		IsInteractive:      false,
-		BypassVersionCheck: opts.BypassVersionCheck,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.CreateSetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    false,
+		SkipVersionCheck: opts.SkipVersionCheck,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

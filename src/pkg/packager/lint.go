@@ -24,11 +24,11 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		return errors.New("package path is required")
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:             opts.Flavor,
-		SetVariables:       opts.SetVariables,
-		CachePath:          opts.CachePath,
-		IsInteractive:      false,
-		BypassVersionCheck: true,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    false,
+		SkipVersionCheck: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

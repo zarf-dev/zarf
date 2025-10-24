@@ -191,11 +191,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:             opts.Flavor,
-		SetVariables:       opts.CreateSetVariables,
-		CachePath:          opts.CachePath,
-		IsInteractive:      opts.IsInteractive,
-		BypassVersionCheck: true,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.CreateSetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

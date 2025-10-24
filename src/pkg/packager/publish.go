@@ -164,8 +164,8 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
-	// BypassVersionCheck skips version requirement validation
-	BypassVersionCheck bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 	RemoteOptions
 }
 
@@ -195,9 +195,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath:          opts.CachePath,
-		Flavor:             opts.Flavor,
-		BypassVersionCheck: opts.BypassVersionCheck,
+		CachePath:        opts.CachePath,
+		Flavor:           opts.Flavor,
+		SkipVersionCheck: opts.SkipVersionCheck,
 	})
 	if err != nil {
 		return registry.Reference{}, err

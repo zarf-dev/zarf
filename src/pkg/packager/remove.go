@@ -29,10 +29,10 @@ import (
 
 // RemoveOptions are the options for Remove.
 type RemoveOptions struct {
-	Cluster            *cluster.Cluster
-	Timeout            time.Duration
-	NamespaceOverride  string
-	BypassVersionCheck bool
+	Cluster           *cluster.Cluster
+	Timeout           time.Duration
+	NamespaceOverride string
+	SkipVersionCheck  bool
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -40,7 +40,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 	l := logger.From(ctx)
 
 	// Validate operational requirements before proceeding
-	if !opts.BypassVersionCheck {
+	if !opts.SkipVersionCheck {
 		if err := validate.ValidateVersionRequirements(pkg); err != nil {
 			return fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
 		}

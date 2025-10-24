@@ -73,8 +73,8 @@ type DeployOptions struct {
 	ValuesOverridesMap ValuesOverrides
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
-	// BypassVersionCheck skips version requirement validation
-	BypassVersionCheck bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -97,7 +97,7 @@ type DeployResult struct {
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
 	// Validate operational requirements before proceeding
-	if !opts.BypassVersionCheck {
+	if !opts.SkipVersionCheck {
 		if err := validate.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --bypass-version-check. Unexpected behavior or errors may occur", err)
 		}
