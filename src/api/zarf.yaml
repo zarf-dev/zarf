@@ -128,6 +128,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -157,6 +159,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -186,6 +190,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -227,6 +233,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -256,6 +264,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -285,6 +295,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -326,6 +338,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -355,6 +369,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
@@ -384,6 +400,8 @@ components:
           autoIndent: true
           pattern: ".+"
           type: raw
+        setValues:
+          - key: .json
         description: action-description
         wait:
           cluster: # Only one of cluster / network can be used
