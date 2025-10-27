@@ -51,7 +51,8 @@ func generatePKI(host string, notAfter time.Time, dnsNames ...string) (Generated
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the ephemeral CA: %w", err)
 	}
-	hostCert, hostKey, err := generateCert(host, ca, caKey, notAfter, dnsNames...)
+	hostCert, hostKey, err := generateServerCert(host, ca, caKey, notAfter, dnsNames...)
+
 	if err != nil {
 		return GeneratedPKI{}, fmt.Errorf("unable to generate the cert for %s: %w", host, err)
 	}
@@ -181,13 +182,6 @@ func createAndSignCertificate(template *x509.Certificate, ca *x509.Certificate, 
 	}
 
 	return cert, privateKey, nil
-}
-
-// generateCert generates a new certificate for the given host using the
-// provided certificate authority. The cert and key files are stored in
-// the provided files.
-func generateCert(host string, ca *x509.Certificate, caKey *rsa.PrivateKey, notAfter time.Time, dnsNames ...string) (*x509.Certificate, *rsa.PrivateKey, error) {
-	return generateTypedCert(CertTypeServer, host, ca, caKey, notAfter, dnsNames...)
 }
 
 // GenerateCA creates a CA certificate and returns the PEM-encoded certificate and private key
