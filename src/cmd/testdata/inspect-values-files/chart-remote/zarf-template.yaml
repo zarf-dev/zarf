@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart
+
+variables:
+  - name: PORT
+
+components:
+  - name: httpd-local
+    charts:
+      - name: htppd-local
+        version: 1.0.0
+        namespace: httpd
+        localPath: chart
+        valuesFiles:
+          - VALUES_YAML_URL
+
