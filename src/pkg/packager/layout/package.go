@@ -128,17 +128,17 @@ func (p *PackageLayout) ContainsSBOM() bool {
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
 // this is a no-op and returns nil.
-//
-// This function:
-// 1. Updates Pkg.Build.Signed = true in memory
-// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
-// 3. Signs the temporary file
-// 4. If signing succeeds, replaces the actual zarf.yaml with the signed version
-// 5. If signing fails, reverts the in-memory state
-//
-// This ensures the zarf.yaml metadata accurately reflects the signed state and the
-// signature is valid for the zarf.yaml content that includes signed:true.
 func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) (err error) {
+	// Note: This function:
+	// 1. Updates Pkg.Build.Signed = true in memory
+	// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
+	// 3. Signs the temporary file
+	// 4. If signing succeeds, replaces the actual zarf.yaml with the signed version
+	// 5. If signing fails, reverts the in-memory state
+	//
+	// This ensures the zarf.yaml metadata accurately reflects the signed state and the
+	// signature is valid for the zarf.yaml content that includes signed:true.
+
 	l := logger.From(ctx)
 
 	// Check if signing should be performed based on the options
