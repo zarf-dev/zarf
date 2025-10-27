@@ -113,12 +113,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
-
-	// If an external registry is used then don't allow users to configure the internal registry / injector
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 
