@@ -44,8 +44,6 @@ jobs:
 
       - name: Build binary and zarf packages
         uses: ./.github/actions/packages
-        with:
-          build-examples: "false"
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
@@ -89,13 +87,18 @@ jobs:
         run: |
           kind delete cluster && kind create cluster --config=kind-nftables-config.yml
 
+      - name: Setup golang
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+
       - name: Make Zarf executable
         run: |
           chmod +x build/zarf
 
-      - name: Run tests
+      - name: Run proxy tests
         run: |
-          build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
+          go test ./src/test/proxy/... -v -timeout 30m
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
