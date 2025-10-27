@@ -193,6 +193,13 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/external && go test -failfast -v -timeout 30m
 
+.PHONY: test-proxy
+test-proxy:
+	@test -s $(ZARF_BIN) || $(MAKE)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/proxy && go test -failfast -v -timeout 30m
+
+
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster

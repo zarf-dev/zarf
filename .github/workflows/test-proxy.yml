@@ -98,7 +98,7 @@ jobs:
 
       - name: Run proxy tests
         run: |
-          go test ./src/test/proxy/... -v -timeout 30m
+          make test-proxy
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
