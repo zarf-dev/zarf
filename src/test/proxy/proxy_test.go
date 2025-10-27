@@ -11,8 +11,6 @@ import (
 )
 
 func TestRegistryProxyInit(t *testing.T) {
-	t.Log("Proxy Test: Zarf init with registry-proxy feature")
-
 	// Run zarf init with registry proxy mode enabled
 	stdOut, stdErr, err := e2e.Zarf(t, "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

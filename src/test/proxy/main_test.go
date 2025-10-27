@@ -10,12 +10,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/test"
 )
 
 var (
-	e2e test.ZarfE2ETest //nolint:gochecknoglobals
+	e2e test.ZarfE2ETest
 )
 
 func TestMain(m *testing.M) {
@@ -27,12 +26,10 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	e2e.Arch = config.GetArch()
-	zarfBinPath, err := filepath.Abs(filepath.Join("build", test.GetCLIName()))
+	e2e.ZarfBinPath, err = filepath.Abs(filepath.Join("build", test.GetCLIName()))
 	if err != nil {
 		log.Fatal(err)
 	}
-	e2e.ZarfBinPath = zarfBinPath
 
 	if _, err := os.Stat(e2e.ZarfBinPath); err != nil {
 		log.Fatalf("zarf binary %s not found: %v", e2e.ZarfBinPath, err)
