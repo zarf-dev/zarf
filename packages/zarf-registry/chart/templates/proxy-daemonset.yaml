@@ -13,6 +13,11 @@ spec:
         app: zarf-registry-proxy
         # Don't mutate this pod
         zarf.dev/agent: ignore
+      annotations:
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-proxy-tls") }}
+{{- if $tlsSecret }}
+        checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
+{{- end }}
     spec:
       priorityClassName: system-node-critical
       containers:

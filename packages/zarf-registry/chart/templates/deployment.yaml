@@ -25,6 +25,12 @@ spec:
         {{- end }}
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+{{- if .Values.mtls.enabled }}
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-server-tls") }}
+{{- if $tlsSecret }}
+        checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
+{{- end }}
+{{- end }}
     spec:
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
