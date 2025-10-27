@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // Config is a struct for configuring the Cmd function.
@@ -26,8 +27,7 @@ type Config struct {
 	Dir            string
 	Env            []string
 	CommandPrinter func(format string, a ...any)
-	Stdout         io.Writer
-	Stderr         io.Writer
+	UseLogger      bool
 }
 
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
@@ -88,21 +88,16 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		&stderrBuf,
 	}
 
-	// TODO (@austinabro321) remove config options for stdout/stderr once logger is released
-	// as these options seem to have been added specifically for the spinner
-	// Add the writers if requested.
-	if config.Stdout != nil {
-		stdoutWriters = append(stdoutWriters, config.Stdout)
-	}
-
-	if config.Stderr != nil {
-		stdErrWriters = append(stdErrWriters, config.Stderr)
-	}
-
 	// Print to stdout if requested.
 	if config.Print {
-		stdoutWriters = append(stdoutWriters, os.Stdout)
-		stdErrWriters = append(stdErrWriters, os.Stderr)
+		if config.UseLogger {
+			l := logger.From(ctx)
+			stdoutWriters = append(stdoutWriters, &logger.LogWriter{Logger: l, Level: logger.Info})
+			stdErrWriters = append(stdErrWriters, &logger.LogWriter{Logger: l, Level: logger.Error})
+		} else {
+			stdoutWriters = append(stdoutWriters, os.Stdout)
+			stdErrWriters = append(stdErrWriters, os.Stderr)
+		}
 	}
 
 	// Bind all the writers.
