@@ -46,11 +46,10 @@ const (
 
 // Registry TLS secret and certificate names
 const (
-	RegistryCASecretName    = "zarf-registry-ca"
 	RegistryServerTLSSecret = "zarf-registry-server-tls"
 	RegistryProxyTLSSecret  = "zarf-registry-proxy-tls"
 
-	RegistrySecretCAPath   = "ca.pem"
+	RegistrySecretCAPath   = "ca.crt"
 	RegistrySecretCertPath = "tls.crt"
 	RegistrySecretKeyPath  = "tls.key"
 )
@@ -323,23 +322,17 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 // GetRegistryMTLSCerts retrieves TLS certificates from Kubernetes secrets for registry proxy connections
 func (c *Cluster) GetRegistryMTLSCerts(ctx context.Context) (pki.GeneratedPKI, error) {
-	caSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryCASecretName, metav1.GetOptions{})
-	if err != nil {
-		return pki.GeneratedPKI{}, fmt.Errorf("failed to get CA secret: %w", err)
-	}
-	caCertPEM := caSecret.Data[RegistrySecretCAPath]
-	if len(caCertPEM) == 0 {
-		return pki.GeneratedPKI{}, fmt.Errorf("CA certificate not found in secret")
-	}
-
 	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryProxyTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
+
+	caCertPEM := clientSecret.Data[RegistrySecretCAPath]
 	clientCertPEM := clientSecret.Data[RegistrySecretCertPath]
 	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
-	if len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
-		return pki.GeneratedPKI{}, fmt.Errorf("client certificate or key not found in secret")
+
+	if len(caCertPEM) == 0 || len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("CA certificate, client certificate, or key not found in secret")
 	}
 
 	return pki.GeneratedPKI{
@@ -376,17 +369,12 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 }
 
 // generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
-// and applies them to the cluster as Kubernetes secrets.
-// Only generates certificates if they don't exist or have half remaining life
+// and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
+// Only generates certificates if they don't exist or have less than 50% remaining life.
 func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
 
 	// Check if any certificates need renewal
-	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryCASecretName, RegistrySecretCAPath)
-	if err != nil {
-		return fmt.Errorf("failed to check CA certificate renewal: %w", err)
-	}
-
 	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check server certificate renewal: %w", err)
@@ -397,7 +385,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
 	}
 
-	if !needsCARenewal && !needsServerRenewal && !needsProxyRenewal {
+	if !needsServerRenewal && !needsProxyRenewal {
 		return nil
 	}
 
@@ -423,36 +411,31 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
 
-	caSecret := v1ac.Secret(RegistryCASecretName, state.ZarfNamespaceName).
-		WithData(map[string][]byte{
-			RegistrySecretCAPath: caCert,
-		})
-	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, caSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
-		return fmt.Errorf("failed to create CA secret: %w", err)
-	}
-
+	// Create server TLS secret with bundled CA
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
 			RegistrySecretCertPath: serverCert,
 			RegistrySecretKeyPath:  serverKey,
+			RegistrySecretCAPath:   caCert,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	// Create proxy TLS secret
+	// Create proxy TLS secret with bundled CA
 	proxySecret := v1ac.Secret(RegistryProxyTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
 			RegistrySecretCertPath: clientCert,
 			RegistrySecretKeyPath:  clientKey,
+			RegistrySecretCAPath:   caCert,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryCASecretName, RegistryServerTLSSecret, RegistryProxyTLSSecret})
+	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryProxyTLSSecret})
 	return nil
 }
 

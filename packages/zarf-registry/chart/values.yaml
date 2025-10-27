@@ -21,8 +21,7 @@ proxy:
     payLoadConfigMapAmount: 0
     shasum: ""
 
-# If this is enabled, then zarf-registry-server-tls must be created with a cert in tls.cert and a key in tls.key
-# and zarf-registry-ca must be created with a certificate in ca.pem
+# If this is enabled, then a secret zarf-registry-server-tls must exist with tls.cert, tls.key, and ca.cert set
 mtls:
   enabled: false
 

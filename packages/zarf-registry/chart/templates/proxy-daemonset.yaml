@@ -19,10 +19,10 @@ spec:
         - args:
           {{ if .Values.ipv6Only }}
             - TCP6-LISTEN:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
-            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1
+            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- else }}
             - TCP4-LISTEN:{{ .Values.service.nodePort }},reuseaddr,fork
-            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/ca/ca.pem,verify=1
+            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
@@ -30,9 +30,6 @@ spec:
           volumeMounts:
           - name: proxy-certs
             mountPath: /certs/client
-            readOnly: true
-          - name: ca-cert
-            mountPath: /certs/ca
             readOnly: true
           ports:
             - containerPort: {{ .Values.service.nodePort }}
@@ -58,9 +55,6 @@ spec:
         - name: proxy-certs
           secret:
             secretName: zarf-registry-proxy-tls
-        - name: ca-cert
-          secret:
-            secretName: zarf-registry-ca
     # IPV6 does not support rewriting packets to localhost so it needs to use hostNetwork over hostPort
     {{- if eq (include "proxy.hostNetwork" .) "true" }}
       dnsPolicy: ClusterFirstWithHostNet

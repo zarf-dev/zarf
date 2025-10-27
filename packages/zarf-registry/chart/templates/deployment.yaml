@@ -89,9 +89,6 @@ spec:
             - name: server-certs
               mountPath: /certs/server
               readOnly: true
-            - name: ca-cert
-              mountPath: /certs/ca
-              readOnly: true
 {{- end }}
             - name: data
               mountPath: /var/lib/registry/
@@ -134,9 +131,6 @@ spec:
         - name: server-certs
           secret:
             secretName: zarf-registry-server-tls
-        - name: ca-cert
-          secret:
-            secretName: zarf-registry-ca
 {{- end }}
         - name: config
           secret:
