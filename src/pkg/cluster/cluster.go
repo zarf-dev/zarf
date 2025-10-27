@@ -377,12 +377,12 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 
 // generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
 // and applies them to the cluster as Kubernetes secrets.
-// Only generates certificates if they don't exist or are expiring within 6 months.
+// Only generates certificates if they don't exist or have half remaining life
 func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
 
 	// Check if any certificates need renewal
-	needsCArenewal, err := c.needsCertRenewal(ctx, RegistryCASecretName, RegistrySecretCAPath)
+	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryCASecretName, RegistrySecretCAPath)
 	if err != nil {
 		return fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
@@ -397,7 +397,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
 	}
 
-	if !needsCArenewal && !needsServerRenewal && !needsProxyRenewal {
+	if !needsCARenewal && !needsServerRenewal && !needsProxyRenewal {
 		return nil
 	}
 
