@@ -228,29 +228,29 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// Signing succeeded - now atomically replace the actual files
 
-	// Copy signed zarf.yaml from temp to actual location
-	err = helpers.CreatePathAndCopy(tmpZarfYAMLPath, zarfYAMLPath)
+	// Move signed zarf.yaml from temp to actual location (atomic rename)
+	err = os.Rename(tmpZarfYAMLPath, zarfYAMLPath)
 	if err != nil {
 		// This is a critical error - signing succeeded but we can't update the file
 		// Keep the signed:true state as it reflects what we intended
 		return fmt.Errorf("failed to update %s after signing: %w", ZarfYAML, err)
 	}
 
-	// Copy signature from temp to actual location
-	err = helpers.CreatePathAndCopy(tmpSignaturePath, actualSignaturePath)
+	// Move signature from temp to actual location (atomic rename)
+	err = os.Rename(tmpSignaturePath, actualSignaturePath)
 	if err != nil {
-		// Revert the zarf.yaml if signature copy fails
+		// Revert the zarf.yaml if signature rename fails
 		// We need to restore the original zarf.yaml
 		p.Pkg.Build.Signed = originalSigned
 		b, marshalErr := goyaml.Marshal(p.Pkg)
 		if marshalErr != nil {
-			return fmt.Errorf("failed to copy signature and failed to revert zarf.yaml: signature copy error: %w, revert error: %w", err, marshalErr)
+			return fmt.Errorf("failed to move signature and failed to revert zarf.yaml: signature rename error: %w, revert error: %w", err, marshalErr)
 		}
 		writeErr := os.WriteFile(zarfYAMLPath, b, helpers.ReadWriteUser)
 		if writeErr != nil {
-			return fmt.Errorf("failed to copy signature and failed to revert zarf.yaml: signature copy error: %w, revert error: %w", err, writeErr)
+			return fmt.Errorf("failed to move signature and failed to revert zarf.yaml: signature rename error: %w, revert error: %w", err, writeErr)
 		}
-		return fmt.Errorf("failed to copy signature after signing: %w", err)
+		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
 	l.Info("package signed successfully", "signature", actualSignaturePath)

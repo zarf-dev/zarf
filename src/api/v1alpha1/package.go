@@ -133,6 +133,14 @@ func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
 	return true
 }
 
+// IsSigned returns whether a Zarf package is signed.
+func (pkg ZarfPackage) IsSigned() bool {
+	if pkg.Build.Signed == nil {
+		return false
+	}
+	return *pkg.Build.Signed
+}
+
 // Variable represents a variable that has a value set programmatically
 type Variable struct {
 	// The name to be used for the variable
