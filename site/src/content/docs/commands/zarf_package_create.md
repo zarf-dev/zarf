@@ -37,6 +37,7 @@ zarf package create [ DIRECTORY ] [flags]
       --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for signing packages
       --skip-sbom                   Skip generating SBOM for this package
+      --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
 ```
 
 ### Options inherited from parent commands
