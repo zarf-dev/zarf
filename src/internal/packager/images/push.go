@@ -234,7 +234,7 @@ func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Clu
 		return nil, fmt.Errorf("cluster client is required when pulling from registry proxy")
 	}
 
-	certs, err := c.GetRegistryMTLSCerts(ctx)
+	certs, err := c.GetRegistryClientMTLSCert(ctx)
 	if err != nil {
 		return nil, err
 	}

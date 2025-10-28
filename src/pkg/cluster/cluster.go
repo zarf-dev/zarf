@@ -320,8 +320,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	return s, nil
 }
 
-// GetRegistryMTLSCerts retrieves TLS certificates from Kubernetes secrets for registry proxy connections
-func (c *Cluster) GetRegistryMTLSCerts(ctx context.Context) (pki.GeneratedPKI, error) {
+// GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode
+func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
 	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryProxyTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
