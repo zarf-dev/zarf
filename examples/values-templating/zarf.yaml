@@ -114,5 +114,6 @@ x-mdx: |
     kubectl get configmap -n helm-overrides
 
     # Remove the package with values templating in remove actions
-    zarf package remove values-templating --confirm --features="values=true"
+    # Feel free to change --set-values to whatever you want!
+    zarf package remove values-templating --confirm --features="values=true" --set-values="site.name=Example,app.environment=test,site.organization=ZarfDev"
     ```
