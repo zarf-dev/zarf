@@ -374,7 +374,6 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
 
-	// Check if any certificates need renewal
 	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check server certificate renewal: %w", err)
@@ -411,7 +410,6 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to generate client certificate: %w", err)
 	}
 
-	// Create server TLS secret with bundled CA
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
@@ -423,7 +421,6 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	// Create proxy TLS secret with bundled CA
 	proxySecret := v1ac.Secret(RegistryProxyTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
