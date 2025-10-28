@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subchart-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: subchart
+  template:
+    metadata:
+      labels:
+        app: subchart
+    spec:
+      containers:
+      - name: memcached
+        image: docker.io/library/memcached:1.6

@@ -267,7 +267,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagSigningKeyPassword    = "Password to the private key used for signing packages"
 	CmdPackageCreateFlagDeprecatedKey         = "[Deprecated] Path to private key file for signing packages (use --signing-key instead)"
 	CmdPackageCreateFlagDeprecatedKeyPassword = "[Deprecated] Password to the private key file used for signing packages (use --signing-key-pass instead)"
-	CmdPackageCreateFlagDifferential          = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
+	CmdPackageCreateFlagDifferential          = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
 	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
@@ -331,11 +331,11 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"
 
-	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployShort      = "Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong       = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 
-	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
+	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
