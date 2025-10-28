@@ -12,6 +12,7 @@ import (
 )
 
 func TestPackageSigning(t *testing.T) {
+	t.Parallel()
 	t.Log("E2E: Package Signing")
 
 	t.Run("Signing a basic package", func(t *testing.T) {

@@ -253,7 +253,7 @@ func DefaultSignBlobOptions() SignBlobOptions {
 		FulcioURL:       "https://fulcio.sigstore.dev",
 		RekorURL:        "https://rekor.sigstore.dev",
 		TLogUpload:      false, // Zarf default: explicit opt-in
-		NewBundleFormat: true,
+		NewBundleFormat: false,
 		B64:             true,
 		Timeout:         CosignDefaultTimeout,
 		Verbose:         false,

@@ -239,17 +239,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Move signature from temp to actual location (atomic rename)
 	err = os.Rename(tmpSignaturePath, actualSignaturePath)
 	if err != nil {
-		// Revert the zarf.yaml if signature rename fails
-		// We need to restore the original zarf.yaml
-		p.Pkg.Build.Signed = originalSigned
-		b, marshalErr := goyaml.Marshal(p.Pkg)
-		if marshalErr != nil {
-			return fmt.Errorf("failed to move signature and failed to revert zarf.yaml: signature rename error: %w, revert error: %w", err, marshalErr)
-		}
-		writeErr := os.WriteFile(zarfYAMLPath, b, helpers.ReadWriteUser)
-		if writeErr != nil {
-			return fmt.Errorf("failed to move signature and failed to revert zarf.yaml: signature rename error: %w, revert error: %w", err, writeErr)
-		}
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
