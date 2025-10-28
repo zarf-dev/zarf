@@ -9,6 +9,8 @@ type ZarfComponent struct {
 	// The name of the component.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 
+	deprecatedGroup string
+
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 
