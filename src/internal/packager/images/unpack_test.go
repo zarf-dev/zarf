@@ -87,30 +87,3 @@ func TestUnpackInvalidTar(t *testing.T) {
 	_, err = Unpack(ctx, invalidTar, dstDir)
 	require.Error(t, err)
 }
-
-func TestUnpackMissingManifest(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	// Create a tar without manifest.json
-	tempDir := t.TempDir()
-	emptyImageDir := filepath.Join(tempDir, "empty-image")
-	err := os.MkdirAll(emptyImageDir, 0755)
-	require.NoError(t, err)
-
-	// Create just an oci-layout file without manifest.json
-	ociLayoutPath := filepath.Join(emptyImageDir, "oci-layout")
-	err = os.WriteFile(ociLayoutPath, []byte(`{"imageLayoutVersion": "1.0.0"}`), 0644)
-	require.NoError(t, err)
-
-	tarFile := filepath.Join(tempDir, "empty-image.tar")
-	err = archive.Compress(ctx, []string{emptyImageDir}, tarFile, archive.CompressOpts{})
-	require.NoError(t, err)
-
-	dstDir := t.TempDir()
-
-	// Call Unpack
-	_, err = Unpack(ctx, tarFile, dstDir)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "manifest.json")
-}

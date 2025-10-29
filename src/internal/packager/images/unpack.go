@@ -20,21 +20,6 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
-// imageManifest represents the structure of the manifest.json file in an image tar.
-type imageManifest struct {
-	Config       string                      `json:"Config"`
-	RepoTags     []string                    `json:"RepoTags"`
-	Layers       []string                    `json:"Layers"`
-	LayerSources map[string]imageLayerSource `json:"LayerSources"`
-}
-
-// imageLayerSource represents metadata about a layer in the manifest.
-type imageLayerSource struct {
-	MediaType string `json:"mediaType"`
-	Size      int64  `json:"size"`
-	Digest    string `json:"digest"`
-}
-
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns the OCI manifest for the image.
 func Unpack(ctx context.Context, tarPath string, destDir string) (ocispec.Manifest, error) {
@@ -65,26 +50,6 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (ocispec.Manife
 		imageDir = extractDir
 	}
 
-	// Read the manifest.json file
-	manifestPath := filepath.Join(imageDir, "manifest.json")
-	manifestBytes, err := os.ReadFile(manifestPath)
-	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to read manifest.json: %w", err)
-	}
-
-	// Parse the manifest
-	var manifests []imageManifest
-	if err := json.Unmarshal(manifestBytes, &manifests); err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to parse manifest.json: %w", err)
-	}
-
-	if len(manifests) == 0 {
-		return ocispec.Manifest{}, errors.New("no manifests found in manifest.json")
-	}
-
-	// For now, we only handle single image tars
-	imgManifest := manifests[0]
-
 	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
 		return ocispec.Manifest{}, fmt.Errorf("failed to create destination directory: %w", err)
@@ -114,11 +79,7 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (ocispec.Manife
 	// Use the first manifest descriptor
 	manifestDesc := srcIdx.Manifests[0]
 
-	// Get the reference from RepoTags
-	if len(imgManifest.RepoTags) == 0 {
-		return ocispec.Manifest{}, errors.New("no RepoTags found in manifest")
-	}
-	ref := imgManifest.RepoTags[0]
+	ref := manifestDesc.Annotations["io.containerd.image.name"]
 
 	// Copy the image from source to destination using the digest
 	copyOpts := oras.DefaultCopyOptions
