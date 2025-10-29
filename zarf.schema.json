@@ -1049,6 +1049,10 @@
           "type": "array",
           "description": "List of local kustomization paths or remote URLs to include in the package."
         },
+        "enableKustomizePlugins": {
+          "type": "boolean",
+          "description": "Enable kustomize plugins during kustomize builds."
+        },
         "noWait": {
           "type": "boolean",
           "description": "Whether to not wait for manifest resources to be ready before continuing."
