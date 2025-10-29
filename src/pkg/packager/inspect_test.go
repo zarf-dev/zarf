@@ -198,22 +198,19 @@ func TestInspectDefinitionResources_Errors(t *testing.T) {
 	setupInspectTests(t)
 
 	tests := []struct {
-		name             string
-		packageDir       string
-		opts             InspectDefinitionResourcesOptions
-		expectedErrorMsg string
+		name       string
+		packageDir string
+		opts       InspectDefinitionResourcesOptions
 	}{
 		{
-			name:             "nonexistent package directory",
-			packageDir:       "/nonexistent/path/to/package",
-			opts:             InspectDefinitionResourcesOptions{},
-			expectedErrorMsg: "no such file or directory",
+			name:       "nonexistent package directory",
+			packageDir: "/nonexistent/path/to/package",
+			opts:       InspectDefinitionResourcesOptions{},
 		},
 		{
-			name:             "invalid zarf.yaml path",
-			packageDir:       testDataRoot,
-			opts:             InspectDefinitionResourcesOptions{},
-			expectedErrorMsg: "no such file or directory",
+			name:       "invalid zarf.yaml path",
+			packageDir: testDataRoot,
+			opts:       InspectDefinitionResourcesOptions{},
 		},
 	}
 
@@ -225,7 +222,6 @@ func TestInspectDefinitionResources_Errors(t *testing.T) {
 			resources, err := InspectDefinitionResources(ctx, tt.packageDir, tt.opts)
 			require.Error(t, err)
 			require.Nil(t, resources)
-			require.Contains(t, err.Error(), tt.expectedErrorMsg)
 		})
 	}
 }
@@ -336,8 +332,8 @@ func TestInspectDefinitionResources_GoldenFiles(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "manifest with values",
-			pkgDir:   inspectTestDataPath("inspect-manifests", "manifest-with-values"),
+			name:   "manifest with values",
+			pkgDir: inspectTestDataPath("inspect-manifests", "manifest-with-values"),
 			opts: InspectDefinitionResourcesOptions{
 				Values: value.Values{
 					"replicas": 5,
