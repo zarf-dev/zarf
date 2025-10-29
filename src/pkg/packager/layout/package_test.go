@@ -899,7 +899,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts.KeyRef = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.EqualError(t, err, "no public key specified")
+		require.EqualError(t, err, "package is signed but no key was provided")
 	})
 
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {

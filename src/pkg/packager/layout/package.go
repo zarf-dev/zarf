@@ -266,7 +266,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	// Validate that we have a public key
 	// Note: this will later be replaced when verification enhancements are made
 	if opts.KeyRef == "" {
-		return errors.New("no public key specified")
+		return errors.New("package is signed but no key was provided")
 	}
 
 	// Validate that the signature exists
