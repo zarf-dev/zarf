@@ -53,7 +53,14 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get raw template configmap")
 	require.Contains(t, kubectlOut, "template={{ .shouldNotBeProcessed }}")
 
-	// Remove the package
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm")
+	// Remove the package with values
+	valuesFile := filepath.Join(src, "override-values.yaml")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify the remove actions used the values correctly
+	// Check that the override-value from override-values.yaml was templated
+	require.Contains(t, stdOut, "REMOVE_TEST_VALUE=override-value", "remove action should have templated the override value from override-values.yaml")
+	// Check that the custom value from --set-values was templated
+	require.Contains(t, stdOut, "REMOVE_CUSTOM_VALUE=custom-remove-value", "remove action should have templated value from --set-values")
 }
