@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -110,6 +111,49 @@ func TestPackageUsesFlavor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tt.expected, hasFlavoredComponent(tt.pkg, tt.flavor))
+		})
+	}
+}
+
+func TestPackageDefinitionWithValuesSchema(t *testing.T) {
+	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
+	// Enable the values feature for these tests
+	err := feature.Set([]feature.Feature{
+		{
+			Name:    feature.Values,
+			Enabled: true,
+		},
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name        string
+		packagePath string
+		expectedErr string
+	}{
+		{
+			name:        "valid values pass schema validation",
+			packagePath: filepath.Join("testdata", "package-with-values-schema"),
+		},
+		{
+			name:        "invalid values fail schema validation",
+			packagePath: filepath.Join("testdata", "package-with-invalid-values"),
+			expectedErr: "values validation failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			opts := DefinitionOptions{}
+			_, err := PackageDefinition(ctx, tt.packagePath, opts)
+			if tt.expectedErr != "" {
+				require.ErrorContains(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

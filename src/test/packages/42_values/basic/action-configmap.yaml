@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: test-action-configmap
-  namespace: default
-data:
-  json: "{{ .Values.json.myKey }}"
-  yaml: "{{ .Values.yaml.myKey }}"

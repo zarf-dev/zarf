@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
-  name: test-values-schema
-  description: Test package for values schema validation
+  name: test-values-schema-valid
+  description: Test package with valid values that pass schema validation
 
 values:
   files:
@@ -9,8 +9,7 @@ values:
   schema: values.schema.json
 
 components:
-  - name: test-schema
-    description: Component to test schema validation
+  - name: test-component
     required: true
     manifests:
       - name: test-configmap

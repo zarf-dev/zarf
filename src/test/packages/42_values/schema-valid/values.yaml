@@ -1,3 +1,0 @@
-config:
-  replicas: 3
-  environment: production
