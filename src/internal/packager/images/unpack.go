@@ -15,87 +15,117 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 )
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns the OCI manifest for the image.
-func Unpack(ctx context.Context, tarPath string, destDir string) (_ ocispec.Manifest, err error) {
+// It returns a map of transform.Image to OCI manifests for all images in the tar.
+func Unpack(ctx context.Context, tarPath string, destDir string) (_ map[transform.Image]ocispec.Manifest, err error) {
 	// Create a temporary directory for extraction
 	tmpDir, err := utils.MakeTempDir("")
 	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to create temp directory: %w", err)
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer func() {
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
 	if err := archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{}); err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to extract tar: %w", err)
+		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
 	// Find the actual image directory (since we may have wrapped it)
 	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to read extracted directory: %w", err)
+		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
 	}
 
 	if len(entries) != 1 {
-		return ocispec.Manifest{}, fmt.Errorf("failed to properly extract directory")
+		return nil, fmt.Errorf("failed to properly extract directory")
 	}
 	imageDir := filepath.Join(tmpDir, entries[0].Name())
 
 	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to create destination directory: %w", err)
+		return nil, fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
 	dstStore, err := oci.NewWithContext(ctx, destDir)
 	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to create OCI store: %w", err)
+		return nil, fmt.Errorf("failed to create OCI store: %w", err)
 	}
 
 	// Create a source OCI store from the extracted image directory
 	srcStore, err := oci.NewWithContext(ctx, imageDir)
 	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to create source OCI store: %w", err)
+		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
 	}
 
-	// Read the index.json from the source to get the manifest descriptor
+	// Read the index.json from the source to get the manifest descriptors
 	srcIdx, err := getIndexFromOCILayout(imageDir)
 	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to read source index.json: %w", err)
+		return nil, fmt.Errorf("failed to read source index.json: %w", err)
 	}
 
 	if len(srcIdx.Manifests) == 0 {
-		return ocispec.Manifest{}, errors.New("no manifests found in index.json")
+		return nil, errors.New("no manifests found in index.json")
 	}
 
-	// Use the first manifest descriptor
-	manifestDesc := srcIdx.Manifests[0]
+	// Process all manifests in the index
+	imagesWithManifests := make(map[transform.Image]ocispec.Manifest)
 
-	ref := manifestDesc.Annotations["io.containerd.image.name"]
+	for _, manifestDesc := range srcIdx.Manifests {
+		// Try to get the reference from annotations in order of preference
+		ref := getRefFromAnnotations(manifestDesc.Annotations)
+		if ref == "" {
+			return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
+		}
 
-	// Copy the image from source to destination using the digest
-	copyOpts := oras.DefaultCopyOptions
-	desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, ref, copyOpts)
-	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to copy image: %w", err)
+		// Copy the image from source to destination using the digest
+		copyOpts := oras.DefaultCopyOptions
+		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, ref, copyOpts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to copy image %s: %w", ref, err)
+		}
+
+		// Read the manifest from the destination store
+		manifestBlobPath := filepath.Join(destDir, "blobs", "sha256", desc.Digest.Hex())
+		manifestData, err := os.ReadFile(manifestBlobPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read manifest blob for %s: %w", ref, err)
+		}
+
+		var ociManifest ocispec.Manifest
+		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
+			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", ref, err)
+		}
+
+		// Parse the reference into a transform.Image
+		imgRef, err := transform.ParseImageRef(ref)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", ref, err)
+		}
+
+		imagesWithManifests[imgRef] = ociManifest
 	}
 
-	// Read the manifest from the destination store
-	manifestBlobPath := filepath.Join(destDir, "blobs", "sha256", desc.Digest.Hex())
-	manifestData, err := os.ReadFile(manifestBlobPath)
-	if err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to read manifest blob: %w", err)
-	}
+	return imagesWithManifests, nil
+}
 
-	var ociManifest ocispec.Manifest
-	if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-		return ocispec.Manifest{}, fmt.Errorf("failed to parse OCI manifest: %w", err)
+// getRefFromAnnotations extracts the image reference from annotations.
+// It checks in order: org.opencontainers.image.ref.name, org.opencontainers.image.base.name, io.containerd.image.name
+func getRefFromAnnotations(annotations map[string]string) string {
+	if ref, ok := annotations[ocispec.AnnotationRefName]; ok && ref != "" {
+		return ref
 	}
-
-	return ociManifest, nil
+	if ref, ok := annotations[ocispec.AnnotationBaseImageName]; ok && ref != "" {
+		return ref
+	}
+	if ref, ok := annotations["io.containerd.image.name"]; ok && ref != "" {
+		return ref
+	}
+	return ""
 }
