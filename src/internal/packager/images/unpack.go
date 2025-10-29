@@ -31,19 +31,19 @@ type ImageWithManifest struct {
 // It returns a list of ImageWithManifest for all images in the tar.
 func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
-	tmpDir, err := utils.MakeTempDir("")
+	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpDir))
+		err = errors.Join(err, os.RemoveAll(tmpdir))
 	}()
 
-	if err := archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, tarPath, tmpdir, archive.DecompressOpts{}); err != nil {
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
-	entries, err := os.ReadDir(tmpDir)
+	entries, err := os.ReadDir(tmpdir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
 	}
@@ -51,7 +51,8 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 	if len(entries) != 1 {
 		return nil, fmt.Errorf("failed to properly extract directory")
 	}
-	imageDir := filepath.Join(tmpDir, entries[0].Name())
+	imageDir := filepath.Join(tmpdir, entries[0].Name())
+	// imageDir = tmpdir
 
 	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
