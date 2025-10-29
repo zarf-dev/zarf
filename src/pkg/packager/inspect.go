@@ -210,6 +210,23 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
+	// Load package-level default values and merge with CLI-provided values
+	packageValues := value.Values{}
+	if len(pkg.Values.Files) > 0 {
+		// Convert relative paths to absolute paths based on packagePath
+		absoluteValuesPaths := make([]string, len(pkg.Values.Files))
+		for i, file := range pkg.Values.Files {
+			absoluteValuesPaths[i] = filepath.Join(packagePath, file)
+		}
+		packageValues, err = value.ParseFiles(ctx, absoluteValuesPaths, value.ParseFilesOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse package values files: %w", err)
+		}
+	}
+	// Merge CLI values on top of package values (CLI takes precedence)
+	packageValues.DeepMerge(opts.Values)
+	vals := packageValues
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -234,7 +251,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, opts.Values, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}
@@ -258,7 +275,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, opts.Values, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}
