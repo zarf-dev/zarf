@@ -28,8 +28,9 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const defaultRetries = 3
@@ -98,8 +99,19 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				Password: cfg.RegistryInfo.PushPassword,
 			}),
 		}
-		if cfg.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-			client.Client.Transport, err = orasTransportWithClientCertsFromSecrets(ctx, cfg.Cluster)
+		// Use MTLS if the registry client cert exists in cluster
+		useMTLS := false
+		var certs pki.GeneratedPKI
+		if cfg.Cluster != nil {
+			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if err != nil && !kerrors.IsNotFound(err) {
+				return err
+			}
+			useMTLS = err == nil
+		}
+
+		if useMTLS {
+			client.Client.Transport, err = transportFromClientCert(certs)
 			if err != nil {
 				return err
 			}
@@ -229,16 +241,7 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 	return nil
 }
 
-func orasTransportWithClientCertsFromSecrets(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
-	if c == nil {
-		return nil, fmt.Errorf("cluster client is required when pulling from registry proxy")
-	}
-
-	certs, err := c.GetRegistryClientMTLSCert(ctx)
-	if err != nil {
-		return nil, err
-	}
-
+func transportFromClientCert(certs pki.GeneratedPKI) (http.RoundTripper, error) {
 	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load client certificate: %w", err)

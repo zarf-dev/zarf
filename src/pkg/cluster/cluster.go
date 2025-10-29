@@ -47,7 +47,7 @@ const (
 // Registry TLS secret and certificate names
 const (
 	RegistryServerTLSSecret = "zarf-registry-server-tls"
-	RegistryProxyTLSSecret  = "zarf-registry-proxy-tls"
+	RegistryClientTLSSecret = "zarf-registry-client-tls"
 
 	RegistrySecretCAPath   = "ca.crt"
 	RegistrySecretCertPath = "tls.crt"
@@ -322,7 +322,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode
 func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
-	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryProxyTLSSecret, metav1.GetOptions{})
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
 	if err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
@@ -379,7 +379,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsProxyRenewal, err := c.needsCertRenewal(ctx, RegistryProxyTLSSecret, RegistrySecretCertPath)
+	needsProxyRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
 	}
@@ -421,7 +421,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	proxySecret := v1ac.Secret(RegistryProxyTLSSecret, state.ZarfNamespaceName).
+	proxySecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
 			RegistrySecretCertPath: clientCert,
@@ -432,7 +432,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryProxyTLSSecret})
+	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
 	return nil
 }
 

@@ -19,6 +19,6 @@ func TestRegistryProxyInit(t *testing.T) {
 	_, _, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-registry-server-tls")
 	require.NoError(t, err, "zarf-registry-server-tls secret should exist")
 
-	_, _, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-registry-proxy-tls")
-	require.NoError(t, err, "zarf-registry-proxy-tls secret should exist")
+	_, _, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-registry-client-tls")
+	require.NoError(t, err, "zarf-registry-client-tls secret should exist")
 }
