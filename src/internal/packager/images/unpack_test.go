@@ -15,51 +15,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestUnpack(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	// First, create a tar from the testdata/my-image directory
-	imageSrcDir := "testdata/my-image"
-	tarFile := filepath.Join(t.TempDir(), "my-image.tar")
-
-	// Create the tar from the source directory
-	err := archive.Compress(ctx, []string{imageSrcDir}, tarFile, archive.CompressOpts{})
-	require.NoError(t, err)
-
-	// Create destination directory for the OCI layout
-	dstDir := t.TempDir()
-
-	// Call Unpack
-	images, err := Unpack(ctx, tarFile, dstDir)
-	require.NoError(t, err)
-
-	// Verify we got one image
-	require.Len(t, images, 1)
-
-	// Get the first image
-	img := images[0]
-
-	// Verify the manifest is not empty
-	require.NotEmpty(t, img.Manifest.Config.Digest)
-	require.NotEmpty(t, img.Manifest.Layers)
-
-	// Verify the OCI layout was created properly
-	idx, err := getIndexFromOCILayout(dstDir)
-	require.NoError(t, err)
-	require.NotEmpty(t, idx.Manifests)
-
-	// Verify that the manifest config blob exists
-	configBlobPath := filepath.Join(dstDir, "blobs", "sha256", img.Manifest.Config.Digest.Hex())
-	require.FileExists(t, configBlobPath)
-
-	// Verify all layer blobs exist
-	for _, layer := range img.Manifest.Layers {
-		layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-		require.FileExists(t, layerBlobPath)
-	}
-}
-
 func TestUnpackInvalidTar(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -113,6 +68,14 @@ func TestUnpackMultipleImages(t *testing.T) {
 		checkImageRefs []string
 	}{
 		{
+			name:           "single image",
+			srcDir:         "testdata/my-image",
+			expectedImages: 1,
+			checkImageRefs: []string{
+				"linux",
+			},
+		},
+		{
 			name:           "oras OCI layout with multiple images",
 			srcDir:         "testdata/oras-oci-layout/images",
 			expectedImages: 6,
@@ -149,28 +112,21 @@ func TestUnpackMultipleImages(t *testing.T) {
 			tarFile := filepath.Join(t.TempDir(), "images.tar")
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
-
-			// Create destination directory for the OCI layout
 			dstDir := t.TempDir()
 
-			// Call Unpack
+			// Run
 			images, err := Unpack(ctx, tarFile, dstDir)
 			require.NoError(t, err)
 
-			// Verify the correct number of images were unpacked
+			// Verify the correct amount of images were found
 			require.Len(t, images, tc.expectedImages)
-
-			// Create a map for easy lookup when verifying specific references
 			imageMap := make(map[string]ImageWithManifest)
 			for _, img := range images {
 				imageMap[img.Image.Reference] = img
 			}
-
-			// Verify specific image references exist
 			for _, ref := range tc.checkImageRefs {
 				imgRef, err := transform.ParseImageRef(ref)
 				require.NoError(t, err)
-
 				img, found := imageMap[imgRef.Reference]
 				require.True(t, found, "expected to find image %s", ref)
 				require.NotEmpty(t, img.Manifest.Config.Digest)
@@ -183,14 +139,10 @@ func TestUnpackMultipleImages(t *testing.T) {
 
 			// Verify all images have the required blobs
 			for _, img := range images {
-				// Verify config blob exists
-				configBlobPath := filepath.Join(dstDir, "blobs", "sha256", img.Manifest.Config.Digest.Hex())
-				require.FileExists(t, configBlobPath, "config blob missing for %s", img.Image.Reference)
-
 				// Verify all layer blobs exist
 				for _, layer := range img.Manifest.Layers {
 					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-					require.FileExists(t, layerBlobPath, "layer blob missing for %s", img.Image.Reference)
+					require.FileExists(t, layerBlobPath)
 				}
 			}
 		})
