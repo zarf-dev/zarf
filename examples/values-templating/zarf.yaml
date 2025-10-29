@@ -112,7 +112,7 @@ x-mdx: |
     zarf connect nginx
 
     # View the helm chart results
-    kubectl get configmap -n helm-overrides
+    kubectl get configmap -n helm-overrides -o yaml
 
     # Remove the package with values templating in remove actions
     # Feel free to change --set-values to whatever you want!
