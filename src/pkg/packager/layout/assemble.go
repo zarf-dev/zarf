@@ -502,7 +502,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	oldValuesFiles := chart.ValuesFiles
 	valuesFiles := []string{}
 	for _, v := range chart.ValuesFiles {
-		if !filepath.IsAbs(v) {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
 			v = filepath.Join(packagePath, v)
 		}
 		valuesFiles = append(valuesFiles, v)
