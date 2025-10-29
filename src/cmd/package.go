@@ -230,12 +230,12 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 
 type packageDeployOptions struct {
 	valuesFiles             []string
-	setVariables            map[string]string
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
 	timeout                 time.Duration
 	retries                 int
+	setVariables            map[string]string
 	optionalComponents      string
 	shasum                  string
 	skipSignatureValidation bool
