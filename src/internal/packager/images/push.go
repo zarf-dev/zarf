@@ -107,7 +107,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			if err != nil && !kerrors.IsNotFound(err) {
 				return err
 			}
-			useMTLS = err == nil
+			useMTLS = !kerrors.IsNotFound(err)
 		}
 
 		if useMTLS {
