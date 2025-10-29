@@ -29,211 +29,39 @@ const (
 	CosignDefaultTimeout = 3 * time.Minute
 )
 
-// SignBlobOptions contains all options for cosign sign-blob operations.
-// This structure supports all cosign v3 sign-blob capabilities.
+// SignBlobOptions embeds Cosign's native options and adds Zarf-specific configuration.
+// By embedding options.KeyOpts, we get direct access to all Cosign signing capabilities
+// while maintaining a clean interface for Zarf users.
 type SignBlobOptions struct {
-	// ========================================
-	// Basic Key Options
-	// ========================================
+	// Embed Cosign's KeyOpts for signing configuration
+	options.KeyOpts
 
-	// KeyRef is the path to private key or KMS URI
-	KeyRef string
+	// Zarf-specific options for output control
+	OutputSignature   string // Custom path for signature file
+	OutputCertificate string // Where to write certificate (keyless mode)
 
-	// PassFunc provides password for encrypted keys
-	PassFunc cosign.PassFunc
-
-	// ========================================
-	// Security Key Options
-	// ========================================
-
-	// Sk enables hardware security key (YubiKey, etc.)
-	Sk bool
-
-	// Slot specifies the security key slot
-	// Options: authentication, signature, card-authentication, key-management
-	// Default: "signature"
-	Slot string
-
-	// ========================================
-	// Keyless/OIDC Options
-	// ========================================
-
-	// IDToken is the OIDC identity token or path to token file
-	IDToken string
-
-	// OIDCIssuer is the OIDC provider URL
-	// Default: "https://oauth2.sigstore.dev/auth"
-	OIDCIssuer string
-
-	// OIDCClientID is the OIDC client ID
-	// Default: "sigstore"
-	OIDCClientID string
-
-	// OIDCClientSecret is the OIDC client secret
-	OIDCClientSecret string
-
-	// OIDCRedirectURL is the redirect URL for OAuth flow
-	// Default: "http://localhost:0/auth/callback"
-	OIDCRedirectURL string
-
-	// OIDCProvider specifies the OIDC provider
-	// Options: spiffe, google, github-actions, filesystem, buildkite-agent
-	OIDCProvider string
-
-	// OIDCDisableProviders disables ambient OIDC credential detection
-	OIDCDisableProviders bool
-
-	// FulcioAuthFlow specifies the OAuth2 flow
-	// Options: normal, device, token, client_credentials
-	// Default: "normal"
-	FulcioAuthFlow string
-
-	// ========================================
-	// Sigstore Infrastructure
-	// ========================================
-
-	// FulcioURL is the Fulcio PKI server URL
-	// Default: "https://fulcio.sigstore.dev"
-	FulcioURL string
-
-	// RekorURL is the Rekor transparency log URL
-	// Default: "https://rekor.sigstore.dev"
-	RekorURL string
-
-	// TLogUpload enables transparency log upload
-	// Default: false for Zarf (explicit opt-in)
-	TLogUpload bool
-
-	// InsecureSkipFulcioVerify skips Fulcio SCT verification (testing only)
-	InsecureSkipFulcioVerify bool
-
-	// IssueCertificateForExistingKey issues a Fulcio certificate even when using existing key
-	IssueCertificateForExistingKey bool
-
-	// ========================================
-	// Timestamp Authority (RFC 3161)
-	// ========================================
-
-	// TSAServerURL is the RFC3161 timestamp server URL
-	TSAServerURL string
-
-	// RFC3161TimestampPath is where to write the RFC3161 timestamp
-	RFC3161TimestampPath string
-
-	// TSAClientCert is the X.509 client certificate for TSA (PEM)
-	TSAClientCert string
-
-	// TSAClientKey is the X.509 client private key for TSA (PEM)
-	TSAClientKey string
-
-	// TSAClientCACert is the X.509 CA certificate for TSA verification (PEM)
-	TSAClientCACert string
-
-	// TSAServerName is the expected SAN in TSA server certificate
-	TSAServerName string
-
-	// ========================================
-	// Bundle & Output Options
-	// ========================================
-
-	// BundlePath is where to write the verification bundle
-	// Bundle contains signature, certificate, timestamp, rekor entry
-	BundlePath string
-
-	// NewBundleFormat uses protobuf bundle format (vs legacy JSON)
-	// Default: true
-	NewBundleFormat bool
-
-	// OutputSignature is a custom path for the signature file
-	OutputSignature string
-
-	// OutputCertificate is where to write the certificate (keyless mode)
-	OutputCertificate string
-
-	// B64 controls base64 encoding of outputs
-	// Default: true
-	B64 bool
-
-	// ========================================
-	// General Options
-	// ========================================
-
-	// SkipConfirmation skips confirmation prompts
-	SkipConfirmation bool
-
-	// Timeout for signing operations
-	// Default: 3m0s
-	Timeout time.Duration
-
-	// Verbose enables debug output
-	Verbose bool
+	// General options
+	Verbose bool          // Enable debug output
+	Timeout time.Duration // Timeout for signing operations
 }
 
-// VerifyBlobOptions contains all options for cosign verify-blob operations.
-// This structure supports all cosign v3 verify-blob capabilities.
+// VerifyBlobOptions embeds Cosign's native options for verification.
+// By embedding options.KeyOpts and options.CertVerifyOptions, we get direct access
+// to all Cosign verification capabilities.
 type VerifyBlobOptions struct {
-	// KeyRef is the path to public key
-	KeyRef string
+	// Embed Cosign's KeyOpts for key-based verification
+	options.KeyOpts
 
-	// ========================================
-	// Keyless Verification Options
-	// ========================================
+	// Embed Cosign's CertVerifyOptions for certificate-based (keyless) verification
+	options.CertVerifyOptions
 
-	// CertificateIdentity is the expected identity in the certificate
-	CertificateIdentity string
+	// Verification-specific options
+	SigRef     string // Path to signature file
+	Offline    bool   // Enable offline verification mode
+	IgnoreTlog bool   // Skip transparency log verification
 
-	// CertificateOIDCIssuer is the expected OIDC issuer
-	CertificateOIDCIssuer string
-
-	// CertificateChain is the path to certificate chain
-	CertificateChain string
-
-	// ========================================
-	// Bundle Verification
-	// ========================================
-
-	// BundlePath is the path to verification bundle
-	BundlePath string
-
-	// ========================================
-	// Transparency Log Options
-	// ========================================
-
-	// RekorURL is the Rekor transparency log URL
-	RekorURL string
-
-	// IgnoreTlog skips transparency log verification
-	IgnoreTlog bool
-
-	// ========================================
-	// Signature Options
-	// ========================================
-
-	// SigRef is the path to signature file
-	SigRef string
-
-	// IgnoreSCT skips SCT verification
-	IgnoreSCT bool
-
-	// Offline enables offline verification mode
-	Offline bool
-
-	// ========================================
-	// Timestamp Options
-	// ========================================
-
-	// RFC3161TimestampPath is the path to RFC3161 timestamp
-	RFC3161TimestampPath string
-
-	// TSACertChainPath is the path to TSA certificate chain
-	TSACertChainPath string
-
-	// ========================================
-	// General Options
-	// ========================================
-
-	// Timeout for verification operations
-	Timeout time.Duration
+	// General options
+	Timeout time.Duration // Timeout for verification operations
 }
 
 // ShouldSign returns true if the options indicate that signing should be performed.
@@ -242,28 +70,33 @@ func (opts SignBlobOptions) ShouldSign() bool {
 	return opts.KeyRef != "" || opts.IDToken != "" || opts.Sk
 }
 
-// DefaultSignBlobOptions returns SignBlobOptions with Zarf defaults
+// DefaultSignBlobOptions returns SignBlobOptions with Zarf defaults.
+// Configures sensible defaults for offline/air-gapped environments.
 func DefaultSignBlobOptions() SignBlobOptions {
 	return SignBlobOptions{
-		Slot:            "signature",
-		OIDCIssuer:      "https://oauth2.sigstore.dev/auth",
-		OIDCClientID:    "sigstore",
-		OIDCRedirectURL: "http://localhost:0/auth/callback",
-		FulcioAuthFlow:  "normal",
-		FulcioURL:       "https://fulcio.sigstore.dev",
-		RekorURL:        "https://rekor.sigstore.dev",
-		TLogUpload:      false, // Zarf default: explicit opt-in
-		NewBundleFormat: false,
-		B64:             true,
-		Timeout:         CosignDefaultTimeout,
-		Verbose:         false,
+		KeyOpts: options.KeyOpts{
+			Slot:             "signature",
+			OIDCIssuer:       "https://oauth2.sigstore.dev/auth",
+			OIDCClientID:     "sigstore",
+			OIDCRedirectURL:  "http://localhost:0/auth/callback",
+			FulcioAuthFlow:   "normal",
+			FulcioURL:        "https://fulcio.sigstore.dev",
+			RekorURL:         "https://rekor.sigstore.dev",
+			NewBundleFormat:  false,
+			SkipConfirmation: false,
+		},
+		Timeout: CosignDefaultTimeout,
+		Verbose: false,
 	}
 }
 
-// DefaultVerifyBlobOptions returns VerifyBlobOptions with Zarf defaults
+// DefaultVerifyBlobOptions returns VerifyBlobOptions with Zarf defaults.
+// Configures sensible defaults for offline/air-gapped environments.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	return VerifyBlobOptions{
-		IgnoreSCT:  true,
+		CertVerifyOptions: options.CertVerifyOptions{
+			IgnoreSCT: true, // Skip SCT verification by default
+		},
 		Offline:    true,
 		IgnoreTlog: true,
 		Timeout:    CosignDefaultTimeout,
@@ -271,7 +104,8 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 }
 
 // CosignSignBlobWithOptions signs a blob with comprehensive cosign options.
-// This function supports all cosign v3 sign-blob capabilities.
+// This function supports all cosign v3 sign-blob capabilities by leveraging
+// the embedded KeyOpts structure.
 func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBlobOptions) ([]byte, error) {
 	l := logger.From(ctx)
 
@@ -281,62 +115,27 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		Timeout: opts.Timeout,
 	}
 
-	// Build comprehensive key options
-	keyOpts := options.KeyOpts{
-		// Basic
-		KeyRef:   opts.KeyRef,
-		PassFunc: opts.PassFunc,
-
-		// Security Key
-		Sk:   opts.Sk,
-		Slot: opts.Slot,
-
-		// OIDC
-		IDToken:              opts.IDToken,
-		OIDCIssuer:           opts.OIDCIssuer,
-		OIDCClientID:         opts.OIDCClientID,
-		OIDCClientSecret:     opts.OIDCClientSecret,
-		OIDCRedirectURL:      opts.OIDCRedirectURL,
-		OIDCProvider:         opts.OIDCProvider,
-		OIDCDisableProviders: opts.OIDCDisableProviders,
-		FulcioAuthFlow:       opts.FulcioAuthFlow,
-
-		// Sigstore
-		FulcioURL:                      opts.FulcioURL,
-		RekorURL:                       opts.RekorURL,
-		InsecureSkipFulcioVerify:       opts.InsecureSkipFulcioVerify,
-		IssueCertificateForExistingKey: opts.IssueCertificateForExistingKey,
-
-		// TSA
-		TSAServerURL:         opts.TSAServerURL,
-		TSAClientCert:        opts.TSAClientCert,
-		TSAClientKey:         opts.TSAClientKey,
-		TSAClientCACert:      opts.TSAClientCACert,
-		TSAServerName:        opts.TSAServerName,
-		RFC3161TimestampPath: opts.RFC3161TimestampPath,
-
-		// Bundle
-		BundlePath:      opts.BundlePath,
-		NewBundleFormat: opts.NewBundleFormat,
-
-		// Confirmation
-		SkipConfirmation: opts.SkipConfirmation,
-	}
+	// Use the embedded KeyOpts directly - no need to copy fields!
+	keyOpts := opts.KeyOpts
 
 	l.Debug("signing blob with cosign",
 		"keyRef", opts.KeyRef,
 		"sk", opts.Sk,
-		"tlogUpload", opts.TLogUpload,
 		"bundlePath", opts.BundlePath)
+
+	// SignBlobCmd signature: (ro *RootOptions, ko KeyOpts, payloadPath string, b64 bool, outputSignature string, outputCertificate string, tlogUpload bool)
+	// Note: Some params like b64 and tlogUpload are not in KeyOpts, so we need to handle defaults
+	b64 := true         // Default: base64 encode signature
+	tlogUpload := false // Zarf default: don't upload to transparency log (offline/air-gap friendly)
 
 	sig, err := sign.SignBlobCmd(
 		rootOpts,
 		keyOpts,
 		blobPath,
-		opts.B64,
+		b64,
 		opts.OutputSignature,
 		opts.OutputCertificate,
-		opts.TLogUpload,
+		tlogUpload,
 	)
 	if err != nil {
 		return nil, err
@@ -347,30 +146,20 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 }
 
 // CosignVerifyBlobWithOptions verifies a blob signature with comprehensive cosign options.
-// This function supports all cosign v3 verify-blob capabilities.
+// This function supports all cosign v3 verify-blob capabilities by leveraging
+// the embedded KeyOpts and CertVerifyOptions structures.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
 	l := logger.From(ctx)
 
-	keyOpts := options.KeyOpts{
-		KeyRef:               opts.KeyRef,
-		BundlePath:           opts.BundlePath,
-		RekorURL:             opts.RekorURL,
-		RFC3161TimestampPath: opts.RFC3161TimestampPath,
-		TSACertChainPath:     opts.TSACertChainPath,
-	}
-
-	certVerifyOpts := options.CertVerifyOptions{
-		CertIdentity:   opts.CertificateIdentity,
-		CertOidcIssuer: opts.CertificateOIDCIssuer,
-		CertChain:      opts.CertificateChain,
-		IgnoreSCT:      opts.IgnoreSCT,
-	}
+	// Use the embedded structs directly - no need to copy fields!
+	keyOpts := opts.KeyOpts
+	certVerifyOpts := opts.CertVerifyOptions
 
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:           keyOpts,
 		CertVerifyOptions: certVerifyOpts,
 		SigRef:            opts.SigRef,
-		IgnoreSCT:         opts.IgnoreSCT,
+		IgnoreSCT:         opts.IgnoreSCT, // From CertVerifyOptions
 		Offline:           opts.Offline,
 		IgnoreTlog:        opts.IgnoreTlog,
 	}

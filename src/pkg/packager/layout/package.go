@@ -162,9 +162,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Verify zarf.yaml exists before signing
 	zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 	if _, err := os.Stat(zarfYAMLPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("cannot sign package: %s not found in package layout", ZarfYAML)
-		}
 		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
 	}
 
