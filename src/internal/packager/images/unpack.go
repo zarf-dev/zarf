@@ -83,13 +83,14 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 	var imagesWithManifests []ImageWithManifest
 
 	for _, manifestDesc := range srcIdx.Manifests {
-		// Try to get the reference from annotations in order of preference
+		if manifestDesc.Annotations == nil {
+			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
+		}
 		ref := getRefFromAnnotations(manifestDesc.Annotations)
 		if ref == "" {
 			return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
 		}
 
-		// Copy the image from source to destination using the digest
 		copyOpts := oras.DefaultCopyOptions
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, ref, copyOpts)
 		if err != nil {
@@ -108,7 +109,6 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", ref, err)
 		}
 
-		// Parse the reference into a transform.Image
 		imgRef, err := transform.ParseImageRef(ref)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", ref, err)
@@ -126,13 +126,17 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 // getRefFromAnnotations extracts the image reference from annotations.
 // It checks in order: org.opencontainers.image.ref.name, org.opencontainers.image.base.name, io.containerd.image.name
 func getRefFromAnnotations(annotations map[string]string) string {
-	if ref, ok := annotations[ocispec.AnnotationRefName]; ok && ref != "" {
+	// This is the location with an OCI-layout that these respective tools expect the image name to be
+	orasRefAnnotation := ocispec.AnnotationRefName
+	dockerRefAnnotation := "io.containerd.image.name"
+	craneRefAnnotation := "org.opencontainers.image.base.name"
+	if ref, ok := annotations[orasRefAnnotation]; ok && ref != "" {
 		return ref
 	}
-	if ref, ok := annotations[ocispec.AnnotationBaseImageName]; ok && ref != "" {
+	if ref, ok := annotations[dockerRefAnnotation]; ok && ref != "" {
 		return ref
 	}
-	if ref, ok := annotations["io.containerd.image.name"]; ok && ref != "" {
+	if ref, ok := annotations[craneRefAnnotation]; ok && ref != "" {
 		return ref
 	}
 	return ""
