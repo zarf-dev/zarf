@@ -243,6 +243,26 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	return nil
 }
 
+// IsSigned returns true if the package is signed.
+// It first checks the package metadata (Build.Signed), then falls back to
+// checking for the presence of a signature file for backward compatibility.
+func (p *PackageLayout) IsSigned() bool {
+	// Check metadata first (authoritative source)
+	if p.Pkg.Build.Signed != nil {
+		return *p.Pkg.Build.Signed
+	}
+
+	// Backward compatibility: check for signature file existence
+	// This handles packages created before the Build.Signed field was added
+	if p.dirPath != "" {
+		if _, err := os.Stat(filepath.Join(p.dirPath, Signature)); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // GetSBOM outputs the SBOM data from the package to the given destination path.
 func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	if !p.ContainsSBOM() {
