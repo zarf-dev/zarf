@@ -249,7 +249,17 @@ func (v Values) Validate(ctx context.Context, schemaPath string) error {
 	}()
 
 	// Load the schema from file
-	schemaLoader := gojsonschema.NewReferenceLoader("file://" + schemaPath)
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return &SchemaValidationError{
+			SchemaPath: schemaPath,
+			Err:        fmt.Errorf("failed to resolve absolute path: %w", err),
+		}
+	}
+	// Convert backslashes to forward slashes for file URI
+	absPath = filepath.ToSlash(absPath)
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
 
 	// Convert Values to a document for validation
 	documentLoader := gojsonschema.NewGoLoader(v)

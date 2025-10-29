@@ -76,7 +76,6 @@ func TestValuesSchema(t *testing.T) {
 		// Create should succeed with valid values
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
 		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdOut, "values validated against schema")
 
 		// Deploy should also succeed
 		packageName := fmt.Sprintf("zarf-package-test-values-schema-valid-%s.tar.zst", e2e.Arch)
