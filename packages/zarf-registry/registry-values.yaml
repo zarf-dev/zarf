@@ -73,6 +73,8 @@ caBundle: |
 
 extraEnvVars:
   ###ZARF_VAR_REGISTRY_EXTRA_ENVS###
+  - name: OTEL_TRACES_EXPORTER
+    value: none
 
 serviceAccount:
   # Specifies whether a service account should be created
