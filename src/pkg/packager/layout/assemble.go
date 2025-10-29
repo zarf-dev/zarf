@@ -22,8 +22,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -493,7 +493,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 	oldValuesFiles := chart.ValuesFiles
 	valuesFiles := []string{}
 	for _, v := range chart.ValuesFiles {
-		if !filepath.IsAbs(v) {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
 			v = filepath.Join(packagePath, v)
 		}
 		valuesFiles = append(valuesFiles, v)

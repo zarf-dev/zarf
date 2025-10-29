@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-raw-template-configmap
+  namespace: default
+data:
+  rawTemplate: "{{ .Values.rawTemplate }}"

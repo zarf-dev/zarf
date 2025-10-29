@@ -21,6 +21,15 @@ components:
     images:
       # NOTE: Pkgtemplates aren't yet available with value and go-templates.
       - "docker.io/library/nginx:1.29.2"
+    actions:
+      onRemove:
+        before:
+          - cmd: |
+              echo "============================================"
+              echo "Removing {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+              echo "Organization: {{ .Values.site.organization }}"
+              echo "============================================"
     manifests:
       - name: values-with-nginx
         # Enables go-templating within the files.
@@ -50,6 +59,17 @@ components:
           # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
           - sourcePath: ".database.host2"
             targetPath: ".config.database.host"
+
+  - name: actions-with-raw-templates
+    description: "This component demonstrates using template: false to pass go-template syntax to external tools"
+    required: true
+    actions:
+      onCreate:
+        after:
+          # You can disable templating when you need to pass go-template syntax to another tool that uses {{ }} delimiters
+          - cmd: |
+              echo "This {{ .wontBeProcessed }} stays as-is"
+            template: false
 
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
@@ -92,4 +112,8 @@ x-mdx: |
 
     # View the helm chart results
     kubectl get configmap -n helm-overrides
+
+    # Remove the package with values templating in remove actions
+    # Feel free to change --set-values to whatever you want!
+    zarf package remove values-templating --confirm --features="values=true" --set-values="site.name=Example,app.environment=test,site.organization=ZarfDev"
     ```
