@@ -278,7 +278,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err := pkgLayout.SignPackage(ctx, opts)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "cannot sign package: zarf.yaml not found")
+		require.Contains(t, err.Error(), "cannot access zarf.yaml for signing")
 	})
 
 	t.Run("invalid directory path", func(t *testing.T) {
