@@ -320,8 +320,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().BoolVar(&o.skipVersionCheck, "bypass-version-check", false, "Ignore version requirements when deploying the package")
-	_ = cmd.Flags().MarkHidden("bypass-version-check")
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("skip-version-check")
 
 	return cmd
 }
