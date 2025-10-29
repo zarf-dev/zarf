@@ -291,7 +291,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-		err = c.generateOrRenewRegistryCerts(ctx)
+		err = c.GenerateOrRenewRegistryCerts(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
@@ -368,23 +368,28 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 	return false, nil
 }
 
-// generateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
+// GenerateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
 // and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
 // Only generates certificates if they don't exist or have less than 50% remaining life.
-func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
+func (c *Cluster) GenerateOrRenewRegistryCerts(ctx context.Context) error {
 	l := logger.From(ctx)
+
+	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath)
+	if err != nil {
+		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+	}
 
 	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsProxyRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
+	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
 	if err != nil {
 		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
 	}
 
-	if !needsServerRenewal && !needsProxyRenewal {
+	if !needsServerRenewal && !needsClientRenewal && !needsCARenewal {
 		return nil
 	}
 
@@ -432,7 +437,7 @@ func (c *Cluster) generateOrRenewRegistryCerts(ctx context.Context) error {
 		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
 	}
 
-	l.Info("certificates for mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
+	l.Info("certificates for registry mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
 	return nil
 }
 
