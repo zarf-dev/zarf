@@ -22,33 +22,30 @@ import (
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns the OCI manifest for the image.
-func Unpack(ctx context.Context, tarPath string, destDir string) (ocispec.Manifest, error) {
+func Unpack(ctx context.Context, tarPath string, destDir string) (_ ocispec.Manifest, err error) {
 	// Create a temporary directory for extraction
 	tmpDir, err := utils.MakeTempDir("")
 	if err != nil {
 		return ocispec.Manifest{}, fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
 
-	// Extract the tar
-	extractDir := filepath.Join(tmpDir, "extracted")
-	if err := archive.Decompress(ctx, tarPath, extractDir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{}); err != nil {
 		return ocispec.Manifest{}, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
 	// Find the actual image directory (since we may have wrapped it)
-	entries, err := os.ReadDir(extractDir)
+	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return ocispec.Manifest{}, fmt.Errorf("failed to read extracted directory: %w", err)
 	}
 
-	// If there's only one directory, assume it's the image directory
-	var imageDir string
-	if len(entries) == 1 && entries[0].IsDir() {
-		imageDir = filepath.Join(extractDir, entries[0].Name())
-	} else {
-		imageDir = extractDir
+	if len(entries) != 1 {
+		return ocispec.Manifest{}, fmt.Errorf("failed to properly extract directory")
 	}
+	imageDir := filepath.Join(tmpDir, entries[0].Name())
 
 	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
