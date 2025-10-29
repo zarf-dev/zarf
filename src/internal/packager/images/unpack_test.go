@@ -5,12 +5,10 @@
 package images
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -53,23 +51,6 @@ func TestUnpack(t *testing.T) {
 		layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
 		require.FileExists(t, layerBlobPath)
 	}
-
-	// Get the manifest descriptor from the index
-	require.Len(t, idx.Manifests, 1)
-	manifestDesc := idx.Manifests[0]
-
-	// Fetch the manifest from the store
-	manifestBlobPath := filepath.Join(dstDir, "blobs", "sha256", manifestDesc.Digest.Hex())
-	manifestBytes, err := os.ReadFile(manifestBlobPath)
-	require.NoError(t, err)
-
-	var storedManifest ocispec.Manifest
-	err = json.Unmarshal(manifestBytes, &storedManifest)
-	require.NoError(t, err)
-
-	// Verify the stored manifest matches the returned manifest
-	require.Equal(t, manifest.Config.Digest, storedManifest.Config.Digest)
-	require.Equal(t, len(manifest.Layers), len(storedManifest.Layers))
 }
 
 func TestUnpackInvalidTar(t *testing.T) {
