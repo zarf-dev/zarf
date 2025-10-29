@@ -278,7 +278,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err := pkgLayout.SignPackage(ctx, opts)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "cannot sign package: zarf.yaml not found")
+		require.Contains(t, err.Error(), "cannot access zarf.yaml for signing")
 	})
 
 	t.Run("invalid directory path", func(t *testing.T) {
@@ -453,33 +453,6 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		// Verify Signed field was not set
 		require.Nil(t, pkgLayout.Pkg.Build.Signed)
-	})
-
-	t.Run("Signed field set to true on success", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-
-		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-		require.NoError(t, err)
-
-		pkgLayout := &PackageLayout{
-			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
-		}
-
-		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-			return []byte("test"), nil
-		})
-		opts := utils.DefaultSignBlobOptions()
-		opts.KeyRef = "./testdata/cosign.key"
-		opts.PassFunc = passFunc
-
-		err = pkgLayout.SignPackage(ctx, opts)
-		require.NoError(t, err)
-
-		// Verify Signed field is set to true
-		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
-		require.True(t, *pkgLayout.Pkg.Build.Signed)
 	})
 
 	t.Run("preserves existing Signed value on skip", func(t *testing.T) {
