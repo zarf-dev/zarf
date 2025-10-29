@@ -14,7 +14,7 @@ spec:
         # Don't mutate this pod
         zarf.dev/agent: ignore
       annotations:
-{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-proxy-tls") }}
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-client-tls") }}
 {{- if $tlsSecret }}
         checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
 {{- end }}
@@ -59,7 +59,7 @@ spec:
       volumes:
         - name: proxy-certs
           secret:
-            secretName: zarf-registry-proxy-tls
+            secretName: zarf-registry-client-tls
     # IPV6 does not support rewriting packets to localhost so it needs to use hostNetwork over hostPort
     {{- if eq (include "proxy.hostNetwork" .) "true" }}
       dnsPolicy: ClusterFirstWithHostNet
