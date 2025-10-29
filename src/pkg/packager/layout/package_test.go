@@ -756,3 +756,252 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	t.Run("successful verification with valid signature", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		signedPath := filepath.Join(tmpDir, Signature)
+
+		// Create and sign a package
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Sign the package
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, signedPath)
+
+		// Verify the signature
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.NoError(t, err)
+	})
+
+	t.Run("verification fails with wrong public key", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		// Create and sign a package
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Sign with the test key
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+
+		// Try to verify with a different (non-existent) key - should fail
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/nonexistent.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+	})
+
+	t.Run("verification fails when signature missing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		// Create zarf.yaml but no signature
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature not found")
+	})
+
+	t.Run("verification fails with empty dirPath", func(t *testing.T) {
+		pkgLayout := &PackageLayout{
+			dirPath: "",
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.EqualError(t, err, "invalid package layout: dirPath is empty")
+	})
+
+	t.Run("verification fails with invalid directory", func(t *testing.T) {
+		pkgLayout := &PackageLayout{
+			dirPath: "/nonexistent/path",
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid package layout directory")
+	})
+
+	t.Run("verification fails when dirPath is a file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "somefile.txt")
+		err := os.WriteFile(filePath, []byte("content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: filePath,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "is not a directory")
+	})
+
+	t.Run("verification fails with no public key", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		signedPath := filepath.Join(tmpDir, Signature)
+
+		// Create signed package
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Sign the package
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, signedPath)
+
+		// Try to verify without providing a key
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "" // Empty key
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.EqualError(t, err, "no public key specified")
+	})
+
+	t.Run("verification fails when signature is corrupted", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		signedPath := filepath.Join(tmpDir, Signature)
+
+		// Create and sign package
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Sign the package
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, signedPath)
+
+		// Corrupt the signature
+		err = os.WriteFile(signedPath, []byte("corrupted signature data"), 0o644)
+		require.NoError(t, err)
+
+		// Try to verify with corrupted signature
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+	})
+
+	t.Run("verification fails when zarf.yaml is modified after signing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		signedPath := filepath.Join(tmpDir, Signature)
+
+		// Create and sign package
+		err := os.WriteFile(yamlPath, []byte("original content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		// Sign the package
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, signedPath)
+
+		// Modify the zarf.yaml after signing (tampering)
+		err = os.WriteFile(yamlPath, []byte("modified content"), 0o644)
+		require.NoError(t, err)
+
+		// Verification should fail because content doesn't match signature
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.Error(t, err)
+	})
+}
