@@ -756,6 +756,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 	pkg.Build.RegistryOverrides = overrides
 
+	// set signed to false by default - this is updated if signing occurs.
+	signed := false
+	pkg.Build.Signed = &signed
+
 	return pkg
 }
 
