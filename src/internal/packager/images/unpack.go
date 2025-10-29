@@ -21,9 +21,15 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
+// ImageWithManifest represents an image reference and its associated OCI manifest.
+type ImageWithManifest struct {
+	Image    transform.Image
+	Manifest ocispec.Manifest
+}
+
 // Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a map of transform.Image to OCI manifests for all images in the tar.
-func Unpack(ctx context.Context, tarPath string, destDir string) (_ map[transform.Image]ocispec.Manifest, err error) {
+// It returns a list of ImageWithManifest for all images in the tar.
+func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
 	tmpDir, err := utils.MakeTempDir("")
 	if err != nil {
@@ -37,7 +43,6 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ map[transfor
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
-	// Find the actual image directory (since we may have wrapped it)
 	entries, err := os.ReadDir(tmpDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
@@ -75,7 +80,7 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ map[transfor
 	}
 
 	// Process all manifests in the index
-	imagesWithManifests := make(map[transform.Image]ocispec.Manifest)
+	var imagesWithManifests []ImageWithManifest
 
 	for _, manifestDesc := range srcIdx.Manifests {
 		// Try to get the reference from annotations in order of preference
@@ -109,7 +114,10 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ map[transfor
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", ref, err)
 		}
 
-		imagesWithManifests[imgRef] = ociManifest
+		imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+			Image:    imgRef,
+			Manifest: ociManifest,
+		})
 	}
 
 	return imagesWithManifests, nil

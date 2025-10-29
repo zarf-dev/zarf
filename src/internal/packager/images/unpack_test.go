@@ -31,21 +31,18 @@ func TestUnpack(t *testing.T) {
 	dstDir := t.TempDir()
 
 	// Call Unpack
-	manifests, err := Unpack(ctx, tarFile, dstDir)
+	images, err := Unpack(ctx, tarFile, dstDir)
 	require.NoError(t, err)
 
-	// Verify we got one manifest
-	require.Len(t, manifests, 1)
+	// Verify we got one image
+	require.Len(t, images, 1)
 
-	// Get the manifest from the map
-	var img transform.Image
-	for imgKey := range manifests {
-		img = imgKey
-	}
+	// Get the first image
+	img := images[0]
 
 	// Verify the manifest is not empty
-	require.NotEmpty(t, manifests[img].Config.Digest)
-	require.NotEmpty(t, manifests[img].Layers)
+	require.NotEmpty(t, img.Manifest.Config.Digest)
+	require.NotEmpty(t, img.Manifest.Layers)
 
 	// Verify the OCI layout was created properly
 	idx, err := getIndexFromOCILayout(dstDir)
@@ -53,11 +50,11 @@ func TestUnpack(t *testing.T) {
 	require.NotEmpty(t, idx.Manifests)
 
 	// Verify that the manifest config blob exists
-	configBlobPath := filepath.Join(dstDir, "blobs", "sha256", manifests[img].Config.Digest.Hex())
+	configBlobPath := filepath.Join(dstDir, "blobs", "sha256", img.Manifest.Config.Digest.Hex())
 	require.FileExists(t, configBlobPath)
 
 	// Verify all layer blobs exist
-	for _, layer := range manifests[img].Layers {
+	for _, layer := range img.Manifest.Layers {
 		layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
 		require.FileExists(t, layerBlobPath)
 	}
@@ -157,20 +154,26 @@ func TestUnpackMultipleImages(t *testing.T) {
 			dstDir := t.TempDir()
 
 			// Call Unpack
-			manifests, err := Unpack(ctx, tarFile, dstDir)
+			images, err := Unpack(ctx, tarFile, dstDir)
 			require.NoError(t, err)
 
 			// Verify the correct number of images were unpacked
-			require.Len(t, manifests, tc.expectedImages)
+			require.Len(t, images, tc.expectedImages)
+
+			// Create a map for easy lookup when verifying specific references
+			imageMap := make(map[string]ImageWithManifest)
+			for _, img := range images {
+				imageMap[img.Image.Reference] = img
+			}
 
 			// Verify specific image references exist
 			for _, ref := range tc.checkImageRefs {
 				imgRef, err := transform.ParseImageRef(ref)
 				require.NoError(t, err)
 
-				manifest, found := manifests[imgRef]
+				img, found := imageMap[imgRef.Reference]
 				require.True(t, found, "expected to find image %s", ref)
-				require.NotEmpty(t, manifest.Config.Digest)
+				require.NotEmpty(t, img.Manifest.Config.Digest)
 			}
 
 			// Verify the OCI layout was created properly
@@ -178,16 +181,16 @@ func TestUnpackMultipleImages(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, idx.Manifests, tc.expectedImages)
 
-			// Verify all manifests have the required blobs
-			for img, manifest := range manifests {
+			// Verify all images have the required blobs
+			for _, img := range images {
 				// Verify config blob exists
-				configBlobPath := filepath.Join(dstDir, "blobs", "sha256", manifest.Config.Digest.Hex())
-				require.FileExists(t, configBlobPath, "config blob missing for %s", img.Reference)
+				configBlobPath := filepath.Join(dstDir, "blobs", "sha256", img.Manifest.Config.Digest.Hex())
+				require.FileExists(t, configBlobPath, "config blob missing for %s", img.Image.Reference)
 
 				// Verify all layer blobs exist
-				for _, layer := range manifest.Layers {
+				for _, layer := range img.Manifest.Layers {
 					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-					require.FileExists(t, layerBlobPath, "layer blob missing for %s", img.Reference)
+					require.FileExists(t, layerBlobPath, "layer blob missing for %s", img.Image.Reference)
 				}
 			}
 		})
