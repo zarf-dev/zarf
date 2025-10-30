@@ -68,9 +68,8 @@ func TestValues(t *testing.T) {
 func TestValuesSchema(t *testing.T) {
 	t.Log("E2E: Values Schema Validation")
 
-	// Test 1: Valid values pass schema validation at create time
 	t.Run("valid values pass schema validation at create time", func(t *testing.T) {
-		src := filepath.Join("src", "test", "packages", "42-values-schema", "valid")
+		src := filepath.Join("src", "test", "packages", "42-values", "schema-valid")
 		tmpdir := t.TempDir()
 
 		// Create should succeed with valid values
@@ -93,9 +92,8 @@ func TestValuesSchema(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	// Test 2: Invalid values fail schema validation at create time
 	t.Run("invalid values fail schema validation at create time", func(t *testing.T) {
-		src := filepath.Join("src", "test", "packages", "42-values-schema", "invalid")
+		src := filepath.Join("src", "test", "packages", "42-values", "schema-invalid")
 		tmpdir := t.TempDir()
 
 		// Create should fail with invalid values
@@ -106,9 +104,8 @@ func TestValuesSchema(t *testing.T) {
 		require.Contains(t, output, "values validation failed", "error should mention schema validation failure")
 	})
 
-	// Test 3: Invalid override values fail schema validation at deploy time
 	t.Run("invalid override values fail schema validation at deploy time", func(t *testing.T) {
-		src := filepath.Join("src", "test", "packages", "42-values-schema", "deploy-invalid")
+		src := filepath.Join("src", "test", "packages", "42-values", "schema-deploy-invalid")
 		tmpdir := t.TempDir()
 
 		// Create should succeed with valid default values
