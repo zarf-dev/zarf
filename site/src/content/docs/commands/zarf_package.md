@@ -38,6 +38,7 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package inspect](/commands/zarf_package_inspect/)	 - Displays the definition of a Zarf package (runs offline)
 * [zarf package list](/commands/zarf_package_list/)	 - Lists out all of the packages that have been deployed to the cluster (runs offline)
 * [zarf package mirror-resources](/commands/zarf_package_mirror-resources/)	 - Mirrors a Zarf package's internal resources to specified image registries and git repositories
+* [zarf package prune](/commands/zarf_package_prune/)	 - Prunes orphaned Helm charts from a deployed Zarf package
 * [zarf package publish](/commands/zarf_package_publish/)	 - Publishes a Zarf package to a remote registry
 * [zarf package pull](/commands/zarf_package_pull/)	 - Pulls a Zarf package from a remote registry and save to the local file system
 * [zarf package remove](/commands/zarf_package_remove/)	 - Removes a Zarf package that has been deployed already (runs offline)

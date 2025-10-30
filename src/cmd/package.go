@@ -60,6 +60,7 @@ func newPackageCommand() *cobra.Command {
 	cmd.AddCommand(newPackageListCommand())
 	cmd.AddCommand(newPackagePublishCommand(v))
 	cmd.AddCommand(newPackagePullCommand(v))
+	cmd.AddCommand(newPackagePruneCommand(v))
 
 	return cmd
 }
@@ -1342,6 +1343,136 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// Package Prune
+// This command prunes helm charts that may be orphaned or otherwise in a pending state and required explicit cleanup
+// This command expects a package / package-name as an argument with the ability to filter by component and chart
+type packagePruneOptions struct {
+	namespaceOverride       string
+	component               string
+	chart                   string
+	skipSignatureValidation bool
+	ociConcurrency          int
+	publicKeyPath           string
+	confirm                 bool
+}
+
+func newPackagePruneCommand(v *viper.Viper) *cobra.Command {
+	o := &packagePruneOptions{}
+
+	cmd := &cobra.Command{
+		Use:               "prune { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
+		Args:              cobra.MaximumNArgs(1),
+		Short:             lang.CmdPackagePruneShort,
+		Long:              lang.CmdPackagePruneLong,
+		RunE:              o.run,
+		ValidArgsFunction: getPackageCompletionArgs,
+	}
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePruneFlagConfirm)
+	cmd.Flags().StringVar(&o.component, "component", "", lang.CmdPackagePruneFlagComponent)
+	cmd.Flags().StringVar(&o.chart, "chart", "", lang.CmdPackagePruneFlagChart)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackagePruneFlagNamespace)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+
+	return cmd
+}
+
+func (o *packagePruneOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	packageSource, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	filter := filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+	)
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+	c, err := cluster.New(ctx)
+	if err != nil {
+		return err
+	}
+	loadOpts := packager.LoadOptions{
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filter,
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+
+	// Get the deployed package state from the cluster
+	deployedPackage, err := c.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(o.namespaceOverride))
+	if err != nil {
+		return fmt.Errorf("unable to get deployed package: %w", err)
+	}
+
+	pruneOpt := packager.PruneOptions{
+		Cluster: c,
+		Timeout: config.ZarfDefaultTimeout,
+	}
+
+	prunableCharts, err := deployedPackage.GetPrunableCharts(o.component, o.chart)
+	if err != nil {
+		return err
+	}
+	// Check if there are any charts to prune
+	totalCharts := 0
+	for _, charts := range prunableCharts {
+		totalCharts += len(charts)
+	}
+	if totalCharts == 0 {
+		logger.From(ctx).Info("no orphaned charts found to prune")
+		return nil
+	}
+
+	// Display all orphaned resources in a table format
+	logger.From(ctx).Info("the following orphaned charts will be pruned")
+	header := []string{"Component", "Chart Name", "Namespace", "Status", "State"}
+	var tableData [][]string
+	for componentName, charts := range prunableCharts {
+		for _, chart := range charts {
+			tableData = append(tableData, []string{
+				componentName,
+				chart.ChartName,
+				chart.Namespace,
+				string(chart.Status),
+				string(chart.State),
+			})
+		}
+	}
+	message.Table(header, tableData)
+
+	if !o.confirm {
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf("Prune %d orphaned chart(s)?", totalCharts),
+		}
+		var confirm bool
+		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+			return fmt.Errorf("package prune cancelled")
+		}
+	}
+
+	// Prune the charts and update state
+	err = packager.PruneCharts(ctx, deployedPackage, prunableCharts, pruneOpt)
+	if err != nil {
+		return fmt.Errorf("failed to prune charts: %w", err)
+	}
+
+	logger.From(ctx).Info("successfully pruned orphaned charts and updated package state")
+
 	return nil
 }
 
