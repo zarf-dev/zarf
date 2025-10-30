@@ -346,7 +346,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 			Name:         manifestFile,
 			ResourceType: ManifestResource,
 		})
-		return err2
+		return nil
 	})
 	if err != nil {
 		return nil, err
