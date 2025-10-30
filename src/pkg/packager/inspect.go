@@ -213,12 +213,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	// Load package-level default values and merge with CLI-provided values
 	packageValues := value.Values{}
 	if len(pkg.Values.Files) > 0 {
-		// Convert relative paths to absolute paths based on packagePath
-		absoluteValuesPaths := make([]string, len(pkg.Values.Files))
+		valuesPaths := make([]string, len(pkg.Values.Files))
 		for i, file := range pkg.Values.Files {
-			absoluteValuesPaths[i] = filepath.Join(packagePath, file)
+			valuesPaths[i] = filepath.Join(packagePath, layout.ValuesDir, file)
 		}
-		packageValues, err = value.ParseFiles(ctx, absoluteValuesPaths, value.ParseFilesOptions{})
+		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse package values files: %w", err)
 		}

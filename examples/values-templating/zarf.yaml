@@ -93,7 +93,11 @@ x-mdx: |
   Deploy this example to see values and templates in action:
 
     ```bash
-    # Create and deploy the package (features="values=true" flag required until general release of values)
+    # Optional: Inspect the manifests and chart values-files (features="values=true" flag required until general release of values)
+    zarf dev inspect manifests --features="values=true"
+    zarf dev inspect values-files --features="values=true"
+
+    # Create and deploy the package
     zarf package create . --confirm --features="values=true"
     zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --features="values=true"
 
