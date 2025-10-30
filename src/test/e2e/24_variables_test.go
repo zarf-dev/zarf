@@ -20,7 +20,7 @@ func TestVariables(t *testing.T) {
 	evilPath := fmt.Sprintf("zarf-package-evil-variables-%s.tar.zst", e2e.Arch)
 	src := filepath.Join("examples", "variables")
 
-	tfPath := "modified-terraform.tf"
+	tfPath := "modified-config.json"
 
 	e2e.CleanFiles(t, tfPath, evilPath)
 
@@ -59,7 +59,7 @@ func TestVariables(t *testing.T) {
 	require.Contains(t, stdErr, "", expectedOutString)
 
 	// Deploy nginx
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "AWS_REGION=unicorn-land", "-l", "trace")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--set", "SITE_NAME=Lula Web", "--set", "SECRET=cool-place", "-l", "trace")
 	require.NoError(t, err, stdOut, stdErr)
 	// Verify that the variables were shown to the user in the formats we expect
 	require.Contains(t, stdOut, "currently set to 'Defense Unicorns' (default)")
@@ -71,7 +71,7 @@ func TestVariables(t *testing.T) {
 	// Verify the terraform file was templated correctly
 	outputTF, err := os.ReadFile(tfPath)
 	require.NoError(t, err)
-	require.Contains(t, string(outputTF), "unicorn-land")
+	require.Contains(t, string(outputTF), "cool-place")
 
 	// Verify the configmap was properly templated
 	kubectlOut, _, err := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-configmap", "-o", "jsonpath='{.data.index\\.html}' ")
@@ -85,9 +85,9 @@ func TestVariables(t *testing.T) {
 	// ORGANIZATION should take the created value
 	require.Contains(t, string(kubectlOut), "Defense Unicorns")
 	// AWS_REGION should have been templated and also templated into this config map
-	require.Contains(t, string(kubectlOut), "unicorn-land")
+	require.Contains(t, string(kubectlOut), "cool-place")
 	// MODIFIED_TERRAFORM_SHASUM should have been templated
-	require.Contains(t, string(kubectlOut), "63af41aebec53e3679948b254073c3c0d603d47ab01b03ab14abd7d98234e101")
+	require.Contains(t, string(kubectlOut), "1e1fd84376096dcaa78479e22398d9f0ab238656199e49767be71f245f8db4e8")
 
 	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")

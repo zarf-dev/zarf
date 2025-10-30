@@ -210,7 +210,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
 	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
-	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs"
+	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +
@@ -267,9 +267,10 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagSigningKeyPassword    = "Password to the private key used for signing packages"
 	CmdPackageCreateFlagDeprecatedKey         = "[Deprecated] Path to private key file for signing packages (use --signing-key instead)"
 	CmdPackageCreateFlagDeprecatedKeyPassword = "[Deprecated] Password to the private key file used for signing packages (use --signing-key-pass instead)"
-	CmdPackageCreateFlagDifferential          = "[beta] Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
-	CmdPackageCreateFlagRegistryOverride      = "Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
+	CmdPackageCreateFlagDifferential          = "Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package"
+	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
+	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
 	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
@@ -282,6 +283,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
 	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
 	CmdPackageDeployFlagNamespace                      = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
+	CmdPackageDeployFlagValuesFiles                    = CmdPackageCreateFlagValuesFiles
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
@@ -292,7 +294,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
 	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
-	CmdPackageRemoveFlagConfirm    = "REQUIRED. Confirm the removal action to prevent accidental deletions"
+	CmdPackageRemoveFlagConfirm    = "Confirms the removal action"
 	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
 
@@ -329,11 +331,11 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"
 
-	CmdDevDeployShort      = "[beta] Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong       = "[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployShort      = "Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong       = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 
-	CmdDevGenerateShort   = "[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart"
+	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
 
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
@@ -398,6 +400,41 @@ $ zarf tools registry push image.tar 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
 # Push an image into an repo hosted at reg.example.com
 $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
 `
+
+	CmdToolsRegistryLoginFlagInteractive = "Interactively prompt for registry server, username, and password if not provided"
+
+	CmdToolsRegistryLoginPromptServer = "Enter the registry server address (e.g., docker.io):"
+
+	CmdToolsRegistryLoginPromptUsername = "Enter registry server username:"
+
+	CmdToolsRegistryLoginPromptPassword = "Enter registry server password:"
+
+	CmdToolsRegistryLoginPromptNoServerProvidedErr = "server argument is required"
+
+	CmdToolsRegistryLoginPromptServerHelp = "Enter the full registry URL (e.g., docker.io, ghcr.io, registry.example.com:5000)"
+
+	CmdToolsRegistryLoginPromptUsernameHelp = "Enter your username or email address for the registry"
+
+	CmdToolsRegistryLoginPromptPasswordHelp = "Enter your password or access token for the registry"
+
+	CmdToolsRegistryLoginPromptNoUsernameProvidedErr = "required flag \"username\" not set"
+
+	CmdToolsRegistryLoginPromptNoPasswordProvidedErr = "one of the flags \"password\" or \"password-stdin\" is required"
+
+	CmdToolsRegistryLoginShort = "Login to a container registry"
+
+	CmdToolsRegistryLoginExample = `
+  # Login interactively (prompts for server, username, password)
+  $ zarf tools registry login --interactive
+
+  # Login with username, prompt for password
+  $ zarf tools registry login --interactive --username myuser docker.io
+
+  # Login normally with all credentials
+  $ zarf tools registry login --username myuser --password mypass docker.io
+
+  # Login with password from stdin
+  $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
 
 	CmdToolsRegistryPullExample = `
 # Pull an image from an internal repo in Zarf to a local tarball

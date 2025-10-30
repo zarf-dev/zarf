@@ -12,6 +12,9 @@ import (
 	"slices"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/internal/feature"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
@@ -30,6 +33,8 @@ type RemoveOptions struct {
 	Cluster           *cluster.Cluster
 	Timeout           time.Duration
 	NamespaceOverride string
+	// Values passed in at remove time. They can come from the CLI or set directly by API callers.
+	value.Values
 }
 
 // Remove removes a package that was already deployed onto a cluster, uninstalling all installed helm charts.
@@ -40,6 +45,21 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 	pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkg)
 	if err != nil {
 		return err
+	}
+
+	if len(pkg.Components) == 0 {
+		return fmt.Errorf("package to remove contains no components")
+	}
+
+	// Check if values feature is enabled when values are passed
+	if len(opts.Values) > 0 && !feature.IsEnabled(feature.Values) {
+		return fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	vals := opts.Values
+	if vals == nil {
+		vals = value.Values{}
 	}
 
 	// Check that cluster is configured if required.
@@ -87,7 +107,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 
 		err := func() error {
-			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil)
+			err := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.Before, nil, vals)
 			if err != nil {
 				return fmt.Errorf("unable to run the before action: %w", err)
 			}
@@ -116,10 +136,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 						l.Warn("helm release was not found. was it already removed?", "name", chart.ChartName, "namespace", chart.Namespace)
 					}
 
-					// Pop the removed helm chart from the installed charts slice.
-					installedCharts := depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts
-					installedCharts = installedCharts[:len(installedCharts)-1]
-					depPkg.DeployedComponents[len(depPkg.DeployedComponents)-1].InstalledCharts = installedCharts
+					// remove the helm chart from the installed charts slice.
+					depComp.InstalledCharts = helpers.RemoveMatches(depComp.InstalledCharts, func(t state.InstalledChart) bool {
+						return t.ChartName == chart.ChartName
+					})
+
 					err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 					if err != nil {
 						// We warn and ignore errors because we may have removed the cluster that this package was inside of
@@ -128,18 +149,20 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 				}
 			}
 
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.After, nil, vals)
 			if err != nil {
 				return fmt.Errorf("unable to run the after action: %w", err)
 			}
-			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil)
+			err = actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnSuccess, nil, vals)
 			if err != nil {
 				return fmt.Errorf("unable to run the success action: %w", err)
 			}
 
-			// Pop the removed component from deploy components slice.
+			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = depPkg.DeployedComponents[:len(depPkg.DeployedComponents)-1]
+				depPkg.DeployedComponents = helpers.RemoveMatches(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
+					return t.Name == depComp.Name
+				})
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)
 				if err != nil {
 					// We warn and ignore errors because we may have removed the cluster that this package was inside of
@@ -149,7 +172,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 			return nil
 		}()
 		if err != nil {
-			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil)
+			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals)
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
 			}

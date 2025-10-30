@@ -81,6 +81,33 @@ $ zarf package create . --set AGENT_IMAGE_TAG=vX.X.X \
   --registry-override quay.io=quay.enterprise.corp
 ```
 
+Registry overrides can also be orchestrated with environment variables and/or configuration files:
+
+```bash
+export ZARF_PACKAGE_CREATE_REGISTRY_OVERRIDE='docker.io=dockerio.enterprise.corp,ghcr.io=ghcr.enterprise.corp,quay.io=quay.enterprise.corp'
+zarf package create .
+```
+
+```yaml
+# zarf-config.yaml
+package:
+  create:
+    registry_override:
+      - docker.io=dockerio.enterprise.corp
+      - ghcr.io=ghcr.enterprise.corp
+      - quay.io=quay.enterprise.corp
+```
+
+```toml
+# zarf-config.toml
+[package.create]
+registry_override = [
+  "docker.io=dockerio.enterprise.corp",
+  "ghcr.io=ghcr.enterprise.corp",
+  "quay.io=quay.enterprise.corp"
+]
+```
+
 And if you need even more control over the exact Agent, Registry, and Gitea images you can specify that with additional `--set` flags:
 
 ```bash

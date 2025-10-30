@@ -17,7 +17,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -82,8 +81,8 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
-	cmd.AddCommand(newRegistryCopyCommand())
-	cmd.AddCommand(newRegistryCatalogCommand())
+	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
+	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 
 	// TODO(soltysh): consider splitting craneOptions to be per command
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdList, &craneOptions, lang.CmdToolsRegistryListExample, 0))
@@ -93,47 +92,152 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
-
 	cmd.AddCommand(craneCmd.NewCmdVersion())
-
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
-
 	return cmd
+}
+
+type registryLoginOptions struct {
+	interactive   bool
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+func (o *registryLoginOptions) run(cmd *cobra.Command, args []string) error {
+	if o.interactive {
+		uname, err := cmd.Flags().GetString("username")
+		if err != nil {
+			return err
+		}
+		pass, err := cmd.Flags().GetString("password")
+		if err != nil {
+			return err
+		}
+		passStdin, err := cmd.Flags().GetBool("password-stdin")
+		if err != nil {
+			return err
+		}
+		//Check if a server was provided
+		if len(args) == 0 {
+			var server string
+			prompt := &survey.Input{
+				Message: lang.CmdToolsRegistryLoginPromptServer,
+				Help:    lang.CmdToolsRegistryLoginPromptServerHelp,
+			}
+			err = survey.AskOne(prompt, &server, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			args = []string{server}
+		}
+		if uname == "" {
+			prompt := &survey.Input{
+				Message: lang.CmdToolsRegistryLoginPromptUsername,
+				Help:    lang.CmdToolsRegistryLoginPromptUsernameHelp,
+			}
+			err = survey.AskOne(prompt, &uname, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			err = cmd.Flags().Set("username", uname)
+			if err != nil {
+				return err
+			}
+		}
+		if pass == "" && !passStdin {
+			prompt := &survey.Password{
+				Message: lang.CmdToolsRegistryLoginPromptPassword,
+				Help:    lang.CmdToolsRegistryLoginPromptPasswordHelp,
+			}
+			err = survey.AskOne(prompt, &pass, survey.WithValidator(survey.Required))
+			if err != nil {
+				return err
+			}
+			err = cmd.Flags().Set("password", pass)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return o.originalRunFn(cmd, args)
 }
 
 func newRegistryLoginCommand() *cobra.Command {
-	cmd := craneCmd.NewCmdAuthLogin()
-	cmd.Example = ""
-	err := cmd.MarkFlagRequired("username")
-	if err != nil {
-		logger.Default().Error("failed to mark username flag required", "error", err.Error())
+	o := &registryLoginOptions{}
+	craneCmd := craneCmd.NewCmdAuthLogin()
+	o.originalRunFn = craneCmd.RunE
+	craneCmd.RunE = o.run
+
+	craneCmd.Example = ""
+	craneCmd.Args = nil
+	craneCmd.Short = lang.CmdToolsRegistryLoginShort
+	craneCmd.Example = lang.CmdToolsRegistryLoginExample
+	craneCmd.Flags().BoolVar(&o.interactive, "interactive", false, lang.CmdToolsRegistryLoginFlagInteractive)
+
+	craneCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		interactive, err := cmd.Flags().GetBool("interactive")
+		if err != nil {
+			return err
+		}
+		if !interactive {
+			if len(args) == 0 {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoServerProvidedErr)
+			}
+			username, err := cmd.Flags().GetString("username")
+			if err != nil {
+				return err
+			}
+			if username == "" {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoUsernameProvidedErr)
+			}
+			password, err := cmd.Flags().GetString("password")
+			if err != nil {
+				return err
+			}
+			passwordStdin, err := cmd.Flags().GetBool("password-stdin")
+			if err != nil {
+				return err
+			}
+			if password == "" && !passwordStdin {
+				return errors.New(lang.CmdToolsRegistryLoginPromptNoPasswordProvidedErr)
+			}
+		}
+		return nil
 	}
-	cmd.MarkFlagsOneRequired("password", "password-stdin")
-	return cmd
+	return craneCmd
 }
 
-func newRegistryCopyCommand() *cobra.Command {
-	// No package information is available so do not pass in a list of architectures
-	craneOptions := []crane.Option{}
-	cmd := craneCmd.NewCmdCopy(&craneOptions)
+func newRegistryCopyCommand(craneOpts *[]crane.Option) *cobra.Command {
+	cmd := craneCmd.NewCmdCopy(craneOpts)
+	// Store crane's original PreRunE if it exists
+	originalPreRunE := cmd.PreRunE
+	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		// No package information is available so do not pass in a list of architectures
+		*craneOpts = append(*craneOpts, crane.WithPlatform(nil))
+		// return the original pre run
+		if originalPreRunE != nil {
+			return originalPreRunE(cmd, args)
+		}
+		return nil
+	}
+
 	return cmd
 }
 
 type registryCatalogOptions struct {
-	craneOptions  []crane.Option
+	craneOptions  *[]crane.Option
 	originalRunFn func(cmd *cobra.Command, args []string) error
 }
 
-func newRegistryCatalogCommand() *cobra.Command {
+func newRegistryCatalogCommand(craneOpts *[]crane.Option) *cobra.Command {
 	o := registryCatalogOptions{
 		// No package information is available so do not pass in a list of architectures
-		craneOptions: []crane.Option{},
+		craneOptions: craneOpts,
 	}
 
-	cmd := craneCmd.NewCmdCatalog(&o.craneOptions)
+	cmd := craneCmd.NewCmdCatalog(o.craneOptions)
 	cmd.Example = lang.CmdToolsRegistryCatalogExample
 	cmd.Args = nil
 
@@ -169,7 +273,7 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Add the correct authentication to the crane command options
 	authOption := images.WithPullAuth(zarfState.RegistryInfo)
-	o.craneOptions = append(o.craneOptions, authOption)
+	*o.craneOptions = append(*o.craneOptions, authOption)
 
 	if tunnel != nil {
 		defer tunnel.Close()
@@ -179,7 +283,10 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
-type registryPruneOptions struct{}
+type registryPruneOptions struct {
+	confirm  bool
+	insecure bool
+}
 
 func newRegistryPruneCommand() *cobra.Command {
 	o := registryPruneOptions{}
@@ -192,7 +299,8 @@ func newRegistryPruneCommand() *cobra.Command {
 	}
 
 	// Always require confirm flag (no viper)
-	cmd.Flags().BoolVar(&config.CommonOptions.Confirm, "confirm", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
 }
@@ -202,6 +310,10 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	c, err := cluster.New(cmd.Context())
 	if err != nil {
 		return err
+	}
+	options := []crane.Option{}
+	if o.insecure {
+		options = append(options, crane.Insecure)
 	}
 
 	ctx := cmd.Context()
@@ -226,15 +338,17 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	if tunnel != nil {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
-		return tunnel.Wrap(func() error { return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint) })
+		return tunnel.Wrap(func() error {
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+		})
 	}
 
-	return doPruneImagesForPackages(ctx, zarfState, zarfPackages, registryEndpoint)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
 }
 
-func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool) error {
 	l := logger.From(ctx)
-	authOption := images.WithPushAuth(s.RegistryInfo)
+	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
 	l.Info("finding images to prune")
 
@@ -255,7 +369,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 						return err
 					}
 
-					digest, err := crane.Digest(transformedImageNoCheck, authOption)
+					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
 						return err
 					}
@@ -266,20 +380,20 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 	}
 
 	// Find which images and tags are in the registry currently
-	imageCatalog, err := crane.Catalog(registryEndpoint, authOption)
+	imageCatalog, err := crane.Catalog(registryEndpoint, options...)
 	if err != nil {
 		return err
 	}
 	referenceToDigest := map[string]string{}
 	for _, image := range imageCatalog {
 		imageRef := fmt.Sprintf("%s/%s", registryEndpoint, image)
-		tags, err := crane.ListTags(imageRef, authOption)
+		tags, err := crane.ListTags(imageRef, options...)
 		if err != nil {
 			return err
 		}
 		for _, tag := range tags {
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
-			digest, err := crane.Digest(taggedImageRef, authOption)
+			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
 				return err
 			}
@@ -310,10 +424,9 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 		l.Info(digestRef)
 	}
 
-	confirm := config.CommonOptions.Confirm
 	if !confirm {
 		prompt := &survey.Confirm{
-			Message: "continue with image prune?",
+			Message: "Continue with image prune?",
 		}
 		if err := survey.AskOne(prompt, &confirm); err != nil {
 			return fmt.Errorf("confirm selection canceled: %w", err)
@@ -324,7 +437,7 @@ func doPruneImagesForPackages(ctx context.Context, s *state.State, zarfPackages 
 
 		// Delete the digest references that are to be pruned
 		for digestRef := range imageDigestsToPrune {
-			err = crane.Delete(digestRef, authOption)
+			err = crane.Delete(digestRef, options...)
 			if err != nil {
 				return err
 			}

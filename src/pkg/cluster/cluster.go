@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/avast/retry-go/v4"
-	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -36,6 +38,10 @@ const (
 	AgentLabel = "zarf.dev/agent"
 	// FieldManagerName is the field manager used during server side apply
 	FieldManagerName = "zarf"
+	// PackageLabel is the label used to identify the owning of package.
+	PackageLabel string = "zarf.dev/package"
+	// NamespaceOverrideLabel is the label used to identify the namespace override.
+	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
 // Cluster Zarf specific cluster management functions.
@@ -158,6 +164,7 @@ type InitStateOptions struct {
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
+// If state was already initialized then internal services (registry, git server, artifact server) won't be updated
 func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.State, error) {
 	l := logger.From(ctx)
 
@@ -237,6 +244,12 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
+		ipFamily, err := c.GetIPFamily(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+		}
+		s.IPFamily = ipFamily
+
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -258,24 +271,13 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues()
+		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
 		if err != nil {
 			return nil, err
 		}
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
-	} else {
-		// TODO (@austinabro321) validate immediately in `zarf init` if these are set and not equal and error out if so
-		if helpers.IsNotZeroAndNotEqual(opts.GitServer, s.GitServer) {
-			l.Warn("ignoring change in git sever init options on re-init, to update run `zarf tools update-creds git`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.RegistryInfo, s.RegistryInfo) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
-		if helpers.IsNotZeroAndNotEqual(opts.ArtifactServer, s.ArtifactServer) {
-			l.Warn("ignoring change to registry init options on re-init, to update run `zarf tools update-creds registry`")
-		}
 	}
 
 	switch s.Distro {
@@ -315,6 +317,14 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
+	if s.RegistryInfo.RegistryMode == "" {
+		if s.RegistryInfo.IsInternal() {
+			s.RegistryInfo.RegistryMode = state.RegistryModeNodePort
+		} else {
+			s.RegistryInfo.RegistryMode = state.RegistryModeExternal
+		}
+	}
 	state.DebugPrint(ctx, s)
 	return s, nil
 }
@@ -341,4 +351,64 @@ func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
 		return fmt.Errorf("unable to apply the zarf state secret: %w", err)
 	}
 	return nil
+}
+
+// GetIPFamily returns the IP family of the cluster, can be ipv4, ipv6, or dual.
+func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error) {
+	svcName := "zarf-ip-family-test"
+	service := v1ac.Service(svcName, state.ZarfNamespaceName).
+		WithSpec(v1ac.ServiceSpec().
+			WithIPFamilyPolicy(corev1.IPFamilyPolicyPreferDualStack).
+			WithPorts(v1ac.ServicePort().
+				WithPort(443).
+				WithProtocol(corev1.ProtocolTCP).
+				WithName("test-port")).
+			WithType(corev1.ServiceTypeClusterIP))
+
+	_, err = c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Apply(ctx, service, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
+	if err != nil {
+		return "", fmt.Errorf("unable to apply test service: %w", err)
+	}
+
+	defer func() {
+		if deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, svcName, metav1.DeleteOptions{}); deleteErr != nil {
+			err = errors.Join(err, fmt.Errorf("failed to cleanup test service %s: %w", svcName, deleteErr))
+		}
+	}()
+
+	// Use health checks to wait for the service to be ready
+	healthCheck := []v1alpha1.NamespacedObjectKindReference{
+		{
+			APIVersion: "v1",
+			Kind:       "Service",
+			Namespace:  state.ZarfNamespaceName,
+			Name:       svcName,
+		},
+	}
+
+	if err := healthchecks.Run(ctx, c.Watcher, healthCheck); err != nil {
+		return "", fmt.Errorf("service health check failed: %w", err)
+	}
+
+	// Get the updated service to check which IP families are available
+	updatedService, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, svcName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("unable to get updated service: %w", err)
+	}
+
+	// Determine IP family based on the service's IP families
+	ipFamilies := updatedService.Spec.IPFamilies
+	hasIPv4 := slices.Contains(ipFamilies, corev1.IPv4Protocol)
+	hasIPv6 := slices.Contains(ipFamilies, corev1.IPv6Protocol)
+
+	switch {
+	case hasIPv4 && hasIPv6:
+		return state.IPFamilyDualStack, nil
+	case hasIPv6:
+		return state.IPFamilyIPv6, nil
+	case hasIPv4:
+		return state.IPFamilyIPv4, nil
+	default:
+		return "", fmt.Errorf("unable to determine IP family of cluster")
+	}
 }

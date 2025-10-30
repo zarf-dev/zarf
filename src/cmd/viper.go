@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -37,6 +38,10 @@ const (
 	VLogFormat = "log_format"
 	VNoColor   = "no_color"
 
+	// Root config, Features
+
+	VFeatures = "features"
+
 	// Init config keys
 
 	VInitComponents   = "init.components"
@@ -54,6 +59,7 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
+	InjectorHostPort      = "init.registry.injector_hostport"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
 	VInitRegistryPushPass = "init.registry.push_password"
@@ -93,11 +99,13 @@ const (
 	VPkgDeployTimeout    = "package.deploy.timeout"
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
+	VPkgDeployValues     = "package.deploy.values"
 
 	// Package publish config keys
 
 	VPkgPublishSigningKey         = "package.publish.signing_key"
 	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
+	VPkgPublishRetries            = "package.publish.retries"
 
 	// Package pull config keys
 
@@ -215,6 +223,22 @@ func setDefaults() {
 	v.SetDefault(VPkgOCIConcurrency, zoci.DefaultConcurrency)
 	v.SetDefault(VPkgRetries, config.ZarfDefaultRetries)
 
+	v.SetDefault(InjectorHostPort, state.ZarfInjectorHostPort)
+
 	// Deploy opts that are non-zero values
 	v.SetDefault(VPkgDeployTimeout, config.ZarfDefaultTimeout)
+
+	// Package publish opts that are non-zero values
+	v.SetDefault(VPkgPublishRetries, 1)
+}
+
+// GetStringSlice returns a string slice from viper
+// it consistently returns expected results across flags and environment variables
+// https://github.com/spf13/viper/issues/380
+func GetStringSlice(v *viper.Viper, key string) []string {
+	var result []string
+	if err := v.UnmarshalKey(key, &result); err != nil {
+		return nil
+	}
+	return result
 }

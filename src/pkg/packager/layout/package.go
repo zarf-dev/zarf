@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v2/cmd/cosign/cli/verify"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -275,6 +275,9 @@ func (p *PackageLayout) FileName() (string, error) {
 			name, p.Pkg.Build.DifferentialPackageVersion, p.Pkg.Metadata.Version)
 	} else if p.Pkg.Metadata.Version != "" {
 		name = fmt.Sprintf("%s-%s", name, p.Pkg.Metadata.Version)
+	}
+	if p.Pkg.Build.Flavor != "" {
+		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
 	}
 
 	if p.Pkg.Metadata.Uncompressed {

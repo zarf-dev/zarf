@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf dev deploy
 
-[beta] Creates and deploys a Zarf package from a given directory
+Creates and deploys a Zarf package from a given directory
 
 ### Synopsis
 
-[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
+Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
 
 ```
 zarf dev deploy [flags]
@@ -21,22 +21,24 @@ zarf dev deploy [flags]
 ### Options
 
 ```
-      --adopt-existing-resources           Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
-      --components string                  Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-      --create-set stringToString          Specify package variables to set on the command line (KEY=value) (default [])
-      --deploy-set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
-  -f, --flavor string                      The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                               help for deploy
-      --no-yolo                            Disable the YOLO mode default override and create / deploy the package as-defined
-      --registry-override stringToString   Specify a map of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet) (default [])
-      --retries int                        Number of retries to perform for Zarf deploy operations like git/image pushes or Helm installs (default 3)
-      --timeout duration                   Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --components string               Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
+      --create-set stringToString       Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString       Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                   The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                            help for deploy
+      --no-yolo                         Disable the YOLO mode default override and create / deploy the package as-defined
+      --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --registry-override stringArray   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
 ```
 
 ### Options inherited from parent commands
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")

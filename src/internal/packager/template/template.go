@@ -14,7 +14,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -27,12 +26,12 @@ const (
 )
 
 // GetZarfVariableConfig gets a variable configuration specific to Zarf
-func GetZarfVariableConfig(ctx context.Context) *variables.VariableConfig {
+func GetZarfVariableConfig(ctx context.Context, isInteractive bool) *variables.VariableConfig {
 	prompt := func(variable v1alpha1.InteractiveVariable) (value string, err error) {
-		if config.CommonOptions.Confirm {
-			return variable.Default, nil
+		if isInteractive {
+			return interactive.PromptVariable(ctx, variable)
 		}
-		return interactive.PromptVariable(ctx, variable)
+		return variable.Default, nil
 	}
 
 	return variables.New("zarf", prompt, logger.From(ctx))
@@ -47,7 +46,13 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		gitInfo := s.GitServer
 
 		builtinMap := map[string]string{
-			"STORAGE_CLASS": s.StorageClass,
+			"STORAGE_CLASS":               s.StorageClass,
+			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
+			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.RegistryMode == state.RegistryModeProxy),
+			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
+			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),
+			"INJECTOR_PAYLOAD_CONFIGMAPS": fmt.Sprintf("%d", s.InjectorInfo.PayLoadConfigMapAmount),
+			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
@@ -73,7 +78,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			builtinMap["AGENT_CA"] = base64.StdEncoding.EncodeToString(agentTLS.CA)
 
 		case "zarf-seed-registry", "zarf-registry":
-			builtinMap["SEED_REGISTRY"] = fmt.Sprintf("%s:%s", helpers.IPV4Localhost, config.ZarfSeedPort)
+			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
 			htpasswd, err := generateHtpasswd(&regInfo)
 			if err != nil {
 				return templateMap, err
@@ -98,10 +103,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		}
 	}
 
-	err = debugPrintTemplateMap(ctx, templateMap)
-	if err != nil {
-		return nil, err
-	}
+	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
 }
@@ -126,10 +128,9 @@ func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
 	return "", nil
 }
 
-func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) error {
+func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
 	sanitizedMap := getSanitizedTemplateMap(templateMap)
 	logger.From(ctx).Debug("cluster.debugPrintTemplateMap", "templateMap", sanitizedMap)
-	return nil
 }
 
 func getSanitizedTemplateMap(templateMap map[string]*variables.TextTemplate) map[string]string {

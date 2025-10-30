@@ -154,12 +154,6 @@ The default timeout for Helm operations in Zarf is 15 minutes.
 
 Use the `--timeout` flag with `zarf init` and `zarf package deploy` to modify the timeout duration.
 
-### Retry Policy
-
-Zarf retries install and upgrade operations up to three times by default if an error occurs.
-
-Use the `--retries` flag with `zarf init` and `zarf package deploy` to change the number of retry attempts.
-
 ### Rollback Process
 
 If attempts to upgrade a chart fail, Zarf tries to roll the chart back to its last successful release. During this rollback process:

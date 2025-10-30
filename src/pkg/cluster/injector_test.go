@@ -11,12 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,17 +109,19 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999)
+		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, podList.Items, 1)
 		require.Equal(t, "injector", podList.Items[0].Name)
+		require.Equal(t, "test", podList.Items[0].Labels["zarf.dev/package"])
 
 		svcList, err := cs.CoreV1().Services(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
 		require.Len(t, svcList.Items, 1)
+		require.Equal(t, "test", svcList.Items[0].Labels["zarf.dev/package"])
 		expected, err := os.ReadFile("./testdata/expected-injection-service.json")
 		require.NoError(t, err)
 		svc, err := cs.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, "zarf-injector", metav1.GetOptions{})
@@ -134,6 +138,7 @@ func TestInjector(t *testing.T) {
 		cm, err := cs.CoreV1().ConfigMaps(state.ZarfNamespaceName).Get(ctx, "rust-binary", metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Equal(t, binData, cm.BinaryData["zarf-injector"])
+		require.Equal(t, "test", cm.Labels["zarf.dev/package"])
 	}
 
 	err = c.StopInjection(ctx)
@@ -163,8 +168,9 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq)
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
 	require.Equal(t, "injector", *pod.Name)
+	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 
@@ -173,122 +179,383 @@ func TestBuildInjectionPod(t *testing.T) {
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
 }
 
+func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
+	t.Helper()
+	cs := fake.NewClientset()
+	ctx := context.Background()
+
+	for _, node := range nodes {
+		_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	for _, pod := range pods {
+		_, err := cs.CoreV1().Pods(pod.Namespace).Create(ctx, &pod, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	return &Cluster{Clientset: cs}
+}
+
 func TestGetInjectorImageAndNode(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	cs := fake.NewClientset()
 
-	c := &Cluster{
-		Clientset: cs,
-	}
+	// Common resource requirement for injector
+	resReq := v1ac.ResourceRequirements().
+		WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("500m"),
+			corev1.ResourceMemory: resource.MustParse("64Mi"),
+		}).
+		WithLimits(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("1"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
+		})
 
-	nodes := []corev1.Node{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "no-resources",
-			},
-			Status: corev1.NodeStatus{
-				Allocatable: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("400m"),
-					corev1.ResourceMemory: resource.MustParse("50Mi"),
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "no-schedule-taint",
-			},
-			Spec: corev1.NodeSpec{
-				Taints: []corev1.Taint{
-					{
-						Effect: corev1.TaintEffectNoSchedule,
-					},
-				},
-			},
+	t.Run("happy path", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good"},
 			Status: corev1.NodeStatus{
 				Allocatable: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("10Gi"),
 				},
 			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "good",
-			},
-			Status: corev1.NodeStatus{
-				Allocatable: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1000m"),
-					corev1.ResourceMemory: resource.MustParse("10Gi"),
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "no-execute-taint",
-			},
-			Spec: corev1.NodeSpec{
-				Taints: []corev1.Taint{
-					{
-						Effect: corev1.TaintEffectNoExecute,
-					},
-				},
-			},
-			Status: corev1.NodeStatus{
-				Allocatable: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1000m"),
-					corev1.ResourceMemory: resource.MustParse("10Gi"),
-				},
-			},
-		},
-	}
-	for i, node := range nodes {
-		_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
-		require.NoError(t, err)
-		podName := fmt.Sprintf("pod-%d", i)
-		pod := corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: "default",
-			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good-pod", Namespace: "default"},
 			Spec: corev1.PodSpec{
-				NodeName: node.Name,
-				InitContainers: []corev1.Container{
-					{
-						Image: podName + "-init",
+				NodeName:   "good",
+				Containers: []corev1.Container{{Image: "nginx"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+		require.NoError(t, err)
+		require.Equal(t, "nginx", image)
+		require.Equal(t, "good", node)
+	})
+
+	t.Run("insufficient resources", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "tiny"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("200m"),
+					corev1.ResourceMemory: resource.MustParse("32Mi"),
+				},
+			},
+		}}
+		c := setupCluster(t, nodes, nil)
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no suitable injector image or node")
+	})
+
+	t.Run("blocking taint", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "tainted"},
+			Spec: corev1.NodeSpec{
+				Taints: []corev1.Taint{{Effect: corev1.TaintEffectNoSchedule}},
+			},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "tainted-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "tainted",
+				Containers: []corev1.Container{{Image: "nginx"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		require.Error(t, err)
+	})
+
+	t.Run("only zarf images", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "zarf-node"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "zarf-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "zarf-node",
+				Containers: []corev1.Container{{Image: "127.0.0.1:5000/zarf"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		require.Error(t, err)
+	})
+
+	t.Run("allocatable reduced by running pods", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "crowded"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+			},
+		}}
+
+		// Create a pod that consumes most of the allocatable resources
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "heavy-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName: "crowded",
+				Containers: []corev1.Container{{
+					Image: "busybox",
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("800m"),
+							corev1.ResourceMemory: resource.MustParse("900Mi"),
+						},
+					},
+				}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+
+		c := setupCluster(t, nodes, pods)
+
+		// Request more than the remaining resources (200m CPU / 100Mi mem left)
+		resReq := v1ac.ResourceRequirements().WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("300m"),  // too big
+			corev1.ResourceMemory: resource.MustParse("200Mi"), // too big
+		})
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no suitable injector image or node")
+
+		// But if we shrink the request to fit the remaining allocatable,
+		// the injector should succeed
+		smallReq := v1ac.ResourceRequirements().WithRequests(corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"), // fits in 200m left
+			corev1.ResourceMemory: resource.MustParse("50Mi"), // fits in 100Mi left
+		})
+
+		image, node, err := c.getInjectorImageAndNode(ctx, smallReq)
+		require.NoError(t, err)
+		require.Equal(t, "busybox", image)
+		require.Equal(t, "crowded", node)
+	})
+}
+
+func TestGetInjectorDaemonsetImage(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		nodes         []corev1.Node
+		expectedImage string
+		expectedError string
+	}{
+		{
+			name: "selects latest pause image with valid semver 3.x and under 1MiB",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.2"},
+								SizeBytes: 800000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 900000,
+							},
+							{
+								Names:     []string{"nginx:latest"},
+								SizeBytes: 100000000,
+							},
+						},
 					},
 				},
-				Containers: []corev1.Container{
-					{
-						Image: podName + "-container",
-					},
-				},
-				EphemeralContainers: []corev1.EphemeralContainer{
-					{
-						EphemeralContainerCommon: corev1.EphemeralContainerCommon{
-							Image: podName + "-ephemeral",
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"registry.k8s.io/pause:3.5"},
+								SizeBytes: 500000,
+							},
 						},
 					},
 				},
 			},
-		}
-		_, err = cs.CoreV1().Pods(pod.Namespace).Create(ctx, &pod, metav1.CreateOptions{})
-		require.NoError(t, err)
+			expectedImage: "k8s.gcr.io/pause:3.9",
+		},
+		{
+			name: "accepts pause images with names containing pause",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"docker.io/my-app/pause-container:3.6"},
+								SizeBytes: 400000,
+							},
+							{
+								Names:     []string{"registry.k8s.io/pausetest:3.7"},
+								SizeBytes: 300000,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "registry.k8s.io/pausetest:3.7",
+		},
+		{
+			name: "ignores pause images outside of 3-4 major version",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/my-custom-pause-app:2.9"},
+								SizeBytes: 60,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.0"},
+								SizeBytes: 1000000,
+							},
+							{
+								Names:     []string{"k8s.gcr.io/my-personal-image-with-pause:5.1"},
+								SizeBytes: 40,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.0",
+		},
+		{
+			name: "ignores pause images over 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048577, // 1 MiB + 1 byte
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "smallest-image:1.0",
+		},
+		{
+			name: "accepts pause images exactly at 1MiB size limit",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"k8s.gcr.io/pause:3.9"},
+								SizeBytes: 1048576, // exactly 1 MiB
+							},
+							{
+								Names:     []string{"smallest-image:1.0"},
+								SizeBytes: 1000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "k8s.gcr.io/pause:3.9",
+		},
+		{
+			name: "skips zarf mutated image",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{
+							{
+								Names:     []string{"127.0.0.1:5000/pause:3.10"},
+								SizeBytes: 1,
+							},
+							{
+								Names:     []string{"alpine:latest"},
+								SizeBytes: 5000000,
+							},
+						},
+					},
+				},
+			},
+			expectedImage: "alpine:latest",
+		},
+		{
+			name: "returns error when nodes have no images",
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					Status: corev1.NodeStatus{
+						Images: []corev1.ContainerImage{},
+					},
+				},
+			},
+			expectedError: "no suitable image found on any node",
+		},
 	}
 
-	resReq := v1ac.ResourceRequirements().
-		WithRequests(corev1.ResourceList{
-			corev1.ResourceCPU:    resource.MustParse(".5"),
-			corev1.ResourceMemory: resource.MustParse("64Mi"),
-		}).
-		WithLimits(
-			corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("1"),
-				corev1.ResourceMemory: resource.MustParse("256Mi"),
-			})
-	image, node, err := c.getInjectorImageAndNode(ctx, resReq)
-	require.NoError(t, err)
-	require.Equal(t, "pod-2-container", image)
-	require.Equal(t, "good", node)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			// Ensure this times out quickly
+			ctx, cancel := context.WithTimeout(ctx, time.Second)
+			t.Cleanup(cancel)
+			cs := fake.NewClientset()
+			c := &Cluster{
+				Clientset: cs,
+			}
+			for _, node := range tt.nodes {
+				_, err := cs.CoreV1().Nodes().Create(ctx, &node, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			image, err := c.GetInjectorDaemonsetImage(ctx)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedImage, image)
+		})
+	}
 }

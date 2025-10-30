@@ -99,7 +99,7 @@ func TestPull(t *testing.T) {
 	testCases := []struct {
 		name              string
 		refs              []string
-		RegistryOverrides map[string]string
+		RegistryOverrides []RegistryOverride
 		arch              string
 		expectErr         bool
 	}{
@@ -126,8 +126,11 @@ func TestPull(t *testing.T) {
 				"stefanprodan/podinfo:6.4.0",
 			},
 			arch: "amd64",
-			RegistryOverrides: map[string]string{
-				"docker.io": "ghcr.io",
+			RegistryOverrides: []RegistryOverride{
+				{
+					Source:   "docker.io",
+					Override: "ghcr.io",
+				},
 			},
 		},
 	}

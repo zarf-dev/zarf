@@ -29,20 +29,20 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_amd64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.214.0/eksctl_Darwin_amd64.tar.gz
         target: binaries/eksctl_Darwin_x86_64
         executable: true
-        shasum: 88297c757fb1bc731f9ea29931c463a4575eb37f4cee27625774c88d5e8c95e2
+        shasum: f154187b8497c80c490407e5fa7c90eb14fadeb996477a811725f319dc62d445
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Darwin_arm64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.214.0/eksctl_Darwin_arm64.tar.gz
         target: binaries/eksctl_Darwin_arm64
         executable: true
-        shasum: ad97a3196dc8fcbba5c501cf386ab8637663bb6a3876e20bc991a1de07a0831e
+        shasum: 436a9b55cca31e1bdc9a4ad252ca2a95ab9ac98526db053798a181dec725f422
         extractPath: eksctl
-      - source: https://github.com/weaveworks/eksctl/releases/download/v0.170.0/eksctl_Linux_amd64.tar.gz
+      - source: https://github.com/eksctl-io/eksctl/releases/download/v0.214.0/eksctl_Linux_amd64.tar.gz
         target: binaries/eksctl_Linux_x86_64
         executable: true
-        shasum: 790b540f8931424d8c89c10dee4cb5567bff44a5e8ed018c7c3a0ac818cf2e05
+        shasum: 0cd97a2b29b5b0143d22c62a952e39fd8909fb11f9f50095ca177ed08d756425
         extractPath: eksctl
 
   - name: deploy-eks-cluster

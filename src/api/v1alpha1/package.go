@@ -68,6 +68,8 @@ type ZarfPackage struct {
 	Constants []Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources.
 	Variables []InteractiveVariable `json:"variables,omitempty"`
+	// Values imports Zarf values files for templating and overriding Helm values.
+	Values ZarfValues `json:"values,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -170,6 +172,14 @@ type Constant struct {
 	Pattern string `json:"pattern,omitempty"`
 }
 
+// Validate runs all validation checks on a package constant.
+func (c Constant) Validate() error {
+	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
+		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
+	}
+	return nil
+}
+
 // SetVariable tracks internal variables that have been set during this run of Zarf
 type SetVariable struct {
 	Variable `json:",inline"`
@@ -177,12 +187,27 @@ type SetVariable struct {
 	Value string `json:"value"`
 }
 
-// Validate runs all validation checks on a package constant.
-func (c Constant) Validate() error {
-	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
-		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
-	}
-	return nil
+// SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
+type SetValueType string
+
+// SetValueYAML enables YAML parsing.
+var SetValueYAML = SetValueType("yaml")
+
+// SetValueJSON enables JSON parsing.
+var SetValueJSON = SetValueType("json")
+
+// SetValueString sets the raw value.
+var SetValueString = SetValueType("string")
+
+// SetValue declares a value that can be set during a package deploy.
+type SetValue struct {
+	// Key represents which value to assign to.
+	Key string `json:"key,omitempty"`
+	// Value is the current value at the key.
+	Value any `json:"value,omitempty"`
+	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
+	// inserting the value into the template. Defaults to SetValueString behavior when empty.
+	Type SetValueType `json:"type,omitempty"`
 }
 
 // ZarfMetadata lists information about the current ZarfPackage.
@@ -246,4 +271,12 @@ type ZarfBuildData struct {
 	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+}
+
+// ZarfValues imports package-level values files and validation.
+type ZarfValues struct {
+	// Files declares the relative filepath of Values files.
+	Files []string `json:"files,omitempty"`
+	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
+	Schema string `json:"schema,omitempty"`
 }

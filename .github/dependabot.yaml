@@ -21,13 +21,53 @@ updates:
           - "github.com/docker/*"
   - package-ecosystem: github-actions
     directory: /
+    groups:
+      actions-organization:
+        patterns:
+          - "actions/*"
     schedule:
-      interval: daily
+      interval: weekly
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: daily
-  - package-ecosystem: cargo
-    directory: /
-    schedule:
-      interval: daily
+    ignore:
+      # NOTE(mkcp): 09/08/25 These packages were compromised as part of a supply chain attack. Zarf was not affected and
+      # many of the packages have been removed, but we are intentionally ignoring these versions as an extra layer of
+      # safety.
+      - dependency-name: "backslash"
+        versions: ["0.2.1"]
+      - dependency-name: "chalk"
+        versions: ["5.6.1"]
+      - dependency-name: "chalk-template"
+        versions: ["1.1.1"]
+      - dependency-name: "color-convert"
+        versions: ["3.1.1"]
+      - dependency-name: "color-name"
+        versions: ["2.0.1"]
+      - dependency-name: "color-string"
+        versions: ["2.1.1"]
+      - dependency-name: "wrap-ansi"
+        versions: ["9.0.1"]
+      - dependency-name: "supports-hyperlinks"
+        versions: ["4.1.1"]
+      - dependency-name: "strip-ansi"
+        versions: ["7.1.1"]
+      - dependency-name: "slice-ansi"
+        versions: ["7.1.1"]
+      - dependency-name: "simple-swizzle"
+        versions: ["0.2.3"]
+      - dependency-name: "is-arrayish"
+        versions: ["0.3.3"]
+      - dependency-name: "error-ex"
+        versions: ["1.3.3"]
+      - dependency-name: "has-ansi"
+        versions: ["6.0.1"]
+      - dependency-name: "ansi-regex"
+        versions: ["6.2.1"]
+      - dependency-name: "ansi-styles"
+        versions: ["6.2.2"]
+      - dependency-name: "supports-color"
+        versions: ["10.2.1"]
+      - dependency-name: "debug"
+        versions: ["4.4.2"]

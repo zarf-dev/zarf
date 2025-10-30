@@ -19,7 +19,9 @@ zarf package inspect manifests [ PACKAGE ] [flags]
 ```
       --components string           comma separated list of components to show manifests for
   -h, --help                        help for manifests
+  -k, --key string                  Path to public key file for validating signed packages
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
+      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --set stringToString          Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
@@ -28,12 +30,11 @@ zarf package inspect manifests [ PACKAGE ] [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-  -k, --key string                 Path to public key file for validating signed packages
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
       --no-color                   Disable terminal color codes in logging and stdout prints.
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --tmpdir string              Specify the temporary directory to use for intermediate files
       --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")

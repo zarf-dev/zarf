@@ -65,7 +65,7 @@ func TestFlavorArchFiltering(t *testing.T) {
 			_, _, err := e2e.Zarf(t, "package", "create", flavorTest, "-o", tmpDir, "--flavor", tt.flavor, "-a", tt.arch, "--no-color", "--confirm")
 			require.NoError(t, err)
 
-			tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-package-flavors-%s-v0.0.0.tar.zst", tt.arch))
+			tarPath := filepath.Join(tmpDir, fmt.Sprintf("zarf-package-test-package-flavors-%s-v0.0.0-%s.tar.zst", tt.arch, tt.flavor))
 			pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{Filter: tt.Filter})
 			require.NoError(t, err)
 			compIDs := []string{}

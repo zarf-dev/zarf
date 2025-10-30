@@ -33,7 +33,7 @@ var User Mode = "user"
 type Name string
 
 // Description is an explanation of the feature, what to expect when it's enabled or disabled, the associated proposal,
-// and any commentary or context appropriate for its stage. Descirptions are mutable, and are intended to be updated
+// and any commentary or context appropriate for its stage. Descriptions are mutable, and are intended to be updated
 // throughout the feature's development lifecycle.
 type Description string
 
@@ -81,6 +81,14 @@ type Feature struct {
 	// Until is the version when a deprecated feature is fully removed. Historical versions included.
 	Until `json:"until,omitempty"`
 	Stage `json:"stage,omitempty"`
+}
+
+func (f Feature) String() string {
+	s := "disabled"
+	if f.Enabled {
+		s = "enabled"
+	}
+	return fmt.Sprintf("%s:%s", f.Name, s)
 }
 
 // IsEnabled allows users to optimistically check for a feature. Useful for control flow. Any user-enabled or disabled
@@ -192,6 +200,14 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 	return m
 }
 
+// List of feature names
+const (
+	// AxolotlMode declares the "axolotl-mode" feature
+	AxolotlMode   Name = "axolotl-mode"
+	RegistryProxy Name = "registry-proxy"
+	Values        Name = "values"
+)
+
 func init() {
 	features := []Feature{
 		// NOTE: Here is an example default feature flag
@@ -203,6 +219,30 @@ func init() {
 		// 	Since:       "v0.60.0",
 		// 	Stage:       GA,
 		// },
+		{
+			Name: AxolotlMode,
+			Description: "Enabling \"axolotl-mode\" runs `zarf say` at the beginning of each CLI command." +
+				"This fun feature is intended to help with testing feature flags.",
+			Enabled: false,
+			Since:   "v0.60.0",
+			Stage:   Alpha,
+		},
+		{
+			Name:        RegistryProxy,
+			Description: "Enables the registry proxy feature during Zarf init",
+			Enabled:     false,
+			Since:       "v0.65.0",
+			Stage:       Alpha,
+		},
+		{
+			Name: Values,
+			Description: "Enabling \"values\" allows for Helm-like values files to be imported. Values are intended to" +
+				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
+				"alternative to Variables .",
+			Enabled: false,
+			Since:   "v0.64.0",
+			Stage:   Alpha,
+		},
 	}
 
 	err := setDefault(features)

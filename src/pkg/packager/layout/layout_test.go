@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	_ "modernc.org/sqlite"
 )
 
 func TestCreateSkeleton(t *testing.T) {
@@ -147,6 +148,9 @@ func TestCreateAbsoluteSources(t *testing.T) {
 								Namespace: "test",
 								Version:   "1.0.0",
 								LocalPath: absoluteChartPath,
+								ValuesFiles: []string{
+									absoluteFilePath,
+								},
 							},
 						},
 					},
@@ -247,4 +251,9 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	importedFileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, "file-import", layout.FilesComponentDir)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(importedFileComponent, "0", "file.txt"))
+
+	// Ensure the sbom exists as expected
+	err = pkgLayout.GetSBOM(ctx, tmpdir)
+	require.NoError(t, err)
+	require.FileExists(t, filepath.Join(tmpdir, "zarf-component-file-import.json"))
 }

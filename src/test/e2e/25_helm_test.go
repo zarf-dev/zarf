@@ -49,6 +49,8 @@ func TestHelm(t *testing.T) {
 
 	t.Run("helm charts example", testHelmChartsExample)
 
+	t.Run("helm charts example with environment registry overrides", testHelmExampleWithOverrides)
+
 	t.Run("helm escaping", testHelmEscaping)
 }
 
@@ -105,6 +107,20 @@ func testHelmChartsExample(t *testing.T) {
 	// Remove the example package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmExampleWithOverrides(t *testing.T) {
+	// Cannot use t.Parallel() here because of the Setenv
+	t.Log("E2E: Helm chart with overrides")
+	tmpdir := t.TempDir()
+
+	// Create a test package (with multiple overrides set from an environment variable)
+	// This should fail but validates that the environment variable is correctly parsed
+	t.Setenv("ZARF_PACKAGE_CREATE_REGISTRY_OVERRIDE", "ghcr.io=localhost:555/noway,docker.io=local-proxy/registry-1.docker.io")
+	defer t.Setenv("ZARF_PACKAGE_CREATE_REGISTRY_OVERRIDE", "")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/helm-charts", "-o", tmpdir, "--tmpdir", tmpdir, "--confirm")
+	require.Error(t, err, stdOut, stdErr)
+	require.Contains(t, string(stdErr), "localhost:555/noway")
 }
 
 func testHelmEscaping(t *testing.T) {
@@ -176,7 +192,7 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 4")
+	require.Contains(t, string(helmOut), "Rollback to 2")
 
 	// Deploy the evil package (again to ensure we check full history)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
@@ -185,7 +201,7 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	// Ensure that we rollback properly
 	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 8")
+	require.Contains(t, string(helmOut), "Rollback to 4")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")

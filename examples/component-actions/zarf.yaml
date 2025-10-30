@@ -129,8 +129,6 @@ components:
           # > NOTE: when including a variable in a command output this will be written to the log regardless of the sensitive setting
           # - use `mute` if you want to silence the command output for sensitive variables
           - cmd: echo "the snake says ${ZARF_VAR_SNAKE_SOUND}"
-          # variables are also exposed as TF_VAR_name for terraform, note the lowercase variable name
-          - cmd: echo "with a TF_VAR, the snake also says ${TF_VAR_snake_sound}"
 
   - name: on-deploy-with-template-use-of-variable
     files:

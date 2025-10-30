@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -27,7 +28,7 @@ type DevDeployOptions struct {
 	// RegistryURL allows for an override to the Zarf state registry URL when not in airgap mode. Important for setting the ###ZARF_REGISTRY### template
 	RegistryURL string
 	// RegistryOverrides overrides the basepath of an OCI image with a path to a different registry during package assembly
-	RegistryOverrides map[string]string
+	RegistryOverrides []images.RegistryOverride
 	// CreateSetVariables are for package templates
 	CreateSetVariables map[string]string
 	// DeploySetVariables are for package variables
@@ -48,7 +49,6 @@ type DevDeployOptions struct {
 func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
-	config.CommonOptions.Confirm = true
 
 	if opts.Retries == 0 {
 		opts.Retries = config.ZarfDefaultRetries
@@ -58,9 +58,10 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:       opts.Flavor,
-		SetVariables: opts.CreateSetVariables,
-		CachePath:    opts.CachePath,
+		Flavor:        opts.Flavor,
+		SetVariables:  opts.CreateSetVariables,
+		CachePath:     opts.CachePath,
+		IsInteractive: false,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -99,7 +100,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables)
+	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.DeploySetVariables, false)
 	if err != nil {
 		return err
 	}
