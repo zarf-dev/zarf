@@ -53,6 +53,8 @@ type AssembleOptions struct {
 	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -174,7 +176,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -200,9 +202,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
 type AssembleSkeletonOptions struct {
-	SigningKeyPath     string
-	SigningKeyPassword string
-	Flavor             string
+	SigningKeyPath       string
+	SigningKeyPassword   string
+	Flavor               string
+	WithBuildMachineInfo bool
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -237,7 +240,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -696,21 +699,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
 	now := time.Now()
-	// Just use $USER env variable to avoid CGO issue.
-	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
-	// Record the name of the user creating the package.
-	if runtime.GOOS == "windows" {
-		pkg.Build.User = os.Getenv("USERNAME")
-	} else {
-		pkg.Build.User = os.Getenv("USER")
-	}
+	if withBuildMachineInfo {
+		// Just use $USER env variable to avoid CGO issue.
+		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
+		// Record the name of the user creating the package.
+		if runtime.GOOS == "windows" {
+			pkg.Build.User = os.Getenv("USERNAME")
+		} else {
+			pkg.Build.User = os.Getenv("USER")
+		}
 
-	// Record the hostname of the package creation terminal.
-	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
-	hostname, _ := os.Hostname()
-	pkg.Build.Terminal = hostname
+		// Record the hostname of the package creation terminal.
+		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
+		hostname, _ := os.Hostname()
+		pkg.Build.Terminal = hostname
+	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion

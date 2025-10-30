@@ -164,6 +164,8 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
+	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 	RemoteOptions
 }
 
@@ -201,9 +203,10 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := layout.AssembleSkeletonOptions{
-		SigningKeyPath:     opts.SigningKeyPath,
-		SigningKeyPassword: opts.SigningKeyPassword,
-		Flavor:             opts.Flavor,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		Flavor:               opts.Flavor,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {
