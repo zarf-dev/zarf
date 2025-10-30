@@ -142,11 +142,6 @@ func TestFooBarBaz(t *testing.T) {
 The end-to-end tests are run sequentially and the naming convention is set intentionally:
 
 - 00-19 tests run prior to `zarf init` (cluster not initialized).
-
-:::note
-Due to resource constraints in public GitHub runners, K8s tests are only performed on Linux.
-:::
-
 - 20 is reserved for `zarf init`.
 - 22 is reserved for tests required the git-server, which is removed at the end of the test.
 - 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server.
