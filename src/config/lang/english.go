@@ -271,6 +271,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
 	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
+	CmdPackageCreateFlagWithBuildMachineInfo  = "Include build machine information (hostname and username) in the package metadata"
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
