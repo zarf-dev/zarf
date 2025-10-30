@@ -81,3 +81,6 @@ serviceAccount:
   name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
   annotations:
     ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
+
+opentelemetry:
+  exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###
