@@ -43,16 +43,22 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
+	// Determine the image directory:
+	// - If there's a single directory entry, the tar had a wrapping directory (e.g., "my-image/")
+	// - If there are multiple entries, the tar contents are at the top level
 	entries, err := os.ReadDir(tmpdir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
 	}
 
-	if len(entries) != 1 {
-		return nil, fmt.Errorf("failed to properly extract directory")
+	var imageDir string
+	if len(entries) == 1 && entries[0].IsDir() {
+		// Single directory entry - navigate into it
+		imageDir = filepath.Join(tmpdir, entries[0].Name())
+	} else {
+		// Multiple entries or single file - use tmpdir directly
+		imageDir = tmpdir
 	}
-	imageDir := filepath.Join(tmpdir, entries[0].Name())
-	// imageDir = tmpdir
 
 	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {

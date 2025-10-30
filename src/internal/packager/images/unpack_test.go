@@ -31,6 +31,46 @@ func TestUnpackInvalidTar(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestUnpackUnwrappedTar(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	// Test with a tar that has contents at the top level (no wrapping directory)
+	// This mimics the structure of tars created by external tools like "tar -cf image.tar blobs/ index.json ..."
+	tarFile := filepath.Join(t.TempDir(), "unwrapped.tar")
+
+	// Create a tar directly from the contents of testdata/my-image without the wrapping directory
+	srcDir := "testdata/my-image"
+	entries, err := os.ReadDir(srcDir)
+	require.NoError(t, err)
+
+	var sources []string
+	for _, entry := range entries {
+		sources = append(sources, filepath.Join(srcDir, entry.Name()))
+	}
+
+	err = archive.Compress(ctx, sources, tarFile, archive.CompressOpts{})
+	require.NoError(t, err)
+
+	dstDir := t.TempDir()
+
+	// Call Unpack
+	images, err := Unpack(ctx, tarFile, dstDir)
+	require.NoError(t, err)
+
+	// Verify we got one image
+	require.Len(t, images, 1)
+
+	// Verify the manifest is not empty
+	require.NotEmpty(t, images[0].Manifest.Config.Digest)
+	require.NotEmpty(t, images[0].Manifest.Layers)
+
+	// Verify the OCI layout was created properly
+	idx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	require.NotEmpty(t, idx.Manifests)
+}
+
 func TestUnpackMissingIndex(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
