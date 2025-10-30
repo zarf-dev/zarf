@@ -10,9 +10,38 @@ In addition, Zarf implements unit tests for specific functions where edge cases 
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
-1. GoLang >= 1.21.x
+1. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
 2. Make
 3. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
+
+## CLI Unit Tests
+
+### Running CLI Unit Tests
+
+There are several ways to run tests depending on your specific situation, such as:
+
+``` bash
+# The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
+make test-unit
+
+# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
+go test ./src/pkg/... -v
+
+# Let's say you only want to run one test. You would run:
+go test ./src/pkg/... -v -run TestFooBarBaz
+```
+
+### Adding New Unit Tests
+
+When adding new unit tests, please ensure that the following requirements are met:
+
+There are generally two types of unit tests within Zarf:
+
+1. Testing isolated functions or files
+1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test the entirety of a command. These are similar to e2e tests, but have faster iteration loops.
+
+To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. For test helper functions check out [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil)
+
 
 ### CLI End-to-End Tests
 
@@ -124,32 +153,3 @@ Due to resource constraints in public GitHub runners, K8s tests are only perform
 - 22 is reserved for tests required the git-server, which is removed at the end of the test.
 - 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server.
 - 99 is reserved for the `zarf destroy` and [YOLO Mode](/ref/examples/yolo/) test.
-
-## CLI Unit Tests
-
-### Running CLI Unit Tests
-
-There are several ways to run tests depending on your specific situation, such as:
-
-``` bash
-# The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
-make test-unit
-
-# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
-go test ./src/pkg/... -v
-
-# Let's say you only want to run one test. You would run:
-go test ./src/pkg/... -v -run TestFooBarBaz
-```
-
-### Adding New CLI Unit Tests
-
-When adding new unit tests, please ensure that the following requirements are met:
-
-1. The test must focus on a true unit, such as a single function or file.
-2. The code being tested must have a clearly defined interface, such as a public specification.
-3. The code being tested should be located within the `src/pkg`.
-
-If all these requirements are met, then a unit test would be appropriate. If not, please consider writing an end-to-end test instead or modify your approach to meet these requirements.
-
-To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. In case you need to mock something out, determine the most suitable approach and if the mock can be used in multiple tests, consider placing it in  `./src/test/mocks/`. This will help enhance the efficiency and organization of the unit tests.
