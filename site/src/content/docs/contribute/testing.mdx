@@ -14,9 +14,7 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 2. Make
 3. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
-## CLI Unit Tests
-
-### Running CLI Unit Tests
+## Unit Tests
 
 There are several ways to run tests depending on your specific situation, such as:
 
@@ -33,15 +31,15 @@ go test ./src/pkg/... -v -run TestFooBarBaz
 
 ### Adding New Unit Tests
 
-To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. For test helper functions check out [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil).
+To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. Generic unit test helper functions can be found in [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil).
 
 There are two types of unit tests within Zarf:
 
 1. Testing isolated functions or files.
-1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test the entirety of a command. These are similar to e2e tests, but have faster iteration loops.
+1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These are similar to e2e tests, but have faster iteration loops.
 
 
-### CLI End-to-End Tests
+## CLI End-to-End Tests
 
 There are several ways to run tests depending on your specific situation, such as:
 
