@@ -37,7 +37,7 @@ When adding new unit tests, please ensure that the following requirements are me
 
 There are generally two types of unit tests within Zarf:
 
-1. Testing isolated functions or files
+1. Testing isolated functions or files.
 1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test the entirety of a command. These are similar to e2e tests, but have faster iteration loops.
 
 To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. For test helper functions check out [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil)
