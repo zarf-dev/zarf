@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifest-with-package-values
+
+values:
+  files:
+    - default-values.yaml
+
+components:
+  - name: httpd
+    manifests:
+      - name: httpd-manifest
+        files:
+          - deployment.yaml
+        template: true

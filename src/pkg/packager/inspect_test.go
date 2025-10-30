@@ -14,10 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-// Test data paths
-var testDataRoot = filepath.Join("..", "..", "cmd", "testdata")
-
-// Helper functions
+var testDataRoot = "testdata/inspect"
 
 func setupInspectTests(t *testing.T) {
 	t.Helper()
@@ -52,27 +49,6 @@ func findResourceByType(resources []Resource, resourceType ResourceType) *Resour
 	return nil
 }
 
-// compareWithGoldenFile compares the generated output with a golden file.
-// Set UPDATE_GOLDEN=1 environment variable to update golden files.
-// Note: Currently not used as golden files contain temp paths that vary between runs.
-// Future work: normalize temp paths before comparison to enable full golden file testing.
-func compareWithGoldenFile(t *testing.T, got, goldenPath string) { //nolint:unused
-	t.Helper()
-
-	// If UPDATE_GOLDEN environment variable is set, update the golden file
-	if os.Getenv("UPDATE_GOLDEN") != "" {
-		err := os.WriteFile(goldenPath, []byte(got), 0o644)
-		require.NoError(t, err, "failed to update golden file")
-		t.Logf("Updated golden file: %s", goldenPath)
-		return
-	}
-
-	// Read and compare with golden file
-	expected, err := os.ReadFile(goldenPath)
-	require.NoError(t, err, "failed to read golden file: %s", goldenPath)
-	require.Equal(t, string(expected), got, "output does not match golden file: %s", goldenPath)
-}
-
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
 	setupInspectTests(t)
@@ -86,7 +62,7 @@ func TestInspectDefinitionResources(t *testing.T) {
 	}{
 		{
 			name:       "chart with values from Values parameter",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-values"),
+			packageDir: inspectTestDataPath("chart-with-values"),
 			opts: InspectDefinitionResourcesOptions{
 				DeploySetVariables: map[string]string{
 					"REPLICAS": "3",
@@ -109,7 +85,7 @@ func TestInspectDefinitionResources(t *testing.T) {
 		},
 		{
 			name:       "manifest with values using Go templates",
-			packageDir: inspectTestDataPath("inspect-manifests", "manifest-with-values"),
+			packageDir: inspectTestDataPath("manifest-with-values"),
 			opts: InspectDefinitionResourcesOptions{
 				Values: value.Values{
 					"replicas": 5,
@@ -126,21 +102,21 @@ func TestInspectDefinitionResources(t *testing.T) {
 		},
 		{
 			name:       "values from variables only (no CLI values)",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart"),
+			packageDir: inspectTestDataPath("chart"),
 			opts: InspectDefinitionResourcesOptions{
 				DeploySetVariables: map[string]string{
 					"REPLICAS": "2",
 				},
 				Values: value.Values{}, // Empty values
 			},
-			expectedResources: 4, // 2 charts * (1 chart resource + 1 values file)
+			expectedResources: 2, // 1 chart resource + 1 values file
 			expectedContent: []string{
 				"replicaCount: \"2\"",
 			},
 		},
 		{
 			name:              "manifest with package-level default values",
-			packageDir:        inspectTestDataPath("inspect-manifests", "manifest-with-package-values"),
+			packageDir:        inspectTestDataPath("manifest-with-package-values"),
 			opts:              InspectDefinitionResourcesOptions{},
 			expectedResources: 1, // 1 manifest resource
 			expectedContent: []string{
@@ -152,7 +128,7 @@ func TestInspectDefinitionResources(t *testing.T) {
 		},
 		{
 			name:       "manifest with package values overridden by CLI",
-			packageDir: inspectTestDataPath("inspect-manifests", "manifest-with-package-values"),
+			packageDir: inspectTestDataPath("manifest-with-package-values"),
 			opts: InspectDefinitionResourcesOptions{
 				Values: value.Values{
 					"app": map[string]any{
