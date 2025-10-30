@@ -248,9 +248,9 @@ type ZarfMetadata struct {
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package.
-	Terminal string `json:"terminal"`
+	Terminal string `json:"terminal,omitempty"`
 	// The username who created this package.
-	User string `json:"user"`
+	User string `json:"user,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
 	// The timestamp when this package was created.
