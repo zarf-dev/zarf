@@ -98,7 +98,6 @@ func TestMigrateDeprecated(t *testing.T) {
 
 	expectedPkg := v1alpha1.ZarfPackage{
 		Build: v1alpha1.ZarfBuildData{
-			LastNonBreakingVersion: LastNonBreakingVersion,
 			Migrations: []string{
 				ScriptsToActionsMigrated,
 				PluralizeSetVariable,
