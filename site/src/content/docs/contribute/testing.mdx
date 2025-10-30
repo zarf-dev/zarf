@@ -35,8 +35,10 @@ To create a unit test, search for or create a file that ends with `_test.go` in 
 
 There are two types of unit tests within Zarf:
 
-1. Testing isolated functions or files.
-1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to e2e tests and faster iteration loops.
+1. Standard unit tests on isolated functions or files.
+1. Tests in the [src/cmd](https://github.com/zarf-dev/zarf/tree/main/src/cmd) package, which test an entire command. These have similar properties to e2e tests, but faster iteration loops.
+
+Unit tests should always take less than one second. Unit tests should run using `t.Parallel()` unless a specific constraint blocks this.
 
 
 ## CLI End-to-End Tests
