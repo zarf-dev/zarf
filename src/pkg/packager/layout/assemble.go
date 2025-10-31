@@ -26,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -196,7 +197,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	})
 
 	// Build cosign sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
 	signOpts.PassFunc = passFunc
 
@@ -274,7 +275,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	})
 
 	// Build cosign sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
 	signOpts.PassFunc = passFunc
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic utility functions.
-package utils
+// Package cosign provides generic cosign functions.
+package cosign
 
 import (
 	"context"

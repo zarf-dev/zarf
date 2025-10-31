@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -1675,7 +1676,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	})
 
 	// Here we will merge future sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
 	signOpts.PassFunc = passFunc
 
