@@ -80,6 +80,7 @@ type packageCreateOptions struct {
 	signingKeyPassword      string
 	flavor                  string
 	ociConcurrency          int
+	withBuildMachineInfo    bool
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -120,6 +121,8 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
+
+	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
@@ -216,6 +219,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
+		WithBuildMachineInfo:    o.withBuildMachineInfo,
 	}
 	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -1352,6 +1356,7 @@ type packagePublishOptions struct {
 	confirm                 bool
 	ociConcurrency          int
 	publicKeyPath           string
+	withBuildMachineInfo    bool
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1374,6 +1379,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	return cmd
 }
@@ -1413,13 +1419,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
 		skeletonOpts := packager.PublishSkeletonOptions{
-			OCIConcurrency:     o.ociConcurrency,
-			SigningKeyPath:     o.signingKeyPath,
-			SigningKeyPassword: o.signingKeyPassword,
-			Retries:            o.retries,
-			RemoteOptions:      defaultRemoteOptions(),
-			CachePath:          cachePath,
-			Flavor:             o.flavor,
+			OCIConcurrency:       o.ociConcurrency,
+			SigningKeyPath:       o.signingKeyPath,
+			SigningKeyPassword:   o.signingKeyPassword,
+			Retries:              o.retries,
+			RemoteOptions:        defaultRemoteOptions(),
+			CachePath:            cachePath,
+			Flavor:               o.flavor,
+			WithBuildMachineInfo: o.withBuildMachineInfo,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err

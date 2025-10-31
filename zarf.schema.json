@@ -332,8 +332,6 @@
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "terminal",
-        "user",
         "architecture",
         "timestamp",
         "version"

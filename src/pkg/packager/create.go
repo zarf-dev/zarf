@@ -32,6 +32,7 @@ type CreateOptions struct {
 	DifferentialPackagePath string
 	OCIConcurrency          int
 	CachePath               string
+	WithBuildMachineInfo    bool
 	// applicable when output is an OCI registry
 	RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -75,14 +76,15 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	assembleOpt := layout.AssembleOptions{
-		SkipSBOM:            opts.SkipSBOM,
-		OCIConcurrency:      opts.OCIConcurrency,
-		DifferentialPackage: differentialPkg,
-		Flavor:              opts.Flavor,
-		RegistryOverrides:   opts.RegistryOverrides,
-		SigningKeyPath:      opts.SigningKeyPath,
-		SigningKeyPassword:  opts.SigningKeyPassword,
-		CachePath:           opts.CachePath,
+		SkipSBOM:             opts.SkipSBOM,
+		OCIConcurrency:       opts.OCIConcurrency,
+		DifferentialPackage:  differentialPkg,
+		Flavor:               opts.Flavor,
+		RegistryOverrides:    opts.RegistryOverrides,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		CachePath:            opts.CachePath,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {

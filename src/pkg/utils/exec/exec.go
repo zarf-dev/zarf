@@ -18,16 +18,16 @@ import (
 	"testing"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// Config is a struct for configuring the Cmd function.
+// Config is a struct for cfguring the Cmd function.
 type Config struct {
 	Print          bool
 	Dir            string
 	Env            []string
 	CommandPrinter func(format string, a ...any)
-	Stdout         io.Writer
-	Stderr         io.Writer
 }
 
 // PrintCfg is a helper function for returning a Config struct with Print set to true.
@@ -35,34 +35,34 @@ func PrintCfg() Config {
 	return Config{Print: true}
 }
 
-// Cmd executes a given command with given config.
+// Cmd executes a given command with given cfg.
 func Cmd(command string, args ...string) (string, string, error) {
 	return CmdWithContext(context.Background(), Config{}, command, args...)
 }
 
-// CmdWithPrint executes a given command with given config and prints the command.
+// CmdWithPrint executes a given command with given cfg and prints the command.
 func CmdWithPrint(command string, args ...string) error {
 	_, _, err := CmdWithContext(context.Background(), PrintCfg(), command, args...)
 	return err
 }
 
 // CmdWithTesting takes a *testing.T and generates a context the cancels on cleanup
-func CmdWithTesting(t *testing.T, config Config, command string, args ...string) (string, string, error) {
+func CmdWithTesting(t *testing.T, cfg Config, command string, args ...string) (string, string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	return CmdWithContext(ctx, config, command, args...)
+	return CmdWithContext(ctx, cfg, command, args...)
 }
 
-// CmdWithContext executes a given command with given config.
-func CmdWithContext(ctx context.Context, config Config, command string, args ...string) (string, string, error) {
+// CmdWithContext executes a given command with given cfg.
+func CmdWithContext(ctx context.Context, cfg Config, command string, args ...string) (string, string, error) {
 	if command == "" {
 		return "", "", errors.New("command is required")
 	}
 
 	// Set up the command.
 	cmd := exec.CommandContext(ctx, command, args...)
-	cmd.Dir = config.Dir
-	cmd.Env = append(os.Environ(), config.Env...)
+	cmd.Dir = cfg.Dir
+	cmd.Env = append(os.Environ(), cfg.Env...)
 
 	// Capture the command outputs.
 	cmdStdout, err := cmd.StdoutPipe()
@@ -88,21 +88,16 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 		&stderrBuf,
 	}
 
-	// TODO (@austinabro321) remove config options for stdout/stderr once logger is released
-	// as these options seem to have been added specifically for the spinner
-	// Add the writers if requested.
-	if config.Stdout != nil {
-		stdoutWriters = append(stdoutWriters, config.Stdout)
-	}
-
-	if config.Stderr != nil {
-		stdErrWriters = append(stdErrWriters, config.Stderr)
-	}
-
 	// Print to stdout if requested.
-	if config.Print {
-		stdoutWriters = append(stdoutWriters, os.Stdout)
-		stdErrWriters = append(stdErrWriters, os.Stderr)
+	if cfg.Print {
+		if config.CommonOptions.PreferLogger {
+			l := logger.From(ctx)
+			stdoutWriters = append(stdoutWriters, &logger.LogWriter{Logger: l, Level: logger.Info})
+			stdErrWriters = append(stdErrWriters, &logger.LogWriter{Logger: l, Level: logger.Error})
+		} else {
+			stdoutWriters = append(stdoutWriters, os.Stdout)
+			stdErrWriters = append(stdErrWriters, os.Stderr)
+		}
 	}
 
 	// Bind all the writers.
@@ -110,8 +105,8 @@ func CmdWithContext(ctx context.Context, config Config, command string, args ...
 	stderr := io.MultiWriter(stdErrWriters...)
 
 	// If we're printing, print the command.
-	if config.Print && config.CommandPrinter != nil {
-		config.CommandPrinter("%s %s", command, strings.Join(args, " "))
+	if cfg.Print && cfg.CommandPrinter != nil {
+		cfg.CommandPrinter("%s %s", command, strings.Join(args, " "))
 	}
 
 	// Start the command.
