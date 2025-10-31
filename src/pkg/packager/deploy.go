@@ -328,9 +328,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	if !opts.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
-		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
-		return nil, nil
+	if d.s != nil {
+		if !d.s.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
+			l.Info("skipping init package component since external registry information was provided", "component", component.Name)
+			return nil, nil
+		}
 	}
 
 	if isRegistry {
