@@ -459,11 +459,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst 
 	if err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}
-	if desc.Annotations == nil {
-		desc.Annotations = make(map[string]string)
-	}
-	desc.Annotations[ocispec.AnnotationRefName] = imageInfo.ref
-	desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.ref
+	desc = addNameAnnotationsToDesc(desc, imageInfo.ref)
 	err = dst.Tag(ctx, desc, imageInfo.ref)
 	if err != nil {
 		return fmt.Errorf("failed to tag image: %w", err)

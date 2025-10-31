@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -112,7 +113,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			srcDir:         "testdata/my-image",
 			expectedImages: 1,
 			checkImageRefs: []string{
-				"linux",
+				"docker.io/library/linux:latest",
 			},
 		},
 		{
@@ -176,6 +177,11 @@ func TestUnpackMultipleImages(t *testing.T) {
 			idx, err := getIndexFromOCILayout(dstDir)
 			require.NoError(t, err)
 			require.Len(t, idx.Manifests, tc.expectedImages)
+			for _, descs := range idx.Manifests {
+				imageName, ok := descs.Annotations[ocispec.AnnotationRefName]
+				require.True(t, ok)
+				require.Contains(t, tc.checkImageRefs, imageName)
+			}
 
 			// Verify all images have the required blobs
 			for _, img := range images {

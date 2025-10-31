@@ -110,12 +110,7 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 		}
 
 		// Tag the image with annotations so that Syft and ORAS can see them
-		if desc.Annotations == nil {
-			desc.Annotations = make(map[string]string)
-		}
-		fmt.Println("tagging image with", img.Reference)
-		desc.Annotations[ocispec.AnnotationRefName] = img.Reference
-		desc.Annotations[ocispec.AnnotationBaseImageName] = img.Reference
+		desc = addNameAnnotationsToDesc(desc, img.Reference)
 		err = dstStore.Tag(ctx, desc, img.Reference)
 		if err != nil {
 			return nil, fmt.Errorf("failed to tag image: %w", err)
