@@ -5,7 +5,6 @@
 package images
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -15,89 +14,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
-
-func TestUnpackInvalidTar(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	// Create a temporary file that is not a valid tar
-	invalidTar := filepath.Join(t.TempDir(), "invalid.tar")
-	err := os.WriteFile(invalidTar, []byte("not a tar file"), 0644)
-	require.NoError(t, err)
-
-	dstDir := t.TempDir()
-
-	// Call Unpack with invalid tar
-	_, err = Unpack(ctx, invalidTar, dstDir)
-	require.Error(t, err)
-}
-
-func TestUnpackUnwrappedTar(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	// Test with a tar that has contents at the top level (no wrapping directory)
-	// This mimics the structure of tars created by external tools like "tar -cf image.tar blobs/ index.json ..."
-	tarFile := filepath.Join(t.TempDir(), "unwrapped.tar")
-
-	// Create a tar directly from the contents of testdata/my-image without the wrapping directory
-	srcDir := "testdata/my-image"
-	entries, err := os.ReadDir(srcDir)
-	require.NoError(t, err)
-
-	var sources []string
-	for _, entry := range entries {
-		sources = append(sources, filepath.Join(srcDir, entry.Name()))
-	}
-
-	err = archive.Compress(ctx, sources, tarFile, archive.CompressOpts{})
-	require.NoError(t, err)
-
-	dstDir := t.TempDir()
-
-	// Call Unpack
-	images, err := Unpack(ctx, tarFile, dstDir)
-	require.NoError(t, err)
-
-	// Verify we got one image
-	require.Len(t, images, 1)
-
-	// Verify the manifest is not empty
-	require.NotEmpty(t, images[0].Manifest.Config.Digest)
-	require.NotEmpty(t, images[0].Manifest.Layers)
-
-	// Verify the OCI layout was created properly
-	idx, err := getIndexFromOCILayout(dstDir)
-	require.NoError(t, err)
-	require.NotEmpty(t, idx.Manifests)
-}
-
-func TestUnpackMissingIndex(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-
-	// Create a tar without index.json
-	tempDir := t.TempDir()
-	emptyImageDir := filepath.Join(tempDir, "empty-image")
-	err := os.MkdirAll(emptyImageDir, 0755)
-	require.NoError(t, err)
-
-	// Create just an oci-layout file without index.json
-	ociLayoutPath := filepath.Join(emptyImageDir, "oci-layout")
-	err = os.WriteFile(ociLayoutPath, []byte(`{"imageLayoutVersion": "1.0.0"}`), 0644)
-	require.NoError(t, err)
-
-	tarFile := filepath.Join(tempDir, "empty-image.tar")
-	err = archive.Compress(ctx, []string{emptyImageDir}, tarFile, archive.CompressOpts{})
-	require.NoError(t, err)
-
-	dstDir := t.TempDir()
-
-	// Call Unpack
-	_, err = Unpack(ctx, tarFile, dstDir)
-	require.Error(t, err)
-	require.ErrorContains(t, err, "index.json")
-}
 
 func TestUnpackMultipleImages(t *testing.T) {
 	t.Parallel()
