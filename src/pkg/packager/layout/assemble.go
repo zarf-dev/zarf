@@ -149,10 +149,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		if err != nil {
 			return nil, err
 		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
+		for _, imageWithManifest := range manifests {
+			ok := images.OnlyHasImageLayers(imageWithManifest.Manifest)
 			if ok {
-				sbomImageList = append(sbomImageList, image)
+				sbomImageList = append(sbomImageList, imageWithManifest.Image)
 			}
 		}
 

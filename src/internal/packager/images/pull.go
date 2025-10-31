@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +56,7 @@ type imageWithOverride struct {
 }
 
 // Pull pulls all images from the given config.
-func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
+func Pull(ctx context.Context, cfg PullConfig) ([]ImageWithManifest, error) {
 	cfg.ImageList = helpers.Unique(cfg.ImageList)
 	l := logger.From(ctx)
 	pullStart := time.Now()
@@ -136,7 +135,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		// TODO: in the future we could support Windows images
 		OS: "linux",
 	}
-	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
+	imagesWithManifests := []ImageWithManifest{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
@@ -223,7 +222,10 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 				byteSize:            size,
 				manifestDesc:        desc,
 			})
-			imagesWithManifests[image.original] = manifest
+			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+				Image:    image.original,
+				Manifest: manifest,
+			})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
 		})
@@ -245,7 +247,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		maps.Copy(imagesWithManifests, daemonImagesWithManifests)
+		imagesWithManifests = append(imagesWithManifests, daemonImagesWithManifests...)
 	}
 
 	for _, imageInfo := range imagesInfo {
@@ -295,9 +297,9 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ map[transform.Image]ocispec.Manifest, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []ImageWithManifest, err error) {
 	l := logger.From(ctx)
-	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
+	imagesWithManifests := []ImageWithManifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
 		return nil, err
@@ -400,7 +402,10 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return err
 			}
-			imagesWithManifests[daemonImage.original] = manifest
+			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+				Image:    daemonImage.original,
+				Manifest: manifest,
+			})
 			size := getSizeOfImage(desc, manifest)
 			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
 			copyOpts := oras.DefaultCopyOptions

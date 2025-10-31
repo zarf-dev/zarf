@@ -180,8 +180,8 @@ func TestPull(t *testing.T) {
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
 			// Make sure all the layers of the image are pulled in
-			for _, manifest := range imageManifests {
-				for _, layer := range manifest.Layers {
+			for _, imageWithManifest := range imageManifests {
+				for _, layer := range imageWithManifest.Manifest.Layers {
 					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}
