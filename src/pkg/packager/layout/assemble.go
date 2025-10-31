@@ -104,6 +104,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
+	imageManifests := []images.ImageWithManifest{}
 	for i, component := range pkg.Components {
 		for _, src := range component.Images {
 			if strings.HasSuffix(src, ".tar") {
@@ -111,14 +112,15 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 				if !filepath.IsAbs(imagePath) {
 					imagePath = filepath.Join(packagePath, src)
 				}
-				imageManifests, err := images.Unpack(ctx, imagePath, filepath.Join(buildPath, ImagesDir))
+				tarImageManifests, err := images.Unpack(ctx, imagePath, filepath.Join(buildPath, ImagesDir))
 				if err != nil {
 					return nil, err
 				}
+				imageManifests = append(imageManifests, tarImageManifests...)
 				pkg.Components[i].Images = helpers.RemoveMatches(pkg.Components[i].Images, func(image string) bool {
 					return image == src
 				})
-				for _, imageManifest := range imageManifests {
+				for _, imageManifest := range tarImageManifests {
 					pkg.Components[i].Images = append(pkg.Components[i].Images, imageManifest.Image.Reference)
 				}
 			} else {
@@ -149,7 +151,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		if err != nil {
 			return nil, err
 		}
-		for _, imageWithManifest := range manifests {
+		imageManifests = append(imageManifests, manifests...)
+		for _, imageWithManifest := range imageManifests {
 			ok := images.OnlyHasImageLayers(imageWithManifest.Manifest)
 			if ok {
 				sbomImageList = append(sbomImageList, imageWithManifest.Image)
