@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-schema-valid
+  description: Test package with valid values that pass schema validation
+
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+
+components:
+  - name: test-component
+    required: true
+    manifests:
+      - name: test-configmap
+        template: true
+        files:
+          - configmap.yaml

@@ -1,0 +1,4 @@
+# Missing required field "replicas" and has invalid type for "version"
+appName: test-app
+version: invalid-version
+enabled: true
