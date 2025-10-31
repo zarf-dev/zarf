@@ -93,36 +93,48 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 		if manifestDesc.Annotations == nil {
 			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
 		}
-		ref := getRefFromAnnotations(manifestDesc.Annotations)
-		if ref == "" {
+		imageName := getRefFromAnnotations(manifestDesc.Annotations)
+		if imageName == "" {
 			return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
 		}
 
-		copyOpts := oras.DefaultCopyOptions
-		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, ref, copyOpts)
+		img, err := transform.ParseImageRef(imageName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to copy image %s: %w", ref, err)
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
+		}
+
+		copyOpts := oras.DefaultCopyOptions
+		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, img.Reference, copyOpts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to copy image %s: %w", img.Reference, err)
+		}
+
+		// Tag the image with annotations so that Syft and ORAS can see them
+		if desc.Annotations == nil {
+			desc.Annotations = make(map[string]string)
+		}
+		fmt.Println("tagging image with", img.Reference)
+		desc.Annotations[ocispec.AnnotationRefName] = img.Reference
+		desc.Annotations[ocispec.AnnotationBaseImageName] = img.Reference
+		err = dstStore.Tag(ctx, desc, img.Reference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
 		// Read the manifest from the destination store
-		manifestBlobPath := filepath.Join(destDir, "blobs", "sha256", desc.Digest.Hex())
+		manifestBlobPath := filepath.Join(destDir, "blobs", "sha256", desc.Digest.Encoded())
 		manifestData, err := os.ReadFile(manifestBlobPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read manifest blob for %s: %w", ref, err)
+			return nil, fmt.Errorf("failed to read manifest blob for %s: %w", imageName, err)
 		}
 
 		var ociManifest ocispec.Manifest
 		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", ref, err)
-		}
-
-		imgRef, err := transform.ParseImageRef(ref)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse image reference %s: %w", ref, err)
+			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
 		}
 
 		imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-			Image:    imgRef,
+			Image:    img,
 			Manifest: ociManifest,
 		})
 	}
