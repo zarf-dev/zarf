@@ -1,0 +1,22 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart-with-values
+
+components:
+  - name: test
+    charts:
+      - name: test-chart
+        version: 1.0.0
+        namespace: test
+        localPath: chart
+        variables:
+          - name: REPLICAS
+            description: Number of replicas
+            path: replicaCount
+        values:
+          - sourcePath: .customField
+            targetPath: .customField
+          - sourcePath: .image.pullPolicy
+            targetPath: .image.pullPolicy
+          - sourcePath: .port
+            targetPath: .port
