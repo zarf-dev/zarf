@@ -70,13 +70,12 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 		return nil, fmt.Errorf("failed to create OCI store: %w", err)
 	}
 
-	// Create a source OCI store from the extracted image directory
 	srcStore, err := oci.NewWithContext(ctx, imageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
 	}
 
-	// Read the index.json from the source to get the manifest descriptors
+	// Read the index.json from the source to get the manifest descriptors of each image
 	srcIdx, err := getIndexFromOCILayout(imageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read source index.json: %w", err)
@@ -116,11 +115,9 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		// Read the manifest from the destination store
-		manifestBlobPath := filepath.Join(destDir, "blobs", "sha256", desc.Digest.Encoded())
-		manifestData, err := os.ReadFile(manifestBlobPath)
+		_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read manifest blob for %s: %w", imageName, err)
+			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
 
 		var ociManifest ocispec.Manifest

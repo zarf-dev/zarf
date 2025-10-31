@@ -68,6 +68,9 @@ func checkForUnpinnedRepos(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 func checkForUnpinnedImages(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, image := range c.Images {
+		if strings.HasSuffix(image, ".tar") {
+			continue
+		}
 		imageYqPath := fmt.Sprintf(".components.[%d].images.[%d]", i, j)
 		pinnedImage, err := isPinnedImage(image)
 		if err != nil {
