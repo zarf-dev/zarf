@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
@@ -136,15 +135,9 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
 	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)

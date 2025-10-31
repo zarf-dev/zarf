@@ -43,6 +43,9 @@ type SignBlobOptions struct {
 	// General options
 	Verbose bool          // Enable debug output
 	Timeout time.Duration // Timeout for signing operations
+
+	// Password provides password for encrypted keys without requiring cosign.PassFunc import
+	Password string
 }
 
 // VerifyBlobOptions embeds Cosign's native options for verification.
@@ -115,8 +118,17 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		Timeout: opts.Timeout,
 	}
 
-	// Use the embedded KeyOpts directly - no need to copy fields!
+	// Use the embedded KeyOpts directly
 	keyOpts := opts.KeyOpts
+
+	// If Password field is set and PassFunc is not, create PassFunc from Password
+	// This allows users to avoid importing cosign.PassFunc directly
+	if opts.Password != "" && keyOpts.PassFunc == nil {
+		password := opts.Password // Capture for closure
+		keyOpts.PassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte(password), nil
+		})
+	}
 
 	l.Debug("signing blob with cosign",
 		"keyRef", opts.KeyRef,

@@ -22,7 +22,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -191,15 +190,9 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
 	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
@@ -269,15 +262,9 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
 	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
