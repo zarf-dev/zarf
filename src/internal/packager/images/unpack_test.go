@@ -129,19 +129,6 @@ func TestUnpackMultipleImages(t *testing.T) {
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
 			},
 		},
-		{
-			name:           "crane OCI layout with multiple images",
-			srcDir:         "testdata/crane-oci-layout/images",
-			expectedImages: 6,
-			checkImageRefs: []string{
-				"ghcr.io/zarf-dev/images/hello-world:latest",
-				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
-				"docker.io/library/local-test:1.0.0",
-				"localhost:9999/local-test:1.0.0",
-				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
-				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
-			},
-		},
 	}
 
 	for _, tc := range testCases {

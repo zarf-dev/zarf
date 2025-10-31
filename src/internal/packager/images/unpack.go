@@ -143,14 +143,10 @@ func getRefFromAnnotations(annotations map[string]string) string {
 	// This is the location with an OCI-layout that these respective tools expect the image name to be
 	orasRefAnnotation := ocispec.AnnotationRefName
 	dockerRefAnnotation := "io.containerd.image.name"
-	craneRefAnnotation := ocispec.AnnotationBaseImageName
 	if ref, ok := annotations[orasRefAnnotation]; ok && ref != "" {
 		return ref
 	}
 	if ref, ok := annotations[dockerRefAnnotation]; ok && ref != "" {
-		return ref
-	}
-	if ref, ok := annotations[craneRefAnnotation]; ok && ref != "" {
 		return ref
 	}
 	return ""
