@@ -28,10 +28,11 @@ repos:
     hooks:
       - id: check-docs-and-schema
         name: Check for outdated docs and Zarf schema
-        entry: ./hack/check-zarf-docs-and-schema.sh
+        entry: make test-docs-and-schema
         files: "^src/(config|cmd)/"
         types: [go]
-        language: script
+        language: system
+        pass_filenames: false
       - id: goimports
         name: goimports
         entry: golangci-lint fmt
