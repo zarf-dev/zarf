@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
 metadata:
   name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
-  version: 16.0.4       # (optional) a version we can track as we release updates or publish to a registry
+  version: 26.0.0       # (optional) a version we can track as we release updates or publish to a registry
   description: |        # (optional) a human-readable description of the package that you are creating
     A Zarf Package that deploys the WordPress blogging and content management platform
 
@@ -44,14 +44,14 @@ components:
     charts:
       - name: wordpress
         url: oci://registry-1.docker.io/bitnamicharts/wordpress
-        version: 16.0.4
+        version: 26.0.0
         namespace: wordpress
         valuesFiles:
           - wordpress-values.yaml
     images:
-      - docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2
-      - docker.io/bitnami/mariadb:10.11.2-debian-11-r21
-      - docker.io/bitnami/wordpress:6.2.0-debian-11-r18
+      - docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55
+      - docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0
+      - docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4
     manifests:
       - name: connect-services
         namespace: wordpress
