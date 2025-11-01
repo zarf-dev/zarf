@@ -42,15 +42,14 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 ### Options
 
 ```
-  -h, --help                        help for sign
-  -k, --key string                  Public key to verify the existing signature before re-signing (optional)
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string               Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
-      --overwrite                   Overwrite an existing signature if the package is already signed
-      --retries int                 Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
-      --signing-key-pass string     Password for encrypted private key
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+  -h, --help                      help for sign
+  -k, --key string                Public key to verify the existing signature before re-signing (optional)
+      --oci-concurrency int       Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string             Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
+      --overwrite                 Overwrite an existing signature if the package is already signed
+      --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --signing-key string        Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
+      --signing-key-pass string   Password for encrypted private key
 ```
 
 ### Options inherited from parent commands
