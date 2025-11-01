@@ -41,4 +41,5 @@ Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package publish](/commands/zarf_package_publish/)	 - Publishes a Zarf package to a remote registry
 * [zarf package pull](/commands/zarf_package_pull/)	 - Pulls a Zarf package from a remote registry and save to the local file system
 * [zarf package remove](/commands/zarf_package_remove/)	 - Removes a Zarf package that has been deployed already (runs offline)
+* [zarf package sign](/commands/zarf_package_sign/)	 - Signs an existing Zarf package
 

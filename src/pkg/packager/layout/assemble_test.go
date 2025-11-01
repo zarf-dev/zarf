@@ -41,28 +41,6 @@ fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9 foo
 	require.Equal(t, "7c554cf67e1c2b50a1b728299c368cd56d53588300c37479623f29a52812ca3f", checksumHash)
 }
 
-func TestSignPackage(t *testing.T) {
-	t.Parallel()
-
-	tmpDir := t.TempDir()
-	yamlPath := filepath.Join(tmpDir, "zarf.yaml")
-	signedPath := filepath.Join(tmpDir, "zarf.yaml.sig")
-
-	err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
-	require.NoError(t, err)
-
-	err = signPackage(tmpDir, "", "")
-	require.NoError(t, err)
-	require.NoFileExists(t, signedPath)
-
-	err = signPackage(tmpDir, "./testdata/cosign.key", "wrongpassword")
-	require.EqualError(t, err, "reading key: decrypt: encrypted: decryption failed")
-
-	err = signPackage(tmpDir, "./testdata/cosign.key", "test")
-	require.NoError(t, err)
-	require.FileExists(t, signedPath)
-}
-
 func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	t.Parallel()
 

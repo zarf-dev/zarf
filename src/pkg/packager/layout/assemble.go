@@ -22,11 +22,10 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -187,12 +186,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
 	if err != nil {
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
+	// Sign the package with the provided options
+	signOpts := zarfCosign.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -251,11 +255,6 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
-	if err != nil {
-		return nil, err
-	}
-
 	layoutOpts := PackageLayoutOptions{
 		SkipSignatureValidation: true,
 		IsPartial:               false,
@@ -263,6 +262,16 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
+	}
+
+	// Sign the package with the provided options
+	signOpts := zarfCosign.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
+	if err != nil {
+		return nil, err
 	}
 
 	return pkgLayout, nil
@@ -740,6 +749,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 	pkg.Build.RegistryOverrides = overrides
 
+	// set signed to false by default - this is updated if signing occurs.
+	signed := false
+	pkg.Build.Signed = &signed
+
 	return pkg
 }
 
@@ -774,35 +787,6 @@ func getChecksum(dirPath string) (string, string, error) {
 	checksumContent := strings.Join(checksumData, "\n") + "\n"
 	sha := sha256.Sum256([]byte(checksumContent))
 	return checksumContent, hex.EncodeToString(sha[:]), nil
-}
-
-func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
-	if signingKeyPath == "" {
-		return nil
-	}
-	passFunc := func(_ bool) ([]byte, error) {
-		return []byte(signingKeyPassword), nil
-	}
-	keyOpts := options.KeyOpts{
-		KeyRef:   signingKeyPath,
-		PassFunc: passFunc,
-	}
-	rootOpts := &options.RootOptions{
-		Verbose: false,
-		Timeout: options.DefaultTimeout,
-	}
-	_, err := sign.SignBlobCmd(
-		rootOpts,
-		keyOpts,
-		filepath.Join(dirPath, ZarfYAML),
-		true,
-		filepath.Join(dirPath, Signature),
-		"",
-		false)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {

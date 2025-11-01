@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -265,7 +266,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := zarfCosign.GetCosignArtifacts(image)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -274,7 +275,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := zarfCosign.GetCosignArtifacts(image)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
