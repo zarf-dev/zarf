@@ -206,6 +206,8 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
+	// Enable kustomize plugins during kustomize builds.
+	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
 	// [alpha]
