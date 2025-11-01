@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: check-docs-and-schema
         name: Check for outdated docs and Zarf schema
-        entry: make test-docs-and-schema
+        entry: bash -c 'echo "Checking docs and schema are up to date..." && ./hack/check-zarf-docs-and-schema.sh'
         files: "^src/(config|cmd)/"
         types: [go]
         language: system
