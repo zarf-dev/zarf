@@ -104,8 +104,19 @@ func (c ZarfComponent) IsRequired() bool {
 	return false
 }
 
+// GetImages returns all images specified in the component, including those from ImageTars.
 func (c ZarfComponent) GetImages() []string {
-	return nil
+	images := []string{}
+
+	// Add images from the Images field
+	images = append(images, c.Images...)
+
+	// Add images from all ImageTars
+	for _, imageTar := range c.ImageTars {
+		images = append(images, imageTar.Images...)
+	}
+
+	return images
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
