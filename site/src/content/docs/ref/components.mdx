@@ -143,9 +143,21 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 <Properties item="ZarfComponent" include={["imageArchives"]} />
 
-OCI images can also be brought into a package via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). The most common way to create an image archive is through the command `docker save my-image:0.0.1 -o image.tar`. The Docker engine version must be >= than [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
+OCI images can also be brought into a package via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). The most common way to create an image archive is through [docker save](https://docs.docker.com/reference/cli/docker/image/save/) command. The Docker engine version must be >= than [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
 
 If the subfield `images` is set within `imageArchives` then Zarf will only pull in the specified images from that tar file. If `images` is empty Zarf will pull in every image in the archive.
+
+
+```yaml
+- name: image-archive
+  description: "pull in an image from a tar archive"
+  required: true
+  imageArchives:
+  - path: image.tar
+    images:
+    - ghcr.io/fluxcd/helm-controller:v1.1.0
+    - ghcr.io/fluxcd/image-automation-controller:v0.39.0
+```
 
 ### Git Repositories
 
