@@ -56,6 +56,12 @@ func TestUnpackMultipleImages(t *testing.T) {
 				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
 			},
 		},
+		{
+			name:           "no images specified - pull all from manifests",
+			srcDir:         "testdata/oras-oci-layout/images",
+			expectedImages: 6,
+			imageRefs:      []string{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -87,22 +93,30 @@ func TestUnpackMultipleImages(t *testing.T) {
 			for _, img := range images {
 				imageMap[img.Image.Reference] = img
 			}
-			for _, ref := range tc.imageRefs {
-				imgRef, err := transform.ParseImageRef(ref)
-				require.NoError(t, err)
-				img, found := imageMap[imgRef.Reference]
-				require.True(t, found, "expected to find image %s", ref)
-				require.NotEmpty(t, img.Manifest.Config.Digest)
+
+			// If specific images were requested, verify they were found
+			if len(tc.imageRefs) > 0 {
+				for _, ref := range tc.imageRefs {
+					imgRef, err := transform.ParseImageRef(ref)
+					require.NoError(t, err)
+					img, found := imageMap[imgRef.Reference]
+					require.True(t, found, "expected to find image %s", ref)
+					require.NotEmpty(t, img.Manifest.Config.Digest)
+				}
 			}
 
 			// Verify the OCI layout was created properly
 			idx, err := getIndexFromOCILayout(dstDir)
 			require.NoError(t, err)
 			require.Len(t, idx.Manifests, tc.expectedImages)
-			for _, descs := range idx.Manifests {
-				imageName, ok := descs.Annotations[ocispec.AnnotationRefName]
-				require.True(t, ok)
-				require.Contains(t, tc.imageRefs, imageName)
+
+			// Verify manifest annotations if specific images were requested
+			if len(tc.imageRefs) > 0 {
+				for _, descs := range idx.Manifests {
+					imageName, ok := descs.Annotations[ocispec.AnnotationRefName]
+					require.True(t, ok)
+					require.Contains(t, tc.imageRefs, imageName)
+				}
 			}
 
 			// Verify all images have the required blobs
