@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -135,15 +135,9 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
@@ -176,6 +170,8 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
+	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 	RemoteOptions
 }
 
@@ -213,9 +209,10 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	}
 	// Create skeleton buildpath
 	createOpts := layout.AssembleSkeletonOptions{
-		SigningKeyPath:     opts.SigningKeyPath,
-		SigningKeyPassword: opts.SigningKeyPassword,
-		Flavor:             opts.Flavor,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		Flavor:               opts.Flavor,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {

@@ -22,7 +22,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -33,6 +32,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -81,6 +81,7 @@ type packageCreateOptions struct {
 	signingKeyPassword      string
 	flavor                  string
 	ociConcurrency          int
+	withBuildMachineInfo    bool
 }
 
 func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
@@ -121,6 +122,8 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagSigningKeyPassword)
+
+	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgCreateWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	cmd.Flags().StringVarP(&o.signingKeyPath, "key", "k", v.GetString(VPkgCreateSigningKey), lang.CmdPackageCreateFlagDeprecatedKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "key-pass", v.GetString(VPkgCreateSigningKeyPassword), lang.CmdPackageCreateFlagDeprecatedKeyPassword)
@@ -217,6 +220,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
 		IsInteractive:           !o.confirm,
+		WithBuildMachineInfo:    o.withBuildMachineInfo,
 	}
 	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -1232,6 +1236,8 @@ type packageRemoveOptions struct {
 	skipSignatureValidation bool
 	ociConcurrency          int
 	publicKeyPath           string
+	valuesFiles             []string
+	setValues               map[string]string
 }
 
 func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
@@ -1254,6 +1260,8 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, "Path to values file(s) for removal actions")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 
 	return cmd
 }
@@ -1271,6 +1279,25 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	vals, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := vals.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
 		filters.BySelectState(o.optionalComponents),
@@ -1297,6 +1324,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		Cluster:           c,
 		Timeout:           config.ZarfDefaultTimeout,
 		NamespaceOverride: o.namespaceOverride,
+		Values:            vals,
 	}
 	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
 	err = utils.ColorPrintYAML(pkg, nil, false)
@@ -1329,6 +1357,7 @@ type packagePublishOptions struct {
 	confirm                 bool
 	ociConcurrency          int
 	publicKeyPath           string
+	withBuildMachineInfo    bool
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1351,6 +1380,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
+	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
 
 	return cmd
 }
@@ -1390,13 +1420,14 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	// Skeleton package - call PublishSkeleton
 	if helpers.IsDir(packageSource) {
 		skeletonOpts := packager.PublishSkeletonOptions{
-			OCIConcurrency:     o.ociConcurrency,
-			SigningKeyPath:     o.signingKeyPath,
-			SigningKeyPassword: o.signingKeyPassword,
-			Retries:            o.retries,
-			RemoteOptions:      defaultRemoteOptions(),
-			CachePath:          cachePath,
-			Flavor:             o.flavor,
+			OCIConcurrency:       o.ociConcurrency,
+			SigningKeyPath:       o.signingKeyPath,
+			SigningKeyPassword:   o.signingKeyPassword,
+			Retries:              o.retries,
+			RemoteOptions:        defaultRemoteOptions(),
+			CachePath:            cachePath,
+			Flavor:               o.flavor,
+			WithBuildMachineInfo: o.withBuildMachineInfo,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
@@ -1540,14 +1571,13 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageSignOptions struct {
-	signingKeyPath          string
-	signingKeyPassword      string
-	publicKeyPath           string
-	skipSignatureValidation bool
-	overwrite               bool
-	output                  string
-	ociConcurrency          int
-	retries                 int
+	signingKeyPath     string
+	signingKeyPassword string
+	publicKeyPath      string
+	overwrite          bool
+	output             string
+	ociConcurrency     int
+	retries            int
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1568,7 +1598,6 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgSignOutput), lang.CmdPackageSignFlagOutput)
 	cmd.Flags().BoolVar(&o.overwrite, "overwrite", v.GetBool(VPkgSignOverwrite), lang.CmdPackageSignFlagOverwrite)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 
@@ -1584,32 +1613,63 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return errors.New("--signing-key is required")
 	}
 
-	cachePath, err := getCachePath(ctx)
-	if err != nil {
-		return err
-	}
-
 	// Determine output destination
 	outputDest := o.output
 	if outputDest == "" {
-		// Default to the directory containing the source package
 		if helpers.IsOCIURL(packageSource) {
-			// For OCI sources, use current working directory
-			wd, err := os.Getwd()
+			// For OCI sources, default to publishing back to the same OCI location
+			// Extract the repository portion (without package name and tag) from source
+			trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
+			srcRef, err := registry.ParseReference(trimmed)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to parse source OCI reference: %w", err)
 			}
-			outputDest = wd
+
+			// Extract repository path without the package name
+			// e.g., "registry.com/namespace/package:tag" -> "registry.com/namespace"
+			repoParts := strings.Split(srcRef.Repository, "/")
+			if len(repoParts) > 1 {
+				// Remove the last part (package name)
+				repoPath := strings.Join(repoParts[:len(repoParts)-1], "/")
+				outputDest = helpers.OCIURLPrefix + srcRef.Registry + "/" + repoPath
+			} else {
+				// Package is directly under registry (no namespace)
+				outputDest = helpers.OCIURLPrefix + srcRef.Registry
+			}
 		} else {
 			// For file sources, use the same directory as the source
 			outputDest = filepath.Dir(packageSource)
 		}
 	}
 
+	// If output is OCI (either default or user-specified), delegate to publish workflow
+	if helpers.IsOCIURL(outputDest) {
+		l.Info("signing and publishing package to OCI registry", "source", packageSource, "destination", outputDest)
+
+		// Create publish options from sign options
+		publishOpts := &packagePublishOptions{
+			signingKeyPath:          o.signingKeyPath,
+			signingKeyPassword:      o.signingKeyPassword,
+			skipSignatureValidation: o.overwrite, // Use overwrite flag for skip validation
+			ociConcurrency:          o.ociConcurrency,
+			retries:                 o.retries,
+			publicKeyPath:           o.publicKeyPath,
+		}
+
+		// Call publish with source and destination repository
+		return publishOpts.run(cmd, []string{packageSource, outputDest})
+	}
+
+	// For local file output, use existing sign logic
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
 	// Load the package
 	loadOpts := packager.LoadOptions{
 		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
+		SkipSignatureValidation: o.overwrite,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 		OCIConcurrency:          o.ociConcurrency,
@@ -1647,14 +1707,9 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// Sign the package
 	l.Info("signing package with provided key")
 
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(o.signingKeyPassword), nil
-	})
-
-	// Here we will merge future sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = o.signingKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {

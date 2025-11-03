@@ -14,7 +14,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -225,7 +225,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -252,7 +252,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("wrongpassword"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -272,7 +272,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -290,7 +290,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -308,7 +308,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -336,7 +336,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -365,7 +365,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		// Empty options - no signing key material configured
-		opts := utils.SignBlobOptions{}
+		opts := zarfCosign.SignBlobOptions{}
 
 		// Should skip signing without error
 		err = pkgLayout.SignPackage(ctx, opts)
@@ -388,7 +388,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -412,7 +412,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 		opts.OutputSignature = "/some/custom/path.sig"
@@ -444,7 +444,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("wrongpassword"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -473,7 +473,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		// Empty options - should skip signing
-		opts := utils.SignBlobOptions{}
+		opts := zarfCosign.SignBlobOptions{}
 
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
@@ -514,7 +514,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		opts := utils.DefaultSignBlobOptions()
+		opts := zarfCosign.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
 
@@ -551,14 +551,14 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setupFunc      func(t *testing.T) (*PackageLayout, utils.SignBlobOptions)
+		setupFunc      func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions)
 		expectedErr    string
 		expectSigned   bool
 		expectSignFile bool
 	}{
 		{
 			name: "package with existing false Signed value gets updated on success",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -576,7 +576,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return []byte("test"), nil
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := zarfCosign.DefaultSignBlobOptions()
 				opts.KeyRef = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 
@@ -588,7 +588,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "package with existing true Signed value gets overwritten",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -606,7 +606,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return []byte("test"), nil
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := zarfCosign.DefaultSignBlobOptions()
 				opts.KeyRef = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 
@@ -618,7 +618,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "sign with different password-protected key",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("test content"), 0o644))
@@ -631,7 +631,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return []byte("test"), nil
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := zarfCosign.DefaultSignBlobOptions()
 				opts.KeyRef = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 
@@ -643,7 +643,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "passFunc returns error",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -656,7 +656,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return nil, os.ErrPermission
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := zarfCosign.DefaultSignBlobOptions()
 				opts.KeyRef = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 
@@ -668,7 +668,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "empty package metadata still signs",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, zarfCosign.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -684,7 +684,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return []byte("test"), nil
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := zarfCosign.DefaultSignBlobOptions()
 				opts.KeyRef = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 

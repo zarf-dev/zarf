@@ -22,10 +22,10 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/pkg/cosign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
@@ -52,6 +52,8 @@ type AssembleOptions struct {
 	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -173,7 +175,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -190,15 +192,9 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
@@ -210,9 +206,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
 type AssembleSkeletonOptions struct {
-	SigningKeyPath     string
-	SigningKeyPassword string
-	Flavor             string
+	SigningKeyPath       string
+	SigningKeyPassword   string
+	Flavor               string
+	WithBuildMachineInfo bool
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -247,7 +244,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -268,15 +265,9 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	// Sign the package with the provided options
-	// Create a password function for encrypted keys
-	passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
-		return []byte(opts.SigningKeyPassword), nil
-	})
-
-	// Build cosign sign options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := zarfCosign.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
-	signOpts.PassFunc = passFunc
+	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
@@ -717,21 +708,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
 	now := time.Now()
-	// Just use $USER env variable to avoid CGO issue.
-	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
-	// Record the name of the user creating the package.
-	if runtime.GOOS == "windows" {
-		pkg.Build.User = os.Getenv("USERNAME")
-	} else {
-		pkg.Build.User = os.Getenv("USER")
-	}
+	if withBuildMachineInfo {
+		// Just use $USER env variable to avoid CGO issue.
+		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
+		// Record the name of the user creating the package.
+		if runtime.GOOS == "windows" {
+			pkg.Build.User = os.Getenv("USERNAME")
+		} else {
+			pkg.Build.User = os.Getenv("USER")
+		}
 
-	// Record the hostname of the package creation terminal.
-	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
-	hostname, _ := os.Hostname()
-	pkg.Build.Terminal = hostname
+		// Record the hostname of the package creation terminal.
+		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
+		hostname, _ := os.Hostname()
+		pkg.Build.Terminal = hostname
+	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion
@@ -755,6 +748,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	pkg.Build.RegistryOverrides = overrides
+
+	// set signed to false by default - this is updated if signing occurs.
+	signed := false
+	pkg.Build.Signed = &signed
 
 	return pkg
 }

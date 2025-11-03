@@ -6,7 +6,6 @@ package git
 
 import (
 	"context"
-	"io"
 
 	"github.com/go-git/go-git/v5/plumbing"
 
@@ -31,10 +30,7 @@ func (r *Repository) gitCloneFallback(ctx context.Context, gitURL string, ref pl
 		cloneArgs = append(cloneArgs, "--depth", "1")
 	}
 
-	cloneExecConfig := exec.Config{
-		Stdout: io.Discard,
-		Stderr: io.Discard,
-	}
+	cloneExecConfig := exec.Config{}
 	_, _, err := exec.CmdWithContext(ctx, cloneExecConfig, "git", cloneArgs...)
 	if err != nil {
 		return err
@@ -44,9 +40,7 @@ func (r *Repository) gitCloneFallback(ctx context.Context, gitURL string, ref pl
 	if ref == emptyRef {
 		fetchArgs := []string{"fetch", "--tags", "--update-head-ok", onlineRemoteName, "refs/*:refs/*"}
 		fetchExecConfig := exec.Config{
-			Stdout: io.Discard,
-			Stderr: io.Discard,
-			Dir:    r.path,
+			Dir: r.path,
 		}
 		_, _, err := exec.CmdWithContext(ctx, fetchExecConfig, "git", fetchArgs...)
 		if err != nil {
