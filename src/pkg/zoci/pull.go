@@ -138,7 +138,7 @@ func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPack
 		if component.Name == "" {
 			return nil, nil, fmt.Errorf("component %s does not exist in this package", rc.Name)
 		}
-		for _, image := range component.Images {
+		for _, image := range component.GetImages() {
 			images[image] = true
 		}
 		desc := root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name)))

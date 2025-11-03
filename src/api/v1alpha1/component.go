@@ -108,10 +108,8 @@ func (c ZarfComponent) IsRequired() bool {
 func (c ZarfComponent) GetImages() []string {
 	images := []string{}
 
-	// Add images from the Images field
 	images = append(images, c.Images...)
 
-	// Add images from all ImageTars
 	for _, imageTar := range c.ImageTars {
 		images = append(images, imageTar.Images...)
 	}

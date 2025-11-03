@@ -347,7 +347,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -355,7 +355,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 			d.s.InjectorInfo.Port = opts.InjectorHostPort
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -390,7 +390,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	l.Info("deploying component", "name", component.Name)
 
-	hasImages := len(component.Images) > 0 && !noImgPush
+	hasImages := len(component.GetImages()) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
@@ -441,7 +441,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	if hasImages {
 		refs := []transform.Image{}
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
