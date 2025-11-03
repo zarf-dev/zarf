@@ -80,6 +80,28 @@
         "^x-": {}
       }
     },
+    "ImageTar": {
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "images": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "path",
+        "images"
+      ],
+      "patternProperties": {
+        "^x-": {}
+      }
+    },
     "InteractiveVariable": {
       "properties": {
         "name": {
@@ -534,6 +556,12 @@
           },
           "type": "array",
           "description": "List of OCI images to include in the package."
+        },
+        "imageTars": {
+          "items": {
+            "$ref": "#/$defs/ImageTar"
+          },
+          "type": "array"
         },
         "repos": {
           "items": {

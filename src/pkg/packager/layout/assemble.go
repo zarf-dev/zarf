@@ -105,34 +105,26 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	componentImages := []transform.Image{}
 	imageManifests := []images.ImageWithManifest{}
-	for i, component := range pkg.Components {
-		for _, src := range component.Images {
-			if strings.HasSuffix(src, ".tar") {
-				imagePath := src
-				if !filepath.IsAbs(imagePath) {
-					imagePath = filepath.Join(packagePath, src)
-				}
-				tarImageManifests, err := images.Unpack(ctx, imagePath, filepath.Join(buildPath, ImagesDir))
-				if err != nil {
-					return nil, err
-				}
-				imageManifests = append(imageManifests, tarImageManifests...)
-				pkg.Components[i].Images = helpers.RemoveMatches(pkg.Components[i].Images, func(image string) bool {
-					return image == src
-				})
-				for _, imageManifest := range tarImageManifests {
-					pkg.Components[i].Images = append(pkg.Components[i].Images, imageManifest.Image.Reference)
-				}
-			} else {
-				refInfo, err := transform.ParseImageRef(src)
-				if err != nil {
-					return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
-				}
-				if slices.Contains(componentImages, refInfo) {
-					continue
-				}
-				componentImages = append(componentImages, refInfo)
+	for _, component := range pkg.Components {
+		for _, imageTar := range component.ImageTars {
+			if !filepath.IsAbs(imageTar.Path) {
+				imageTar.Path = filepath.Join(packagePath, imageTar.Path)
 			}
+			tarImageManifests, err := images.Unpack(ctx, imageTar, filepath.Join(buildPath, ImagesDir))
+			if err != nil {
+				return nil, err
+			}
+			imageManifests = append(imageManifests, tarImageManifests...)
+		}
+		for _, src := range component.Images {
+			refInfo, err := transform.ParseImageRef(src)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
+			}
+			if slices.Contains(componentImages, refInfo) {
+				continue
+			}
+			componentImages = append(componentImages, refInfo)
 		}
 	}
 	sbomImageList := []transform.Image{}

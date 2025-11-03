@@ -42,6 +42,9 @@ type ZarfComponent struct {
 	// List of OCI images to include in the package.
 	Images []string `json:"images,omitempty"`
 
+	// List of Tar files of images to bring into the package
+	ImageTars []ImageTar `json:"imageTars,omitempty"`
+
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
 
@@ -53,6 +56,14 @@ type ZarfComponent struct {
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+}
+
+// ImageTar is a Tar file containing an OCI layout of images
+type ImageTar struct {
+	// Path to Tar file containing an OCI-layout
+	Path string `json:"path"`
+	// Images within the OCI layout to be brought into the package
+	Images []string `json:"images"`
 }
 
 // NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.

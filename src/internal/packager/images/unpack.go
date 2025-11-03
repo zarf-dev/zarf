@@ -14,6 +14,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -29,7 +30,7 @@ type ImageWithManifest struct {
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithManifest, err error) {
+func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
 	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {
@@ -39,7 +40,7 @@ func Unpack(ctx context.Context, tarPath string, destDir string) (_ []ImageWithM
 		err = errors.Join(err, os.RemoveAll(tmpdir))
 	}()
 
-	if err := archive.Decompress(ctx, tarPath, tmpdir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, imageTar.Path, tmpdir, archive.DecompressOpts{}); err != nil {
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 

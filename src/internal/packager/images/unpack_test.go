@@ -10,6 +10,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -57,9 +58,10 @@ func TestUnpackMultipleImages(t *testing.T) {
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
 			dstDir := t.TempDir()
+			imageTar := v1alpha1.ImageTar{Path: tarFile}
 
 			// Run
-			images, err := Unpack(ctx, tarFile, dstDir)
+			images, err := Unpack(ctx, imageTar, dstDir)
 			require.NoError(t, err)
 
 			// Verify the correct amount of images were found
