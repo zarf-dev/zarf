@@ -139,6 +139,14 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 <ExampleYAML src={import("../../../../../examples/podinfo-flux/zarf.yaml?raw")} component="flux" />
 
+### Container Image Archives
+
+<Properties item="ZarfComponent" include={["imageArchives"]} />
+
+OCI images can also be brought into a package via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). The most common way to create an image archive is through the command `docker save my-image:0.0.1 -o image.tar`. The Docker engine version must be >= than [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
+
+If the subfield `images` is set within `imageArchives` then Zarf will only pull in the specified images from that tar file. If `images` is empty Zarf will pull in every image in the archive.
+
 ### Git Repositories
 
 <Properties item="ZarfComponent" include={["repos"]} />
