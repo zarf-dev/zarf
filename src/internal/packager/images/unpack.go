@@ -146,7 +146,6 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 		})
 	}
 
-	// Verify all requested images were found
 	for img, found := range requestedImages {
 		if !found {
 			return nil, fmt.Errorf("could not find image %s", img)
