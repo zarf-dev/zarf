@@ -94,7 +94,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 	}
 
 	// Process manifests in the index
-	var imagesWithManifests []ImageWithManifest
+	var manifests []ImageWithManifest
 	for _, manifestDesc := range srcIdx.Manifests {
 		if manifestDesc.Annotations == nil {
 			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
@@ -140,7 +140,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
 		}
 
-		imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+		manifests = append(manifests, ImageWithManifest{
 			Image:    manifestImg,
 			Manifest: ociManifest,
 		})
@@ -152,7 +152,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 		}
 	}
 
-	return imagesWithManifests, nil
+	return manifests, nil
 }
 
 // getRefFromAnnotations extracts the image reference from annotations.

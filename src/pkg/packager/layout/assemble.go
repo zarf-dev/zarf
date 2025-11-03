@@ -104,7 +104,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	imageManifests := []images.ImageWithManifest{}
+	manifests := []images.ImageWithManifest{}
 	for i, component := range pkg.Components {
 		for j, imageTar := range component.ImageTars {
 			if !filepath.IsAbs(imageTar.Path) {
@@ -114,7 +114,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			if err != nil {
 				return nil, err
 			}
-			imageManifests = append(imageManifests, tarImageManifests...)
+			manifests = append(manifests, tarImageManifests...)
 			var imageList []string
 			for _, imageManifest := range tarImageManifests {
 				imageList = append(imageList, imageManifest.Image.Reference)
@@ -144,17 +144,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, pullCfg)
+		imageManifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return nil, err
 		}
-		imageManifests = append(imageManifests, manifests...)
+		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, imageWithManifest := range imageManifests {
-		ok := images.OnlyHasImageLayers(imageWithManifest.Manifest)
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
 		if ok {
-			sbomImageList = append(sbomImageList, imageWithManifest.Image)
+			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 
 		// Sort images index to make build reproducible.

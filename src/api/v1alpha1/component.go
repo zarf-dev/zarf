@@ -42,7 +42,7 @@ type ZarfComponent struct {
 	// List of OCI images to include in the package.
 	Images []string `json:"images,omitempty"`
 
-	// List of Tar files of images to bring into the package
+	// List of Tar files of images to bring into the package.
 	ImageTars []ImageTar `json:"imageTars,omitempty"`
 
 	// List of git repos to include in the package.
