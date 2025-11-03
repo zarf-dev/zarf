@@ -54,14 +54,11 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 
 	var imageDir string
 	if len(entries) == 1 && entries[0].IsDir() {
-		// Single directory entry - navigate into it
 		imageDir = filepath.Join(tmpdir, entries[0].Name())
 	} else {
-		// Multiple entries or single file - use tmpdir directly
 		imageDir = tmpdir
 	}
 
-	// Create the OCI layout store at the destination
 	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create destination directory: %w", err)
 	}
@@ -160,7 +157,6 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 }
 
 // getRefFromAnnotations extracts the image reference from annotations.
-// It checks in order: org.opencontainers.image.ref.name, org.opencontainers.image.base.name, io.containerd.image.name
 func getRefFromAnnotations(annotations map[string]string) string {
 	// This is the location with an OCI-layout that these respective tools expect the image name to be
 	orasRefAnnotation := ocispec.AnnotationRefName
