@@ -86,110 +86,73 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 		return nil, errors.New("no manifests found in index.json")
 	}
 
-	// Process all manifests in the index
-	var imagesWithManifests []ImageWithManifest
-
-	// If no specific images are requested, process all manifests
-	if len(imageTar.Images) == 0 {
-		for _, manifestDesc := range srcIdx.Manifests {
-			if manifestDesc.Annotations == nil {
-				return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
-			}
-
-			imageName := getRefFromAnnotations(manifestDesc.Annotations)
-			if imageName == "" {
-				return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
-			}
-			manifestImg, err := transform.ParseImageRef(imageName)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
-			}
-
-			copyOpts := oras.DefaultCopyOptions
-			desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
-			if err != nil {
-				return nil, fmt.Errorf("failed to copy image %s: %w", manifestImg.Reference, err)
-			}
-
-			// Tag the image with annotations so that Syft and ORAS can see them
-			desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
-			err = dstStore.Tag(ctx, desc, manifestImg.Reference)
-			if err != nil {
-				return nil, fmt.Errorf("failed to tag image: %w", err)
-			}
-
-			_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-			}
-
-			var ociManifest ocispec.Manifest
-			if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-				return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
-			}
-
-			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-				Image:    manifestImg,
-				Manifest: ociManifest,
-			})
+	// Build a set of requested images for filtering
+	requestedImages := make(map[string]bool)
+	for _, img := range imageTar.Images {
+		ref, err := transform.ParseImageRef(img)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", img, err)
 		}
-	} else {
-		// Process only the requested images
-		for _, image := range imageTar.Images {
-			foundImage := false
-			for _, manifestDesc := range srcIdx.Manifests {
-				if manifestDesc.Annotations == nil {
-					return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
-				}
+		requestedImages[ref.Reference] = false
+	}
 
-				imageName := getRefFromAnnotations(manifestDesc.Annotations)
-				if imageName == "" {
-					return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
-				}
-				manifestImg, err := transform.ParseImageRef(imageName)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
-				}
-				tarRef, err := transform.ParseImageRef(image)
-				if err != nil {
-					return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
-				}
-				if manifestImg.Reference != tarRef.Reference {
-					continue
-				}
-				foundImage = true
+	// Process manifests in the index
+	var imagesWithManifests []ImageWithManifest
+	for _, manifestDesc := range srcIdx.Manifests {
+		if manifestDesc.Annotations == nil {
+			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
+		}
 
-				copyOpts := oras.DefaultCopyOptions
-				desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
-				if err != nil {
-					return nil, fmt.Errorf("failed to copy image %s: %w", manifestImg.Reference, err)
-				}
+		imageName := getRefFromAnnotations(manifestDesc.Annotations)
+		if imageName == "" {
+			return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
+		}
+		manifestImg, err := transform.ParseImageRef(imageName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
+		}
 
-				// Tag the image with annotations so that Syft and ORAS can see them
-				desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
-				err = dstStore.Tag(ctx, desc, manifestImg.Reference)
-				if err != nil {
-					return nil, fmt.Errorf("failed to tag image: %w", err)
-				}
-
-				_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
-				if err != nil {
-					return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-				}
-
-				var ociManifest ocispec.Manifest
-				if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-					return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
-				}
-
-				imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-					Image:    manifestImg,
-					Manifest: ociManifest,
-				})
+		// If specific images were requested, skip those not in the list
+		if len(imageTar.Images) > 0 {
+			if _, requested := requestedImages[manifestImg.Reference]; !requested {
+				continue
 			}
-			if !foundImage {
-				return nil, fmt.Errorf("could not find image %s", image)
-			}
+			requestedImages[manifestImg.Reference] = true
+		}
+
+		copyOpts := oras.DefaultCopyOptions
+		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to copy image %s: %w", manifestImg.Reference, err)
+		}
+
+		// Tag the image with annotations so that Syft and ORAS can see them
+		desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
+		err = dstStore.Tag(ctx, desc, manifestImg.Reference)
+		if err != nil {
+			return nil, fmt.Errorf("failed to tag image: %w", err)
+		}
+
+		_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
+		}
+
+		var ociManifest ocispec.Manifest
+		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
+			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
+		}
+
+		imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+			Image:    manifestImg,
+			Manifest: ociManifest,
+		})
+	}
+
+	// Verify all requested images were found
+	for img, found := range requestedImages {
+		if !found {
+			return nil, fmt.Errorf("could not find image %s", img)
 		}
 	}
 
