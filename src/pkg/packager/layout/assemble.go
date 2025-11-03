@@ -105,8 +105,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	componentImages := []transform.Image{}
 	imageManifests := []images.ImageWithManifest{}
-	for _, component := range pkg.Components {
-		for _, imageTar := range component.ImageTars {
+	for i, component := range pkg.Components {
+		for j, imageTar := range component.ImageTars {
 			if !filepath.IsAbs(imageTar.Path) {
 				imageTar.Path = filepath.Join(packagePath, imageTar.Path)
 			}
@@ -115,6 +115,11 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 				return nil, err
 			}
 			imageManifests = append(imageManifests, tarImageManifests...)
+			var imageList []string
+			for _, imageManifest := range tarImageManifests {
+				imageList = append(imageList, imageManifest.Image.Reference)
+			}
+			pkg.Components[i].ImageTars[j].Images = imageList
 		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)

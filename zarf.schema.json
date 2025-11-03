@@ -83,21 +83,23 @@
     "ImageTar": {
       "properties": {
         "path": {
-          "type": "string"
+          "type": "string",
+          "description": "Path to Tar file containing an OCI-layout"
         },
         "images": {
           "items": {
             "type": "string"
           },
-          "type": "array"
+          "type": "array",
+          "description": "Images within the OCI layout to be brought into the package"
         }
       },
       "additionalProperties": false,
       "type": "object",
       "required": [
-        "path",
-        "images"
+        "path"
       ],
+      "description": "ImageTar is a Tar file containing an OCI layout of images",
       "patternProperties": {
         "^x-": {}
       }
@@ -561,7 +563,8 @@
           "items": {
             "$ref": "#/$defs/ImageTar"
           },
-          "type": "array"
+          "type": "array",
+          "description": "List of Tar files of images to bring into the package"
         },
         "repos": {
           "items": {

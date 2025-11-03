@@ -63,7 +63,7 @@ type ImageTar struct {
 	// Path to Tar file containing an OCI-layout
 	Path string `json:"path"`
 	// Images within the OCI layout to be brought into the package
-	Images []string `json:"images"`
+	Images []string `json:"images,omitempty"`
 }
 
 // NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
