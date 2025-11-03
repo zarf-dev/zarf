@@ -93,7 +93,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	}
 
 	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
+		verifyOptions := zarfCosign.DefaultVerifyBlobOptions()
 		verifyOptions.KeyRef = opts.PublicKeyPath
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
@@ -250,7 +250,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts zarfCosign.SignBlo
 }
 
 // VerifyPackageSignature verifies the package signature
-func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.VerifyBlobOptions) error {
+func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts zarfCosign.VerifyBlobOptions) error {
 	l := logger.From(ctx)
 	l.Debug("verifying package signature")
 
@@ -281,7 +281,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	opts.SigRef = signaturePath
 
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	return zarfCosign.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
 
 // IsSigned returns true if the package is signed.

@@ -1852,7 +1852,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Package is signed and we have a key - verify using VerifyPackageSignature
-	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
 	verifyOpts.KeyRef = o.publicKeyPath
 
 	err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
