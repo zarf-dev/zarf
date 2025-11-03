@@ -5,7 +5,7 @@ metadata:
 components:
   - name: test-component
     required: true
-    imageTars:
+    imageArchives:
     - path: image.tar
     actions:
       onCreate:
