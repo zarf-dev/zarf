@@ -30,7 +30,7 @@ type ImageWithManifest struct {
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ []ImageWithManifest, err error) {
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
 	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {
@@ -40,7 +40,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 		err = errors.Join(err, os.RemoveAll(tmpdir))
 	}()
 
-	if err := archive.Decompress(ctx, imageTar.Path, tmpdir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, imageArchive.Path, tmpdir, archive.DecompressOpts{}); err != nil {
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
@@ -85,7 +85,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 
 	// Build a set of requested images for filtering
 	requestedImages := make(map[string]bool)
-	for _, img := range imageTar.Images {
+	for _, img := range imageArchive.Images {
 		ref, err := transform.ParseImageRef(img)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", img, err)
@@ -110,7 +110,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 		}
 
 		// If specific images were requested, skip those not in the list
-		if len(imageTar.Images) > 0 {
+		if len(imageArchive.Images) > 0 {
 			if _, requested := requestedImages[manifestImg.Reference]; !requested {
 				continue
 			}

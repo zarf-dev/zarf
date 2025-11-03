@@ -43,7 +43,7 @@ type ZarfComponent struct {
 	Images []string `json:"images,omitempty"`
 
 	// List of Tar files of images to bring into the package.
-	ImageTars []ImageTar `json:"imageTars,omitempty"`
+	ImageArchives []ImageArchives `json:"imageT,omitempty"`
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
@@ -58,8 +58,8 @@ type ZarfComponent struct {
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
 }
 
-// ImageTar is a Tar file containing an OCI layout of images
-type ImageTar struct {
+// ImageArchives is a Tar file containing an OCI layout of images
+type ImageArchives struct {
 	// Path to Tar file containing an OCI-layout
 	Path string `json:"path"`
 	// Images within the OCI layout to be brought into the package
@@ -81,14 +81,14 @@ type NamespacedObjectKindReference struct {
 // RequiresCluster returns if the component requires a cluster connection to deploy.
 func (c ZarfComponent) RequiresCluster() bool {
 	hasImages := len(c.Images) > 0
-	hasImageTars := len(c.ImageTars) > 0
+	hasImageArchives := len(c.ImageArchives) > 0
 	hasCharts := len(c.Charts) > 0
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
 	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImageTars || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
+	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 
@@ -104,14 +104,14 @@ func (c ZarfComponent) IsRequired() bool {
 	return false
 }
 
-// GetImages returns all images specified in the component, including those from ImageTars.
+// GetImages returns all images specified in the component, including those from ImageArchives.
 func (c ZarfComponent) GetImages() []string {
 	images := []string{}
 
 	images = append(images, c.Images...)
 
-	for _, imageTar := range c.ImageTars {
-		images = append(images, imageTar.Images...)
+	for _, imageArchives := range c.ImageArchives {
+		images = append(images, imageArchives.Images...)
 	}
 
 	return images

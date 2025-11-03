@@ -74,13 +74,13 @@ func TestUnpackMultipleImages(t *testing.T) {
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
 			dstDir := t.TempDir()
-			imageTar := v1alpha1.ImageTar{
+			imageArchives := v1alpha1.ImageArchives{
 				Path:   tarFile,
 				Images: tc.imageRefs,
 			}
 
 			// Run
-			images, err := Unpack(ctx, imageTar, dstDir)
+			images, err := Unpack(ctx, imageArchives, dstDir)
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return

@@ -200,7 +200,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		return registry.Reference{}, err
 	}
 	for _, comp := range pkg.Components {
-		if comp.ImageTars != nil {
+		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image tars")
 		}
 	}

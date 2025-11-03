@@ -39,10 +39,10 @@ func TestGetImages(t *testing.T) {
 			},
 		},
 		{
-			name: "only ImageTars with images",
+			name: "only ImageArchives with images",
 			component: ZarfComponent{
 				Name: "test-component",
-				ImageTars: []ImageTar{
+				ImageArchives: []ImageArchives{
 					{
 						Path: "/tmp/images.tar",
 						Images: []string{
@@ -58,13 +58,13 @@ func TestGetImages(t *testing.T) {
 			},
 		},
 		{
-			name: "both Images and ImageTars",
+			name: "both Images and ImageArchives",
 			component: ZarfComponent{
 				Name: "test-component",
 				Images: []string{
 					"docker.io/library/nginx:latest",
 				},
-				ImageTars: []ImageTar{
+				ImageArchives: []ImageArchives{
 					{
 						Path: "/tmp/images1.tar",
 						Images: []string{

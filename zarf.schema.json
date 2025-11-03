@@ -80,7 +80,7 @@
         "^x-": {}
       }
     },
-    "ImageTar": {
+    "ImageArchives": {
       "properties": {
         "path": {
           "type": "string",
@@ -99,7 +99,7 @@
       "required": [
         "path"
       ],
-      "description": "ImageTar is a Tar file containing an OCI layout of images",
+      "description": "ImageArchives is a Tar file containing an OCI layout of images",
       "patternProperties": {
         "^x-": {}
       }
@@ -559,12 +559,12 @@
           "type": "array",
           "description": "List of OCI images to include in the package."
         },
-        "imageTars": {
+        "imageT": {
           "items": {
-            "$ref": "#/$defs/ImageTar"
+            "$ref": "#/$defs/ImageArchives"
           },
           "type": "array",
-          "description": "List of Tar files of images to bring into the package"
+          "description": "List of Tar files of images to bring into the package."
         },
         "repos": {
           "items": {

@@ -51,7 +51,7 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 	tests := []struct {
 		name           string
 		images         []string
-		imageTar       []ImageTar
+		imageArchives  []ImageArchives
 		files          []ZarfFile
 		dataInjections []ZarfDataInjection
 		expected       bool
@@ -66,9 +66,9 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "only image tars",
-			imageTar: []ImageTar{{}},
-			expected: true,
+			name:          "only image tars",
+			imageArchives: []ImageArchives{{}},
+			expected:      true,
 		},
 		{
 			name:     "only files",
@@ -84,7 +84,7 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			name:           "all set",
 			images:         []string{""},
 			files:          []ZarfFile{{}},
-			imageTar:       []ImageTar{{}},
+			imageArchives:  []ImageArchives{{}},
 			dataInjections: []ZarfDataInjection{{}},
 			expected:       true,
 		},
@@ -99,7 +99,7 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 						Name:           "without images",
 						Images:         tt.images,
 						Files:          tt.files,
-						ImageTars:      tt.imageTar,
+						ImageArchives:  tt.imageArchives,
 						DataInjections: tt.dataInjections,
 					},
 				},
