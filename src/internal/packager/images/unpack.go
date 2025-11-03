@@ -90,6 +90,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 	var imagesWithManifests []ImageWithManifest
 
 	for _, image := range imageTar.Images {
+		foundImage := false
 		for _, manifestDesc := range srcIdx.Manifests {
 			if manifestDesc.Annotations == nil {
 				return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
@@ -110,6 +111,7 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 			if manifestImg.Reference != tarRef.Reference {
 				continue
 			}
+			foundImage = true
 
 			copyOpts := oras.DefaultCopyOptions
 			desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
@@ -138,6 +140,9 @@ func Unpack(ctx context.Context, imageTar v1alpha1.ImageTar, destDir string) (_ 
 				Image:    manifestImg,
 				Manifest: ociManifest,
 			})
+		}
+		if !foundImage {
+			return nil, fmt.Errorf("could not find image %s", image)
 		}
 	}
 

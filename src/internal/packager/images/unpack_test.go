@@ -5,6 +5,7 @@
 package images
 
 import (
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -24,6 +25,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 		srcDir         string
 		expectedImages int
 		imageRefs      []string
+		expectErr      error
 	}{
 		{
 			name:           "single image",
@@ -32,6 +34,14 @@ func TestUnpackMultipleImages(t *testing.T) {
 			imageRefs: []string{
 				"docker.io/library/linux:latest",
 			},
+		},
+		{
+			name:   "non-existent",
+			srcDir: "testdata/my-image",
+			imageRefs: []string{
+				"docker.io/library/non-existent-image:linux",
+			},
+			expectErr: errors.New("could not find image docker.io/library/non-existent-image:linux"),
 		},
 		// {
 		// 	name:           "oras OCI layout with multiple images",
@@ -65,6 +75,10 @@ func TestUnpackMultipleImages(t *testing.T) {
 
 			// Run
 			images, err := Unpack(ctx, imageTar, dstDir)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+				return
+			}
 			require.NoError(t, err)
 
 			// Verify the correct amount of images were found
