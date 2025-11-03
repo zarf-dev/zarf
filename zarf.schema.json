@@ -559,7 +559,7 @@
           "type": "array",
           "description": "List of OCI images to include in the package."
         },
-        "imageT": {
+        "imageArchives": {
           "items": {
             "$ref": "#/$defs/ImageArchives"
           },

@@ -43,7 +43,7 @@ type ZarfComponent struct {
 	Images []string `json:"images,omitempty"`
 
 	// List of Tar files of images to bring into the package.
-	ImageArchives []ImageArchives `json:"imageT,omitempty"`
+	ImageArchives []ImageArchives `json:"imageArchives,omitempty"`
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
