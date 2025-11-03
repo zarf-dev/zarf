@@ -81,13 +81,14 @@ type NamespacedObjectKindReference struct {
 // RequiresCluster returns if the component requires a cluster connection to deploy.
 func (c ZarfComponent) RequiresCluster() bool {
 	hasImages := len(c.Images) > 0
+	hasImageTars := len(c.ImageTars) > 0
 	hasCharts := len(c.Charts) > 0
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
 	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
+	if hasImageTars || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 
@@ -101,6 +102,10 @@ func (c ZarfComponent) IsRequired() bool {
 	}
 
 	return false
+}
+
+func (c ZarfComponent) GetImages() []string {
+	return nil
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
