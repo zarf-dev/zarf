@@ -190,26 +190,6 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 	return nil
 }
 
-// CosignVerifyBlob verifies a signature using basic options (legacy function, maintained for compatibility).
-// For new code, use CosignVerifyBlobWithOptions for full control.
-func CosignVerifyBlob(ctx context.Context, blobRef, sigRef, keyPath string) error {
-	opts := DefaultVerifyBlobOptions()
-	opts.KeyRef = keyPath
-	opts.SigRef = sigRef
-	return CosignVerifyBlobWithOptions(ctx, blobRef, opts)
-}
-
-// CosignSignBlob signs a blob using basic options (legacy function, maintained for compatibility).
-// For new code, use CosignSignBlobWithOptions for full control.
-func CosignSignBlob(blobPath, outputSigPath, keyPath string, passFn cosign.PassFunc) ([]byte, error) {
-	ctx := context.Background()
-	opts := DefaultSignBlobOptions()
-	opts.KeyRef = keyPath
-	opts.PassFunc = passFn
-	opts.OutputSignature = outputSigPath
-	return CosignSignBlobWithOptions(ctx, blobPath, opts)
-}
-
 // GetCosignArtifacts returns signatures and attestations for the given image
 func GetCosignArtifacts(image string) ([]string, error) {
 	var nameOpts []name.Option

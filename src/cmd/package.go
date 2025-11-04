@@ -32,7 +32,6 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -1687,26 +1686,16 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	// Check for existing signature and handle overwrite logic
-	sigPath := filepath.Join(pkgLayout.DirPath(), layout.Signature)
-	_, err = os.Stat(sigPath)
-	sigExists := err == nil
+	signed := pkgLayout.IsSigned()
 
-	if sigExists && !o.overwrite {
+	if signed && !o.overwrite {
 		return errors.New("package is already signed, use --overwrite to re-sign")
-	}
-
-	if sigExists && o.overwrite {
-		l.Info("removing existing signature for re-signing")
-		if err := os.Remove(sigPath); err != nil {
-			return fmt.Errorf("failed to remove old signature: %w", err)
-		}
 	}
 
 	// Sign the package
 	l.Info("signing package with provided key")
 
-	signOpts := zarfCosign.DefaultSignBlobOptions()
+	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 
