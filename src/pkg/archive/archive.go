@@ -131,7 +131,10 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	// map local paths to archive names
 	mapping := make(map[string]string, len(sources))
 	for _, src := range sources {
-		mapping[src] = filepath.Base(src)
+		// Normalize path to use OS-specific separators (especially important on Windows)
+		// to ensure it matches what filepath.WalkDir returns
+		cleanSrc := filepath.Clean(src)
+		mapping[cleanSrc] = filepath.Base(cleanSrc)
 	}
 	files, err := archives.FilesFromDisk(ctx, nil, mapping)
 	if err != nil {
