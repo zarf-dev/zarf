@@ -490,7 +490,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
 			path = filepath.Join(packagePath, path)
 		}
-		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 		}
 	}
@@ -675,7 +675,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
