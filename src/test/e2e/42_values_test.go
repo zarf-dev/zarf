@@ -116,10 +116,9 @@ func TestValuesSchema(t *testing.T) {
 		packageName := fmt.Sprintf("zarf-package-test-values-schema-deploy-invalid-%s.tar.zst", e2e.Arch)
 		path := filepath.Join(tmpdir, packageName)
 		overrideValuesPath := filepath.Join(src, "override-invalid.yaml")
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--features=\"values=true\"", "--values", overrideValuesPath)
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--features=\"values=true\"", "--values", overrideValuesPath)
 		require.Error(t, err, "expected error for invalid override values at deploy time")
 		// Check that the error message mentions validation failure
-		output := stdOut + stdErr
-		require.Contains(t, output, "values validation failed", "error should mention schema validation failure")
+		require.Contains(t, stdErr, "values validation failed", "error should mention schema validation failure")
 	})
 }
