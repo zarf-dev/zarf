@@ -21,7 +21,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	zarfCosign "github.com/zarf-dev/zarf/src/internal/cosign"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -129,7 +128,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
 // this is a no-op and returns nil.
-func (p *PackageLayout) SignPackage(ctx context.Context, opts zarfCosign.SignBlobOptions) (err error) {
+func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) (err error) {
 	// Note: This function:
 	// 1. Updates Pkg.Build.Signed = true in memory
 	// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
@@ -217,7 +216,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts zarfCosign.SignBlo
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
-	_, err = zarfCosign.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
+	_, err = utils.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
