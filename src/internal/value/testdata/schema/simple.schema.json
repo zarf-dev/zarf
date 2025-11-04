@@ -2,24 +2,18 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "app": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "replicas": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        }
-      },
-      "required": ["name"]
+    "name": {
+      "type": "string",
+      "minLength": 1
     },
-    "enabled": {
-      "type": "boolean"
+    "version": {
+      "type": "string"
+    },
+    "replicas": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
     }
   },
-  "required": ["app"]
+  "required": ["name"]
 }

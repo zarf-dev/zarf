@@ -634,11 +634,19 @@ func TestValidate(t *testing.T) {
 		name       string
 		valuesFile string
 		schemaFile string
+		opts       ValidateOptions
 	}{
 		{
 			name:       "valid values pass schema validation",
 			valuesFile: "testdata/schema/valid-values.yaml",
 			schemaFile: "testdata/schema/simple.schema.json",
+			opts:       ValidateOptions{},
+		},
+		{
+			name:       "missing required field passes when SkipRequired is true",
+			valuesFile: "testdata/schema/invalid-values.yaml",
+			schemaFile: "testdata/schema/simple.schema.json",
+			opts:       ValidateOptions{SkipRequired: true},
 		},
 	}
 
@@ -650,7 +658,7 @@ func TestValidate(t *testing.T) {
 			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
 			require.NoError(t, err)
 
-			err = vals.Validate(ctx, tt.schemaFile)
+			err = vals.Validate(ctx, tt.schemaFile, tt.opts)
 			require.NoError(t, err)
 		})
 	}
@@ -661,19 +669,29 @@ func TestValidate_Errors(t *testing.T) {
 		name        string
 		valuesFile  string
 		schemaFile  string
+		opts        ValidateOptions
 		errContains string
 	}{
 		{
 			name:        "missing required field",
 			valuesFile:  "testdata/schema/invalid-values.yaml",
 			schemaFile:  "testdata/schema/simple.schema.json",
+			opts:        ValidateOptions{},
 			errContains: "schema validation failed",
 		},
 		{
 			name:        "nonexistent schema file",
 			valuesFile:  "testdata/schema/valid-values.yaml",
 			schemaFile:  "testdata/schema/nonexistent.schema.json",
+			opts:        ValidateOptions{},
 			errContains: "failed to load or parse schema",
+		},
+		{
+			name:        "non-required errors still caught when SkipRequired is true",
+			valuesFile:  "testdata/schema/invalid-range.yaml",
+			schemaFile:  "testdata/schema/simple.schema.json",
+			opts:        ValidateOptions{SkipRequired: true},
+			errContains: "schema validation failed",
 		},
 	}
 
@@ -685,7 +703,7 @@ func TestValidate_Errors(t *testing.T) {
 			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
 			require.NoError(t, err)
 
-			err = vals.Validate(ctx, tt.schemaFile)
+			err = vals.Validate(ctx, tt.schemaFile, tt.opts)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.errContains)
 		})

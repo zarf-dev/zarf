@@ -238,8 +238,14 @@ func (v Values) Set(path Path, newVal any) error {
 	return nil
 }
 
+// ValidateOptions provides optional configuration for Values validation
+type ValidateOptions struct {
+	// SkipRequired skips validation of required fields
+	SkipRequired bool
+}
+
 // Validate validates the Values against a JSON schema file at schemaPath.
-func (v Values) Validate(ctx context.Context, schemaPath string) error {
+func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	defer func() {
@@ -275,9 +281,25 @@ func (v Values) Validate(ctx context.Context, schemaPath string) error {
 
 	// Check if validation passed
 	if !result.Valid() {
-		return &SchemaValidationError{
-			SchemaPath: schemaPath,
-			Errors:     result.Errors(),
+		errs := result.Errors()
+
+		// Filter out "required" errors if SkipRequired is true
+		if opts.SkipRequired {
+			var filteredErrors []gojsonschema.ResultError
+			for _, err := range errs {
+				if err.Type() != "required" {
+					filteredErrors = append(filteredErrors, err)
+				}
+			}
+			errs = filteredErrors
+		}
+
+		// Only return error if there are validation errors after filtering
+		if len(errs) > 0 {
+			return &SchemaValidationError{
+				SchemaPath: schemaPath,
+				Errors:     errs,
+			}
 		}
 	}
 

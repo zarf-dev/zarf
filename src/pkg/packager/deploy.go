@@ -149,7 +149,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	// Validate merged values against schema if provided
 	if pkgLayout.Pkg.Values.Schema != "" {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, pkgLayout.Pkg.Values.Schema)
-		if err := vals.Validate(ctx, schemaPath); err != nil {
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
 			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
 		}
 		l.Debug("values validated against schema", "schemaPath", schemaPath)

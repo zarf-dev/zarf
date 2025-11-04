@@ -28,6 +28,9 @@ import (
 type DefinitionOptions struct {
 	Flavor       string
 	SetVariables map[string]string
+	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
+	// value should be supplied at deploy-time and doesn't have a default set in the package values.
+	SkipRequiredValues bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -70,7 +73,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, packagePath, opts.SetVariables, opts.Flavor)
+	err = validate(ctx, pkg, packagePath, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -78,7 +81,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -105,7 +108,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		}
 	}
 
-	if err := validateValuesSchema(ctx, pkg, packagePath); err != nil {
+	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
 		return err
 	}
 
@@ -119,7 +122,11 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	return nil
 }
 
-func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string) error {
+type validateValuesSchemaOptions struct {
+	skipRequired bool
+}
+
+func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts validateValuesSchemaOptions) error {
 	// Skip validation if no schema or values files are provided
 	if pkg.Values.Schema == "" || len(pkg.Values.Files) == 0 {
 		return nil
@@ -140,7 +147,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 
 	// Resolve schema path relative to package directory
 	schemaPath := filepath.Join(packagePath, layout.ValuesDir, pkg.Values.Schema)
-	if err := vals.Validate(ctx, schemaPath); err != nil {
+	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
 
