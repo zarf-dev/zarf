@@ -1704,40 +1704,6 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	// Handle output - OCI or local file
-	if helpers.IsOCIURL(outputDest) {
-		l.Info("publishing signed package to OCI registry", "destination", outputDest)
-
-		// Parse the OCI reference
-		trimmed := strings.TrimPrefix(outputDest, helpers.OCIURLPrefix)
-		parts := strings.Split(trimmed, "/")
-		dstRef := registry.Reference{
-			Registry:   parts[0],
-			Repository: strings.Join(parts[1:], "/"),
-		}
-
-		if err := dstRef.ValidateRegistry(); err != nil {
-			return fmt.Errorf("invalid OCI registry URL: %w", err)
-		}
-
-		// Publish the signed package to OCI
-		publishOpts := packager.PublishPackageOptions{
-			OCIConcurrency:     o.ociConcurrency,
-			SigningKeyPath:     "", // Already signed, don't re-sign - maybe remove?
-			SigningKeyPassword: "",
-			Retries:            o.retries,
-			RemoteOptions:      defaultRemoteOptions(),
-		}
-
-		pubRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, publishOpts)
-		if err != nil {
-			return fmt.Errorf("failed to publish signed package to OCI: %w", err)
-		}
-
-		l.Info("package signed and published successfully", "reference", pubRef.String())
-		return nil
-	}
-
 	// Archive to local directory
 	l.Info("archiving signed package to local directory", "directory", outputDest)
 	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
