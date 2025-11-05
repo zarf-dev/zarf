@@ -215,7 +215,7 @@ func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
 	}{
 		{
 			name:       "chart with values mapping",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-helm-values"),
+			packageDir: inspectTestDataPath("chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{
 				Values: value.Values{
 					"customField": "fromValues",
@@ -237,7 +237,7 @@ func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
 		},
 		{
 			name:       "chart with values and variables",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-helm-values"),
+			packageDir: inspectTestDataPath("chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{
 				DeploySetVariables: map[string]string{
 					"REPLICAS": "5",
