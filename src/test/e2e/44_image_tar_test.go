@@ -29,7 +29,7 @@ func TestImageTarPush(t *testing.T) {
 	sbomPath := t.TempDir()
 	err = pkgLayout.GetSBOM(t.Context(), sbomPath)
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(sbomPath, "docker.io_library_3.21.3_latest.json"))
+	require.FileExists(t, filepath.Join(sbomPath, "ghcr.io_zarf-dev_images_alpine_3.21.3.json"))
 
 	_, _, err = e2e.Zarf(t, "package", "mirror-resources", path)
 	require.NoError(t, err)
