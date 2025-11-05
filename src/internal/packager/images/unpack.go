@@ -96,10 +96,6 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 	// Process manifests in the index
 	var manifests []ImageWithManifest
 	for _, manifestDesc := range srcIdx.Manifests {
-		if manifestDesc.Annotations == nil {
-			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
-		}
-
 		imageName, err := getRefFromAnnotations(manifestDesc)
 		if err != nil {
 			return nil, err
@@ -157,6 +153,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 
 // getRefFromAnnotations extracts the image reference from a manifest descriptor.
 func getRefFromAnnotations(manifestDesc ocispec.Descriptor) (string, error) {
+	if manifestDesc.Annotations == nil {
+		return "", fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
+	}
 	// This is the default docker annotation for the image name
 	dockerRefAnnotation := "io.containerd.image.name"
 	// When the Docker engine containerd image store is used, this annotation is exists which can be used for sha referenced images
