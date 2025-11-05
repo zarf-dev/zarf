@@ -269,6 +269,8 @@ type ZarfBuildData struct {
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+	// Whether this package was signed
+	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 }

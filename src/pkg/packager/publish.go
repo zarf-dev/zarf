@@ -133,7 +133,12 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
 	}
 
