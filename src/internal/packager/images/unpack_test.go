@@ -17,6 +17,47 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+func TestGetRefFromAnnotations(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		desc     ocispec.Descriptor
+		expected string
+	}{
+		{
+			name: "io.containerd.image.name present",
+			desc: ocispec.Descriptor{
+				Digest: "sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+				Annotations: map[string]string{
+					"io.containerd.image.name":                    "docker.io/library/nginx:perl",
+					"org.opencontainers.image.ref.name":           "perl",
+					"containerd.io/distribution.source.docker.io": "library/nginx",
+				},
+			},
+			expected: "docker.io/library/nginx:perl",
+		},
+		{
+			name: "only containerd.io/distribution.source.docker.io present",
+			desc: ocispec.Descriptor{
+				Digest: "sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+				Annotations: map[string]string{
+					"containerd.io/distribution.source.docker.io": "library/nginx",
+				},
+			},
+			expected: "docker.io/library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result := getRefFromAnnotations(tc.desc)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestUnpackMultipleImages(t *testing.T) {
 	t.Parallel()
 
@@ -32,7 +73,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			srcDir:         "testdata/my-image",
 			expectedImages: 1,
 			imageRefs: []string{
-				"docker.io/library/linux:latest",
+				"docker.io/library/hello-world:linux",
 			},
 		},
 		{
