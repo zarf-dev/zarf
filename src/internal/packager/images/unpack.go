@@ -30,7 +30,7 @@ type ImageWithManifest struct {
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir string) (_ []ImageWithManifest, err error) {
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir string, arch string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
 	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {
@@ -114,6 +114,11 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 		}
 
 		copyOpts := oras.DefaultCopyOptions
+		platform := &ocispec.Platform{
+			Architecture: arch,
+			OS:           "linux",
+		}
+		copyOpts.WithTargetPlatform(platform)
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)

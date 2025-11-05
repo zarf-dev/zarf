@@ -110,7 +110,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
-			tarImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir))
+
+			tarImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
 			if err != nil {
 				return nil, err
 			}

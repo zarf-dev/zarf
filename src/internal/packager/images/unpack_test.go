@@ -7,6 +7,7 @@ package images
 import (
 	"errors"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -142,7 +143,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 
 			// Run
-			images, err := Unpack(ctx, imageArchives, dstDir)
+			images, err := Unpack(ctx, imageArchives, dstDir, runtime.GOARCH)
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return
