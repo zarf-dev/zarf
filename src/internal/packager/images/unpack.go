@@ -166,7 +166,7 @@ func getRefFromAnnotations(manifestDesc ocispec.Descriptor) (string, error) {
 	}
 
 	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStoreAnnotation]; ok && repo != "" {
-		return fmt.Sprintf("docker.io/%s@%s", repo, manifestDesc.Digest.String()), nil
+		return fmt.Sprintf("%s@%s", repo, manifestDesc.Digest.String()), nil
 	}
 
 	// This is the annotation oras-go uses to check for the name during oras.copy

@@ -46,7 +46,7 @@ func TestGetRefFromAnnotations(t *testing.T) {
 					"containerd.io/distribution.source.docker.io": "library/nginx",
 				},
 			},
-			expected: "docker.io/library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+			expected: "library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
 		},
 		{
 			name: "org.opencontainers.image.ref.name present",
