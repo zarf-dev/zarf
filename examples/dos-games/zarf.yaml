@@ -4,6 +4,11 @@ metadata:
   description: Simple example to load classic DOS games into K8s in the airgap
   version: 1.2.0
 
+documentation:
+- release.md
+- readme.md
+- values-recommendations.md
+
 components:
   - name: baseline
     required: true

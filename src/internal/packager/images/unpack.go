@@ -96,6 +96,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 	// Process manifests in the index
 	var manifests []ImageWithManifest
 	for _, manifestDesc := range srcIdx.Manifests {
+		if manifestDesc.MediaType == ocispec.MediaTypeImageIndex {
+			return nil, fmt.Errorf("pulling in image indexes is not supported")
+		}
 		imageName, err := getRefFromAnnotations(manifestDesc)
 		if err != nil {
 			return nil, err
