@@ -267,12 +267,12 @@ type ZarfBuildData struct {
 	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
-	// The minimum version of Zarf that does not have breaking package structure changes.
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
+	// Requirements for specific package operations.
+	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.
@@ -281,4 +281,12 @@ type ZarfValues struct {
 	Files []string `json:"files,omitempty"`
 	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
 	Schema string `json:"schema,omitempty"`
+}
+
+// VersionRequirement specifies minimum version requirements for the package
+type VersionRequirement struct {
+	// The minimum version of Zarf required to use this package
+	Version string `json:"version"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
 }

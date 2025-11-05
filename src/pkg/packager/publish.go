@@ -169,6 +169,8 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
 	RemoteOptions
@@ -200,8 +202,9 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath: opts.CachePath,
-		Flavor:    opts.Flavor,
+		CachePath:        opts.CachePath,
+		Flavor:           opts.Flavor,
+		SkipVersionCheck: opts.SkipVersionCheck,
 	})
 	if err != nil {
 		return registry.Reference{}, err
