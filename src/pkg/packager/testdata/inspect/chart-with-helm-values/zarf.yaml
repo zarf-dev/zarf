@@ -14,9 +14,6 @@ components:
             description: Number of replicas
             path: replicaCount
         values:
-          - sourcePath: .customField
-            targetPath: .customField
-          - sourcePath: .image.pullPolicy
-            targetPath: .image.pullPolicy
-          - sourcePath: .port
-            targetPath: .port
+          # Map all Zarf values into Helm value overrides
+          - sourcePath: .
+            targetPath: .

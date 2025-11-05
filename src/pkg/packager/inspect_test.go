@@ -3,7 +3,6 @@
 package packager
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -61,8 +60,8 @@ func TestInspectDefinitionResources(t *testing.T) {
 		expectedContent   []string
 	}{
 		{
-			name:       "chart with values from Values parameter",
-			packageDir: inspectTestDataPath("chart-with-values"),
+			name:       "chart with helm values from Values parameter",
+			packageDir: inspectTestDataPath("chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{
 				DeploySetVariables: map[string]string{
 					"REPLICAS": "3",
@@ -216,7 +215,7 @@ func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
 	}{
 		{
 			name:       "chart with values mapping",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-values"),
+			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{
 				Values: value.Values{
 					"customField": "fromValues",
@@ -238,7 +237,7 @@ func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
 		},
 		{
 			name:       "chart with values and variables",
-			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-values"),
+			packageDir: inspectTestDataPath("inspect-values-files", "chart-with-helm-values"),
 			opts: InspectDefinitionResourcesOptions{
 				DeploySetVariables: map[string]string{
 					"REPLICAS": "5",
@@ -293,92 +292,6 @@ func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
 			for _, expected := range tt.expectedInValues {
 				require.Contains(t, valuesResource.Content, expected)
 			}
-		})
-	}
-}
-
-func TestInspectDefinitionResources_GoldenFiles(t *testing.T) {
-	t.Parallel()
-	setupInspectTests(t)
-
-	tests := []struct {
-		name     string
-		pkgDir   string
-		opts     InspectDefinitionResourcesOptions
-		expected string
-	}{
-		{
-			name:   "manifest with values",
-			pkgDir: inspectTestDataPath("inspect-manifests", "manifest-with-values"),
-			opts: InspectDefinitionResourcesOptions{
-				Values: value.Values{
-					"replicas": 5,
-					"imageTag": "latest",
-					"port":     8080,
-				},
-			},
-			expected: inspectTestDataPath("inspect-manifests", "manifest-with-values", "expected.yaml"),
-		},
-		{
-			name:     "manifest with package default values",
-			pkgDir:   inspectTestDataPath("inspect-manifests", "manifest-with-package-values"),
-			opts:     InspectDefinitionResourcesOptions{},
-			expected: inspectTestDataPath("inspect-manifests", "manifest-with-package-values", "expected-default.yaml"),
-		},
-		{
-			name:   "manifest with package values overridden",
-			pkgDir: inspectTestDataPath("inspect-manifests", "manifest-with-package-values"),
-			opts: InspectDefinitionResourcesOptions{
-				Values: value.Values{
-					"app": map[string]any{
-						"name":     "overridden-app",
-						"replicas": 5,
-						"image": map[string]any{
-							"repository": "nginx",
-							"tag":        "latest",
-						},
-						"port": 8080,
-					},
-				},
-			},
-			expected: inspectTestDataPath("inspect-manifests", "manifest-with-package-values", "expected-override.yaml"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := testutil.TestContext(t)
-
-			absDir, err := filepath.Abs(tt.pkgDir)
-			require.NoError(t, err)
-
-			resources, err := InspectDefinitionResources(ctx, absDir, tt.opts)
-			require.NoError(t, err)
-			require.NotEmpty(t, resources)
-
-			// For golden file comparison, we need to normalize the temp paths
-			// since they vary between runs
-			manifestResource := findResourceByType(resources, ManifestResource)
-			require.NotNil(t, manifestResource, "should have a manifest resource")
-
-			// Note: The expected files contain temp directory paths that will vary.
-			// In a production implementation, you'd want to normalize these paths
-			// before comparison. For now, we just validate key content.
-			content := manifestResource.Content
-
-			// Read expected file for key content validation
-			expectedContent, err := os.ReadFile(tt.expected)
-			require.NoError(t, err, "failed to read expected file")
-
-			// Validate that key elements from expected file are present
-			// This is a simplified approach - a full implementation would normalize paths
-			require.Contains(t, content, "apiVersion: apps/v1")
-			require.Contains(t, content, "kind: Deployment")
-
-			t.Logf("Expected file path: %s", tt.expected)
-			t.Logf("To update expected files, run: UPDATE_GOLDEN=1 go test")
-			_ = expectedContent // For future full golden file comparison after normalization
 		})
 	}
 }

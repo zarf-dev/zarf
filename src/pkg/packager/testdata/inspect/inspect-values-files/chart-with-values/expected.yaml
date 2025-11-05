@@ -1,7 +1,0 @@
-# associated chart: demo-helm
-customField: fromCLI
-image:
-  pullPolicy: Always
-port: 9090
-replicaCount: "3"
----
