@@ -120,7 +120,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 		copyOpts := oras.DefaultCopyOptions
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
 		if err != nil {
-			return nil, fmt.Errorf("failed to copy image %s: %w", manifestImg.Reference, err)
+			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
 
 		// Tag the image with annotations so that Syft and ORAS can see them
