@@ -753,7 +753,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		signOpts := zarfCosign.DefaultSignBlobOptions()
+		signOpts := utils.DefaultSignBlobOptions()
 		signOpts.KeyRef = "./testdata/cosign.key"
 		signOpts.PassFunc = passFunc
 
@@ -762,7 +762,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.FileExists(t, signedPath)
 
 		// Verify the signature
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -786,7 +786,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		signOpts := zarfCosign.DefaultSignBlobOptions()
+		signOpts := utils.DefaultSignBlobOptions()
 		signOpts.KeyRef = "./testdata/cosign.key"
 		signOpts.PassFunc = passFunc
 
@@ -794,7 +794,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to verify with a different (non-existent) key - should fail
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/nonexistent.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -814,7 +814,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -828,7 +828,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -841,7 +841,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -860,7 +860,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -886,7 +886,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		signOpts := zarfCosign.DefaultSignBlobOptions()
+		signOpts := utils.DefaultSignBlobOptions()
 		signOpts.KeyRef = "./testdata/cosign.key"
 		signOpts.PassFunc = passFunc
 
@@ -895,7 +895,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.FileExists(t, signedPath)
 
 		// Try to verify without providing a key
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -920,7 +920,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		signOpts := zarfCosign.DefaultSignBlobOptions()
+		signOpts := utils.DefaultSignBlobOptions()
 		signOpts.KeyRef = "./testdata/cosign.key"
 		signOpts.PassFunc = passFunc
 
@@ -933,7 +933,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to verify with corrupted signature
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -958,7 +958,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
-		signOpts := zarfCosign.DefaultSignBlobOptions()
+		signOpts := utils.DefaultSignBlobOptions()
 		signOpts.KeyRef = "./testdata/cosign.key"
 		signOpts.PassFunc = passFunc
 
@@ -971,7 +971,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verification should fail because content doesn't match signature
-		verifyOpts := zarfCosign.DefaultVerifyBlobOptions()
+		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
