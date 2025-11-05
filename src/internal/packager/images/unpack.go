@@ -100,9 +100,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 			return nil, fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
 		}
 
-		imageName := getRefFromAnnotations(manifestDesc)
-		if imageName == "" {
-			return nil, fmt.Errorf("no valid reference annotation found for manifest %s", manifestDesc.Digest)
+		imageName, err := getRefFromAnnotations(manifestDesc)
+		if err != nil {
+			return nil, err
 		}
 		manifestImg, err := transform.ParseImageRef(imageName)
 		if err != nil {
@@ -156,19 +156,27 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 }
 
 // getRefFromAnnotations extracts the image reference from a manifest descriptor.
-func getRefFromAnnotations(manifestDesc ocispec.Descriptor) string {
+func getRefFromAnnotations(manifestDesc ocispec.Descriptor) (string, error) {
 	// This is the default docker annotation for the image name
 	dockerRefAnnotation := "io.containerd.image.name"
 	// When the Docker engine containerd image store is used, this annotation is exists which can be used for sha referenced images
-	dockerContainerdImageStore := "containerd.io/distribution.source.docker.io"
+	dockerContainerdImageStoreAnnotation := "containerd.io/distribution.source.docker.io"
 
 	if ref, ok := manifestDesc.Annotations[dockerRefAnnotation]; ok && ref != "" {
-		return ref
+		return ref, nil
 	}
 
-	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStore]; ok && repo != "" {
-		return fmt.Sprintf("docker.io/%s@%s", repo, manifestDesc.Digest.String())
+	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStoreAnnotation]; ok && repo != "" {
+		return fmt.Sprintf("docker.io/%s@%s", repo, manifestDesc.Digest.String()), nil
 	}
 
-	return ""
+	// This is the annotation oras-go uses to check for the name during oras.copy
+	// This may change for oras https://github.com/oras-project/oras/issues/1893
+	// podman also uses this field
+	if ref, ok := manifestDesc.Annotations[ocispec.AnnotationRefName]; ok && ref != "" {
+		return ref, nil
+	}
+
+	return "", fmt.Errorf("could not determine image reference. The manifest descriptor must have one of the following annotations: %s, %s, %s",
+		dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
 }

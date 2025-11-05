@@ -21,9 +21,10 @@ func TestGetRefFromAnnotations(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name     string
-		desc     ocispec.Descriptor
-		expected string
+		name      string
+		desc      ocispec.Descriptor
+		expected  string
+		expectErr bool
 	}{
 		{
 			name: "io.containerd.image.name present",
@@ -47,12 +48,32 @@ func TestGetRefFromAnnotations(t *testing.T) {
 			},
 			expected: "docker.io/library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
 		},
+		{
+			name: "org.opencontainers.image.ref.name present",
+			desc: ocispec.Descriptor{
+				Digest: "sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+				Annotations: map[string]string{
+					"org.opencontainers.image.ref.name": "registry.com/podman-or-oras:0.0.1",
+				},
+			},
+			expected: "registry.com/podman-or-oras:0.0.1",
+		},
+		{
+			name:      "no annotations",
+			desc:      ocispec.Descriptor{},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			result := getRefFromAnnotations(tc.desc)
+			result, err := getRefFromAnnotations(tc.desc)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			require.Equal(t, tc.expected, result)
 		})
 	}
