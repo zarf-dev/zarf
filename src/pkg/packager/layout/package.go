@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 
@@ -124,9 +125,142 @@ func (p *PackageLayout) ContainsSBOM() bool {
 	return !helpers.InvalidPath(filepath.Join(p.dirPath, SBOMTar))
 }
 
-// SignPackage signs the zarf package
-func (p *PackageLayout) SignPackage(signingKeyPath, signingKeyPassword string) error {
-	return signPackage(p.dirPath, signingKeyPath, signingKeyPassword)
+// SignPackage signs the zarf package using cosign with the provided options.
+// If the options do not indicate signing should be performed (no key material configured),
+// this is a no-op and returns nil.
+func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) (err error) {
+	// Note: This function:
+	// 1. Updates Pkg.Build.Signed = true in memory
+	// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
+	// 3. Signs the temporary file
+	// 4. If signing succeeds, replaces the actual zarf.yaml with the signed version
+	// 5. If signing fails, reverts the in-memory state
+	//
+	// This ensures the zarf.yaml metadata accurately reflects the signed state and the
+	// signature is valid for the zarf.yaml content that includes signed:true.
+
+	l := logger.From(ctx)
+
+	// Check if signing should be performed based on the options
+	// this is a no-op as there may be many different ways to sign
+	// input validation should be performed in the calling function
+	if !opts.ShouldSign() {
+		l.Info("skipping package signing (no signing key material configured)")
+		return nil
+	}
+
+	// Validate package layout state
+	if p.dirPath == "" {
+		return errors.New("invalid package layout: dirPath is empty")
+	}
+	if info, err := os.Stat(p.dirPath); err != nil {
+		return fmt.Errorf("invalid package layout directory: %w", err)
+	} else if !info.IsDir() {
+		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
+	}
+
+	// Verify zarf.yaml exists before signing
+	zarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
+	if _, err := os.Stat(zarfYAMLPath); err != nil {
+		return fmt.Errorf("cannot access %s for signing: %w", ZarfYAML, err)
+	}
+
+	// Save the original signed state in case we need to rollback
+	var originalSigned *bool
+	if p.Pkg.Build.Signed != nil {
+		val := *p.Pkg.Build.Signed
+		originalSigned = &val
+	}
+
+	// Create temporary directory for signing
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for signing: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
+	tmpSignaturePath := filepath.Join(tmpDir, Signature)
+
+	// Update in-memory state to signed:true
+	signed := true
+	p.Pkg.Build.Signed = &signed
+
+	// Marshal package with signed:true
+	b, err := goyaml.Marshal(p.Pkg)
+	if err != nil {
+		// Rollback
+		p.Pkg.Build.Signed = originalSigned
+		return fmt.Errorf("failed to marshal package for signing: %w", err)
+	}
+
+	// Write to temporary file
+	err = os.WriteFile(tmpZarfYAMLPath, b, helpers.ReadWriteUser)
+	if err != nil {
+		// Rollback
+		p.Pkg.Build.Signed = originalSigned
+		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
+	}
+
+	// Configure signing to write to temp directory
+	signOpts := opts
+	signOpts.OutputSignature = tmpSignaturePath
+
+	// Check if signature already exists in actual layout and warn
+	actualSignaturePath := filepath.Join(p.dirPath, Signature)
+	if _, err := os.Stat(actualSignaturePath); err == nil {
+		l.Warn("overwriting existing package signature", "path", actualSignaturePath)
+	}
+
+	// Perform the signing operation on the temp file
+	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
+	_, err = utils.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
+	if err != nil {
+		// Rollback in-memory state
+		p.Pkg.Build.Signed = originalSigned
+		return fmt.Errorf("failed to sign package: %w", err)
+	}
+
+	// Signing succeeded - now atomically replace the actual files
+
+	// Move signed zarf.yaml from temp to actual location (atomic rename)
+	err = os.Rename(tmpZarfYAMLPath, zarfYAMLPath)
+	if err != nil {
+		// This is a critical error - signing succeeded but we can't update the file
+		// Keep the signed:true state as it reflects what we intended
+		return fmt.Errorf("failed to update %s after signing: %w", ZarfYAML, err)
+	}
+
+	// Move signature from temp to actual location (atomic rename)
+	err = os.Rename(tmpSignaturePath, actualSignaturePath)
+	if err != nil {
+		return fmt.Errorf("failed to move signature after signing: %w", err)
+	}
+
+	l.Info("package signed successfully", "signature", actualSignaturePath)
+	return nil
+}
+
+// IsSigned returns true if the package is signed.
+// It first checks the package metadata (Build.Signed), then falls back to
+// checking for the presence of a signature file for backward compatibility.
+func (p *PackageLayout) IsSigned() bool {
+	// Check metadata first (authoritative source)
+	if p.Pkg.Build.Signed != nil {
+		return *p.Pkg.Build.Signed
+	}
+
+	// Backward compatibility: check for signature file existence
+	// This handles packages created before the Build.Signed field was added
+	if p.dirPath != "" {
+		if _, err := os.Stat(filepath.Join(p.dirPath, Signature)); err == nil {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetSBOM outputs the SBOM data from the package to the given destination path.

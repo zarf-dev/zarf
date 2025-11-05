@@ -60,6 +60,7 @@ func newPackageCommand() *cobra.Command {
 	cmd.AddCommand(newPackageListCommand())
 	cmd.AddCommand(newPackagePublishCommand(v))
 	cmd.AddCommand(newPackagePullCommand(v))
+	cmd.AddCommand(newPackageSignCommand(v))
 
 	return cmd
 }
@@ -1579,6 +1580,153 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	logger.From(cmd.Context()).Info("package downloaded successful", "path", packagePath)
+	return nil
+}
+
+type packageSignOptions struct {
+	signingKeyPath     string
+	signingKeyPassword string
+	publicKeyPath      string
+	overwrite          bool
+	output             string
+	ociConcurrency     int
+	retries            int
+}
+
+func newPackageSignCommand(v *viper.Viper) *cobra.Command {
+	o := &packageSignOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "sign PACKAGE_SOURCE",
+		Aliases: []string{"s"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdPackageSignShort,
+		Long:    lang.CmdPackageSignLong,
+		Example: lang.CmdPackageSignExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgSignSigningKeyPassword), lang.CmdPackageSignFlagSigningKeyPass)
+	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgSignOutput), lang.CmdPackageSignFlagOutput)
+	cmd.Flags().BoolVar(&o.overwrite, "overwrite", v.GetBool(VPkgSignOverwrite), lang.CmdPackageSignFlagOverwrite)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+
+	return cmd
+}
+
+func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	l := logger.From(ctx)
+	packageSource := args[0]
+
+	if o.signingKeyPath == "" {
+		return errors.New("--signing-key is required")
+	}
+
+	// Determine output destination
+	outputDest := o.output
+	if outputDest == "" {
+		if helpers.IsOCIURL(packageSource) {
+			// For OCI sources, default to publishing back to the same OCI location
+			// Extract the repository portion (without package name and tag) from source
+			trimmed := strings.TrimPrefix(packageSource, helpers.OCIURLPrefix)
+			srcRef, err := registry.ParseReference(trimmed)
+			if err != nil {
+				return fmt.Errorf("failed to parse source OCI reference: %w", err)
+			}
+
+			// Extract repository path without the package name
+			// e.g., "registry.com/namespace/package:tag" -> "registry.com/namespace"
+			repoParts := strings.Split(srcRef.Repository, "/")
+			if len(repoParts) > 1 {
+				// Remove the last part (package name)
+				repoPath := strings.Join(repoParts[:len(repoParts)-1], "/")
+				outputDest = helpers.OCIURLPrefix + srcRef.Registry + "/" + repoPath
+			} else {
+				// Package is directly under registry (no namespace)
+				outputDest = helpers.OCIURLPrefix + srcRef.Registry
+			}
+		} else {
+			// For file sources, use the same directory as the source
+			outputDest = filepath.Dir(packageSource)
+		}
+	}
+
+	// If output is OCI (either default or user-specified), delegate to publish workflow
+	if helpers.IsOCIURL(outputDest) {
+		l.Info("signing and publishing package to OCI registry", "source", packageSource, "destination", outputDest)
+
+		// Create publish options from sign options
+		publishOpts := &packagePublishOptions{
+			signingKeyPath:          o.signingKeyPath,
+			signingKeyPassword:      o.signingKeyPassword,
+			skipSignatureValidation: o.overwrite, // Use overwrite flag for skip validation
+			ociConcurrency:          o.ociConcurrency,
+			retries:                 o.retries,
+			publicKeyPath:           o.publicKeyPath,
+		}
+
+		// Call publish with source and destination repository
+		return publishOpts.run(cmd, []string{packageSource, outputDest})
+	}
+
+	// For local file output, use existing sign logic
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Load the package
+	loadOpts := packager.LoadOptions{
+		PublicKeyPath:           o.publicKeyPath,
+		SkipSignatureValidation: o.overwrite,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+
+	l.Info("loading package", "source", packageSource)
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load package: %w", err)
+	}
+	defer func() {
+		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
+			l.Warn("failed to cleanup package layout", "error", cleanupErr)
+		}
+	}()
+
+	signed := pkgLayout.IsSigned()
+
+	if signed && !o.overwrite {
+		return errors.New("package is already signed, use --overwrite to re-sign")
+	}
+
+	// Sign the package
+	l.Info("signing package with provided key")
+
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = o.signingKeyPath
+	signOpts.Password = o.signingKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
+	if err != nil {
+		return fmt.Errorf("failed to sign package: %w", err)
+	}
+
+	// Archive to local directory
+	l.Info("archiving signed package to local directory", "directory", outputDest)
+	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
+	if err != nil {
+		return fmt.Errorf("failed to archive signed package: %w", err)
+	}
+
+	l.Info("package signed successfully", "path", signedPath)
 	return nil
 }
 

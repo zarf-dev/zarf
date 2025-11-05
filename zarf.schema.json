@@ -341,6 +341,10 @@
           "type": "string",
           "description": "The flavor of Zarf used to build this package."
         },
+        "signed": {
+          "type": "boolean",
+          "description": "Whether this package was signed"
+        },
         "versionRequirements": {
           "items": {
             "$ref": "#/$defs/VersionRequirement"
