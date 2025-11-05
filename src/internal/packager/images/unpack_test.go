@@ -18,7 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestGetRefFromAnnotations(t *testing.T) {
+func TestGetRefFromManifest(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -69,7 +69,7 @@ func TestGetRefFromAnnotations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			result, err := getRefFromAnnotations(tc.desc)
+			result, err := getRefFromManifest(tc.desc)
 			if tc.expectErr {
 				require.Error(t, err)
 				return

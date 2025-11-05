@@ -16,6 +16,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
@@ -96,10 +97,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 	// Process manifests in the index
 	var manifests []ImageWithManifest
 	for _, manifestDesc := range srcIdx.Manifests {
-		if manifestDesc.MediaType == ocispec.MediaTypeImageIndex {
-			return nil, fmt.Errorf("pulling in image indexes is not supported")
-		}
-		imageName, err := getRefFromAnnotations(manifestDesc)
+		imageName, err := getRefFromManifest(manifestDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -116,12 +114,25 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 			requestedImages[manifestImg.Reference] = true
 		}
 
-		copyOpts := oras.DefaultCopyOptions
-		platform := &ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
+		_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
-		copyOpts.WithTargetPlatform(platform)
+
+		var ociManifest ocispec.Manifest
+		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
+			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
+		}
+
+		copyOpts := oras.DefaultCopyOptions
+		// If this is a container image then require the platform match, otherwise always bring the image in
+		if OnlyHasImageLayers(ociManifest) {
+			platform := &ocispec.Platform{
+				Architecture: arch,
+				OS:           "linux",
+			}
+			copyOpts.WithTargetPlatform(platform)
+		}
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
@@ -134,16 +145,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-		}
-
-		var ociManifest ocispec.Manifest
-		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
-		}
-
+		logger.From(ctx).Info("pulled in image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		manifests = append(manifests, ImageWithManifest{
 			Image:    manifestImg,
 			Manifest: ociManifest,
@@ -159,8 +161,8 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 	return manifests, nil
 }
 
-// getRefFromAnnotations extracts the image reference from a manifest descriptor.
-func getRefFromAnnotations(manifestDesc ocispec.Descriptor) (string, error) {
+// getRefFromManifest extracts the image reference from a manifest descriptor.
+func getRefFromManifest(manifestDesc ocispec.Descriptor) (string, error) {
 	if manifestDesc.Annotations == nil {
 		return "", fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
 	}
