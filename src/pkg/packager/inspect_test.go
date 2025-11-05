@@ -39,15 +39,6 @@ func assertContainsAll(t *testing.T, resources []Resource, expectedContent []str
 	}
 }
 
-func findResourceByType(resources []Resource, resourceType ResourceType) *Resource {
-	for i := range resources {
-		if resources[i].ResourceType == resourceType {
-			return &resources[i]
-		}
-	}
-	return nil
-}
-
 func TestInspectDefinitionResources(t *testing.T) {
 	t.Parallel()
 	setupInspectTests(t)
@@ -149,6 +140,51 @@ func TestInspectDefinitionResources(t *testing.T) {
 				"containerPort: 8080",
 			},
 		},
+		{
+			name:       "chart with values mapping",
+			packageDir: inspectTestDataPath("chart-with-helm-values"),
+			opts: InspectDefinitionResourcesOptions{
+				Values: value.Values{
+					"customField": "fromValues",
+					"image": map[string]any{
+						"pullPolicy": "IfNotPresent",
+					},
+					"port": 8080,
+				},
+			},
+			expectedResources: 2, // 1 chart + 1 values file
+			expectedContent: []string{
+				"containerPort: 8080",
+				"customField: fromValues",
+				"pullPolicy: IfNotPresent",
+				"port: 8080",
+			},
+		},
+		{
+			name:       "chart with values and variables",
+			packageDir: inspectTestDataPath("chart-with-helm-values"),
+			opts: InspectDefinitionResourcesOptions{
+				DeploySetVariables: map[string]string{
+					"REPLICAS": "5",
+				},
+				Values: value.Values{
+					"customField": "testValue",
+					"image": map[string]any{
+						"pullPolicy": "Never",
+					},
+					"port": 9090,
+				},
+			},
+			expectedResources: 2, // 1 chart + 1 values file
+			expectedContent: []string{
+				"replicas: 5",
+				"containerPort: 9090",
+				"customField: testValue",
+				"pullPolicy: Never",
+				"port: 9090",
+				"replicaCount: \"5\"",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -197,101 +233,6 @@ func TestInspectDefinitionResources_Errors(t *testing.T) {
 			resources, err := InspectDefinitionResources(ctx, tt.packageDir, tt.opts)
 			require.Error(t, err)
 			require.Nil(t, resources)
-		})
-	}
-}
-
-func TestInspectDefinitionResources_ValuesFileLoading(t *testing.T) {
-	t.Parallel()
-	setupInspectTests(t)
-
-	tests := []struct {
-		name              string
-		packageDir        string
-		opts              InspectDefinitionResourcesOptions
-		expectedResources int
-		expectedInChart   []string
-		expectedInValues  []string
-	}{
-		{
-			name:       "chart with values mapping",
-			packageDir: inspectTestDataPath("chart-with-helm-values"),
-			opts: InspectDefinitionResourcesOptions{
-				Values: value.Values{
-					"customField": "fromValues",
-					"image": map[string]any{
-						"pullPolicy": "IfNotPresent",
-					},
-					"port": 8080,
-				},
-			},
-			expectedResources: 2, // 1 chart + 1 values file
-			expectedInChart: []string{
-				"containerPort: 8080",
-			},
-			expectedInValues: []string{
-				"customField: fromValues",
-				"pullPolicy: IfNotPresent",
-				"port: 8080",
-			},
-		},
-		{
-			name:       "chart with values and variables",
-			packageDir: inspectTestDataPath("chart-with-helm-values"),
-			opts: InspectDefinitionResourcesOptions{
-				DeploySetVariables: map[string]string{
-					"REPLICAS": "5",
-				},
-				Values: value.Values{
-					"customField": "testValue",
-					"image": map[string]any{
-						"pullPolicy": "Never",
-					},
-					"port": 9090,
-				},
-			},
-			expectedResources: 2, // 1 chart + 1 values file
-			expectedInChart: []string{
-				"replicas: 5",
-				"containerPort: 9090",
-			},
-			expectedInValues: []string{
-				"customField: testValue",
-				"pullPolicy: Never",
-				"port: 9090",
-				"replicaCount: \"5\"",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			ctx := testutil.TestContext(t)
-
-			absDir, err := filepath.Abs(tt.packageDir)
-			require.NoError(t, err)
-
-			resources, err := InspectDefinitionResources(ctx, absDir, tt.opts)
-			require.NoError(t, err)
-			require.Len(t, resources, tt.expectedResources)
-
-			// Find chart and values resources
-			chartResource := findResourceByType(resources, ChartResource)
-			valuesResource := findResourceByType(resources, ValuesFileResource)
-
-			require.NotNil(t, chartResource, "should have a chart resource")
-			require.NotNil(t, valuesResource, "should have a values file resource")
-
-			// Verify expected content in chart
-			for _, expected := range tt.expectedInChart {
-				require.Contains(t, chartResource.Content, expected)
-			}
-
-			// Verify expected content in values
-			for _, expected := range tt.expectedInValues {
-				require.Contains(t, valuesResource.Content, expected)
-			}
 		})
 	}
 }

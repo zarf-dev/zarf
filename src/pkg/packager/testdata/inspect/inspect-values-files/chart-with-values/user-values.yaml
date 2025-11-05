@@ -1,4 +1,0 @@
-image:
-  pullPolicy: Always
-customField: fromValuesFile
-port: 9090

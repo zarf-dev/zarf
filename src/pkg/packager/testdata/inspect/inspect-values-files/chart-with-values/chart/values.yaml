@@ -1,1 +1,0 @@
-description: "values in this file will not show on zarf package inspect values-files since they are packaged and become part of the main chart"
