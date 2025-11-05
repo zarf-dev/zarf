@@ -1790,32 +1790,21 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	pkg := pkgLayout.Pkg
-
-	// Print header
-	l.Info("Package Verification Results",
-		"name", pkg.Metadata.Name,
-		"version", pkg.Metadata.Version,
-		"architecture", pkg.Build.Architecture)
-
 	// Checksum verification passed (we successfully loaded the package)
 	l.Info("checksum verification", "status", "PASSED")
 
-	// Check if package has a signature
-	signaturePath := filepath.Join(pkgLayout.DirPath(), layout.Signature)
-	_, err = os.Stat(signaturePath)
-	hasSignature := err == nil
+	isSigned := pkgLayout.IsSigned()
 
-	// Handle signature verification logic with early returns
-	if !hasSignature && o.publicKeyPath != "" {
+	// Handle signature verification logic
+	if !isSigned && o.publicKeyPath != "" {
 		return errors.New("a key was provided but the package is not signed")
 	}
 
-	if hasSignature && o.publicKeyPath == "" {
+	if isSigned && o.publicKeyPath == "" {
 		return errors.New("package is signed but no public key was provided (use --key)")
 	}
 
-	if !hasSignature && o.publicKeyPath == "" {
+	if !isSigned && o.publicKeyPath == "" {
 		l.Warn("package is unsigned", "signed", false)
 		l.Info("verification complete", "status", "SUCCESS")
 		return nil
