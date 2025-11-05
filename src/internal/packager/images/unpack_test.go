@@ -91,8 +91,16 @@ func TestUnpackMultipleImages(t *testing.T) {
 		expectErr      error
 	}{
 		{
-			name:           "single image",
+			name:           "single image, docker image store",
 			srcDir:         "testdata/my-image",
+			expectedImages: 1,
+			imageRefs: []string{
+				"docker.io/library/hello-world:linux",
+			},
+		},
+		{
+			name:           "single image, docker containerd store",
+			srcDir:         "testdata/docker-containerd-image-store",
 			expectedImages: 1,
 			imageRefs: []string{
 				"docker.io/library/hello-world:linux",
