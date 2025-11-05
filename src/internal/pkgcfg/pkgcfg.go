@@ -31,8 +31,6 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 
 // List of migrations tracked in the zarf.yaml build data.
 const (
-	// This should be updated when a breaking change is introduced to the Zarf package structure.  See: https://github.com/zarf-dev/zarf/releases/tag/v0.27.0
-	LastNonBreakingVersion   = "v0.27.0"
 	ScriptsToActionsMigrated = "scripts-to-actions"
 	PluralizeSetVariable     = "pluralize-set-variable"
 )
@@ -74,9 +72,6 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 		ScriptsToActionsMigrated,
 		PluralizeSetVariable,
 	}
-
-	// Record the latest version of Zarf without breaking changes to the package structure.
-	pkg.Build.LastNonBreakingVersion = LastNonBreakingVersion
 
 	return pkg, warnings
 }
