@@ -1769,7 +1769,6 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Load the package (validates checksums automatically)
 	// Note: OCI signature validation does not require the whole package
-	// this scenario could be optimized to avoid loading the whole package
 	loadOpts := packager.LoadOptions{
 		PublicKeyPath:           "",
 		SkipSignatureValidation: true,
@@ -1778,6 +1777,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
+		LayersSelector:          zoci.MetadataLayers,
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
