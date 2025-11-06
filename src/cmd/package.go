@@ -61,6 +61,7 @@ func newPackageCommand() *cobra.Command {
 	cmd.AddCommand(newPackagePublishCommand(v))
 	cmd.AddCommand(newPackagePullCommand(v))
 	cmd.AddCommand(newPackageSignCommand(v))
+	cmd.AddCommand(newPackageVerifyCommand(v))
 
 	return cmd
 }
@@ -1727,6 +1728,99 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	l.Info("package signed successfully", "path", signedPath)
+	return nil
+}
+
+type packageVerifyOptions struct {
+	publicKeyPath  string
+	ociConcurrency int
+}
+
+func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
+	o := &packageVerifyOptions{}
+
+	cmd := &cobra.Command{
+		Use:     "verify PACKAGE_SOURCE",
+		Aliases: []string{"v"},
+		Args:    cobra.ExactArgs(1),
+		Short:   lang.CmdPackageVerifyShort,
+		Long:    lang.CmdPackageVerifyLong,
+		Example: lang.CmdPackageVerifyExample,
+		RunE:    o.run,
+	}
+
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
+	return cmd
+}
+
+func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	l := logger.From(ctx)
+	packageSource := args[0]
+
+	l.Info("verifying package", "source", packageSource)
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Load the package (validates checksums automatically)
+	// Note: OCI signature validation does not require the whole package
+	loadOpts := packager.LoadOptions{
+		PublicKeyPath:           "",
+		SkipSignatureValidation: true,
+		Filter:                  filters.Empty(),
+		Architecture:            config.GetArch(),
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+		LayersSelector:          zoci.MetadataLayers,
+	}
+
+	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
+	if err != nil {
+		return fmt.Errorf("package verification failed: %w", err)
+	}
+	defer func() {
+		if cleanupErr := pkgLayout.Cleanup(); cleanupErr != nil {
+			l.Warn("failed to cleanup package", "error", cleanupErr)
+		}
+	}()
+
+	// Checksum verification passed (we successfully loaded the package)
+	l.Info("checksum verification", "status", "PASSED")
+
+	isSigned := pkgLayout.IsSigned()
+
+	// Handle signature verification logic
+	if !isSigned && o.publicKeyPath != "" {
+		return errors.New("a key was provided but the package is not signed")
+	}
+
+	if isSigned && o.publicKeyPath == "" {
+		return errors.New("package is signed but no public key was provided (use --key)")
+	}
+
+	if !isSigned && o.publicKeyPath == "" {
+		l.Warn("package is unsigned", "signed", false)
+		l.Info("verification complete", "status", "SUCCESS")
+		return nil
+	}
+
+	// Package is signed and we have a key - verify using VerifyPackageSignature
+	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts.KeyRef = o.publicKeyPath
+
+	err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+	if err != nil {
+		return fmt.Errorf("signature verification failed: %w", err)
+	}
+
+	l.Info("signature verification", "status", "PASSED")
+	l.Info("verification complete", "status", "SUCCESS")
 	return nil
 }
 

@@ -335,6 +335,17 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
 
+	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
+	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
+	CmdPackageVerifyExample = `
+# Verify a signed package
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify an unsigned package (checksums only)
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
+`
+	CmdPackageVerifyFlagKey = "Public key for signature verification"
+
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
 # Pull a package matching the current architecture
