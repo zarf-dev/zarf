@@ -21,7 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"helm.sh/helm/v3/pkg/repo"
+	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 )
 
 // Docker/k3d networking constants
@@ -179,10 +179,10 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
-	repoFile := repo.NewFile()
+	repoFile := repov1.NewFile()
 
 	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, giteaUser)
-	entry := &repo.Entry{
+	entry := &repov1.Entry{
 		Name:     "temp_entry",
 		Username: giteaUser,
 		Password: commonPassword,

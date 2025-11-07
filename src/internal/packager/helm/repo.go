@@ -19,14 +19,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/downloader"
-	"helm.sh/helm/v3/pkg/getter"
-	"helm.sh/helm/v3/pkg/registry"
-	"helm.sh/helm/v3/pkg/repo"
+	"helm.sh/helm/v4/pkg/action"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/downloader"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/registry"
+	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -167,7 +167,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		chartURL  string
 		err       error
 	)
-	repoFile, err := repo.LoadFile(pull.Settings.RepositoryConfig)
+	repoFile, err := repov1.LoadFile(pull.Settings.RepositoryConfig)
 
 	// Not returning the error here since the repo file is only needed if we are pulling from a repo that requires authentication
 	if err != nil {
@@ -206,17 +206,14 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			}
 		}
 
-		chartURL, err = repo.FindChartInAuthAndTLSRepoURL(
+		chartURL, err = repov1.FindChartInRepoURL(
 			chart.URL,
-			username,
-			password,
 			chartName,
-			chart.Version,
-			pull.CertFile,
-			pull.KeyFile,
-			pull.CaFile,
-			config.CommonOptions.InsecureSkipTLSVerify,
 			getter.All(pull.Settings),
+			repov1.WithChartVersion(chart.Version),
+			repov1.WithUsernamePassword(username, password),
+			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
+			repov1.WithInsecureSkipTLSverify(config.CommonOptions.InsecureSkipTLSVerify),
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
@@ -364,7 +361,7 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 	return nil
 }
 
-func loadAndValidateChart(location string) (loader.ChartLoader, *chart.Chart, error) {
+func loadAndValidateChart(location string) (loader.ChartLoader, *chartv2.Chart, error) {
 	// Validate the chart
 	cl, err := loader.Loader(location)
 	if err != nil {

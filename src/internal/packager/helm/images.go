@@ -6,9 +6,9 @@ package helm
 import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v4/pkg/chart/common"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
 )
 
 // ChartImage represents a single image entry in the helm.sh/images annotation.
@@ -27,7 +27,7 @@ type ChartImage struct {
 type ChartImages []ChartImage
 
 // FindAnnotatedImagesForChart attempts to parse any image annotations found in a chart archive or directory.
-func FindAnnotatedImagesForChart(chartPath string, values chartutil.Values) (images []string, err error) {
+func FindAnnotatedImagesForChart(chartPath string, values common.Values) (images []string, err error) {
 	// Load a new chart.
 	chart, err := loader.Load(chartPath)
 	if err != nil {
@@ -50,7 +50,7 @@ func FindAnnotatedImagesForChart(chartPath string, values chartutil.Values) (ima
 }
 
 // findImagesRecursive recursively finds images in a chart and its dependencies.
-func findImagesRecursive(c *chart.Chart, values chartutil.Values, imageSet map[string]bool) {
+func findImagesRecursive(c *chartv2.Chart, values common.Values, imageSet map[string]bool) {
 	// Process current chart's annotations
 	if imageAnnotation, ok := c.Metadata.Annotations["helm.sh/images"]; ok && imageAnnotation != "" {
 		var chartImages ChartImages
@@ -65,17 +65,17 @@ func findImagesRecursive(c *chart.Chart, values chartutil.Values, imageSet map[s
 
 	// Process dependencies recursively
 	for _, depChart := range c.Dependencies() {
-		var subchartValues chartutil.Values
+		var subchartValues common.Values
 		if depChart.Name() != "" {
 			// Try to access subchart values using the dependency name as the key
 			if depValues, ok := values[depChart.Name()].(map[string]interface{}); ok {
-				subchartValues = chartutil.Values(depValues)
+				subchartValues = common.Values(depValues)
 			} else {
 				// If no specific values for this subchart, use empty values
-				subchartValues = chartutil.Values{}
+				subchartValues = common.Values{}
 			}
 		} else {
-			subchartValues = chartutil.Values{}
+			subchartValues = common.Values{}
 		}
 
 		findImagesRecursive(depChart, subchartValues, imageSet)
@@ -83,7 +83,7 @@ func findImagesRecursive(c *chart.Chart, values chartutil.Values, imageSet map[s
 }
 
 // shouldIncludeImage determines if an image should be included based on its condition.
-func shouldIncludeImage(img ChartImage, values chartutil.Values) bool {
+func shouldIncludeImage(img ChartImage, values common.Values) bool {
 	if img.Condition == "" {
 		return true
 	}

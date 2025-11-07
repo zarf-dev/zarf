@@ -12,7 +12,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
-	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v4/pkg/action"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -110,7 +111,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		agentImage.Path = strings.TrimPrefix(agentImage.Path, fmt.Sprintf("%s/", subPath))
 	}
 
-	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
+	actionConfig, err := createActionConfig(state.ZarfNamespaceName)
 	if err != nil {
 		return err
 	}
@@ -124,7 +125,12 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 
 	// Ensure we find the release - otherwise this can return without an error and not do anything
 	found := false
-	for _, release := range releases {
+	for _, releaser := range releases {
+		// Type assert to concrete Release type
+		release, ok := releaser.(*releasev1.Release)
+		if !ok {
+			return fmt.Errorf("unable to cast release to v1.Release type")
+		}
 		// Update the Zarf Agent release with the new values
 		// Maintaining the "raw-init" release name for backwards compatibility
 		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {

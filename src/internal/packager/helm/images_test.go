@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v4/pkg/chart/common"
 )
 
 func TestFindAnnotatedImagesForChart(t *testing.T) {
@@ -17,7 +17,7 @@ func TestFindAnnotatedImagesForChart(t *testing.T) {
 		testChartPath := filepath.Join("testdata", "annotations-test", "test-chart")
 
 		// Test with default values (redis.enabled=true, subchart.postgres.enabled=false)
-		values := chartutil.Values{
+		values := common.Values{
 			"redis": map[string]interface{}{
 				"enabled": true,
 			},
@@ -58,7 +58,7 @@ func TestFindAnnotatedImagesForChart(t *testing.T) {
 		testChartPath := filepath.Join("testdata", "annotations-test", "test-chart")
 
 		// Enable all conditional images
-		values := chartutil.Values{
+		values := common.Values{
 			"redis": map[string]interface{}{
 				"enabled": true,
 			},
@@ -91,7 +91,7 @@ func TestFindAnnotatedImagesForChart(t *testing.T) {
 		testChartPath := filepath.Join("testdata", "annotations-test", "test-chart")
 
 		// Disable all conditional images
-		values := chartutil.Values{
+		values := common.Values{
 			"redis": map[string]interface{}{
 				"enabled": false,
 			},
@@ -126,7 +126,7 @@ func TestFindAnnotatedImagesForChart(t *testing.T) {
 		testChartPath := filepath.Join("testdata", "annotations-test", "test-chart")
 
 		// Use empty values - should merge with chart's default values
-		values := chartutil.Values{}
+		values := common.Values{}
 
 		images, err := FindAnnotatedImagesForChart(testChartPath, values)
 		require.NoError(t, err)
@@ -155,7 +155,7 @@ func TestFindAnnotatedImagesForChart(t *testing.T) {
 		// Provide parent values but no subchart values
 		// Since we're not overriding subchart values, it will use the parent chart's
 		// default values.yaml which sets subchart.postgres.enabled=false
-		values := chartutil.Values{
+		values := common.Values{
 			"redis": map[string]interface{}{
 				"enabled": false,
 			},
@@ -187,7 +187,7 @@ func TestShouldIncludeImage(t *testing.T) {
 			Image:     "test:latest",
 			Condition: "",
 		}
-		values := chartutil.Values{}
+		values := common.Values{}
 
 		result := shouldIncludeImage(img, values)
 		require.True(t, result, "image without condition should always be included")
@@ -199,7 +199,7 @@ func TestShouldIncludeImage(t *testing.T) {
 			Image:     "test:latest",
 			Condition: "feature.enabled",
 		}
-		values := chartutil.Values{
+		values := common.Values{
 			"feature": map[string]interface{}{
 				"enabled": true,
 			},
@@ -215,7 +215,7 @@ func TestShouldIncludeImage(t *testing.T) {
 			Image:     "test:latest",
 			Condition: "feature.enabled",
 		}
-		values := chartutil.Values{
+		values := common.Values{
 			"feature": map[string]interface{}{
 				"enabled": false,
 			},
@@ -231,7 +231,7 @@ func TestShouldIncludeImage(t *testing.T) {
 			Image:     "test:latest",
 			Condition: "nonexistent.path",
 		}
-		values := chartutil.Values{
+		values := common.Values{
 			"feature": map[string]interface{}{
 				"enabled": true,
 			},
@@ -247,7 +247,7 @@ func TestShouldIncludeImage(t *testing.T) {
 			Image:     "test:latest",
 			Condition: "database.postgres.enabled",
 		}
-		values := chartutil.Values{
+		values := common.Values{
 			"database": map[string]interface{}{
 				"postgres": map[string]interface{}{
 					"enabled": true,

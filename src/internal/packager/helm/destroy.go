@@ -13,7 +13,8 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"helm.sh/helm/v3/pkg/action"
+	"helm.sh/helm/v4/pkg/action"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 )
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
@@ -23,7 +24,7 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	l.Info("removing Zarf-installed charts")
 
 	// Initially load the actionConfig without a namespace
-	actionConfig, err := createActionConfig(ctx, "")
+	actionConfig, err := createActionConfig("")
 	if err != nil {
 		// Don't fatal since this is a removal action
 		l.Error("unable to initialize the K8s client", "error", err.Error())
@@ -48,7 +49,14 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	}
 
 	// Iterate over all releases
-	for _, release := range releases {
+	for _, releaser := range releases {
+		// FIXME: maybe this function should return an error
+		// Type assert to concrete Release type
+		release, ok := releaser.(*releasev1.Release)
+		if !ok {
+			l.Error("unable to cast release to v1.Release type")
+			continue
+		}
 		if !purgeAllZarfInstallations && release.Namespace != state.ZarfNamespaceName {
 			// Don't process releases outside the zarf namespace unless purge all is true
 			continue
