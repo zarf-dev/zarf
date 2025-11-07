@@ -242,8 +242,11 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
+		// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
+		client.ForceConflicts = true
+
 		// Perform the loadedChart upgrade.
-		_, err = client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err := client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
 		if err != nil {
 			return err
 		}
@@ -268,6 +271,9 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	} else {
 		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
+
+	// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
+	client.ForceConflicts = true
 
 	// We need to include CRDs or operator installations will fail spectacularly.
 	client.SkipCRDs = false
@@ -294,6 +300,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if !ok {
 		return nil, fmt.Errorf("unable to cast release to v1.Release type")
 	}
+	fmt.Println("status is", release.Info.Status)
 	return release, nil
 }
 
@@ -318,6 +325,10 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
 
+	// FIXME: Need to decide if we'll keep this, most likely we will
+	// Not sure why this is failing. For instance during `zarf tools update-creds`
+	client.ForceConflicts = true
+
 	client.SkipCRDs = true
 
 	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
@@ -341,6 +352,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if !ok {
 		return nil, fmt.Errorf("unable to cast release to v1.Release type")
 	}
+	fmt.Println("status is", release.Info.Status)
 	return release, nil
 }
 
