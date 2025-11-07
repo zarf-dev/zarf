@@ -220,10 +220,16 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		}
 	}
 
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
+
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
 		Out:            io.Discard,
 		RegistryClient: regClient,
+		ContentCache:   cachePath,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
