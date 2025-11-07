@@ -17,7 +17,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/feature"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
@@ -88,12 +87,10 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	}
 
 	// Apply go-templates in cmds if templating is enabled
-	if feature.IsEnabled(feature.Values) {
-		if action.ShouldTemplate() {
-			cmd, err = template.Apply(ctx, cmd, tmplObjs)
-			if err != nil {
-				return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
-			}
+	if action.ShouldTemplate() {
+		cmd, err = template.Apply(ctx, cmd, tmplObjs)
+		if err != nil {
+			return fmt.Errorf("could not template cmd %s: %w", cmdEscaped, err)
 		}
 	}
 
