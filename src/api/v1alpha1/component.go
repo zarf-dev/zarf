@@ -317,8 +317,10 @@ func (a ZarfComponentAction) ShouldTemplate() bool {
 	if a.Template != nil {
 		return *a.Template
 	}
-	// Default to true
-	return true
+	// Default to false
+	// NOTE(mkcp): Making users opt-out of go-templates in actions was a breaking change for cmds that passed templates
+	//  to CLI tooling. This pattern was more common than anticipated, so we're making these opt-in for the time being.
+	return false
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
