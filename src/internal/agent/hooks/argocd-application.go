@@ -75,9 +75,15 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		"name", app.Name,
 		"git-server", s.GitServer.Address)
 
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
+	if err != nil {
+		return nil, err
+	}
+
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, registryAddress, s.GitServer, r)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +92,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, registryAddress, s.GitServer, r)
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +108,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+func getPatchedRepoURL(ctx context.Context, repoURL, registryAddress string, gs state.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
 	l := logger.From(ctx)
 	isCreate := r.Operation == v1.Create
 	isUpdate := r.Operation == v1.Update
@@ -110,11 +116,18 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 	var isPatched bool
 	var err error
 
+	isOCI := helpers.IsOCIURL(repoURL)
+
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
 	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
 	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
+		if isOCI {
+			zarfStateAddress := helpers.OCIURLPrefix + registryAddress
+			isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
+		} else {
+			isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
+		}
 		if err != nil {
 			return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
@@ -122,13 +135,28 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 
 	// Mutate the repoURL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
-		if err != nil {
-			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
+		if isOCI {
+			patchedSrc, err := transform.ImageTransformHost(registryAddress, repoURL)
+			if err != nil {
+				return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+			}
+
+			patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+			if err != nil {
+				return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+			}
+			patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
+
+			l.Debug("mutated ArgoCD application OCI repoURL to the Zarf Registry URL", "original", repoURL, "mutated", patchedURL)
+		} else {
+			// Mutate the git URL so that the hostname matches the hostname in the Zarf state
+			transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
+			if err != nil {
+				return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
+			}
+			patchedURL = transformedURL.String()
+			l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 		}
-		patchedURL = transformedURL.String()
-		l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	}
 
 	return patchedURL, nil
