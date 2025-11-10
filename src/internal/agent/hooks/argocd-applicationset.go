@@ -78,11 +78,17 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 		"name", appSet.Name,
 		"gitServer", s.GitServer.Address)
 
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	patches := make([]operations.PatchOperation, 0)
 
 	for genIdx, generator := range appSet.Spec.Generators {
 		if generator.Git != nil && generator.Git.RepoURL != "" {
-			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, s.GitServer)
+			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, registryAddress, clusterIP, s.GitServer, r)
 			if err != nil {
 				return nil, err
 			}
