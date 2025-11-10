@@ -80,9 +80,15 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		"operation", r.Operation,
 		"gitServer", s.GitServer.Address)
 
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +97,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +113,12 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
+func getPatchedRepoURL(
+	ctx context.Context,
+	repoURL, registryAddress, clusterIP string,
+	gs state.GitServerInfo,
+	r *v1.AdmissionRequest,
+) (string, error) {
 	l := logger.From(ctx)
 
 	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
@@ -122,6 +133,82 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 		return repoURL, nil
 	}
 
+	isOCIURL := helpers.IsOCIURL(repoURL)
+
+	shouldMutate, isPatchedClusterIP, err := shouldMutateURL(r.Operation, isOCIURL, repoURL, registryAddress, clusterIP, gs)
+	if err != nil {
+		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
+	}
+
+	if !shouldMutate {
+		return repoURL, nil
+	}
+
+	if isOCIURL {
+		return mutateOCIURL(ctx, repoURL, registryAddress, isPatchedClusterIP)
+	}
+	return mutateGitURL(ctx, repoURL, gs)
+}
+
+func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (bool, bool, error) {
+	isCreate := operation == v1.Create
+	isUpdate := operation == v1.Update
+	if isCreate {
+		return true, false, nil
+	}
+
+	var isPatched bool
+	var isPatchedClusterIP bool
+	var err error
+	if isOCIURL {
+		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
+		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
+		if err != nil {
+			return false, false, err
+		}
+		if clusterIP != "" {
+			zarfStateClusterIPAddress := helpers.OCIURLPrefix + clusterIP
+			isPatchedClusterIP, err = helpers.DoHostnamesMatch(zarfStateClusterIPAddress, repoURL)
+			if err != nil {
+				return false, false, err
+			}
+		}
+	} else {
+		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
+	}
+
+	return (isUpdate && !isPatched), isPatchedClusterIP, err
+}
+
+func mutateOCIURL(ctx context.Context, repoURL, registryAddress string, isPatchedClusterIP bool) (string, error) {
+	l := logger.From(ctx)
+	var patchedSrc string
+	var err error
+
+	if isPatchedClusterIP {
+		patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, repoURL)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+		}
+	} else {
+		patchedSrc, err = transform.ImageTransformHost(registryAddress, repoURL)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+		}
+	}
+
+	patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+	}
+
+	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
+	l.Debug("mutated ArgoCD application OCI repoURL to the Zarf Registry URL", "original", repoURL, "mutated", patchedURL)
+	return patchedURL, nil
+}
+
+func mutateGitURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
+	l := logger.From(ctx)
 	transformedURL, err := transform.GitURL(gs.Address, repoURL, gs.PushUsername)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
