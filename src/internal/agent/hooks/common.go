@@ -20,6 +20,13 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
+const (
+	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
+	AgentErrTransformGitURL = "unable to transform the git url"
+	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
+	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
+)
+
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {
 		currLabels = make(map[string]string)
