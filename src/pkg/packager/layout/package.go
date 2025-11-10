@@ -37,6 +37,7 @@ type PackageLayout struct {
 type PackageLayoutOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
+	Verify                  bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
 }
@@ -67,6 +68,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions)
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -91,14 +93,23 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	// early failure condition
+	if !pkgLayout.IsSigned() && opts.Verify {
+		return nil, errors.New("package is not signed")
+	}
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
-		if err != nil {
-			return nil, err
-		}
+	// early warning and return condition
+	if !pkgLayout.IsSigned() {
+		l.Warn("package is not signed - verification cannot be performed")
+		return pkgLayout, nil
+	}
+
+	verifyOptions := utils.DefaultVerifyBlobOptions()
+	verifyOptions.KeyRef = opts.PublicKeyPath
+
+	err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
+	if err != nil {
+		return nil, err
 	}
 
 	return pkgLayout, nil
