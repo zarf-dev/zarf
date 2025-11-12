@@ -271,19 +271,19 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageCreateFlagRegistryOverride      = "Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)"
 	CmdPackageCreateFlagFlavor                = "The flavor of components to include in the resulting package (i.e. have a matching or empty \"only.flavor\" key)"
 	CmdPackageCreateFlagValuesFiles           = "[alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times."
+	CmdPackageCreateFlagWithBuildMachineInfo  = "Include build machine information (hostname and username) in the package metadata"
 	CmdPackageCreateCleanPathErr              = "Invalid characters in Zarf cache path, defaulting to %s"
 
-	CmdPackageDeployFlagConfirm                        = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
-	CmdPackageDeployFlagAdoptExistingResources         = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
-	CmdPackageDeployFlagSet                            = "Specify deployment variables to set on the command line (KEY=value)"
-	CmdPackageDeployFlagComponents                     = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
-	CmdPackageDeployFlagShasum                         = "Shasum of the package to deploy. Required if deploying a remote https package."
-	CmdPackageDeployFlagTimeout                        = "Timeout for health checks and Helm operations such as installs and rollbacks"
-	CmdPackageDeployValidateArchitectureErr            = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
-	CmdPackageDeployValidateLastNonBreakingVersionWarn = "The version of this Zarf binary '%s' is less than the LastNonBreakingVersion of '%s'. You may need to upgrade your Zarf version to at least '%s' to deploy this package"
-	CmdPackageDeployInvalidCLIVersionWarn              = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
-	CmdPackageDeployFlagNamespace                      = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
-	CmdPackageDeployFlagValuesFiles                    = CmdPackageCreateFlagValuesFiles
+	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
+	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
+	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
+	CmdPackageDeployFlagTimeout                = "Timeout for health checks and Helm operations such as installs and rollbacks"
+	CmdPackageDeployValidateArchitectureErr    = "this package architecture is %s, but the target cluster only has the %s architecture(s). These architectures must be compatible when \"images\" are present"
+	CmdPackageDeployInvalidCLIVersionWarn      = "CLIVersion is set to '%s' which can cause issues with package creation and deployment. To avoid such issues, please set the value to the valid semantic version for this version of Zarf."
+	CmdPackageDeployFlagNamespace              = "[Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined."
+	CmdPackageDeployFlagValuesFiles            = CmdPackageCreateFlagValuesFiles
 
 	CmdPackageMirrorFlagComponents = "Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
 	CmdPackageMirrorFlagNoChecksum = "Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images."
@@ -310,6 +310,41 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
 	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
 	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+
+	CmdPackageSignShort   = "Signs an existing Zarf package"
+	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."
+	CmdPackageSignExample = `
+# Sign an unsigned package
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./private-key.pem
+
+# Re-sign with a new key (overwrite existing signature)
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./new-key.pem --overwrite
+
+# Sign a package from an OCI registry and output to local directory
+$ zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 --signing-key ./private-key.pem --output ./signed/
+
+# Sign a package and publish directly to OCI registry
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./private-key.pem --output oci://ghcr.io/my-org/signed-packages
+
+# Sign with a cloud KMS key
+$ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
+`
+	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
+	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
+	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
+	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
+	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+
+	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
+	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
+	CmdPackageVerifyExample = `
+# Verify a signed package
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify an unsigned package (checksums only)
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
+`
+	CmdPackageVerifyFlagKey = "Public key for signature verification"
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

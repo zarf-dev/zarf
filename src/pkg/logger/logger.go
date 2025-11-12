@@ -253,15 +253,31 @@ func SetDefault(l *slog.Logger) {
 	defaultLogger.Store(l)
 }
 
-// DebugWriter a custom io.Writer that forwards to slog.Debug logs
-type DebugWriter struct {
+// LogWriter is a custom io.Writer that forwards to slog at a configurable level.
+// If Level is not set, it defaults to Debug.
+type LogWriter struct {
 	Logger *slog.Logger
+	Level  Level
 }
 
-func (w *DebugWriter) Write(p []byte) (n int, err error) {
+func (w *LogWriter) Write(p []byte) (n int, err error) {
 	msg := strings.TrimSpace(string(p))
-	if msg != "" {
+	if msg == "" {
+		return len(p), nil
+	}
+
+	switch w.Level {
+	case Debug:
+		w.Logger.Debug(msg)
+	case Info:
+		w.Logger.Info(msg)
+	case Warn:
+		w.Logger.Warn(msg)
+	case Error:
+		w.Logger.Error(msg)
+	default:
 		w.Logger.Debug(msg)
 	}
+
 	return len(p), nil
 }
