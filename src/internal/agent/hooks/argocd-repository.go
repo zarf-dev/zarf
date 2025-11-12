@@ -16,7 +16,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -49,10 +48,6 @@ func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Clust
 // mutateRepositorySecret mutates the git URL in the ArgoCD repository secret to point to the repository URL defined in the ZarfState.
 func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
-	isCreate := r.Operation == v1.Create
-	isUpdate := r.Operation == v1.Update
-	var isPatched bool
-
 	s, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
@@ -75,7 +70,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	var repoCreds RepoCreds
 	repoCreds.URL = string(url)
 
-	isOCI := helpers.IsOCIURL(repoCreds.URL)
+	isOCIURL := helpers.IsOCIURL(repoCreds.URL)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
 	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
@@ -83,49 +78,12 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		return nil, err
 	}
 
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		if isOCI {
-			zarfStateAddress := helpers.OCIURLPrefix + registryAddress
-			isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoCreds.URL)
-		} else {
-			isPatched, err = helpers.DoHostnamesMatch(s.GitServer.Address, repoCreds.URL)
-		}
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	patchedURL, err := getPatchedRepoURL(ctx, repoCreds.URL, registryAddress, s.GitServer, r)
+	if err != nil {
+		return nil, err
 	}
 
-	patchedURL := repoCreds.URL
-	// Mutate the repoURL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		if isOCI {
-			patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
-			}
-
-			patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
-			}
-			patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
-
-			l.Debug("mutating the ArgoCD repository secret OCI URL to the Zarf Registry URL", "original", repoCreds.URL, "mutated", patchedURL)
-		} else {
-			// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-			transformedURL, err := transform.GitURL(s.GitServer.Address, repoCreds.URL, s.GitServer.PushUsername)
-			if err != nil {
-				return nil, fmt.Errorf("unable the git url: %w", err)
-			}
-			patchedURL = transformedURL.String()
-			l.Debug("mutating the ArgoCD repository secret URL to the Zarf URL", "original", repoCreds.URL, "mutated", patchedURL)
-		}
-	}
-
-	patches := populateArgoRepositoryPatchOperations(patchedURL, s.GitServer, s.RegistryInfo, isOCI)
+	patches := populateArgoRepositoryPatchOperations(patchedURL, s.GitServer, s.RegistryInfo, isOCIURL)
 	patches = append(patches, getLabelPatch(secret.Labels))
 
 	return &operations.Result{
@@ -135,20 +93,25 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 }
 
 // Patch updates of the Argo Repository Secret.
-func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitServerInfo, registryInfo state.RegistryInfo, isOCI bool) []operations.PatchOperation {
+func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitServerInfo, registryInfo state.RegistryInfo, isOCIURL bool) []operations.PatchOperation {
 	var patches []operations.PatchOperation
-	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
+	username, password := getCreds(isOCIURL, gitServer, registryInfo)
 
-	if isOCI {
-		patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(registryInfo.PullUsername))))
-		patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(registryInfo.PullPassword))))
-		if registryInfo.IsInternal() {
-			patches = append(patches, operations.ReplacePatchOperation("/data/insecureOCIForceHttp", base64.StdEncoding.EncodeToString([]byte("true"))))
-		}
-	} else {
-		patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(gitServer.PullUsername))))
-		patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(gitServer.PullPassword))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/url", base64.StdEncoding.EncodeToString([]byte(repoURL))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(username))))
+	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(password))))
+
+	if isOCIURL && registryInfo.IsInternal() {
+		patches = append(patches, operations.ReplacePatchOperation("/data/insecureOCIForceHttp", base64.StdEncoding.EncodeToString([]byte("true"))))
 	}
 
 	return patches
+}
+
+// Helper for getting eiher git server of registry creds
+func getCreds(isOCIURL bool, gitServer state.GitServerInfo, registry state.RegistryInfo) (string, string) {
+	if isOCIURL {
+		return registry.PullUsername, registry.PullPassword
+	}
+	return gitServer.PullUsername, gitServer.PullPassword
 }

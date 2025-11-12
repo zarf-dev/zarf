@@ -1,0 +1,19 @@
+---
+applications:
+  - name: oci-helm
+    namespace: argocd
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    project: default
+    sources:
+      - repoURL: oci://ghcr.io/stefanprodan/charts/podinfo
+        path: .
+        targetRevision: 6.9.2
+        helm:
+          valueFiles:
+            - values.yaml
+    syncPolicy:
+      automated: { }
+    destination:
+      namespace: podinfo-oci
+      server: https://kubernetes.default.svc

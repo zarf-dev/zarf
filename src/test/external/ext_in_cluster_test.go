@@ -137,6 +137,8 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	fmt.Println(string(regBody))
 	suite.Equal(200, respReg.StatusCode)
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "stefanprodan/charts/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "dhpup/oci-edge", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want (TODO VERIFY NAME AND PORT)
 

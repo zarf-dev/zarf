@@ -82,6 +82,7 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 				Spec: AppProjectSpec{
 					SourceRepos: []string{
 						"oci://ghcr.io/stefanprodan/charts/podinfo",
+						"oci://registry-1.docker.io/dhpup/oci-edge",
 					},
 				},
 			}),
@@ -89,6 +90,10 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/spec/sourceRepos/0",
 					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/1",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
