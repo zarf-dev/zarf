@@ -22,10 +22,9 @@ func TestGetRefFromManifest(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name      string
-		desc      ocispec.Descriptor
-		expected  string
-		expectErr bool
+		name     string
+		desc     ocispec.Descriptor
+		expected string
 	}{
 		{
 			name: "io.containerd.image.name present",
@@ -60,21 +59,16 @@ func TestGetRefFromManifest(t *testing.T) {
 			expected: "registry.com/podman-or-oras:0.0.1",
 		},
 		{
-			name:      "no annotations",
-			desc:      ocispec.Descriptor{},
-			expectErr: true,
+			name:     "no annotations",
+			desc:     ocispec.Descriptor{},
+			expected: "",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			result, err := getRefFromManifest(tc.desc)
-			if tc.expectErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+			result := getRefFromManifest(tc.desc)
 			require.Equal(t, tc.expected, result)
 		})
 	}

@@ -29,6 +29,13 @@ type ImageWithManifest struct {
 	Manifest ocispec.Manifest
 }
 
+const (
+	// This is the default docker annotation for the image name
+	dockerRefAnnotation = "io.containerd.image.name"
+	// When the Docker engine containerd image store is used, this annotation is exists which can be used for sha referenced images
+	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
+)
+
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir string, arch string) (_ []ImageWithManifest, err error) {
@@ -97,9 +104,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 	// Process manifests in the index
 	var manifests []ImageWithManifest
 	for _, manifestDesc := range srcIdx.Manifests {
-		imageName, err := getRefFromManifest(manifestDesc)
-		if err != nil {
-			return nil, err
+		imageName := getRefFromManifest(manifestDesc)
+		if imageName == "" {
+			continue
 		}
 		manifestImg, err := transform.ParseImageRef(imageName)
 		if err != nil {
@@ -152,40 +159,41 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 		})
 	}
 
+	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following"+
+		"annotations in the index.json: %s, %s, %s", dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
 	for img, found := range requestedImages {
 		if !found {
-			return nil, fmt.Errorf("could not find image %s", img)
+			return nil, fmt.Errorf("could not find image %s: %s", img, explainErr)
 		}
+	}
+
+	if len(manifests) == 0 {
+		return nil, fmt.Errorf("could not find any image references: %s", explainErr)
 	}
 
 	return manifests, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.
-func getRefFromManifest(manifestDesc ocispec.Descriptor) (string, error) {
+func getRefFromManifest(manifestDesc ocispec.Descriptor) string {
 	if manifestDesc.Annotations == nil {
-		return "", fmt.Errorf("manifest %s has empty annotations, couldn't find image name", manifestDesc.Digest)
+		return ""
 	}
-	// This is the default docker annotation for the image name
-	dockerRefAnnotation := "io.containerd.image.name"
-	// When the Docker engine containerd image store is used, this annotation is exists which can be used for sha referenced images
-	dockerContainerdImageStoreAnnotation := "containerd.io/distribution.source.docker.io"
 
 	if ref, ok := manifestDesc.Annotations[dockerRefAnnotation]; ok && ref != "" {
-		return ref, nil
+		return ref
 	}
 
 	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStoreAnnotation]; ok && repo != "" {
-		return fmt.Sprintf("%s@%s", repo, manifestDesc.Digest.String()), nil
+		return fmt.Sprintf("%s@%s", repo, manifestDesc.Digest.String())
 	}
 
 	// This is the annotation oras-go uses to check for the name during oras.copy
 	// This may change for oras https://github.com/oras-project/oras/issues/1893
 	// podman also uses this field
 	if ref, ok := manifestDesc.Annotations[ocispec.AnnotationRefName]; ok && ref != "" {
-		return ref, nil
+		return ref
 	}
 
-	return "", fmt.Errorf("could not determine image reference. The manifest descriptor must have one of the following annotations: %s, %s, %s",
-		dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
+	return ""
 }
