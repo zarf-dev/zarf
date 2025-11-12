@@ -759,6 +759,18 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
+	var versionRequirements []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+				Version: "v0.66.0",
+				Reason:  "Image archives have been added to the package. Zarf must use CLI version v0.66.0 to recognize or push these images",
+			})
+			break
+		}
+	}
+	pkg.Build.VersionRequirements = versionRequirements
+
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
 	for i := range registryOverrides {
