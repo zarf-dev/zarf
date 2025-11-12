@@ -42,7 +42,7 @@ func TestGetImages(t *testing.T) {
 			name: "only ImageArchives with images",
 			component: ZarfComponent{
 				Name: "test-component",
-				ImageArchives: []ImageArchives{
+				ImageArchives: []ImageArchive{
 					{
 						Path: "/tmp/images.tar",
 						Images: []string{
@@ -64,7 +64,7 @@ func TestGetImages(t *testing.T) {
 				Images: []string{
 					"docker.io/library/nginx:latest",
 				},
-				ImageArchives: []ImageArchives{
+				ImageArchives: []ImageArchive{
 					{
 						Path: "/tmp/images1.tar",
 						Images: []string{

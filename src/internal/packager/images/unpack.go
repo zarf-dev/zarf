@@ -38,7 +38,7 @@ const (
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir string, arch string) (_ []ImageWithManifest, err error) {
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
 	// Create a temporary directory for extraction
 	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {

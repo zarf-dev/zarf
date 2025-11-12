@@ -43,7 +43,7 @@ type ZarfComponent struct {
 	Images []string `json:"images,omitempty"`
 
 	// List of Tar files of images to bring into the package.
-	ImageArchives []ImageArchives `json:"imageArchives,omitempty"`
+	ImageArchives []ImageArchive `json:"imageArchives,omitempty"`
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
@@ -58,8 +58,8 @@ type ZarfComponent struct {
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
 }
 
-// ImageArchives is a Tar file containing an OCI layout of images
-type ImageArchives struct {
+// ImageArchive is a Tar file containing an OCI layout of images
+type ImageArchive struct {
 	// Path to Tar file containing an OCI-layout
 	Path string `json:"path"`
 	// Images within the OCI layout to be brought into the package

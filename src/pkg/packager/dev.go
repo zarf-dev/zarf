@@ -82,7 +82,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if !opts.AirgapMode {
 		for idx := range pkg.Components {
 			pkg.Components[idx].Images = []string{}
-			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchives{}
+			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
 			pkg.Components[idx].Repos = []string{}
 		}
 	}
