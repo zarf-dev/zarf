@@ -102,7 +102,51 @@ func TestArgoRepoWebhook(t *testing.T) {
 					Namespace: "argo",
 				},
 				Data: map[string][]byte{
-					"url": []byte("oci://ghcr.io/stefanprodan/charts/podinfo"),
+					"url":  []byte("oci://registry-1.docker.io/dhpup/oci-edge"),
+					"type": []byte("oci"),
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/data/url",
+					b64.StdEncoding.EncodeToString([]byte("oci://127.0.0.1:31999/dhpup/oci-edge")),
+				),
+				operations.ReplacePatchOperation(
+					"/data/username",
+					b64.StdEncoding.EncodeToString([]byte(s.RegistryInfo.PullUsername)),
+				),
+				operations.ReplacePatchOperation(
+					"/data/password",
+					b64.StdEncoding.EncodeToString([]byte(s.RegistryInfo.PullPassword)),
+				),
+				operations.ReplacePatchOperation(
+					"/data/insecureOCIForceHttp",
+					b64.StdEncoding.EncodeToString([]byte("true")),
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"argocd.argoproj.io/secret-type": "repository",
+						"zarf-agent":                     "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated for OCI Helm repo",
+			admissionReq: createArgoRepoAdmissionRequest(t, v1.Create, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"argocd.argoproj.io/secret-type": "repository",
+					},
+					Name:      "argo-oci-helm-repo-secret",
+					Namespace: "argo",
+				},
+				Data: map[string][]byte{
+					"url":       []byte("oci://ghcr.io/stefanprodan/charts/podinfo"),
+					"enableOCI": []byte("true"),
+					"type":      []byte("helm"),
 				},
 			}),
 			patch: []operations.PatchOperation{
@@ -133,17 +177,19 @@ func TestArgoRepoWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should be mutated for OCI repo with internal service registry",
+			name: "should be mutated for OCI Helm repo with internal service registry",
 			admissionReq: createArgoRepoAdmissionRequest(t, v1.Create, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"argocd.argoproj.io/secret-type": "repository",
 					},
-					Name:      "argo-oci-repo-secret",
+					Name:      "argo-oci-helm-repo-secret",
 					Namespace: "argo",
 				},
 				Data: map[string][]byte{
-					"url": []byte("oci://ghcr.io/stefanprodan/charts/podinfo"),
+					"url":       []byte("oci://ghcr.io/stefanprodan/charts/podinfo"),
+					"enableOCI": []byte("true"),
+					"type":      []byte("helm"),
 				},
 			}),
 			patch: []operations.PatchOperation{
