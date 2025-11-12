@@ -108,57 +108,74 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL, registryAddress string, gs state.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
-	l := logger.From(ctx)
-	isCreate := r.Operation == v1.Create
-	isUpdate := r.Operation == v1.Update
-	patchedURL := repoURL
+func getPatchedRepoURL(
+	ctx context.Context,
+	repoURL, registryAddress string,
+	gs state.GitServerInfo,
+	r *v1.AdmissionRequest,
+) (string, error) {
+	isOCIURL := helpers.IsOCIURL(repoURL)
+
+	shouldMutate, err := shouldMutateURL(r.Operation, isOCIURL, repoURL, registryAddress, gs)
+	if err != nil {
+		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
+	}
+
+	if !shouldMutate {
+		return repoURL, nil
+	}
+
+	if isOCIURL {
+		return mutateOCIURL(ctx, repoURL, registryAddress)
+	}
+	return mutateGitURL(ctx, repoURL, gs)
+}
+
+func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress string, gs state.GitServerInfo) (bool, error) {
+	isCreate := operation == v1.Create
+	isUpdate := operation == v1.Update
+	if isCreate {
+		return true, nil
+	}
+
 	var isPatched bool
 	var err error
-
-	isOCI := helpers.IsOCIURL(repoURL)
-
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		if isOCI {
-			zarfStateAddress := helpers.OCIURLPrefix + registryAddress
-			isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
-		} else {
-			isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
-		}
-		if err != nil {
-			return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	if isOCIURL {
+		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
+		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
+	} else {
+		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
 	}
 
-	// Mutate the repoURL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		if isOCI {
-			patchedSrc, err := transform.ImageTransformHost(registryAddress, repoURL)
-			if err != nil {
-				return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
-			}
+	return (isUpdate && !isPatched), err
+}
 
-			patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
-			if err != nil {
-				return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
-			}
-			patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
-
-			l.Debug("mutated ArgoCD application OCI repoURL to the Zarf Registry URL", "original", repoURL, "mutated", patchedURL)
-		} else {
-			// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-			transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
-			if err != nil {
-				return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
-			}
-			patchedURL = transformedURL.String()
-			l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
-		}
+func mutateOCIURL(ctx context.Context, repoURL, registryAddress string) (string, error) {
+	l := logger.From(ctx)
+	patchedSrc, err := transform.ImageTransformHost(registryAddress, repoURL)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
 	}
 
+	patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+	}
+
+	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
+	l.Debug("mutated ArgoCD application OCI repoURL to the Zarf Registry URL", "original", repoURL, "mutated", patchedURL)
+	return patchedURL, nil
+}
+
+func mutateGitURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
+	l := logger.From(ctx)
+	transformedURL, err := transform.GitURL(gs.Address, repoURL, gs.PushUsername)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
+	}
+
+	patchedURL := transformedURL.String()
+	l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	return patchedURL, nil
 }
 
