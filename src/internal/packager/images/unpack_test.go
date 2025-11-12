@@ -7,7 +7,6 @@ package images
 import (
 	"errors"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -124,10 +123,13 @@ func TestUnpackMultipleImages(t *testing.T) {
 			},
 		},
 		{
-			name:            "non-existent image",
-			srcDir:          "testdata/docker-graph-driver-image-store",
-			requestedImages: []string{"docker.io/library/non-existent-image:linux"},
-			expectErr:       errors.New("could not find image docker.io/library/non-existent-image:linux"),
+			name:   "non-existent image",
+			srcDir: "testdata/docker-graph-driver-image-store",
+			requestedImages: []string{
+				"docker.io/library/hello-world:linux",
+				"docker.io/library/non-existent-image:linux",
+			},
+			expectErr: errors.New("could not find image docker.io/library/non-existent-image:linux"),
 		},
 		{
 			name:      "non-annotated layout",
@@ -152,7 +154,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 
 			// Run
-			images, err := Unpack(ctx, imageArchives, dstDir, runtime.GOARCH)
+			images, err := Unpack(ctx, imageArchives, dstDir, "amd64")
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return
