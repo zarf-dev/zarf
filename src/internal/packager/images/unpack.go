@@ -101,8 +101,8 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		requestedImages[ref.Reference] = false
 	}
 
-	// Process imagesWithManifest in the index
 	var imagesWithManifest []ImageWithManifest
+	var foundImages []string
 	for _, manifestDesc := range srcIdx.Manifests {
 		imageName := getRefFromManifest(manifestDesc)
 		if imageName == "" {
@@ -112,6 +112,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
 		}
+		foundImages = append(foundImages, manifestImg.Reference)
 
 		// If specific images were requested, skip those not in the list
 		if len(imageArchive.Images) > 0 {
@@ -165,15 +166,11 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		})
 	}
 
-	var foundImages []string
-	for _, manifest := range imagesWithManifest {
-		foundImages = append(foundImages, manifest.Image.Reference)
-	}
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
 		"annotations in the index.json: %s, %s, %s", dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
 	for img, found := range requestedImages {
 		if !found {
-			return nil, fmt.Errorf("could not find image %s found images %s: %s", img, foundImages, explainErr)
+			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
 		}
 	}
 
