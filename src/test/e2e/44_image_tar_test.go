@@ -30,7 +30,7 @@ func TestImageTarPush(t *testing.T) {
 	err = pkgLayout.GetSBOM(t.Context(), sbomPath)
 	require.NoError(t, err)
 	require.FileExists(t, filepath.Join(sbomPath, "ghcr.io_zarf-dev_images_alpine_3.21.3.json"))
-	// Verify that the images in image archives were populated properly
+	// Verify that the images sub-field in image archives was populated properly
 	require.Equal(t, []string{"ghcr.io/zarf-dev/images/alpine:3.21.3"}, pkgLayout.Pkg.Components[0].ImageArchives[0].Images)
 
 	_, _, err = e2e.Zarf(t, "package", "mirror-resources", path)

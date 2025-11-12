@@ -111,13 +111,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
 
-			tarImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
 			if err != nil {
 				return nil, err
 			}
-			manifests = append(manifests, tarImageManifests...)
+			manifests = append(manifests, archiveImageManifests...)
 			var imageList []string
-			for _, imageManifest := range tarImageManifests {
+			for _, imageManifest := range archiveImageManifests {
 				imageList = append(imageList, imageManifest.Image.Reference)
 			}
 			pkg.Components[i].ImageArchives[j].Images = imageList
