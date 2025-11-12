@@ -1,7 +1,7 @@
 apiVersion: v1
 description: Zarf internal registry
 name: docker-registry
-version: 1.0.0
+version: 1.0.1
 
 maintainers:
   - name: The Zarf Authors

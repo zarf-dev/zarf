@@ -16,4 +16,6 @@ type ZarfCommonOptions struct {
 	CachePath string
 	// Location Zarf should use as a staging ground when managing files and images for package creation and deployment
 	TempDirectory string
+	// Whether to prefer using the structured logger over printing to stdout/stderr (i.e. in actions or git repo pulls)
+	PreferLogger bool
 }

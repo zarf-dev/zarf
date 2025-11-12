@@ -7,13 +7,18 @@ package template
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	ttmpl "text/template"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/Masterminds/sprig/v3"
+	"github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -153,10 +158,200 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 	return err
 }
 
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go#L45
+// SPDX-License-Identifier: Apache 2.0
+// Minor edits: revised var names
 func funcMap() ttmpl.FuncMap {
 	m := sprig.TxtFuncMap()
 	delete(m, "env")
 	delete(m, "expandenv")
-	// TODO(mkcp): Add additional functions from Helm
+	extras := ttmpl.FuncMap{
+		"toToml":        toTOML,
+		"fromToml":      fromTOML,
+		"toYaml":        toYAML,
+		"mustToYaml":    mustToYAML,
+		"toYamlPretty":  toYAMLPretty,
+		"fromYaml":      fromYAML,
+		"fromYamlArray": fromYAMLArray,
+		"toJson":        toJSON,
+		"mustToJson":    mustToJSON,
+		"fromJson":      fromJSON,
+		"fromJsonArray": fromJSONArray,
+	}
+	maps.Copy(m, extras)
 	return m
+}
+
+// toYAML takes an interface, marshals it to yaml, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+//
+// This is designed to be called from a template.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func toYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+// mustToYAML takes an interface, marshals it to yaml, and returns a string.
+// It will panic if there is an error.
+//
+// This is designed to be called from a template when need to ensure that the
+// output YAML is valid.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func mustToYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+// adapted from https://github.com/helm/helm/blob/main/pkg/engine/funcs.go#L108
+func toYAMLPretty(v interface{}) string {
+	var data bytes.Buffer
+	encoder := yaml.NewEncoder(&data, yaml.Indent(2))
+	err := encoder.Encode(v)
+
+	if err != nil {
+		// Swallow errors inside a template.
+		return ""
+	}
+	return strings.TrimSuffix(data.String(), "\n")
+}
+
+// fromYAML converts a YAML document into a map[string]interface{}.
+//
+// This is not a general-purpose YAML parser, and will not parse all valid
+// YAML documents. Additionally, because its intended use is within templates
+// it tolerates errors. It will insert the returned error message string into
+// m["Error"] in the returned map.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func fromYAML(str string) map[string]interface{} {
+	m := map[string]interface{}{}
+
+	if err := yaml.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
+}
+
+// fromYAMLArray converts a YAML array into a []interface{}.
+//
+// This is not a general-purpose YAML parser, and will not parse all valid
+// YAML documents. Additionally, because its intended use is within templates
+// it tolerates errors. It will insert the returned error message string as
+// the first and only item in the returned array.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func fromYAMLArray(str string) []interface{} {
+	a := []interface{}{}
+
+	if err := yaml.Unmarshal([]byte(str), &a); err != nil {
+		a = []interface{}{err.Error()}
+	}
+	return a
+}
+
+// toTOML takes an interface, marshals it to toml, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+//
+// This is designed to be called from a template.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func toTOML(v interface{}) string {
+	b := bytes.NewBuffer(nil)
+	e := toml.NewEncoder(b)
+	err := e.Encode(v)
+	if err != nil {
+		return err.Error()
+	}
+	return b.String()
+}
+
+// fromTOML converts a TOML document into a map[string]interface{}.
+//
+// This is not a general-purpose TOML parser, and will not parse all valid
+// TOML documents. Additionally, because its intended use is within templates
+// it tolerates errors. It will insert the returned error message string into
+// m["Error"] in the returned map.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func fromTOML(str string) map[string]interface{} {
+	m := make(map[string]interface{})
+
+	if err := toml.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
+}
+
+// toJSON takes an interface, marshals it to json, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+//
+// This is designed to be called from a template.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func toJSON(v interface{}) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return string(data)
+}
+
+// mustToJSON takes an interface, marshals it to json, and returns a string.
+// It will panic if there is an error.
+//
+// This is designed to be called from a template when need to ensure that the
+// output JSON is valid.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func mustToJSON(v interface{}) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
+// fromJSON converts a JSON document into a map[string]interface{}.
+//
+// This is not a general-purpose JSON parser, and will not parse all valid
+// JSON documents. Additionally, because its intended use is within templates
+// it tolerates errors. It will insert the returned error message string into
+// m["Error"] in the returned map.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func fromJSON(str string) map[string]interface{} {
+	m := make(map[string]interface{})
+
+	if err := json.Unmarshal([]byte(str), &m); err != nil {
+		m["Error"] = err.Error()
+	}
+	return m
+}
+
+// fromJSONArray converts a JSON array into a []interface{}.
+//
+// This is not a general-purpose JSON parser, and will not parse all valid
+// JSON documents. Additionally, because its intended use is within templates
+// it tolerates errors. It will insert the returned error message string as
+// the first and only item in the returned array.
+// Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go
+// SPDX-License-Identifier: Apache 2.0
+func fromJSONArray(str string) []interface{} {
+	a := []interface{}{}
+
+	if err := json.Unmarshal([]byte(str), &a); err != nil {
+		a = []interface{}{err.Error()}
+	}
+	return a
 }

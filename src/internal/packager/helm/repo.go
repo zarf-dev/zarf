@@ -333,7 +333,7 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 
 	man := &downloader.Manager{
 		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
-		Out:            &logger.DebugWriter{Logger: l},
+		Out:            &logger.LogWriter{Logger: l, Level: logger.Debug},
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,

@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf dev generate
 
-[alpha] Creates a zarf.yaml automatically from a given remote (git) Helm chart
+Creates a zarf.yaml automatically from a given remote (git) Helm chart
 
 ```
 zarf dev generate NAME [flags]

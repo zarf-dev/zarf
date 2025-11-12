@@ -59,12 +59,7 @@ func (suite *ExtInClusterTestSuite) SetupSuite() {
 	err := exec.CmdWithPrint("helm", helmInstallArgs...)
 	suite.NoError(err, "unable to install gitea chart")
 
-	// Install docker-registry chart to the k8s cluster to act as the 'remote' container registry
-	helmAddArgs := []string{"repo", "add", "twuni", "https://helm.twun.io"}
-	err = exec.CmdWithPrint("helm", helmAddArgs...)
-	suite.NoError(err, "unable to add the docker-registry chart repo")
-
-	helmInstallArgs = []string{"install", "external-registry", "twuni/docker-registry", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
+	helmInstallArgs = []string{"install", "external-registry", "../../../packages/zarf-registry/chart", "-f=docker-registry-values.yaml", "-n=external-registry", "--create-namespace"}
 	err = exec.CmdWithPrint("helm", helmInstallArgs...)
 	suite.NoError(err, "unable to install the docker-registry chart")
 

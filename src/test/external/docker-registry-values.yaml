@@ -1,6 +1,6 @@
 image:
-  repository: registry
-  tag: 2.8.3
+  repository: docker.io/library/registry
+  tag: 3.0.0
   pullPolicy: IfNotPresent
 imagePullSecrets:
   - name: private-registry
@@ -15,5 +15,7 @@ service:
 
 # Note: Super fake and not real htpasswd for testing purposes
 secrets:
-  haSharedSecret: ""
   htpasswd: "push-user:$2a$10$bnke4DeqY4qsAWIRsJCFluayx4v56mxhp/bfwubt.K83fudDzKAue"
+  configData:
+    http:
+      secret: "q1EouKxQvHtNho3MAoLwFJHCz8Fcbc8E4XLzm!McQuwmHGJG"

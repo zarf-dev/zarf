@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf dev deploy
 
-[beta] Creates and deploys a Zarf package from a given directory
+Creates and deploys a Zarf package from a given directory
 
 ### Synopsis
 
-[beta] Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
+Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration.
 
 ```
 zarf dev deploy [flags]

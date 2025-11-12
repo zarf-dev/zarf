@@ -207,6 +207,13 @@ func (suite *ExtOutClusterTestSuite) Test_4_SubpathAgentTlsUpdate() {
 	suite.NoError(err, "Unable to find images, helm auth likely failed")
 }
 
+func (suite *ExtOutClusterTestSuite) Test_5_ReInitialize() {
+	// Ensure that Zarf can re-initialize without having to re-enter existing flags for state
+	initArgs := []string{"init", "--confirm"}
+	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
+	suite.NoError(err, "unable to initialize the k8s server with zarf")
+}
+
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {
 	suite.T().Helper()
 
