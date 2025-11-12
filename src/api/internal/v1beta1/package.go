@@ -154,9 +154,9 @@ type ZarfBuildData struct {
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 	// The machine name that created this package.
-	Terminal string `json:"terminal"`
+	Terminal string `json:"terminal,omitempty"`
 	// The username who created this package.
-	User string `json:"user"`
+	User string `json:"user,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
 	// The timestamp when this package was created.

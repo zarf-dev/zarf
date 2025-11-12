@@ -231,6 +231,8 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
+	// Enable kustomize plugins during kustomize builds.
+	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
 	// [alpha]
@@ -340,8 +342,10 @@ func (a ZarfComponentAction) ShouldTemplate() bool {
 	if a.Template != nil {
 		return *a.Template
 	}
-	// Default to true
-	return true
+	// Default to false
+	// NOTE(mkcp): Making users opt-out of go-templates in actions was a breaking change for cmds that passed templates
+	//  to CLI tooling. This pattern was more common than anticipated, so we're making these opt-in for the time being.
+	return false
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
