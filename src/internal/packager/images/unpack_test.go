@@ -85,7 +85,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 	}{
 		{
 			name:   "single image, docker image store",
-			srcDir: "testdata/my-image",
+			srcDir: "testdata/docker-graph-driver-image-store",
 			expectedRefs: []string{
 				"docker.io/library/hello-world:linux",
 			},
@@ -125,7 +125,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 		},
 		{
 			name:            "non-existent",
-			srcDir:          "testdata/my-image",
+			srcDir:          "testdata/docker-graph-driver-image-store",
 			requestedImages: []string{"docker.io/library/non-existent-image:linux"},
 			expectErr:       errors.New("could not find image docker.io/library/non-existent-image:linux"),
 		},
