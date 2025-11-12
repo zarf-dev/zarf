@@ -121,9 +121,23 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 			requestedImages[manifestImg.Reference] = true
 		}
 
-		_, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		foundDesc, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
+		}
+		// If an image index is returned, then grab the image at a specific platform
+		var platform *ocispec.Platform
+		if foundDesc.MediaType == ocispec.MediaTypeImageIndex {
+			platform = &ocispec.Platform{
+				Architecture: arch,
+				OS:           "linux",
+			}
+			fbOptions := oras.DefaultFetchBytesOptions
+			fbOptions.TargetPlatform = platform
+			foundDesc, manifestData, err = oras.FetchBytes(ctx, srcStore, foundDesc.Digest.String(), fbOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
+			}
 		}
 
 		var ociManifest ocispec.Manifest
@@ -132,19 +146,11 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchives, destDir st
 		}
 
 		copyOpts := oras.DefaultCopyOptions
-		// If this is a container image then require the platform match, otherwise always bring the image in
-		if OnlyHasImageLayers(ociManifest) {
-			platform := &ocispec.Platform{
-				Architecture: arch,
-				OS:           "linux",
-			}
-			copyOpts.WithTargetPlatform(platform)
-		}
+		copyOpts.WithTargetPlatform(platform)
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
-
 		// Tag the image with annotations so that Syft and ORAS can see them
 		desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
 		err = dstStore.Tag(ctx, desc, manifestImg.Reference)

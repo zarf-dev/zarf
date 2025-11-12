@@ -101,14 +101,6 @@ func TestUnpackMultipleImages(t *testing.T) {
 			},
 		},
 		{
-			name:   "non-existent",
-			srcDir: "testdata/my-image",
-			imageRefs: []string{
-				"docker.io/library/non-existent-image:linux",
-			},
-			expectErr: errors.New("could not find image docker.io/library/non-existent-image:linux"),
-		},
-		{
 			name:           "oras OCI layout with multiple images",
 			srcDir:         "testdata/oras-oci-layout/images",
 			expectedImages: 6,
@@ -126,6 +118,14 @@ func TestUnpackMultipleImages(t *testing.T) {
 			srcDir:         "testdata/oras-oci-layout/images",
 			expectedImages: 6,
 			imageRefs:      []string{},
+		},
+		{
+			name:   "non-existent",
+			srcDir: "testdata/my-image",
+			imageRefs: []string{
+				"docker.io/library/non-existent-image:linux",
+			},
+			expectErr: errors.New("could not find image docker.io/library/non-existent-image:linux"),
 		},
 	}
 
