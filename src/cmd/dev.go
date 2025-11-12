@@ -620,6 +620,7 @@ type devFindImagesOptions struct {
 	why                 string
 	skipCosign          bool
 	registryURL         string
+	update              bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -655,6 +656,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
 	cmd.Flags().BoolVar(&o.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	// update images in zarf.yaml file
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagFindImagesUpdate)
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
@@ -737,6 +740,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println(componentDefinition)
+
+	if o.update {
+		if err := packager.UpdateImages(ctx, baseDir, imagesScans); err != nil {
+			return fmt.Errorf("unable to create update: %w", err)
+		}
+	}
+
 	return nil
 }
 
