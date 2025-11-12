@@ -32,7 +32,7 @@ type ImageWithManifest struct {
 const (
 	// This is the default docker annotation for the image name
 	dockerRefAnnotation = "io.containerd.image.name"
-	// When the Docker engine containerd image store is used, this annotation is exists which can be used for sha referenced images
+	// When the Docker engine containerd image store is used only this annotation is used for sha referenced images
 	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
 )
 
