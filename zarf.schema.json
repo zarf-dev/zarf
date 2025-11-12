@@ -84,7 +84,7 @@
       "properties": {
         "path": {
           "type": "string",
-          "description": "Path to Tar file containing an OCI-layout"
+          "description": "Path to file containing an OCI-layout"
         },
         "images": {
           "items": {
@@ -99,7 +99,7 @@
       "required": [
         "path"
       ],
-      "description": "ImageArchive is a Tar file containing an OCI layout of images",
+      "description": "ImageArchive points to an archived file containing an OCI layout",
       "patternProperties": {
         "^x-": {}
       }
