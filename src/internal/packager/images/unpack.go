@@ -125,7 +125,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
-		// If an image index is returned, then grab the image at a specific platform
+		// If an image index is returned, then grab the manifest at the specific platform, and set the platform for the later oras.Copy
 		var platform *ocispec.Platform
 		if foundDesc.MediaType == ocispec.MediaTypeImageIndex {
 			platform = &ocispec.Platform{
