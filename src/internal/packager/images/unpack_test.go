@@ -124,10 +124,15 @@ func TestUnpackMultipleImages(t *testing.T) {
 			},
 		},
 		{
-			name:            "non-existent",
+			name:            "non-existent image",
 			srcDir:          "testdata/docker-graph-driver-image-store",
 			requestedImages: []string{"docker.io/library/non-existent-image:linux"},
 			expectErr:       errors.New("could not find image docker.io/library/non-existent-image:linux"),
+		},
+		{
+			name:      "non-annotated layout",
+			srcDir:    "testdata/non-annotated-layout",
+			expectErr: errors.New("could not find any image references"),
 		},
 	}
 
