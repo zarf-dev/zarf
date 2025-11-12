@@ -183,7 +183,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 				require.Contains(t, tc.expectedRefs, imageName)
 			}
 
-			// Verify all the required layers exist in the ocispec
+			// Verify all the required layers exist in the oci layout
 			for _, img := range images {
 				for _, layer := range img.Manifest.Layers {
 					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
