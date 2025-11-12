@@ -146,6 +146,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
 		}
 
+		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(platform)
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
@@ -159,7 +160,6 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		logger.From(ctx).Info("pulled in image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
 		imagesWithManifest = append(imagesWithManifest, ImageWithManifest{
 			Image:    manifestImg,
 			Manifest: ociManifest,
