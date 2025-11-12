@@ -92,7 +92,7 @@ func TestArgoAppWebhook(t *testing.T) {
 					Source: &ApplicationSource{RepoURL: "oci://ghcr.io/stefanprodan/charts/podinfo"},
 					Sources: []ApplicationSource{
 						{
-							RepoURL: "oci://ghcr.io/stefanprodan/manifests/podinfo",
+							RepoURL: "oci://registry-1.docker.io/dhpup/oci-edge",
 						},
 						{
 							RepoURL: "https://diff-git-server.com/almonds",
@@ -107,7 +107,7 @@ func TestArgoAppWebhook(t *testing.T) {
 				),
 				operations.ReplacePatchOperation(
 					"/spec/sources/0/repoURL",
-					"oci://127.0.0.1:31999/stefanprodan/manifests/podinfo",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
 				),
 				operations.ReplacePatchOperation(
 					"/spec/sources/1/repoURL",
