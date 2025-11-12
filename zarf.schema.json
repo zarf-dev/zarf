@@ -80,7 +80,7 @@
         "^x-": {}
       }
     },
-    "ImageArchives": {
+    "ImageArchive": {
       "properties": {
         "path": {
           "type": "string",
@@ -99,7 +99,7 @@
       "required": [
         "path"
       ],
-      "description": "ImageArchives is a Tar file containing an OCI layout of images",
+      "description": "ImageArchive is a Tar file containing an OCI layout of images",
       "patternProperties": {
         "^x-": {}
       }
@@ -587,7 +587,7 @@
         },
         "imageArchives": {
           "items": {
-            "$ref": "#/$defs/ImageArchives"
+            "$ref": "#/$defs/ImageArchive"
           },
           "type": "array",
           "description": "List of Tar files of images to bring into the package."
