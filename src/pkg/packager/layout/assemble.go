@@ -764,7 +764,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 		if len(comp.ImageArchives) > 0 {
 			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
 				Version: "v0.66.0",
-				Reason:  "Image archives have been added to the package. Zarf must use CLI version v0.66.0 to recognize or push these images",
+				Reason:  "This package contains image archives which will only be recognized on v0.66.0+",
 			})
 			break
 		}
