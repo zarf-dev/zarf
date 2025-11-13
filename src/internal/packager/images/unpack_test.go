@@ -84,21 +84,21 @@ func TestUnpackMultipleImages(t *testing.T) {
 	}{
 		{
 			name:   "single image, docker image store",
-			srcDir: "testdata/docker-graph-driver-image-store",
+			srcDir: filepath.Join("testdata", "docker-graph-driver-image-store"),
 			expectedRefs: []string{
 				"docker.io/library/hello-world:linux",
 			},
 		},
 		{
 			name:   "single image, docker containerd store",
-			srcDir: "testdata/docker-containerd-image-store",
+			srcDir: filepath.Join("testdata", "docker-containerd-image-store"),
 			expectedRefs: []string{
 				"docker.io/library/hello-world:linux",
 			},
 		},
 		{
 			name:   "Pull specific images",
-			srcDir: "testdata/oras-oci-layout/images",
+			srcDir: filepath.Join("testdata", "oras-oci-layout", "images"),
 			requestedImages: []string{
 				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 				"ghcr.io/zarf-dev/images/hello-world:latest",
@@ -112,7 +112,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 		},
 		{
 			name:   "no images specified - pull all from manifests",
-			srcDir: "testdata/oras-oci-layout/images",
+			srcDir: filepath.Join("testdata", "oras-oci-layout", "images"),
 			expectedRefs: []string{
 				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 				"ghcr.io/zarf-dev/images/hello-world:latest",
@@ -124,7 +124,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 		},
 		{
 			name:   "non-existent image",
-			srcDir: "testdata/docker-graph-driver-image-store",
+			srcDir: filepath.Join("testdata", "docker-graph-driver-image-store"),
 			requestedImages: []string{
 				"docker.io/library/hello-world:linux",
 				"docker.io/library/non-existent-image:linux",
@@ -133,7 +133,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 		},
 		{
 			name:      "non-annotated layout",
-			srcDir:    "testdata/non-annotated-layout",
+			srcDir:    filepath.Join("testdata", "non-annotated-layout"),
 			expectErr: errors.New("could not find any image references"),
 		},
 	}
