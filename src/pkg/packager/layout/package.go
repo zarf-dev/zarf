@@ -40,6 +40,7 @@ type PackageLayoutOptions struct {
 	Verify                  bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
+	VerifyBlobOptions       utils.VerifyBlobOptions
 }
 
 // DirPath returns base directory of the package layout
@@ -109,6 +110,11 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 
 	err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 	if err != nil {
+		// TODO: if not requiring a verify - warn and return layout
+		if !opts.Verify {
+			l.Warn("package signature could not be verified:", "error", err.Error())
+			return pkgLayout, nil
+		}
 		return nil, err
 	}
 
