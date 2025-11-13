@@ -104,7 +104,24 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	for _, component := range pkg.Components {
+	manifests := []images.ImageWithManifest{}
+	for i, component := range pkg.Components {
+		for j, imageArchive := range component.ImageArchives {
+			if !filepath.IsAbs(imageArchive.Path) {
+				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
+			}
+
+			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, archiveImageManifests...)
+			var imageList []string
+			for _, imageManifest := range archiveImageManifests {
+				imageList = append(imageList, imageManifest.Image.Reference)
+			}
+			pkg.Components[i].ImageArchives[j].Images = imageList
+		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -128,15 +145,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, pullCfg)
+		imageManifests, err := images.Pull(ctx, pullCfg)
 		if err != nil {
 			return nil, err
 		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
-			if ok {
-				sbomImageList = append(sbomImageList, image)
-			}
+		manifests = append(manifests, imageManifests...)
+	}
+
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
+		if ok {
+			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 
 		// Sort images index to make build reproducible.
@@ -739,6 +758,18 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
+
+	var versionRequirements []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+				Version: "v0.67.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.67.0+",
+			})
+			break
+		}
+	}
+	pkg.Build.VersionRequirements = versionRequirements
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
