@@ -30,20 +30,20 @@ import (
 )
 
 type initOptions struct {
-	setVariables            map[string]string
-	optionalComponents      string
-	storageClass            string
-	gitServer               state.GitServerInfo
-	registryInfo            state.RegistryInfo
-	artifactServer          state.ArtifactServerInfo
-	injectorHostPort        int
-	adoptExistingResources  bool
-	timeout                 time.Duration
-	retries                 int
-	publicKeyPath           string
-	skipSignatureValidation bool
-	confirm                 bool
-	ociConcurrency          int
+	setVariables           map[string]string
+	optionalComponents     string
+	storageClass           string
+	gitServer              state.GitServerInfo
+	registryInfo           state.RegistryInfo
+	artifactServer         state.ArtifactServerInfo
+	injectorHostPort       int
+	adoptExistingResources bool
+	timeout                time.Duration
+	retries                int
+	publicKeyPath          string
+	verify                 bool
+	confirm                bool
+	ociConcurrency         int
 }
 
 func newInitCommand() *cobra.Command {
@@ -104,7 +104,7 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
@@ -154,11 +154,11 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		CachePath:               cachePath,
+		PublicKeyPath: o.publicKeyPath,
+		Verify:        o.verify,
+		Filter:        filters.Empty(),
+		Architecture:  config.GetArch(),
+		CachePath:     cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

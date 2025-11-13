@@ -17,11 +17,11 @@ zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 ### Options
 
 ```
-  -h, --help                        help for definition
-  -k, --key string                  Path to public key file for validating signed packages
-  -n, --namespace string            [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+  -h, --help                  help for definition
+  -k, --key string            Path to public key file for validating signed packages
+  -n, --namespace string      [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
+      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --verify                Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

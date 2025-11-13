@@ -55,7 +55,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", publicKeyFlag, "-o", outputPath)
 	suite.NoError(err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--skip-signature-validation", "-o", outputPath)
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "-o", outputPath)
 	suite.NoError(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http")
@@ -78,7 +78,7 @@ func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {
 	// Test inspect on a public package.
 	// NOTE: This also makes sure that Zarf does not attempt auth when inspecting a public package.
 	ref := fmt.Sprintf("oci://ghcr.io/zarf-dev/packages/dos-games:1.0.0-%s", e2e.Arch)
-	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", ref, "--skip-signature-validation")
+	_, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", ref)
 	suite.NoError(err, stdErr)
 }
 
