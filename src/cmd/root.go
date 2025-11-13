@@ -258,8 +258,7 @@ func Execute(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	// NOTE(mkcp): This line must be run with the unconfigured default logger because user flags are set downstream
-	// in rootCmd's preRun func.
+	// Use default logger in case there was an error prior to the logger being setup
 	logger.Default().Error(err.Error())
 	os.Exit(1)
 }
