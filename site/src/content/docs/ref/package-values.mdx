@@ -405,73 +405,8 @@ data:
 **Benefits of the new approach:**
 - Structured, nested configuration
 - Type safety (numbers, booleans, arrays, objects)
-- Access to Sprig functions for transformations
+- Access to powerful template engine and function chaining
 - Better IDE support with standard YAML
-- Clearer separation of concerns
-
-## Best Practices
-
-### Organize Values Logically
-
-Group related values together:
-
-```yaml
-# values.yaml
-app:
-  name: "my-app"
-  environment: "production"
-  replicas: 3
-
-database:
-  host: "db.example.com"
-  port: 5432
-  name: "appdb"
-
-monitoring:
-  enabled: true
-  retention: "30d"
-```
-
-### Use Meaningful Defaults
-
-Provide sensible defaults in your values files:
-
-```yaml
-app:
-  replicas: 3  # Default for production
-  logLevel: "info"
-
-# Optional settings with empty defaults
-features:
-  experimental: false
-  debug: false
-```
-
-### Document Your Values
-
-Add comments to explain configuration options:
-
-```yaml
-# values.yaml
-app:
-  # Number of replicas for high availability
-  replicas: 3
-
-  # Log level: debug, info, warn, error
-  logLevel: "info"
-
-  # Enable experimental features (not recommended for production)
-  experimental: false
-```
-
-### Reference Templating Features
-
-See the [Templating Reference](/ref/templating/) for information on:
-- Go template syntax and Sprig functions
-- String transformations (upper, lower, kebabcase, etc.)
-- List operations, conditionals, and loops
-- Math functions and encoding
-- Best practices and troubleshooting
 
 ## Examples
 
@@ -485,6 +420,7 @@ See the [values-templating example](/ref/examples/) for a complete working examp
 
 ## Related Documentation
 
+- [Package Values Best Practices](/best-practices/package-values/) - Best practices for using Package Values
 - [Templating Reference](/ref/templating/) - Complete guide to Go templates and Sprig functions
 - [Deployment Values (Legacy)](/ref/values/) - Legacy Variables and Constants system
 - [Actions](/ref/actions/) - Component action configuration
