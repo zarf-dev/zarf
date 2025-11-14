@@ -360,6 +360,7 @@ func rollbackChart(name string, version int, actionConfig *action.Configuration,
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
 	client.ForceReplace = true
+	client.ServerSideApply = "auto"
 	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
 	client.Version = version
