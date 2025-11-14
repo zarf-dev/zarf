@@ -1,0 +1,731 @@
+---
+title: Templating
+sidebar:
+  order: 37
+---
+
+:::caution
+
+Templating with Package Values is currently an **alpha feature** and requires the `--features="values=true"` flag when creating, deploying, inspecting, or removing packages.
+
+:::
+
+Zarf supports Go template syntax with [Sprig functions](http://masterminds.github.io/sprig/) for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution.
+
+## Template Objects
+
+Zarf provides several template objects that contain data you can access in your templates. These objects are available when using Go templates with `template: true`.
+
+### `.Values`
+
+User-defined values from your [Package Values](/ref/package-values/) files:
+
+```yaml
+{{ .Values.app.name }}
+{{ .Values.database.host }}
+{{ .Values.site.organization }}
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.app.name }}-config
+data:
+  environment: {{ .Values.app.environment }}
+  replicas: "{{ .Values.app.replicas }}"
+```
+
+### `.Metadata`
+
+Package metadata from your `zarf.yaml`:
+
+```yaml
+{{ .Metadata.name }}        # Package name
+{{ .Metadata.description }} # Package description
+{{ .Metadata.version }}     # Package version
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: package-info
+data:
+  package-name: {{ .Metadata.name }}
+  package-version: {{ .Metadata.version }}
+```
+
+### `.Build`
+
+Build-time information about when and how the package was created:
+
+```yaml
+{{ .Build.timestamp }}    # Build timestamp
+{{ .Build.architecture }} # Target architecture (e.g., amd64, arm64)
+{{ .Build.version }}      # Zarf version used to build
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: build-info
+  annotations:
+    build-time: {{ .Build.timestamp }}
+    target-arch: {{ .Build.architecture }}
+```
+
+### `.Variables` and `.Constants`
+
+For backwards compatibility during migration from the legacy [Deployment Values](/ref/values/) system:
+
+```yaml
+{{ .Variables.EXAMPLE_VAR }}
+{{ .Constants.EXAMPLE_CONST }}
+```
+
+These legacy objects allow existing packages to continue working while migrating to the new Package Values system.
+
+## Template Syntax
+
+### Basic Interpolation
+
+Use double curly braces to insert values from template objects:
+
+```yaml
+# Simple value insertion
+name: {{ .Values.app.name }}
+
+# Nested values with dot notation
+host: {{ .Values.database.host }}
+port: {{ .Values.database.port }}
+
+# Accessing different template objects
+packageName: {{ .Metadata.name }}
+buildTime: {{ .Build.timestamp }}
+```
+
+### Whitespace Control
+
+Control whitespace around template expressions:
+
+```yaml
+# Remove leading whitespace
+{{- .Values.app.name }}
+
+# Remove trailing whitespace
+{{ .Values.app.name -}}
+
+# Remove both
+{{- .Values.app.name -}}
+```
+
+## Where Templating is Available
+
+### Manifest Files
+
+Enable templating in manifest files by setting `template: true`:
+
+```yaml
+components:
+  - name: my-component
+    manifests:
+      - name: k8s-resources
+        template: true  # Enables Go template processing
+        files:
+          - deployment.yaml
+          - service.yaml
+          - configmap.yaml
+```
+
+Example templated manifest:
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+    environment: {{ .Values.app.environment }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      containers:
+      - name: {{ .Values.app.name }}
+        image: {{ .Values.app.image }}:{{ .Values.app.tag }}
+```
+
+:::note
+
+Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated by Zarf.
+
+:::
+
+### Actions
+
+Actions require **explicit opt-in** to avoid conflicts with external tools. Set `template: true` on individual actions:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onCreate:
+        after:
+          # Templating enabled
+          - cmd: |
+              echo "Building {{ .Values.app.name }}"
+              echo "Version: {{ .Values.app.version }}"
+            template: true
+
+          # Templating disabled (default)
+          - cmd: |
+              # This {{ .template }} syntax is preserved
+              envsubst < template.yaml
+```
+
+**Why opt-in for actions?**
+- Prevents conflicts with shell variables like `${VAR}`
+- Avoids breaking external tools that use `{{ }}` syntax (e.g., envsubst, gomplate)
+- Provides explicit control over when Zarf processes templates
+
+### Remove Actions
+
+Templating is also available in remove actions:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onRemove:
+        before:
+          - cmd: |
+              echo "Removing {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+              echo "Organization: {{ .Values.site.organization }}"
+            template: true
+```
+
+## Sprig Functions
+
+Zarf includes the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities.
+
+### String Functions
+
+Transform and manipulate strings:
+
+```yaml
+# Case conversion
+name: {{ .Values.app.name | upper }}        # MY-APP
+name: {{ .Values.app.name | lower }}        # my-app
+name: {{ .Values.app.name | title }}        # My-App
+
+# Format conversion
+name: {{ .Values.site.title | kebabcase }}  # my-awesome-app
+name: {{ .Values.site.title | snakecase }}  # my_awesome_app
+name: {{ .Values.site.title | camelcase }}  # myAwesomeApp
+
+# Quoting
+value: {{ .Values.app.name | quote }}       # "my-app"
+value: {{ .Values.app.name | squote }}      # 'my-app'
+
+# Trimming and padding
+message: {{ .Values.message | trim }}
+message: {{ .Values.message | trimPrefix "prefix-" }}
+message: {{ .Values.message | trimSuffix "-suffix" }}
+
+# Repetition and truncation
+dashes: {{ "-" | repeat 40 }}               # ----------------------------------------
+short: {{ .Values.longText | trunc 50 }}    # First 50 characters
+```
+
+**Example in a ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.app.name | kebabcase }}-config
+  labels:
+    environment: {{ .Values.app.environment | upper }}
+data:
+  app-name: {{ .Values.app.name | quote }}
+  title: {{ .Values.site.title | title }}
+```
+
+### List Functions
+
+Work with arrays and lists:
+
+```yaml
+# Joining lists
+features: {{ .Values.app.features | join ", " }}
+# Output: "templating, sprig-functions, kubernetes-deployment"
+
+# List properties
+count: {{ .Values.app.features | len }}              # 3
+first: {{ .Values.app.features | first }}            # templating
+last: {{ .Values.app.features | last }}              # kubernetes-deployment
+
+# Sorting and reversing
+sorted: {{ .Values.app.features | sortAlpha | join ", " }}
+reversed: {{ .Values.app.features | reverse | join ", " }}
+
+# Checking membership
+{{ if has "templating" .Values.app.features }}
+  # templating feature is enabled
+{{ end }}
+```
+
+**Example in a ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  features: {{ .Values.app.features | join "," | quote }}
+  feature-count: {{ .Values.app.features | len | toString | quote }}
+  first-feature: {{ .Values.app.features | first | quote }}
+  sorted-features: {{ .Values.app.features | sortAlpha | join "," | quote }}
+```
+
+### Default and Conditional Functions
+
+Provide fallback values and conditional logic:
+
+```yaml
+# Default values
+replicas: {{ .Values.app.replicas | default 3 }}
+namespace: {{ .Values.app.namespace | default "default" }}
+
+# Empty checks
+{{ if empty .Values.app.optional }}
+  # Value is empty or not set
+{{ end }}
+
+# Coalesce (first non-empty value)
+host: {{ coalesce .Values.database.host .Values.database.defaultHost "localhost" }}
+
+# Ternary (conditional)
+environment: {{ .Values.app.production | ternary "prod" "dev" }}
+```
+
+**Example in a Deployment:**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}
+  namespace: {{ .Values.app.namespace | default "default" }}
+spec:
+  replicas: {{ .Values.app.replicas | default 1 }}
+  template:
+    spec:
+      containers:
+      - name: app
+        image: {{ .Values.app.image }}
+        env:
+        - name: LOG_LEVEL
+          value: {{ .Values.app.logLevel | default "info" | quote }}
+        - name: DEBUG
+          value: {{ .Values.app.debug | default false | quote }}
+```
+
+### Math Functions
+
+Perform arithmetic operations:
+
+```yaml
+# Basic arithmetic
+sum: {{ add .Values.app.replicas 2 }}           # replicas + 2
+product: {{ mul .Values.app.replicas 10 }}      # replicas * 10
+difference: {{ sub .Values.app.replicas 1 }}    # replicas - 1
+quotient: {{ div 100 .Values.app.replicas }}    # 100 / replicas
+
+# Min/Max
+max-port: {{ max .Values.app.port1 .Values.app.port2 .Values.app.port3 }}
+min-port: {{ min .Values.app.port1 .Values.app.port2 .Values.app.port3 }}
+
+# Rounding
+rounded: {{ .Values.app.price | round 2 }}      # Round to 2 decimals
+ceiling: {{ .Values.app.price | ceil }}
+floor: {{ .Values.app.price | floor }}
+```
+
+**Example in a ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  replicas: {{ .Values.app.replicas | quote }}
+  replicas-plus-two: {{ add .Values.app.replicas 2 | quote }}
+  scaled-replicas: {{ mul .Values.app.replicas 10 | quote }}
+  max-port: {{ max .Values.app.port1 .Values.app.port2 | quote }}
+```
+
+### Encoding and Hashing Functions
+
+Encode data and generate hashes:
+
+```yaml
+# Base64 encoding/decoding
+encoded: {{ .Values.app.secret | b64enc }}
+decoded: {{ .Values.app.encodedSecret | b64dec }}
+
+# Hashing
+sha256: {{ .Values.app.data | sha256sum }}
+sha1: {{ .Values.app.data | sha1sum }}
+
+# URL encoding
+url: {{ .Values.app.callback | urlquery }}
+```
+
+**Example in a Secret:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+data:
+  # Secrets must be base64 encoded
+  username: {{ .Values.database.username | b64enc }}
+  password: {{ .Values.database.password | b64enc }}
+  config-hash: {{ .Values.app.config | sha256sum | b64enc }}
+```
+
+### Formatting Functions
+
+Like Helm, Zarf offers functions for formatting and indenting output:
+
+```yaml
+# Indentation
+{{ .Values.multilineConfig | indent 4 }}
+{{ .Values.multilineConfig | nindent 2 }}  # newline + indent
+
+# Type conversion
+port: {{ .Values.app.port | toString }}
+count: {{ .Values.app.count | toInt }}
+
+# JSON/YAML
+{{ .Values.config | toJson }}
+{{ .Values.config | toPrettyJson }}
+{{ .Values.config | toYaml }}
+```
+
+**Example with multi-line values:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  config.yaml: |
+    # Indent multi-line YAML
+{{ .Values.app.config | toYaml | indent 4 }}
+
+  styles.css: |
+{{ .Values.site.styles | indent 4 }}
+```
+
+## Conditional Logic
+
+Use if/else statements for conditional rendering:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  {{ if .Values.app.production }}
+  environment: "production"
+  log-level: "warn"
+  {{ else }}
+  environment: "development"
+  log-level: "debug"
+  {{ end }}
+
+  {{ if eq .Values.app.environment "production" }}
+  replicas: "3"
+  {{ else if eq .Values.app.environment "staging" }}
+  replicas: "2"
+  {{ else }}
+  replicas: "1"
+  {{ end }}
+```
+
+### Comparison Operators
+
+```yaml
+# Equality
+{{ if eq .Values.app.environment "production" }}
+{{ if ne .Values.app.environment "production" }}  # not equal
+
+# Numeric comparisons
+{{ if gt .Values.app.replicas 3 }}  # greater than
+{{ if ge .Values.app.replicas 3 }}  # greater or equal
+{{ if lt .Values.app.replicas 3 }}  # less than
+{{ if le .Values.app.replicas 3 }}  # less or equal
+
+# Logical operators
+{{ if and .Values.app.production .Values.app.secure }}
+{{ if or .Values.app.debug .Values.app.verbose }}
+{{ if not .Values.app.production }}
+```
+
+## Loops and Iteration
+
+Iterate over lists and maps:
+
+```yaml
+# Iterating over a list
+{{ range .Values.app.features }}
+  - {{ . }}
+{{ end }}
+
+# With index
+{{ range $index, $feature := .Values.app.features }}
+  {{ $index }}: {{ $feature }}
+{{ end }}
+
+# Iterating over a map
+{{ range $key, $value := .Values.app.config }}
+  {{ $key }}: {{ $value }}
+{{ end }}
+```
+
+**Example in a ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: features-config
+data:
+  features.txt: |
+    Enabled features:
+{{ range .Values.app.features }}
+    - {{ . }}
+{{ end }}
+
+  ports.conf: |
+{{ range $index, $port := .Values.app.ports }}
+    listen {{ $port }};
+{{ end }}
+```
+
+## Go Template Variables
+
+Assign values to go template variables for reuse within a template (note, these will not be stored "globally" like
+package values):
+
+```yaml
+{{ $appName := .Values.app.name }}
+{{ $namespace := .Values.app.namespace | default "default" }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $appName }}-service
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    app: {{ $appName }}
+```
+
+## Complex Example
+
+Combining multiple Sprig functions:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-configmap
+  namespace: nginx
+  labels:
+    app: {{ .Values.app.name | kebabcase }}
+    environment: {{ .Values.app.environment | upper }}
+data:
+  # Multi-line HTML with various transformations
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>{{ .Values.site.name | title }}</title>
+        <style>
+{{ .Values.site.styles | indent 10 }}
+        </style>
+      </head>
+      <body>
+        <h1>{{ .Values.site.name | title }}</h1>
+
+        <!-- String transformations -->
+        <p>Message: {{ .Values.site.message | upper | quote }}</p>
+        <p>Slug: {{ .Values.site.title | kebabcase }}</p>
+
+        <!-- List operations -->
+        <p>Features: {{ .Values.app.features | join ", " }}</p>
+        <p>Feature Count: {{ .Values.app.features | len }}</p>
+        <p>First Feature: {{ .Values.app.features | first | title }}</p>
+
+        <!-- Default values -->
+        <p>Log Level: {{ .Values.app.logLevel | default "info" | upper }}</p>
+
+        <!-- Math operations -->
+        <p>Replicas: {{ .Values.app.replicas }}</p>
+        <p>Scaled: {{ mul .Values.app.replicas 10 }}</p>
+        <p>Max Port: {{ max .Values.app.port1 .Values.app.port2 }}</p>
+
+        <!-- Encoding -->
+        <p>Config Hash: {{ .Values.app.config | sha256sum }}</p>
+        <p>Encoded: {{ .Values.app.secret | b64enc }}</p>
+      </body>
+    </html>
+```
+
+## Using Helm charts within Zarf:
+- Helm templating happens inside chart templates (standard Helm behavior)
+- Zarf templating happens at the package level
+- Use [Helm value mappings](/ref/package-values/#mapping-to-helm-chart-values) to pass Zarf values to charts
+
+## Best Practices
+
+### Use Pipelines for Readability
+
+Chain functions together for clarity:
+
+```yaml
+# Good: clear transformation pipeline
+name: {{ .Values.app.name | lower | kebabcase | trunc 50 }}
+
+# Avoid: nested function calls
+name: {{ trunc 50 (kebabcase (lower .Values.app.name)) }}
+```
+
+### Quote String Values
+
+Always quote string values in YAML:
+
+```yaml
+# Good
+environment: {{ .Values.app.environment | quote }}
+
+# Risky: unquoted values can cause YAML parsing issues
+environment: {{ .Values.app.environment }}
+```
+
+### Provide Defaults
+
+Use defaults for optional values:
+
+```yaml
+# Good
+replicas: {{ .Values.app.replicas | default 3 }}
+namespace: {{ .Values.app.namespace | default "default" }}
+
+# Risky: missing values cause template errors
+replicas: {{ .Values.app.replicas }}
+```
+
+### Control Whitespace
+
+Use whitespace control for clean output:
+
+```yaml
+# Good: clean output
+{{- if .Values.app.debug }}
+debug: true
+{{- end }}
+
+# Produces unwanted blank lines
+{{ if .Values.app.debug }}
+debug: true
+{{ end }}
+```
+
+### Comment Complex Logic
+
+Explain non-obvious template logic:
+
+```yaml
+# Calculate scaled replica count based on environment
+{{- $baseReplicas := .Values.app.replicas | default 1 -}}
+{{- $scaleFactor := .Values.app.production | ternary 3 1 -}}
+replicas: {{ mul $baseReplicas $scaleFactor }}
+```
+
+## Troubleshooting
+
+### Preview Templated Manifests
+
+Use `zarf dev inspect manifests` to preview without deploying:
+
+```bash
+zarf dev inspect manifests --features="values=true"
+```
+
+### Common Errors
+
+**Template parse errors:**
+```
+Error: template: :5:14: executing "" at <.Values.app.missing>: map has no entry for key "missing"
+```
+Solution: Ensure the value exists or use `default`:
+```yaml
+value: {{ .Values.app.missing | default "fallback" }}
+```
+
+**Type errors:**
+```
+Error: wrong type for value; expected string; got int
+```
+Solution: Convert types explicitly:
+```yaml
+value: {{ .Values.app.port | toString | quote }}
+```
+
+**Whitespace issues:**
+Use `-` to trim whitespace:
+```yaml
+{{- .Values.app.name -}}
+```
+
+## Examples
+
+See the [values-templating example](/ref/examples/) for comprehensive demonstrations of:
+
+- Basic template syntax
+- All Sprig function categories
+- Conditional logic
+- List iteration
+- Complex transformations
+- Real-world use cases
+
+## Related Documentation
+
+- [Package Values](/ref/package-values/) - Defining and using package values
+- [Actions](/ref/actions/) - Templating in component actions
+- [Deployment Values (Legacy)](/ref/values/) - Legacy templating system
+- [Sprig Function Documentation](http://masterminds.github.io/sprig/) - Complete Sprig reference

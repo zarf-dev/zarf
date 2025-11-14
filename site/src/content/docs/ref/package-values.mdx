@@ -1,0 +1,333 @@
+---
+title: Package Values
+sidebar:
+  order: 36
+---
+
+import Properties from '@components/SchemaItemProperties.astro';
+import ExampleYAML from "@components/ExampleYAML.astro";
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+:::caution
+
+Package Values is currently an **alpha feature** and requires the `--features="values=true"` flag when creating, deploying, inspecting, or removing packages. The API may change in future releases.
+
+:::
+
+Package Values provide a modern, file-based approach to defining reusable configuration data for your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses Go templates with access to structured data and [Sprig functions](/ref/templating/).
+
+## Overview
+
+Package Values allow you to:
+
+- Define structured configuration data in separate YAML files similar to [Helm's values files](https://helm.sh/docs/chart_template_guide/values_files/)
+- Use Go template syntax (`{{ .Values.key }}`) for interpolation
+- Access nested values with dot notation
+- Leverage [Sprig functions](/ref/templating/) and builtins for advanced transformations
+- Map Zarf package values to Helm chart values
+- Maintain clean separation between configuration and deployment logic
+
+## Defining Values
+
+### Values Files
+
+Values are defined in YAML files and are declared in your `zarf.yaml` package configuration:
+
+```yaml
+# zarf.yaml
+kind: ZarfPackageConfig
+metadata:
+  name: my-package
+values:
+  files:
+    - values.yaml
+    - overrides.yaml
+```
+
+The values files contain structured YAML data:
+
+```yaml
+# values/values.yaml
+site:
+  name: "My Application"
+  organization: "MyOrg"
+  styles: |
+    body { font-family: sans-serif; }
+
+app:
+  environment: "production"
+  replicas: 3
+  features:
+    - "templating"
+    - "sprig-functions"
+  ports: [80, 443, 8080]
+
+database:
+  host: "postgres.local"
+  port: 5432
+```
+
+Multiple values files are merged in order, with later files taking precedence.
+
+## Using Values in Components
+
+Values are accessed in templates through the `.Values` template object. See the [Templating Reference](/ref/templating/#template-objects) for details on all available template objects (`.Values`, `.Metadata`, `.Build`, etc.).
+
+### In Manifests
+
+Enable Go templating in manifest files by setting `template: true`:
+
+```yaml
+components:
+  - name: my-component
+    manifests:
+      - name: app-manifests
+        template: true  # Enables Go template processing
+        files:
+          - deployment.yaml
+          - service.yaml
+          - configmap.yaml
+```
+
+See the [Templating Reference](/ref/templating/) for complete details on template syntax, Sprig functions, and advanced usage.
+
+### In Actions
+
+Actions require explicit opt-in to templating. Set `template: true` on individual actions:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onCreate:
+        after:
+          - cmd: |
+              echo "Deploying {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+            template: true  # Required to enable templating in actions
+```
+
+See the [Templating Reference](/ref/templating/) for details on templating in actions and why it requires opt-in.
+
+### Mapping to Helm Chart Values
+
+Map Package Values to Helm chart values using `sourcePath` and `targetPath`:
+
+```yaml
+components:
+  - name: helm-component
+    charts:
+      - name: my-chart
+        version: 1.0.0
+        namespace: my-app
+        localPath: charts/my-chart
+        values:
+          # Map .Values.app.name to .appName in the Helm chart
+          - sourcePath: ".app.name"
+            targetPath: ".appName"
+
+          # Map nested values
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+
+          # Map to deeply nested chart values
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+
+          # Multiple mappings to the same target - last one wins
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+          - sourcePath: ".database.host_override"
+            targetPath: ".config.database.host"  # Takes priority
+```
+
+**Mapping Behavior:**
+- Mappings are evaluated in order from top to bottom
+- Later mappings to the same `targetPath` override earlier ones
+- Source paths reference your Package Values (`.Values.*`, `.Metadata.*`, etc.)
+- Target paths reference the Helm chart's `values.yaml` structure
+
+<Properties item="ZarfChartValue" />
+
+## Setting Values at Deploy Time
+
+Override values when deploying a package:
+
+```bash
+# Using --set-values flag
+zarf package deploy my-package.tar.zst \
+  --features="values=true" \
+  --set-values="app.environment=staging,app.replicas=5"
+
+# Values can also be prompted interactively
+zarf package deploy my-package.tar.zst \
+  --features="values=true"
+```
+
+## Inspecting Values
+
+Preview how values are applied to manifests:
+
+```bash
+# View templated manifests without deploying
+zarf dev inspect manifests --features="values=true"
+
+# View values files in a package
+zarf package inspect values-files my-package.tar.zst --features="values=true"
+```
+
+## Migration from Variables and Constants
+
+If you're migrating from the legacy Variables/Constants system:
+
+### Before (Legacy)
+
+```yaml
+# zarf.yaml
+variables:
+  - name: DATABASE_USERNAME
+    default: "postgres"
+
+constants:
+  - name: APP_VERSION
+    value: "1.0.0"
+
+components:
+  - name: app
+    manifests:
+      - name: configmap
+        files:
+          - config.yaml
+```
+
+```yaml
+# config.yaml
+apiVersion: v1
+kind: ConfigMap
+data:
+  username: ###ZARF_VAR_DATABASE_USERNAME###
+  version: ###ZARF_CONST_APP_VERSION###
+```
+
+### After (Package Values)
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: app
+    manifests:
+      - name: configmap
+        template: true  # Required for Go templates
+        files:
+          - config.yaml
+```
+
+```yaml
+# values/values.yaml
+database:
+  username: "postgres"
+
+app:
+  version: "1.0.0"
+```
+
+```yaml
+# config.yaml
+apiVersion: v1
+kind: ConfigMap
+data:
+  username: {{ .Values.database.username }}
+  version: {{ .Values.app.version }}
+```
+
+**Benefits of the new approach:**
+- Structured, nested configuration
+- Type safety (numbers, booleans, arrays, objects)
+- Access to Sprig functions for transformations
+- Better IDE support with standard YAML
+- Clearer separation of concerns
+
+## Best Practices
+
+### Organize Values Logically
+
+Group related values together:
+
+```yaml
+# values.yaml
+app:
+  name: "my-app"
+  environment: "production"
+  replicas: 3
+
+database:
+  host: "db.example.com"
+  port: 5432
+  name: "appdb"
+
+monitoring:
+  enabled: true
+  retention: "30d"
+```
+
+### Use Meaningful Defaults
+
+Provide sensible defaults in your values files:
+
+```yaml
+app:
+  replicas: 3  # Default for production
+  logLevel: "info"
+
+# Optional settings with empty defaults
+features:
+  experimental: false
+  debug: false
+```
+
+### Document Your Values
+
+Add comments to explain configuration options:
+
+```yaml
+# values.yaml
+app:
+  # Number of replicas for high availability
+  replicas: 3
+
+  # Log level: debug, info, warn, error
+  logLevel: "info"
+
+  # Enable experimental features (not recommended for production)
+  experimental: false
+```
+
+### Reference Templating Features
+
+See the [Templating Reference](/ref/templating/) for information on:
+- Go template syntax and Sprig functions
+- String transformations (upper, lower, kebabcase, etc.)
+- List operations, conditionals, and loops
+- Math functions and encoding
+- Best practices and troubleshooting
+
+## Examples
+
+See the [values-templating example](/ref/examples/) for a complete working example demonstrating:
+
+- File-based values configuration
+- Manifest templating with Go templates
+- Helm chart value mappings
+- Action templating
+- Sprig function usage
+
+## Related Documentation
+
+- [Templating Reference](/ref/templating/) - Complete guide to Go templates and Sprig functions
+- [Deployment Values (Legacy)](/ref/values/) - Legacy Variables and Constants system
+- [Actions](/ref/actions/) - Component action configuration
+- [Components](/ref/components/) - Component structure and features
