@@ -1,0 +1,390 @@
+---
+title: Templating
+sidebar:
+  order: 11
+---
+
+This guide provides best practices for using [templating](/ref/templating/) in your Zarf packages.
+
+:::caution
+
+Templating with Package Values is currently an **alpha feature** and requires the `--features="values=true"` flag when creating, deploying, inspecting, or removing packages.
+
+:::
+
+## Use Pipelines for Readability
+
+Chain functions together using the pipe operator (`|`) for clarity:
+
+```yaml
+# ✅ GOOD: Clear transformation pipeline
+name: {{ .Values.app.name | lower | kebabcase | trunc 50 }}
+
+# ❌ AVOID: Nested function calls
+name: {{ trunc 50 (kebabcase (lower .Values.app.name)) }}
+```
+
+## Always Quote String Values
+
+Use the `quote` function to ensure string values are properly quoted in YAML:
+
+```yaml
+# ✅ GOOD: Properly quoted
+environment: {{ .Values.app.environment | quote }}
+image: {{ .Values.app.image | quote }}
+
+# ❌ RISKY: Can cause YAML parsing issues
+environment: {{ .Values.app.environment }}
+```
+
+**Why this matters:**
+- Prevents YAML parsing errors with special characters
+- Handles values like `"yes"`, `"no"`, `"true"`, `"false"` correctly
+- Protects against values that look like numbers
+
+**Example of the problem:**
+
+```yaml
+# Without quote, this breaks YAML parsing
+apiVersion: {{ .Values.version }}  # If version is "1.0", breaks
+apiVersion: {{ .Values.version | quote }}  # "1.0" works correctly
+```
+
+## Provide Defaults for Optional Values
+
+Use the `default` function to provide fallback values:
+
+```yaml
+# ✅ GOOD: Safe with defaults
+replicas: {{ .Values.app.replicas | default 3 }}
+namespace: {{ .Values.app.namespace | default "default" | quote }}
+logLevel: {{ .Values.app.logLevel | default "info" | quote }}
+
+# ❌ RISKY: Fails if value is missing
+replicas: {{ .Values.app.replicas }}
+```
+
+**When to use defaults:**
+- Optional configuration values
+- Values that have sensible fallbacks
+- Any value that might not be provided by users
+
+**Combine with other functions:**
+
+```yaml
+# Default, then transform
+environment: {{ .Values.app.environment | default "production" | upper | quote }}
+```
+
+## Control Whitespace
+
+Use whitespace control operators (`-`) to manage output formatting:
+
+```yaml
+# ✅ GOOD: Clean output, no extra blank lines
+{{- if .Values.app.debug }}
+debug: true
+{{- end }}
+
+# ❌ PRODUCES UNWANTED BLANK LINES
+{{ if .Values.app.debug }}
+debug: true
+{{ end }}
+```
+
+**Whitespace control operators:**
+- `{{-` removes whitespace before the template
+- `-}}` removes whitespace after the template
+- `{{- -}}` removes whitespace on both sides
+
+**Example output difference:**
+
+```yaml
+# Without whitespace control:
+metadata:
+  labels:
+
+    app: nginx
+
+# With whitespace control:
+metadata:
+  labels:
+    app: nginx
+```
+
+## Comment Complex Template Logic
+
+Add comments to explain non-obvious template logic:
+
+```yaml
+# ✅ GOOD: Explained logic
+# Calculate scaled replica count based on environment
+# Production gets 3x replicas, non-production gets 1x
+{{- $baseReplicas := .Values.app.replicas | default 1 -}}
+{{- $scaleFactor := .Values.app.production | ternary 3 1 -}}
+replicas: {{ mul $baseReplicas $scaleFactor }}
+
+# ❌ UNCLEAR: What's happening here?
+{{- $baseReplicas := .Values.app.replicas | default 1 -}}
+{{- $scaleFactor := .Values.app.production | ternary 3 1 -}}
+replicas: {{ mul $baseReplicas $scaleFactor }}
+```
+
+**What to comment:**
+- Complex conditionals
+- Non-obvious default values
+- Business logic encoded in templates
+
+## Avoid Over-Templating
+
+Keep templates simple and prefer data over complex logic:
+
+```yaml
+# ✅ GOOD: Simple conditional
+{{- if .Values.monitoring.enabled }}
+annotations:
+  prometheus.io/scrape: "true"
+{{- end }}
+
+# ❌ AVOID: Complex nested logic
+{{- if and .Values.monitoring.enabled (or (eq .Values.app.environment "production") (eq .Values.app.environment "staging")) (not .Values.app.debug) }}
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: {{ .Values.monitoring.port | default 8080 | quote }}
+{{- end }}
+```
+
+**Better approach for complex cases:**
+
+Move logic to values files:
+
+```yaml
+# values.yaml
+monitoring:
+  enabled: true
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+```
+
+```yaml
+# manifest
+{{- if .Values.monitoring.enabled }}
+annotations:
+{{- range $key, $value := .Values.monitoring.annotations }}
+  {{ $key }}: {{ $value | quote }}
+{{- end }}
+{{- end }}
+```
+
+## Use Template Variables for Reusability
+
+Define template variables to avoid repeating complex expressions:
+
+```yaml
+# ✅ GOOD: Define once, use many times
+{{- $appName := .Values.app.name | lower | kebabcase -}}
+{{- $namespace := .Values.app.namespace | default "default" -}}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $appName }}-service
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    app: {{ $appName }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $appName }}-deployment
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ $appName }}
+
+# ❌ AVOID: Repeating the same expression
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.app.name | lower | kebabcase }}-service
+  namespace: {{ .Values.app.namespace | default "default" }}
+spec:
+  selector:
+    app: {{ .Values.app.name | lower | kebabcase }}
+```
+
+## Handle Type Conversions Explicitly
+
+Convert types explicitly when needed:
+
+```yaml
+# ✅ GOOD: Explicit type conversion
+apiVersion: v1
+kind: ConfigMap
+data:
+  # Numbers must be strings in ConfigMaps
+  port: {{ .Values.app.port | toString | quote }}
+  replicas: {{ .Values.app.replicas | toString | quote }}
+
+  # Booleans to strings
+  debug: {{ .Values.app.debug | toString | quote }}
+
+# ❌ RISKY: Type mismatch errors
+data:
+  port: {{ .Values.app.port }}  # May fail if port is a number
+```
+
+**Common conversions:**
+- `toString` - Convert to string
+- `toInt` - Convert to integer
+- `toYaml` - Convert object to YAML
+- `toJson` - Convert object to JSON
+
+## Test Templates Before Deployment
+
+Always preview your templates before deploying:
+
+```bash
+# Preview manifests with default values
+zarf dev inspect manifests --features="values=true"
+
+# Preview with custom values
+zarf dev inspect manifests \
+  --features="values=true" \
+  -f custom-values.yaml
+
+# Preview with inline overrides
+zarf dev inspect manifests \
+  --features="values=true" \
+  --set-values="app.replicas=5,app.environment=staging"
+```
+
+**What to check:**
+- Templates render without errors
+- Output looks as expected
+- No unexpected whitespace
+- Values are correctly interpolated
+- Conditionals evaluate correctly
+
+## Handle Missing Values Gracefully
+
+Protect against missing or nil values:
+
+```yaml
+# ✅ GOOD: Safe against missing values
+{{- if .Values.monitoring }}
+  {{- if .Values.monitoring.enabled }}
+annotations:
+  prometheus.io/scrape: "true"
+  {{- end }}
+{{- end }}
+
+# Alternative: Use default for the entire object
+{{- $monitoring := .Values.monitoring | default dict -}}
+{{- if $monitoring.enabled }}
+annotations:
+  prometheus.io/scrape: "true"
+{{- end }}
+
+# ❌ RISKY: Will fail if monitoring is undefined
+{{- if .Values.monitoring.enabled }}
+annotations:
+  prometheus.io/scrape: "true"
+{{- end }}
+```
+
+## Be Consistent with Indentation
+
+Use the `indent` and `nindent` functions consistently:
+
+```yaml
+# ✅ GOOD: Proper indentation
+apiVersion: v1
+kind: ConfigMap
+data:
+  config.yaml: |
+{{ .Values.app.config | toYaml | indent 4 }}
+
+# ✅ ALSO GOOD: Using nindent (newline + indent)
+apiVersion: v1
+kind: ConfigMap
+data:
+  config.yaml: |-
+{{- .Values.app.config | toYaml | nindent 4 }}
+
+# ❌ AVOID: Inconsistent indentation
+apiVersion: v1
+kind: ConfigMap
+data:
+  config.yaml: |
+    {{ .Values.app.config | toYaml }}
+```
+
+**Choose the right function:**
+- `indent N` - Indent every line by N spaces
+- `nindent N` - Add newline, then indent by N spaces
+
+## Common Errors and Solutions
+
+### Template Parse Errors
+
+**Error:**
+```
+Error: template: :5:14: executing "" at <.Values.app.missing>: map has no entry for key "missing"
+```
+
+**Solution:**
+```yaml
+# Use default for optional values
+value: {{ .Values.app.missing | default "fallback" }}
+
+# Or check if exists first
+{{- if .Values.app.missing }}
+value: {{ .Values.app.missing }}
+{{- end }}
+```
+
+### Type Errors
+
+**Error:**
+```
+Error: wrong type for value; expected string; got int
+```
+
+**Solution:**
+```yaml
+# Convert types explicitly
+value: {{ .Values.app.port | toString | quote }}
+```
+
+### Whitespace Issues
+
+**Problem:** Extra blank lines or spacing in output
+
+**Solution:**
+```yaml
+# Use whitespace control operators
+{{- if .Values.app.debug -}}
+debug: true
+{{- end -}}
+```
+
+### Quoting Problems
+
+**Problem:** YAML parsing fails with boolean-like strings
+
+**Solution:**
+```yaml
+# Always quote string values
+value: {{ .Values.app.setting | quote }}
+```
+
+## Related Documentation
+
+- [Templating Reference](/ref/templating/) - Complete templating documentation
+- [Package Values](/ref/package-values/) - Defining and using package values
+- [Sprig Function Documentation](http://masterminds.github.io/sprig/) - Complete Sprig reference
+- [values-templating Example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) - Working examples
