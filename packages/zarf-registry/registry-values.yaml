@@ -29,6 +29,9 @@ proxy:
     payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
     shasum: "###ZARF_INJECTOR_SHASUM###"
 
+mtls:
+  enabled: ###ZARF_REGISTRY_PROXY###
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
