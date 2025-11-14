@@ -40,6 +40,7 @@ values:
   files:
     - values.yaml
     - overrides.yaml
+  schema: values-schema.json  # Optional JSON schema for validation
 ```
 
 The values files contain structured YAML data:
@@ -67,9 +68,53 @@ database:
 
 Multiple values files are merged in order, with later files taking precedence.
 
+### Schema Validation
+
+Optionally provide a JSON schema to validate user-provided values:
+
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
+```
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "app": {
+      "type": "object",
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["development", "staging", "production"]
+        }
+      },
+      "required": ["replicas", "environment"]
+    }
+  }
+}
+```
+
+The schema validates values during deployment, helping catch configuration errors early.
+
 ## Using Values
 
 Values are accessed in templates through the `.Values` template object. See the [Templating Reference](/ref/templating/#template-objects) for details on all available template objects (`.Values`, `.Metadata`, `.Build`, etc.).
+
+:::note
+
+Package Values are available during `onDeploy` and `onRemove` actions, but **not** during `onCreate` actions. This is because values are typically provided at deployment time, not package creation time.
+
+:::
 
 ### In Manifests
 
@@ -106,6 +151,43 @@ components:
 ```
 
 See the [Templating Reference](/ref/templating/) for details on templating in actions and why it requires opt-in.
+
+#### Setting Values from Actions
+
+Actions can dynamically set values using the `setValues` field, similar to `setVariables`:
+
+```yaml
+components:
+  - name: dynamic-config
+    actions:
+      onDeploy:
+        after:
+          - cmd: echo "generated-password-123"
+            setValues:
+              - name: database.password
+
+          - cmd: kubectl get configmap app-config -o json
+            setValues:
+              - name: existing.config
+                type: json
+
+          - cmd: |
+              cat <<EOF
+              apiVersion: v1
+              kind: Config
+              settings:
+                debug: true
+              EOF
+            setValues:
+              - name: runtime.settings
+                type: yaml
+```
+
+The `setValues` field accepts:
+- `name`: The path where the value should be stored (e.g., `database.password`)
+- `type`: The format of the output - `string` (default), `json`, or `yaml`
+
+Values set via `setValues` are available in subsequent actions and manifests within the same deployment.
 
 ### Mapping to Helm Chart Values
 
@@ -185,17 +267,59 @@ With `sourcePath: "."` and `targetPath: "."`, all these values are passed direct
 
 ## Setting Values at Deploy Time
 
-Override values when deploying a package:
+Override or provide values when deploying or removing a package:
+
+### Using --set-values Flag
+
+Provide individual values via command line:
 
 ```bash
-# Using --set-values flag
+# Set values at deploy time
 zarf package deploy my-package.tar.zst \
   --features="values=true" \
   --set-values="app.environment=staging,app.replicas=5"
 
-# Values can also be prompted interactively
+# Set values during removal
+zarf package remove my-package \
+  --features="values=true" \
+  --set-values="app.environment=staging"
+```
+
+### Using Values Files
+
+Provide entire values files with the `-f` or `--values` flag:
+
+```bash
+# Deploy with custom values file
 zarf package deploy my-package.tar.zst \
-  --features="values=true"
+  --features="values=true" \
+  -f custom-values.yaml
+
+# Multiple values files (later files override earlier ones)
+zarf package deploy my-package.tar.zst \
+  --features="values=true" \
+  -f base-values.yaml \
+  -f override-values.yaml
+
+# Also works with zarf dev deploy
+zarf dev deploy \
+  --features="values=true" \
+  -f dev-values.yaml
+```
+
+### Configuration Files
+
+Values can also be set via Viper configuration:
+
+```yaml
+# ~/.zarf-config.yaml
+package:
+  deploy:
+    values:
+      - custom-values.yaml
+  remove:
+    values:
+      - cleanup-values.yaml
 ```
 
 ## Inspecting Values
