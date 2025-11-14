@@ -16,8 +16,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -92,10 +90,17 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	err = validatePackageSignature(ctx, pkgLayout, opts.PublicKeyPath, opts.SkipSignatureValidation)
-	if err != nil {
-		return nil, err
+
+	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
+		verifyOptions := utils.DefaultVerifyBlobOptions()
+		verifyOptions.KeyRef = opts.PublicKeyPath
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return pkgLayout, nil
 }
 
@@ -241,6 +246,41 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	l.Info("package signed successfully", "signature", actualSignaturePath)
 	return nil
+}
+
+// VerifyPackageSignature verifies the package signature
+func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.VerifyBlobOptions) error {
+	l := logger.From(ctx)
+	l.Debug("verifying package signature")
+
+	// Validate package layout state
+	if p.dirPath == "" {
+		return errors.New("invalid package layout: dirPath is empty")
+	}
+	if info, err := os.Stat(p.dirPath); err != nil {
+		return fmt.Errorf("invalid package layout directory: %w", err)
+	} else if !info.IsDir() {
+		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
+	}
+
+	// Validate that we have a public key
+	// Note: this will later be replaced when verification enhancements are made
+	if opts.KeyRef == "" {
+		return errors.New("package is signed but no key was provided")
+	}
+
+	// Validate that the signature exists
+	signaturePath := filepath.Join(p.dirPath, Signature)
+	if _, err := os.Stat(signaturePath); err != nil {
+		return fmt.Errorf("signature not found: %w", err)
+	}
+
+	// Note: this is the backwards compatible behavior
+	// this will change in the future
+	opts.SigRef = signaturePath
+
+	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
+	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
 
 // IsSigned returns true if the package is signed.
@@ -485,40 +525,5 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
-	return nil
-}
-
-func validatePackageSignature(ctx context.Context, pkgLayout *PackageLayout, publicKeyPath string, skipSignatureValidation bool) error {
-	if skipSignatureValidation {
-		return nil
-	}
-
-	signaturePath := filepath.Join(pkgLayout.dirPath, Signature)
-	sigExist := true
-	_, err := os.Stat(signaturePath)
-	if err != nil {
-		sigExist = false
-	}
-	if !sigExist && publicKeyPath == "" {
-		// Nobody was expecting a signature, so we can just return
-		return nil
-	} else if sigExist && publicKeyPath == "" {
-		return errors.New("package is signed but no key was provided")
-	} else if !sigExist && publicKeyPath != "" {
-		return errors.New("a key was provided but the package is not signed")
-	}
-
-	keyOptions := options.KeyOpts{KeyRef: publicKeyPath}
-	cmd := &verify.VerifyBlobCmd{
-		KeyOpts:    keyOptions,
-		SigRef:     signaturePath,
-		IgnoreSCT:  true,
-		Offline:    true,
-		IgnoreTlog: true,
-	}
-	err = cmd.Exec(ctx, filepath.Join(pkgLayout.dirPath, ZarfYAML))
-	if err != nil {
-		return fmt.Errorf("package signature did not match the provided key: %w", err)
-	}
 	return nil
 }

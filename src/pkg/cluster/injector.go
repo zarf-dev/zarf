@@ -43,6 +43,10 @@ var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, pkgName string) (int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	// The injector breaks if the same image is added multiple times
+	injectorSeedSrcs = helpers.Unique(injectorSeedSrcs)
+
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {

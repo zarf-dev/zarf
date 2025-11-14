@@ -335,6 +335,17 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
 
+	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
+	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
+	CmdPackageVerifyExample = `
+# Verify a signed package
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify an unsigned package (checksums only)
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
+`
+	CmdPackageVerifyFlagKey = "Public key for signature verification"
+
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
 # Pull a package matching the current architecture
@@ -387,6 +398,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	CmdDevFlagRegistry             = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
+	CmdDevFlagFindImagesUpdate     = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
