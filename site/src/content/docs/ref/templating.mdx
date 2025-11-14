@@ -10,15 +10,15 @@ Templating with Package Values is currently an **alpha feature** and requires th
 
 :::
 
-Zarf supports Go template syntax with [Sprig functions](http://masterminds.github.io/sprig/) for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution.
+Zarf supports Go template syntax and `text/template` engine with powerful features including control flow and functions. Zarf includes the full library of [Sprig functions](http://masterminds.github.io/sprig/) and some builtins for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution.
 
 ## Template Objects
 
-Zarf provides several template objects that contain data you can access in your templates. These objects are available when using Go templates with `template: true`.
+To use Zarf templates, it's important to understand template objects. Template objects contain data that you can access in your templates. They always start with a capital letter.
 
 ### `.Values`
 
-User-defined values from your [Package Values](/ref/package-values/) files:
+Most commonly, [Package Values](/ref/package-values/) files allow you to define and access your own data:
 
 ```yaml
 {{ .Values.app.name }}
@@ -39,7 +39,7 @@ data:
 
 ### `.Metadata`
 
-Package metadata from your `zarf.yaml`:
+Fields from the package definition's `metadata` are available in all templates:
 
 ```yaml
 {{ .Metadata.name }}        # Package name
@@ -60,7 +60,7 @@ data:
 
 ### `.Build`
 
-Build-time information about when and how the package was created:
+Similar to Metadata, Build fields on the package definition can be accessed during deploy and remove:
 
 ```yaml
 {{ .Build.timestamp }}    # Build timestamp
@@ -81,14 +81,12 @@ metadata:
 
 ### `.Variables` and `.Constants`
 
-For backwards compatibility during migration from the legacy [Deployment Values](/ref/values/) system:
+If users want to start using the new templates before switching over to Values, Variables and Constants are also available.
 
 ```yaml
 {{ .Variables.EXAMPLE_VAR }}
 {{ .Constants.EXAMPLE_CONST }}
 ```
-
-These legacy objects allow existing packages to continue working while migrating to the new Package Values system.
 
 ## Template Syntax
 
@@ -124,7 +122,7 @@ Control whitespace around template expressions:
 {{- .Values.app.name -}}
 ```
 
-## Where Templating is Available
+## Using Templates
 
 ### Manifest Files
 
@@ -176,7 +174,7 @@ Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated 
 
 ### Actions
 
-Actions require **explicit opt-in** to avoid conflicts with external tools. Set `template: true` on individual actions:
+Action templating must be enabled to help avoid conflicts with external tools. Set `template: true` on individual actions:
 
 ```yaml
 components:
@@ -218,9 +216,9 @@ components:
             template: true
 ```
 
-## Sprig Functions
+## Template Functions
 
-Zarf includes the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities. See the [values-templating example](/ref/examples/) for comprehensive demonstrations of all function categories.
+Zarf includes both builtin functions and the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities. See the [values-templating example](/ref/examples/) for comprehensive demonstrations of all function categories.
 
 ### String Functions
 
@@ -315,7 +313,7 @@ data:
 
 ## Conditional Logic
 
-Use if/else statements for conditional rendering:
+Go's `text/template` engine allows the use of if/else statements for conditional rendering:
 
 ```yaml
 apiVersion: v1
@@ -359,9 +357,9 @@ data:
 {{ if not .Values.app.production }}
 ```
 
-## Loops and Iteration
+## Range, Loops, and Iteration
 
-Iterate over lists and maps:
+Go's `text/template` engine also allows users to iterate over lists and maps:
 
 ```yaml
 # Iterating over a list
@@ -402,8 +400,12 @@ data:
 
 ## Go Template Variables
 
-Assign values to go template variables for reuse within a template (note, these will not be stored "globally" like
-package values):
+Assign values to go template variables for reuse within a template (note, :
+
+:::note
+Template vars are a feature from Go's `text/template` engine and are _not_ Zarf's Variables. Template variables are
+stored locally within the current template, and variable scope is not shared between Zarf Components or the Package.
+:::
 
 ```yaml
 {{ $appName := .Values.app.name }}
@@ -421,7 +423,7 @@ spec:
 
 ## Complex Examples
 
-For comprehensive examples combining multiple Sprig functions, see the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) which demonstrates:
+For comprehensive examples combining multiple template functions, see the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) which demonstrates:
 
 - String transformations (upper, lower, kebabcase, title)
 - List operations (join, len, first, sortAlpha)
@@ -502,7 +504,7 @@ Explain non-obvious template logic:
 replicas: {{ mul $baseReplicas $scaleFactor }}
 ```
 
-## Troubleshooting
+## Development and Troubleshooting
 
 ### Preview Templated Manifests
 
@@ -530,12 +532,6 @@ Error: wrong type for value; expected string; got int
 Solution: Convert types explicitly:
 ```yaml
 value: {{ .Values.app.port | toString | quote }}
-```
-
-**Whitespace issues:**
-Use `-` to trim whitespace:
-```yaml
-{{- .Values.app.name -}}
 ```
 
 ## Related Documentation
