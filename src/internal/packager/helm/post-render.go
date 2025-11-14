@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/action"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -79,6 +79,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
 	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
+		namespace.SetManagedFields(nil)
 		rend.namespaces[rend.chart.Namespace] = namespace
 	}
 
@@ -135,6 +136,9 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 				l.Warn("refusing to adopt initial namespace", "name", name)
 			} else {
 				// This is an existing namespace to adopt
+				// Clear managedFields for Helm 4 server-side apply compatibility
+				// FIXME: check
+				namespace.SetManagedFields(nil)
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
 				if err != nil {
 					return fmt.Errorf("unable to adopt the existing namespace %s", name)
@@ -279,6 +283,9 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
 				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
 				resource.SetAnnotations(annotations)
+				// FIXME: not sure if this is actually needed
+				// Clear managedFields for Helm 4 server-side apply compatibility
+				resource.SetManagedFields(nil)
 				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
 				if err != nil {
 					return err
