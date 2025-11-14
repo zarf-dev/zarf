@@ -105,7 +105,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
+		release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.AdoptExistingResources)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
@@ -117,7 +117,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return nil, zarfChart.ReleaseName, fmt.Errorf("unable to cast release to v1.Release type")
 		}
 
-		release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
+		release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease, opts.AdoptExistingResources)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -258,7 +258,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer) (*releasev1.Release, error) {
+	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, adoptExistingResources bool) (*releasev1.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
@@ -274,7 +274,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
 	// This can only be enabled when ssa is enabled
-	client.ForceConflicts = true
+	client.ForceConflicts = adoptExistingResources
 
 	// We need to include CRDs or operator installations will fail spectacularly.
 	client.SkipCRDs = false
@@ -292,8 +292,8 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	client.ServerSideApply = true
 
-	// FIXME: not sure if this will help adopt-existing-resources
-	// client.TakeOwnership = true
+	// FIXME: can this replace adopt existing resources?
+	client.TakeOwnership = adoptExistingResources
 
 	// Perform the loadedChart installation.
 	releaser, err := client.RunWithContext(ctx, chart, chartValues)
@@ -311,7 +311,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, c *cluster.Cluster, lastRelease *releasev1.Release) (*releasev1.Release, error) {
+	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, c *cluster.Cluster, lastRelease *releasev1.Release, adoptExistingResources bool) (*releasev1.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
 	err := migrateDeprecatedAPIs(ctx, c, actionConfig, lastRelease)
 	if err != nil {
@@ -330,6 +330,10 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	} else {
 		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
+
+	// FIXME: Server-side apply is causing "metadata.managedFields must be nil" errors in Helm 4
+	// Temporarily disabling until we can root cause the issue
+	client.ServerSideApply = "false"
 
 	// FIXME: Need to decide if we'll keep this, most likely we will
 	// Another option is to set this to adoptExistingResources
@@ -350,6 +354,12 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.PostRenderer = postRender
 
 	client.MaxHistory = maxHelmHistory
+
+	// Enable TakeOwnership when adopting existing resources
+	// This tells Helm to adopt resources without Helm annotations (i.e., resources created by kubectl)
+	if adoptExistingResources {
+		client.TakeOwnership = true
+	}
 
 	// Perform the loadedChart upgrade.
 	releaser, err := client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)

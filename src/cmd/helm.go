@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"helm.sh/helm/v3/pkg/kube"
 	helmcmd "helm.sh/helm/v4/pkg/cmd"
 )
 
@@ -18,6 +19,8 @@ func newHelmCommand() *cobra.Command {
 	if len(os.Args) > 2 {
 		helmArgs = os.Args[3:]
 	}
+	// FIXME: what do I want this to be set to? Should it be set to the same thing during `zarf tools helm` as it is during Zarf operations
+	kube.ManagedFieldsManager = "helm"
 
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
