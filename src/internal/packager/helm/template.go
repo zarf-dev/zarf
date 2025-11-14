@@ -36,7 +36,7 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	l := logger.From(ctx)
 	l.Debug("templating helm chart", "name", zarfChart.Name)
 
-	actionCfg, err := createActionConfig(zarfChart.Namespace)
+	actionCfg, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
 		return "", err
 	}

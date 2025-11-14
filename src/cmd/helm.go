@@ -18,7 +18,7 @@ func newHelmCommand() *cobra.Command {
 	if len(os.Args) > 2 {
 		helmArgs = os.Args[3:]
 	}
-	// The inclusion of Helm in this manner should be changed once https://github.com/helm/helm/pull/13617 is merged
+
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
 		slog.Warn("command failed", slog.Any("error", err))

@@ -111,7 +111,7 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		agentImage.Path = strings.TrimPrefix(agentImage.Path, fmt.Sprintf("%s/", subPath))
 	}
 
-	actionConfig, err := createActionConfig(state.ZarfNamespaceName)
+	actionConfig, err := createActionConfig(ctx, state.ZarfNamespaceName)
 	if err != nil {
 		return err
 	}

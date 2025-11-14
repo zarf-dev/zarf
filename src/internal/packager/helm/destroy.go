@@ -24,7 +24,7 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 	l.Info("removing Zarf-installed charts")
 
 	// Initially load the actionConfig without a namespace
-	actionConfig, err := createActionConfig("")
+	actionConfig, err := createActionConfig(ctx, "")
 	if err != nil {
 		// Don't fatal since this is a removal action
 		l.Error("unable to initialize the K8s client", "error", err.Error())

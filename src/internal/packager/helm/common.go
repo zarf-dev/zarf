@@ -5,6 +5,7 @@
 package helm
 
 import (
+	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
@@ -126,8 +128,11 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 	return helpers.MergeMapRecursive(chartValues, valuesOverrides), nil
 }
 
-func createActionConfig(namespace string) (*action.Configuration, error) {
+func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
+	//FIXME: use constructor
 	actionConfig := new(action.Configuration)
+	l := logger.From(ctx)
+	actionConfig.SetLogger(l.Handler())
 	// Set the settings for the helm SDK
 	settings := cli.New()
 	settings.SetNamespace(namespace)

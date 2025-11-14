@@ -81,7 +81,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	}
 
 	// Setup K8s connection.
-	actionConfig, err := createActionConfig(zarfChart.Namespace)
+	actionConfig, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -182,7 +182,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 // RemoveChart removes a chart from the cluster.
 func RemoveChart(ctx context.Context, namespace string, name string, timeout time.Duration) error {
 	// Establish a new actionConfig for the namespace.
-	actionConfig, err := createActionConfig(namespace)
+	actionConfig, err := createActionConfig(ctx, namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -198,7 +198,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 	l := logger.From(ctx)
 	l.Debug("updating values for helm release", "name", chart.ReleaseName)
 
-	actionConfig, err := createActionConfig(chart.Namespace)
+	actionConfig, err := createActionConfig(ctx, chart.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -273,6 +273,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	}
 
 	// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
+	// This can only be enabled when ssa is enabled
 	client.ForceConflicts = true
 
 	// We need to include CRDs or operator installations will fail spectacularly.
@@ -288,6 +289,11 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
+
+	client.ServerSideApply = true
+
+	// FIXME: not sure if this will help adopt-existing-resources
+	// client.TakeOwnership = true
 
 	// Perform the loadedChart installation.
 	releaser, err := client.RunWithContext(ctx, chart, chartValues)
@@ -326,8 +332,12 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	}
 
 	// FIXME: Need to decide if we'll keep this, most likely we will
+	// Another option is to set this to adoptExistingResources
 	// Not sure why this is failing. For instance during `zarf tools update-creds`
-	client.ForceConflicts = true
+	// This can only be enabled when ssa is enabled
+	if lastRelease.ApplyMethod == "ssa" {
+		client.ForceConflicts = true
+	}
 
 	client.SkipCRDs = true
 
@@ -359,7 +369,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 func rollbackChart(name string, version int, actionConfig *action.Configuration, timeout time.Duration) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	client.ForceReplace = true
+	// client.ForceReplace = true
 	client.ServerSideApply = "auto"
 	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
