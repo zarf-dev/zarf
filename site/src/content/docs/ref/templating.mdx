@@ -220,232 +220,97 @@ components:
 
 ## Sprig Functions
 
-Zarf includes the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities.
+Zarf includes the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities. See the [values-templating example](/ref/examples/) for comprehensive demonstrations of all function categories.
 
 ### String Functions
 
-Transform and manipulate strings:
+Transform and manipulate strings with functions like `upper`, `lower`, `title`, `kebabcase`, `snakecase`, `quote`, `trim`, and more:
 
 ```yaml
-# Case conversion
+# Case and format conversion
 name: {{ .Values.app.name | upper }}        # MY-APP
-name: {{ .Values.app.name | lower }}        # my-app
-name: {{ .Values.app.name | title }}        # My-App
-
-# Format conversion
 name: {{ .Values.site.title | kebabcase }}  # my-awesome-app
-name: {{ .Values.site.title | snakecase }}  # my_awesome_app
-name: {{ .Values.site.title | camelcase }}  # myAwesomeApp
-
-# Quoting
 value: {{ .Values.app.name | quote }}       # "my-app"
-value: {{ .Values.app.name | squote }}      # 'my-app'
 
-# Trimming and padding
+# Trimming and manipulation
 message: {{ .Values.message | trim }}
-message: {{ .Values.message | trimPrefix "prefix-" }}
-message: {{ .Values.message | trimSuffix "-suffix" }}
-
-# Repetition and truncation
-dashes: {{ "-" | repeat 40 }}               # ----------------------------------------
-short: {{ .Values.longText | trunc 50 }}    # First 50 characters
+short: {{ .Values.longText | trunc 50 }}
 ```
 
-**Example in a ConfigMap:**
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Values.app.name | kebabcase }}-config
-  labels:
-    environment: {{ .Values.app.environment | upper }}
-data:
-  app-name: {{ .Values.app.name | quote }}
-  title: {{ .Values.site.title | title }}
-```
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more string function examples.
 
 ### List Functions
 
-Work with arrays and lists:
+Work with arrays and lists using functions like `join`, `len`, `first`, `last`, `sortAlpha`, `reverse`, and `has`:
 
 ```yaml
-# Joining lists
 features: {{ .Values.app.features | join ", " }}
-# Output: "templating, sprig-functions, kubernetes-deployment"
-
-# List properties
-count: {{ .Values.app.features | len }}              # 3
-first: {{ .Values.app.features | first }}            # templating
-last: {{ .Values.app.features | last }}              # kubernetes-deployment
-
-# Sorting and reversing
+count: {{ .Values.app.features | len }}
+first: {{ .Values.app.features | first }}
 sorted: {{ .Values.app.features | sortAlpha | join ", " }}
-reversed: {{ .Values.app.features | reverse | join ", " }}
-
-# Checking membership
-{{ if has "templating" .Values.app.features }}
-  # templating feature is enabled
-{{ end }}
 ```
 
-**Example in a ConfigMap:**
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config
-data:
-  features: {{ .Values.app.features | join "," | quote }}
-  feature-count: {{ .Values.app.features | len | toString | quote }}
-  first-feature: {{ .Values.app.features | first | quote }}
-  sorted-features: {{ .Values.app.features | sortAlpha | join "," | quote }}
-```
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more list function examples.
 
 ### Default and Conditional Functions
 
-Provide fallback values and conditional logic:
+Provide fallback values using functions like `default`, `empty`, `coalesce`, and `ternary`:
 
 ```yaml
-# Default values
 replicas: {{ .Values.app.replicas | default 3 }}
 namespace: {{ .Values.app.namespace | default "default" }}
-
-# Empty checks
-{{ if empty .Values.app.optional }}
-  # Value is empty or not set
-{{ end }}
-
-# Coalesce (first non-empty value)
 host: {{ coalesce .Values.database.host .Values.database.defaultHost "localhost" }}
-
-# Ternary (conditional)
 environment: {{ .Values.app.production | ternary "prod" "dev" }}
-```
-
-**Example in a Deployment:**
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ .Values.app.name }}
-  namespace: {{ .Values.app.namespace | default "default" }}
-spec:
-  replicas: {{ .Values.app.replicas | default 1 }}
-  template:
-    spec:
-      containers:
-      - name: app
-        image: {{ .Values.app.image }}
-        env:
-        - name: LOG_LEVEL
-          value: {{ .Values.app.logLevel | default "info" | quote }}
-        - name: DEBUG
-          value: {{ .Values.app.debug | default false | quote }}
 ```
 
 ### Math Functions
 
-Perform arithmetic operations:
+Perform arithmetic operations using `add`, `sub`, `mul`, `div`, `max`, `min`, `round`, and more:
 
 ```yaml
-# Basic arithmetic
-sum: {{ add .Values.app.replicas 2 }}           # replicas + 2
-product: {{ mul .Values.app.replicas 10 }}      # replicas * 10
-difference: {{ sub .Values.app.replicas 1 }}    # replicas - 1
-quotient: {{ div 100 .Values.app.replicas }}    # 100 / replicas
-
-# Min/Max
+sum: {{ add .Values.app.replicas 2 }}
+product: {{ mul .Values.app.replicas 10 }}
 max-port: {{ max .Values.app.port1 .Values.app.port2 .Values.app.port3 }}
-min-port: {{ min .Values.app.port1 .Values.app.port2 .Values.app.port3 }}
-
-# Rounding
-rounded: {{ .Values.app.price | round 2 }}      # Round to 2 decimals
-ceiling: {{ .Values.app.price | ceil }}
-floor: {{ .Values.app.price | floor }}
 ```
 
-**Example in a ConfigMap:**
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config
-data:
-  replicas: {{ .Values.app.replicas | quote }}
-  replicas-plus-two: {{ add .Values.app.replicas 2 | quote }}
-  scaled-replicas: {{ mul .Values.app.replicas 10 | quote }}
-  max-port: {{ max .Values.app.port1 .Values.app.port2 | quote }}
-```
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more math function examples.
 
 ### Encoding and Hashing Functions
 
-Encode data and generate hashes:
+Encode data and generate hashes using `b64enc`, `b64dec`, `sha256sum`, `sha1sum`, and more:
 
 ```yaml
-# Base64 encoding/decoding
 encoded: {{ .Values.app.secret | b64enc }}
-decoded: {{ .Values.app.encodedSecret | b64dec }}
-
-# Hashing
 sha256: {{ .Values.app.data | sha256sum }}
-sha1: {{ .Values.app.data | sha1sum }}
-
-# URL encoding
-url: {{ .Values.app.callback | urlquery }}
 ```
 
-**Example in a Secret:**
-
+Common use case for Secrets:
 ```yaml
 apiVersion: v1
 kind: Secret
-metadata:
-  name: app-secrets
 type: Opaque
 data:
-  # Secrets must be base64 encoded
   username: {{ .Values.database.username | b64enc }}
   password: {{ .Values.database.password | b64enc }}
-  config-hash: {{ .Values.app.config | sha256sum | b64enc }}
 ```
+
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more encoding examples.
 
 ### Formatting Functions
 
-Like Helm, Zarf offers functions for formatting and indenting output:
+Format and indent output using `indent`, `nindent`, `toString`, `toYaml`, `toJson`, and more:
 
 ```yaml
 # Indentation
 {{ .Values.multilineConfig | indent 4 }}
-{{ .Values.multilineConfig | nindent 2 }}  # newline + indent
 
 # Type conversion
 port: {{ .Values.app.port | toString }}
-count: {{ .Values.app.count | toInt }}
 
-# JSON/YAML
-{{ .Values.config | toJson }}
-{{ .Values.config | toPrettyJson }}
-{{ .Values.config | toYaml }}
-```
-
-**Example with multi-line values:**
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config
+# Multi-line values in ConfigMaps
 data:
   config.yaml: |
-    # Indent multi-line YAML
 {{ .Values.app.config | toYaml | indent 4 }}
-
-  styles.css: |
-{{ .Values.site.styles | indent 4 }}
 ```
 
 ## Conditional Logic
@@ -554,56 +419,17 @@ spec:
     app: {{ $appName }}
 ```
 
-## Complex Example
+## Complex Examples
 
-Combining multiple Sprig functions:
+For comprehensive examples combining multiple Sprig functions, see the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) which demonstrates:
 
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-configmap
-  namespace: nginx
-  labels:
-    app: {{ .Values.app.name | kebabcase }}
-    environment: {{ .Values.app.environment | upper }}
-data:
-  # Multi-line HTML with various transformations
-  index.html: |
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>{{ .Values.site.name | title }}</title>
-        <style>
-{{ .Values.site.styles | indent 10 }}
-        </style>
-      </head>
-      <body>
-        <h1>{{ .Values.site.name | title }}</h1>
-
-        <!-- String transformations -->
-        <p>Message: {{ .Values.site.message | upper | quote }}</p>
-        <p>Slug: {{ .Values.site.title | kebabcase }}</p>
-
-        <!-- List operations -->
-        <p>Features: {{ .Values.app.features | join ", " }}</p>
-        <p>Feature Count: {{ .Values.app.features | len }}</p>
-        <p>First Feature: {{ .Values.app.features | first | title }}</p>
-
-        <!-- Default values -->
-        <p>Log Level: {{ .Values.app.logLevel | default "info" | upper }}</p>
-
-        <!-- Math operations -->
-        <p>Replicas: {{ .Values.app.replicas }}</p>
-        <p>Scaled: {{ mul .Values.app.replicas 10 }}</p>
-        <p>Max Port: {{ max .Values.app.port1 .Values.app.port2 }}</p>
-
-        <!-- Encoding -->
-        <p>Config Hash: {{ .Values.app.config | sha256sum }}</p>
-        <p>Encoded: {{ .Values.app.secret | b64enc }}</p>
-      </body>
-    </html>
-```
+- String transformations (upper, lower, kebabcase, title)
+- List operations (join, len, first, sortAlpha)
+- Default values and conditionals
+- Math operations (add, mul, max, min)
+- Encoding and hashing (b64enc, sha256sum)
+- Multi-line values with indentation
+- Real-world ConfigMap and Deployment examples
 
 ## Using Helm charts within Zarf:
 - Helm templating happens inside chart templates (standard Helm behavior)
@@ -711,17 +537,6 @@ Use `-` to trim whitespace:
 ```yaml
 {{- .Values.app.name -}}
 ```
-
-## Examples
-
-See the [values-templating example](/ref/examples/) for comprehensive demonstrations of:
-
-- Basic template syntax
-- All Sprig function categories
-- Conditional logic
-- List iteration
-- Complex transformations
-- Real-world use cases
 
 ## Related Documentation
 
