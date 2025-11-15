@@ -85,7 +85,7 @@ func DefaultSignBlobOptions() SignBlobOptions {
 			FulcioAuthFlow:   "normal",
 			FulcioURL:        "https://fulcio.sigstore.dev",
 			RekorURL:         "https://rekor.sigstore.dev",
-			NewBundleFormat:  false,
+			NewBundleFormat:  true,
 			SkipConfirmation: false,
 		},
 		Timeout: CosignDefaultTimeout,
@@ -97,6 +97,9 @@ func DefaultSignBlobOptions() SignBlobOptions {
 // Configures sensible defaults for offline/air-gapped environments.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	return VerifyBlobOptions{
+		KeyOpts: options.KeyOpts{
+			NewBundleFormat: true,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			IgnoreSCT: true, // Skip SCT verification by default
 		},
@@ -178,7 +181,7 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 
 	l.Debug("verifying blob with cosign",
 		"keyRef", opts.KeyRef,
-		"sigRef", opts.SigRef,
+		"bundlePath", opts.BundlePath,
 		"offline", opts.Offline)
 
 	err := cmd.Exec(ctx, blobPath)

@@ -12,6 +12,7 @@ import (
 const (
 	ZarfYAML  = "zarf.yaml"
 	Signature = "zarf.yaml.sig"
+	Bundle    = "zarf.bundle.sig"
 	Checksums = "checksums.txt"
 
 	ImagesDir     = "images"
