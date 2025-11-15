@@ -216,9 +216,16 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signOpts.BundlePath = tmpBundlePath
 
 	// Check if signature already exists in actual layout and warn
+	// Note: duplicate warnings - this one will be removed when the standard signature is deprecated
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	if _, err := os.Stat(actualSignaturePath); err == nil {
 		l.Warn("overwriting existing package signature", "path", actualSignaturePath)
+	}
+
+	// Check if signature already exists in actual layout and warn
+	actualBundlePath := filepath.Join(p.dirPath, Bundle)
+	if _, err := os.Stat(actualBundlePath); err == nil {
+		l.Warn("overwriting existing package signature bundle", "path", actualBundlePath)
 	}
 
 	// Perform the signing operation on the temp file
@@ -246,12 +253,12 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	err = os.Rename(tmpBundlePath, filepath.Join(p.dirPath, Bundle))
+	err = os.Rename(tmpBundlePath, actualBundlePath)
 	if err != nil {
 		return fmt.Errorf("failed to move bundle after signing: %w", err)
 	}
 
-	l.Info("package signed successfully", "signature", actualSignaturePath)
+	l.Info("package signed successfully")
 	return nil
 }
 
