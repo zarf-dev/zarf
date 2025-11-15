@@ -481,7 +481,7 @@ func (o *devPatchGitOptions) run(cmd *cobra.Command, args []string) error {
 	// Perform git url transformation via regex
 	text := string(content)
 
-	processedText := transform.MutateGitURLsInText(l.Warn, host, text, o.gitPushUsername)
+	processedText := transform.MutateGitURLsInText(l.Warn, host, text, o.gitPushUsername, false)
 
 	// Print the differences
 	dmp := diffmatchpatch.New()

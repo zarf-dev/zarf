@@ -69,7 +69,7 @@ func TestMutateGitURLsInText(t *testing.T) {
 	https://www.defenseunicorns.com/
 	`
 
-	resultingText := MutateGitURLsInText(dummyLogger, "https://gitlab.com", originalText, "repo-owner")
+	resultingText := MutateGitURLsInText(dummyLogger, "https://gitlab.com", originalText, "repo-owner", false)
 	require.Equal(t, expectedText, resultingText)
 }
 

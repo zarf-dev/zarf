@@ -89,7 +89,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	// Mutate the repoURL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(s.GitServer.Address, repoCreds.URL, s.GitServer.PushUsername)
+		transformedURL, err := transform.GitURL(s.GitServer.Address, repoCreds.URL, s.GitServer.PushUsername, false)
 		if err != nil {
 			return nil, fmt.Errorf("unable the git url: %w", err)
 		}

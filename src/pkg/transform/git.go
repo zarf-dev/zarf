@@ -16,10 +16,10 @@ import (
 var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)?(?P<git>\.git)?(\/)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
 
 // MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
-func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string) string {
+func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string, noChecksum bool) string {
 	extractPathRegex := regexp.MustCompile(`[a-z]+:\/\/[^\/]+\/(.*\.git)`)
 	output := extractPathRegex.ReplaceAllStringFunc(text, func(match string) string {
-		output, err := GitURL(targetBaseURL, match, pushUser)
+		output, err := GitURL(targetBaseURL, match, pushUser, noChecksum)
 		if err != nil {
 			logger("Unable to transform the git url, using the original url we have: %s", match)
 			return match
@@ -65,7 +65,7 @@ func GitURLtoFolderName(sourceURL string) (string, error) {
 }
 
 // GitURLtoRepoName takes a git url and returns the name of the repo in the remote airgap repository.
-func GitURLtoRepoName(sourceURL string) (string, error) {
+func GitURLtoRepoName(sourceURL string, noChecksum bool) (string, error) {
 	get, err := helpers.MatchRegex(gitURLRegex, sourceURL)
 
 	if err != nil {
@@ -74,6 +74,12 @@ func GitURLtoRepoName(sourceURL string) (string, error) {
 	}
 
 	repoName := get("repo")
+
+	// If noChecksum is true, return the repo name without checksum
+	if noChecksum {
+		return repoName, nil
+	}
+
 	// NOTE: We remove the .git and protocol so that https://zarf.dev/repo.git and http://zarf.dev/repo
 	// resolve to the same repo (as they would in real life)
 	sanitizedURL := fmt.Sprintf("%s/%s", get("hostPath"), repoName)
@@ -87,8 +93,8 @@ func GitURLtoRepoName(sourceURL string) (string, error) {
 }
 
 // GitURL takes a base URL, a source url and a username and returns a Zarf-compatible url.
-func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, error) {
-	repoName, err := GitURLtoRepoName(sourceURL)
+func GitURL(targetBaseURL string, sourceURL string, pushUser string, noChecksum bool) (*url.URL, error) {
+	repoName, err := GitURLtoRepoName(sourceURL, noChecksum)
 	if err != nil {
 		return nil, err
 	}

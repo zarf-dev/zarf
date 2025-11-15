@@ -75,7 +75,7 @@ func proxyRequestTransform(r *http.Request, s *state.State) error {
 	} else {
 		switch {
 		case isGitUserAgent(r.UserAgent()):
-			targetURL, err = transform.GitURL(s.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), s.GitServer.PushUsername)
+			targetURL, err = transform.GitURL(s.GitServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String(), s.GitServer.PushUsername, false)
 		case isPipUserAgent(r.UserAgent()):
 			targetURL, err = transform.PipTransformURL(s.ArtifactServer.Address, getTLSScheme(r.TLS)+r.Host+r.URL.String())
 		case isNpmUserAgent(r.UserAgent()):

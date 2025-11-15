@@ -37,7 +37,7 @@ func Open(rootPath, address string) (*Repository, error) {
 		return nil, err
 	}
 	if os.IsNotExist(err) {
-		repoFolder, err = transform.GitURLtoRepoName(address)
+		repoFolder, err = transform.GitURLtoRepoName(address, false)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse git url %s: %w", address, err)
 		}
@@ -161,7 +161,7 @@ func (r *Repository) Path() string {
 }
 
 // Push pushes the repository to the remote git server.
-func (r *Repository) Push(ctx context.Context, address, username, password string) error {
+func (r *Repository) Push(ctx context.Context, address, username, password string, noChecksum bool) error {
 	l := logger.From(ctx)
 	repo, err := git.PlainOpen(r.path)
 	if err != nil {
@@ -176,7 +176,7 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 	if len(remote.Config().URLs) == 0 {
 		return fmt.Errorf("repository has zero remotes configured")
 	}
-	targetURL, err := transform.GitURL(address, remote.Config().URLs[0], username)
+	targetURL, err := transform.GitURL(address, remote.Config().URLs[0], username, noChecksum)
 	if err != nil {
 		return fmt.Errorf("unable to transform the git url: %w", err)
 	}

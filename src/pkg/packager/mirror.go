@@ -80,8 +80,9 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 
 // RepoPushOptions are optional parameters to push repos in a zarf package to a Git server
 type RepoPushOptions struct {
-	Cluster *cluster.Cluster
-	Retries int
+	Cluster       *cluster.Cluster
+	Retries       int
+	NoGitChecksum bool
 }
 
 // PushReposToRepository pushes Git repositories in the package layout to the Git server
@@ -96,7 +97,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 		return fmt.Errorf("git server address must be specified")
 	}
 	for _, component := range pkgLayout.Pkg.Components {
-		err := pushComponentReposToRegistry(ctx, component, pkgLayout, gitInfo, opts.Cluster, opts.Retries)
+		err := pushComponentReposToRegistry(ctx, component, pkgLayout, gitInfo, opts.Cluster, opts.Retries, opts.NoGitChecksum)
 		if err != nil {
 			return err
 		}
@@ -105,7 +106,7 @@ func PushReposToRepository(ctx context.Context, pkgLayout *layout.PackageLayout,
 }
 
 func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfComponent,
-	pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, c *cluster.Cluster, retries int) (err error) {
+	pkgLayout *layout.PackageLayout, gitInfo state.GitServerInfo, c *cluster.Cluster, retries int, noGitChecksum bool) (err error) {
 	l := logger.From(ctx)
 	for _, repoURL := range component.Repos {
 		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -126,7 +127,7 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 		err = retry.Do(func() error {
 			if !dns.IsServiceURL(gitInfo.Address) {
 				l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
-				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
+				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword, noGitChecksum)
 				if err != nil {
 					return err
 				}
@@ -160,13 +161,13 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 			}
 			return tunnel.Wrap(func() error {
 				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
-				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
+				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword, noGitChecksum)
 				if err != nil {
 					return err
 				}
 				// Add the read-only user to this repo
 				// TODO: This should not be done here. Or the function name should be changed.
-				repoName, err := transform.GitURLtoRepoName(repoURL)
+				repoName, err := transform.GitURLtoRepoName(repoURL, noGitChecksum)
 				if err != nil {
 					return retry.Unrecoverable(err)
 				}

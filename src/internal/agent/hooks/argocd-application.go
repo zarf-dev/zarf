@@ -123,7 +123,7 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 	// Mutate the repoURL if necessary
 	if isCreate || (isUpdate && !isPatched) {
 		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
+		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername, false)
 		if err != nil {
 			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
 		}

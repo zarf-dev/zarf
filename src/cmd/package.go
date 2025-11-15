@@ -468,6 +468,7 @@ type packageMirrorResourcesOptions struct {
 	confirm                 bool
 	shasum                  string
 	noImgChecksum           bool
+	noGitChecksum           bool
 	skipSignatureValidation bool
 	retries                 int
 	optionalComponents      string
@@ -503,6 +504,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().BoolVar(&o.noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+	cmd.Flags().BoolVar(&o.noGitChecksum, "no-git-checksum", false, lang.CmdPackageMirrorFlagNoGitChecksum)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -637,8 +639,9 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		}
 
 		mirrorOpt := packager.RepoPushOptions{
-			Cluster: c,
-			Retries: o.retries,
+			Cluster:       c,
+			Retries:       o.retries,
+			NoGitChecksum: o.noGitChecksum,
 		}
 		err = packager.PushReposToRepository(ctx, pkgLayout, o.gitServer, mirrorOpt)
 		if err != nil {
