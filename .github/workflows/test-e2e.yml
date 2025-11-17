@@ -79,7 +79,18 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run tests
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           make test-e2e-without-cluster ARCH=amd64
 
@@ -113,7 +124,18 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run tests
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           make test-e2e-with-cluster ARCH=amd64
 
@@ -148,12 +170,19 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
         #       used for each test
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true make test-e2e-with-cluster ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true TMPDIR=/mnt/zarf-tmp ZARF_TEST_TMPDIR=/mnt/zarf-tmp ZARF_CACHE=/mnt/zarf-cache make test-e2e-with-cluster ARCH=amd64
 
   # Run the tests on kind
   validate-kind-arm64:
@@ -184,7 +213,18 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run tests
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           make test-e2e-with-cluster ARCH=arm64
 
@@ -222,7 +262,18 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run tests
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           make test-e2e-with-cluster ARCH=amd64
 

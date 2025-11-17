@@ -89,9 +89,20 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Create and deploy the upgrade test packages
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.3 --confirm
           sudo env "PATH=$PATH" CI=true zarf package deploy zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst --confirm
@@ -102,7 +113,7 @@ jobs:
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.
         run: |
-          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e-with-cluster ARCH=amd64
+          sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true TMPDIR=/mnt/zarf-tmp ZARF_TEST_TMPDIR=/mnt/zarf-tmp ZARF_CACHE=/mnt/zarf-cache make test-e2e-with-cluster ARCH=amd64
 
       - name: "Describe nodes, pods and deployments"
         # NOTE: We describe nodes, pods and deployments here to help understand failures
@@ -118,9 +129,13 @@ jobs:
       - name: Run the upgrade tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of zarf installed
         #       in a previous step. This test run will the current release to create a K3s cluster.
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: |
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
 
           zarf package create src/test/upgrade --set PODINFO_VERSION=6.3.4 --confirm
 
-          sudo env "PATH=$PATH" CI=true make test-upgrade ARCH=amd64
+          sudo env "PATH=$PATH" CI=true TMPDIR=/mnt/zarf-tmp ZARF_TEST_TMPDIR=/mnt/zarf-tmp ZARF_CACHE=/mnt/zarf-cache make test-upgrade ARCH=amd64

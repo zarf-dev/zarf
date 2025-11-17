@@ -121,7 +121,10 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		args = append(args, "--log-format=console", "--no-color")
 	}
 	if !slices.Contains(args, "--tmpdir") && !isToolCall {
-		tmpdir, err := os.MkdirTemp("", "zarf-")
+		// Allow custom temp directory base via ZARF_TEST_TMPDIR environment variable
+		// This is useful for CI environments where /mnt has more space than /tmp
+		tmpBase := os.Getenv("ZARF_TEST_TMPDIR")
+		tmpdir, err := os.MkdirTemp(tmpBase, "zarf-")
 		if err != nil {
 			return "", "", err
 		}
@@ -131,22 +134,35 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 		}(tmpdir)
 		args = append(args, "--tmpdir", tmpdir)
 	}
-	if !slices.Contains(args, "--zarf-cache") && !isToolCall && isCI && isWindows {
-		// We make the cache dir relative to the working directory to make it work on the Windows Runners
-		// - they use two drives which filepath.Rel cannot cope with.
-		cwd, err := os.Getwd()
-		if err != nil {
-			return "", "", err
+	if !slices.Contains(args, "--zarf-cache") && !isToolCall && isCI {
+		// Allow custom cache directory via ZARF_CACHE environment variable
+		cacheDir := os.Getenv("ZARF_CACHE")
+
+		if cacheDir == "" && isWindows {
+			// We make the cache dir relative to the working directory to make it work on the Windows Runners
+			// - they use two drives which filepath.Rel cannot cope with.
+			cwd, err := os.Getwd()
+			if err != nil {
+				return "", "", err
+			}
+			cacheDir, err = os.MkdirTemp(cwd, "zarf-")
+			if err != nil {
+				return "", "", err
+			}
+		} else if cacheDir != "" {
+			// Ensure custom cache directory exists
+			if err := os.MkdirAll(cacheDir, 0755); err != nil {
+				return "", "", err
+			}
 		}
-		cacheDir, err := os.MkdirTemp(cwd, "zarf-")
-		if err != nil {
-			return "", "", err
+
+		if cacheDir != "" {
+			args = append(args, "--zarf-cache", cacheDir)
+			defer func(path string) {
+				errRemove := os.RemoveAll(path)
+				err = errors.Join(err, errRemove)
+			}(cacheDir)
 		}
-		args = append(args, "--zarf-cache", cacheDir)
-		defer func(path string) {
-			errRemove := os.RemoveAll(path)
-			err = errors.Join(err, errRemove)
-		}(cacheDir)
 	}
 	cfg := exec.PrintCfg()
 	cfg.Dir = dir

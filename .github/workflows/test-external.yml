@@ -52,7 +52,18 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      # Setup /mnt for temporary storage to reduce disk pressure on root filesystem
+      - name: Setup temporary storage on /mnt
+        run: |
+          sudo mkdir -p /mnt/zarf-tmp /mnt/zarf-cache
+          sudo chmod 1777 /mnt/zarf-tmp
+          sudo chown -R $USER:$USER /mnt/zarf-cache
+
       - name: Run external service test
+        env:
+          TMPDIR: /mnt/zarf-tmp
+          ZARF_TEST_TMPDIR: /mnt/zarf-tmp
+          ZARF_CACHE: /mnt/zarf-cache
         run: make test-external
 
       - name: get cluster info
