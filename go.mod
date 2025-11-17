@@ -56,9 +56,9 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/xeipuuv/gojsonschema v1.2.0
-	golang.org/x/crypto v0.43.0
+	golang.org/x/crypto v0.44.0
 	golang.org/x/sync v0.18.0
-	golang.org/x/term v0.36.0
+	golang.org/x/term v0.37.0
 	helm.sh/helm/v3 v3.18.4
 	k8s.io/api v0.34.2
 	k8s.io/apimachinery v0.34.2
@@ -601,8 +601,8 @@ require (
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/oauth2 v0.31.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.13.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240716161551-93cc26a95ae9 // indirect
 	google.golang.org/api v0.251.0 // indirect
