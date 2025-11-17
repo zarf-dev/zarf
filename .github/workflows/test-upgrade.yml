@@ -99,6 +99,11 @@ jobs:
           sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
           rm zarf-package-test-upgrade-package-amd64-6.3.3.tar.zst
 
+      - name: Report disk space
+        if: always()
+        run: |
+          lsblk -f
+
       - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use this PR's Zarf to create a K3s cluster.

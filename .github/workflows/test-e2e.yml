@@ -148,6 +148,11 @@ jobs:
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
 
+      - name: Report disk space
+        if: always()
+        run: |
+          lsblk -f
+
       - name: Run tests
         # NOTE: "PATH=$PATH" preserves the default user $PATH. This is needed to maintain the version of go installed
         #       in a previous step. This test run will use Zarf to create a K3s cluster, and a brand new cluster will be
