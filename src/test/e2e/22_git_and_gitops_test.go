@@ -183,6 +183,10 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	// Remove the flux example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "podinfo-flux", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the flux images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "registry", "prune", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
 
 func waitArgoDeployment(t *testing.T) {
@@ -212,5 +216,9 @@ func waitArgoDeployment(t *testing.T) {
 
 	// Remove the argocd example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "argocd", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the flux images to reduce disk pressure
+	stdOut, stdErr, err = e2e.Zarf(t, "tools", "registry", "prune", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
