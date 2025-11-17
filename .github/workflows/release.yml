@@ -183,7 +183,7 @@ jobs:
           GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
       - name: Report disk space on failure
-        if: always()
+        if: failure()
         run: |
           echo "create-release failed, printing out available diskspace"
           lsblk -f
