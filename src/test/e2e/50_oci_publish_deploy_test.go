@@ -98,6 +98,9 @@ func (suite *PublishDeploySuiteTestSuite) Test_1_Deploy() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", "oci://"+ref, "--plain-http", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(suite.T())
+
 	// Test deploy w/ bad ref.
 	_, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", "oci://"+badDeployRef.String(), "--plain-http", "--confirm")
 	suite.Error(err, stdErr)

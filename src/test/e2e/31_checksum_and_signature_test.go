@@ -45,4 +45,7 @@ func TestChecksumAndSignature(t *testing.T) {
 	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", pkgName, publicKeyFlag, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(t)
 }

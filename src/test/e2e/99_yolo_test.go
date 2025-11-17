@@ -54,6 +54,8 @@ func TestYOLOMode(t *testing.T) {
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Note: No registry prune here as YOLO mode doesn't use the in-cluster registry
 }
 
 func TestDevDeploy(t *testing.T) {

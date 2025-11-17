@@ -107,6 +107,9 @@ func testHelmChartsExample(t *testing.T) {
 	// Remove the example package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(t)
 }
 
 func testHelmExampleWithOverrides(t *testing.T) {
@@ -149,6 +152,9 @@ func testHelmEscaping(t *testing.T) {
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "evil-templates", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(t)
 }
 
 func testHelmUninstallRollback(t *testing.T, tmpdir string) {
@@ -206,6 +212,9 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(t)
 }
 
 func testHelmAdoption(t *testing.T, tmpdir string) {
@@ -238,4 +247,7 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// Prune the registry to reduce disk pressure
+	e2e.PruneRegistry(t)
 }
