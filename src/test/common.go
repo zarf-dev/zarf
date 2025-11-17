@@ -183,13 +183,3 @@ func (e2e *ZarfE2ETest) GetZarfVersion(t *testing.T) string {
 	require.NoError(t, err, stdOut, stdErr)
 	return strings.Trim(stdOut, "\n")
 }
-
-// PruneRegistry executes zarf tools registry prune to reduce disk pressure.
-// This should be called after package removal operations to clean up unused images
-// from the in-cluster registry, helping to reduce disk pressure during E2E tests.
-func (e2e *ZarfE2ETest) PruneRegistry(t *testing.T) {
-	t.Helper()
-	t.Log("Pruning registry to reduce disk pressure")
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "registry", "prune", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-}
