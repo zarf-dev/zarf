@@ -104,10 +104,6 @@ jobs:
         run: |
           sudo env "PATH=$PATH" CI=true APPLIANCE_MODE=true APPLIANCE_MODE_KEEP=true make test-e2e-with-cluster ARCH=amd64
 
-      - name: get cluster info
-        uses: ./.github/actions/debug-cluster
-        if: always()
-
       # Before we run the upgrade tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files

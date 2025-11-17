@@ -89,6 +89,8 @@ func TestComponentStatus(t *testing.T) {
 	t.Cleanup(func() {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
+
+		e2e.PruneRegistry(t)
 	})
 }
 
