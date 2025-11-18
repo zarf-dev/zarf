@@ -178,18 +178,21 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 
 	// Get trusted root path with automatic fallback to embedded root
 	// This prevents network calls - the embedded root was fetched via TUF at build time
-	trustedRootPath, cleanup, err := GetTrustedRootPath(opts.TrustedRootPath)
-	if err != nil {
-		return fmt.Errorf("failed to get trusted root: %w", err)
+	if opts.NewBundleFormat {
+		trustedRootPath, cleanup, err := GetTrustedRootPath(opts.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("failed to get trusted root: %w", err)
+		}
+		opts.TrustedRootPath = trustedRootPath
+		defer cleanup()
 	}
-	defer cleanup()
 
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:           keyOpts,
 		CertVerifyOptions: certVerifyOpts,
 		SigRef:            opts.SigRef,
-		TrustedRootPath:   trustedRootPath, // Now always provided
-		IgnoreSCT:         opts.IgnoreSCT,  // From CertVerifyOptions
+		TrustedRootPath:   opts.TrustedRootPath,
+		IgnoreSCT:         opts.IgnoreSCT, // From CertVerifyOptions
 		Offline:           opts.Offline,
 		IgnoreTlog:        opts.IgnoreTlog,
 	}
@@ -197,11 +200,10 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 	l.Debug("verifying blob with cosign",
 		"keyRef", opts.KeyRef,
 		"bundlePath", opts.BundlePath,
-		"trustedRootPath", trustedRootPath,
-		"usingEmbeddedRoot", opts.TrustedRootPath == "",
-		"offline", opts.Offline)
+		"trustedRootPath", opts.TrustedRootPath,
+		"newBundleFormat", opts.NewBundleFormat)
 
-	err = cmd.Exec(ctx, blobPath)
+	err := cmd.Exec(ctx, blobPath)
 	if err != nil {
 		return err
 	}

@@ -308,6 +308,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	// Legacy signature found
 	l.Warn("non-bundle format signature is being deprecated in favor of the sigstore bundle format")
 	opts.SigRef = signaturePath
+	opts.NewBundleFormat = false
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }

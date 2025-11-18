@@ -108,43 +108,6 @@ git add src/pkg/utils/data/trusted_root.json
 git commit -m "chore: update embedded Sigstore trusted root"
 ```
 
-### Automated Updates (Recommended)
-
-Create a scheduled workflow (`.github/workflows/update-trusted-root.yml`):
-
-```yaml
-name: Update Trusted Root
-
-on:
-  schedule:
-    - cron: '0 0 1 * *'  # Monthly
-  workflow_dispatch:
-
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-
-      - name: Update trusted root
-        run: go run hack/tuf/main.go
-
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: 'chore: update embedded Sigstore trusted root'
-          title: 'Update Embedded Sigstore Trusted Root'
-          body: |
-            Automated update of the embedded Sigstore trusted root.
-
-            Fetched via TUF from tuf-repo-cdn.sigstore.dev with cryptographic verification.
-```
-
 ## Security Considerations
 
 ### Why Embed vs. Fetch at Runtime?
