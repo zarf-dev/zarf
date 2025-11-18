@@ -66,6 +66,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
+      --injector-port int               the port that the injector will be exposed through on the Kubernetes Node. Nodeport in nodeport mode, hostport in Proxy mode
   -k, --key string                      Path to public key file for validating signed packages
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
       --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)

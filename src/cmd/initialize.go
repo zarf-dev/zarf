@@ -74,7 +74,6 @@ func newInitCommand() *cobra.Command {
 		"the port that the injector will be exposed through on the Kubernetes Node. Nodeport in nodeport mode, hostport in Proxy mode")
 	// While this feature is in early alpha we will hide the flags
 	cmd.Flags().MarkHidden("registry-mode")
-	cmd.Flags().MarkHidden("injector-port")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
