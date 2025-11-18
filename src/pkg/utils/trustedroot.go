@@ -27,7 +27,7 @@ import (
 // The file will be written to src/pkg/utils/data/trusted_root.json
 // and should be committed to the repository.
 //
-//go:embed data/trusted_root.json
+//go:embed root/trusted_root.json
 var EmbeddedTrustedRoot []byte
 
 // GetTrustedRootMaterial returns TrustedMaterial for Cosign verification.
