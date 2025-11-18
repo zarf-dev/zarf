@@ -248,9 +248,9 @@ type ZarfMetadata struct {
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
 type ZarfBuildData struct {
 	// The machine name that created this package.
-	Terminal string `json:"terminal"`
+	Terminal string `json:"terminal,omitempty"`
 	// The username who created this package.
-	User string `json:"user"`
+	User string `json:"user,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
 	// The timestamp when this package was created.
@@ -267,10 +267,12 @@ type ZarfBuildData struct {
 	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
-	// The minimum version of Zarf that does not have breaking package structure changes.
-	LastNonBreakingVersion string `json:"lastNonBreakingVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+	// Whether this package was signed
+	Signed *bool `json:"signed,omitempty"`
+	// Requirements for specific package operations.
+	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.
@@ -279,4 +281,12 @@ type ZarfValues struct {
 	Files []string `json:"files,omitempty"`
 	// Schema declares a path to a .schema.json file that validates the contents of Files.
 	Schema string `json:"schema,omitempty"`
+}
+
+// VersionRequirement specifies minimum version requirements for the package
+type VersionRequirement struct {
+	// The minimum version of Zarf required to use this package
+	Version string `json:"version"`
+	// Explanation for why this version is required
+	Reason string `json:"reason,omitempty"`
 }

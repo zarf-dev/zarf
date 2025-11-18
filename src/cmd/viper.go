@@ -79,17 +79,18 @@ const (
 
 	// Package create config keys
 
-	VPkgCreateSet                = "package.create.set"
-	VPkgCreateOutput             = "package.create.output"
-	VPkgCreateSbom               = "package.create.sbom"
-	VPkgCreateSbomOutput         = "package.create.sbom_output"
-	VPkgCreateSkipSbom           = "package.create.skip_sbom"
-	VPkgCreateMaxPackageSize     = "package.create.max_package_size"
-	VPkgCreateSigningKey         = "package.create.signing_key"
-	VPkgCreateSigningKeyPassword = "package.create.signing_key_password"
-	VPkgCreateDifferential       = "package.create.differential"
-	VPkgCreateRegistryOverride   = "package.create.registry_override"
-	VPkgCreateFlavor             = "package.create.flavor"
+	VPkgCreateSet                  = "package.create.set"
+	VPkgCreateOutput               = "package.create.output"
+	VPkgCreateSbom                 = "package.create.sbom"
+	VPkgCreateSbomOutput           = "package.create.sbom_output"
+	VPkgCreateSkipSbom             = "package.create.skip_sbom"
+	VPkgCreateMaxPackageSize       = "package.create.max_package_size"
+	VPkgCreateSigningKey           = "package.create.signing_key"
+	VPkgCreateSigningKeyPassword   = "package.create.signing_key_password"
+	VPkgCreateDifferential         = "package.create.differential"
+	VPkgCreateRegistryOverride     = "package.create.registry_override"
+	VPkgCreateFlavor               = "package.create.flavor"
+	VPkgCreateWithBuildMachineInfo = "package.create.with_build_machine_info"
 
 	// Package deploy config keys
 
@@ -103,9 +104,17 @@ const (
 
 	// Package publish config keys
 
-	VPkgPublishSigningKey         = "package.publish.signing_key"
-	VPkgPublishSigningKeyPassword = "package.publish.signing_key_password"
-	VPkgPublishRetries            = "package.publish.retries"
+	VPkgPublishSigningKey           = "package.publish.signing_key"
+	VPkgPublishSigningKeyPassword   = "package.publish.signing_key_password"
+	VPkgPublishRetries              = "package.publish.retries"
+	VPkgPublishWithBuildMachineInfo = "package.publish.with_build_machine_info"
+
+	// Package sign config keys
+
+	VPkgSignSigningKey         = "package.sign.signing_key"
+	VPkgSignSigningKeyPassword = "package.sign.signing_key_password"
+	VPkgSignOutput             = "package.sign.output"
+	VPkgSignOverwrite          = "package.sign.overwrite"
 
 	// Package pull config keys
 

@@ -133,7 +133,12 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("package layout must be specified")
 	}
 
-	if err := pkgLayout.SignPackage(opts.SigningKeyPath, opts.SigningKeyPassword); err != nil {
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
 	}
 
@@ -164,6 +169,10 @@ type PublishSkeletonOptions struct {
 	Flavor string
 	// Retries specifies the number of retries to use
 	Retries int
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
+	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 	RemoteOptions
 }
 
@@ -193,17 +202,19 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath: opts.CachePath,
-		Flavor:    opts.Flavor,
+		CachePath:        opts.CachePath,
+		Flavor:           opts.Flavor,
+		SkipVersionCheck: opts.SkipVersionCheck,
 	})
 	if err != nil {
 		return registry.Reference{}, err
 	}
 	// Create skeleton buildpath
 	createOpts := layout.AssembleSkeletonOptions{
-		SigningKeyPath:     opts.SigningKeyPath,
-		SigningKeyPassword: opts.SigningKeyPassword,
-		Flavor:             opts.Flavor,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		Flavor:               opts.Flavor,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
 	if err != nil {

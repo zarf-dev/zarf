@@ -48,10 +48,15 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get action configmap")
 	require.Contains(t, kubectlOut, "myValue")
 
-	// Verify the raw template configmap was NOT processed by Zarf (template: false)
+	// Verify the raw template configmap was NOT processed by Zarf (default behavior without template: true)
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-raw-template-configmap", "-o", "jsonpath='{.data.rawTemplate}'")
 	require.NoError(t, err, "unable to get raw template configmap")
 	require.Contains(t, kubectlOut, "template={{ .shouldNotBeProcessed }}")
+
+	// Verify the processed template configmap WAS processed by Zarf (template: true)
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-processed-template-configmap", "-o", "jsonpath='{.data.processedTemplate}'")
+	require.NoError(t, err, "unable to get processed template configmap")
+	require.Contains(t, kubectlOut, "processed=myValue")
 
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "override-values.yaml")

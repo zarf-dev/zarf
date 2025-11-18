@@ -254,7 +254,12 @@ func TestPublishPackage(t *testing.T) {
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
 
+			// set build data to empty
+			layoutExpected.Pkg.Build = v1alpha1.ZarfBuildData{}
+
 			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
+			//build data changes when signed
+			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 			if tc.opts.SigningKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))

@@ -70,11 +70,11 @@ func TestFindImages(t *testing.T) {
 		testPackagePath := filepath.Join("examples", "wordpress")
 		sets := []string{"WORDPRESS_USERNAME=zarf", "WORDPRESS_PASSWORD=fake", "WORDPRESS_EMAIL=hello@defenseunicorns.com", "WORDPRESS_FIRST_NAME=zarf", "WORDPRESS_LAST_NAME=zarf", "WORDPRESS_BLOG_NAME=blog"}
 		deploysSet := strings.Join(sets, ",")
-		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnami/apache-exporter:0.13.3-debian-11-r2", "--deploy-set", deploysSet)
+		stdOut, _, err := e2e.Zarf(t, "dev", "find-images", testPackagePath, "--why", "docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55", "--deploy-set", deploysSet)
 		require.NoError(t, err)
 		require.Contains(t, stdOut, "component: wordpress")
 		require.Contains(t, stdOut, "chart: wordpress")
-		require.Contains(t, stdOut, "image: docker.io/bitnami/wordpress:6.2.0-debian-11-r18")
+		require.Contains(t, stdOut, "image: docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4")
 	})
 
 	t.Run("zarf test find images --why w/ manifests success", func(t *testing.T) {
