@@ -36,7 +36,7 @@ type initOptions struct {
 	gitServer               state.GitServerInfo
 	registryInfo            state.RegistryInfo
 	artifactServer          state.ArtifactServerInfo
-	injectorHostPort        int
+	injectorPort            int
 	adoptExistingResources  bool
 	timeout                 time.Duration
 	retries                 int
@@ -70,11 +70,11 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
 		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
-	cmd.Flags().IntVar(&o.injectorHostPort, "injector-hostport", v.GetInt(InjectorHostPort),
-		"the hostport that the long lived DaemonSet injector will use when the registry is running in proxy mode")
+	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
+		"the port that the injector will be exposed through on the Kubernetes Node. Nodeport in nodeport mode, hostport in Proxy mode")
 	// While this feature is in early alpha we will hide the flags
 	cmd.Flags().MarkHidden("registry-mode")
-	cmd.Flags().MarkHidden("injector-hostport")
+	cmd.Flags().MarkHidden("injector-port")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -109,7 +109,7 @@ func newInitCommand() *cobra.Command {
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-hostport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 
 	cmd.Flags().SortFlags = true
@@ -178,7 +178,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		OCIConcurrency:         o.ociConcurrency,
 		SetVariables:           o.setVariables,
 		StorageClass:           o.storageClass,
-		InjectorHostPort:       o.injectorHostPort,
+		InjectorPort:           o.injectorPort,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 	}
