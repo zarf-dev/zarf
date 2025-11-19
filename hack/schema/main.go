@@ -65,21 +65,17 @@ func genSchema() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("unable to generate the Zarf config schema: %w", err)
 	}
-	// Parse the JSON schema
+
 	var schemaMap map[string]any
 	if err := json.Unmarshal(schemaData, &schemaMap); err != nil {
-		fmt.Printf("unable to parse schema JSON: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("unable to parse schema JSON: %w", err)
 	}
 
-	// Add YAML extension support
 	addYAMLExtensions(schemaMap)
 
-	// Marshal back to JSON with indentation
 	output, err := json.MarshalIndent(schemaMap, "", "  ")
 	if err != nil {
-		fmt.Printf("unable to marshal schema JSON: %v\n", err)
-		os.Exit(1)
+		return "", fmt.Errorf("unable to marshal schema JSON: %w", err)
 	}
 	return string(output), nil
 }
@@ -91,5 +87,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println(string(schema))
+	fmt.Println(schema)
 }
