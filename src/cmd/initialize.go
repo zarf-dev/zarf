@@ -60,11 +60,6 @@ func newInitCommand() *cobra.Command {
 
 	v := getViper()
 
-	// Init package variable defaults that are non-zero values
-	// NOTE: these are not in setDefaults so that zarf tools update-creds does not erroneously update values back to the default
-	v.SetDefault(VInitGitPushUser, state.ZarfGitPushUser)
-	v.SetDefault(VInitRegistryPushUser, state.ZarfRegistryPushUser)
-
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
 
@@ -124,20 +119,20 @@ func newInitCommand() *cobra.Command {
 func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	ctx := cmd.Context()
 
-	if o.registryInfo.RegistryMode == "" {
-		if o.registryInfo.Address == "" {
-			o.registryInfo.RegistryMode = state.RegistryModeNodePort
-		} else {
-			o.registryInfo.RegistryMode = state.RegistryModeExternal
-		}
-	}
-
 	if err := o.validateInitFlags(); err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
 	if err := validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer); err != nil {
 		return err
+	}
+
+	if o.registryInfo.RegistryMode == "" {
+		if o.registryInfo.Address == "" {
+			o.registryInfo.RegistryMode = state.RegistryModeNodePort
+		} else {
+			o.registryInfo.RegistryMode = state.RegistryModeExternal
+		}
 	}
 
 	initPackageName := config.GetInitPackageName()

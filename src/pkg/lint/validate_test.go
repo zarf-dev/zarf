@@ -377,6 +377,20 @@ func TestValidateComponentActions(t *testing.T) {
 			expectedErrs: []string{"cannot contain setVariables outside of onDeploy in actions"},
 		},
 		{
+			name: "templating in onCreate",
+			actions: v1alpha1.ZarfComponentActions{
+				OnCreate: v1alpha1.ZarfComponentActionSet{
+					Before: []v1alpha1.ZarfComponentAction{
+						{
+							Cmd:      "echo 'templating not allowed'",
+							Template: helpers.BoolPtr(true),
+						},
+					},
+				},
+			},
+			expectedErrs: []string{PkgValidateErrActionTemplateOnCreate},
+		},
+		{
 			name: "invalid onCreate action",
 			actions: v1alpha1.ZarfComponentActions{
 				OnCreate: v1alpha1.ZarfComponentActionSet{

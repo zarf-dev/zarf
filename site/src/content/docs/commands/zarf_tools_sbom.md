@@ -23,7 +23,7 @@ zarf tools sbom [flags]
 ```
       --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
   -c, --config stringArray                        syft configuration file(s) to use
-      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript)
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript, python)
       --exclude stringArray                       exclude paths from being scanned using a glob expression
       --file string                               file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
       --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
