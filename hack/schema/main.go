@@ -12,6 +12,33 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 )
 
+// addYAMLExtensions walks through the JSON schema and adds patternProperties
+// for "x-" prefixed fields to any object that has "properties".
+// This allows YAML extensions (custom fields starting with x-) to be valid.
+func addYAMLExtensions(data map[string]any) {
+	if _, hasProperties := data["properties"]; hasProperties {
+		if _, hasPatternProps := data["patternProperties"]; !hasPatternProps {
+			data["patternProperties"] = map[string]any{
+				"^x-": map[string]any{},
+			}
+		}
+	}
+
+	// Recursively walk through all nested objects
+	for _, v := range data {
+		switch val := v.(type) {
+		case map[string]any:
+			addYAMLExtensions(val)
+		case []any:
+			for _, item := range val {
+				if obj, ok := item.(map[string]any); ok {
+					addYAMLExtensions(obj)
+				}
+			}
+		}
+	}
+}
+
 func genSchema() (string, error) {
 	reflector := jsonschema.Reflector(jsonschema.Reflector{ExpandedStruct: true})
 
@@ -33,9 +60,21 @@ func genSchema() (string, error) {
 	}
 
 	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
-	output, err := json.MarshalIndent(schema, "", "  ")
+	schemaData, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("unable to generate the Zarf config schema: %w", err)
+	}
+
+	var schemaMap map[string]any
+	if err := json.Unmarshal(schemaData, &schemaMap); err != nil {
+		return "", fmt.Errorf("unable to parse schema JSON: %w", err)
+	}
+
+	addYAMLExtensions(schemaMap)
+
+	output, err := json.MarshalIndent(schemaMap, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("unable to marshal schema JSON: %w", err)
 	}
 	return string(output), nil
 }
