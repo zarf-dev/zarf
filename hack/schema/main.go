@@ -61,9 +61,25 @@ func genSchema() (string, error) {
 	}
 
 	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
-	output, err := json.MarshalIndent(schema, "", "  ")
+	schemaData, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("unable to generate the Zarf config schema: %w", err)
+	}
+	// Parse the JSON schema
+	var schemaMap map[string]any
+	if err := json.Unmarshal(schemaData, &schemaMap); err != nil {
+		fmt.Printf("unable to parse schema JSON: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Add YAML extension support
+	addYAMLExtensions(schemaMap)
+
+	// Marshal back to JSON with indentation
+	output, err := json.MarshalIndent(schemaMap, "", "  ")
+	if err != nil {
+		fmt.Printf("unable to marshal schema JSON: %v\n", err)
+		os.Exit(1)
 	}
 	return string(output), nil
 }
@@ -75,22 +91,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Parse the JSON schema
-	var schemaData map[string]any
-	if err := json.Unmarshal([]byte(schema), &schemaData); err != nil {
-		fmt.Printf("unable to parse schema JSON: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Add YAML extension support
-	addYAMLExtensions(schemaData)
-
-	// Marshal back to JSON with indentation
-	output, err := json.MarshalIndent(schemaData, "", "  ")
-	if err != nil {
-		fmt.Printf("unable to marshal schema JSON: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Println(string(output))
+	fmt.Println(string(schema))
 }
