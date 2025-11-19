@@ -280,7 +280,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
-		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
 	switch s.Distro {
@@ -296,6 +295,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	if opts.StorageClass != "" {
 		s.StorageClass = opts.StorageClass
+	}
+
+	if opts.InjectorPort != 0 {
+		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
 	// Save the state back to K8s
