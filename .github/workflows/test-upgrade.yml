@@ -107,9 +107,21 @@ jobs:
       - name: "Describe nodes, pods and deployments"
         # NOTE: We describe nodes, pods and deployments here to help understand failures
         run: |
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe nodes
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe deployments -n=podinfo-upgrade
-          sudo env "PATH=$PATH" CI=true zarf tools kubectl describe pods -n=podinfo-upgrade
+          echo "***** Getting pods *****"
+          sudo env "PATH=$PATH" CI=true kubectl get pods -A
+
+          echo "***** Getting pods yaml *****"
+          sudo env "PATH=$PATH" CI=true kubectl get pods -A -o yaml
+
+          echo "***** Describing pods *****"
+          sudo env "PATH=$PATH" CI=true kubectl describe pods -A
+
+          echo "***** Getting nodes *****"
+          sudo env "PATH=$PATH" CI=true kubectl get nodes -A
+
+          echo "***** describing nodes *****"
+          sudo env "PATH=$PATH" CI=true kubectl describe nodes -A
+        if: always()
 
       # Before we run the upgrade tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files

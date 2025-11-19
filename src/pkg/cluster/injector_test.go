@@ -109,7 +109,7 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 31999, "test")
+		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 0, 31999, "test")
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
