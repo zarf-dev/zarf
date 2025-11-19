@@ -55,6 +55,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 
 	l.Info("creating Zarf injector resources")
 
+	svc, err := c.createInjectorNodeportService(ctx, injectorNodePort, registryNodePort, pkgName)
+	if err != nil {
+		return 0, err
+	}
+
 	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
 	if err != nil {
 		return 0, err
@@ -70,11 +75,6 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
 	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
-	if err != nil {
-		return 0, err
-	}
-
-	svc, err := c.createInjectorNodeportService(ctx, injectorNodePort, registryNodePort, pkgName)
 	if err != nil {
 		return 0, err
 	}
