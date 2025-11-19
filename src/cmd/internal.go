@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/gitea"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
@@ -34,6 +35,7 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	cmd.AddCommand(newInternalAgentCommand())
 	cmd.AddCommand(newInternalHTTPProxyCommand())
 	cmd.AddCommand(newInternalGenCliDocsCommand(rootCmd))
+	cmd.AddCommand(newInternalGenSchemaCommand())
 	cmd.AddCommand(newInternalCreateReadOnlyGiteaUserCommand())
 	cmd.AddCommand(newInternalCreateArtifactRegistryTokenCommand())
 	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
@@ -214,6 +216,30 @@ func addHiddenDummyFlag(cmd *cobra.Command, flagDummy string) {
 			logger.From(cmd.Context()).Debug("Unable to add hidden dummy flag", "error", err)
 		}
 	}
+}
+
+type internalGenSchemaOptions struct{}
+
+func newInternalGenSchemaCommand() *cobra.Command {
+	o := &internalGenSchemaOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "gen-schema",
+		Short: lang.CmdInternalConfigSchemaShort,
+		RunE:  o.run,
+	}
+
+	return cmd
+}
+
+func (o *internalGenSchemaOptions) run(_ *cobra.Command, _ []string) error {
+	schemaBytes, err := schema.GenerateSchema()
+	if err != nil {
+		return fmt.Errorf("unable to generate schema: %w", err)
+	}
+
+	fmt.Println(string(schemaBytes))
+	return nil
 }
 
 type internalCreateReadOnlyGiteaUserOptions struct{}
