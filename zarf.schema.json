@@ -453,12 +453,12 @@
       },
       "properties": {
         "sourcePath": {
-          "type": "string",
-          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$"
+          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
+          "type": "string"
         },
         "targetPath": {
-          "type": "string",
-          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$"
+          "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
+          "type": "string"
         }
       },
       "required": [
@@ -1201,8 +1201,8 @@
           "type": "array"
         },
         "schema": {
-          "description": "Schema declares a path to a .schema.json file that validates the contents of Files."
-          "type": "string",
+          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
+          "type": "string"
         }
       },
       "type": "object"
