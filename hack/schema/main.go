@@ -16,7 +16,6 @@ import (
 // for "x-" prefixed fields to any object that has "properties".
 // This allows YAML extensions (custom fields starting with x-) to be valid.
 func addYAMLExtensions(data map[string]any) {
-	// Add pattern properties if this object has "properties"
 	if _, hasProperties := data["properties"]; hasProperties {
 		if _, hasPatternProps := data["patternProperties"]; !hasPatternProps {
 			data["patternProperties"] = map[string]any{
