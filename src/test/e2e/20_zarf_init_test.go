@@ -64,7 +64,7 @@ func TestZarfInit(t *testing.T) {
 	}
 
 	// run `zarf init`
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
@@ -87,6 +87,9 @@ func TestZarfInit(t *testing.T) {
 	stdOut, _, err := e2e.Kubectl(t, "get", "service", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.ports[*].nodePort}'")
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
+
+	// Verify that we save the injector port
+	require.Equal(t, 31888, s.InjectorInfo.Port)
 
 	// Check that the registry is running with the correct scale down policy
 	stdOut, _, err = e2e.Kubectl(t, "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
