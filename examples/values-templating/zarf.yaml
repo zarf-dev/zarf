@@ -73,7 +73,7 @@ components:
               echo "Organization: {{ .Values.site.organization }}"
               echo "Environment: {{ .Values.app.environment }}"
             template: true
-          # Without template: true (the default), go-template syntax is passed through unchanged
+          # Without template: true, go-template syntax is passed through unchanged
           - cmd: |
               echo "This {{ .wontBeProcessed }} stays as-is"
 
