@@ -20,12 +20,12 @@ import (
 func main() {
 	schema, err := generateSchema()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating schema: %v\n", err)
+		fmt.Println("Error generating schema: %v", err)
 		os.Exit(1)
 	}
 
 	if err := os.WriteFile("zarf-v1alpha1-schema.json", schema, 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "Error writing schema file: %v\n", err)
+		fmt.Println("Error writing schema file: %v", err)
 		os.Exit(1)
 	}
 
@@ -62,22 +62,18 @@ func generateSchema() ([]byte, error) {
 	// Generate the schema from the ZarfPackage type
 	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
 
-	// Marshal to JSON
 	schemaData, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal schema: %w", err)
 	}
 
-	// Parse back to a map so we can add YAML extensions
 	var schemaMap map[string]any
 	if err := json.Unmarshal(schemaData, &schemaMap); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal schema: %w", err)
 	}
 
-	// Add YAML extension support
 	addYAMLExtensions(schemaMap)
 
-	// Marshal back to JSON with indentation
 	output, err := json.MarshalIndent(schemaMap, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal final schema: %w", err)
@@ -90,16 +86,17 @@ func generateSchema() ([]byte, error) {
 // for "x-" prefixed fields to any object that has "properties".
 // This allows YAML extensions (custom fields starting with x-) to be valid.
 func addYAMLExtensions(data map[string]any) {
-	// Add pattern properties if this object has "properties"
-	if _, hasProperties := data["properties"]; hasProperties {
-		if _, hasPatternProps := data["patternProperties"]; !hasPatternProps {
-			data["patternProperties"] = map[string]any{
-				"^x-": map[string]any{},
+	propertiesKey := "properties"
+	patternPropertiesKey := "patternProperties"
+	yamlExtensionRegex := "^x-"
+	if _, hasProperties := data[propertiesKey]; hasProperties {
+		if _, hasPatternProps := data[patternPropertiesKey]; !hasPatternProps {
+			data[patternPropertiesKey] = map[string]any{
+				yamlExtensionRegex: map[string]any{},
 			}
 		}
 	}
 
-	// Recursively walk through all nested objects
 	for _, v := range data {
 		switch val := v.(type) {
 		case map[string]any:
