@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: manifest-with-values
+
+components:
+  - name: test
+    manifests:
+      - name: test-manifest
+        template: true
+        files:
+          - deployment.yaml
