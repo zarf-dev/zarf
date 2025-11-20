@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-//go:build ignore
+//go:build tools
 
 package main
 
@@ -24,7 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := os.WriteFile("zarf-schema.json", schema, 0644); err != nil {
+	if err := os.WriteFile("zarf-v1alpha1-schema.json", schema, 0644); err != nil {
 		fmt.Fprintf(os.Stderr, "Error writing schema file: %v\n", err)
 		os.Exit(1)
 	}

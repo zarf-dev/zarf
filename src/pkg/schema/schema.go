@@ -10,11 +10,10 @@ import (
 	_ "embed"
 )
 
-//go:embed zarf-schema.json
-var schema []byte
+//go:embed zarf-v1alpha1-schema.json
+var v1Alpha1Schema []byte
 
-// GetV1Alpha1Schema returns the embedded JSON schema for the Zarf package configuration.
-// The schema is generated at compile time via go:generate.
+// GetV1Alpha1Schema returns the embedded JSON schema for the v1alpha1 Zarf package config
 func GetV1Alpha1Schema() []byte {
-	return schema
+	return v1Alpha1Schema
 }
