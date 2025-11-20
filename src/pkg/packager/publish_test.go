@@ -159,7 +159,6 @@ func TestPublishFromOCIValidation(t *testing.T) {
 }
 
 func TestPublishSkeleton(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string

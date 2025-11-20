@@ -84,7 +84,6 @@ func TestGetSBOM(t *testing.T) {
 }
 
 func TestCreateAbsoluteSources(t *testing.T) {
-
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name       string

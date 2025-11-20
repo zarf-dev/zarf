@@ -102,6 +102,7 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
+	go generate ./src/pkg/schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
 	go run main.go internal gen-schema > zarf.schema.json
 	hack/cots/update-gitea.sh

@@ -18,8 +18,7 @@ import (
 
 func TestZarfSchema(t *testing.T) {
 	t.Parallel()
-	zarfSchema, err := schema.GenerateSchema()
-	require.NoError(t, err)
+	zarfSchema := schema.GetV1Alpha1Schema()
 
 	tests := []struct {
 		name                  string

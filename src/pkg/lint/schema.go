@@ -22,10 +22,7 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &untypedZarfPackage); err != nil {
 		return nil, err
 	}
-	jsonSchema, err := schema.GenerateSchema()
-	if err != nil {
-		return nil, fmt.Errorf("unable to generate schema: %w", err)
-	}
+	jsonSchema := schema.GetV1Alpha1Schema()
 	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}
@@ -38,10 +35,7 @@ func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, er
 	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
-	jsonSchema, err := schema.GenerateSchema()
-	if err != nil {
-		return nil, fmt.Errorf("unable to generate schema: %w", err)
-	}
+	jsonSchema := schema.GetV1Alpha1Schema()
 	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
 		return nil, err
 	}

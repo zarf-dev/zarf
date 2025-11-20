@@ -36,7 +36,6 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 }
 
 func TestAssembleLayers(t *testing.T) {
-
 	tt := []struct {
 		name string
 		path string

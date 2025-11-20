@@ -233,11 +233,7 @@ func newInternalGenSchemaCommand() *cobra.Command {
 }
 
 func (o *internalGenSchemaOptions) run(_ *cobra.Command, _ []string) error {
-	schemaBytes, err := schema.GenerateSchema()
-	if err != nil {
-		return fmt.Errorf("unable to generate schema: %w", err)
-	}
-
+	schemaBytes := schema.GetV1Alpha1Schema()
 	fmt.Println(string(schemaBytes))
 	return nil
 }
