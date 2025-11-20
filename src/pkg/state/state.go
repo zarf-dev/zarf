@@ -70,7 +70,7 @@ const (
 	ZarfGeneratedPasswordLen               = 24
 	ZarfGeneratedSecretLen                 = 48
 	ZarfInClusterContainerRegistryNodePort = 31999
-	ZarfInjectorHostPort                   = 5001
+	ZarfInjectorDefaultHostPort            = 5001
 	ZarfRegistryHostPort                   = 5000
 	ZarfRegistryPushUser                   = "zarf-push"
 	ZarfRegistryPullUser                   = "zarf-pull"
