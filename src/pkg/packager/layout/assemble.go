@@ -118,6 +118,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			manifests = append(manifests, archiveImageManifests...)
 			var imageList []string
 			for _, imageManifest := range archiveImageManifests {
+				err := checkForDuplicateImage(pkg.Components, imageArchive, imageManifest.Image.Reference)
+				if err != nil {
+					return nil, err
+				}
 				imageList = append(imageList, imageManifest.Image.Reference)
 			}
 			pkg.Components[i].ImageArchives[j].Images = imageList
@@ -938,5 +942,22 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
 	}
 
+	return nil
+}
+
+func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive v1alpha1.ImageArchive, imageRef string) error {
+	for _, comp := range components {
+		for _, imageArchive := range comp.ImageArchives {
+			if imageArchive.Path == currentArchive.Path {
+				continue
+			}
+			if slices.Contains(imageArchive.Images, imageRef) {
+				return fmt.Errorf("image %s from %s is also pulled by archive %s", imageRef, currentArchive.Path, imageArchive.Path)
+			}
+		}
+		if slices.Contains(comp.Images, imageRef) {
+			return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
+		}
+	}
 	return nil
 }
