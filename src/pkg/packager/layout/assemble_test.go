@@ -66,7 +66,6 @@ func TestCheckImageDuplicate(t *testing.T) {
 		components     []v1alpha1.ZarfComponent
 		currentArchive v1alpha1.ImageArchive
 		imageRef       string
-		expectError    bool
 		errorContains  string
 	}{
 		{
@@ -86,8 +85,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 			currentArchive: v1alpha1.ImageArchive{
 				Path: "/path/to/archive1.tar",
 			},
-			imageRef:    "postgres:13",
-			expectError: false,
+			imageRef: "postgres:13",
 		},
 		{
 			name: "duplicate in different image archive",
@@ -110,7 +108,6 @@ func TestCheckImageDuplicate(t *testing.T) {
 				Path: "/path/to/archive1.tar",
 			},
 			imageRef:      "postgres:13",
-			expectError:   true,
 			errorContains: "is also pulled by archive /path/to/archive2.tar",
 		},
 		{
@@ -125,7 +122,6 @@ func TestCheckImageDuplicate(t *testing.T) {
 				Path: "/path/to/archive1.tar",
 			},
 			imageRef:      "postgres:13",
-			expectError:   true,
 			errorContains: "is also pulled by component",
 		},
 		{
@@ -144,8 +140,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 			currentArchive: v1alpha1.ImageArchive{
 				Path: "/path/to/archive1.tar",
 			},
-			imageRef:    "nginx:1.21",
-			expectError: false,
+			imageRef: "nginx:1.21",
 		},
 		{
 			name: "duplicate across multiple components",
@@ -172,7 +167,6 @@ func TestCheckImageDuplicate(t *testing.T) {
 				Path: "/path/to/archive1.tar",
 			},
 			imageRef:      "nginx:1.21",
-			expectError:   true,
 			errorContains: "is also pulled by archive /path/to/archive2.tar",
 		},
 		{
@@ -185,8 +179,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 			currentArchive: v1alpha1.ImageArchive{
 				Path: "/path/to/archive1.tar",
 			},
-			imageRef:    "nginx:1.21",
-			expectError: false,
+			imageRef: "nginx:1.21",
 		},
 	}
 
@@ -196,7 +189,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 
 			err := checkForDuplicateImage(tt.components, tt.currentArchive, tt.imageRef)
 
-			if tt.expectError {
+			if tt.errorContains != "" {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.errorContains)
 			} else {
