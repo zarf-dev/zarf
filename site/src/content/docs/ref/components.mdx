@@ -143,7 +143,7 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 <Properties item="ZarfComponent" include={["imageArchives"]} />
 
-OCI images can also be brought into a package via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). Common ways to create OCI archives are through the [docker save](https://docs.docker.com/reference/cli/docker/image/save/) and [podman save --format=oci-archive](https://docs.podman.io/en/latest/markdown/podman-save.1.html) commands. The Docker engine version must be >= [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
+Another way to bring OCI images can into the package is via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). Common ways to create OCI archives are through the [docker save](https://docs.docker.com/reference/cli/docker/image/save/) and [podman save --format=oci-archive](https://docs.podman.io/en/latest/markdown/podman-save.1.html) commands. The Docker engine version must be >= [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
 
 If the sub-field `imageArchives.images` is set then then Zarf will only pull the specified images into the package. If this field is empty, then Zarf will pull in every recognized image into the package, and populate `imageArchives.images` during the build process.
 
