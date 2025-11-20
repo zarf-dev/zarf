@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	schema, err := generateSchema()
+	schema, err := generateV1Alpha1Schema()
 	if err != nil {
 		fmt.Println("Error generating schema: %v", err)
 		os.Exit(1)
@@ -32,7 +32,7 @@ func main() {
 	fmt.Println("Successfully generated zarf-schema.json")
 }
 
-func generateSchema() ([]byte, error) {
+func generateV1Alpha1Schema() ([]byte, error) {
 	reflector := jsonschema.Reflector{ExpandedStruct: true}
 
 	// AddGoComments breaks if called with an absolute path, so we save the current
@@ -55,7 +55,7 @@ func generateSchema() ([]byte, error) {
 	typePackagePath := filepath.Join("..", "..", "api", "v1alpha1")
 
 	// Get the Go comments from the v1alpha1 package
-	if err := reflector.AddGoComments("github.com/zarf-dev/zarf/src/pkg/schema", typePackagePath); err != nil {
+	if err := reflector.AddGoComments("github.com/zarf-dev/zarf/src/api/v1alpha1", typePackagePath); err != nil {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 
@@ -78,6 +78,9 @@ func generateSchema() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal final schema: %w", err)
 	}
+
+	// Add trailing newline to match linter expectations
+	output = append(output, '\n')
 
 	return output, nil
 }
