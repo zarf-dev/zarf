@@ -5,6 +5,6 @@ metadata:
 components:
   - name: component
     imageArchives:
-      - path: image.tar
+      - path: ../image.tar
         images:
           - my-image:2
