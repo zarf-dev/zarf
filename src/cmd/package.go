@@ -1082,6 +1082,7 @@ type packageInspectDocumentationOptions struct {
 
 func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
 	return &packageInspectDocumentationOptions{
+		outputDir:               "",
 		skipSignatureValidation: false,
 	}
 }
@@ -1091,7 +1092,6 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "documentation [ PACKAGE_SOURCE ]",
 		Short: "Extract documentation files from the package",
-		Long:  "Extract documentation files from the package to the current directory. Use --keys to select specific documentation files.",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  o.run,
 	}
@@ -1100,7 +1100,7 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,dev.zarf.vex')")
-	cmd.Flags().StringVarP(&o.outputDir, "output-dir", "o", ".", "Directory to extract documentation files to")
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (creates '<package-name>-documentation' subdirectory)")
 
 	return cmd
 }
@@ -1168,8 +1168,17 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		return fmt.Errorf("documentation directory not found in package")
 	}
 
+	// Create output directory named <packagename>-documentation inside the specified output dir
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
+	if _, err := os.Stat(outputPath); err == nil {
+		return fmt.Errorf("output directory '%s' already exists. Please remove or rename it before extracting documentation", outputPath)
+	}
+	if err := os.MkdirAll(outputPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", outputPath, err)
+	}
+
 	// Extract documentation files
-	l.Info("extracting documentation files", "count", len(keysToExtract), "output", o.outputDir)
+	l.Info("extracting documentation files", "count", len(keysToExtract))
 
 	for key, fileName := range keysToExtract {
 		srcPath := filepath.Join(docDir, fileName)
@@ -1178,14 +1187,20 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 			continue
 		}
 
-		dstPath := filepath.Join(o.outputDir, fileName)
+		dstPath := filepath.Join(outputPath, fileName)
 		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)
 		}
-		l.Info("extracted documentation file", "key", key, "file", fileName, "destination", dstPath)
+		l.Info("extracted documentation file", "key", key, "file", fileName)
 	}
 
-	l.Info("documentation extraction complete")
+	// Get absolute path for better user feedback
+	absOutputPath, err := filepath.Abs(outputPath)
+	if err != nil {
+		l.Warn("documentation successfully extracted, couldn't get output path", "error", err)
+		return nil
+	}
+	l.Info("documentation successfully extracted", "path", absOutputPath)
 	return nil
 }
 

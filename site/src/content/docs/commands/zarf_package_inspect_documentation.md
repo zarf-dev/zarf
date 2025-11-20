@@ -10,10 +10,6 @@ tableOfContents: false
 
 Extract documentation files from the package
 
-### Synopsis
-
-Extract documentation files from the package to the current directory. Use --keys to select specific documentation files.
-
 ```
 zarf package inspect documentation [ PACKAGE_SOURCE ] [flags]
 ```
@@ -25,7 +21,7 @@ zarf package inspect documentation [ PACKAGE_SOURCE ] [flags]
   -k, --key string                  Path to public key file for validating signed packages
       --keys strings                Comma-separated list of documentation keys to extract (e.g., 'configuration,dev.zarf.vex')
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output-dir string           Directory to extract documentation files to (default ".")
+      --output string               Directory to extract documentation to (creates '<package-name>-documentation' subdirectory)
       --skip-signature-validation   Skip validating the signature of the Zarf package
 ```
 
