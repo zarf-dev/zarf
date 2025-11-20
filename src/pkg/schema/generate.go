@@ -24,6 +24,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Add trailing newline to match linter expectations
+	schema = append(schema, '\n')
+
 	if err := os.WriteFile("zarf-v1alpha1-schema.json", schema, 0644); err != nil {
 		fmt.Println("Error writing schema file: %v", err)
 		os.Exit(1)
@@ -59,7 +62,6 @@ func generateV1Alpha1Schema() ([]byte, error) {
 		return nil, fmt.Errorf("unable to add Go comments to schema: %w", err)
 	}
 
-	// Generate the schema from the ZarfPackage type
 	schema := reflector.Reflect(&v1alpha1.ZarfPackage{})
 
 	schemaData, err := json.MarshalIndent(schema, "", "  ")
@@ -78,9 +80,6 @@ func generateV1Alpha1Schema() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal final schema: %w", err)
 	}
-
-	// Add trailing newline to match linter expectations
-	output = append(output, '\n')
 
 	return output, nil
 }
