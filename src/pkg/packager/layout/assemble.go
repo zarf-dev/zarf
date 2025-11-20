@@ -163,6 +163,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
+	l.Debug("copying documentation files to package", "files", pkg.Documentation)
+	for _, file := range pkg.Documentation {
+		if err = copyDocumentationFile(file, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+	}
+
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
@@ -905,6 +912,24 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	// Set appropriate file permissions
 	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	}
+
+	return nil
+}
+
+func copyDocumentationFile(file, packagePath, buildPath string) error {
+	src := file
+	if !filepath.IsAbs(src) {
+		src = filepath.Join(packagePath, file)
+	}
+
+	dst := filepath.Join(buildPath, DocumentationDir, file)
+	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+	}
+
+	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
 	}
 
 	return nil

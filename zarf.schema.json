@@ -1240,6 +1240,13 @@
       },
       "type": "array"
     },
+    "documentation": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Documentation maps keys to file paths for package documentation files.",
+      "type": "object"
+    },
     "kind": {
       "default": "ZarfPackageConfig",
       "description": "The kind of Zarf package.",

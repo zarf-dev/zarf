@@ -14,9 +14,10 @@ const (
 	Signature = "zarf.yaml.sig"
 	Checksums = "checksums.txt"
 
-	ImagesDir     = "images"
-	ComponentsDir = "components"
-	ValuesDir     = "values"
+	ImagesDir        = "images"
+	ComponentsDir    = "components"
+	ValuesDir        = "values"
+	DocumentationDir = "documentation"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"

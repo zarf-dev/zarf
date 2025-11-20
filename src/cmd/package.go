@@ -409,6 +409,10 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
 
+	if len(pkgLayout.Pkg.Documentation) > 0 {
+		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
+	}
+
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
@@ -673,6 +677,7 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd.AddCommand(newPackageInspectShowManifestsCommand(v))
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
+	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
@@ -1064,6 +1069,123 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	for _, image := range images {
 		fmt.Println("-", image)
 	}
+	return nil
+}
+
+type packageInspectDocumentationOptions struct {
+	skipSignatureValidation bool
+	keys                    []string
+	outputDir               string
+	ociConcurrency          int
+	publicKeyPath           string
+}
+
+func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
+	return &packageInspectDocumentationOptions{
+		skipSignatureValidation: false,
+	}
+}
+
+func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
+	o := newPackageInspectDocumentationOptions()
+	cmd := &cobra.Command{
+		Use:   "documentation [ PACKAGE_SOURCE ]",
+		Short: "Extract documentation files from the package",
+		Long:  "Extract documentation files from the package to the current directory. Use --keys to select specific documentation files.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.run,
+	}
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,dev.zarf.vex')")
+	cmd.Flags().StringVarP(&o.outputDir, "output-dir", "o", ".", "Directory to extract documentation files to")
+
+	return cmd
+}
+
+// FIXME: need to check on oci layers
+func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
+	l := logger.From(ctx)
+
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := packager.LoadOptions{
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+	defer func() {
+		if err := pkgLayout.Cleanup(); err != nil {
+			l.Warn("unable to cleanup package layout", "error", err)
+		}
+	}()
+
+	if len(pkgLayout.Pkg.Documentation) == 0 {
+		return fmt.Errorf("no documentation files found in package")
+	}
+
+	// Determine which keys to extract
+	keysToExtract := make(map[string]string)
+	if len(o.keys) > 0 {
+		// Extract only specified keys
+		for _, key := range o.keys {
+			if filePath, ok := pkgLayout.Pkg.Documentation[key]; ok {
+				keysToExtract[key] = filePath
+			} else {
+				l.Warn("documentation key not found in package", "key", key)
+			}
+		}
+		if len(keysToExtract) == 0 {
+			return fmt.Errorf("none of the specified keys were found in package documentation")
+		}
+	} else {
+		// Extract all documentation files
+		keysToExtract = pkgLayout.Pkg.Documentation
+	}
+
+	// Get the documentation directory from the package
+	docDir := filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir)
+	if _, err := os.Stat(docDir); os.IsNotExist(err) {
+		return fmt.Errorf("documentation directory not found in package")
+	}
+
+	// Extract documentation files
+	l.Info("extracting documentation files", "count", len(keysToExtract), "output", o.outputDir)
+
+	for key, fileName := range keysToExtract {
+		srcPath := filepath.Join(docDir, fileName)
+		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+			l.Warn("documentation file not found", "key", key, "file", fileName)
+			continue
+		}
+
+		dstPath := filepath.Join(o.outputDir, fileName)
+		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)
+		}
+		l.Info("extracted documentation file", "key", key, "file", fileName, "destination", dstPath)
+	}
+
+	l.Info("documentation extraction complete")
 	return nil
 }
 
