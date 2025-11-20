@@ -33,6 +33,9 @@ func TestImageTarPush(t *testing.T) {
 	// Verify that the images sub-field in image archives was populated properly
 	require.Equal(t, []string{"ghcr.io/zarf-dev/images/alpine:3.21.3"}, pkgLayout.Pkg.Components[0].ImageArchives[0].Images)
 
-	_, _, err = e2e.Zarf(t, "package", "mirror-resources", path)
+	_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--skip-version-check")
+	require.NoError(t, err)
+
+	_, _, err = e2e.Zarf(t, "package", "remove", "image-tar", "--confirm", "--skip-version-check")
 	require.NoError(t, err)
 }

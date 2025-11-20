@@ -7,6 +7,10 @@ components:
     required: true
     imageArchives:
     - path: image.tar
+    manifests:
+    - name: alpine-pod
+      files:
+      - pod.yaml
     actions:
       onCreate:
         before:
