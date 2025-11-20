@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-archives
+
+components:
+  - name: component
+    imageArchives:
+      - path: image.tar
+        images:
+          - my-image:2
