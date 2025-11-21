@@ -19,7 +19,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestCreateSkeleton(t *testing.T) {
+func TestAssembleSkeleton(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
@@ -35,14 +35,38 @@ func TestCreateSkeleton(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
+27c16ce7e3861da034af1bb356d6a4f38cb84fa65d51fa62f69727143b4c6b60 documentation/doc.md
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
 879bfe82d20f7bdcd60f9e876043cc4343af4177a6ee8b2660c304a5b6c70be7 components/files.tar
-c34045c1a1db8d1b3fca8a692198466952daae07eaf6104b4c87ed3b55b6af1b documentation/doc.md
 c497f1a56559ea0a9664160b32e4b377df630454ded6a3787924130c02f341a6 components/manifests.tar
 fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm-charts.tar
 `
 
 	require.Equal(t, expectedChecksum, string(b))
+}
+
+func TestAssemblePackage(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-package", load.DefinitionOptions{})
+	require.NoError(t, err)
+
+	opt := layout.AssembleOptions{SkipSBOM: true}
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, "./testdata/zarf-package", opt)
+	require.NoError(t, err)
+
+	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
+	require.NoError(t, err)
+	// helm-charts.tar checksum is non-deterministic due to helm package embedding timestamps
+	// so we verify the other checksums and check helm-charts.tar exists
+	require.Contains(t, string(b), "0886541c9338c6917f0e278130d48c5f0492e27180686e2a005b407365f58b0a components/manifests.tar")
+	require.Contains(t, string(b), "1a3c6cb1683dc962a65509edafc7658c44c78aee9f45b8db8990af897731cb14 components/files.tar")
+	require.Contains(t, string(b), "27c16ce7e3861da034af1bb356d6a4f38cb84fa65d51fa62f69727143b4c6b60 documentation/doc.md")
+	require.Contains(t, string(b), "4b041ced809bc664daedf861365ae0d6bf7d3b287415fcd55d2b37e9c5c1cafc components/data-injections.tar")
+	require.Contains(t, string(b), "components/helm-charts.tar")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
