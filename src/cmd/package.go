@@ -674,7 +674,7 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.AddCommand(newPackageInspectSBOMCommand(v))
 	cmd.AddCommand(newPackageInspectImagesCommand(v))
-	cmd.AddCommand(newPackageInspectShowManifestsCommand(v))
+	cmd.AddCommand(newPackageInspectManifestsCommand(v))
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
 	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
@@ -839,7 +839,7 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 	}
 }
 
-func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
+func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
 		Use:   "manifests [ PACKAGE ]",
