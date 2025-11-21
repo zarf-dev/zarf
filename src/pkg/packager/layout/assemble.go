@@ -227,6 +227,12 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
+	for _, file := range pkg.Documentation {
+		if err = copyDocumentationFile(file, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+	}
+
 	// To remove the flavor value, as the flavor is configured by the tag uploaded to the registry
 	//   example:
 	//     url: oci://ghcr.io/zarf-dev/packages/init:v0.58.0-upstream
