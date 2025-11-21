@@ -125,8 +125,8 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 
 func (suite *PublishDeploySuiteTestSuite) Test_3_Publish_With_Directory_Name_Collision() {
 	// Ensure we can publish from a directory that contains
-	// a subdirectory name matching the zarf package name
-	// https://github.com/zarf-dev/zarf/issues/2455
+	// a subdirectory name matching package name
+	// https://github.com/zarf-dev/zarf/issues/4148
 	suite.T().Log("E2E: Package Publish with directory name collision")
 
 	tmpDir := suite.T().TempDir()
