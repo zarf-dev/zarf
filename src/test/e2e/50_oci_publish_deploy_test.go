@@ -124,8 +124,8 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 }
 
 func (suite *PublishDeploySuiteTestSuite) Test_3_Publish_With_Directory_Name_Collision() {
-	// Ensure we can publish from a directory that contains a subdirectory name matching the
-	// Zarf packages metadata.name field.
+	// Ensure we can publish from a directory that contains
+	// a subdirectory name matching the zarf package name
 	// https://github.com/zarf-dev/zarf/issues/2455
 	suite.T().Log("E2E: Package Publish with directory name collision")
 
@@ -153,7 +153,6 @@ func (suite *PublishDeploySuiteTestSuite) Test_3_Publish_With_Directory_Name_Col
 	suite.FileExists(pkgTarball)
 
 	// Create a directory in tmpDir with the same name as the package metadata.name
-	// This reproduces the issue from #4148
 	collisionDir := filepath.Join(tmpDir, packageName)
 	err = os.Mkdir(collisionDir, 0o755)
 	suite.NoError(err)
