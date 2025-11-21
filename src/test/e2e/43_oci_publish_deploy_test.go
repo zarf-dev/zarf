@@ -6,6 +6,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -117,6 +118,56 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 
 	// Deploy the local package.
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", local, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+}
+
+func (suite *PublishDeploySuiteTestSuite) Test_3_Publish_With_Directory_Name_Collision() {
+	suite.T().Log("E2E: Package Publish with directory name collision (issue #4148)")
+
+	// Create a package in a temporary directory
+	tmpDir := suite.T().TempDir()
+	packagePath := filepath.Join("src", "test", "packages", "43-oci-publish-collision")
+
+	// Create the package
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", packagePath, "-o", tmpDir, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Get the created package tarball name
+	pkgName := fmt.Sprintf("zarf-package-test-collision-pkg-%s-0.0.1.tar.zst", e2e.Arch)
+	pkgTarball := filepath.Join(tmpDir, pkgName)
+	suite.FileExists(pkgTarball)
+
+	// Create a directory in tmpDir with the same name as the package metadata
+	// This reproduces the issue from #4148
+	collisionDir := filepath.Join(tmpDir, "test-collision-pkg")
+	err = os.Mkdir(collisionDir, 0o755)
+	suite.NoError(err)
+
+	// Change to tmpDir to simulate the issue where a directory exists with the package name
+	originalWd, err := os.Getwd()
+	suite.NoError(err)
+	defer func() {
+		err := os.Chdir(originalWd)
+		suite.NoError(err)
+	}()
+	err = os.Chdir(tmpDir)
+	suite.NoError(err)
+
+	// Publish the package - this should succeed despite the directory name collision
+	publishRef := registry.Reference{
+		Registry:   suite.Reference.Registry,
+		Repository: "collision-test",
+	}
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", pkgTarball, "oci://"+publishRef.String(), "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Verify the package was published by inspecting it
+	inspectRef := registry.Reference{
+		Registry:   suite.Reference.Registry,
+		Repository: "collision-test/test-collision-pkg",
+		Reference:  "0.0.1",
+	}
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+inspectRef.String(), "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 }
 
