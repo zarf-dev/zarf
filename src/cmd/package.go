@@ -1105,7 +1105,6 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-// FIXME: need to check on oci layers
 func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	l := logger.From(ctx)
@@ -1128,6 +1127,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:          o.ociConcurrency,
 		RemoteOptions:           defaultRemoteOptions(),
 		CachePath:               cachePath,
+		LayersSelector:          zoci.DocLayers,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
