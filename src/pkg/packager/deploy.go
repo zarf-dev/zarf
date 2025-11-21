@@ -142,15 +142,15 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
-	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
-	}
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
-	if err != nil {
-		return DeployResult{}, err
+	// Read the package values from values.yaml if it exists
+	vals := make(value.Values)
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	if _, err := os.Stat(valuesPath); err == nil {
+		parsedVals, err := value.ParseLocalFile(ctx, valuesPath)
+		if err != nil {
+			return DeployResult{}, err
+		}
+		vals = parsedVals
 	}
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
