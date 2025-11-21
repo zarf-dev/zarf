@@ -355,7 +355,6 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 
 	for _, fileName := range keysToExtract {
 		srcPath := filepath.Join(docDir, filepath.Base(fileName))
-
 		dstPath := filepath.Join(destPath, filepath.Base(fileName))
 		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)

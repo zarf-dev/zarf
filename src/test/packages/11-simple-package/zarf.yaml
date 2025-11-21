@@ -4,6 +4,9 @@ metadata:
   description: simple small package to test skeleton publish
   version: 0.0.1
 
+documentation:
+  simple: "test.txt"
+
 components:
   - name: on-deploy-with-template-use-of-variable
     required: true
