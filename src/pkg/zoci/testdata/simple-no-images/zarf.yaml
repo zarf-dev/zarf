@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/zarf-dev/zarf/main/zarf.schema.json
+kind: ZarfPackageConfig
+
+metadata:
+  name: test-collision-pkg
+  version: 0.0.1
+  architecture: amd64
+
+components:
+  - name: test-component
+    required: true
+    files:
+      - source: test-file.txt
+        target: /tmp/test-file.txt

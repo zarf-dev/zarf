@@ -46,7 +46,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	src, err := file.New("")
+	// Create a temporary directory for the OCI file store to avoid conflicts
+	// with directories in the current working directory that may have the same
+	// name as the package metadata (issue #4148)
+	tempDir, err := os.MkdirTemp("", "zarf-oci-push-*")
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	src, err := file.New(tempDir)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
@@ -101,16 +110,12 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 				return cfgErr
 			}
 
-			//TODO: ewyles WIP -- this line fails in the case of issue https://github.com/zarf-dev/zarf/issues/4148
 			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
 			if packErr != nil {
 				return packErr
 			}
-			// Always remove the temp manifest file created by PackAndTagManifest
-			defer func() {
-				err2 := os.Remove(pkgLayout.Pkg.Metadata.Name)
-				err = errors.Join(err, err2)
-			}()
+			// Note: The manifest file created by PackAndTagManifest is in tempDir
+			// and will be cleaned up automatically when the function returns
 
 			// Update the total with manifest + config for better progress (optional)
 			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
