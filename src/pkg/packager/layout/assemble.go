@@ -929,7 +929,7 @@ func copyDocumentationFile(file, packagePath, buildPath string) error {
 		src = filepath.Join(packagePath, file)
 	}
 
-	dst := filepath.Join(buildPath, DocumentationDir, file)
+	dst := filepath.Join(buildPath, DocumentationDir, filepath.Base(src))
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 	}

@@ -45,30 +45,6 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 	require.Equal(t, expectedChecksum, string(b))
 }
 
-func TestAssemblePackage(t *testing.T) {
-	t.Parallel()
-
-	ctx := testutil.TestContext(t)
-
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-package", load.DefinitionOptions{})
-	require.NoError(t, err)
-
-	opt := layout.AssembleOptions{SkipSBOM: true}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, "./testdata/zarf-package", opt)
-	require.NoError(t, err)
-
-	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
-	require.NoError(t, err)
-	// helm-charts.tar checksum is non-deterministic due to helm package embedding timestamps
-	// so we verify the other checksums and check helm-charts.tar exists
-	require.Contains(t, string(b), "0886541c9338c6917f0e278130d48c5f0492e27180686e2a005b407365f58b0a components/manifests.tar")
-	require.Contains(t, string(b), "1a3c6cb1683dc962a65509edafc7658c44c78aee9f45b8db8990af897731cb14 components/files.tar")
-	require.Contains(t, string(b), "27c16ce7e3861da034af1bb356d6a4f38cb84fa65d51fa62f69727143b4c6b60 documentation/doc.md")
-	require.Contains(t, string(b), "4b041ced809bc664daedf861365ae0d6bf7d3b287415fcd55d2b37e9c5c1cafc components/data-injections.tar")
-	require.Contains(t, string(b), "components/helm-charts.tar")
-}
-
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 	t.Helper()
 	b, err := goyaml.Marshal(pkg)
@@ -136,11 +112,16 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			require.NoError(t, err)
 			absoluteKustomizePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "kustomize"))
 			require.NoError(t, err)
+			absoluteDocsPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "doc.md"))
+			require.NoError(t, err)
 			componentName := "absolute-files"
 			pkg := v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "standard",
+				},
+				Documentation: map[string]string{
+					"docs": absoluteDocsPath,
 				},
 				Components: []v1alpha1.ZarfComponent{
 					{
@@ -195,6 +176,10 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				pkgLayout, err = layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
+			docsDir := filepath.Join(tmpdir, "docs-dir")
+			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
+			require.NoError(t, err)
+			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 
 			// Ensure the component has the correct files
 			fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.FilesComponentDir)

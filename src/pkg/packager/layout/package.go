@@ -319,6 +319,53 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	return nil
 }
 
+// GetDocumentation extracts documentation files from the package to the given destination path.
+// If keys is empty, all documentation files are extracted.
+// If keys are provided, only those specific documentation files are extracted.
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) error {
+	l := logger.From(ctx)
+
+	if len(p.Pkg.Documentation) == 0 {
+		return fmt.Errorf("no documentation files found in package")
+	}
+
+	// Get the documentation directory from the package
+	docDir := filepath.Join(p.dirPath, DocumentationDir)
+	if _, err := os.Stat(docDir); os.IsNotExist(err) {
+		return fmt.Errorf("documentation directory not found in package")
+	}
+
+	keysToExtract := make(map[string]string)
+	if len(keys) > 0 {
+		for _, key := range keys {
+			if filePath, ok := p.Pkg.Documentation[key]; ok {
+				keysToExtract[key] = filePath
+			} else {
+				return fmt.Errorf("key %s, not found in package documentation", key)
+			}
+		}
+	} else {
+		keysToExtract = p.Pkg.Documentation
+	}
+
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
+	}
+
+	for _, fileName := range keysToExtract {
+		srcPath := filepath.Join(docDir, filepath.Base(fileName))
+
+		dstPath := filepath.Join(destPath, filepath.Base(fileName))
+		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)
+		}
+	}
+
+	l.Info("documentation successfully extracted", "path", destPath)
+	return nil
+}
+
 // GetComponentDir returns a path to the directory in the given component.
 func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (_ string, err error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))

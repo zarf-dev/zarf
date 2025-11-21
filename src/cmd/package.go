@@ -1139,69 +1139,12 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		}
 	}()
 
-	if len(pkgLayout.Pkg.Documentation) == 0 {
-		return fmt.Errorf("no documentation files found in package")
-	}
-
-	// Determine which keys to extract
-	keysToExtract := make(map[string]string)
-	if len(o.keys) > 0 {
-		// Extract only specified keys
-		for _, key := range o.keys {
-			if filePath, ok := pkgLayout.Pkg.Documentation[key]; ok {
-				keysToExtract[key] = filePath
-			} else {
-				l.Warn("documentation key not found in package", "key", key)
-			}
-		}
-		if len(keysToExtract) == 0 {
-			return fmt.Errorf("none of the specified keys were found in package documentation")
-		}
-	} else {
-		// Extract all documentation files
-		keysToExtract = pkgLayout.Pkg.Documentation
-	}
-
-	// Get the documentation directory from the package
-	docDir := filepath.Join(pkgLayout.DirPath(), layout.DocumentationDir)
-	if _, err := os.Stat(docDir); os.IsNotExist(err) {
-		return fmt.Errorf("documentation directory not found in package")
-	}
-
-	// Create output directory named <packagename>-documentation inside the specified output dir
 	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
 	if _, err := os.Stat(outputPath); err == nil {
 		return fmt.Errorf("output directory '%s' already exists. Please remove or rename it before extracting documentation", outputPath)
 	}
-	if err := os.MkdirAll(outputPath, helpers.ReadWriteExecuteUser); err != nil {
-		return fmt.Errorf("failed to create output directory %s: %w", outputPath, err)
-	}
 
-	// Extract documentation files
-	l.Info("extracting documentation files", "count", len(keysToExtract))
-
-	for key, fileName := range keysToExtract {
-		srcPath := filepath.Join(docDir, fileName)
-		if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-			l.Warn("documentation file not found", "key", key, "file", fileName)
-			continue
-		}
-
-		dstPath := filepath.Join(outputPath, fileName)
-		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)
-		}
-		l.Info("extracted documentation file", "key", key, "file", fileName)
-	}
-
-	// Get absolute path for better user feedback
-	absOutputPath, err := filepath.Abs(outputPath)
-	if err != nil {
-		l.Warn("documentation successfully extracted, couldn't get output path", "error", err)
-		return nil
-	}
-	l.Info("documentation successfully extracted", "path", absOutputPath)
-	return nil
+	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
 type packageInspectDefinitionOptions struct {
