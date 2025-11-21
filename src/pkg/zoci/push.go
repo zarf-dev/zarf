@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -46,17 +47,13 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	// Create a temporary directory for the OCI file store to avoid conflicts
-	// with directories in the current working directory that may have the same
-	// name as the package metadata (issue #4148)
-	tempDir, err := os.MkdirTemp("", "zarf-oci-push-*")
+	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer os.RemoveAll(tempDir)
 
-	//src, err := file.New(tempDir)
-	src, err := file.New("")
+	src, err := file.New(tempDir)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
@@ -115,8 +112,6 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			if packErr != nil {
 				return packErr
 			}
-			// Note: The manifest file created by PackAndTagManifest is in tempDir
-			// and will be cleaned up automatically when the function returns
 
 			// Update the total with manifest + config for better progress (optional)
 			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
