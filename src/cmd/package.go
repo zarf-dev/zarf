@@ -1376,6 +1376,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY",
+		Aliases: []string{"push"},
 		Short:   lang.CmdPackagePublishShort,
 		Example: lang.CmdPackagePublishExample,
 		Args:    cobra.ExactArgs(2),
