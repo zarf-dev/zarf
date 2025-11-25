@@ -486,17 +486,27 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	g, gCtx := errgroup.WithContext(ctx)
 	for idx, data := range component.DataInjections {
-		tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return nil, err
+		var dataInjectionsPath string
+		if data.Type == v1alpha1.DataInjectionExternal {
+			source := d.vc.ReplaceString(data.Source)
+			if source == "" {
+				return nil, fmt.Errorf("data injection source cannot be empty for external type")
+			}
+			dataInjectionsPath = source
+		} else {
+			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+			if err != nil {
+				return nil, err
+			}
+			defer func() {
+				err = errors.Join(err, os.RemoveAll(tmpDir))
+			}()
+			dataInjectionsPath, err = pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
+			if err != nil {
+				return nil, err
+			}
 		}
-		defer func() {
-			err = errors.Join(err, os.RemoveAll(tmpDir))
-		}()
-		dataInjectionsPath, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.DataComponentDir)
-		if err != nil {
-			return nil, err
-		}
+
 		g.Go(func() error {
 			return d.c.HandleDataInjection(gCtx, data, dataInjectionsPath, idx)
 		})

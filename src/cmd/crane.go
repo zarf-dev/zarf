@@ -371,7 +371,8 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
-						return err
+						l.Warn("unable to get digest for image, skipping prune check", "image", transformedImageNoCheck, "error", err.Error())
+						continue
 					}
 					pkgImages[digest] = true
 				}

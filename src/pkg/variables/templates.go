@@ -49,6 +49,17 @@ func (vc *VariableConfig) GetAllTemplates() map[string]*TextTemplate {
 	return templateMap
 }
 
+// ReplaceString replaces text templates in a string.
+func (vc *VariableConfig) ReplaceString(text string) string {
+	templateMap := vc.GetAllTemplates()
+	for key, template := range templateMap {
+		if template != nil {
+			text = strings.ReplaceAll(text, key, template.Value)
+		}
+	}
+	return text
+}
+
 // ReplaceTextTemplate loads a file from a given path, replaces text in it and writes it back in place.
 func (vc *VariableConfig) ReplaceTextTemplate(path string) (err error) {
 	templateRegex := fmt.Sprintf("###%s_[A-Z0-9_]+###", strings.ToUpper(vc.templatePrefix))

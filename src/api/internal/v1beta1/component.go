@@ -315,6 +315,8 @@ type ZarfDataInjection struct {
 	Target ZarfContainerTarget `json:"target"`
 	// Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image.
 	Compress bool `json:"compress,omitempty"`
+	// [alpha] The type of data injection (default 'embedded' which bundles the data at create time).
+	Type string `json:"type,omitempty" jsonschema:"enum=embedded,enum=external"`
 }
 
 // ZarfComponentImport structure for including imported Zarf components.

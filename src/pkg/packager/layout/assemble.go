@@ -393,6 +393,10 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for dataIdx, data := range component.DataInjections {
+		if data.Type == v1alpha1.DataInjectionExternal {
+			continue
+		}
+
 		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
@@ -626,6 +630,10 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 
 	for dataIdx, data := range component.DataInjections {
+		if data.Type == v1alpha1.DataInjectionExternal {
+			continue
+		}
+
 		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		dst := filepath.Join(compBuildPath, rel)
 
