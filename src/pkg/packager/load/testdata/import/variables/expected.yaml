@@ -15,8 +15,8 @@ variables:
     default: "default from child in component imported later"
 values:
   files:
-    - import/child-values.yaml
-    - secondImport/secondary-child-values.yaml
+    - child-values.yaml
+    - secondary-child-values.yaml
     - parent-values.yaml
   schema: "parent-values.schema.json"
 components:

@@ -13,7 +13,7 @@ variables:
     default: "default from child"
 values:
   files:
-    - child-values.yaml
+    - ../child-values.yaml
   schema: "child-values.schema.json"
 
 components:
