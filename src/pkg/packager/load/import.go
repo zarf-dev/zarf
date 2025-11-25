@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -55,6 +56,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"importStack", len(importStack),
 	)
 
+	var valuesFiles []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -156,8 +158,14 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+		for _, v := range importedPkg.Values.Files {
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+		}
 	}
 
+	valuesFiles = append(valuesFiles, pkg.Values.Files...)
+	valuesFiles = slices.Compact(valuesFiles)
+	pkg.Values.Files = valuesFiles
 	pkg.Components = components
 
 	varMap := map[string]bool{}

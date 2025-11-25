@@ -10,13 +10,13 @@ import (
 
 // Constants used in the default package layout.
 const (
-	ZarfYAML  = "zarf.yaml"
-	Signature = "zarf.yaml.sig"
-	Checksums = "checksums.txt"
+	ZarfYAML   = "zarf.yaml"
+	Signature  = "zarf.yaml.sig"
+	Checksums  = "checksums.txt"
+	ValuesYAML = "values.yaml"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
-	ValuesDir     = "values"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
