@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
+	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -235,6 +236,99 @@ func (v Values) Set(path Path, newVal any) error {
 		}
 	}
 	return nil
+}
+
+// ValidateOptions provides optional configuration for Values validation
+type ValidateOptions struct {
+	// SkipRequired skips validation of required fields
+	SkipRequired bool
+}
+
+// Validate validates the Values against a JSON schema file at schemaPath.
+func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete",
+			"duration", time.Since(start),
+			"schemaPath", schemaPath)
+	}()
+
+	// Load the schema from file
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return &SchemaValidationError{
+			SchemaPath: schemaPath,
+			Err:        fmt.Errorf("failed to resolve absolute path: %w", err),
+		}
+	}
+	// Convert backslashes to forward slashes for file URI
+	absPath = filepath.ToSlash(absPath)
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+
+	// Convert Values to a document for validation
+	documentLoader := gojsonschema.NewGoLoader(v)
+
+	// Validate
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		return &SchemaValidationError{
+			SchemaPath: schemaPath,
+			Err:        fmt.Errorf("failed to load or parse schema: %w", err),
+		}
+	}
+
+	// Check if validation passed
+	if !result.Valid() {
+		errs := result.Errors()
+
+		// Filter out "required" errors if SkipRequired is true
+		if opts.SkipRequired {
+			var filteredErrors []gojsonschema.ResultError
+			for _, err := range errs {
+				if err.Type() != "required" {
+					filteredErrors = append(filteredErrors, err)
+				}
+			}
+			errs = filteredErrors
+		}
+
+		// Only return error if there are validation errors after filtering
+		if len(errs) > 0 {
+			return &SchemaValidationError{
+				SchemaPath: schemaPath,
+				Errors:     errs,
+			}
+		}
+	}
+
+	return nil
+}
+
+// SchemaValidationError represents an error when JSON schema validation fails
+type SchemaValidationError struct {
+	SchemaPath string
+	Errors     []gojsonschema.ResultError
+	Err        error
+}
+
+func (e *SchemaValidationError) Error() string {
+	if e.Err != nil {
+		return fmt.Sprintf("schema validation failed for %s: %v", e.SchemaPath, e.Err)
+	}
+	if len(e.Errors) > 0 {
+		var errMsgs []string
+		for _, err := range e.Errors {
+			errMsgs = append(errMsgs, err.String())
+		}
+		return fmt.Sprintf("schema validation failed for %s:\n%s", e.SchemaPath, strings.Join(errMsgs, "\n"))
+	}
+	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
+}
+
+func (e *SchemaValidationError) Unwrap() error {
+	return e.Err
 }
 
 // InvalidFileExtError represents an error when a file has an invalid extension

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-values-schema-deploy-invalid-configmap
+data:
+  appName: "{{ .Values.appName }}"
+  replicas: "{{ .Values.replicas }}"

@@ -628,3 +628,84 @@ func TestDeepMerge(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name       string
+		valuesFile string
+		schemaFile string
+		opts       ValidateOptions
+	}{
+		{
+			name:       "valid values pass schema validation",
+			valuesFile: "testdata/schema/valid-values.yaml",
+			schemaFile: "testdata/schema/simple.schema.json",
+			opts:       ValidateOptions{},
+		},
+		{
+			name:       "missing required field passes when SkipRequired is true",
+			valuesFile: "testdata/schema/invalid-values.yaml",
+			schemaFile: "testdata/schema/simple.schema.json",
+			opts:       ValidateOptions{SkipRequired: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
+			require.NoError(t, err)
+
+			err = vals.Validate(ctx, tt.schemaFile, tt.opts)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestValidate_Errors(t *testing.T) {
+	tests := []struct {
+		name        string
+		valuesFile  string
+		schemaFile  string
+		opts        ValidateOptions
+		errContains string
+	}{
+		{
+			name:        "missing required field",
+			valuesFile:  "testdata/schema/invalid-values.yaml",
+			schemaFile:  "testdata/schema/simple.schema.json",
+			opts:        ValidateOptions{},
+			errContains: "schema validation failed",
+		},
+		{
+			name:        "nonexistent schema file",
+			valuesFile:  "testdata/schema/valid-values.yaml",
+			schemaFile:  "testdata/schema/nonexistent.schema.json",
+			opts:        ValidateOptions{},
+			errContains: "failed to load or parse schema",
+		},
+		{
+			name:        "non-required errors still caught when SkipRequired is true",
+			valuesFile:  "testdata/schema/invalid-range.yaml",
+			schemaFile:  "testdata/schema/simple.schema.json",
+			opts:        ValidateOptions{SkipRequired: true},
+			errContains: "schema validation failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			vals, err := ParseFiles(ctx, []string{tt.valuesFile}, ParseFilesOptions{})
+			require.NoError(t, err)
+
+			err = vals.Validate(ctx, tt.schemaFile, tt.opts)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errContains)
+		})
+	}
+}

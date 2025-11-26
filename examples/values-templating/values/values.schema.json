@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "description": "Schema for values-templating example package values",
+  "properties": {
+    "site": {
+      "type": "object",
+      "description": "Site configuration and metadata",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The name of the site you are deploying"
+        },
+        "styles": {
+          "type": "string",
+          "description": "CSS styles for the site"
+        },
+        "organization": {
+          "type": "string",
+          "description": "The organization providing the site"
+        },
+        "footer": {
+          "type": "string",
+          "description": "Custom footer text"
+        },
+        "title": {
+          "type": "string",
+          "description": "Site title"
+        },
+        "message": {
+          "type": "string",
+          "description": "Welcome message"
+        }
+      },
+      "required": ["name", "organization"]
+    },
+    "app": {
+      "type": "object",
+      "description": "Application deployment configuration",
+      "properties": {
+        "environment": {
+          "type": "string",
+          "enum": ["development", "staging", "production"],
+          "description": "Deployment environment"
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Number of application replicas"
+        },
+        "config_data": {
+          "type": "string",
+          "description": "Application configuration data"
+        },
+        "optional_setting": {
+          "type": "string",
+          "description": "Optional configuration setting"
+        },
+        "required_setting": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Required configuration setting"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of enabled features"
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          },
+          "description": "Network ports"
+        },
+        "name": {
+          "type": "string",
+          "description": "Application name for Helm overrides"
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string",
+              "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$",
+              "description": "Image tag version"
+            }
+          }
+        }
+      },
+      "required": ["environment", "replicas", "required_setting"]
+    },
+    "database": {
+      "type": "object",
+      "description": "Database configuration",
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "Database host"
+        },
+        "host2": {
+          "type": "string",
+          "description": "Alternate database host"
+        }
+      }
+    }
+  },
+  "required": ["site", "app"]
+}
