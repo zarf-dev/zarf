@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -17,8 +16,6 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tests := []struct {
 		name           string

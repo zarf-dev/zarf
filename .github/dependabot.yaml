@@ -3,7 +3,6 @@ updates:
   - package-ecosystem: gomod
     directories:
       - "/"
-      - "/hack/schema"
     schedule:
       interval: daily
     groups:

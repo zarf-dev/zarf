@@ -12,14 +12,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestDevInspectManifests(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name               string
@@ -116,7 +113,6 @@ func TestDevInspectManifests(t *testing.T) {
 
 func TestDevInspectValuesFiles(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name           string

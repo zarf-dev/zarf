@@ -13,13 +13,12 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/pkg/schema"
 )
 
 func TestZarfSchema(t *testing.T) {
 	t.Parallel()
-	zarfSchema, err := os.ReadFile("../../../zarf.schema.json")
-	require.NoError(t, err)
+	zarfSchema := schema.GetV1Alpha1Schema()
 
 	tests := []struct {
 		name                  string
@@ -187,7 +186,6 @@ components:
 }
 
 func TestValidatePackageSchema(t *testing.T) {
-	ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	setVariables := map[string]string{
 		"PACKAGE_NAME": "test-package",
 		"MY_COMP_NAME": "test-comp",
