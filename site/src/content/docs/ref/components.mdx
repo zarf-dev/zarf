@@ -313,6 +313,13 @@ If you have any `default` components in a package definition you can also exclud
 $ zarf package deploy ./path/to/package.tar.zst --components=optional-component-1,-default-component-1
 ```
 
+For components that match multiple selectors, the last selector takes priority.
+
+```bash
+# exclude all components except component-1
+$ zarf package deploy ./path/to/package.tar.zst --components=-*,component-1
+```
+
 :::
 
 ## Extensions (Removed)
