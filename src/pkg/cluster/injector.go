@@ -39,26 +39,54 @@ import (
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
-// InjectorOpts represents the config for the injector pod
-type InjectorOpts struct {
+// ZarfInjectorOptions represents the options used by injector pod
+type ZarfInjectorOptions struct {
 	ImagesDir        string
 	InjectorSeedSrcs []string
-	InjectorNodePort int
-	RegistryNodePort int
 	PkgName          string
 	Architecture     string
+	// Linux/Windows allowable port-ranges are 1-65535, so using a unsigned int 16 enforces the use of a port in that range
+	RegistryNodePort uint16
+	InjectorNodePort uint16
+}
+
+// Validate ensures that required stuc fields are populated with expected values
+func (i *ZarfInjectorOptions) Validate() error {
+	if i.ImagesDir == "" {
+		return fmt.Errorf("a path to the image directory must be provided")
+	}
+
+	// We only check that the RegistryNodePort is not-zero, as using 0 lets Kubernetes choose the NodePort on our behave
+	if i.RegistryNodePort == 0 {
+		return fmt.Errorf("registry port must be between 1-65535")
+	}
+
+	if i.PkgName == "" {
+		return fmt.Errorf("a package name is required by the injector")
+	}
+
+	if i.Architecture == "" {
+		return fmt.Errorf("an architecture must be provided")
+	}
+
+	return nil
 }
 
 // StartInjection initializes a Zarf injection into the cluster
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir string, opts InjectorOpts) (int, error) {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir string, opts ZarfInjectorOptions) (int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	err := opts.Validate()
+	if err != nil {
+		return 0, err
+	}
 
 	// The injector breaks if the same image is added multiple times
 	opts.InjectorSeedSrcs = helpers.Unique(opts.InjectorSeedSrcs)
 
 	// Stop any previous running injection before starting.
-	err := c.StopInjection(ctx)
+	err = c.StopInjection(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -113,7 +141,12 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir string, opts Inject
 }
 
 // CreateInjectorConfigMaps creates the required configmaps to run the injector
-func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir string, opts InjectorOpts) ([]string, string, error) {
+func (c *Cluster) CreateInjectorConfigMaps(ctx context.Context, tmpDir string, opts ZarfInjectorOptions) ([]string, string, error) {
+	err := opts.Validate()
+	if err != nil {
+		return nil, "", err
+	}
+
 	payloadCmNames, shasum, err := c.createPayloadConfigMaps(ctx, tmpDir, opts)
 	if err != nil {
 		return nil, "", fmt.Errorf("unable to generate the injector payload configmaps: %w", err)
@@ -201,7 +234,7 @@ func (c *Cluster) StopInjection(ctx context.Context) error {
 	return nil
 }
 
-func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir string, opts InjectorOpts) ([]string, string, error) {
+func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir string, opts ZarfInjectorOptions) ([]string, string, error) {
 	l := logger.From(ctx)
 	tarPath := filepath.Join(tmpDir, "payload.tar.gz")
 	seedImagesDir := filepath.Join(tmpDir, "seed-images")
@@ -274,7 +307,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir string, op
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, opts InjectorOpts) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, opts ZarfInjectorOptions) (string, string, error) {
 	l := logger.From(ctx)
 
 	// List all nodes and running pods once
@@ -500,7 +533,7 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, opts InjectorOpts) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, opts ZarfInjectorOptions) *v1ac.PodApplyConfiguration {
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -600,7 +633,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, opts InjectorOpts) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, opts ZarfInjectorOptions) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -628,7 +661,7 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, opts Inject
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
-		if assignedNodePort == opts.RegistryNodePort {
+		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
 			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 			if deleteErr != nil {
