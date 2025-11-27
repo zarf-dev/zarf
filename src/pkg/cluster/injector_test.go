@@ -46,32 +46,22 @@ func TestInjectorOpts(t *testing.T) {
 			opts: ZarfInjectorOptions{
 				ImagesDir: t.TempDir(),
 			},
-			expectedErr: "registry port must be between 1-65535",
-		},
-		{
-			name: "provide only ImagesDir and RegistryNodePort",
-			opts: ZarfInjectorOptions{
-				ImagesDir:        t.TempDir(),
-				RegistryNodePort: 31999,
-			},
 			expectedErr: "a package name is required by the injector",
 		},
 		{
 			name: "do not provide Architecture",
 			opts: ZarfInjectorOptions{
-				ImagesDir:        t.TempDir(),
-				RegistryNodePort: 31999,
-				PkgName:          "axolotl",
+				ImagesDir: t.TempDir(),
+				PkgName:   "axolotl",
 			},
 			expectedErr: "an architecture must be provided",
 		},
 		{
 			name: "provide all the required args",
 			opts: ZarfInjectorOptions{
-				ImagesDir:        t.TempDir(),
-				RegistryNodePort: 31999,
-				PkgName:          "axolotl",
-				Architecture:     "amd64",
+				ImagesDir:    t.TempDir(),
+				PkgName:      "axolotl",
+				Architecture: "amd64",
 			},
 		},
 	}

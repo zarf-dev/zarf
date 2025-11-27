@@ -51,14 +51,17 @@ type ZarfInjectorOptions struct {
 }
 
 // Validate ensures that required stuc fields are populated with expected values
+// Required fields
+// - ImagesDir, path to folder containing the images
+// - PkgName, name of the package used as a label selector by the pod
+// - Architecture, used to schedule the injector only on a node of the right cpu architecture
+// Non-required fields
+// - InjectorSeedSrcs, tbd
+// - RegistryNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+// - InjectorNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
 func (i *ZarfInjectorOptions) Validate() error {
 	if i.ImagesDir == "" {
 		return fmt.Errorf("a path to the image directory must be provided")
-	}
-
-	// We only check that the RegistryNodePort is not-zero, as using 0 lets Kubernetes choose the NodePort on our behave
-	if i.RegistryNodePort == 0 {
-		return fmt.Errorf("registry port must be between 1-65535")
 	}
 
 	if i.PkgName == "" {
