@@ -10,3 +10,10 @@ components:
         namespace: default
         kustomizations:
           - ./.
+  - name: underscores
+    required: true
+    manifests:
+      - name: fuzzy-underscores-in-image
+        namespace: underscore
+        files:
+          - ./configmap-image-with-underscores.yaml

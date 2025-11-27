@@ -38,7 +38,7 @@ import (
 
 var (
 	imageCheck      = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
-	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
+	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-_.\/:]+:[\w.\-_]*[a-z\.\-_][\w.\-_]*)"`)
 )
 
 // FindImagesOptions declares the parameters to find images.

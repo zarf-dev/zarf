@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-for-images-with-underscores
+  namespace: underscore
+data:
+  mongodb_exporter_image: docker.io/percona/mongodb_exporter:0.47.1
