@@ -63,7 +63,14 @@ func (c *Cluster) HandleDataInjection(ctx context.Context, data v1alpha1.ZarfDat
 	l.Debug("performing data injection", "target", data.Target)
 
 	source := filepath.Join(dataInjectionPath, filepath.Base(data.Target.Path))
+	if data.Type == v1alpha1.DataInjectionExternal {
+		source = dataInjectionPath
+	}
+
 	if helpers.InvalidPath(source) {
+		if data.Type == v1alpha1.DataInjectionExternal {
+			return fmt.Errorf("could not find the external data injection source path %s", source)
+		}
 		// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
 		source = filepath.Join(dataInjectionPath, strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
 		if helpers.InvalidPath(source) {

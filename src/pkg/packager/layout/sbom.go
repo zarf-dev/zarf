@@ -156,6 +156,9 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 	tarPath := filepath.Join(buildPath, ComponentsDir, component.Name) + ".tar"
+	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
+		return nil, nil
+	}
 	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
 	if err != nil {
 		return nil, err

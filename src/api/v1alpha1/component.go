@@ -4,6 +4,13 @@
 // Package v1alpha1 holds the definition of the v1alpha1 Zarf Package
 package v1alpha1
 
+const (
+	// DataInjectionEmbedded is the default data injection type
+	DataInjectionEmbedded = "embedded"
+	// DataInjectionExternal is for external data injection
+	DataInjectionExternal = "external"
+)
+
 // ZarfComponent is the primary functional grouping of assets to deploy by Zarf.
 type ZarfComponent struct {
 	// The name of the component.
@@ -373,6 +380,8 @@ type ZarfDataInjection struct {
 	Target ZarfContainerTarget `json:"target"`
 	// Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image.
 	Compress bool `json:"compress,omitempty"`
+	// [alpha] The type of data injection (default 'embedded' which bundles the data at create time).
+	Type string `json:"type,omitempty" jsonschema:"enum=embedded,enum=external"`
 }
 
 // ZarfComponentImport structure for including imported Zarf components.

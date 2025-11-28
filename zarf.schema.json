@@ -996,6 +996,14 @@
         "target": {
           "$ref": "#/$defs/ZarfContainerTarget",
           "description": "The target pod + container to inject the data into."
+        },
+        "type": {
+          "description": "[alpha] The type of data injection (default 'embedded' which bundles the data at create time).",
+          "enum": [
+            "embedded",
+            "external"
+          ],
+          "type": "string"
         }
       },
       "required": [
