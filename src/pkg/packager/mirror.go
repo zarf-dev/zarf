@@ -48,7 +48,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	}
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", img, err)
