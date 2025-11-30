@@ -2,6 +2,8 @@ kind: ZarfPackageConfig
 metadata:
   name: test
   version: v0.0.1
+documentation:
+  my-doc: doc.md
 components:
   - name: helm-charts
     required: true

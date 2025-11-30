@@ -52,6 +52,31 @@ During the deployment process, Zarf will leverage the infrastructure created dur
 
 If you already have a Zarf package and you want to create an updated package you would normally have to re-create the entire package from scratch, including things that might not have changed. Depending on your workflow, you may  want to create a package that only contains the artifacts that have changed since the last time you built your package. This can be achieved by using the `--differential` flag while running the `zarf package create` command. You can use this flag to point to an already built package you have locally or to a package that has been previously [published](/tutorials/6-publish-and-deploy#publish-package) to a registry.
 
+## Package Documentation
+
+Zarf packages can include documentation files that provide important information to package deployers. This is particularly useful for communicating configuration options, deployment instructions, security considerations, or any other information that users need to know before or after deploying a package.
+
+
+
+### Defining Documentation
+
+To include documentation in your package, add a `documentation` section to your `zarf.yaml`:
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: my-package
+
+documentation:
+  readme: README.md
+  configuration: docs/configuration.md
+  secrets: secrets.md
+
+components:
+  - name: my-component
+    # ... component definition
+```
+
 ## Package Sources
 
 A source can be used with the following commands as their first argument:
@@ -91,3 +116,9 @@ In addition to the traditional sources outlined above, there is also a special "
 Additionally, inspecting a package deployed to a cluster will not be able to show the package's SBOMs, as they are not currently persisted to the cluster.
 
 :::
+
+### Package Documentation
+
+Documents can be stored in the package under the top level `documentation` field, which maps documentation keys to file paths. Package deployers can view this documentation with the [zarf package inspect documentation](src/content/docs/commands/zarf_package_inspect_documentation.md) command. Common use cases for package documentation include information around the values to set on deploy, changelogs, or application specific information.
+
+For instance, in the [dos-games](src/content/ref/examples/dos-games) package, the documentation informs users on the level 1 secrets.

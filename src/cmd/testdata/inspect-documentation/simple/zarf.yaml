@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: documentation
+
+documentation:
+  readme: README.md
+  contributing: CONTRIBUTE.md
+
+components:
+  - name: empty-component
+    required: true
