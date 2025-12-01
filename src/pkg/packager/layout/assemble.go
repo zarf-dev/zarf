@@ -163,7 +163,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	l.Debug("copying documentation files to package", "files", pkg.Documentation)
 	for _, file := range pkg.Documentation {
 		if err = copyDocumentationFile(file, packagePath, buildPath); err != nil {
 			return nil, err

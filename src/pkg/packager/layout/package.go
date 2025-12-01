@@ -329,7 +329,6 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("no documentation files found in package")
 	}
 
-	// Get the documentation directory from the package
 	docDir := filepath.Join(p.dirPath, DocumentationDir)
 	if _, err := os.Stat(docDir); os.IsNotExist(err) {
 		return fmt.Errorf("documentation directory not found in package")
@@ -348,7 +347,6 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		keysToExtract = p.Pkg.Documentation
 	}
 
-	// Create output directory if it doesn't exist
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}

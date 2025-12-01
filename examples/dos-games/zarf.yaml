@@ -4,8 +4,8 @@ metadata:
   description: Simple example to load classic DOS games into K8s in the airgap
   version: 1.2.0
 
-# The documentation key can be utilized to pass information to package deployers.
-# Common use cases include describing package configuration options such as values and application specific documentation.
+# The documentation key can be utilized to pass information to package consumers
+# Commonly used to detail package configuration, or in this instance, application specific documentation.
 documentation:
  secrets: "secrets.md"
 

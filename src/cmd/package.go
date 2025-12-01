@@ -1081,10 +1081,7 @@ type packageInspectDocumentationOptions struct {
 }
 
 func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
-	return &packageInspectDocumentationOptions{
-		outputDir:               "",
-		skipSignatureValidation: false,
-	}
+	return &packageInspectDocumentationOptions{}
 }
 
 func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
@@ -1099,8 +1096,8 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,dev.zarf.vex')")
-	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (creates '<package-name>-documentation' subdirectory)")
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
 
 	return cmd
 }
