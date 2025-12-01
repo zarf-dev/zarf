@@ -1102,9 +1102,8 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) error {
+func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
-	l := logger.From(ctx)
 
 	src, err := choosePackage(ctx, args)
 	if err != nil {
@@ -1131,16 +1130,10 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		return fmt.Errorf("unable to load the package: %w", err)
 	}
 	defer func() {
-		if err := pkgLayout.Cleanup(); err != nil {
-			l.Warn("unable to cleanup package layout", "error", err)
-		}
+		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
 	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
-	if _, err := os.Stat(outputPath); err == nil {
-		return fmt.Errorf("output directory '%s' already exists. Please remove or rename it before extracting documentation", outputPath)
-	}
-
 	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
