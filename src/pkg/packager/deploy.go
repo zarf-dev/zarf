@@ -460,7 +460,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushOptions{
+		pushOpts := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
@@ -469,7 +469,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
 		}
-		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushConfig)
+		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}

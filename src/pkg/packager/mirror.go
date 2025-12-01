@@ -59,7 +59,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushConfig := images.PushOptions{
+	pushOpts := images.PushOptions{
 		OCIConcurrency:        opts.OCIConcurrency,
 		PlainHTTP:             opts.PlainHTTP,
 		NoChecksum:            opts.NoImageChecksum,
@@ -68,7 +68,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Cluster:               opts.Cluster,
 	}
-	err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), registryInfo, pushConfig)
+	err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), registryInfo, pushOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push images: %w", err)
 	}

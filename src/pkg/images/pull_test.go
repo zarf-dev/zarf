@@ -74,11 +74,11 @@ func TestCheckForIndex(t *testing.T) {
 			require.NoError(t, err)
 			cacheDir := t.TempDir()
 			dstDir := t.TempDir()
-			cfg := PullOptions{
+			opts := PullOptions{
 				Arch:           tc.arch,
 				CacheDirectory: cacheDir,
 			}
-			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, cfg)
+			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
 				// Ensure the error message contains the digest of the manifests the user can use
@@ -146,13 +146,13 @@ func TestPull(t *testing.T) {
 
 			destDir := t.TempDir()
 			cacheDir := t.TempDir()
-			cfg := PullOptions{
+			opts := PullOptions{
 				CacheDirectory:    cacheDir,
 				RegistryOverrides: tc.RegistryOverrides,
 				Arch:              tc.arch,
 			}
 
-			imageManifests, err := Pull(ctx, images, destDir, cfg)
+			imageManifests, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return

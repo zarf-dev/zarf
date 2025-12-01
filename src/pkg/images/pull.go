@@ -437,7 +437,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullOptions, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error
@@ -446,8 +446,8 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullOptions, dst
 	if err != nil {
 		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 	}
-	repo.PlainHTTP = cfg.PlainHTTP
-	if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
+	repo.PlainHTTP = opts.PlainHTTP
+	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
 		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 		if err != nil {
 			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
@@ -456,10 +456,10 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullOptions, dst
 	repo.Client = client
 
 	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = cfg.OCIConcurrency
+	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
-	localCache, err := oci.NewWithContext(ctx, cfg.CacheDirectory)
+	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
