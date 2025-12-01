@@ -24,13 +24,26 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 const defaultRetries = 3
 
+// PushOpts is the configuration for pushing images.
+type PushOpts struct {
+	OCIConcurrency        int
+	NoChecksum            bool
+	Arch                  string
+	Retries               int
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+	Cluster               *cluster.Cluster
+	ResponseHeaderTimeout time.Duration
+}
+
 // Push pushes images to a registry.
-func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, cfg PushConfig) error {
+func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, registryInfo state.RegistryInfo, cfg PushOpts) error {
 	start := time.Now()
 	if len(imageList) == 0 {
 		return fmt.Errorf("image list cannot be empty")
@@ -38,7 +51,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	if sourceDirectory == "" {
 		return fmt.Errorf("source directory cannot be empty")
 	}
-	if cfg.RegistryInfo.Address == "" {
+	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
 	if cfg.Retries < 1 {
@@ -73,7 +86,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		if cfg.Cluster != nil {
 			var err error
 			var registryURL string
-			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, registryInfo)
 			if err != nil {
 				return err
 			}
@@ -85,7 +98,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				defer tunnel.Close()
 			}
 		} else {
-			registryRef, err = parseRegistryReference(cfg.RegistryInfo.Address)
+			registryRef, err = parseRegistryReference(registryInfo.Address)
 			if err != nil {
 				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
@@ -95,8 +108,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			Client: orasRetry.DefaultClient,
 			Cache:  auth.NewCache(),
 			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
-				Username: cfg.RegistryInfo.PushUsername,
-				Password: cfg.RegistryInfo.PushPassword,
+				Username: registryInfo.PushUsername,
+				Password: registryInfo.PushPassword,
 			}),
 		}
 

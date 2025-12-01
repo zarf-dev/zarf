@@ -118,7 +118,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
-		pullCfg := images.PullConfig{
+		pullCfg := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,

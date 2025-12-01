@@ -44,6 +44,17 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
+// PullOptions is the configuration for pulling images.
+type PullOptions struct {
+	OCIConcurrency        int
+	Arch                  string
+	RegistryOverrides     []RegistryOverride
+	CacheDirectory        string
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+	ResponseHeaderTimeout time.Duration
+}
+
 type imagePullInfo struct {
 	registryOverrideRef string
 	ref                 string
@@ -57,7 +68,7 @@ type imageWithOverride struct {
 }
 
 // Pull pulls all images from the given config.
-func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
+func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) (map[transform.Image]ocispec.Manifest, error) {
 	if len(imageList) == 0 {
 		return nil, fmt.Errorf("image list is required")
 	}
@@ -73,19 +84,19 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		return nil, fmt.Errorf("failed to create image path %s: %w", destinationDirectory, err)
 	}
 
-	if err := helpers.CreateDirectory(cfg.CacheDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
+	if err := helpers.CreateDirectory(opts.CacheDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
 		return nil, fmt.Errorf("failed to create cache directory %s: %w", destinationDirectory, err)
 	}
 
-	if cfg.ResponseHeaderTimeout < 0 {
-		cfg.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
+	if opts.ResponseHeaderTimeout < 0 {
+		opts.ResponseHeaderTimeout = 0 // currently allowing infinite timeout
 	}
 
 	imagesWithOverride := []imageWithOverride{}
 	// Iterate over all images, marking each one as overridden.
 	for _, img := range imageList {
 		overriddenImage := img
-		for _, v := range cfg.RegistryOverrides {
+		for _, v := range opts.RegistryOverrides {
 			if strings.HasPrefix(img.Reference, v.Source) {
 				// If we have an override, the first override wins.
 				// Doing so allows earlier, longer prefixes (such as docker.io/library)
@@ -131,14 +142,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		}
 	}
 
-	client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+	client.Client.Transport, err = orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
 	if err != nil {
 		return nil, err
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
-		Architecture: cfg.Arch,
+		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
 		OS: "linux",
 	}
@@ -163,8 +174,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 			repo.Client = client
 
-			repo.PlainHTTP = cfg.PlainHTTP
-			if dns.IsLocalhost(repo.Reference.Host()) && !cfg.PlainHTTP {
+			repo.PlainHTTP = opts.PlainHTTP
+			if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
@@ -237,9 +248,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-	l.Debug("done fetching info for images", "count", len(imageList), "duration", time.Since(imageFetchStart))
+	l.Debug("done fetching info for images", "count", imageCount, "duration", time.Since(imageFetchStart))
 
-	l.Info("pulling images", "count", len(imageList))
+	l.Info("pulling images", "count", imageCount)
 
 	dst, err := oci.NewWithContext(ctx, destinationDirectory)
 	if err != nil {
@@ -247,7 +258,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, cfg.Arch, cfg.OCIConcurrency)
+		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
@@ -255,7 +266,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	for _, imageInfo := range imagesInfo {
-		err = orasSave(ctx, imageInfo, cfg, dst, client)
+		err = orasSave(ctx, imageInfo, opts, dst, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save images: %w", err)
 		}
@@ -426,7 +437,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	return imagesWithManifests, nil
 }
 
-func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullConfig, dst *oci.Store, client *auth.Client) error {
+func orasSave(ctx context.Context, imageInfo imagePullInfo, cfg PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
 	var pullSrc oras.ReadOnlyTarget
 	var err error

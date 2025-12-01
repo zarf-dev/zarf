@@ -74,7 +74,7 @@ func TestCheckForIndex(t *testing.T) {
 			require.NoError(t, err)
 			cacheDir := t.TempDir()
 			dstDir := t.TempDir()
-			cfg := PullConfig{
+			cfg := PullOptions{
 				Arch:           tc.arch,
 				CacheDirectory: cacheDir,
 			}
@@ -146,7 +146,7 @@ func TestPull(t *testing.T) {
 
 			destDir := t.TempDir()
 			cacheDir := t.TempDir()
-			cfg := PullConfig{
+			cfg := PullOptions{
 				CacheDirectory:    cacheDir,
 				RegistryOverrides: tc.RegistryOverrides,
 				Arch:              tc.arch,
@@ -203,7 +203,7 @@ func TestPullInvalidCache(t *testing.T) {
 	err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
 	require.NoError(t, err)
 
-	opts := PullConfig{
+	opts := PullOptions{
 		CacheDirectory: cacheDir,
 	}
 	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)

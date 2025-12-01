@@ -20,36 +20,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
-
-// PullConfig is the configuration for pulling images.
-type PullConfig struct {
-	OCIConcurrency        int
-	Arch                  string
-	RegistryOverrides     []RegistryOverride
-	CacheDirectory        string
-	PlainHTTP             bool
-	InsecureSkipTLSVerify bool
-	ResponseHeaderTimeout time.Duration
-}
-
-// PushConfig is the configuration for pushing images.
-type PushConfig struct {
-	OCIConcurrency        int
-	RegistryInfo          state.RegistryInfo
-	NoChecksum            bool
-	Arch                  string
-	Retries               int
-	PlainHTTP             bool
-	InsecureSkipTLSVerify bool
-	Cluster               *cluster.Cluster
-	ResponseHeaderTimeout time.Duration
-}
 
 // RegistryOverride describes an override for a specific registry.
 type RegistryOverride struct {
