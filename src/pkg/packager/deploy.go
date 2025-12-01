@@ -19,15 +19,15 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -460,11 +460,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushConfig{
+		pushOpts := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
@@ -472,7 +469,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
 		}
-		err := images.Push(ctx, pushConfig)
+		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}
