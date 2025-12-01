@@ -89,7 +89,7 @@ func TestAssembleLayers(t *testing.T) {
 			// get all layers
 			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
 			require.NoError(t, err)
-			require.Len(t, layers, 10)
+			require.Len(t, layers, 11)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
@@ -122,16 +122,17 @@ func TestAssembleLayers(t *testing.T) {
 			// get documentation layers
 			docLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.DocLayers)
 			require.NoError(t, err)
-			// 2 metadata layers (zarf.yaml, checksums.txt) + 1 doc layer (README.md)
-			require.Len(t, docLayers, 3)
-			hasDocLayer := false
+			// 2 metadata layers (zarf.yaml, checksums.txt) + 2 doc layers
+			require.Len(t, docLayers, 4)
+			hasRelativeLayer := false
+			// relative layer properly formatted
 			for _, layer := range docLayers {
-				if layer.Annotations["org.opencontainers.image.title"] == "documentation/README.md" {
-					hasDocLayer = true
+				if layer.Annotations["org.opencontainers.image.title"] == "documentation/common.go" {
+					hasRelativeLayer = true
 					break
 				}
 			}
-			require.True(t, hasDocLayer)
+			require.True(t, hasRelativeLayer)
 		})
 	}
 }
