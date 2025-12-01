@@ -5,7 +5,7 @@ metadata:
   version: 1.2.0
 
 # The documentation key can be utilized to pass information to package consumers
-# Commonly used to detail package configuration, or in this instance, application specific documentation.
+# Commonly used to detail package configuration, or as in this instance, application specific documentation.
 documentation:
  secrets: "secrets.md"
 
