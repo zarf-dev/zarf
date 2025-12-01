@@ -211,23 +211,20 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 	layers := make([]ocispec.Descriptor, 0)
 
 	switch layersSelector {
-	case "":
+	case AllLayers:
 		layers = append(layers, layerMap[AllLayers]...)
-	case "sbom":
+	case SbomLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[SbomLayers]...)
-	case "metadata":
+	case MetadataLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
-	case "manifests":
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[ComponentLayers]...)
-	case "components":
+	case ComponentLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ComponentLayers]...)
-	case "images":
+	case ImageLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ImageLayers]...)
-	case "docs":
+	case DocLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[DocLayers]...)
 	default:
