@@ -340,11 +340,9 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	return err
 }
 
-// validateDocumentation runs all validation checks on package documentation.
 func validateDocumentation(documentation map[string]string) error {
 	var err error
 
-	// Check for duplicate basenames
 	baseNames := make(map[string]bool)
 	for _, path := range documentation {
 		base := filepath.Base(path)
