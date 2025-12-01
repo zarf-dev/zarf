@@ -94,4 +94,4 @@ Additionally, inspecting a package deployed to a cluster will not be able to sho
 
 ### Package Documentation
 
-Documentation can be stored in the package under the top level `documentation` field, which maps documentation keys to file paths. Package consumers can view documentation using [zarf package inspect documentation](/commands/zarf_package_inspect_documentation). This is particularly useful for communicating configuration options, changelogs, or application specific information. For instance, in the [dos-games](/ref/examples/dos-games) package, the documentation informs users on the level 1 secrets.
+Documentation can be stored in a package using the top level `documentation` field. Package consumers can view this documentation using [zarf package inspect documentation](/commands/zarf_package_inspect_documentation). These docs can be useful for communicating configuration options, changelogs, or application specific information. See an example of using documentation in the [dos-games](/ref/examples/dos-games) package.
