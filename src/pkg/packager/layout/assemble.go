@@ -120,15 +120,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if len(componentImages) > 0 {
 		pullCfg := images.PullConfig{
 			OCIConcurrency:        opts.OCIConcurrency,
-			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
-			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, pullCfg)
+		manifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullCfg)
 		if err != nil {
 			return nil, err
 		}

@@ -57,18 +57,24 @@ type imageWithOverride struct {
 }
 
 // Pull pulls all images from the given config.
-func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
-	cfg.ImageList = helpers.Unique(cfg.ImageList)
+func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, cfg PullConfig) (map[transform.Image]ocispec.Manifest, error) {
+	if len(imageList) == 0 {
+		return nil, fmt.Errorf("image list is required")
+	}
+	if destinationDirectory == "" {
+		return nil, fmt.Errorf("destination directory is required")
+	}
+	imageList = helpers.Unique(imageList)
 	l := logger.From(ctx)
 	pullStart := time.Now()
 
-	imageCount := len(cfg.ImageList)
-	if err := helpers.CreateDirectory(cfg.DestinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create image path %s: %w", cfg.DestinationDirectory, err)
+	imageCount := len(imageList)
+	if err := helpers.CreateDirectory(destinationDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to create image path %s: %w", destinationDirectory, err)
 	}
 
 	if err := helpers.CreateDirectory(cfg.CacheDirectory, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create cache directory %s: %w", cfg.DestinationDirectory, err)
+		return nil, fmt.Errorf("failed to create cache directory %s: %w", destinationDirectory, err)
 	}
 
 	if cfg.ResponseHeaderTimeout < 0 {
@@ -77,7 +83,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 
 	imagesWithOverride := []imageWithOverride{}
 	// Iterate over all images, marking each one as overridden.
-	for _, img := range cfg.ImageList {
+	for _, img := range imageList {
 		overriddenImage := img
 		for _, v := range cfg.RegistryOverrides {
 			if strings.HasPrefix(img.Reference, v.Source) {
@@ -95,7 +101,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	}
 
 	imageFetchStart := time.Now()
-	l.Info("fetching info for images", "count", imageCount, "destination", cfg.DestinationDirectory)
+	l.Info("fetching info for images", "count", imageCount, "destination", destinationDirectory)
 	storeOpts := credentials.StoreOptions{}
 	credStore, err := credentials.NewStoreFromDocker(storeOpts)
 	if err != nil {
@@ -231,11 +237,11 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-	l.Debug("done fetching info for images", "count", len(cfg.ImageList), "duration", time.Since(imageFetchStart))
+	l.Debug("done fetching info for images", "count", len(imageList), "duration", time.Since(imageFetchStart))
 
-	l.Info("pulling images", "count", len(cfg.ImageList))
+	l.Info("pulling images", "count", len(imageList))
 
-	dst, err := oci.NewWithContext(ctx, cfg.DestinationDirectory)
+	dst, err := oci.NewWithContext(ctx, destinationDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create oci layout: %w", err)
 	}
@@ -255,7 +261,7 @@ func Pull(ctx context.Context, cfg PullConfig) (map[transform.Image]ocispec.Mani
 		}
 	}
 
-	l.Info("done pulling images", "count", len(cfg.ImageList), "duration", time.Since(pullStart).Round(time.Millisecond*100))
+	l.Info("done pulling images", "count", imageList, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return imagesWithManifests, nil
 }

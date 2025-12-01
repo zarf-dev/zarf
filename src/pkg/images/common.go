@@ -23,7 +23,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -31,8 +30,6 @@ import (
 // PullConfig is the configuration for pulling images.
 type PullConfig struct {
 	OCIConcurrency        int
-	DestinationDirectory  string
-	ImageList             []transform.Image
 	Arch                  string
 	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
@@ -44,8 +41,6 @@ type PullConfig struct {
 // PushConfig is the configuration for pushing images.
 type PushConfig struct {
 	OCIConcurrency        int
-	SourceDirectory       string
-	ImageList             []transform.Image
 	RegistryInfo          state.RegistryInfo
 	NoChecksum            bool
 	Arch                  string

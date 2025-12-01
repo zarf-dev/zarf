@@ -30,30 +30,36 @@ import (
 const defaultRetries = 3
 
 // Push pushes images to a registry.
-func Push(ctx context.Context, cfg PushConfig) error {
+func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, cfg PushConfig) error {
 	start := time.Now()
-	if cfg.Retries < 1 {
-		cfg.Retries = defaultRetries
+	if len(imageList) == 0 {
+		return fmt.Errorf("image list cannot be empty")
+	}
+	if sourceDirectory == "" {
+		return fmt.Errorf("source directory cannot be empty")
 	}
 	if cfg.RegistryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	if cfg.Retries < 1 {
+		cfg.Retries = defaultRetries
+	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
 	}
-	cfg.ImageList = helpers.Unique(cfg.ImageList)
+	imageList = helpers.Unique(imageList)
 	toPush := map[string]struct{}{}
-	for _, img := range cfg.ImageList {
+	for _, img := range imageList {
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
 
-	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
+	err := addRefNameAnnotationToImages(sourceDirectory)
 	if err != nil {
 		return err
 	}
 
-	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
+	src, err := oci.NewWithContext(ctx, sourceDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
@@ -193,7 +199,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
-	l.Info("done pushing images", "count", len(cfg.ImageList), "duration", time.Since(start).Round(time.Millisecond*100))
+	l.Info("done pushing images", "count", len(imageList), "duration", time.Since(start).Round(time.Millisecond*100))
 	return nil
 }
 
