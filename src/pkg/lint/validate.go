@@ -342,7 +342,6 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 
 func validateDocumentation(documentation map[string]string) error {
 	var err error
-
 	baseNames := make(map[string]bool)
 	for _, path := range documentation {
 		base := filepath.Base(path)
@@ -352,6 +351,5 @@ func validateDocumentation(documentation map[string]string) error {
 			baseNames[base] = true
 		}
 	}
-
 	return err
 }
