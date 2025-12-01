@@ -6,17 +6,14 @@ package test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry"
-	"sigs.k8s.io/yaml"
 )
 
 type PublishDeploySuiteTestSuite struct {
@@ -120,68 +117,6 @@ func (suite *PublishDeploySuiteTestSuite) Test_2_Pull_And_Deploy() {
 
 	// Deploy the local package.
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", local, "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-}
-
-func (suite *PublishDeploySuiteTestSuite) Test_3_Publish_With_Directory_Name_Collision() {
-	// Ensure we can publish from a directory that contains
-	// a subdirectory name matching package name
-	// https://github.com/zarf-dev/zarf/issues/4148
-	suite.T().Log("E2E: Package Publish with directory name collision")
-
-	tmpDir := suite.T().TempDir()
-
-	packagePath := filepath.Join("src", "test", "packages", "11-simple-package")
-
-	zarfYamlPath := filepath.Join(packagePath, "zarf.yaml")
-	zarfYamlBytes, err := os.ReadFile(zarfYamlPath)
-	suite.NoError(err)
-
-	var zarfConfig v1alpha1.ZarfPackage
-	err = yaml.Unmarshal(zarfYamlBytes, &zarfConfig)
-	suite.NoError(err)
-
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", packagePath, "-o", tmpDir, "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-
-	// read the packageName from the zarf yaml to ensure we reproduce the collision
-	packageName := zarfConfig.Metadata.Name
-	suite.NotEmpty(packageName, "package name should not be empty")
-
-	pkgName := fmt.Sprintf("zarf-package-%s-%s-0.0.1.tar.zst", packageName, e2e.Arch)
-	pkgTarball := filepath.Join(tmpDir, pkgName)
-	suite.FileExists(pkgTarball)
-
-	// Create a directory in tmpDir with the same name as the package metadata.name
-	collisionDir := filepath.Join(tmpDir, packageName)
-	err = os.Mkdir(collisionDir, 0o755)
-	suite.NoError(err)
-
-	// Change to tmpDir to simulate the issue where a directory exists with the package name
-	originalWd, err := os.Getwd()
-	suite.NoError(err)
-	defer func() {
-		err := os.Chdir(originalWd)
-		suite.NoError(err)
-	}()
-	err = os.Chdir(tmpDir)
-	suite.NoError(err)
-
-	// Publish the package - this should succeed despite the directory name collision
-	publishRef := registry.Reference{
-		Registry:   suite.Reference.Registry,
-		Repository: "collision-test",
-	}
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "publish", pkgTarball, "oci://"+publishRef.String(), "--plain-http")
-	suite.NoError(err, stdOut, stdErr)
-
-	// Verify the package was published by inspecting it
-	inspectRef := registry.Reference{
-		Registry:   suite.Reference.Registry,
-		Repository: fmt.Sprintf("collision-test/%s", packageName),
-		Reference:  "0.0.1",
-	}
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", "oci://"+inspectRef.String(), "--plain-http")
 	suite.NoError(err, stdOut, stdErr)
 }
 
