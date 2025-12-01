@@ -30,8 +30,8 @@ import (
 
 const defaultRetries = 3
 
-// PushOpts is the configuration for pushing images.
-type PushOpts struct {
+// PushOptions is the configuration for pushing images.
+type PushOptions struct {
 	OCIConcurrency        int
 	NoChecksum            bool
 	Arch                  string
@@ -43,7 +43,7 @@ type PushOpts struct {
 }
 
 // Push pushes images to a registry.
-func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, registryInfo state.RegistryInfo, cfg PushOpts) error {
+func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, registryInfo state.RegistryInfo, cfg PushOptions) error {
 	start := time.Now()
 	if len(imageList) == 0 {
 		return fmt.Errorf("image list cannot be empty")

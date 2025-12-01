@@ -93,7 +93,7 @@ func TestPush(t *testing.T) {
 			}
 
 			// push images to registry
-			cfg := PushOpts{
+			cfg := PushOptions{
 				PlainHTTP: true,
 				Arch:      "amd64",
 			}

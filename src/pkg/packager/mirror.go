@@ -59,7 +59,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushConfig := images.PushOpts{
+	pushConfig := images.PushOptions{
 		OCIConcurrency:        opts.OCIConcurrency,
 		PlainHTTP:             opts.PlainHTTP,
 		NoChecksum:            opts.NoImageChecksum,

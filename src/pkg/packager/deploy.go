@@ -460,7 +460,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushOpts{
+		pushConfig := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
