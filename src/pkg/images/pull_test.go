@@ -74,13 +74,11 @@ func TestCheckForIndex(t *testing.T) {
 			require.NoError(t, err)
 			cacheDir := t.TempDir()
 			dstDir := t.TempDir()
-			cfg := PullConfig{
-				Arch:                 tc.arch,
-				DestinationDirectory: dstDir,
-				ImageList:            []transform.Image{refInfo},
-				CacheDirectory:       cacheDir,
+			opts := PullOptions{
+				Arch:           tc.arch,
+				CacheDirectory: cacheDir,
 			}
-			_, err = Pull(ctx, cfg)
+			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
 				// Ensure the error message contains the digest of the manifests the user can use
@@ -148,15 +146,13 @@ func TestPull(t *testing.T) {
 
 			destDir := t.TempDir()
 			cacheDir := t.TempDir()
-			cfg := PullConfig{
-				DestinationDirectory: destDir,
-				CacheDirectory:       cacheDir,
-				RegistryOverrides:    tc.RegistryOverrides,
-				Arch:                 tc.arch,
-				ImageList:            images,
+			opts := PullOptions{
+				CacheDirectory:    cacheDir,
+				RegistryOverrides: tc.RegistryOverrides,
+				Arch:              tc.arch,
 			}
 
-			imageManifests, err := Pull(ctx, cfg)
+			imageManifests, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
@@ -207,14 +203,10 @@ func TestPullInvalidCache(t *testing.T) {
 	err = os.WriteFile(invalidLayerPath, invalidContent, 0777)
 	require.NoError(t, err)
 
-	opts := PullConfig{
-		DestinationDirectory: destDir,
-		CacheDirectory:       cacheDir,
-		ImageList: []transform.Image{
-			ref,
-		},
+	opts := PullOptions{
+		CacheDirectory: cacheDir,
 	}
-	_, err = Pull(ctx, opts)
+	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)
 	require.NoError(t, err)
 
 	pulledLayerPath := filepath.Join(destDir, "blobs", "sha256", correctLayerSha)
