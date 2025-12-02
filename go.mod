@@ -61,7 +61,7 @@ require (
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.34.2
 	oras.land/oras-go/v2 v2.6.0
-	github.com/fluxcd/cli-utils v0.36.0-flux.15
+	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.0
 	sigs.k8s.io/kustomize/kyaml v0.21.0
 	sigs.k8s.io/yaml v1.6.0
@@ -176,7 +176,8 @@ require (
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
 	github.com/olekukonko/ll v0.1.2 // indirect
-	github.com/onsi/gomega v1.36.2 // indirect
+	github.com/onsi/ginkgo/v2 v2.25.2 // indirect
+	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/otiai10/mint v1.6.3 // indirect
 	github.com/pandatix/go-cvss v0.6.2 // indirect
 	github.com/pkg/xattr v0.4.9 // indirect
@@ -425,7 +426,7 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/licensecheck v0.3.1 // indirect
-	github.com/google/pprof v0.0.0-20250602020802-c6617b811d0e // indirect
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.7 // indirect
