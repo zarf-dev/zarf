@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/gitea"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -59,11 +59,8 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	if len(refs) == 0 {
 		return nil
 	}
-	pushConfig := images.PushConfig{
+	pushOpts := images.PushOptions{
 		OCIConcurrency:        opts.OCIConcurrency,
-		SourceDirectory:       pkgLayout.GetImageDirPath(),
-		RegistryInfo:          registryInfo,
-		ImageList:             refs,
 		PlainHTTP:             opts.PlainHTTP,
 		NoChecksum:            opts.NoImageChecksum,
 		Arch:                  pkgLayout.Pkg.Build.Architecture,
@@ -71,7 +68,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 		Cluster:               opts.Cluster,
 	}
-	err := images.Push(ctx, pushConfig)
+	err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), registryInfo, pushOpts)
 	if err != nil {
 		return fmt.Errorf("failed to push images: %w", err)
 	}
