@@ -7,7 +7,6 @@ package lint
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -68,7 +67,6 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
-	PkgValidateErrDocumentationDuplicate  = "duplicate filename %q in documentation"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -84,9 +82,6 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		if varErr := constant.Validate(); varErr != nil {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
-	}
-	if docErr := validateDocumentation(pkg.Documentation); docErr != nil {
-		err = errors.Join(err, docErr)
 	}
 	uniqueComponentNames := make(map[string]bool)
 	groupDefault := make(map[string]string)
@@ -337,20 +332,5 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 		err = errors.Join(err, fmt.Errorf(PkgValidateErrManifestFileOrKustomize, manifest.Name))
 	}
 
-	return err
-}
-
-func validateDocumentation(documentation map[string]string) error {
-	var err error
-	// FIXME: make test case where this breaks
-	baseNames := make(map[string]bool)
-	for _, path := range documentation {
-		base := filepath.Base(path)
-		if baseNames[base] {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrDocumentationDuplicate, base))
-		} else {
-			baseNames[base] = true
-		}
-	}
 	return err
 }
