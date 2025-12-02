@@ -19,15 +19,15 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -63,11 +63,11 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer        state.GitServerInfo
-	RegistryInfo     state.RegistryInfo
-	ArtifactServer   state.ArtifactServerInfo
-	StorageClass     string
-	InjectorHostPort int
+	GitServer      state.GitServerInfo
+	RegistryInfo   state.RegistryInfo
+	ArtifactServer state.ArtifactServerInfo
+	StorageClass   string
+	InjectorPort   int
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
@@ -106,8 +106,8 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
-	if opts.InjectorHostPort == 0 {
-		opts.InjectorHostPort = state.ZarfInjectorHostPort
+	if opts.InjectorPort == 0 && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		opts.InjectorPort = state.ZarfInjectorDefaultHostPort
 	}
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
@@ -332,6 +332,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
+			InjectorPort:   opts.InjectorPort,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -365,9 +366,8 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
-			d.s.InjectorInfo.Port = opts.InjectorHostPort
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.InjectorInfo.Port, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
@@ -460,11 +460,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushConfig{
+		pushOpts := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
@@ -472,7 +469,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
 		}
-		err := images.Push(ctx, pushConfig)
+		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}

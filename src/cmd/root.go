@@ -19,7 +19,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/feature"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -208,37 +208,17 @@ func NewZarfCommand() *cobra.Command {
 
 	rootCmd.AddCommand(newVersionCommand())
 
+	// Setup flags - skip for vendor-only commands
+	if !checkVendorOnlyFromArgs() {
+		setupRootFlags(rootCmd)
+	}
+
 	return rootCmd
 }
 
-// Execute is the entrypoint for the CLI.
-func Execute(ctx context.Context) {
-	cmd, err := rootCmd.ExecuteContextC(ctx)
-	if err == nil {
-		return
-	}
-
-	// Check if we need to use the default err printer
-	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
-	comps := strings.Split(cmd.CommandPath(), " ")
-	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
-		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
-		os.Exit(1)
-	}
-
-	// NOTE(mkcp): This line must be run with the unconfigured default logger because user flags are set downstream
-	// in rootCmd's preRun func.
-	logger.Default().Error(err.Error())
-	os.Exit(1)
-}
-
-func init() {
+// setupRootFlags sets up the persistent flags for the root command
+func setupRootFlags(rootCmd *cobra.Command) {
 	var showNoProgressDeprecation bool
-	// Skip for vendor-only commands
-	if checkVendorOnlyFromArgs() {
-		return
-	}
-
 	vpr := getViper()
 
 	// Features
@@ -261,6 +241,26 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
 	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
 	_ = rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http or --insecure-skip-tls-verify instead.")
+}
+
+// Execute is the entrypoint for the CLI.
+func Execute(ctx context.Context) {
+	cmd, err := rootCmd.ExecuteContextC(ctx)
+	if err == nil {
+		return
+	}
+
+	// Check if we need to use the default err printer
+	defaultPrintCmds := []string{"helm", "yq", "kubectl"}
+	comps := strings.Split(cmd.CommandPath(), " ")
+	if len(comps) > 1 && comps[1] == "tools" && slices.Contains(defaultPrintCmds, comps[2]) {
+		cmd.PrintErrln(cmd.ErrPrefix(), err.Error())
+		os.Exit(1)
+	}
+
+	// Use default logger in case there was an error prior to the logger being setup
+	logger.Default().Error(err.Error())
+	os.Exit(1)
 }
 
 // setupLogger handles creating a logger and setting it as the global default.

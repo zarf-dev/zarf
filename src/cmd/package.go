@@ -24,8 +24,8 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/value"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"oras.land/oras-go/v2/registry"
 
@@ -1376,6 +1376,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY",
+		Aliases: []string{"push"},
 		Short:   lang.CmdPackagePublishShort,
 		Example: lang.CmdPackagePublishExample,
 		Args:    cobra.ExactArgs(2),

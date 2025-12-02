@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"

@@ -67,6 +67,10 @@ The CLI docs (located at `site/src/content/docs/commands`), and [`zarf.schema.js
 
 We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 
+## Examples
+Zarf maintains a gallery of different examples to give users living documentation on real-life Zarf use cases.
+Contributions are highly welcome. When adding an example, be sure to also add it to the [make target](https://github.com/zarf-dev/zarf/blob/main/Makefile#L152) `build-examples`.
+
 ## Architecture Decision Records (ADR)
 
 We've chosen to use ADRs to document architecturally significant decisions. We primarily use the guidance found in [this article by Michael Nygard](http://thinkrelevance.com/blog/2011/11/15/documenting-architecture-decisions) with a couple of tweaks:

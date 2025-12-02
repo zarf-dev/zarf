@@ -371,7 +371,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
 
 	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
-	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo"
+	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo --output-directory ./podinfo"
 
 	CmdDevPatchGitShort = "Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:\n" +
 		"This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook."
@@ -398,6 +398,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	CmdDevFlagRegistry             = "Override the ###ZARF_REGISTRY### value"
 	CmdDevFlagFindImagesWhy        = "Prints the source manifest for the specified image"
 	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
+	CmdDevFlagFindImagesUpdate     = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
 
 	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
 	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
