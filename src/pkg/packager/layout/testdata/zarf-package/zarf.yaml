@@ -3,7 +3,7 @@ metadata:
   name: test
   version: v0.0.1
 documentation:
-  my-docs: doc.md
+  my-doc: doc.md
 components:
   - name: helm-charts
     required: true

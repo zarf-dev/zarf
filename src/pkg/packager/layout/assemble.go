@@ -163,8 +163,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	for _, file := range pkg.Documentation {
-		if err = copyDocumentationFile(file, packagePath, buildPath); err != nil {
+	for key, file := range pkg.Documentation {
+		if err = copyDocumentationFile(key, file, packagePath, buildPath); err != nil {
 			return nil, err
 		}
 	}
@@ -226,8 +226,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	for _, file := range pkg.Documentation {
-		if err = copyDocumentationFile(file, packagePath, buildPath); err != nil {
+	for key, file := range pkg.Documentation {
+		if err = copyDocumentationFile(key, file, packagePath, buildPath); err != nil {
 			return nil, err
 		}
 	}
@@ -922,13 +922,14 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	return nil
 }
 
-func copyDocumentationFile(file, packagePath, buildPath string) error {
+func copyDocumentationFile(key, file, packagePath, buildPath string) error {
 	src := file
 	if !filepath.IsAbs(src) {
 		src = filepath.Join(packagePath, file)
 	}
 
-	dst := filepath.Join(buildPath, DocumentationDir, filepath.Base(src))
+	docFilename := FormatDocumentFileName(key, file)
+	dst := filepath.Join(buildPath, DocumentationDir, docFilename)
 	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
 		return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
 	}

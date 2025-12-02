@@ -127,7 +127,7 @@ func TestAssembleLayers(t *testing.T) {
 			hasRelativeLayer := false
 			// relative layer properly formatted
 			for _, layer := range docLayers {
-				if layer.Annotations["org.opencontainers.image.title"] == "documentation/common.go" {
+				if layer.Annotations["org.opencontainers.image.title"] == "documentation/relative-file-common.go" {
 					hasRelativeLayer = true
 					break
 				}

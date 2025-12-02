@@ -351,16 +351,22 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
-	for _, fileName := range keysToExtract {
-		srcPath := filepath.Join(docDir, filepath.Base(fileName))
-		dstPath := filepath.Join(destPath, filepath.Base(fileName))
+	for key, file := range keysToExtract {
+		docFileName := FormatDocumentFileName(key, file)
+		srcPath := filepath.Join(docDir, docFileName)
+		dstPath := filepath.Join(destPath, docFileName)
 		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
-			return fmt.Errorf("failed to copy documentation file %s: %w", fileName, err)
+			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
 		}
 	}
 
 	l.Info("documentation successfully extracted", "path", destPath)
 	return nil
+}
+
+// FormatDocumentFileName for storing the document in the package or presenting it to the user
+func FormatDocumentFileName(key, file string) string {
+	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
 }
 
 // GetComponentDir returns a path to the directory in the given component.

@@ -991,8 +991,8 @@ func TestGetDocumentation(t *testing.T) {
 		require.NoError(t, os.MkdirAll(docDir, 0o700))
 
 		// Create test documentation files
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "README.md"), []byte("readme content"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "LICENSE"), []byte("license content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docDir, "readme-README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docDir, "license-LICENSE"), []byte("license content"), 0o644))
 
 		pkg := v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test"},
@@ -1012,8 +1012,8 @@ func TestGetDocumentation(t *testing.T) {
 		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
 		require.NoError(t, err)
 
-		require.FileExists(t, filepath.Join(outputDir, "README.md"))
-		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
+		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
+		require.FileExists(t, filepath.Join(outputDir, "license-LICENSE"))
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1022,7 +1022,7 @@ func TestGetDocumentation(t *testing.T) {
 		docDir := filepath.Join(pkgDir, DocumentationDir)
 		require.NoError(t, os.MkdirAll(docDir, 0o700))
 
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docDir, "readme-README.md"), []byte("readme content"), 0o644))
 		require.NoError(t, os.WriteFile(filepath.Join(docDir, "LICENSE"), []byte("license content"), 0o644))
 
 		pkg := v1alpha1.ZarfPackage{
@@ -1043,7 +1043,7 @@ func TestGetDocumentation(t *testing.T) {
 		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
 		require.NoError(t, err)
 
-		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
 		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 

@@ -67,7 +67,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	docsDir := suite.T().TempDir()
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "documentation", simplePackageRef, "--plain-http", publicKeyFlag, "--output", docsDir)
 	suite.NoError(err, stdOut, stdErr)
-	suite.FileExists(filepath.Join(docsDir, "simple-package-documentation", "test.txt"))
+	suite.FileExists(filepath.Join(docsDir, "simple-package-documentation", "some-text-test.txt"))
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)

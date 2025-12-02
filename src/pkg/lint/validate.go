@@ -342,6 +342,7 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 
 func validateDocumentation(documentation map[string]string) error {
 	var err error
+	// FIXME: make test case where this breaks
 	baseNames := make(map[string]bool)
 	for _, path := range documentation {
 		base := filepath.Base(path)

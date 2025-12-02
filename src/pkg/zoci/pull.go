@@ -119,8 +119,8 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 
 	// documentation layers
 	docLayers := make([]ocispec.Descriptor, 0)
-	for _, file := range pkg.Documentation {
-		desc := root.Locate(filepath.Join(layout.DocumentationDir, filepath.Base(file)))
+	for key, file := range pkg.Documentation {
+		desc := root.Locate(filepath.Join(layout.DocumentationDir, layout.FormatDocumentFileName(key, file)))
 		if !oci.IsEmptyDescriptor(desc) {
 			docLayers = append(docLayers, desc)
 		}

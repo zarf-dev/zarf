@@ -5,7 +5,7 @@ metadata:
   version: 0.0.1
 
 documentation:
-  simple: "test.txt"
+  some-text: "test.txt"
 
 components:
   - name: on-deploy-with-template-use-of-variable
