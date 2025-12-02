@@ -311,7 +311,7 @@ func TestPublishPackageDirectoryNameCollision(t *testing.T) {
 
 			// Ensure we restore the original directory
 			t.Cleanup(func() {
-				_ = os.Chdir(origDir)
+				require.NoError(t, os.Chdir(origDir))
 			})
 
 			// Publish test package

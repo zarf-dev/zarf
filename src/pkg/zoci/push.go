@@ -51,7 +51,11 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return ocispec.Descriptor{}, fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			l.Warn("failed to remove temp directory", "path", tempDir, "error", err)
+		}
+	}()
 
 	src, err := file.New(tempDir)
 	if err != nil {
