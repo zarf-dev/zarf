@@ -7,7 +7,7 @@ metadata:
 # The documentation key can be utilized to pass information to package consumers
 # Commonly used to detail package configuration, or as in this instance, application specific documentation.
 documentation:
-  secrets: "secrets.md"
+  walkthrough: "secrets.md"
 
 components:
   - name: baseline
