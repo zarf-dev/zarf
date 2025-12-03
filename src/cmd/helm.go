@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"helm.sh/helm/v3/pkg/kube"
 	helmcmd "helm.sh/helm/v4/pkg/cmd"
+	"helm.sh/helm/v4/pkg/kube"
 )
 
 func newHelmCommand() *cobra.Command {
