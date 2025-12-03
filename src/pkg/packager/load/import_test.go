@@ -48,7 +48,7 @@ func TestResolveImports(t *testing.T) {
 			path: "./testdata/import/import-each-other",
 		},
 		{
-			name: "variables, constants, and values are resolved correctly",
+			name: "variables and constants are resolved correctly",
 			path: "./testdata/import/variables",
 		},
 		{

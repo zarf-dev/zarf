@@ -11,11 +11,6 @@ variables:
     default: "default from child"
   - name: CHILD_VAR
     default: "default from child"
-values:
-  files:
-    - ../child-values.yaml
-  schema: "child-values.schema.json"
-
 components:
   - name: first-imported-component
     required: true
