@@ -166,18 +166,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	// Copy schema file if specified
 	if pkg.Values.Schema != "" {
-		l.Debug("copying values schema file to package", "schema", pkg.Values.Schema)
-		// Resolve the schema path
-		schemaPath := pkg.Values.Schema
-		if !filepath.IsAbs(schemaPath) {
-			schemaPath = filepath.Join(packagePath, ValuesDir, pkg.Values.Schema)
-		}
-		// Validate the schema is a valid JSON Schema before copying
-		if err = value.ValidateSchemaFile(schemaPath); err != nil {
-			return nil, fmt.Errorf("values schema validation failed: %w", err)
-		}
-		// NOTE(mkcp): values schemas should have the same copy-constraints as values files.
-		if err = copyValuesFile(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err
 		}
 	}
@@ -924,6 +913,45 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	// Set appropriate file permissions
 	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	}
+
+	return nil
+}
+
+// copyValuesSchema validates and copies a values schema file to the build directory.
+// It validates the schema is valid JSON Schema, checks for path traversal, and copies
+// the file to buildPath/values/<schema>.
+func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+	l.Debug("copying values schema file to package", "schema", schema)
+
+	// Resolve the schema source path
+	schemaSrc := schema
+	if !filepath.IsAbs(schemaSrc) {
+		schemaSrc = filepath.Join(packagePath, ValuesDir, schema)
+	}
+
+	// Ensure the schema is a valid
+	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
+		return fmt.Errorf("values schema validation failed: %w", err)
+	}
+
+	// Ensure relative paths don't escape the package root
+	cleanSchema := filepath.Clean(schema)
+	if strings.HasPrefix(cleanSchema, "..") {
+		return fmt.Errorf("values schema path %s escapes package root", schema)
+	}
+
+	// Copy schema file to pre-archive package
+	schemaDst := filepath.Join(buildPath, ValuesDir, cleanSchema)
+	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
+	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
+		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
+	}
+
+	// Set appropriate file permissions
+	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
 	}
 
 	return nil
