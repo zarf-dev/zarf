@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -67,6 +68,7 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrDocumentationDuplicate  = "formatted filename %q is duplicated"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -82,6 +84,9 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		if varErr := constant.Validate(); varErr != nil {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
+	}
+	if docErr := validateDocumentation(pkg.Documentation); docErr != nil {
+		err = errors.Join(err, docErr)
 	}
 	uniqueComponentNames := make(map[string]bool)
 	groupDefault := make(map[string]string)
@@ -155,6 +160,20 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	for groupKey, componentNames := range groupedComponents {
 		if len(componentNames) == 1 {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
+		}
+	}
+	return err
+}
+
+func validateDocumentation(documentation map[string]string) error {
+	var err error
+	baseNames := make(map[string]bool)
+	for key, filename := range documentation {
+		base := layout.FormatDocumentFileName(key, filename)
+		if baseNames[base] {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrDocumentationDuplicate, base))
+		} else {
+			baseNames[base] = true
 		}
 	}
 	return err

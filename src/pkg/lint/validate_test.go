@@ -138,6 +138,27 @@ func TestZarfPackageValidate(t *testing.T) {
 				PkgValidateErrYOLONoDistro,
 			},
 		},
+		{
+			name: "duplicate documentation formatted names",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "package-with-duplicate-docs",
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+					},
+				},
+				Documentation: map[string]string{
+					"readme":      "cool-readme.md",
+					"readme-cool": "readme.md",
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrDocumentationDuplicate, "readme-cool-readme.md"),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -484,6 +505,58 @@ func TestValidateComponentAction(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateAction(tt.action)
+			if tt.expectedErrs == nil {
+				require.NoError(t, err)
+				return
+			}
+			errs := strings.Split(err.Error(), "\n")
+			require.ElementsMatch(t, tt.expectedErrs, errs)
+		})
+	}
+}
+
+func TestValidateDocumentation(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		documentation map[string]string
+		expectedErrs  []string
+	}{
+		{
+			name:          "valid documentation with unique basenames",
+			documentation: map[string]string{"readme": "docs/README.md", "guide": "docs/GUIDE.md"},
+			expectedErrs:  nil,
+		},
+		{
+			name:          "empty documentation",
+			documentation: map[string]string{},
+			expectedErrs:  nil,
+		},
+		{
+			name: "duplicate names should work",
+			documentation: map[string]string{
+				"guide1": "docs/GUIDE.md",
+				"guide2": "other/GUIDE.md",
+				"read1":  "docs/README.md",
+				"read2":  "another/README.md",
+			},
+		},
+		{
+			name: "should error if formatted names conflict",
+			documentation: map[string]string{
+				"my":    "oh-my.txt",
+				"my-oh": "my.txt",
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrDocumentationDuplicate, "my-oh-my.txt"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validateDocumentation(tt.documentation)
 			if tt.expectedErrs == nil {
 				require.NoError(t, err)
 				return
