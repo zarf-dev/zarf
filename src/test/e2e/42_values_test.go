@@ -102,11 +102,10 @@ func TestValuesSchema(t *testing.T) {
 		tmpdir := t.TempDir()
 
 		// Create should fail with invalid values
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
+		_, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
 		require.Error(t, err, "expected error for invalid values")
 		// Check that the error message mentions validation failure
-		output := stdOut + stdErr
-		require.Contains(t, output, "values validation failed", "error should mention schema validation failure")
+		require.Contains(t, stdErr, "values validation failed", "error should mention schema validation failure")
 	})
 
 	t.Run("invalid override values fail schema validation at deploy time", func(t *testing.T) {
