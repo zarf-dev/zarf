@@ -242,9 +242,6 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
-		// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
-		client.ForceConflicts = true
-
 		// Perform the loadedChart upgrade.
 		_, err := client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
 		if err != nil {
@@ -306,7 +303,6 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if !ok {
 		return nil, fmt.Errorf("unable to cast release to v1.Release type")
 	}
-	fmt.Println("status is", release.Info.Status)
 	return release, nil
 }
 
@@ -340,7 +336,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Not sure why this is failing. For instance during `zarf tools update-creds`
 	// This can only be enabled when ssa is enabled
 	if lastRelease.ApplyMethod == "ssa" {
-		client.ForceConflicts = true
+		client.ForceConflicts = adoptExistingResources
 	}
 
 	client.SkipCRDs = true
@@ -372,7 +368,6 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if !ok {
 		return nil, fmt.Errorf("unable to cast release to v1.Release type")
 	}
-	fmt.Println("status is", release.Info.Status)
 	return release, nil
 }
 
