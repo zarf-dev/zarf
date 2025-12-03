@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
@@ -166,6 +167,15 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	// Copy schema file if specified
 	if pkg.Values.Schema != "" {
 		l.Debug("copying values schema file to package", "schema", pkg.Values.Schema)
+		// Resolve the schema path
+		schemaPath := pkg.Values.Schema
+		if !filepath.IsAbs(schemaPath) {
+			schemaPath = filepath.Join(packagePath, ValuesDir, pkg.Values.Schema)
+		}
+		// Validate the schema is a valid JSON Schema before copying
+		if err = value.ValidateSchemaFile(schemaPath); err != nil {
+			return nil, fmt.Errorf("values schema validation failed: %w", err)
+		}
 		// NOTE(mkcp): values schemas should have the same copy-constraints as values files.
 		if err = copyValuesFile(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err

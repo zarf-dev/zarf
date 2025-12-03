@@ -325,6 +325,31 @@ func (e *SchemaValidationError) Unwrap() error {
 	return e.Err
 }
 
+// ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
+// It checks that the file exists, is readable, and can be parsed as a valid JSON Schema.
+func ValidateSchemaFile(schemaPath string) error {
+	// Check file exists and is readable
+	if _, err := os.Stat(schemaPath); err != nil {
+		return fmt.Errorf("unable to access schema file %s: %w", schemaPath, err)
+	}
+
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
+	}
+	absPath = filepath.ToSlash(absPath)
+
+	// Attempt to compile the schema - this validates it's valid JSON Schema
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+	_, err = gojsonschema.NewSchema(schemaLoader)
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
+	}
+
+	return nil
+}
+
 // InvalidFileExtError represents an error when a file has an invalid extension
 type InvalidFileExtError struct {
 	FilePath string
