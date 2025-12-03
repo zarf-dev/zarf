@@ -272,7 +272,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		}
 	}
 
-	l.Info("done pulling images", "count", imageList, "duration", time.Since(pullStart).Round(time.Millisecond*100))
+	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return imagesWithManifests, nil
 }
