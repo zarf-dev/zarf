@@ -23,8 +23,8 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -38,7 +38,7 @@ import (
 
 var (
 	imageCheck      = regexp.MustCompile(`(?mi)"image":"((([a-z0-9._-]+)/)?([a-z0-9._-]+)(:([a-z0-9._-]+))?)"`)
-	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-.\/:]+:[\w.\-]*[a-z\.\-][\w.\-]*)"`)
+	imageFuzzyCheck = regexp.MustCompile(`(?mi)["|=]([a-z0-9\-_.\/:]+:[\w.\-_]*[a-z\.\-_][\w.\-_]*)"`)
 )
 
 // FindImagesOptions declares the parameters to find images.
