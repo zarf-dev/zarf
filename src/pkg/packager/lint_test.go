@@ -9,12 +9,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestLintPackageWithImports(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-
 	testCases := []struct {
 		name     string
 		path     string

@@ -9,12 +9,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestPackageCreatePublishArch(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name         string
@@ -42,7 +40,6 @@ func TestPackageCreatePublishArch(t *testing.T) {
 }
 
 func TestPackageCreateDifferentialOCIPackage(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name           string
