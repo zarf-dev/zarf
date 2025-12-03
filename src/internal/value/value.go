@@ -258,10 +258,7 @@ func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOp
 	// Convert to absolute path and ensure forward slashes for URI
 	absPath, err := filepath.Abs(schemaPath)
 	if err != nil {
-		return &SchemaValidationError{
-			SchemaPath: schemaPath,
-			Err:        fmt.Errorf("failed to resolve absolute path: %w", err),
-		}
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
 	}
 	// Convert backslashes to forward slashes for file URI
 	absPath = filepath.ToSlash(absPath)
@@ -273,10 +270,7 @@ func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOp
 	// Validate
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
-		return &SchemaValidationError{
-			SchemaPath: schemaPath,
-			Err:        fmt.Errorf("failed to load or parse schema: %w", err),
-		}
+		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaPath, err)
 	}
 
 	// Check if validation passed
