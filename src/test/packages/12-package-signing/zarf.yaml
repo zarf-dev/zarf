@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: basic-signing
+
+components:
+- name: deselect-me
+  default: true
+
+- name: optional

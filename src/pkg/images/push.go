@@ -29,37 +29,56 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const defaultRetries = 3
 
+// PushOptions is the configuration for pushing images.
+type PushOptions struct {
+	OCIConcurrency        int
+	NoChecksum            bool
+	Arch                  string
+	Retries               int
+	PlainHTTP             bool
+	InsecureSkipTLSVerify bool
+	Cluster               *cluster.Cluster
+	ResponseHeaderTimeout time.Duration
+}
+
 // Push pushes images to a registry.
-func Push(ctx context.Context, cfg PushConfig) error {
+func Push(ctx context.Context, imageList []transform.Image, sourceDirectory string, registryInfo state.RegistryInfo, cfg PushOptions) error {
 	start := time.Now()
+	if len(imageList) == 0 {
+		return fmt.Errorf("image list cannot be empty")
+	}
+	if sourceDirectory == "" {
+		return fmt.Errorf("source directory cannot be empty")
+	}
+	if registryInfo.Address == "" {
+		return fmt.Errorf("registry address must be specified")
+	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
-	}
-	if cfg.RegistryInfo.Address == "" {
-		return fmt.Errorf("registry address must be specified")
 	}
 	if cfg.ResponseHeaderTimeout <= 0 {
 		cfg.ResponseHeaderTimeout = 10 * time.Second
 	}
-	cfg.ImageList = helpers.Unique(cfg.ImageList)
+	imageList = helpers.Unique(imageList)
 	toPush := map[string]struct{}{}
-	for _, img := range cfg.ImageList {
+	for _, img := range imageList {
 		toPush[img.Reference] = struct{}{}
 	}
 	l := logger.From(ctx)
 
-	err := addRefNameAnnotationToImages(cfg.SourceDirectory)
+	err := addRefNameAnnotationToImages(sourceDirectory)
 	if err != nil {
 		return err
 	}
 
-	src, err := oci.NewWithContext(ctx, cfg.SourceDirectory)
+	src, err := oci.NewWithContext(ctx, sourceDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
@@ -73,7 +92,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 		if cfg.Cluster != nil {
 			var err error
 			var registryURL string
-			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, cfg.RegistryInfo)
+			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, registryInfo)
 			if err != nil {
 				return err
 			}
@@ -85,7 +104,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 				defer tunnel.Close()
 			}
 		} else {
-			registryRef, err = parseRegistryReference(cfg.RegistryInfo.Address)
+			registryRef, err = parseRegistryReference(registryInfo.Address)
 			if err != nil {
 				return fmt.Errorf("failed to get reference from registry address: %w", err)
 			}
@@ -95,8 +114,8 @@ func Push(ctx context.Context, cfg PushConfig) error {
 			Client: orasRetry.DefaultClient,
 			Cache:  auth.NewCache(),
 			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
-				Username: cfg.RegistryInfo.PushUsername,
-				Password: cfg.RegistryInfo.PushPassword,
+				Username: registryInfo.PushUsername,
+				Password: registryInfo.PushPassword,
 			}),
 		}
 		// Use MTLS if the registry client cert exists in cluster
@@ -215,7 +234,7 @@ func Push(ctx context.Context, cfg PushConfig) error {
 	if err != nil {
 		return err
 	}
-	l.Info("done pushing images", "count", len(cfg.ImageList), "duration", time.Since(start).Round(time.Millisecond*100))
+	l.Info("done pushing images", "count", len(imageList), "duration", time.Since(start).Round(time.Millisecond*100))
 	return nil
 }
 

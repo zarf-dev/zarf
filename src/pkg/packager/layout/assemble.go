@@ -22,16 +22,14 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -53,6 +51,8 @@ type AssembleOptions struct {
 	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -118,17 +118,15 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
-		pullCfg := images.PullConfig{
+		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
-			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, pullCfg)
+		manifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +172,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -185,12 +183,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
 	if err != nil {
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -200,9 +203,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
 type AssembleSkeletonOptions struct {
-	SigningKeyPath     string
-	SigningKeyPassword string
-	Flavor             string
+	SigningKeyPath       string
+	SigningKeyPassword   string
+	Flavor               string
+	WithBuildMachineInfo bool
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -237,18 +241,13 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
 		return nil, err
 	}
 	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
-	if err != nil {
-		return nil, err
-	}
-
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -260,6 +259,16 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
+	}
+
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
+	if err != nil {
+		return nil, err
 	}
 
 	return pkgLayout, nil
@@ -478,7 +487,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
 			path = filepath.Join(packagePath, path)
 		}
-		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 		}
 	}
@@ -663,7 +672,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
@@ -696,21 +705,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
 	now := time.Now()
-	// Just use $USER env variable to avoid CGO issue.
-	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
-	// Record the name of the user creating the package.
-	if runtime.GOOS == "windows" {
-		pkg.Build.User = os.Getenv("USERNAME")
-	} else {
-		pkg.Build.User = os.Getenv("USER")
-	}
+	if withBuildMachineInfo {
+		// Just use $USER env variable to avoid CGO issue.
+		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
+		// Record the name of the user creating the package.
+		if runtime.GOOS == "windows" {
+			pkg.Build.User = os.Getenv("USERNAME")
+		} else {
+			pkg.Build.User = os.Getenv("USER")
+		}
 
-	// Record the hostname of the package creation terminal.
-	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
-	hostname, _ := os.Hostname()
-	pkg.Build.Terminal = hostname
+		// Record the hostname of the package creation terminal.
+		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
+		hostname, _ := os.Hostname()
+		pkg.Build.Terminal = hostname
+	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion
@@ -734,6 +745,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	pkg.Build.RegistryOverrides = overrides
+
+	// set signed to false by default - this is updated if signing occurs.
+	signed := false
+	pkg.Build.Signed = &signed
 
 	return pkg
 }
@@ -769,35 +784,6 @@ func getChecksum(dirPath string) (string, string, error) {
 	checksumContent := strings.Join(checksumData, "\n") + "\n"
 	sha := sha256.Sum256([]byte(checksumContent))
 	return checksumContent, hex.EncodeToString(sha[:]), nil
-}
-
-func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
-	if signingKeyPath == "" {
-		return nil
-	}
-	passFunc := func(_ bool) ([]byte, error) {
-		return []byte(signingKeyPassword), nil
-	}
-	keyOpts := options.KeyOpts{
-		KeyRef:   signingKeyPath,
-		PassFunc: passFunc,
-	}
-	rootOpts := &options.RootOptions{
-		Verbose: false,
-		Timeout: options.DefaultTimeout,
-	}
-	_, err := sign.SignBlobCmd(
-		rootOpts,
-		keyOpts,
-		filepath.Join(dirPath, ZarfYAML),
-		true,
-		filepath.Join(dirPath, Signature),
-		"",
-		false)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {

@@ -93,14 +93,11 @@ func TestPush(t *testing.T) {
 			}
 
 			// push images to registry
-			cfg := PushConfig{
-				SourceDirectory: tc.SourceDirectory,
-				RegistryInfo:    regInfo,
-				PlainHTTP:       true,
-				Arch:            "amd64",
-				ImageList:       imageList,
+			opts := PushOptions{
+				PlainHTTP: true,
+				Arch:      "amd64",
 			}
-			err = Push(ctx, cfg)
+			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
 
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)

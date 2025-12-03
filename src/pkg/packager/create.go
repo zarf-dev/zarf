@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -32,10 +32,13 @@ type CreateOptions struct {
 	DifferentialPackagePath string
 	OCIConcurrency          int
 	CachePath               string
+	WithBuildMachineInfo    bool
 	// applicable when output is an OCI registry
 	RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 }
 
 // Create takes a path to a directory containing a ZarfPackageConfig and returns the path to the created package
@@ -45,10 +48,11 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:        opts.Flavor,
-		SetVariables:  opts.SetVariables,
-		CachePath:     opts.CachePath,
-		IsInteractive: opts.IsInteractive,
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.SetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: opts.SkipVersionCheck,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -75,14 +79,15 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	assembleOpt := layout.AssembleOptions{
-		SkipSBOM:            opts.SkipSBOM,
-		OCIConcurrency:      opts.OCIConcurrency,
-		DifferentialPackage: differentialPkg,
-		Flavor:              opts.Flavor,
-		RegistryOverrides:   opts.RegistryOverrides,
-		SigningKeyPath:      opts.SigningKeyPath,
-		SigningKeyPassword:  opts.SigningKeyPassword,
-		CachePath:           opts.CachePath,
+		SkipSBOM:             opts.SkipSBOM,
+		OCIConcurrency:       opts.OCIConcurrency,
+		DifferentialPackage:  differentialPkg,
+		Flavor:               opts.Flavor,
+		RegistryOverrides:    opts.RegistryOverrides,
+		SigningKeyPath:       opts.SigningKeyPath,
+		SigningKeyPassword:   opts.SigningKeyPassword,
+		CachePath:            opts.CachePath,
+		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
 	if err != nil {

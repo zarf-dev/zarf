@@ -103,10 +103,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setVariables,
-		CachePath:     cachePath,
-		IsInteractive: true,
+		Flavor:           o.flavor,
+		SetVariables:     o.setVariables,
+		CachePath:        cachePath,
+		IsInteractive:    true,
+		SkipVersionCheck: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
@@ -283,6 +284,7 @@ type devDeployOptions struct {
 	optionalComponents     string
 	noYOLO                 bool
 	ociConcurrency         int
+	skipVersionCheck       bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -318,6 +320,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("skip-version-check")
 
 	return cmd
 }
@@ -355,6 +359,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
+		SkipVersionCheck:   o.skipVersionCheck,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -615,6 +620,7 @@ type devFindImagesOptions struct {
 	why                 string
 	skipCosign          bool
 	registryURL         string
+	update              bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -650,6 +656,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
 	cmd.Flags().BoolVar(&o.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	// update images in zarf.yaml file
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagFindImagesUpdate)
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
@@ -732,6 +740,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println(componentDefinition)
+
+	if o.update {
+		if err := packager.UpdateImages(ctx, baseDir, imagesScans); err != nil {
+			return fmt.Errorf("unable to create update: %w", err)
+		}
+	}
+
 	return nil
 }
 

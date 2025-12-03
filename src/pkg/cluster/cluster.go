@@ -171,6 +171,8 @@ type InitStateOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	// StorageClass of the k8s cluster Zarf is initializing
 	StorageClass string
+	// InjectorPort is the port that the injector will be exposed through
+	InjectorPort int
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -310,6 +312,10 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	if opts.StorageClass != "" {
 		s.StorageClass = opts.StorageClass
+	}
+
+	if opts.InjectorPort != 0 {
+		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
 	// Save the state back to K8s

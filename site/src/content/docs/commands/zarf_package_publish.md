@@ -38,6 +38,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
       --signing-key string          Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string     Password to the private key used for publishing packages
       --skip-signature-validation   Skip validating the signature of the Zarf package
+      --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
 ```
 
 ### Options inherited from parent commands

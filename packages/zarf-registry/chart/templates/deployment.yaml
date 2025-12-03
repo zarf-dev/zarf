@@ -79,6 +79,8 @@ spec:
               value: "Registry Realm"
             - name: REGISTRY_AUTH_HTPASSWD_PATH
               value: "/etc/docker/registry/htpasswd"
+            - name: OTEL_TRACES_EXPORTER
+              value: {{ .Values.opentelemetry.exporter | default "otlp" }}
 {{- if .Values.persistence.enabled }}
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: "/var/lib/registry"

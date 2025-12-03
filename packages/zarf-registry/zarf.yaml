@@ -58,6 +58,10 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: REGISTRY_OTEL_EXPORTER
+    description: set the opentelemetry exporter
+    default: "none"
+
   - name: REGISTRY_CREATE_SERVICE_ACCOUNT
     description: Toggle the creation of a new service account for the registry
     default: "false"
@@ -153,7 +157,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.0
+        version: 1.0.1
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
@@ -180,7 +184,7 @@ components:
       - name: docker-registry
         releaseName: zarf-docker-registry
         localPath: chart
-        version: 1.0.0
+        version: 1.0.1
         namespace: zarf
         valuesFiles:
           - registry-values.yaml
