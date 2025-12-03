@@ -351,7 +351,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 		return nil, err
 	}
 
-	return resources, err
+	return resources, nil
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
