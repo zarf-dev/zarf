@@ -950,7 +950,7 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	tarPath := filepath.Join(buildPath, DocumentationTar)
-	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, false); err != nil {
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
