@@ -113,6 +113,67 @@ func TestReproducibleTarballs(t *testing.T) {
 	require.Equal(t, pkg1.Metadata.AggregateChecksum, pkg2.Metadata.AggregateChecksum)
 }
 
+func TestDeterministicOCIPull(t *testing.T) {
+	t.Log("E2E: Deterministic OCI pull checksums")
+
+	// This test verifies that pulling the same OCI package multiple times
+	// produces identical checksums, ensuring deterministic archive creation
+	// even with concurrent OCI layer downloads.
+
+	var (
+		ociRef    = "oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0"
+		cosignKey = "cosign.pub"
+		tmp       = t.TempDir()
+		pull1Dir  = filepath.Join(tmp, "pull1")
+		pull2Dir  = filepath.Join(tmp, "pull2")
+		pull3Dir  = filepath.Join(tmp, "pull3")
+		pkgName   = fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
+	)
+
+	// Create output directories
+	require.NoError(t, os.MkdirAll(pull1Dir, 0o755))
+	require.NoError(t, os.MkdirAll(pull2Dir, 0o755))
+	require.NoError(t, os.MkdirAll(pull3Dir, 0o755))
+
+	// Pull 1
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "pull", ociRef, "--key", cosignKey, "-a", e2e.Arch, "-o", pull1Dir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkg1Path := filepath.Join(pull1Dir, pkgName)
+	require.FileExists(t, pkg1Path)
+
+	// Pull 2
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", ociRef, "--key", cosignKey, "-a", e2e.Arch, "-o", pull2Dir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkg2Path := filepath.Join(pull2Dir, pkgName)
+	require.FileExists(t, pkg2Path)
+
+	// Pull 3
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", ociRef, "--key", cosignKey, "-a", e2e.Arch, "-o", pull3Dir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkg3Path := filepath.Join(pull3Dir, pkgName)
+	require.FileExists(t, pkg3Path)
+
+	// Calculate checksums
+	checksum1, err := helpers.GetSHA256OfFile(pkg1Path)
+	require.NoError(t, err)
+
+	checksum2, err := helpers.GetSHA256OfFile(pkg2Path)
+	require.NoError(t, err)
+
+	checksum3, err := helpers.GetSHA256OfFile(pkg3Path)
+	require.NoError(t, err)
+
+	// Assert all three pulls produced identical checksums
+	require.Equal(t, checksum1, checksum2, "Pull 1 and Pull 2 checksums should match")
+	require.Equal(t, checksum2, checksum3, "Pull 2 and Pull 3 checksums should match")
+	require.Equal(t, checksum1, checksum3, "Pull 1 and Pull 3 checksums should match")
+
+	t.Logf("All three OCI pulls produced identical checksum: %s", checksum1)
+}
+
 func TestPackageTarballDirectoryStructure(t *testing.T) {
 	t.Log("E2E: Package tarball directory structure")
 
