@@ -172,6 +172,13 @@ func TestFindImages(t *testing.T) {
 						"registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1",
 					},
 				},
+				{
+					ComponentName: "underscores",
+					Matches:       []string{},
+					PotentialMatches: []string{
+						"docker.io/percona/mongodb_exporter:0.47.1",
+					},
+				},
 			},
 		},
 	}
@@ -208,7 +215,6 @@ func TestBuildImageMap(t *testing.T) {
 			},
 		},
 		Containers: []corev1.Container{
-
 			{
 				Image: "container-image",
 			},
