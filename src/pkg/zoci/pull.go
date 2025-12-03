@@ -117,12 +117,11 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 	layerMap[SbomLayers] = sbomLayers
 
-	// documentation layers
 	docLayers := make([]ocispec.Descriptor, 0)
-	for key, file := range pkg.Documentation {
-		desc := root.Locate(filepath.Join(layout.DocumentationDir, layout.FormatDocumentFileName(key, file)))
-		if !oci.IsEmptyDescriptor(desc) {
-			docLayers = append(docLayers, desc)
+	if len(pkg.Documentation) > 0 {
+		docDescriptor := root.Locate(layout.DocumentationTar)
+		if !oci.IsEmptyDescriptor(docDescriptor) {
+			docLayers = append(docLayers, docDescriptor)
 		}
 	}
 	layerMap[DocLayers] = docLayers

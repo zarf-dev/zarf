@@ -322,16 +322,16 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 // GetDocumentation extracts documentation files from the package to the given destination path.
 // If keys is empty, all documentation files are extracted.
 // If keys are provided, only those specific documentation files are extracted.
-func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) error {
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
 	l := logger.From(ctx)
 
 	if len(p.Pkg.Documentation) == 0 {
 		return fmt.Errorf("no documentation files found in package")
 	}
 
-	docDir := filepath.Join(p.dirPath, DocumentationDir)
-	if _, err := os.Stat(docDir); os.IsNotExist(err) {
-		return fmt.Errorf("documentation directory not found in package")
+	tarPath := filepath.Join(p.dirPath, DocumentationTar)
+	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
+		return fmt.Errorf("documentation.tar not found in package")
 	}
 
 	keysToExtract := make(map[string]string)
@@ -340,11 +340,25 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 			if filePath, ok := p.Pkg.Documentation[key]; ok {
 				keysToExtract[key] = filePath
 			} else {
-				return fmt.Errorf("key %s, not found in package documentation", key)
+				return fmt.Errorf("key %s not found in package documentation", key)
 			}
 		}
 	} else {
 		keysToExtract = p.Pkg.Documentation
+	}
+
+	// Extract tar to temp directory
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
+	if err != nil {
+		return fmt.Errorf("failed to extract documentation.tar: %w", err)
 	}
 
 	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
@@ -353,7 +367,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 
 	for key, file := range keysToExtract {
 		docFileName := FormatDocumentFileName(key, file)
-		srcPath := filepath.Join(docDir, docFileName)
+		srcPath := filepath.Join(tmpDir, docFileName)
 		dstPath := filepath.Join(destPath, docFileName)
 		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
 			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)

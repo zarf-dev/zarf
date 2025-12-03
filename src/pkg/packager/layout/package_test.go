@@ -987,12 +987,17 @@ func TestGetDocumentation(t *testing.T) {
 	t.Run("extract all documentation files", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgDir := filepath.Join(tmpDir, "package")
-		docDir := filepath.Join(pkgDir, DocumentationDir)
-		require.NoError(t, os.MkdirAll(docDir, 0o700))
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
 
-		// Create test documentation files
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "readme-README.md"), []byte("readme content"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "license-LICENSE"), []byte("license content"), 0o644))
+		// Create temp dir for documentation files
+		docTempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "license-LICENSE"), []byte("license content"), 0o644))
+
+		// Create documentation.tar
+		tarPath := filepath.Join(pkgDir, DocumentationTar)
+		err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+		require.NoError(t, err)
 
 		pkg := v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test"},
@@ -1009,7 +1014,7 @@ func TestGetDocumentation(t *testing.T) {
 		}
 
 		outputDir := filepath.Join(tmpDir, "output")
-		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		err = pkgLayout.GetDocumentation(ctx, outputDir, nil)
 		require.NoError(t, err)
 
 		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
@@ -1019,11 +1024,17 @@ func TestGetDocumentation(t *testing.T) {
 	t.Run("extract specific documentation keys", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgDir := filepath.Join(tmpDir, "package")
-		docDir := filepath.Join(pkgDir, DocumentationDir)
-		require.NoError(t, os.MkdirAll(docDir, 0o700))
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
 
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "readme-README.md"), []byte("readme content"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(docDir, "LICENSE"), []byte("license content"), 0o644))
+		// Create temp dir for documentation files
+		docTempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "license-LICENSE"), []byte("license content"), 0o644))
+
+		// Create documentation.tar
+		tarPath := filepath.Join(pkgDir, DocumentationTar)
+		err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+		require.NoError(t, err)
 
 		pkg := v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test"},
@@ -1040,11 +1051,11 @@ func TestGetDocumentation(t *testing.T) {
 		}
 
 		outputDir := filepath.Join(tmpDir, "output")
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
+		err = pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
 		require.NoError(t, err)
 
 		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
-		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
+		require.NoFileExists(t, filepath.Join(outputDir, "license-LICENSE"))
 	})
 
 	t.Run("error when no documentation in package", func(t *testing.T) {
@@ -1071,8 +1082,16 @@ func TestGetDocumentation(t *testing.T) {
 	t.Run("error when key not found", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		pkgDir := filepath.Join(tmpDir, "package")
-		docDir := filepath.Join(pkgDir, DocumentationDir)
-		require.NoError(t, os.MkdirAll(docDir, 0o700))
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		// Create temp dir for documentation files
+		docTempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
+
+		// Create documentation.tar
+		tarPath := filepath.Join(pkgDir, DocumentationTar)
+		err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+		require.NoError(t, err)
 
 		pkg := v1alpha1.ZarfPackage{
 			Metadata: v1alpha1.ZarfMetadata{Name: "test"},
@@ -1088,7 +1107,7 @@ func TestGetDocumentation(t *testing.T) {
 		}
 
 		outputDir := filepath.Join(tmpDir, "output")
-		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
+		err = pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
 	})
 }

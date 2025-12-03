@@ -46,8 +46,10 @@ const (
 	// extensionMz and extensionTmz denote minLZ-compressed tarballs.
 	extensionMz  = ".tar.mz"
 	extensionTmz = ".tmz"
-	// sbomFileName is the default filename for nested SBOM archives.
+	// sbomFileName is the filename for SBOM archives in a Zarf package.
 	sbomFileName = "sboms.tar"
+	// documentationFileName is the filename for Documentation archives in a Zarf package
+	documentationFileName = "documentation.tar"
 	// dirPerm defines the permission bits for created directories.
 	dirPerm = 0o755
 	// filePerm defines the permission bits for created files (unused).
@@ -277,7 +279,7 @@ func nestedUnarchive(ctx context.Context, extractor archives.Extractor, dst stri
 		}
 		if strings.HasSuffix(path, extensionTar) {
 			outDir := filepath.Join(strings.TrimSuffix(path, extensionTar), "..")
-			if info.Name() == sbomFileName {
+			if info.Name() == sbomFileName || info.Name() == documentationFileName {
 				outDir = strings.TrimSuffix(path, extensionTar)
 			}
 			if err := unarchive(ctx, extractor, path, outDir); err != nil {

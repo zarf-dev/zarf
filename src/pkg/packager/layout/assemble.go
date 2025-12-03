@@ -163,10 +163,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	for key, file := range pkg.Documentation {
-		if err = copyDocumentationFile(key, file, packagePath, buildPath); err != nil {
-			return nil, err
-		}
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
@@ -226,10 +224,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, err
 	}
 
-	for key, file := range pkg.Documentation {
-		if err = copyDocumentationFile(key, file, packagePath, buildPath); err != nil {
-			return nil, err
-		}
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	// To remove the flavor value, as the flavor is configured by the tag uploaded to the registry
@@ -922,20 +918,40 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 	return nil
 }
 
-func copyDocumentationFile(key, file, packagePath, buildPath string) error {
-	src := file
-	if !filepath.IsAbs(src) {
-		src = filepath.Join(packagePath, file)
+func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath string) (err error) {
+	if len(pkg.Documentation) == 0 {
+		return nil
 	}
 
-	docFilename := FormatDocumentFileName(key, file)
-	dst := filepath.Join(buildPath, DocumentationDir, docFilename)
-	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-		return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	for key, file := range pkg.Documentation {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+
+		docFilename := FormatDocumentFileName(key, file)
+		dst := filepath.Join(tmpDir, docFilename)
+
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+		}
+
+		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+		}
 	}
 
-	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-		return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+	tarPath := filepath.Join(buildPath, DocumentationTar)
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, false); err != nil {
+		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
 	return nil
