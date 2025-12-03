@@ -12,11 +12,30 @@ image:
 imagePullSecrets:
   - name: private-registry
 
+proxy:
+  enabled: ###ZARF_REGISTRY_PROXY###
+  hostNetwork: ###ZARF_VAR_HOST_NETWORK###
+  tolerations:
+    ###ZARF_VAR_PROXY_TOLERATIONS###
+  image:
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_PROXY_IMAGE_TAG###"
+  registry:
+    image:
+      repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  injector:
+    hostPort: ###ZARF_INJECTOR_HOSTPORT###
+    image: "###ZARF_INJECTOR_IMAGE###"
+    payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
+    shasum: "###ZARF_INJECTOR_SHASUM###"
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
     http:
       secret: "###ZARF_REGISTRY_SECRET###"
+
+ipv6Only: ###ZARF_IPV6_ONLY###
 
 service:
   nodePort: "###ZARF_NODEPORT###"
@@ -62,3 +81,6 @@ serviceAccount:
   name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
   annotations:
     ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
+
+opentelemetry:
+  exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###

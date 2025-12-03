@@ -6,6 +6,23 @@ image:
   repository: registry
   tag: 2.8.3
 
+proxy:
+  enabled: false
+  injectorHostPort: 5001
+  tolerations: []
+  registry:
+    image:
+      repository: registry
+  image:
+    repository: alpine/socat
+    tag: 1.8.0.3
+  injector:
+    image: registry.k8s.io/pause:3.10
+    payLoadConfigMapAmount: 0
+    shasum: ""
+
+ipv6Only: false
+
 service:
   name: registry
   type: NodePort
@@ -87,3 +104,6 @@ serviceAccount:
   create: false
   name: ""
   annotations: {}
+
+opentelemetry:
+  exporter: none

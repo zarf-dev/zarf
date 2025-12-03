@@ -6,11 +6,25 @@ wordpressFirstName: ###ZARF_VAR_WORDPRESS_FIRST_NAME###
 wordpressLastName: ###ZARF_VAR_WORDPRESS_LAST_NAME###
 wordpressBlogName: ###ZARF_VAR_WORDPRESS_BLOG_NAME###
 
+# All images are temporarily using the legacy Bitnami repos due to:
+# https://github.com/bitnami/containers/issues/83267
+image:
+  repository: bitnamilegacy/wordpress
+  tag: 6.8.2-debian-12-r4
+
 # This value turns on the metrics exporter and thus will require another image.
 metrics:
   enabled: true
+  image:
+    repository: bitnamilegacy/apache-exporter
+    tag: 1.0.10-debian-12-r55
 
 # Sets the WordPress service as a ClusterIP service to not conflict with potential
 # pre-existing LoadBalancer services.
 service:
   type: ClusterIP
+
+mariadb:
+  image:
+    repository: bitnamilegacy/mariadb
+    tag: 12.0.2-debian-12-r0

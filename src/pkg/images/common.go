@@ -20,41 +20,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
-
-// PullConfig is the configuration for pulling images.
-type PullConfig struct {
-	OCIConcurrency        int
-	DestinationDirectory  string
-	ImageList             []transform.Image
-	Arch                  string
-	RegistryOverrides     []RegistryOverride
-	CacheDirectory        string
-	PlainHTTP             bool
-	InsecureSkipTLSVerify bool
-	ResponseHeaderTimeout time.Duration
-}
-
-// PushConfig is the configuration for pushing images.
-type PushConfig struct {
-	OCIConcurrency        int
-	SourceDirectory       string
-	ImageList             []transform.Image
-	RegistryInfo          state.RegistryInfo
-	NoChecksum            bool
-	Arch                  string
-	Retries               int
-	PlainHTTP             bool
-	InsecureSkipTLSVerify bool
-	Cluster               *cluster.Cluster
-	ResponseHeaderTimeout time.Duration
-}
 
 // RegistryOverride describes an override for a specific registry.
 type RegistryOverride struct {
@@ -141,7 +111,7 @@ func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 	if err == nil {
 		return false, nil
 	}
-	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL)
+	logger.From(ctx).Debug("failing back to plainHTTP connection", "registry_url", registryURL, "err", err)
 	// If https regular request failed and plainHTTP is allowed check again over plainHTTP
 	err2 := Ping(ctx, true, registryURL, client)
 	if err2 != nil {
