@@ -920,18 +920,18 @@ func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) er
 
 // copyValuesSchema validates and copies a values schema file to the build directory.
 // It validates the schema is valid JSON Schema, checks for path traversal, and copies
-// the file to buildPath/values/<schema>.
+// the file to the package root.
 func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 	l.Debug("copying values schema file to package", "schema", schema)
 
-	// Resolve the schema source path
+	// Resolve the schema source path from package root
 	schemaSrc := schema
 	if !filepath.IsAbs(schemaSrc) {
-		schemaSrc = filepath.Join(packagePath, ValuesDir, schema)
+		schemaSrc = filepath.Join(packagePath, schema)
 	}
 
-	// Ensure the schema is a valid
+	// Validate the schema is valid JSON Schema
 	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
 		return fmt.Errorf("values schema validation failed: %w", err)
 	}
@@ -942,8 +942,8 @@ func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string
 		return fmt.Errorf("values schema path %s escapes package root", schema)
 	}
 
-	// Copy schema file to pre-archive package
-	schemaDst := filepath.Join(buildPath, ValuesDir, cleanSchema)
+	// Copy schema file to package root
+	schemaDst := filepath.Join(buildPath, cleanSchema)
 	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
 	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
 		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
