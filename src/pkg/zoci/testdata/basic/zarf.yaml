@@ -8,7 +8,6 @@ metadata:
 
 documentation:
   readme: README.md
-  relative-file: ../../common.go
 
 components:
   - name: alpine
