@@ -124,8 +124,6 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 			// 2 metadata layers (zarf.yaml, checksums.txt) + 1 documentation.tar
 			require.Len(t, docLayers, 3)
-			hasDocumentationTar := false
-			require.True(t, hasDocumentationTar)
 		})
 	}
 }
