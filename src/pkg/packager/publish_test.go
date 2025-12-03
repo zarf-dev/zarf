@@ -268,6 +268,67 @@ func TestPublishPackage(t *testing.T) {
 	}
 }
 
+func TestPublishPackageDirectoryNameCollision(t *testing.T) {
+	tt := []struct {
+		name          string
+		path          string
+		opts          PublishPackageOptions
+		publicKeyPath string
+	}{
+		{
+			name: "Publish package from directory with subdir matching package name",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			registryRef := createRegistry(ctx, t)
+
+			// We want to pull the package and sure the content is the same as the local package
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			require.NoError(t, err)
+
+			// Create a temporary directory to use as working directory and
+			// create a subdir with same name as the package to test name collission
+			// https://github.com/zarf-dev/zarf/issues/4148
+			tmpDir := t.TempDir()
+			collisionDir := filepath.Join(tmpDir, "test")
+			err = os.Mkdir(collisionDir, 0o755)
+			require.NoError(t, err)
+
+			// Save original working directory to restore after test
+			origDir, err := os.Getwd()
+			require.NoError(t, err)
+
+			// Change to temp directory
+			err = os.Chdir(tmpDir)
+			require.NoError(t, err)
+
+			// Ensure we restore the original directory
+			t.Cleanup(func() {
+				require.NoError(t, os.Chdir(origDir))
+			})
+
+			// Publish test package
+			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			require.NoError(t, err)
+
+			// set build data to empty
+			layoutExpected.Pkg.Build = v1alpha1.ZarfBuildData{}
+
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
+			//build data changes when signed
+			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
+			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
+		})
+	}
+}
+
 func TestPublishPackageDeterministic(t *testing.T) {
 	tt := []struct {
 		name string

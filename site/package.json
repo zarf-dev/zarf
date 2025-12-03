@@ -19,7 +19,7 @@
     "@astrojs/check": "^0.5.10",
     "@astrojs/starlight": "^0.34.1",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^5.14.4",
+    "astro": "^5.16.0",
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.33.3",

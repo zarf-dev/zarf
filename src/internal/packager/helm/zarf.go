@@ -132,8 +132,9 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 			return fmt.Errorf("unable to cast release to v1.Release type")
 		}
 		// Update the Zarf Agent release with the new values
-		// Maintaining the "raw-init" release name for backwards compatibility
-		if release.Chart.Name() == "raw-init-zarf-agent-zarf-agent" {
+		// Before the Zarf agent was converted to a Helm chart, the name could differ depending on the name of the init package
+		// To stay backwards compatible with these package , we exclude the package name section of the release name
+		if strings.Contains(release.Chart.Name(), "zarf-agent-zarf-agent") {
 			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",

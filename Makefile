@@ -172,6 +172,8 @@ build-examples: ## Build all of the example packages
 
 	@test -s ./build/zarf-package-yolo-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/yolo -o build -a $(ARCH) --confirm
 
+	@test -s ./build/zarf-package-values-templating-$(ARCH).tar.zst || $(ZARF_BIN) package create examples/values-templating -o build -a $(ARCH) --confirm --features="values=true"
+
 ## NOTE: Requires an existing cluster or the env var APPLIANCE_MODE=true
 .PHONY: test-e2e
 test-e2e: test-e2e-without-cluster test-e2e-with-cluster  ## Run all of the core Zarf CLI E2E tests (builds any deps that aren't present)
