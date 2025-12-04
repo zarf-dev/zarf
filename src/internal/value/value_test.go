@@ -315,7 +315,7 @@ func TestParseLocalFile(t *testing.T) {
 
 			if tt.expectError {
 				require.Error(t, err)
-				require.Nil(t, result)
+				require.Equal(t, tt.expectedResult, result)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tt.expectedResult, result)
