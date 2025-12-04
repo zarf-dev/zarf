@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/action"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -79,6 +79,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
 	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
+		namespace.SetManagedFields(nil)
 		rend.namespaces[rend.chart.Namespace] = namespace
 	}
 

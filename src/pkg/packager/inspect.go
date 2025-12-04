@@ -20,7 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v4/pkg/chart/common"
 )
 
 // ResourceType represents the different types of Zarf resources that can be inspected
@@ -302,11 +302,11 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
-func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, kubeVersion string, isInteractive bool) (Resource, chartutil.Values, error) {
+func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, kubeVersion string, isInteractive bool) (Resource, common.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
 	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath); err != nil {
-		return Resource{}, chartutil.Values{}, err
+		return Resource{}, common.Values{}, err
 	}
 
 	chartOverrides := make(map[string]any)
@@ -314,29 +314,29 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, packag
 		if setVar, ok := variableConfig.GetSetVariable(variable.Name); ok && setVar != nil {
 			// Use the variable's path as a key to ensure unique entries for variables with the same name but different paths.
 			if err := helpers.MergePathAndValueIntoMap(chartOverrides, variable.Path, setVar.Value); err != nil {
-				return Resource{}, chartutil.Values{}, fmt.Errorf("unable to merge path and value into map: %w", err)
+				return Resource{}, common.Values{}, fmt.Errorf("unable to merge path and value into map: %w", err)
 			}
 		}
 	}
 
 	valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return Resource{}, chartutil.Values{}, fmt.Errorf("failed to list values files: %w", err)
+		return Resource{}, common.Values{}, fmt.Errorf("failed to list values files: %w", err)
 	}
 	for _, valueFilePath := range valuesFilePaths {
 		err := variableConfig.ReplaceTextTemplate(valueFilePath)
 		if err != nil {
-			return Resource{}, chartutil.Values{}, fmt.Errorf("error templating the values file: %w", err)
+			return Resource{}, common.Values{}, fmt.Errorf("error templating the values file: %w", err)
 		}
 	}
 
 	chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
 	if err != nil {
-		return Resource{}, chartutil.Values{}, fmt.Errorf("failed to load chart data: %w", err)
+		return Resource{}, common.Values{}, fmt.Errorf("failed to load chart data: %w", err)
 	}
 	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig, isInteractive)
 	if err != nil {
-		return Resource{}, chartutil.Values{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
+		return Resource{}, common.Values{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 	}
 	resource := Resource{
 		Content:      fmt.Sprintf("%s\n", chartTemplate),

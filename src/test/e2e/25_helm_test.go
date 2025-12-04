@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHelmReleaseHistory(t *testing.T) {
+func TestReleaseHistoryHelm(t *testing.T) {
 	outputPath := t.TempDir()
 	localTgzChartPath := filepath.Join("src", "test", "packages", "25-helm-release-history")
 	_, _, err := e2e.Zarf(t, "package", "create", localTgzChartPath, "-o", outputPath, "--confirm")
