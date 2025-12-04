@@ -1,0 +1,3 @@
+# Valid required field but invalid range
+name: test-app
+replicas: 20

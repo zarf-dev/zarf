@@ -5,6 +5,7 @@ metadata:
 values:
   files:
     - values.yaml
+  schema: values/values.schema.json
 
 # Until Consts and Vars are fully deprecated, they'll be available in go-templates
 constants:
@@ -121,7 +122,7 @@ x-mdx: |
     zarf connect nginx
 
     # View the helm chart results
-    kubectl get configmap -n helm-overrides
+    kubectl get configmap -n helm-overrides -o yaml
 
     # Remove the package with values templating in remove actions
     # Feel free to change --set-values to whatever you want!
