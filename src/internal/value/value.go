@@ -202,14 +202,20 @@ func (v Values) Set(path Path, newVal any) error {
 
 	// Handle root path "." - merge the value directly into the map
 	if path == "." {
-		if valueMap, ok := newVal.(map[string]any); ok {
-			// If newVal is a map, merge its contents into v
-			for k, val := range valueMap {
-				v[k] = val
-			}
-			return nil
+		var valueMap map[string]any
+		switch val := newVal.(type) {
+		case Values:
+			valueMap = val
+		case map[string]any:
+			valueMap = val
+		default:
+			return fmt.Errorf("cannot merge non-map value at root path")
 		}
-		return fmt.Errorf("cannot merge non-map value at root path")
+		// Merge the map contents into v
+		for k, val := range valueMap {
+			v[k] = val
+		}
+		return nil
 	}
 
 	// Split path into parts (remove leading dot first)

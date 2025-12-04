@@ -26,6 +26,8 @@ zarf dev inspect values-files [ DIRECTORY ] [flags]
   -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                        help for values-files
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
+      --set-values stringToString   Set specific values via command line (format: key.path=value) (default [])
+      --values strings              Path to values file(s) for templating
 ```
 
 ### Options inherited from parent commands
