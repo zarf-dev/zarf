@@ -304,13 +304,9 @@ func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOp
 type SchemaValidationError struct {
 	SchemaPath string
 	Errors     []gojsonschema.ResultError
-	Err        error
 }
 
 func (e *SchemaValidationError) Error() string {
-	if e.Err != nil {
-		return fmt.Sprintf("schema validation failed for %s: %v", e.SchemaPath, e.Err)
-	}
 	if len(e.Errors) > 0 {
 		var errMsgs []string
 		for _, err := range e.Errors {
@@ -319,10 +315,6 @@ func (e *SchemaValidationError) Error() string {
 		return fmt.Sprintf("schema validation failed for %s:\n%s", e.SchemaPath, strings.Join(errMsgs, "\n"))
 	}
 	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
-}
-
-func (e *SchemaValidationError) Unwrap() error {
-	return e.Err
 }
 
 // ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
