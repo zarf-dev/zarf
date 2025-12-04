@@ -225,6 +225,11 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Setup a new upgrade action
 		client := action.NewUpgrade(actionConfig)
 
+		// FIXME: This is needed, I'm not sure why
+		if lastRelease.ApplyMethod == "ssa" {
+			client.ForceConflicts = true
+		}
+
 		// Let each chart run for the default timeout.
 		client.Timeout = opts.Timeout
 
