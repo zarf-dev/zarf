@@ -145,17 +145,13 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	// Read the package values from values.yaml if it exists
 	vals := make(value.Values)
 	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
-	if _, err := os.Stat(valuesPath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return DeployResult{}, err
-		}
-	} else {
-		parsedVals, err := value.ParseLocalFile(ctx, valuesPath)
-		if err != nil {
-			return DeployResult{}, err
-		}
-		vals = parsedVals
+
+	parsedVals, err := value.ParseLocalFile(ctx, valuesPath)
+	if err != nil {
+		return DeployResult{}, err
 	}
+	vals = parsedVals
+
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
 	l.Debug("package values", "values", vals)

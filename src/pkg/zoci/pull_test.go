@@ -89,9 +89,9 @@ func TestAssembleLayers(t *testing.T) {
 			// get all layers
 			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
 			require.NoError(t, err)
-			require.Len(t, layers, 10)
+			require.Len(t, layers, 9)
 
-			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt", "values.yaml"}
+			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
 			// get sbom layers - it appears as though the sbom layers are not deterministic
 			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)

@@ -876,6 +876,10 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
+	if len(files) == 0 {
+		return nil
+	}
+
 	// Build absolute paths for all values files
 	valueFilePaths := make([]string, len(files))
 	for i, file := range files {
