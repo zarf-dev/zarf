@@ -216,7 +216,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if len(pkg.Values.Files) > 0 {
 		valuesPaths := make([]string, len(pkg.Values.Files))
 		for i, file := range pkg.Values.Files {
-			valuesPaths[i] = filepath.Join(packagePath, layout.ValuesDir, file)
+			valuesPaths[i] = filepath.Join(packagePath, file)
 		}
 		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
 		if err != nil {
