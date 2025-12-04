@@ -287,19 +287,22 @@ func TestParseLocalFile(t *testing.T) {
 			expectError:    false,
 		},
 		{
-			name:        "file does not exist",
-			file:        "testdata/nonexistent.yaml",
-			expectError: true,
+			name:           "file does not exist",
+			file:           "testdata/nonexistent.yaml",
+			expectedResult: Values{},
+			expectError:    false,
 		},
 		{
-			name:        "invalid YAML syntax",
-			file:        "testdata/invalid/malformed.yaml",
-			expectError: true,
+			name:           "invalid YAML syntax",
+			file:           "testdata/invalid/malformed.yaml",
+			expectedResult: Values{},
+			expectError:    true,
 		},
 		{
-			name:        "malformed YAML with tabs",
-			file:        "testdata/invalid/tabs.yaml",
-			expectError: true,
+			name:           "malformed YAML with tabs",
+			file:           "testdata/invalid/tabs.yaml",
+			expectedResult: Values{},
+			expectError:    true,
 		},
 	}
 
