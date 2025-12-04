@@ -30,6 +30,11 @@ service:
 
 resources: {}
 
+securityContext:
+  runAsUser: 1000
+  fsGroup: 2000
+  runAsGroup: 2000
+
 persistence:
   accessMode: "ReadWriteOnce"
   enabled: true
