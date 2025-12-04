@@ -292,10 +292,8 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
+	// FIXME: do we want to expose the option to automatically do server side apply. What are the implications?
 	client.ServerSideApply = true
-
-	// FIXME: can this replace adopt existing resources?
-	client.TakeOwnership = adoptExistingResources
 
 	// Perform the loadedChart installation.
 	releaser, err := client.RunWithContext(ctx, chart, chartValues)

@@ -136,9 +136,6 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 				l.Warn("refusing to adopt initial namespace", "name", name)
 			} else {
 				// This is an existing namespace to adopt
-				// Clear managedFields for Helm 4 server-side apply compatibility
-				// FIXME: check
-				namespace.SetManagedFields(nil)
 				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, namespace, metav1.UpdateOptions{})
 				if err != nil {
 					return fmt.Errorf("unable to adopt the existing namespace %s", name)
@@ -283,9 +280,6 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
 				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
 				resource.SetAnnotations(annotations)
-				// FIXME: not sure if this is actually needed
-				// Clear managedFields for Helm 4 server-side apply compatibility
-				resource.SetManagedFields(nil)
 				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
 				if err != nil {
 					return err
