@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fluxcd/cli-utils/pkg/object"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
@@ -23,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 var inClusterMirrorCredentialArgs = []string{

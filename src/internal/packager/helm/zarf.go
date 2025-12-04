@@ -12,9 +12,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
+	"github.com/fluxcd/cli-utils/pkg/object"
 	"helm.sh/helm/v3/pkg/action"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/object"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
