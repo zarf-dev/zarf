@@ -160,6 +160,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
+	// Copy schema file if specified
+	if pkg.Values.Schema != "" {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+	}
+
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
@@ -905,6 +912,45 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
 	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values file: %w", err)
+	}
+
+	return nil
+}
+
+// copyValuesSchema validates and copies a values schema file to the build directory.
+// It validates the schema is valid JSON Schema, checks for path traversal, and copies
+// the file to the package root.
+func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+	l.Debug("copying values schema file to package", "schema", schema)
+
+	// Resolve the schema source path from package root
+	schemaSrc := schema
+	if !filepath.IsAbs(schemaSrc) {
+		schemaSrc = filepath.Join(packagePath, schema)
+	}
+
+	// Validate the schema is valid JSON Schema
+	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
+		return fmt.Errorf("values schema validation failed: %w", err)
+	}
+
+	// Ensure relative paths don't escape the package root
+	cleanSchema := filepath.Clean(schema)
+	if strings.HasPrefix(cleanSchema, "..") {
+		return fmt.Errorf("values schema path %s escapes package root", schema)
+	}
+
+	// Copy schema file to package root
+	schemaDst := filepath.Join(buildPath, cleanSchema)
+	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
+	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
+		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
+	}
+
+	// Set appropriate file permissions
+	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
 	}
 
 	return nil

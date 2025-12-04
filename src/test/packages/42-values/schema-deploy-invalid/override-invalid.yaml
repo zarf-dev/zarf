@@ -1,0 +1,3 @@
+# Invalid override values for deploy time - replicas is a string instead of integer
+appName: overridden-app
+replicas: "not-a-number"
