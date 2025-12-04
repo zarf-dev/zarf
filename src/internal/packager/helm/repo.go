@@ -333,10 +333,16 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 	}
 
 	settings := cli.New()
+	// FIXME: is this the right place to put this? Should it be placed in a subdir?
+	cachePath, err := config.GetAbsCachePath()
+	if err != nil {
+		return err
+	}
 
 	man := &downloader.Manager{
 		// TODO(mkcp): Shouldn't rely on a global mutable var. Pass in a writer here somehow, or at least make atomic?
 		Out:            &logger.LogWriter{Logger: l, Level: logger.Debug},
+		ContentCache:   cachePath,
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,
