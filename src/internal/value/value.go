@@ -86,7 +86,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			if err != nil {
 				return nil, err
 			}
-			vals, err = parseLocalFile(ctx, path)
+			vals, err = ParseLocalFile(ctx, path)
 			if err != nil {
 				return nil, err
 			}
@@ -97,13 +97,19 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 	return m, nil
 }
 
-func parseLocalFile(ctx context.Context, path string) (Values, error) {
-	m := make(Values)
+// ParseLocalFile reads and parses a single local YAML file into a Values map.
+func ParseLocalFile(ctx context.Context, path string) (Values, error) {
+	if strings.TrimSpace(path) == "" {
+		return make(Values), nil
+	}
 
 	// Handle files
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			return make(Values), nil
+		}
+		return make(Values), err
 	}
 	defer func(f *os.File) {
 		if closeErr := f.Close(); closeErr != nil {
@@ -113,11 +119,13 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 	}(f)
 
 	// Decode and merge values
+	m := make(Values)
 	if err = yaml.NewDecoder(f).DecodeContext(ctx, &m); err != nil {
 		if errors.Is(err, io.EOF) {
-			return m, nil // Empty file is ok
+			// Empty file - ensure we return initialized map not nil
+			return make(Values), nil
 		}
-		return nil, &YAMLDecodeError{
+		return make(Values), &YAMLDecodeError{
 			FilePath: path,
 			Err:      fmt.Errorf("%s", yaml.FormatError(err, true, true)),
 		}

@@ -4,7 +4,7 @@ metadata:
   description: Example nginx package to demonstrate Zarf Values templating
 values:
   files:
-    - values.yaml
+    - values/values.yaml
   schema: values/values.schema.json
 
 # Until Consts and Vars are fully deprecated, they'll be available in go-templates

@@ -13,5 +13,5 @@ components:
         namespace: httpd
         localPath: chart
         valuesFiles:
-          - http://127.0.0.1:54291/values.yaml
+          - http://127.0.0.1:34025/values.yaml
 
