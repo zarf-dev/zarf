@@ -9,15 +9,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fluxcd/cli-utils/pkg/kstatus/polling/aggregator"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/polling/collector"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/polling/event"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/status"
+	"github.com/fluxcd/cli-utils/pkg/kstatus/watcher"
+	"github.com/fluxcd/cli-utils/pkg/object"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 // Run waits for a list of Zarf healthchecks to reach a ready state.

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fluxcd/cli-utils/pkg/kstatus/status"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/stretchr/testify/require"
@@ -26,7 +27,6 @@ import (
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
 func TestInjector(t *testing.T) {

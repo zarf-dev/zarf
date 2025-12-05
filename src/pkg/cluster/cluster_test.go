@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fluxcd/cli-utils/pkg/kstatus/status"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -18,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
-	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 )
 
 func TestGetIPFamily(t *testing.T) {
