@@ -5,7 +5,7 @@ metadata:
 
 values:
   files:
-    - values.yaml
+    - values/values.yaml
   schema: values.schema.json
 
 components:
