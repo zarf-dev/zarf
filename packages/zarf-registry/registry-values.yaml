@@ -84,3 +84,8 @@ serviceAccount:
 
 opentelemetry:
   exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###
+
+securityContext:
+  runAsUser: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_USER###
+  fsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_FS_GROUP###
+  runAsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP###

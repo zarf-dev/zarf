@@ -215,8 +215,8 @@ type ZarfChartVariable struct {
 
 // ZarfChartValue maps a Zarf Value key to a Helm Value.
 type ZarfChartValue struct {
-	SourcePath string `json:"sourcePath"`
-	TargetPath string `json:"targetPath"`
+	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$"`
+	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.

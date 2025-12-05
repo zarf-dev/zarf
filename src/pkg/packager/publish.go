@@ -202,9 +202,10 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath:        opts.CachePath,
-		Flavor:           opts.Flavor,
-		SkipVersionCheck: opts.SkipVersionCheck,
+		CachePath:          opts.CachePath,
+		Flavor:             opts.Flavor,
+		SkipVersionCheck:   opts.SkipVersionCheck,
+		SkipRequiredValues: true,
 	})
 	if err != nil {
 		return registry.Reference{}, err

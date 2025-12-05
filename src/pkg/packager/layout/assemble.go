@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -180,6 +181,13 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l.Debug("copying values files to package", "files", pkg.Values.Files)
 	for _, file := range pkg.Values.Files {
 		if err = copyValuesFile(ctx, file, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+	}
+
+	// Copy schema file if specified
+	if pkg.Values.Schema != "" {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err
 		}
 	}
@@ -765,8 +773,8 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	for _, comp := range pkg.Components {
 		if len(comp.ImageArchives) > 0 {
 			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.67.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.67.0+",
+				Version: "v0.67.1",
+				Reason:  "This package contains image archives which will only be recognized on v0.67.1+",
 			})
 			break
 		}
@@ -957,5 +965,44 @@ func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive 
 			return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
 		}
 	}
+	return nil
+}
+
+// copyValuesSchema validates and copies a values schema file to the build directory.
+// It validates the schema is valid JSON Schema, checks for path traversal, and copies
+// the file to the package root.
+func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+	l.Debug("copying values schema file to package", "schema", schema)
+
+	// Resolve the schema source path from package root
+	schemaSrc := schema
+	if !filepath.IsAbs(schemaSrc) {
+		schemaSrc = filepath.Join(packagePath, schema)
+	}
+
+	// Validate the schema is valid JSON Schema
+	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
+		return fmt.Errorf("values schema validation failed: %w", err)
+	}
+
+	// Ensure relative paths don't escape the package root
+	cleanSchema := filepath.Clean(schema)
+	if strings.HasPrefix(cleanSchema, "..") {
+		return fmt.Errorf("values schema path %s escapes package root", schema)
+	}
+
+	// Copy schema file to package root
+	schemaDst := filepath.Join(buildPath, cleanSchema)
+	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
+	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
+		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
+	}
+
+	// Set appropriate file permissions
+	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	}
+
 	return nil
 }
