@@ -156,6 +156,15 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	vals.DeepMerge(opts.Values)
 	l.Debug("package values", "values", vals)
 
+	// Validate merged values against schema if provided
+	if pkgLayout.Pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), pkgLayout.Pkg.Values.Schema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
+			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
+		}
+		l.Debug("values validated against schema", "schemaPath", schemaPath)
+	}
+
 	d := deployer{
 		vc:   variableConfig,
 		vals: vals,

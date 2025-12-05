@@ -1,0 +1,7 @@
+app:
+  name: my-httpd-app
+  replicas: 3
+  image:
+    repository: httpd
+    tag: "2.4"
+  port: 80

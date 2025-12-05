@@ -1,0 +1,5 @@
+replicaCount: 1
+customField: ""
+image:
+  pullPolicy: IfNotPresent
+port: 80
