@@ -175,7 +175,8 @@ jobs:
           # FIXME unnecessary after k3s bug is figured out
           echo "***** Getting configmaps *****"
           sudo env "PATH=$PATH" CI=true kubectl get configmaps -A
-        if: always()
+        # The test deletes the k3s cluster, so this should only run on failure
+        if: failure()
 
   # Run the tests on kind
   validate-kind-arm64:
