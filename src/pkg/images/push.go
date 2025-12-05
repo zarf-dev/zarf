@@ -6,8 +6,12 @@ package images
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -24,8 +28,10 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const defaultRetries = 3
@@ -112,14 +118,30 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				Password: registryInfo.PushPassword,
 			}),
 		}
+		// Use MTLS if the registry client cert exists in cluster
+		useMTLS := false
+		var certs pki.GeneratedPKI
+		if cfg.Cluster != nil {
+			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if err != nil && !kerrors.IsNotFound(err) {
+				return err
+			}
+			useMTLS = !kerrors.IsNotFound(err)
+		}
 
-		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
-		if err != nil {
-			return err
+		if useMTLS {
+			client.Client.Transport, err = transportFromClientCert(certs)
+			if err != nil {
+				return err
+			}
+		} else {
+			client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if err != nil {
+				return err
+			}
 		}
 
 		plainHTTP := cfg.PlainHTTP
-
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
@@ -236,6 +258,30 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	return nil
+}
+
+func transportFromClientCert(certs pki.GeneratedPKI) (http.RoundTripper, error) {
+	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client certificate: %w", err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(certs.CA) {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
+	transport.TLSClientConfig = tlsConfig
+	return transport, nil
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
