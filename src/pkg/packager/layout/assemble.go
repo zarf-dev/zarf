@@ -935,12 +935,6 @@ func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string
 		return fmt.Errorf("values schema validation failed: %w", err)
 	}
 
-	// Ensure relative paths don't escape the package root
-	cleanSchema := filepath.Clean(schema)
-	if strings.HasPrefix(cleanSchema, "..") {
-		return fmt.Errorf("values schema path %s escapes package root", schema)
-	}
-
 	// Copy schema file to package root
 	schemaDst := filepath.Join(buildPath, ValuesSchema)
 	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
