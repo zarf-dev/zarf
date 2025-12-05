@@ -453,9 +453,11 @@
       },
       "properties": {
         "sourcePath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         },
         "targetPath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         }
       },
@@ -1199,7 +1201,7 @@
           "type": "array"
         },
         "schema": {
-          "description": "Schema is a placeholder field for importing a .json.schema file for imported Values files.",
+          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
           "type": "string"
         }
       },

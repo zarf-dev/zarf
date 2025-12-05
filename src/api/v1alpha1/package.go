@@ -281,7 +281,7 @@ type ZarfBuildData struct {
 type ZarfValues struct {
 	// Files declares the relative filepath of Values files.
 	Files []string `json:"files,omitempty"`
-	// Schema is a placeholder field for importing a .json.schema file for imported Values files.
+	// Schema declares a path to a .schema.json file that validates the contents of Files.
 	Schema string `json:"schema,omitempty"`
 }
 

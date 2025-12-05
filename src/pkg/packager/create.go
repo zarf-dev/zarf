@@ -12,7 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
@@ -48,11 +48,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.SetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: opts.SkipVersionCheck,
+		Flavor:             opts.Flavor,
+		SetVariables:       opts.SetVariables,
+		CachePath:          opts.CachePath,
+		IsInteractive:      opts.IsInteractive,
+		SkipRequiredValues: true,
+		SkipVersionCheck:   opts.SkipVersionCheck,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

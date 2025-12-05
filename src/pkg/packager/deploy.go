@@ -21,13 +21,13 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -142,19 +142,25 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
-	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
-	}
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	// Read the package values from values.yaml if it exists
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
 	if err != nil {
 		return DeployResult{}, err
 	}
+
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
 	l.Debug("package values", "values", vals)
+
+	// Validate merged values against schema if provided
+	if pkgLayout.Pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
+			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
+		}
+		l.Debug("values validated against schema", "schemaPath", schemaPath)
+	}
 
 	d := deployer{
 		vc:   variableConfig,
@@ -460,11 +466,8 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushConfig{
+		pushOpts := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
@@ -472,7 +475,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
 		}
-		err := images.Push(ctx, pushConfig)
+		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}

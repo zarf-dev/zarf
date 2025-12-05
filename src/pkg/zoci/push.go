@@ -17,7 +17,8 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -46,7 +47,17 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	src, err := file.New("")
+	tempDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			l.Warn("failed to remove temp directory", "path", tempDir, "error", err)
+		}
+	}()
+
+	src, err := file.New(tempDir)
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
@@ -105,11 +116,6 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			if packErr != nil {
 				return packErr
 			}
-			// Always remove the temp manifest file created by PackAndTagManifest
-			defer func() {
-				err2 := os.Remove(pkgLayout.Pkg.Metadata.Name)
-				err = errors.Join(err, err2)
-			}()
 
 			// Update the total with manifest + config for better progress (optional)
 			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
