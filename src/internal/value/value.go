@@ -20,6 +20,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+const SchemaFileName = "values.schema.json"
+
 // Values provides a map of keys to values for use in templating and Helm overrides.
 // NOTE(mkcp): Values is NOT thread-safe. If you need concurrent access:
 //   - Use external synchronization (sync.RWMutex)

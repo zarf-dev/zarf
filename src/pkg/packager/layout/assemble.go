@@ -941,7 +941,7 @@ func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string
 	}
 
 	// Copy schema file to package root
-	schemaDst := filepath.Join(buildPath, cleanSchema)
+	schemaDst := filepath.Join(buildPath, value.SchemaFileName)
 	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
 	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
 		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)

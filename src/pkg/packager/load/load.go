@@ -147,7 +147,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 		return fmt.Errorf("failed to parse values files for validation: %w", err)
 	}
 
-	// Resolve schema path relative to package root
+	// Resolve declared schema path relative to package root
 	schemaPath := filepath.Join(packagePath, pkg.Values.Schema)
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
