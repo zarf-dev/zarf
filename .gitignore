@@ -1,5 +1,3 @@
-src/cmd/testdata/inspect-values-files/chart-remote/zarf.yaml
-
 .DS_Store
 .direnv/
 .idea/
@@ -31,3 +29,5 @@ __debug_bin
 !**/testdata/**
 coverage.out
 dist
+
+src/cmd/testdata/inspect-values-files/chart-remote/zarf.yaml
