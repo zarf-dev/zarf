@@ -14,7 +14,7 @@ const (
 	Signature    = "zarf.yaml.sig"
 	Checksums    = "checksums.txt"
 	ValuesYAML   = "values.yaml"
-  ValuesSchema = "values.schema.json"
+	ValuesSchema = "values.schema.json"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
