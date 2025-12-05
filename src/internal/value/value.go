@@ -20,14 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// SchemaFileName provides a fixed filename for the values schemas. They should be stored in the package root in an
-// assembled package:
-// ./.
-// ./zarf.yaml
-// ./values.yaml
-// ./values.schema.json
-const SchemaFileName = "values.schema.json"
-
 // Values provides a map of keys to values for use in templating and Helm overrides.
 // NOTE(mkcp): Values is NOT thread-safe. If you need concurrent access:
 //   - Use external synchronization (sync.RWMutex)
