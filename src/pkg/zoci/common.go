@@ -35,6 +35,8 @@ const (
 	AllLayers LayersSelector = ""
 	//SbomLayers is the selector for SBOM layers including metadata
 	SbomLayers LayersSelector = "sbom"
+	//DocLayers is the selector for package documentation
+	DocLayers LayersSelector = "documentation"
 	// MetadataLayers is the selector for metadata layers (zarf.yaml, signature, checksums)
 	MetadataLayers LayersSelector = "metadata"
 	// ImageLayers is the selector for image layers including metadata

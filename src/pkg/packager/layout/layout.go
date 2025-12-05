@@ -16,11 +16,15 @@ const (
 	ValuesYAML   = "values.yaml"
 	ValuesSchema = "values.schema.json"
 
-	ImagesDir     = "images"
-	ComponentsDir = "components"
+	ImagesDir        = "images"
+	ComponentsDir    = "components"
+	ValuesDir        = "values"
+	DocumentationDir = "documentation"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
+
+	DocumentationTar = "documentation.tar"
 
 	IndexJSON = "index.json"
 	OCILayout = "oci-layout"
