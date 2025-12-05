@@ -92,12 +92,8 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		errs := []error{}
 		for _, id := range objs {
 			rs := statusCollector.ResourceStatuses[id]
-			switch rs.Status {
-			case status.CurrentStatus:
-			case status.NotFoundStatus:
-				errs = append(errs, fmt.Errorf("%s: %s not found", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
-			default:
-				errs = append(errs, fmt.Errorf("%s: %s not ready", rs.Identifier.Name, rs.Identifier.GroupKind.Kind))
+			if rs.Status != status.CurrentStatus {
+				errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status))
 			}
 		}
 		errs = append(errs, ctx.Err())
