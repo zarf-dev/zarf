@@ -13,11 +13,11 @@ const (
 	ZarfYAML     = "zarf.yaml"
 	Signature    = "zarf.yaml.sig"
 	Checksums    = "checksums.txt"
-	ValuesSchema = "values.schema.json"
+	ValuesYAML   = "values.yaml"
+  ValuesSchema = "values.schema.json"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
-	ValuesDir     = "values"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"

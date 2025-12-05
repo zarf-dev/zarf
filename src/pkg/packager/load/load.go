@@ -139,7 +139,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkg.Values.Files))
 	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(packagePath, layout.ValuesDir, vf)
+		valueFilePaths[i] = filepath.Join(packagePath, vf)
 	}
 
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
