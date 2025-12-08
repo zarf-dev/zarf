@@ -216,6 +216,114 @@ func TestParseFiles_Errors(t *testing.T) {
 	}
 }
 
+func TestParseLocalFile(t *testing.T) {
+	tests := []struct {
+		name           string
+		file           string
+		expectedResult Values
+		expectError    bool
+	}{
+		{
+			name: "single valid YAML file",
+			file: "testdata/valid/simple.yaml",
+			expectedResult: Values{
+				"my-component": map[string]any{
+					"key1": "value1",
+					"key2": "value2",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "complex nested YAML",
+			file: "testdata/valid/complex.yaml",
+			expectedResult: Values{
+				"deployment": map[string]any{
+					"replicas": uint64(3),
+					"image": map[string]any{
+						"repository": "nginx",
+						"tag":        "1.21",
+					},
+					"resources": map[string]any{
+						"limits": map[string]any{
+							"cpu":    "100m",
+							"memory": "128Mi",
+						},
+						"requests": map[string]any{
+							"cpu":    "50m",
+							"memory": "64Mi",
+						},
+					},
+				},
+				"service": map[string]any{
+					"type":       "ClusterIP",
+					"port":       uint64(80),
+					"targetPort": uint64(8080),
+				},
+				"ingress": map[string]any{
+					"enabled": true,
+					"annotations": map[string]any{
+						"kubernetes.io/ingress.class": "nginx",
+					},
+					"hosts": []any{
+						map[string]any{
+							"host": "example.com",
+							"paths": []any{
+								map[string]any{
+									"path":     "/",
+									"pathType": "Prefix",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:           "empty YAML file",
+			file:           "testdata/valid/empty.yaml",
+			expectedResult: Values{},
+			expectError:    false,
+		},
+		{
+			name:           "file does not exist",
+			file:           "testdata/nonexistent.yaml",
+			expectedResult: Values{},
+			expectError:    false,
+		},
+		{
+			name:           "invalid YAML syntax",
+			file:           "testdata/invalid/malformed.yaml",
+			expectedResult: Values{},
+			expectError:    true,
+		},
+		{
+			name:           "malformed YAML with tabs",
+			file:           "testdata/invalid/tabs.yaml",
+			expectedResult: Values{},
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			result, err := ParseLocalFile(ctx, tt.file)
+
+			if tt.expectError {
+				require.Error(t, err)
+				require.Equal(t, tt.expectedResult, result)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedResult, result)
+			}
+		})
+	}
+}
+
 func TestExtract(t *testing.T) {
 	tests := []struct {
 		name   string
