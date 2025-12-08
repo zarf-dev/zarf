@@ -68,7 +68,13 @@ func main() {
 	}
 	fmt.Println("✓ All test ConfigMaps created successfully!")
 
-	time.Sleep(10 * time.Second)
+	// Delete all test ConfigMaps
+	fmt.Printf("\nDeleting %d test ConfigMaps...\n", configMapCount)
+	if err := deleteTestConfigMaps(ctx, clientset, testNamespace, configMapCount); err != nil {
+		fmt.Printf("Error deleting test ConfigMaps: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("✓ All test ConfigMaps deleted successfully!")
 
 	// Create registry ConfigMap in kube-public
 	fmt.Println("\nCreating registry ConfigMap in kube-public...")
@@ -90,10 +96,10 @@ func main() {
 
 	// Success summary
 	fmt.Println("\n========================================")
-	fmt.Println("Success! All ConfigMaps created and verified.")
-	fmt.Printf("- %d test ConfigMaps in namespace: %s\n", configMapCount, testNamespace)
-	fmt.Println("- 1 registry ConfigMap in namespace: kube-public")
-	fmt.Println("\nConfigMaps have been left in the cluster (no cleanup performed).")
+	fmt.Println("Success! ConfigMaps created, deleted, and verified.")
+	fmt.Printf("- Created and deleted %d test ConfigMaps in namespace: %s\n", configMapCount, testNamespace)
+	fmt.Println("- 1 registry ConfigMap in namespace: kube-public (still in cluster)")
+	fmt.Println("\nTest ConfigMaps have been cleaned up. Registry ConfigMap remains for inspection.")
 }
 
 // connectToCluster returns a Kubernetes client and rest config
@@ -189,6 +195,24 @@ func createTestConfigMaps(ctx context.Context, clientset kubernetes.Interface, n
 		// Delay between ConfigMaps
 		if i < count-1 {
 			time.Sleep(delayBetweenCM)
+		}
+	}
+	return nil
+}
+
+// deleteTestConfigMaps deletes count ConfigMaps
+func deleteTestConfigMaps(ctx context.Context, clientset kubernetes.Interface, namespace string, count int) error {
+	for i := 0; i < count; i++ {
+		name := fmt.Sprintf("test-configmap-%02d", i)
+
+		err := clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return fmt.Errorf("error deleting ConfigMap %s: %w", name, err)
+		}
+
+		// Print progress
+		if (i+1)%5 == 0 || i == count-1 {
+			fmt.Printf("[%d/%d] Deleted %s\n", i+1, count, name)
 		}
 	}
 	return nil
