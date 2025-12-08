@@ -64,7 +64,7 @@ func TestWaitForNetworkEndpoint(t *testing.T) {
 	t.Cleanup(successServer.Close)
 
 	// Server that accepts connection but never responds (simulates hanging)
-	hangingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	hangingServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		// Block until the request context is cancelled
 		<-r.Context().Done()
 	}))

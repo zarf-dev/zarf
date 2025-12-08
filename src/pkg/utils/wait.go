@@ -208,7 +208,10 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 						l.Debug(err.Error())
 						continue
 					}
-					resp.Body.Close()
+					err = resp.Body.Close()
+					if err != nil {
+						l.Debug(err.Error())
+					}
 
 					// If the status code is not in the 2xx range, try again.
 					if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -235,7 +238,10 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 					l.Debug(err.Error())
 					continue
 				}
-				resp.Body.Close()
+				err = resp.Body.Close()
+				if err != nil {
+					l.Debug(err.Error())
+				}
 
 				if resp.StatusCode != code {
 					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
