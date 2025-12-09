@@ -44,6 +44,16 @@ const (
 	NamespaceOverrideLabel string = "zarf.dev/namespace-override"
 )
 
+// Registry TLS secret and certificate names
+const (
+	RegistryServerTLSSecret = "zarf-registry-server-tls"
+	RegistryClientTLSSecret = "zarf-registry-client-tls"
+
+	RegistrySecretCAPath   = "ca.crt"
+	RegistrySecretCertPath = "tls.crt"
+	RegistrySecretKeyPath  = "tls.key"
+)
+
 // Cluster Zarf specific cluster management functions.
 type Cluster struct {
 	// Clientset implements k8s client api
@@ -282,6 +292,13 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.ArtifactServer = opts.ArtifactServer
 	}
 
+	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		err = c.GenerateOrRenewRegistryCerts(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate certs: %w", err)
+		}
+	}
+
 	switch s.Distro {
 	case DistroIsK3s, DistroIsK3d:
 		s.StorageClass = "local-path"
@@ -307,6 +324,127 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	return s, nil
+}
+
+// GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode
+func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
+	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
+	}
+
+	caCertPEM := clientSecret.Data[RegistrySecretCAPath]
+	clientCertPEM := clientSecret.Data[RegistrySecretCertPath]
+	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
+
+	if len(caCertPEM) == 0 || len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
+		return pki.GeneratedPKI{}, fmt.Errorf("CA certificate, client certificate, or key not found in secret")
+	}
+
+	return pki.GeneratedPKI{
+		CA:   caCertPEM,
+		Cert: clientCertPEM,
+		Key:  clientKeyPEM,
+	}, nil
+}
+
+// needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
+func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string) (bool, error) {
+	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, fmt.Errorf("failed to get secret %s: %w", secretName, err)
+	}
+
+	certData, exists := secret.Data[certPath]
+	if !exists {
+		return true, nil // Certificate key doesn't exist in secret
+	}
+
+	percentageRemainingLife, err := pki.GetRemainingCertLifePercentage(certData)
+	if err != nil {
+		return false, err
+	}
+	remainingLifeRenewalThreshold := 50.0
+	if percentageRemainingLife < remainingLifeRenewalThreshold {
+		return true, nil
+	}
+	return false, nil
+}
+
+// GenerateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
+// and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
+// Only generates certificates if they don't exist or have less than 50% remaining life.
+func (c *Cluster) GenerateOrRenewRegistryCerts(ctx context.Context) error {
+	l := logger.From(ctx)
+
+	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath)
+	if err != nil {
+		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+	}
+
+	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
+	if err != nil {
+		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+	}
+
+	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
+	if err != nil {
+		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
+	}
+
+	if !needsServerRenewal && !needsClientRenewal && !needsCARenewal {
+		return nil
+	}
+
+	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
+	if err != nil {
+		return fmt.Errorf("failed to generate CA certificate: %w", err)
+	}
+
+	serverHosts := []string{
+		"zarf-docker-registry",
+		"zarf-docker-registry.zarf.svc.cluster.local",
+		"localhost",
+		"127.0.0.1",
+		"[::1]",
+	}
+	serverCert, serverKey, err := pki.GenerateServerCert(caCert, caKey, "zarf-docker-registry", serverHosts)
+	if err != nil {
+		return fmt.Errorf("failed to generate server certificate: %w", err)
+	}
+
+	clientCert, clientKey, err := pki.GenerateClientCert(caCert, caKey, "zarf-registry-proxy")
+	if err != nil {
+		return fmt.Errorf("failed to generate client certificate: %w", err)
+	}
+
+	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
+		WithType(corev1.SecretTypeTLS).
+		WithData(map[string][]byte{
+			RegistrySecretCertPath: serverCert,
+			RegistrySecretKeyPath:  serverKey,
+			RegistrySecretCAPath:   caCert,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create server TLS secret: %w", err)
+	}
+
+	proxySecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
+		WithType(corev1.SecretTypeTLS).
+		WithData(map[string][]byte{
+			RegistrySecretCertPath: clientCert,
+			RegistrySecretKeyPath:  clientKey,
+			RegistrySecretCAPath:   caCert,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
+	}
+
+	l.Info("certificates for registry mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
+	return nil
 }
 
 // LoadState utilizes the k8s Clientset to load and return the current state.State data or an empty state.State if no
