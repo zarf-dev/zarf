@@ -13,7 +13,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -22,8 +21,6 @@ func TestResolveImportsCircular(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", layout.ZarfYAML))
 	require.NoError(t, err)
@@ -37,7 +34,7 @@ func TestResolveImportsCircular(t *testing.T) {
 func TestResolveImports(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
 	testCases := []struct {
 		name   string
 		path   string
