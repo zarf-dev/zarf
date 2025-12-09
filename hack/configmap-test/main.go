@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -43,11 +43,6 @@ func run() error {
 
 	fmt.Println("k3s ConfigMap test")
 
-	workDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("getting working directory: %w", err)
-	}
-
 	config, err := getKubeConfig()
 	if err != nil {
 		return fmt.Errorf("getting kubeconfig: %w", err)
@@ -63,10 +58,12 @@ func run() error {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
 
-	fmt.Println("Creating ConfigMaps")
-	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
+	// Generate 1MB of random data
+	fmt.Println("Generating 1MB of random data")
+	b := make([]byte, 1024*1024) // 1MB
+	_, err = rand.Read(b)
 	if err != nil {
-		return fmt.Errorf("this test assumes you have the zarf-injector in your cwd: %w", err)
+		return fmt.Errorf("generating random data: %w", err)
 	}
 
 	_, err = clientset.CoreV1().Namespaces().Apply(ctx, v1ac.Namespace(testNamespace), metav1.ApplyOptions{FieldManager: "configmap-test"})
