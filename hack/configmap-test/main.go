@@ -9,25 +9,57 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
-
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/cli-utils/pkg/object"
-
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/state"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const (
-	timeout = 60 * time.Second
+	timeout       = 60 * time.Second
+	zarfNamespace = "zarf"
 )
+
+// getKubeConfig creates a Kubernetes REST config from kubeconfig
+func getKubeConfig() (*rest.Config, error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+	return kubeConfig.ClientConfig()
+}
+
+// createClientset creates a Kubernetes clientset
+func createClientset(config *rest.Config) (*kubernetes.Clientset, error) {
+	return kubernetes.NewForConfig(config)
+}
+
+func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
+	dynamicClient, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
+	return sw, nil
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -40,8 +72,8 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	fmt.Println("ConfigMap Test Tool with Zarf Injection")
-	fmt.Println("=========================================")
+	fmt.Println("ConfigMap Test Tool")
+	fmt.Println("===================")
 
 	// Get current directory
 	workDir, err := os.Getwd()
@@ -49,37 +81,47 @@ func run() error {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
 
-	c, err := cluster.NewWithWait(ctx)
+	// Create Kubernetes config
+	config, err := getKubeConfig()
 	if err != nil {
-		return fmt.Errorf("connecting to cluster: %w", err)
+		return fmt.Errorf("getting kubeconfig: %w", err)
+	}
+
+	// Create Kubernetes clientset
+	clientset, err := createClientset(config)
+	if err != nil {
+		return fmt.Errorf("creating clientset: %w", err)
+	}
+
+	// Create status watcher
+	sw, err := WatcherForConfig(config)
+	if err != nil {
+		return fmt.Errorf("creating watcher: %w", err)
 	}
 
 	pkgName := "configmap-test"
 	// Start injection
-	fmt.Println("\nStarting Zarf injection...")
+	fmt.Println("\nCreating ConfigMaps...")
 	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
 	if err != nil {
 		return err
 	}
 
-	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
+	cm := v1ac.ConfigMap("rust-binary", zarfNamespace).
 		WithBinaryData(map[string][]byte{
 			"zarf-injector": b,
 		}).
 		WithLabels(map[string]string{
 			"label": pkgName,
 		})
-	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	_, err = clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
 	if err != nil {
 		return err
 	}
 
-	// Stop injection (this cleans up the injector resources)
-	fmt.Println("\nStopping Zarf injection...")
-	// if err := c.StopInjection(ctx); err != nil {
-	// 	return fmt.Errorf("stopping injection: %w", err)
-	// }
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	// Delete ConfigMaps
+	fmt.Println("\nDeleting configmaps...")
+	err = clientset.CoreV1().ConfigMaps(zarfNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -94,14 +136,14 @@ func run() error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	err = clientset.CoreV1().ConfigMaps(zarfNamespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
 
 	// Create registry ConfigMap in kube-public
 	fmt.Println("\nCreating registry ConfigMap in kube-public...")
-	registryCM, err := createRegistryConfigMap(ctx, c)
+	registryCM, err := createRegistryConfigMap(ctx, clientset)
 	if err != nil {
 		return fmt.Errorf("creating registry ConfigMap: %w", err)
 	}
@@ -110,7 +152,7 @@ func run() error {
 	fmt.Println("\nRunning health check on registry ConfigMap...")
 	fmt.Println("current time is", time.Now())
 	objMeta := configMapToObjMetadata(registryCM)
-	if err := waitForReady(ctx, c.Watcher, []object.ObjMetadata{objMeta}); err != nil {
+	if err := waitForReady(ctx, sw, []object.ObjMetadata{objMeta}); err != nil {
 		return fmt.Errorf("health check failed: %w", err)
 	}
 	fmt.Println("Health check passed! ConfigMap is ready.")
@@ -119,9 +161,9 @@ func run() error {
 }
 
 // createRegistryConfigMap creates the local-registry-hosting ConfigMap in kube-public
-func createRegistryConfigMap(ctx context.Context, c *cluster.Cluster) (*corev1.ConfigMap, error) {
+func createRegistryConfigMap(ctx context.Context, clientset *kubernetes.Clientset) (*corev1.ConfigMap, error) {
 	registryData := `host: "127.0.0.1:5001"
-help: "https://github.com/zarf-dev/zarf"`
+help: "https://example.com"`
 
 	// Namespace doesn't need to be kube-public, this happens in any namespace
 	namespace := "kube-public"
@@ -131,7 +173,7 @@ help: "https://github.com/zarf-dev/zarf"`
 			"localRegistryHosting.v1": registryData,
 		})
 
-	appliedCM, err := c.Clientset.CoreV1().ConfigMaps(namespace).Apply(ctx, cm,
+	appliedCM, err := clientset.CoreV1().ConfigMaps(namespace).Apply(ctx, cm,
 		metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
 	if err != nil {
 		return nil, err
