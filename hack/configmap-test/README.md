@@ -1,15 +1,22 @@
-# ConfigMap Test Tool
+# ConfigMap Test Tool with Zarf Injection
 
 ## Purpose
 
-Simple bug reproduction tool for testing ConfigMap creation and health checks in Kubernetes.
+Bug reproduction tool that uses Zarf's injection mechanism to test ConfigMap creation and health checks in Kubernetes.
 
 ## What It Does
 
-1. Creates 30 ConfigMaps with 1MB of random data each in the `configmap-test` namespace
-2. Creates a single `local-registry-hosting` ConfigMap in the `kube-public` namespace
-3. Runs a health check on the registry ConfigMap to verify it's ready
-4. Leaves all ConfigMaps in the cluster (no cleanup)
+1. Extracts the Zarf init package (`zarf-init-amd64-v0.67.0-11-g0b411ed2.tar.zst`)
+2. Calls `StartInjection` from Zarf's cluster package (creates injector pod and ConfigMaps)
+3. Calls `StopInjection` (cleans up injector resources)
+4. Creates a `local-registry-hosting` ConfigMap in the `kube-public` namespace
+5. Runs a health check on the registry ConfigMap to verify it's ready
+
+## Prerequisites
+
+- The Zarf init package must be in the same directory: `zarf-init-amd64-v0.67.0-11-g0b411ed2.tar.zst`
+- A running Kubernetes cluster (accessible via kubeconfig)
+- The `zarf` namespace must exist in the cluster
 
 ## Build
 
@@ -27,35 +34,41 @@ go build -o configmap-test .
 
 No command-line flags are needed - all configuration is hardcoded.
 
-## What Gets Created
+## What Gets Created and Cleaned Up
 
-### In `configmap-test` namespace:
-- `test-configmap-00` through `test-configmap-29`
-- Each contains 1MB of random binary data
+### During Injection (temporary):
+- Injector pod in `zarf` namespace
+- Injector service (NodePort)
+- Payload ConfigMaps in `zarf` namespace
+- Rust binary ConfigMap
 
-### In `kube-public` namespace:
-- `local-registry-hosting` with registry configuration
+### After StopInjection (cleaned up):
+All injector resources are removed.
+
+### Remaining in cluster:
+- `local-registry-hosting` ConfigMap in `kube-public` namespace
 
 ## Verification
 
-Check the created ConfigMaps:
+Check the registry ConfigMap:
 
 ```bash
-# List all test ConfigMaps
-kubectl get cm -n configmap-test
-
-# View the registry ConfigMap
 kubectl get cm -n kube-public local-registry-hosting -o yaml
 ```
 
 ## Cleanup
 
-To remove the test ConfigMaps:
+To remove the registry ConfigMap:
 
 ```bash
-# Delete test namespace (removes all 30 ConfigMaps)
-kubectl delete namespace configmap-test
-
-# Delete registry ConfigMap
 kubectl delete cm -n kube-public local-registry-hosting
 ```
+
+## How It Works
+
+This tool follows the same injection pattern as Zarf's init process:
+1. Loads the init package from the tar.zst file
+2. Uses `cluster.NewWithWait()` to connect to the cluster
+3. Calls `c.StartInjection()` which creates all necessary injector resources
+4. Calls `c.StopInjection()` to clean up injector resources
+5. Creates a test ConfigMap and validates it with health checks

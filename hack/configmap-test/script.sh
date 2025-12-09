@@ -7,5 +7,6 @@ while true; do
   echo "Loop iteration: $loop_count"
   k3d cluster delete
   k3d cluster create --image rancher/k3s:v1.32.10-k3s1  || continue
+  kubectl create ns zarf
   go run main.go || break
 done
