@@ -30,36 +30,6 @@ const (
 	testNamespace = "test-namespace"
 )
 
-// getKubeConfig creates a Kubernetes REST config from kubeconfig
-func getKubeConfig() (*rest.Config, error) {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	configOverrides := &clientcmd.ConfigOverrides{}
-	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
-	return kubeConfig.ClientConfig()
-}
-
-// createClientset creates a Kubernetes clientset
-func createClientset(config *rest.Config) (*kubernetes.Clientset, error) {
-	return kubernetes.NewForConfig(config)
-}
-
-func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
-	dynamicClient, err := dynamic.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-	httpClient, err := rest.HTTPClientFor(cfg)
-	if err != nil {
-		return nil, err
-	}
-	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	if err != nil {
-		return nil, err
-	}
-	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
-	return sw, nil
-}
-
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -101,7 +71,7 @@ func run() error {
 	fmt.Println("Creating ConfigMaps")
 	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
 	if err != nil {
-		return err
+		return fmt.Errorf("this test assumes you have the zarf-injector in your cwd: %w", err)
 	}
 
 	_, err = clientset.CoreV1().Namespaces().Apply(ctx, v1ac.Namespace(testNamespace), metav1.ApplyOptions{FieldManager: "configmap-test"})
@@ -212,4 +182,34 @@ func waitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	}
 
 	return nil
+}
+
+// getKubeConfig creates a Kubernetes REST config from kubeconfig
+func getKubeConfig() (*rest.Config, error) {
+	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+	configOverrides := &clientcmd.ConfigOverrides{}
+	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, configOverrides)
+	return kubeConfig.ClientConfig()
+}
+
+// createClientset creates a Kubernetes clientset
+func createClientset(config *rest.Config) (*kubernetes.Clientset, error) {
+	return kubernetes.NewForConfig(config)
+}
+
+func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
+	dynamicClient, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+	httpClient, err := rest.HTTPClientFor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
+	return sw, nil
 }
