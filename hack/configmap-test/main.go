@@ -43,31 +43,26 @@ func run() error {
 
 	fmt.Println("k3s ConfigMap test")
 
-	// Get current directory
 	workDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
 
-	// Create Kubernetes config
 	config, err := getKubeConfig()
 	if err != nil {
 		return fmt.Errorf("getting kubeconfig: %w", err)
 	}
 
-	// Create Kubernetes clientset
 	clientset, err := createClientset(config)
 	if err != nil {
 		return fmt.Errorf("creating clientset: %w", err)
 	}
 
-	// Create status watcher
 	sw, err := WatcherForConfig(config)
 	if err != nil {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
 
-	// Start injection
 	fmt.Println("Creating ConfigMaps")
 	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
 	if err != nil {
@@ -79,7 +74,7 @@ func run() error {
 		return err
 	}
 
-	cm := v1ac.ConfigMap("rust-binary", testNamespace).
+	cm := v1ac.ConfigMap("large-binary", testNamespace).
 		WithBinaryData(map[string][]byte{
 			"large-binary": b,
 		})
@@ -88,13 +83,12 @@ func run() error {
 		return err
 	}
 
-	// Delete the binary configmap
 	fmt.Println("Deleting configmap")
-	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "large-binary", metav1.DeleteOptions{})
 	if err != nil {
 		return err
 	}
-	// While this selector doesn't actually select anything, it's still needed to
+	// While this selector doesn't actually select anything, the bug seemingly only happens if this is done after the large binary is deleted
 	listOpts := metav1.ListOptions{
 		LabelSelector: "nothing-selector",
 	}
