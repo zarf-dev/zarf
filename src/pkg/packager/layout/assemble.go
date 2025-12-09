@@ -771,8 +771,8 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	for _, comp := range pkg.Components {
 		if len(comp.ImageArchives) > 0 {
 			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.67.1",
-				Reason:  "This package contains image archives which will only be recognized on v0.67.1+",
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 			})
 			break
 		}
