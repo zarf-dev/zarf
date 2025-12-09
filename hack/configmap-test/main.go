@@ -62,14 +62,11 @@ func main() {
 	}
 	fmt.Println("✓ Connected successfully!")
 
-	injectorNodePort := 0
-	registryNodePort := 0
 	pkgName := "configmap-test"
-
 	// Start injection
 	fmt.Println("\nStarting Zarf injection...")
 	cwd, _ := os.Getwd()
-	_, err = c.StartInjection(ctx, cwd, pkgLayout.GetImageDirPath(), []string{"library/registry:3.0.0", "alpine/socat:1.8.0.3"}, injectorNodePort, registryNodePort, pkgName)
+	_, _, err = c.CreateInjectorConfigMaps(ctx, cwd, pkgLayout.GetImageDirPath(), []string{"library/registry:3.0.0", "alpine/socat:1.8.0.3"}, pkgName)
 	if err != nil {
 		fmt.Printf("Error starting injection: %v\n", err)
 		os.Exit(1)
