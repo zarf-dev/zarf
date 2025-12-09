@@ -99,7 +99,6 @@ func run() error {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
 
-	pkgName := "configmap-test"
 	// Start injection
 	fmt.Println("\nCreating ConfigMaps...")
 	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
@@ -115,9 +114,6 @@ func run() error {
 	cm := v1ac.ConfigMap("rust-binary", testNamespace).
 		WithBinaryData(map[string][]byte{
 			"large-binary": b,
-		}).
-		WithLabels(map[string]string{
-			"label": pkgName,
 		})
 	_, err = clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
 	if err != nil {
