@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/aggregator"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/collector"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/polling/event"
@@ -21,12 +22,11 @@ import (
 	"sigs.k8s.io/cli-utils/pkg/object"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 const (
-	timeout     = 60 * time.Second
-	packageFile = "zarf-init-amd64-v0.67.0-11-g0b411ed2.tar.zst"
+	timeout = 60 * time.Second
 )
 
 func main() {
@@ -49,14 +49,6 @@ func run() error {
 		return fmt.Errorf("getting working directory: %w", err)
 	}
 
-	packagePath := filepath.Join(workDir, packageFile)
-
-	// Extract package
-	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
-	if err != nil {
-		return fmt.Errorf("loading package: %w", err)
-	}
-
 	c, err := cluster.NewWithWait(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to cluster: %w", err)
@@ -65,15 +57,46 @@ func run() error {
 	pkgName := "configmap-test"
 	// Start injection
 	fmt.Println("\nStarting Zarf injection...")
-	_, _, err = c.CreateInjectorConfigMaps(ctx, workDir, pkgLayout.GetImageDirPath(), []string{"library/registry:3.0.0", "alpine/socat:1.8.0.3"}, pkgName)
+	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
 	if err != nil {
-		return fmt.Errorf("starting injection: %w", err)
+		return err
+	}
+
+	cm := v1ac.ConfigMap("rust-binary", state.ZarfNamespaceName).
+		WithBinaryData(map[string][]byte{
+			"zarf-injector": b,
+		}).
+		WithLabels(map[string]string{
+			"label": pkgName,
+		})
+	_, err = c.Clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
+	if err != nil {
+		return err
 	}
 
 	// Stop injection (this cleans up the injector resources)
 	fmt.Println("\nStopping Zarf injection...")
-	if err := c.StopInjection(ctx); err != nil {
-		return fmt.Errorf("stopping injection: %w", err)
+	// if err := c.StopInjection(ctx); err != nil {
+	// 	return fmt.Errorf("stopping injection: %w", err)
+	// }
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	if err != nil && !kerrors.IsNotFound(err) {
+		return err
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"zarf-injector": "payload",
+		},
+	})
+	if err != nil {
+		return err
+	}
+	listOpts := metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+	err = c.Clientset.CoreV1().ConfigMaps(state.ZarfNamespaceName).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	if err != nil {
+		return err
 	}
 
 	// Create registry ConfigMap in kube-public
@@ -85,11 +108,12 @@ func run() error {
 
 	// Run health check on registry ConfigMap
 	fmt.Println("\nRunning health check on registry ConfigMap...")
+	fmt.Println("current time is", time.Now())
 	objMeta := configMapToObjMetadata(registryCM)
 	if err := waitForReady(ctx, c.Watcher, []object.ObjMetadata{objMeta}); err != nil {
 		return fmt.Errorf("health check failed: %w", err)
 	}
-	fmt.Println("✓ Health check passed! ConfigMap is ready.")
+	fmt.Println("Health check passed! ConfigMap is ready.")
 
 	return nil
 }
@@ -99,12 +123,15 @@ func createRegistryConfigMap(ctx context.Context, c *cluster.Cluster) (*corev1.C
 	registryData := `host: "127.0.0.1:5001"
 help: "https://github.com/zarf-dev/zarf"`
 
-	cm := v1ac.ConfigMap("local-registry-hosting", "kube-public").
+	// Namespace doesn't need to be kube-public, this happens in any namespace
+	namespace := "kube-public"
+
+	cm := v1ac.ConfigMap("local-registry-hosting", namespace).
 		WithData(map[string]string{
 			"localRegistryHosting.v1": registryData,
 		})
 
-	appliedCM, err := c.Clientset.CoreV1().ConfigMaps("kube-public").Apply(ctx, cm,
+	appliedCM, err := c.Clientset.CoreV1().ConfigMaps(namespace).Apply(ctx, cm,
 		metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
 	if err != nil {
 		return nil, err
