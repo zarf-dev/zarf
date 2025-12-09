@@ -182,8 +182,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
 	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
 
-	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
-
 	CmdInternalTypesSchemaShort = "Generates a JSON schema for the Zarf types (DeployedPackage ZarfPackage ZarfState)"
 
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"

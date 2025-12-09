@@ -6,18 +6,13 @@ package main
 
 import (
 	"context"
-	"embed"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 )
-
-//go:embed zarf.schema.json
-var zarfSchema embed.FS
 
 func main() {
 	// This ensures `./zarf` actions call the current Zarf binary over the system Zarf binary
@@ -39,6 +34,5 @@ func main() {
 		}
 	}()
 
-	lint.ZarfSchema = zarfSchema
 	cmd.Execute(ctx)
 }

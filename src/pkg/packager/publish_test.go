@@ -16,7 +16,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -66,7 +65,6 @@ func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 
 func TestPublishError(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	registryURL := testutil.SetupInMemoryRegistry(ctx, t, 5000)
 	defaultRef := registry.Reference{
@@ -105,7 +103,6 @@ func TestPublishError(t *testing.T) {
 
 func TestPublishFromOCIValidation(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tt := []struct {
 		name      string
@@ -162,8 +159,6 @@ func TestPublishFromOCIValidation(t *testing.T) {
 }
 
 func TestPublishSkeleton(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-
 	tt := []struct {
 		name string
 		path string

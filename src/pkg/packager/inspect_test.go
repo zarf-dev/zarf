@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -17,7 +16,6 @@ var testDataRoot = "testdata/inspect"
 
 func setupInspectTests(t *testing.T) {
 	t.Helper()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	// Enable values feature for tests (ignore error if already set)
 	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 }
