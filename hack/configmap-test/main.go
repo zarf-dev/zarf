@@ -72,8 +72,7 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	fmt.Println("ConfigMap Test Tool")
-	fmt.Println("===================")
+	fmt.Println("k3s ConfigMap test")
 
 	// Get current directory
 	workDir, err := os.Getwd()
@@ -100,7 +99,7 @@ func run() error {
 	}
 
 	// Start injection
-	fmt.Println("\nCreating ConfigMaps...")
+	fmt.Println("Creating ConfigMaps")
 	b, err := os.ReadFile(filepath.Join(workDir, "zarf-injector"))
 	if err != nil {
 		return err
@@ -121,7 +120,7 @@ func run() error {
 	}
 
 	// Delete the binary configmap
-	fmt.Println("\nDeleting configmaps...")
+	fmt.Println("Deleting configmap")
 	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
@@ -136,14 +135,14 @@ func run() error {
 	}
 
 	// Create registry ConfigMap in kube-public
-	fmt.Println("\nCreating registry ConfigMap in kube-public...")
+	fmt.Println("Creating separate ConfigMap...")
 	registryCM, err := createRegistryConfigMap(ctx, clientset)
 	if err != nil {
 		return fmt.Errorf("creating registry ConfigMap: %w", err)
 	}
 
 	// Run health check on registry ConfigMap
-	fmt.Println("\nRunning health check on registry ConfigMap...")
+	fmt.Println("Running health check on registry ConfigMap...")
 	fmt.Println("current time is", time.Now())
 	objMeta := configMapToObjMetadata(registryCM)
 	if err := waitForReady(ctx, sw, []object.ObjMetadata{objMeta}); err != nil {
