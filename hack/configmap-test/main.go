@@ -120,22 +120,15 @@ func run() error {
 		return err
 	}
 
-	// Delete ConfigMaps
+	// Delete the binary configmap
 	fmt.Println("\nDeleting configmaps...")
 	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"zarf-injector": "payload",
-		},
-	})
-	if err != nil {
-		return err
-	}
+	// While this selector doesn't actually select anything, it's still needed to
 	listOpts := metav1.ListOptions{
-		LabelSelector: selector.String(),
+		LabelSelector: "nothing-selector",
 	}
 	err = clientset.CoreV1().ConfigMaps(testNamespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
