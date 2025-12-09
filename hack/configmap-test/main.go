@@ -30,6 +30,13 @@ const (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -39,70 +46,52 @@ func main() {
 	// Get current directory
 	workDir, err := os.Getwd()
 	if err != nil {
-		fmt.Printf("Error getting working directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("getting working directory: %w", err)
 	}
 
 	packagePath := filepath.Join(workDir, packageFile)
 
 	// Extract package
-	fmt.Println("✓ Package extracted")
 	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
 	if err != nil {
-		fmt.Printf("Error loading package: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("loading package: %w", err)
 	}
 
-	// Connect to cluster
-	fmt.Println("\nConnecting to Kubernetes cluster...")
 	c, err := cluster.NewWithWait(ctx)
 	if err != nil {
-		fmt.Printf("Error connecting to cluster: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("connecting to cluster: %w", err)
 	}
-	fmt.Println("✓ Connected successfully!")
 
 	pkgName := "configmap-test"
 	// Start injection
 	fmt.Println("\nStarting Zarf injection...")
-	cwd, _ := os.Getwd()
-	_, _, err = c.CreateInjectorConfigMaps(ctx, cwd, pkgLayout.GetImageDirPath(), []string{"library/registry:3.0.0", "alpine/socat:1.8.0.3"}, pkgName)
+	_, _, err = c.CreateInjectorConfigMaps(ctx, workDir, pkgLayout.GetImageDirPath(), []string{"library/registry:3.0.0", "alpine/socat:1.8.0.3"}, pkgName)
 	if err != nil {
-		fmt.Printf("Error starting injection: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("starting injection: %w", err)
 	}
 
 	// Stop injection (this cleans up the injector resources)
 	fmt.Println("\nStopping Zarf injection...")
 	if err := c.StopInjection(ctx); err != nil {
-		fmt.Printf("Error stopping injection: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("stopping injection: %w", err)
 	}
-	fmt.Println("✓ Injection stopped and cleaned up")
 
 	// Create registry ConfigMap in kube-public
 	fmt.Println("\nCreating registry ConfigMap in kube-public...")
 	registryCM, err := createRegistryConfigMap(ctx, c)
 	if err != nil {
-		fmt.Printf("Error creating registry ConfigMap: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("creating registry ConfigMap: %w", err)
 	}
-	fmt.Printf("✓ Registry ConfigMap created: %s\n", registryCM.Name)
 
 	// Run health check on registry ConfigMap
 	fmt.Println("\nRunning health check on registry ConfigMap...")
 	objMeta := configMapToObjMetadata(registryCM)
 	if err := waitForReady(ctx, c.Watcher, []object.ObjMetadata{objMeta}); err != nil {
-		fmt.Printf("Error during health check: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("health check failed: %w", err)
 	}
 	fmt.Println("✓ Health check passed! ConfigMap is ready.")
 
-	// Success summary
-	fmt.Println("\n=========================================")
-	fmt.Println("Success! Zarf injection completed and ConfigMap verified.")
-	fmt.Println("- Zarf injector resources created and cleaned up")
-	fmt.Println("- 1 registry ConfigMap in namespace: kube-public (still in cluster)")
+	return nil
 }
 
 // createRegistryConfigMap creates the local-registry-hosting ConfigMap in kube-public
