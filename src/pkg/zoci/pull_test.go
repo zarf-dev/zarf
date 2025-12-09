@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -37,7 +36,6 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 }
 
 func TestAssembleLayers(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	tt := []struct {
 		name string
 		path string
