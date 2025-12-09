@@ -78,6 +78,30 @@
       },
       "type": "object"
     },
+    "ImageArchive": {
+      "additionalProperties": false,
+      "description": "ImageArchive points to an archived file containing an OCI layout",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "images": {
+          "description": "Images within the OCI layout to be brought into the package",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "Path to file containing an OCI-layout",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
     "InteractiveVariable": {
       "additionalProperties": false,
       "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
@@ -453,9 +477,11 @@
       },
       "properties": {
         "sourcePath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         },
         "targetPath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         }
       },
@@ -541,6 +567,13 @@
           "description": "List of resources to health check after deployment",
           "items": {
             "$ref": "#/$defs/NamespacedObjectKindReference"
+          },
+          "type": "array"
+        },
+        "imageArchives": {
+          "description": "List of Tar files of images to bring into the package.",
+          "items": {
+            "$ref": "#/$defs/ImageArchive"
           },
           "type": "array"
         },
@@ -1199,7 +1232,7 @@
           "type": "array"
         },
         "schema": {
-          "description": "Schema is a placeholder field for importing a .json.schema file for imported Values files.",
+          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
           "type": "string"
         }
       },
