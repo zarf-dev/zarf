@@ -133,45 +133,27 @@ func run() error {
 		return err
 	}
 
-	// Create registry ConfigMap in kube-public
-	fmt.Println("Creating separate ConfigMap...")
-	registryCM, err := createRegistryConfigMap(ctx, clientset)
+	anotherCM := v1ac.ConfigMap("local-registry-hosting", testNamespace).
+		WithData(map[string]string{
+			"localRegistryHosting.v1": "whatever",
+		})
+
+	cmToCheck, err := clientset.CoreV1().ConfigMaps(testNamespace).Apply(ctx, anotherCM,
+		metav1.ApplyOptions{FieldManager: "configmap-test"})
 	if err != nil {
-		return fmt.Errorf("creating registry ConfigMap: %w", err)
+		return err
 	}
 
 	// Run health check on registry ConfigMap
 	fmt.Println("Running health check on registry ConfigMap...")
 	fmt.Println("current time is", time.Now())
-	objMeta := configMapToObjMetadata(registryCM)
+	objMeta := configMapToObjMetadata(cmToCheck)
 	if err := waitForReady(ctx, sw, []object.ObjMetadata{objMeta}); err != nil {
 		return fmt.Errorf("health check failed: %w", err)
 	}
 	fmt.Println("Health check passed! ConfigMap is ready.")
 
 	return nil
-}
-
-// createRegistryConfigMap creates the local-registry-hosting ConfigMap in kube-public
-func createRegistryConfigMap(ctx context.Context, clientset *kubernetes.Clientset) (*corev1.ConfigMap, error) {
-	registryData := `host: "127.0.0.1:5001"
-help: "https://example.com"`
-
-	// Namespace doesn't need to be kube-public, this happens in any namespace
-	namespace := "kube-public"
-
-	cm := v1ac.ConfigMap("local-registry-hosting", namespace).
-		WithData(map[string]string{
-			"localRegistryHosting.v1": registryData,
-		})
-
-	appliedCM, err := clientset.CoreV1().ConfigMaps(namespace).Apply(ctx, cm,
-		metav1.ApplyOptions{FieldManager: "configmap-test"})
-	if err != nil {
-		return nil, err
-	}
-
-	return appliedCM, nil
 }
 
 // configMapToObjMetadata converts a ConfigMap to ObjMetadata for health checking
