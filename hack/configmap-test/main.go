@@ -28,7 +28,7 @@ import (
 
 const (
 	timeout       = 60 * time.Second
-	zarfNamespace = "zarf"
+	testNamespace = "test-namespace"
 )
 
 // getKubeConfig creates a Kubernetes REST config from kubeconfig
@@ -107,9 +107,14 @@ func run() error {
 		return err
 	}
 
-	cm := v1ac.ConfigMap("rust-binary", zarfNamespace).
+	_, err = clientset.CoreV1().Namespaces().Apply(ctx, v1ac.Namespace(testNamespace), metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
+	if err != nil {
+		return err
+	}
+
+	cm := v1ac.ConfigMap("rust-binary", testNamespace).
 		WithBinaryData(map[string][]byte{
-			"zarf-injector": b,
+			"large-binary": b,
 		}).
 		WithLabels(map[string]string{
 			"label": pkgName,
@@ -121,7 +126,7 @@ func run() error {
 
 	// Delete ConfigMaps
 	fmt.Println("\nDeleting configmaps...")
-	err = clientset.CoreV1().ConfigMaps(zarfNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
+	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
 	if err != nil && !kerrors.IsNotFound(err) {
 		return err
 	}
@@ -136,7 +141,7 @@ func run() error {
 	listOpts := metav1.ListOptions{
 		LabelSelector: selector.String(),
 	}
-	err = clientset.CoreV1().ConfigMaps(zarfNamespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
+	err = clientset.CoreV1().ConfigMaps(testNamespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOpts)
 	if err != nil {
 		return err
 	}
