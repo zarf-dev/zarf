@@ -9,7 +9,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -105,7 +104,7 @@ func run() error {
 		return err
 	}
 
-	_, err = clientset.CoreV1().Namespaces().Apply(ctx, v1ac.Namespace(testNamespace), metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
+	_, err = clientset.CoreV1().Namespaces().Apply(ctx, v1ac.Namespace(testNamespace), metav1.ApplyOptions{FieldManager: "configmap-test"})
 	if err != nil {
 		return err
 	}
@@ -114,7 +113,7 @@ func run() error {
 		WithBinaryData(map[string][]byte{
 			"large-binary": b,
 		})
-	_, err = clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
+	_, err = clientset.CoreV1().ConfigMaps(*cm.Namespace).Apply(ctx, cm, metav1.ApplyOptions{FieldManager: "configmap-test"})
 	if err != nil {
 		return err
 	}
@@ -122,7 +121,7 @@ func run() error {
 	// Delete the binary configmap
 	fmt.Println("Deleting configmap")
 	err = clientset.CoreV1().ConfigMaps(testNamespace).Delete(ctx, "rust-binary", metav1.DeleteOptions{})
-	if err != nil && !kerrors.IsNotFound(err) {
+	if err != nil {
 		return err
 	}
 	// While this selector doesn't actually select anything, it's still needed to
@@ -167,7 +166,7 @@ help: "https://example.com"`
 		})
 
 	appliedCM, err := clientset.CoreV1().ConfigMaps(namespace).Apply(ctx, cm,
-		metav1.ApplyOptions{Force: true, FieldManager: "configmap-test"})
+		metav1.ApplyOptions{FieldManager: "configmap-test"})
 	if err != nil {
 		return nil, err
 	}
