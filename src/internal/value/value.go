@@ -16,6 +16,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/goccy/go-yaml"
+	"github.com/xeipuuv/gojsonschema"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -85,7 +86,7 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 			if err != nil {
 				return nil, err
 			}
-			vals, err = parseLocalFile(ctx, path)
+			vals, err = ParseLocalFile(ctx, path)
 			if err != nil {
 				return nil, err
 			}
@@ -96,13 +97,19 @@ func ParseFiles(ctx context.Context, paths []string, _ ParseFilesOptions) (_ Val
 	return m, nil
 }
 
-func parseLocalFile(ctx context.Context, path string) (Values, error) {
-	m := make(Values)
+// ParseLocalFile reads and parses a single local YAML file into a Values map.
+func ParseLocalFile(ctx context.Context, path string) (Values, error) {
+	if strings.TrimSpace(path) == "" {
+		return make(Values), nil
+	}
 
 	// Handle files
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			return make(Values), nil
+		}
+		return make(Values), err
 	}
 	defer func(f *os.File) {
 		if closeErr := f.Close(); closeErr != nil {
@@ -112,11 +119,13 @@ func parseLocalFile(ctx context.Context, path string) (Values, error) {
 	}(f)
 
 	// Decode and merge values
+	m := make(Values)
 	if err = yaml.NewDecoder(f).DecodeContext(ctx, &m); err != nil {
 		if errors.Is(err, io.EOF) {
-			return m, nil // Empty file is ok
+			// Empty file - ensure we return initialized map not nil
+			return make(Values), nil
 		}
-		return nil, &YAMLDecodeError{
+		return make(Values), &YAMLDecodeError{
 			FilePath: path,
 			Err:      fmt.Errorf("%s", yaml.FormatError(err, true, true)),
 		}
@@ -202,14 +211,20 @@ func (v Values) Set(path Path, newVal any) error {
 
 	// Handle root path "." - merge the value directly into the map
 	if path == "." {
-		if valueMap, ok := newVal.(map[string]any); ok {
-			// If newVal is a map, merge its contents into v
-			for k, val := range valueMap {
-				v[k] = val
-			}
-			return nil
+		var valueMap map[string]any
+		switch val := newVal.(type) {
+		case Values:
+			valueMap = val
+		case map[string]any:
+			valueMap = val
+		default:
+			return fmt.Errorf("cannot merge non-map value at root path")
 		}
-		return fmt.Errorf("cannot merge non-map value at root path")
+		// Merge the map contents into v
+		for k, val := range valueMap {
+			v[k] = val
+		}
+		return nil
 	}
 
 	// Split path into parts (remove leading dot first)
@@ -234,6 +249,110 @@ func (v Values) Set(path Path, newVal any) error {
 			current = nextMap
 		}
 	}
+	return nil
+}
+
+// ValidateOptions provides optional configuration for Values validation
+type ValidateOptions struct {
+	// SkipRequired skips validation of required fields
+	SkipRequired bool
+}
+
+// Validate validates the Values against a JSON schema file at schemaPath.
+func (v Values) Validate(ctx context.Context, schemaPath string, opts ValidateOptions) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	defer func() {
+		l.Debug("schema validation complete",
+			"duration", time.Since(start),
+			"schemaPath", schemaPath)
+	}()
+
+	// Load the schema from file
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
+	}
+	// Convert backslashes to forward slashes for file URI
+	absPath = filepath.ToSlash(absPath)
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+
+	// Convert Values to a document for validation
+	documentLoader := gojsonschema.NewGoLoader(v)
+
+	// Validate
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		return fmt.Errorf("failed to load or parse schema at %s: %w", schemaPath, err)
+	}
+
+	// Check if validation passed
+	if !result.Valid() {
+		errs := result.Errors()
+
+		// Filter out "required" errors if SkipRequired is true
+		if opts.SkipRequired {
+			var filteredErrors []gojsonschema.ResultError
+			for _, err := range errs {
+				if err.Type() != "required" {
+					filteredErrors = append(filteredErrors, err)
+				}
+			}
+			errs = filteredErrors
+		}
+
+		// Only return error if there are validation errors after filtering
+		if len(errs) > 0 {
+			return &SchemaValidationError{
+				SchemaPath: schemaPath,
+				Errors:     errs,
+			}
+		}
+	}
+
+	return nil
+}
+
+// SchemaValidationError represents an error when JSON schema validation fails
+type SchemaValidationError struct {
+	SchemaPath string
+	Errors     []gojsonschema.ResultError
+}
+
+func (e *SchemaValidationError) Error() string {
+	if len(e.Errors) > 0 {
+		var errMsgs []string
+		for _, err := range e.Errors {
+			errMsgs = append(errMsgs, err.String())
+		}
+		return fmt.Sprintf("schema validation failed for %s:\n%s", e.SchemaPath, strings.Join(errMsgs, "\n"))
+	}
+	return fmt.Sprintf("schema validation failed for %s", e.SchemaPath)
+}
+
+// ValidateSchemaFile validates that a file at schemaPath is a valid JSON Schema.
+// It checks that the file exists, is readable, and can be parsed as a valid JSON Schema.
+func ValidateSchemaFile(schemaPath string) error {
+	// Check file exists and is readable
+	if _, err := os.Stat(schemaPath); err != nil {
+		return fmt.Errorf("unable to access schema file %s: %w", schemaPath, err)
+	}
+
+	// Convert to absolute path and ensure forward slashes for URI
+	absPath, err := filepath.Abs(schemaPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve absolute path of %s: %w", schemaPath, err)
+	}
+	absPath = filepath.ToSlash(absPath)
+
+	// Attempt to compile the schema - this validates it's valid JSON Schema
+	schemaLoader := gojsonschema.NewReferenceLoader("file:///" + absPath)
+	_, err = gojsonschema.NewSchema(schemaLoader)
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
+	}
+
 	return nil
 }
 

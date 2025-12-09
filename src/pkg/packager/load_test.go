@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -67,7 +66,6 @@ func TestLoadPackage(t *testing.T) {
 
 func TestLoadSplitPackage(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	ctx := testutil.TestContext(t)
 

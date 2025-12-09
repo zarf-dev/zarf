@@ -142,19 +142,25 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
-	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
-	}
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	// Read the package values from values.yaml if it exists
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
 	if err != nil {
 		return DeployResult{}, err
 	}
+
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
 	l.Debug("package values", "values", vals)
+
+	// Validate merged values against schema if provided
+	if pkgLayout.Pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
+			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
+		}
+		l.Debug("values validated against schema", "schemaPath", schemaPath)
+	}
 
 	d := deployer{
 		vc:   variableConfig,

@@ -28,6 +28,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -154,9 +155,14 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	l.Debug("copying values files to package", "files", pkg.Values.Files)
-	for _, file := range pkg.Values.Files {
-		if err = copyValuesFile(ctx, file, packagePath, buildPath); err != nil {
+	l.Debug("merging values files to package", "files", pkg.Values.Files)
+	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+		return nil, err
+	}
+
+	// Copy schema file if specified
+	if pkg.Values.Schema != "" {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err
 		}
 	}
@@ -874,35 +880,71 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
+func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	// Process local values file
-	src := file
-	if !filepath.IsAbs(src) {
-		src = filepath.Join(packagePath, ValuesDir, file)
-	}
-	// Validate src
-	if _, err := os.Stat(src); err != nil {
-		return fmt.Errorf("unable to access values file %s: %w", src, err)
+	if len(files) == 0 {
+		return nil
 	}
 
-	// Ensure relative paths don't munge the destination and write outside of the package tmpdir
-	cleanFile := filepath.Clean(file)
-	if strings.HasPrefix(cleanFile, "..") {
-		return fmt.Errorf("values file path %s escapes package directory", file)
+	// Build absolute paths for all values files
+	valueFilePaths := make([]string, len(files))
+	for i, file := range files {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+		// Validate src exists
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("unable to access values file %s: %w", src, err)
+		}
+		valueFilePaths[i] = src
 	}
 
-	//Copy file to pre-archive package - destination includes ValuesDir
-	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
-	l.Debug("copying values file", "src", src, "dst", dst)
-	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-		return fmt.Errorf("failed to copy values file %s: %w", src, err)
+	// Parse and merge all values files
+	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to parse values files: %w", err)
+	}
+
+	// Write merged values to YAML
+	dst := filepath.Join(buildPath, ValuesYAML)
+	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
+	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to write merged values file: %w", err)
+	}
+
+	return nil
+}
+
+// copyValuesSchema validates and copies a values schema file to the build directory.
+// It validates the schema is valid JSON Schema, checks for path traversal, and copies
+// the file to the package root.
+func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+	l.Debug("copying values schema file to package", "schema", schema)
+
+	// Resolve the schema source path from package root
+	schemaSrc := schema
+	if !filepath.IsAbs(schemaSrc) {
+		schemaSrc = filepath.Join(packagePath, schema)
+	}
+
+	// Validate the schema is valid JSON Schema
+	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
+		return fmt.Errorf("values schema validation failed: %w", err)
+	}
+
+	// Copy schema file to package root
+	schemaDst := filepath.Join(buildPath, ValuesSchema)
+	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
+	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
+		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
 	}
 
 	// Set appropriate file permissions
-	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
 	}
 
 	return nil

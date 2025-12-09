@@ -106,6 +106,18 @@ variables:
     description: Decides if host port or host network should be used with the registry proxy
     default: "false"
 
+  - name: REGISTRY_SECURITY_CONTEXT_RUN_AS_USER
+    description: The user ID to run the registry as
+    default: "1000"
+
+  - name: REGISTRY_SECURITY_CONTEXT_FS_GROUP
+    description: The filesystem group ID to run the registry as
+    default: "2000"
+
+  - name: REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP
+    description: The group ID to run the registry as
+    default: "2000"
+
 constants:
   - name: REGISTRY_IMAGE
     value: "###ZARF_PKG_TMPL_REGISTRY_IMAGE###"

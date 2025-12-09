@@ -16,7 +16,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -66,7 +65,6 @@ func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 
 func TestPublishError(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	registryURL := testutil.SetupInMemoryRegistry(ctx, t, 5000)
 	defaultRef := registry.Reference{
@@ -105,7 +103,6 @@ func TestPublishError(t *testing.T) {
 
 func TestPublishFromOCIValidation(t *testing.T) {
 	ctx := context.Background()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tt := []struct {
 		name      string
@@ -162,8 +159,6 @@ func TestPublishFromOCIValidation(t *testing.T) {
 }
 
 func TestPublishSkeleton(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
-
 	tt := []struct {
 		name string
 		path string
@@ -264,6 +259,67 @@ func TestPublishPackage(t *testing.T) {
 			if tc.opts.SigningKeyPath != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
 			}
+		})
+	}
+}
+
+func TestPublishPackageDirectoryNameCollision(t *testing.T) {
+	tt := []struct {
+		name          string
+		path          string
+		opts          PublishPackageOptions
+		publicKeyPath string
+	}{
+		{
+			name: "Publish package from directory with subdir matching package name",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := testutil.TestContext(t)
+			registryRef := createRegistry(ctx, t)
+
+			// We want to pull the package and sure the content is the same as the local package
+			layoutExpected, err := layout.LoadFromTar(ctx, tc.path, layout.PackageLayoutOptions{Filter: filters.Empty()})
+			require.NoError(t, err)
+
+			// Create a temporary directory to use as working directory and
+			// create a subdir with same name as the package to test name collission
+			// https://github.com/zarf-dev/zarf/issues/4148
+			tmpDir := t.TempDir()
+			collisionDir := filepath.Join(tmpDir, "test")
+			err = os.Mkdir(collisionDir, 0o755)
+			require.NoError(t, err)
+
+			// Save original working directory to restore after test
+			origDir, err := os.Getwd()
+			require.NoError(t, err)
+
+			// Change to temp directory
+			err = os.Chdir(tmpDir)
+			require.NoError(t, err)
+
+			// Ensure we restore the original directory
+			t.Cleanup(func() {
+				require.NoError(t, os.Chdir(origDir))
+			})
+
+			// Publish test package
+			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
+			require.NoError(t, err)
+
+			// set build data to empty
+			layoutExpected.Pkg.Build = v1alpha1.ZarfBuildData{}
+
+			layoutActual := pullFromRemote(ctx, t, packageRef.String(), "amd64", tc.publicKeyPath, t.TempDir())
+			//build data changes when signed
+			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
+			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
 }
