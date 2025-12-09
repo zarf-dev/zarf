@@ -115,7 +115,7 @@ func run() error {
 	}
 
 	// Run health check on registry ConfigMap
-	fmt.Println("Running health check on registry ConfigMap...")
+	fmt.Println("Running health check on other ConfigMap...")
 	fmt.Println("current time is", time.Now())
 	objMeta := configMapToObjMetadata(cmToCheck)
 	if err := waitForReady(ctx, sw, []object.ObjMetadata{objMeta}); err != nil {
