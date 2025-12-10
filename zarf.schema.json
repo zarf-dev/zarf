@@ -344,6 +344,10 @@
           "description": "The username who created this package.",
           "type": "string"
         },
+        "verified": {
+          "description": "Whether this package has been succuessfully verified",
+          "type": "boolean"
+        },
         "version": {
           "description": "The version of Zarf used to build this package.",
           "type": "string"
