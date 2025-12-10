@@ -1,7 +1,7 @@
-# this happens for sure on v1.32.10
 # effected versions:
 # v1.34.2+k3s1
 # v1.33.6+k3s
+# v1.32.10
 # This does not happen on kind built with latest kubernetes, leading me to believe it is a k3s issue.
 loop_count=0
 while true; do

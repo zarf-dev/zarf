@@ -58,7 +58,6 @@ func run() error {
 		return fmt.Errorf("creating watcher: %w", err)
 	}
 
-	// Generate 1MB of random data
 	fmt.Println("Generating 1MB of random data")
 	b := make([]byte, 1024*1024) // 1MB
 	_, err = rand.Read(b)
@@ -105,7 +104,6 @@ func run() error {
 		return err
 	}
 
-	// Run health check on registry ConfigMap
 	fmt.Println("Running health check on other ConfigMap...")
 	fmt.Println("current time is", time.Now())
 	objMeta := configMapToObjMetadata(cmToCheck)
@@ -117,7 +115,6 @@ func run() error {
 	return nil
 }
 
-// configMapToObjMetadata converts a ConfigMap to ObjMetadata for health checking
 func configMapToObjMetadata(cm *corev1.ConfigMap) object.ObjMetadata {
 	return object.ObjMetadata{
 		Name:      cm.Name,
@@ -129,8 +126,6 @@ func configMapToObjMetadata(cm *corev1.ConfigMap) object.ObjMetadata {
 	}
 }
 
-// waitForReady waits for the given objects to reach ready status
-// Copied from /home/austin/code/zarf/src/internal/healthchecks/healthchecks.go:62-104
 func waitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.ObjMetadata) error {
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
