@@ -11,20 +11,10 @@ webhooks:
           values:
             # Ensure we don't mess with kube-system
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
         # Ignore K3s Klipper
         - key: svccontroller.k3s.cattle.io/svcname
           operator: DoesNotExist
@@ -57,20 +47,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -100,20 +80,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -144,20 +114,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -188,20 +148,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
     clientConfig:
       service:
         name: {{ .Values.service.name }}
@@ -230,20 +180,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
         - key: argocd.argoproj.io/secret-type
           operator: In
           values:
@@ -276,20 +216,10 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.namespaceSelectorExpression" . | nindent 8 }}
     objectSelector:
       matchExpressions:
-        # Always ignore specific resources if requested by annotation/label
-        - key: zarf.dev/agent
-          operator: NotIn
-          values:
-            - "skip"
-            - "ignore"
+        {{- include "zarf-agent.webhook.objectSelectorExpression" . | nindent 8 }}
     clientConfig:
       service:
         name: agent-hook
@@ -306,6 +236,52 @@ webhooks:
           - "v1alpha1"
         resources:
           - "appprojects"
+    admissionReviewVersions:
+      - "v1"
+      - "v1beta1"
+    sideEffects: None
+  # This webhook ensures pods in the zarf namespace are always mutated,
+  # even when passive mode is enabled. This is needed for internal components like gitea.
+  - name: agent-zarf-internal.zarf.dev
+    namespaceSelector:
+      matchExpressions:
+        # Only target the zarf namespace
+        - key: "kubernetes.io/metadata.name"
+          operator: In
+          values:
+            - "zarf"
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+    objectSelector:
+      matchExpressions:
+        - key: zarf.dev/agent
+          operator: NotIn
+          values:
+            - "skip"
+            - "ignore"
+        # Ignore K3s Klipper
+        - key: svccontroller.k3s.cattle.io/svcname
+          operator: DoesNotExist
+    clientConfig:
+      service:
+        name: {{ .Values.service.name }}
+        namespace: {{ .Release.Namespace }}
+        path: "/mutate/pod"
+      caBundle: "###ZARF_AGENT_CA###"
+    rules:
+      - operations:
+          - "CREATE"
+          - "UPDATE"
+        apiGroups:
+          - ""
+        apiVersions:
+          - "v1"
+        resources:
+          - "pods"
+          - "pods/ephemeralcontainers"
     admissionReviewVersions:
       - "v1"
       - "v1beta1"

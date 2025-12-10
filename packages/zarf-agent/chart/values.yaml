@@ -40,3 +40,7 @@ resources:
 
 affinity: {}
 tolerations: []
+
+mode:
+  namespaces: "active"
+  objects: "active"

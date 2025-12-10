@@ -3,6 +3,14 @@ metadata:
   name: init-package-zarf-agent
   description: Install the zarf agent mutating webhook on a new cluster
 
+variables:
+  - name: AGENT_NAMESPACES_MODE
+    description: "The namespace selection mode for the Zarf agent: 'active' (default, mutates all namespaces except those with zarf.dev/agent=ignore) or 'passive' (only mutates namespaces with zarf.dev/agent=mutate)"
+    default: "active"
+  - name: AGENT_OBJECTS_MODE
+    description: "The object selection mode for the Zarf agent: 'active' (default, mutates all objects except those with zarf.dev/agent=ignore) or 'passive' (only mutates objects with zarf.dev/agent=mutate)"
+    default: "active"
+
 constants:
   - name: AGENT_IMAGE
     value: "###ZARF_PKG_TMPL_AGENT_IMAGE###"
@@ -25,6 +33,8 @@ components:
         localPath: chart
         version: 0.1.0
         namespace: zarf
+        valuesFiles:
+          - agent-values.yaml
     actions:
       onCreate:
         before:

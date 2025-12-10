@@ -37,6 +37,8 @@ type initOptions struct {
 	registryInfo            state.RegistryInfo
 	artifactServer          state.ArtifactServerInfo
 	injectorPort            int
+	agentNamespacesMode     string
+	agentObjectsMode        string
 	adoptExistingResources  bool
 	timeout                 time.Duration
 	retries                 int
@@ -96,6 +98,10 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
+	// Flags for the Zarf agent
+	cmd.Flags().StringVar(&o.agentNamespacesMode, "agent-namespaces-mode", v.GetString(VInitAgentNamespacesMode), lang.CmdInitFlagAgentNamespacesMode)
+	cmd.Flags().StringVar(&o.agentObjectsMode, "agent-objects-mode", v.GetString(VInitAgentObjectsMode), lang.CmdInitFlagAgentObjectsMode)
+
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
@@ -146,6 +152,14 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+
+	// Set the agent mode variables if provided via flag
+	if o.agentNamespacesMode != "" {
+		o.setVariables["AGENT_NAMESPACES_MODE"] = o.agentNamespacesMode
+	}
+	if o.agentObjectsMode != "" {
+		o.setVariables["AGENT_OBJECTS_MODE"] = o.agentObjectsMode
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -336,6 +350,13 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
 				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
+	}
+
+	if o.agentNamespacesMode != "" && o.agentNamespacesMode != "active" && o.agentNamespacesMode != "passive" {
+		return fmt.Errorf("invalid agent namespaces mode %q, must be 'active' or 'passive'", o.agentNamespacesMode)
+	}
+	if o.agentObjectsMode != "" && o.agentObjectsMode != "active" && o.agentObjectsMode != "passive" {
+		return fmt.Errorf("invalid agent objects mode %q, must be 'active' or 'passive'", o.agentObjectsMode)
 	}
 
 	return nil
