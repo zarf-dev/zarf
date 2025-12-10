@@ -3,6 +3,7 @@
 # v1.33.6+k3s
 # v1.32.10
 # This does not happen on kind built with latest kubernetes, leading me to believe it is a k3s issue.
+# This doesn't happen if the command doesn't use sqllite.  curl -sfL https://get.k3s.io | sh -s - --cluster-init
 loop_count=0
 while true; do
   loop_count=$((loop_count + 1))
