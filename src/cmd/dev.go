@@ -156,8 +156,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set-variables", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetVariables)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
-	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -260,8 +260,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set-variables", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetVariables)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
-	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd

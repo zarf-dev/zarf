@@ -275,6 +275,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value)."
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagTimeout                = "Timeout for health checks and Helm operations such as installs and rollbacks"
@@ -290,11 +291,12 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
 	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
 
-	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
-	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
-	CmdPackageRemoveFlagConfirm    = "Confirms the removal action"
-	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
-	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
+	CmdPackageRemoveShort           = "Removes a Zarf package that has been deployed already (runs offline)"
+	CmdPackageRemoveLong            = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
+	CmdPackageRemoveFlagConfirm     = "Confirms the removal action"
+	CmdPackageRemoveFlagComponents  = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
+	CmdPackageRemoveFlagNamespace   = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
+	CmdPackageRemoveFlagValuesFiles = "Path to values file(s) for removal actions"
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `

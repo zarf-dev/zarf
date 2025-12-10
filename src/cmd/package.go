@@ -247,6 +247,7 @@ type packageDeployOptions struct {
 	timeout                 time.Duration
 	retries                 int
 	setVariables            map[string]string
+	setValues               map[string]string
 	optionalComponents      string
 	shasum                  string
 	skipSignatureValidation bool
@@ -281,6 +282,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
@@ -308,12 +310,24 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 
 	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
-	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
 	if err != nil {
 		return err
+	}
+
+	// Apply CLI --set-values overrides last
+	for key, val := range o.setValues {
+		p := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			p = value.Path("." + key)
+		}
+		if err := values.Set(p, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
 	}
 
 	cachePath, err := getCachePath(ctx)
@@ -1273,8 +1287,8 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
-	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, "Path to values file(s) for removal actions")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
 
 	return cmd
 }
