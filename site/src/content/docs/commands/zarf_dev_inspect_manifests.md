@@ -17,13 +17,15 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
 ### Options
 
 ```
-      --create-set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
-      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-  -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                        help for manifests
-      --kube-version string         Override the default helm template KubeVersion when performing a package chart template
-      --set-values stringToString   Set specific values via command line (format: key.path=value) (default [])
-      --values strings              Path to values file(s) for templating
+      --create-set stringToString             Alias for --create-set-variables (default [])
+      --create-set-variables stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString             Alias for --deploy-set-variables (default [])
+      --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                                  help for manifests
+      --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
+      --set-values stringToString             Set specific values via command line (format: key.path=value) (default [])
+      --values strings                        Path to values file(s) for templating
 ```
 
 ### Options inherited from parent commands

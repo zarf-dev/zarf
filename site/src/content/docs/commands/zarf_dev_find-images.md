@@ -23,16 +23,18 @@ zarf dev find-images [ DIRECTORY ] [flags]
 ### Options
 
 ```
-      --create-set stringToString   Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
-      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
-  -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                        help for find-images
-      --kube-version string         Override the default helm template KubeVersion when performing a package chart template
-      --registry-url string         Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
-  -p, --repo-chart-path string      If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
-      --skip-cosign                 Skip searching for cosign artifacts related to discovered images
-  -u, --update                      Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
-      --why string                  Prints the source manifest for the specified image
+      --create-set stringToString             Alias for --create-set-variables (default [])
+      --create-set-variables stringToString   Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
+      --deploy-set stringToString             Alias for --deploy-set-variables (default [])
+      --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                                  help for find-images
+      --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
+      --registry-url string                   Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
+  -p, --repo-chart-path string                If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
+      --skip-cosign                           Skip searching for cosign artifacts related to discovered images
+  -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
+      --why string                            Prints the source manifest for the specified image
 ```
 
 ### Options inherited from parent commands
