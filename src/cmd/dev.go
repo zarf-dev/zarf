@@ -169,6 +169,8 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -187,6 +189,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
+		// Update values entry
 		if err := values.Set(path, val); err != nil {
 			return fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
@@ -273,6 +276,8 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -291,6 +296,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
+		// Update values entry
 		if err := values.Set(path, val); err != nil {
 			return fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
