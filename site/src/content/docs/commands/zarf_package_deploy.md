@@ -31,6 +31,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --retries int                    Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set stringToString             Alias for --set-variables (default [])
+      --set-values stringToString      Specify deployment package values to set on the command line (key.path=value). (default [])
       --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --shasum string                  Shasum of the package to deploy. Required if deploying a remote https package.
       --skip-signature-validation      Skip validating the signature of the Zarf package
