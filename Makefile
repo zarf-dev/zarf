@@ -14,10 +14,14 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
-	ifneq ($(UNAME_S),Linux)
-		ifeq ($(UNAME_S),Darwin)
-			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+	UNAME_M := $(shell uname -m)
+	ifeq ($(UNAME_S),Linux)
+		ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+			ZARF_BIN := $(addsuffix -arm,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-linux-arm
 		endif
+	else ifeq ($(UNAME_S),Darwin)
+		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
 			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
