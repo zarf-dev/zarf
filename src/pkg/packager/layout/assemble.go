@@ -119,7 +119,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			manifests = append(manifests, archiveImageManifests...)
 			var imageList []string
 			for _, imageManifest := range archiveImageManifests {
-				err := checkForDuplicateImage(pkg.Components, imageArchive, imageManifest.Image.Reference)
+				err := checkForDuplicateImage(pkg.Components, component.ImageArchives[j], imageManifest.Image.Reference)
 				if err != nil {
 					return nil, err
 				}

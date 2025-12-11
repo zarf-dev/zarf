@@ -63,7 +63,7 @@ type ImageArchive struct {
 	// Path to file containing an OCI-layout
 	Path string `json:"path"`
 	// Images within the OCI layout to be brought into the package
-	Images []string `json:"images,omitempty"`
+	Images []string `json:"images"`
 }
 
 // NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.

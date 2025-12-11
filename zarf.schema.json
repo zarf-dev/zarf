@@ -98,7 +98,8 @@
         }
       },
       "required": [
-        "path"
+        "path",
+        "images"
       ],
       "type": "object"
     },

@@ -114,13 +114,10 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		foundImages = append(foundImages, manifestImg.Reference)
 
-		// If specific images were requested, skip those not in the list
-		if len(imageArchive.Images) > 0 {
-			if _, requested := requestedImages[manifestImg.Reference]; !requested {
-				continue
-			}
-			requestedImages[manifestImg.Reference] = true
+		if _, requested := requestedImages[manifestImg.Reference]; !requested {
+			continue
 		}
+		requestedImages[manifestImg.Reference] = true
 
 		foundDesc, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
