@@ -22,10 +22,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -134,7 +132,6 @@ func TestPackageList(t *testing.T) {
 
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name           string
@@ -255,7 +252,6 @@ type ValuesFilesTestData struct {
 
 func TestPackageInspectValuesFiles(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []ValuesFilesTestData{
 		{
@@ -301,7 +297,6 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 }
 
 func TestPackageInspectRemoteValuesFiles(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 	// set up a test http server that serves test values file:
 	remoteValuesFile := filepath.Join("testdata", "inspect-values-files", "chart-remote", "remote-values", "values.yaml")
 	fileServer := newYAMLFileServer(t, remoteValuesFile)

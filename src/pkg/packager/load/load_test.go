@@ -18,7 +18,6 @@ import (
 
 func TestLoadPackageWithFlavors(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	tests := []struct {
 		name        string
@@ -117,7 +116,6 @@ func TestPackageUsesFlavor(t *testing.T) {
 
 func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	// Enable the values feature for these tests
 	err := feature.Set([]feature.Feature{

@@ -14,7 +14,7 @@ imagePullSecrets:
 
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
-  hostNetwork: ###ZARF_VAR_HOST_NETWORK###
+  hostNetwork: ###ZARF_VAR_HOST_NETWORK_PROXY###
   tolerations:
     ###ZARF_VAR_PROXY_TOLERATIONS###
   image:

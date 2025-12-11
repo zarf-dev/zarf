@@ -1,0 +1,1275 @@
+{
+  "$defs": {
+    "Constant": {
+      "additionalProperties": false,
+      "description": "Constant are constants that can be used to dynamically template K8s resources or run in actions.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "autoIndent": {
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_.",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "A description of the constant to explain its purpose on package create or deploy confirmation prompts",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name to be used for the constant",
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "An optional regex pattern that a constant value must match before a package can be created.",
+          "type": "string"
+        },
+        "value": {
+          "description": "The value to set for the constant during deploy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "value"
+      ],
+      "type": "object"
+    },
+    "DeprecatedZarfComponentScripts": {
+      "additionalProperties": false,
+      "description": "DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "after": {
+          "description": "Scripts to run after the component successfully deploys.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "before": {
+          "description": "Scripts to run before the component is deployed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "prepare": {
+          "description": "Scripts to run before the component is added during package create.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "retry": {
+          "description": "Retry the script if it fails.",
+          "type": "boolean"
+        },
+        "showOutput": {
+          "description": "Show the output of the script during package deployment.",
+          "type": "boolean"
+        },
+        "timeoutSeconds": {
+          "description": "Timeout in seconds for the script.",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "InteractiveVariable": {
+      "additionalProperties": false,
+      "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "autoIndent": {
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.",
+          "type": "boolean"
+        },
+        "default": {
+          "description": "The default value to use for the variable",
+          "type": "string"
+        },
+        "description": {
+          "description": "A description of the variable to be used when prompting the user a value",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name to be used for the variable",
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue.",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "Whether to prompt the user for input for this variable",
+          "type": "boolean"
+        },
+        "sensitive": {
+          "description": "Whether to mark this variable as sensitive to not print it in the log",
+          "type": "boolean"
+        },
+        "type": {
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)",
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "NamespacedObjectKindReference": {
+      "additionalProperties": false,
+      "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "apiVersion": {
+          "description": "API Version of the resource",
+          "type": "string"
+        },
+        "kind": {
+          "description": "Kind of the resource",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name of the resource",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace of the resource",
+          "type": "string"
+        }
+      },
+      "required": [
+        "apiVersion",
+        "kind",
+        "namespace",
+        "name"
+      ],
+      "type": "object"
+    },
+    "SetValue": {
+      "additionalProperties": false,
+      "description": "SetValue declares a value that can be set during a package deploy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "key": {
+          "description": "Key represents which value to assign to.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when\ninserting the value into the template. Defaults to SetValueString behavior when empty.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Value is the current value at the key."
+        }
+      },
+      "type": "object"
+    },
+    "Shell": {
+      "additionalProperties": false,
+      "description": "Shell represents the desired shell to use for a given command",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "darwin": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on macOS systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "linux": {
+          "description": "(default 'sh') Indicates a preference for the shell to use on Linux systems",
+          "examples": [
+            "sh",
+            "bash",
+            "fish",
+            "zsh",
+            "pwsh"
+          ],
+          "type": "string"
+        },
+        "windows": {
+          "description": "(default 'powershell') Indicates a preference for the shell to use on Windows systems (note that choosing 'cmd' will turn off migrations like touch -\u003e New-Item)",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh",
+            "sh",
+            "bash",
+            "gsh"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Variable": {
+      "additionalProperties": false,
+      "description": "Variable represents a variable that has a value set programmatically",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "autoIndent": {
+          "description": "Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "The name to be used for the variable",
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "pattern": {
+          "description": "An optional regex pattern that a variable value must match before a package deployment can continue.",
+          "type": "string"
+        },
+        "sensitive": {
+          "description": "Whether to mark this variable as sensitive to not print it in the log",
+          "type": "boolean"
+        },
+        "type": {
+          "description": "Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)",
+          "enum": [
+            "raw",
+            "file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "VersionRequirement": {
+      "additionalProperties": false,
+      "description": "VersionRequirement specifies minimum version requirements for the package",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "reason": {
+          "description": "Explanation for why this version is required",
+          "type": "string"
+        },
+        "version": {
+          "description": "The minimum version of Zarf required to use this package",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "type": "object"
+    },
+    "ZarfBuildData": {
+      "additionalProperties": false,
+      "description": "ZarfBuildData is written during the packager.Create() operation to track details of the created package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "The architecture this package was created on.",
+          "type": "string"
+        },
+        "differential": {
+          "description": "Whether this package was created with differential components.",
+          "type": "boolean"
+        },
+        "differentialMissing": {
+          "description": "List of components that were not included in this package due to differential packaging.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "differentialPackageVersion": {
+          "description": "Version of a previously built package used as the basis for creating this differential package.",
+          "type": "string"
+        },
+        "flavor": {
+          "description": "The flavor of Zarf used to build this package.",
+          "type": "string"
+        },
+        "migrations": {
+          "description": "Any migrations that have been run on this package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "registryOverrides": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Any registry domains that were overridden on package create when pulling images.",
+          "type": "object"
+        },
+        "signed": {
+          "description": "Whether this package was signed",
+          "type": "boolean"
+        },
+        "terminal": {
+          "description": "The machine name that created this package.",
+          "type": "string"
+        },
+        "timestamp": {
+          "description": "The timestamp when this package was created.",
+          "type": "string"
+        },
+        "user": {
+          "description": "The username who created this package.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of Zarf used to build this package.",
+          "type": "string"
+        },
+        "versionRequirements": {
+          "description": "Requirements for specific package operations.",
+          "items": {
+            "$ref": "#/$defs/VersionRequirement"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "architecture",
+        "timestamp",
+        "version"
+      ],
+      "type": "object"
+    },
+    "ZarfChart": {
+      "additionalProperties": false,
+      "description": "ZarfChart defines a helm chart to be deployed.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "gitPath": {
+          "description": "(git repo only) The sub directory to the chart within a git repo.",
+          "examples": [
+            "charts/your-chart"
+          ],
+          "type": "string"
+        },
+        "localPath": {
+          "description": "The path to a local chart's folder or .tgz archive.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace to deploy the chart to.",
+          "type": "string"
+        },
+        "noWait": {
+          "description": "Whether to not wait for chart resources to be ready before continuing.",
+          "type": "boolean"
+        },
+        "releaseName": {
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
+          "type": "string"
+        },
+        "repoName": {
+          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart).",
+          "type": "string"
+        },
+        "schemaValidation": {
+          "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.",
+          "type": "boolean"
+        },
+        "url": {
+          "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
+          "examples": [
+            "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
+            "helm chart repo: https://stefanprodan.github.io/podinfo",
+            "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"
+          ],
+          "type": "string"
+        },
+        "values": {
+          "description": "[alpha] List of values sources to their Helm override target",
+          "items": {
+            "$ref": "#/$defs/ZarfChartValue"
+          },
+          "type": "array"
+        },
+        "valuesFiles": {
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "variables": {
+          "description": "[alpha] List of variables to set in the Helm chart.",
+          "items": {
+            "$ref": "#/$defs/ZarfChartVariable"
+          },
+          "type": "array"
+        },
+        "version": {
+          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfChartValue": {
+      "additionalProperties": false,
+      "description": "ZarfChartValue maps a Zarf Value key to a Helm Value.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "sourcePath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
+          "type": "string"
+        },
+        "targetPath": {
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourcePath",
+        "targetPath"
+      ],
+      "type": "object"
+    },
+    "ZarfChartVariable": {
+      "additionalProperties": false,
+      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "description": {
+          "description": "A brief description of what the variable controls.",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the variable.",
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "path": {
+          "description": "The path within the Helm chart values where this variable applies.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "path"
+      ],
+      "type": "object"
+    },
+    "ZarfComponent": {
+      "additionalProperties": false,
+      "description": "ZarfComponent is the primary functional grouping of assets to deploy by Zarf.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/ZarfComponentActions",
+          "description": "Custom commands to run at various stages of a package lifecycle."
+        },
+        "charts": {
+          "description": "Helm charts to install during package deploy.",
+          "items": {
+            "$ref": "#/$defs/ZarfChart"
+          },
+          "type": "array"
+        },
+        "dataInjections": {
+          "description": "Datasets to inject into a container in the target cluster.",
+          "items": {
+            "$ref": "#/$defs/ZarfDataInjection"
+          },
+          "type": "array"
+        },
+        "default": {
+          "description": "Determines the default Y/N state for installing this component on package deploy.",
+          "type": "boolean"
+        },
+        "description": {
+          "description": "Message to include during package deploy describing the purpose of this component.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Files or folders to place on disk during package deployment.",
+          "items": {
+            "$ref": "#/$defs/ZarfFile"
+          },
+          "type": "array"
+        },
+        "group": {
+          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.",
+          "type": "string"
+        },
+        "healthChecks": {
+          "description": "List of resources to health check after deployment",
+          "items": {
+            "$ref": "#/$defs/NamespacedObjectKindReference"
+          },
+          "type": "array"
+        },
+        "images": {
+          "description": "List of OCI images to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "import": {
+          "$ref": "#/$defs/ZarfComponentImport",
+          "description": "Import a component from another Zarf package."
+        },
+        "manifests": {
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy.",
+          "items": {
+            "$ref": "#/$defs/ZarfManifest"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "The name of the component.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "only": {
+          "$ref": "#/$defs/ZarfComponentOnlyTarget",
+          "description": "Filter when this component is included in package creation or deployment."
+        },
+        "repos": {
+          "description": "List of git repos to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "required": {
+          "description": "Do not prompt user to install this component.",
+          "type": "boolean"
+        },
+        "scripts": {
+          "$ref": "#/$defs/DeprecatedZarfComponentScripts",
+          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentAction": {
+      "additionalProperties": false,
+      "description": "ZarfComponentAction represents a single action to run during a zarf package operation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cmd": {
+          "description": "The command to run. Must specify either cmd or wait for the action to do anything.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the action to be displayed during package execution instead of the command.",
+          "type": "string"
+        },
+        "dir": {
+          "description": "The working directory to run the command in (default is CWD).",
+          "type": "string"
+        },
+        "env": {
+          "description": "Additional environment variables to set for the command.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "description": "Retry the command if it fails up to given number of times (default 0).",
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions).",
+          "type": "integer"
+        },
+        "mute": {
+          "description": "Hide the output of the command during package deployment (default false).",
+          "type": "boolean"
+        },
+        "setValues": {
+          "description": "(onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.",
+          "items": {
+            "$ref": "#/$defs/SetValue"
+          },
+          "type": "array"
+        },
+        "setVariable": {
+          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
+          "pattern": "^[A-Z0-9_]+$",
+          "type": "string"
+        },
+        "setVariables": {
+          "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.",
+          "items": {
+            "$ref": "#/$defs/Variable"
+          },
+          "type": "array"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell",
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+        },
+        "template": {
+          "description": "Disable go-template processing on the cmd field. This is useful when the cmd contains go-templates that should be passed to another system.",
+          "type": "boolean"
+        },
+        "wait": {
+          "$ref": "#/$defs/ZarfComponentActionWait",
+          "description": "Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionDefaults": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActionDefaults sets the default configs for child actions.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dir": {
+          "description": "Working directory for commands (default CWD).",
+          "type": "string"
+        },
+        "env": {
+          "description": "Additional environment variables for commands.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxRetries": {
+          "description": "Retry commands given number of times if they fail (default 0).",
+          "type": "integer"
+        },
+        "maxTotalSeconds": {
+          "description": "Default timeout in seconds for commands (default to 0, no timeout).",
+          "type": "integer"
+        },
+        "mute": {
+          "description": "Hide the output of commands during execution (default false).",
+          "type": "boolean"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell",
+          "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionSet": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActionSet is a set of actions to run during a zarf package operation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "after": {
+          "description": "Actions to run at the end of an operation.",
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "before": {
+          "description": "Actions to run at the start of an operation.",
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "defaults": {
+          "$ref": "#/$defs/ZarfComponentActionDefaults",
+          "description": "Default configuration for all actions in this set."
+        },
+        "onFailure": {
+          "description": "Actions to run if all operations fail.",
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        },
+        "onSuccess": {
+          "description": "Actions to run if all operations succeed.",
+          "items": {
+            "$ref": "#/$defs/ZarfComponentAction"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWait": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActionWait specifies a condition to wait for before continuing",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cluster": {
+          "$ref": "#/$defs/ZarfComponentActionWaitCluster",
+          "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+        },
+        "network": {
+          "$ref": "#/$defs/ZarfComponentActionWaitNetwork",
+          "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentActionWaitCluster": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActionWaitCluster specifies a condition to wait for before continuing",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "condition": {
+          "description": "The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist.",
+          "examples": [
+            "Ready",
+            "Available"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "description": "The kind of resource to wait for.",
+          "examples": [
+            "Pod",
+            "Deployment"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the resource or selector to wait for.",
+          "examples": [
+            "podinfo",
+            "app=podinfo"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace of the resource to wait for.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentActionWaitNetwork": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "The address to wait for.",
+          "examples": [
+            "localhost:8080",
+            "1.1.1.1"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "description": "The HTTP status code to wait for if using http or https.",
+          "examples": [
+            200,
+            404
+          ],
+          "type": "integer"
+        },
+        "protocol": {
+          "description": "The protocol to wait for.",
+          "enum": [
+            "tcp",
+            "http",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "address"
+      ],
+      "type": "object"
+    },
+    "ZarfComponentActions": {
+      "additionalProperties": false,
+      "description": "ZarfComponentActions are ActionSets that map to different zarf package operations.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "onCreate": {
+          "$ref": "#/$defs/ZarfComponentActionSet",
+          "description": "Actions to run during package creation."
+        },
+        "onDeploy": {
+          "$ref": "#/$defs/ZarfComponentActionSet",
+          "description": "Actions to run during package deployment."
+        },
+        "onRemove": {
+          "$ref": "#/$defs/ZarfComponentActionSet",
+          "description": "Actions to run during package removal."
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentImport": {
+      "additionalProperties": false,
+      "description": "ZarfComponentImport structure for including imported Zarf components.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The name of the component to import from the referenced zarf.yaml.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The path to the directory containing the zarf.yaml to import.",
+          "type": "string"
+        },
+        "url": {
+          "description": "[beta] The URL to a Zarf package to import via OCI.",
+          "pattern": "^oci://.*$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentOnlyCluster": {
+      "additionalProperties": false,
+      "description": "ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "Only create and deploy to clusters of the given architecture.",
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
+        "distros": {
+          "description": "A list of kubernetes distros this package works with (Reserved for future use).",
+          "items": {
+            "examples": [
+              "k3s",
+              "eks"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfComponentOnlyTarget": {
+      "additionalProperties": false,
+      "description": "ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cluster": {
+          "$ref": "#/$defs/ZarfComponentOnlyCluster",
+          "description": "Only deploy component to specified clusters."
+        },
+        "flavor": {
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
+          "type": "string"
+        },
+        "localOS": {
+          "description": "Only deploy component to specified OS.",
+          "enum": [
+            "linux",
+            "darwin",
+            "windows"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ZarfContainerTarget": {
+      "additionalProperties": false,
+      "description": "ZarfContainerTarget defines the destination info for a ZarfData target",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "container": {
+          "description": "The container name to target for data injection.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace to target for data injection.",
+          "type": "string"
+        },
+        "path": {
+          "description": "The path within the container to copy the data into.",
+          "type": "string"
+        },
+        "selector": {
+          "description": "The K8s selector to target for data injection.",
+          "examples": [
+            "app=data-injection"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "namespace",
+        "selector",
+        "container",
+        "path"
+      ],
+      "type": "object"
+    },
+    "ZarfDataInjection": {
+      "additionalProperties": false,
+      "description": "ZarfDataInjection is a data-injection definition.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "compress": {
+          "description": "Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image.",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container.",
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ZarfContainerTarget",
+          "description": "The target pod + container to inject the data into."
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfFile": {
+      "additionalProperties": false,
+      "description": "ZarfFile defines a file to deploy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "executable": {
+          "description": "(files only) Determines if the file should be made executable during package deploy.",
+          "type": "boolean"
+        },
+        "extractPath": {
+          "description": "Local folder or file to be extracted from a 'source' archive.",
+          "type": "string"
+        },
+        "shasum": {
+          "description": "(files only) Optional SHA256 checksum of the file.",
+          "type": "string"
+        },
+        "source": {
+          "description": "Local folder or file path or remote URL to pull into the package.",
+          "type": "string"
+        },
+        "symlinks": {
+          "description": "List of symlinks to create during package deploy.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "description": "The absolute or relative path where the file or folder should be copied to during package deploy.",
+          "type": "string"
+        },
+        "template": {
+          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "target"
+      ],
+      "type": "object"
+    },
+    "ZarfManifest": {
+      "additionalProperties": false,
+      "description": "ZarfManifest defines raw manifests Zarf will deploy as a helm chart.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enableKustomizePlugins": {
+          "description": "Enable kustomize plugins during kustomize builds.",
+          "type": "boolean"
+        },
+        "files": {
+          "description": "List of local K8s YAML files or remote URLs to deploy (in order).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kustomizations": {
+          "description": "List of local kustomization paths or remote URLs to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kustomizeAllowAnyDirectory": {
+          "description": "Allow traversing directory above the current directory if needed for kustomization.",
+          "type": "boolean"
+        },
+        "name": {
+          "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace to deploy the manifests to.",
+          "type": "string"
+        },
+        "noWait": {
+          "description": "Whether to not wait for manifest resources to be ready before continuing.",
+          "type": "boolean"
+        },
+        "template": {
+          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfMetadata": {
+      "additionalProperties": false,
+      "description": "ZarfMetadata lists information about the current ZarfPackage.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "aggregateChecksum": {
+          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
+          "type": "string"
+        },
+        "allowNamespaceOverride": {
+          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden.",
+          "type": "boolean"
+        },
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations contains arbitrary metadata about the package.\nUsers are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md",
+          "type": "object"
+        },
+        "architecture": {
+          "description": "The target cluster architecture for this package.",
+          "examples": [
+            "arm64",
+            "amd64"
+          ],
+          "type": "string"
+        },
+        "authors": {
+          "description": "Comma-separated list of package authors (including contact info).",
+          "examples": [
+            "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+          ],
+          "type": "string"
+        },
+        "description": {
+          "description": "Additional information about this package.",
+          "type": "string"
+        },
+        "documentation": {
+          "description": "Link to package documentation when online.",
+          "type": "string"
+        },
+        "image": {
+          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI).",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name to identify this Zarf package.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "source": {
+          "description": "Link to package source code when online.",
+          "type": "string"
+        },
+        "uncompressed": {
+          "description": "Disable compression of this package.",
+          "type": "boolean"
+        },
+        "url": {
+          "description": "Link to package information when online.",
+          "type": "string"
+        },
+        "vendor": {
+          "description": "Name of the distributing entity, organization or individual.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).",
+          "type": "string"
+        },
+        "yolo": {
+          "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ZarfValues": {
+      "additionalProperties": false,
+      "description": "ZarfValues imports package-level values files and validation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "files": {
+          "description": "Files declares the relative filepath of Values files.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema": {
+          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/zarf-dev/zarf/src/api/v1alpha1/zarf-package",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ZarfPackage the top-level structure of a Zarf config file.",
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "description": "The API version of the Zarf package.",
+      "enum": [
+        "zarf.dev/v1alpha1"
+      ],
+      "type": "string"
+    },
+    "build": {
+      "$ref": "#/$defs/ZarfBuildData",
+      "description": "Zarf-generated package build data."
+    },
+    "components": {
+      "description": "List of components to deploy in this package.",
+      "items": {
+        "$ref": "#/$defs/ZarfComponent"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "constants": {
+      "description": "Constant template values applied on deploy for K8s resources.",
+      "items": {
+        "$ref": "#/$defs/Constant"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "default": "ZarfPackageConfig",
+      "description": "The kind of Zarf package.",
+      "enum": [
+        "ZarfInitConfig",
+        "ZarfPackageConfig"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ZarfMetadata",
+      "description": "Package metadata."
+    },
+    "values": {
+      "$ref": "#/$defs/ZarfValues",
+      "description": "Values imports Zarf values files for templating and overriding Helm values."
+    },
+    "variables": {
+      "description": "Variable template values applied on deploy for K8s resources.",
+      "items": {
+        "$ref": "#/$defs/InteractiveVariable"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "kind",
+    "components"
+  ],
+  "type": "object"
+}

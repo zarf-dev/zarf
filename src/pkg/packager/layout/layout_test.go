@@ -12,7 +12,6 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -24,7 +23,6 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
 
@@ -56,7 +54,6 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 
 func TestGetSBOM(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	ctx := testutil.TestContext(t)
 
@@ -88,7 +85,6 @@ func TestGetSBOM(t *testing.T) {
 }
 
 func TestCreateAbsoluteSources(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name       string
@@ -208,7 +204,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 func TestCreateAbsolutePathImports(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
 	ctx := testutil.TestContext(t)
 	tmpdir := t.TempDir()
 	absoluteFilePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))

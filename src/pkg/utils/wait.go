@@ -176,6 +176,12 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 		condition = "success"
 	}
 
+	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
+	// hanging on slow or unresponsive servers.
+	httpClient := &http.Client{
+		Timeout: waitInterval - (time.Millisecond * 5),
+	}
+
 	delay := 100 * time.Millisecond
 
 	for {
@@ -197,10 +203,14 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				// Default to checking for a 2xx response.
 				if condition == "success" {
 					// Try to get the URL and check the status code.
-					resp, err := http.Get(url)
+					resp, err := httpClient.Get(url)
 					if err != nil {
 						l.Debug(err.Error())
 						continue
+					}
+					err = resp.Body.Close()
+					if err != nil {
+						l.Debug(err.Error())
 					}
 
 					// If the status code is not in the 2xx range, try again.
@@ -223,11 +233,16 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				}
 
 				// Try to get the URL and check the status code.
-				resp, err := http.Get(url)
+				resp, err := httpClient.Get(url)
 				if err != nil {
 					l.Debug(err.Error())
 					continue
 				}
+				err = resp.Body.Close()
+				if err != nil {
+					l.Debug(err.Error())
+				}
+
 				if resp.StatusCode != code {
 					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
 					continue
