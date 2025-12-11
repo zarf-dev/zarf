@@ -336,6 +336,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 
 	keysToExtract := maps.Clone(p.Pkg.Documentation)
 	if len(keys) > 0 {
+		keysToExtract = make(map[string]string)
 		for _, key := range keys {
 			if filePath, ok := p.Pkg.Documentation[key]; ok {
 				keysToExtract[key] = filePath
