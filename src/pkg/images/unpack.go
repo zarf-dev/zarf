@@ -39,6 +39,9 @@ const (
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
+	if imageArchive.Images == nil {
+		return nil, fmt.Errorf("images must be defined")
+	}
 	// Create a temporary directory for extraction
 	tmpdir, err := utils.MakeTempDir("")
 	if err != nil {
@@ -169,10 +172,6 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		if !found {
 			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
 		}
-	}
-
-	if len(imagesWithManifest) == 0 {
-		return nil, fmt.Errorf("could not find any image references: %s", explainErr)
 	}
 
 	return imagesWithManifest, nil

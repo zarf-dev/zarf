@@ -79,20 +79,19 @@ func TestUnpackMultipleImages(t *testing.T) {
 		name            string
 		srcDir          string
 		requestedImages []string
-		expectedRefs    []string
 		expectErr       error
 	}{
 		{
 			name:   "single image, docker image store",
 			srcDir: filepath.Join("testdata", "docker-graph-driver-image-store"),
-			expectedRefs: []string{
+			requestedImages: []string{
 				"docker.io/library/hello-world:linux",
 			},
 		},
 		{
 			name:   "single image, docker containerd store",
 			srcDir: filepath.Join("testdata", "docker-containerd-image-store"),
-			expectedRefs: []string{
+			requestedImages: []string{
 				"docker.io/library/hello-world:linux",
 			},
 		},
@@ -104,16 +103,11 @@ func TestUnpackMultipleImages(t *testing.T) {
 				"ghcr.io/zarf-dev/images/hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
 			},
-			expectedRefs: []string{
-				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
-				"ghcr.io/zarf-dev/images/hello-world:latest",
-				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
-			},
 		},
 		{
 			name:   "no images specified - pull all from manifests",
 			srcDir: filepath.Join("testdata", "oras-oci-layout", "images"),
-			expectedRefs: []string{
+			requestedImages: []string{
 				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 				"ghcr.io/zarf-dev/images/hello-world:latest",
 				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
@@ -130,11 +124,6 @@ func TestUnpackMultipleImages(t *testing.T) {
 				"docker.io/library/non-existent-image:linux",
 			},
 			expectErr: errors.New("could not find image docker.io/library/non-existent-image:linux"),
-		},
-		{
-			name:      "non-annotated layout",
-			srcDir:    filepath.Join("testdata", "non-annotated-layout"),
-			expectErr: errors.New("could not find any image references"),
 		},
 	}
 
@@ -166,8 +155,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 				imageMap[img.Image.Reference] = img
 			}
 
-			// If specific images were requested, verify they were found
-			for _, ref := range tc.expectedRefs {
+			for _, ref := range tc.requestedImages {
 				img, found := imageMap[ref]
 				require.True(t, found)
 				require.NotEmpty(t, img.Manifest.Config.Digest)
@@ -180,7 +168,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			for _, descs := range idx.Manifests {
 				imageName, ok := descs.Annotations[ocispec.AnnotationRefName]
 				require.True(t, ok)
-				require.Contains(t, tc.expectedRefs, imageName)
+				require.Contains(t, tc.requestedImages, imageName)
 			}
 
 			// Verify all the required layers exist in the oci layout
