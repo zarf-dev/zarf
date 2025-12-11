@@ -334,7 +334,7 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("documentation.tar not found in package")
 	}
 
-	keysToExtract := make(map[string]string)
+	keysToExtract := maps.Clone(p.Pkg.Documentation)
 	if len(keys) > 0 {
 		for _, key := range keys {
 			if filePath, ok := p.Pkg.Documentation[key]; ok {
@@ -343,8 +343,6 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 				return fmt.Errorf("key %s not found in package documentation", key)
 			}
 		}
-	} else {
-		keysToExtract = p.Pkg.Documentation
 	}
 
 	// Extract tar to temp directory
