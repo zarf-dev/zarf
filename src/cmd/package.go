@@ -1104,12 +1104,10 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 
 func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
-
 	src, err := choosePackage(ctx, args)
 	if err != nil {
 		return err
 	}
-
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err

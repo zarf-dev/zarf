@@ -483,7 +483,6 @@ func TestParseRegistryOverrides(t *testing.T) {
 
 func TestPackageInspectDocumentation(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name          string
