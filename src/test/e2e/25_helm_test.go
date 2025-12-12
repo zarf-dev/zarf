@@ -109,6 +109,10 @@ func testHelmChartsExample(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
+func testHelmServerSideApply(t *testing.T) {
+
+}
+
 func testHelmExampleWithOverrides(t *testing.T) {
 	// Cannot use t.Parallel() here because of the Setenv
 	t.Log("E2E: Helm chart with overrides")
