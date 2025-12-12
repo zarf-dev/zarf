@@ -314,14 +314,6 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Temporarily disabling until we can root cause the issue
 	client.ServerSideApply = "auto"
 
-	// FIXME: Need to decide if we'll keep this, most likely we will
-	// Another option is to set this to adoptExistingResources
-	// Not sure why this is failing. For instance during `zarf tools update-creds`
-	// This can only be enabled when ssa is enabled
-	if lastRelease.ApplyMethod == "ssa" {
-		client.ForceConflicts = adoptExistingResources
-	}
-
 	client.SkipCRDs = true
 
 	client.SkipSchemaValidation = !zarfChart.ShouldRunSchemaValidation()
