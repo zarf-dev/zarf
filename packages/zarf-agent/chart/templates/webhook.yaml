@@ -290,6 +290,7 @@ webhooks:
           operator: In
           values:
             - repository
+            - repo-creds
     clientConfig:
       service:
         name: {{ .Values.service.name }}
