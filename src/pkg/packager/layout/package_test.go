@@ -991,8 +991,8 @@ func TestGetDocumentation(t *testing.T) {
 
 		// Create temp dir for documentation files
 		docTempDir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "license-LICENSE"), []byte("license content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "LICENSE"), []byte("license content"), 0o644))
 
 		// Create documentation.tar
 		tarPath := filepath.Join(pkgDir, DocumentationTar)
@@ -1017,8 +1017,8 @@ func TestGetDocumentation(t *testing.T) {
 		err = pkgLayout.GetDocumentation(ctx, outputDir, nil)
 		require.NoError(t, err)
 
-		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
-		require.FileExists(t, filepath.Join(outputDir, "license-LICENSE"))
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 
 	t.Run("extract specific documentation keys", func(t *testing.T) {
@@ -1028,8 +1028,8 @@ func TestGetDocumentation(t *testing.T) {
 
 		// Create temp dir for documentation files
 		docTempDir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "license-LICENSE"), []byte("license content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "LICENSE"), []byte("license content"), 0o644))
 
 		// Create documentation.tar
 		tarPath := filepath.Join(pkgDir, DocumentationTar)
@@ -1054,8 +1054,8 @@ func TestGetDocumentation(t *testing.T) {
 		err = pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
 		require.NoError(t, err)
 
-		require.FileExists(t, filepath.Join(outputDir, "readme-README.md"))
-		require.NoFileExists(t, filepath.Join(outputDir, "license-LICENSE"))
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
 	})
 
 	t.Run("error when no documentation in package", func(t *testing.T) {
@@ -1086,7 +1086,7 @@ func TestGetDocumentation(t *testing.T) {
 
 		// Create temp dir for documentation files
 		docTempDir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme-README.md"), []byte("readme content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "README.md"), []byte("readme content"), 0o644))
 
 		// Create documentation.tar
 		tarPath := filepath.Join(pkgDir, DocumentationTar)

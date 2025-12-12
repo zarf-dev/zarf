@@ -971,13 +971,28 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
+	basenameCounts := make(map[string]int)
+	for _, file := range pkg.Documentation {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
 	for key, file := range pkg.Documentation {
 		src := file
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(packagePath, file)
 		}
 
-		docFilename := FormatDocumentFileName(key, file)
+		basename := filepath.Base(file)
+		var docFilename string
+
+		// If basename is unique, use it directly; otherwise use key prefix
+		if basenameCounts[basename] == 1 {
+			docFilename = basename
+		} else {
+			docFilename = FormatDocumentFileName(key, file)
+		}
+
 		dst := filepath.Join(tmpDir, docFilename)
 
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {

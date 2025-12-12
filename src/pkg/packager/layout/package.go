@@ -364,8 +364,23 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
+	basenameCounts := make(map[string]int)
+	for _, file := range keysToExtract {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
 	for key, file := range keysToExtract {
-		docFileName := FormatDocumentFileName(key, file)
+		basename := filepath.Base(file)
+		var docFileName string
+
+		// If basename is unique, use it directly; otherwise use key prefix
+		if basenameCounts[basename] == 1 {
+			docFileName = basename
+		} else {
+			docFileName = FormatDocumentFileName(key, file)
+		}
+
 		srcPath := filepath.Join(tmpDir, docFileName)
 		dstPath := filepath.Join(destPath, docFileName)
 		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
@@ -380,6 +395,30 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 // FormatDocumentFileName for storing the document in the package or presenting it to the user
 func FormatDocumentFileName(key, file string) string {
 	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
+}
+
+// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
+// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) map[string]string {
+	// Count basenames to detect conflicts
+	basenameCounts := make(map[string]int)
+	for _, file := range documentation {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
+	// Build map of key -> final filename
+	result := make(map[string]string)
+	for key, file := range documentation {
+		basename := filepath.Base(file)
+		// If basename is unique, use it directly; otherwise use key prefix
+		if basenameCounts[basename] == 1 {
+			result[key] = basename
+		} else {
+			result[key] = FormatDocumentFileName(key, file)
+		}
+	}
+	return result
 }
 
 // GetComponentDir returns a path to the directory in the given component.

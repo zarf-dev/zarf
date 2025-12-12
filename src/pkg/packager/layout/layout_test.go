@@ -35,8 +35,8 @@ func TestAssembleSkeleton(t *testing.T) {
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
 879bfe82d20f7bdcd60f9e876043cc4343af4177a6ee8b2660c304a5b6c70be7 components/files.tar
+bd82245bfc3c79abfa23dcf72c8099a2788c1b6073464f1ee0c6b64b9c8ef2f6 documentation.tar
 c497f1a56559ea0a9664160b32e4b377df630454ded6a3787924130c02f341a6 components/manifests.tar
-fb025c2fe5257c7c766343471f33f57d4eaddb1ea5772cf9d1aa6fb8809cb4cc documentation.tar
 fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm-charts.tar
 `
 
@@ -175,7 +175,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			docsDir := filepath.Join(tmpdir, "docs-dir")
 			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
 			require.NoError(t, err)
-			require.FileExists(t, filepath.Join(docsDir, "docs-doc.md"))
+			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 
 			// Ensure the component has the correct files
 			fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.FilesComponentDir)
