@@ -138,7 +138,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			if !ok {
 				continue
 			}
-			if rel.Info.Status == "deployed" {
+			if rel.Info.Status == releasecommon.StatusDeployed {
 				previouslyDeployedVersion = rel.Version
 			}
 		}
