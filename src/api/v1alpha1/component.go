@@ -168,6 +168,9 @@ type ZarfChart struct {
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+	// whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.
+	// Auto uses whichever strategy that chart was previously installed with.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 }
 
 // ShouldRunSchemaValidation returns if Helm schema validation should be run or not

@@ -19,9 +19,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/storage/driver"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/kube"
+	"helm.sh/helm/v4/pkg/storage/driver"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -129,13 +130,13 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 					settings.SetNamespace(chart.Namespace)
 					actionConfig := &action.Configuration{}
 					// TODO (phillebaba): Get credentials from cluster instead of reading again.
-					err := actionConfig.Init(settings.RESTClientGetter(), chart.Namespace, "", func(string, ...interface{}) {})
+					err := actionConfig.Init(settings.RESTClientGetter(), chart.Namespace, "")
 					if err != nil {
 						return err
 					}
 					client := action.NewUninstall(actionConfig)
 					client.KeepHistory = false
-					client.Wait = true
+					client.WaitStrategy = kube.StatusWatcherStrategy
 					client.Timeout = opts.Timeout
 					_, err = client.Run(chart.ChartName)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
