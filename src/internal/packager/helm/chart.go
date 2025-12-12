@@ -312,7 +312,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	// FIXME: Server-side apply is causing "metadata.managedFields must be nil" errors in Helm 4
 	// Temporarily disabling until we can root cause the issue
-	client.ServerSideApply = "false"
+	client.ServerSideApply = "auto"
 
 	// FIXME: Need to decide if we'll keep this, most likely we will
 	// Another option is to set this to adoptExistingResources
