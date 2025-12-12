@@ -5,7 +5,6 @@
 package helm
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -31,10 +30,8 @@ import (
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"helm.sh/helm/v4/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 )
 
@@ -92,7 +89,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	}
 
 	histClient := action.NewHistory(actionConfig)
-	var release *releasev1.Release
 
 	helmCtx, helmCtxCancel := context.WithTimeout(ctx, opts.Timeout)
 	defer helmCtxCancel()
@@ -105,7 +101,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		release, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.AdoptExistingResources)
+		_, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.AdoptExistingResources)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
@@ -117,7 +113,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return nil, zarfChart.ReleaseName, fmt.Errorf("unable to cast release to v1.Release type")
 		}
 
-		release, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease, opts.AdoptExistingResources)
+		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease, opts.AdoptExistingResources)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -157,22 +153,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, zarfChart.ReleaseName, installErr
 	}
 
-	resourceList, err := actionConfig.KubeClient.Build(bytes.NewBufferString(release.Manifest), true)
-	if err != nil {
-		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to build the resource list: %w", err)
-	}
-
-	runtimeObjs := []runtime.Object{}
-	for _, resource := range resourceList {
-		runtimeObjs = append(runtimeObjs, resource.Object)
-	}
-	if !zarfChart.NoWait {
-		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
-		l.Info("running health checks", "chart", zarfChart.Name)
-		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
-			return nil, zarfChart.ReleaseName, err
-		}
-	}
 	l.Debug("done processing Helm chart", "name", zarfChart.Name, "duration", time.Since(start))
 
 	// return any collected connect strings for zarf connect.
