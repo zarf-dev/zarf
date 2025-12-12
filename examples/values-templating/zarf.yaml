@@ -4,7 +4,8 @@ metadata:
   description: Example nginx package to demonstrate Zarf Values templating
 values:
   files:
-    - values.yaml
+    - values/values.yaml
+  schema: values/values.schema.json
 
 # Until Consts and Vars are fully deprecated, they'll be available in go-templates
 constants:
@@ -108,7 +109,11 @@ x-mdx: |
   Deploy this example to see values and templates in action:
 
     ```bash
-    # Create and deploy the package (features="values=true" flag required until general release of values)
+    # Optional: Inspect the manifests and chart values-files (features="values=true" flag required until general release of values)
+    zarf dev inspect manifests --features="values=true"
+    zarf dev inspect values-files --features="values=true"
+
+    # Create and deploy the package
     zarf package create . --confirm --features="values=true"
     zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --features="values=true"
 
@@ -117,7 +122,7 @@ x-mdx: |
     zarf connect nginx
 
     # View the helm chart results
-    kubectl get configmap -n helm-overrides
+    kubectl get configmap -n helm-overrides -o yaml
 
     # Remove the package with values templating in remove actions
     # Feel free to change --set-values to whatever you want!

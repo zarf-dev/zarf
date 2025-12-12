@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/mholt/archives"
@@ -133,10 +134,24 @@ func Compress(ctx context.Context, sources []string, dest string, _ CompressOpts
 	for _, src := range sources {
 		mapping[src] = filepath.Base(src)
 	}
-	files, err := archives.FilesFromDisk(ctx, nil, mapping)
+	files, err := archives.FilesFromDisk(ctx, &archives.FromDiskOptions{
+		ClearAttributes: true,
+	}, mapping)
 	if err != nil {
 		return fmt.Errorf("failed to stat sources: %w", err)
 	}
+
+	// Sort files by NameInArchive to ensure deterministic tar creation
+	// FilesFromDisk iterates over a map which has non-deterministic ordering
+	slices.SortFunc(files, func(a, b archives.FileInfo) int {
+		if a.NameInArchive < b.NameInArchive {
+			return -1
+		}
+		if a.NameInArchive > b.NameInArchive {
+			return 1
+		}
+		return 0
+	})
 
 	archiver, err := findArchiver(dest)
 	if err != nil {
