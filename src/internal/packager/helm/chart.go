@@ -113,7 +113,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return nil, zarfChart.ReleaseName, fmt.Errorf("unable to cast release to v1.Release type")
 		}
 
-		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease, opts.AdoptExistingResources)
+		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -272,7 +272,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
-	useSSA := zarfChart.ServerSideApply == "false"
+	useSSA := zarfChart.ServerSideApply != "false"
 	client.ServerSideApply = useSSA
 
 	// Perform the loadedChart installation.
@@ -290,7 +290,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, c *cluster.Cluster, lastRelease *releasev1.Release, adoptExistingResources bool) (*releasev1.Release, error) {
+	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, c *cluster.Cluster, lastRelease *releasev1.Release) (*releasev1.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
 	err := migrateDeprecatedAPIs(ctx, c, actionConfig, lastRelease)
 	if err != nil {
@@ -326,12 +326,6 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.PostRenderer = postRender
 
 	client.MaxHistory = maxHelmHistory
-
-	// Enable TakeOwnership when adopting existing resources
-	// This tells Helm to adopt resources without Helm annotations (i.e., resources created by kubectl)
-	if adoptExistingResources {
-		client.TakeOwnership = true
-	}
 
 	// Perform the loadedChart upgrade.
 	releaser, err := client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)

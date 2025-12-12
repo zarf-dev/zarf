@@ -52,6 +52,8 @@ func TestHelm(t *testing.T) {
 	t.Run("helm charts example with environment registry overrides", testHelmExampleWithOverrides)
 
 	t.Run("helm escaping", testHelmEscaping)
+
+	t.Run("helm server-side apply", testHelmServerSideApply)
 }
 
 func testHelmChartsExample(t *testing.T) {
@@ -110,7 +112,31 @@ func testHelmChartsExample(t *testing.T) {
 }
 
 func testHelmServerSideApply(t *testing.T) {
+	t.Parallel()
+	t.Log("E2E: Helm server-side apply")
+	tmpdir := t.TempDir()
 
+	helmSSAPath := filepath.Join("src", "test", "packages", "25-helm-ssa")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", helmSSAPath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Deploy the package
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-charts-ssa-%s.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify podinfo-with-ssa was deployed with server-side apply
+	helmOutSSA, err := exec.Command("helm", "get", "metadata", "podinfo-with-ssa", "-n", "podinfo-with-ssa").Output()
+	require.NoError(t, err, "unable to get helm metadata for podinfo-with-ssa")
+	require.Contains(t, string(helmOutSSA), "APPLY_METHOD: server-side apply")
+
+	// Verify podinfo-without-ssa was deployed with client-side apply
+	helmOutNoSSA, err := exec.Command("helm", "get", "metadata", "podinfo-without-ssa", "-n", "podinfo-without-ssa").Output()
+	require.NoError(t, err, "unable to get helm metadata for podinfo-without-ssa")
+	require.Contains(t, string(helmOutNoSSA), "APPLY_METHOD: client-side apply")
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 }
 
 func testHelmExampleWithOverrides(t *testing.T) {
