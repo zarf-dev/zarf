@@ -362,7 +362,7 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 		for _, component := range pkg.Data.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
-				for _, image := range component.Images {
+				for _, image := range component.GetImages() {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags
 					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryEndpoint, image)
 					if err != nil {
