@@ -16,10 +16,8 @@ const (
 	ValuesYAML   = "values.yaml"
 	ValuesSchema = "values.schema.json"
 
-	ImagesDir        = "images"
-	ComponentsDir    = "components"
-	ValuesDir        = "values"
-	DocumentationDir = "documentation"
+	ImagesDir     = "images"
+	ComponentsDir = "components"
 
 	SBOMDir = "zarf-sbom"
 	SBOMTar = "sboms.tar"
