@@ -26,10 +26,10 @@ func TestReleaseHistoryHelm(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	stdout, err := exec.Command("helm", "history", "-n", "helm-release-history", "chart").Output()
+	stdout, _, err := e2e.Zarf(t, "tools", "helm", "history", "-n", "helm-release-history", "chart")
 	require.NoError(t, err)
-	out := strings.TrimSpace(string(stdout))
-	count := len(strings.Split(string(out), "\n"))
+	out := strings.TrimSpace(stdout)
+	count := len(strings.Split(out, "\n"))
 	require.Equal(t, 11, count)
 
 	_, _, err = e2e.Zarf(t, "package", "remove", packagePath, "--confirm")
@@ -126,14 +126,14 @@ func testHelmServerSideApply(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify podinfo-with-ssa was deployed with server-side apply
-	helmOutSSA, err := exec.Command("helm", "get", "metadata", "podinfo-with-ssa", "-n", "podinfo-with-ssa").Output()
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "podinfo-with-ssa", "-n", "podinfo-with-ssa")
 	require.NoError(t, err, "unable to get helm metadata for podinfo-with-ssa")
-	require.Contains(t, string(helmOutSSA), "APPLY_METHOD: server-side apply")
+	require.Contains(t, stdOut, "APPLY_METHOD: server-side apply")
 
 	// Verify podinfo-without-ssa was deployed with client-side apply
-	helmOutNoSSA, err := exec.Command("helm", "get", "metadata", "podinfo-without-ssa", "-n", "podinfo-without-ssa").Output()
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "podinfo-without-ssa", "-n", "podinfo-without-ssa")
 	require.NoError(t, err, "unable to get helm metadata for podinfo-without-ssa")
-	require.Contains(t, string(helmOutNoSSA), "APPLY_METHOD: client-side apply")
+	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -202,36 +202,36 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	// We do not want to uninstall charts that had failed installs/upgrades
 	// to prevent unintentional deletion and/or data loss in production environments.
 	// https://github.com/zarf-dev/zarf/issues/2455
-	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
+	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the good package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", goodPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure this upgrades/fixes the dos-games chart.
-	helmOut, err = exec.Command("helm", "list", "-n", "dos-games").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	// Deploy the evil package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that we rollback properly
-	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 2")
+	require.Contains(t, helmOut, "Rollback to 2")
 
 	// Deploy the evil package (again to ensure we check full history)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", evilPath, "--timeout", "10s", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
 
 	// Ensure that we rollback properly
-	helmOut, err = exec.Command("helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1").Output()
+	helmOut, _, err = e2e.Zarf(t, "tools", "helm", "history", "-n", "dos-games", "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866", "--max", "1")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "Rollback to 4")
+	require.Contains(t, helmOut, "Rollback to 4")
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
@@ -254,9 +254,9 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
-	helmOut, err := exec.Command("helm", "list", "-n", "dos-games").Output()
+	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
 	require.NoError(t, err)
-	require.Contains(t, string(helmOut), "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
 
 	existingLabel, _, err := e2e.Kubectl(t, "get", "ns", "dos-games", "-o=jsonpath={.metadata.labels.keep-this}")
 	require.Equal(t, "label", existingLabel)
