@@ -100,6 +100,7 @@ const (
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
 	VPkgDeployValues     = "package.deploy.values"
+	VPkgDeploySetValues  = "package.deploy.set_values"
 
 	// Package publish config keys
 
@@ -118,6 +119,10 @@ const (
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
+
+	// Package remove config keys
+
+	VPkgRemoveSetValues = "package.remove.set_values"
 
 	// Dev deploy config keys
 
