@@ -36,7 +36,7 @@ func TestChecksumAndSignature(t *testing.T) {
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, "--verify", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "unable to load package: package is signed but no key was provided")
+	require.Contains(t, stdErr, "unable to load package: package is signed but no public key was provided (use --key)")
 
 	// Test that we don't get an error when we remember to provide the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgName, publicKeyFlag, "--confirm")
