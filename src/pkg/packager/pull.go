@@ -33,8 +33,8 @@ import (
 type PullOptions struct {
 	// SHASum uniquely identifies a package based on its contents.
 	SHASum string
-	// SkipSignatureValidation flags whether Pull should skip validating the signature.
-	SkipSignatureValidation bool
+	// Verify validates the create-time signage of a package.
+	Verify bool
 	// Architecture is the package architecture.
 	Architecture string
 	// PublicKeyPath validates the create-time signage of a package.
@@ -69,14 +69,14 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
-		Shasum:                  opts.SHASum,
-		Architecture:            arch,
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Output:                  destination,
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-		CachePath:               opts.CachePath,
+		Shasum:         opts.SHASum,
+		Architecture:   arch,
+		PublicKeyPath:  opts.PublicKeyPath,
+		Verify:         opts.Verify,
+		Output:         destination,
+		OCIConcurrency: opts.OCIConcurrency,
+		RemoteOptions:  opts.RemoteOptions,
+		CachePath:      opts.CachePath,
 	})
 	if err != nil {
 		return "", err
@@ -94,16 +94,17 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source                  string
-	Shasum                  string
-	Architecture            string
-	LayersSelector          zoci.LayersSelector
-	Filter                  filters.ComponentFilterStrategy
-	OCIConcurrency          int
-	CachePath               string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
+	Source         string
+	Shasum         string
+	Architecture   string
+	LayersSelector zoci.LayersSelector
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	CachePath      string
+	PublicKeyPath  string
 	RemoteOptions
+	VertifyBlobOptions utils.VerifyBlobOptions
+	Verify             bool
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -158,10 +159,11 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  opts.Filter,
+		PublicKeyPath:     opts.PublicKeyPath,
+		Verify:            opts.Verify,
+		VerifyBlobOptions: opts.VertifyBlobOptions,
+		IsPartial:         isPartial,
+		Filter:            opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

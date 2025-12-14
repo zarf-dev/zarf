@@ -138,13 +138,13 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was deployed, escaped, and contains all of its data
-	kubectlOut, err := exec.Command("kubectl", "-n", "default", "describe", "cm", "dont-template-me").Output()
-	require.NoError(t, err, "unable to describe configmap")
-	require.Contains(t, string(kubectlOut), `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
-	require.Contains(t, string(kubectlOut), "backtick1: \"content with backticks `some random things`\"")
-	require.Contains(t, string(kubectlOut), "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
-	require.Contains(t, string(kubectlOut), `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
-	require.Contains(t, string(kubectlOut), `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
+	kubectlOut, kubectlErr, err := e2e.Kubectl(t, "-n", "default", "describe", "cm", "dont-template-me")
+	require.NoError(t, err, kubectlOut, kubectlErr, "unable to describe configmap")
+	require.Contains(t, kubectlOut, `alert: OOMKilled {{ "{{ \"random.Values\" }}" }}`)
+	require.Contains(t, kubectlOut, "backtick1: \"content with backticks `some random things`\"")
+	require.Contains(t, kubectlOut, "backtick2: \"nested templating with backticks {{` random.Values `}}\"")
+	require.Contains(t, kubectlOut, `description: Pod {{$labels.pod}} in {{$labels.namespace}} got OOMKilled`)
+	require.Contains(t, kubectlOut, `TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIG`)
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "evil-templates", "--confirm")

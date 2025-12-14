@@ -37,8 +37,10 @@ type PackageLayout struct {
 type PackageLayoutOptions struct {
 	PublicKeyPath           string
 	SkipSignatureValidation bool
+	Verify                  bool
 	IsPartial               bool
 	Filter                  filters.ComponentFilterStrategy
+	VerifyBlobOptions       utils.VerifyBlobOptions
 }
 
 // DirPath returns base directory of the package layout
@@ -67,6 +69,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions)
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -91,14 +94,28 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	// early failure condition
+	if !pkgLayout.IsSigned() && opts.Verify {
+		return nil, errors.New("package is not signed")
+	}
 
-		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
-		if err != nil {
-			return nil, err
+	// early warning and return condition
+	if !pkgLayout.IsSigned() {
+		l.Warn("package is not signed - verification cannot be performed")
+		return pkgLayout, nil
+	}
+
+	verifyOptions := utils.DefaultVerifyBlobOptions()
+	verifyOptions.KeyRef = opts.PublicKeyPath
+
+	err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
+	if err != nil {
+		// TODO: if not requiring a verify - warn and return layout
+		if !opts.Verify {
+			l.Warn("package signature could not be verified:", "error", err.Error())
+			return pkgLayout, nil
 		}
+		return nil, err
 	}
 
 	return pkgLayout, nil
@@ -280,7 +297,15 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	opts.SigRef = signaturePath
 
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	verified := false
+	err := utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	if err != nil {
+		p.Pkg.Build.Verified = &verified
+		return err
+	}
+	verified = true
+	p.Pkg.Build.Verified = &verified
+	return nil
 }
 
 // IsSigned returns true if the package is signed.
