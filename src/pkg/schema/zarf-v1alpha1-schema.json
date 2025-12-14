@@ -345,7 +345,7 @@
           "type": "string"
         },
         "verified": {
-          "description": "Whether this package has been succuessfully verified",
+          "description": "Whether this package has been successfully verified",
           "type": "boolean"
         },
         "version": {
