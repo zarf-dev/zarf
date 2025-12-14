@@ -204,11 +204,12 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalCrc32Short = "Generates a decimal CRC32 for the given text"
 
 	// zarf package
-	CmdPackageShort             = "Zarf package commands for creating, deploying, and inspecting packages"
-	CmdPackageFlagConcurrency   = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
-	CmdPackageFlagFlagPublicKey = "Path to public key file for validating signed packages"
-	CmdPackageFlagVerify        = "Verify the Zarf package signature"
-	CmdPackageFlagRetries       = "Number of retries to perform for Zarf operations like git/image pushes"
+	CmdPackageShort                         = "Zarf package commands for creating, deploying, and inspecting packages"
+	CmdPackageFlagConcurrency               = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
+	CmdPackageFlagFlagPublicKey             = "Path to public key file for validating signed packages"
+	CmdPackageFlagVerify                    = "Verify the Zarf package signature"
+	CmdPackageFlagSkipSignatureValidation   = "[Deprecated] Skip validating the signature of the Zarf package"
+	CmdPackageFlagRetries                   = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"
 	CmdPackageCreateLong  = "Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.\n" +

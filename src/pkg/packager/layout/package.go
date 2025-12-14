@@ -94,28 +94,41 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	// early failure condition
-	if !pkgLayout.IsSigned() && opts.Verify {
-		return nil, errors.New("package is not signed")
-	}
-
-	// early warning and return condition
+	// Handle unsigned packages
 	if !pkgLayout.IsSigned() {
+		// If a public key was provided but package is unsigned, that's an error condition
+		if opts.PublicKeyPath != "" {
+			return nil, errors.New("a key was provided but the package is not signed")
+		}
+
+		// Unsigned packages are allowed (just warn) - they don't have signatures to verify
 		l.Warn("package is not signed - verification cannot be performed")
 		return pkgLayout, nil
 	}
 
+	// Package is signed - check if we have a key to verify with
+	if opts.PublicKeyPath == "" {
+		// If verification is required but no key provided, that's an error
+		if opts.Verify {
+			return nil, errors.New("package is signed but no public key was provided (use --key)")
+		}
+
+		// Otherwise just warn and continue
+		l.Warn("package is signed but no public key was provided - signature verification skipped")
+		return pkgLayout, nil
+	}
+
+	// We have a signed package and a public key - verify the signature
 	verifyOptions := utils.DefaultVerifyBlobOptions()
 	verifyOptions.KeyRef = opts.PublicKeyPath
 
 	err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 	if err != nil {
-		// TODO: if not requiring a verify - warn and return layout
 		if !opts.Verify {
 			l.Warn("package signature could not be verified:", "error", err.Error())
 			return pkgLayout, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
 
 	return pkgLayout, nil
