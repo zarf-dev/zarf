@@ -287,7 +287,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.SkipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark flag skip-signature-validation", "error", errSig)
 	}
@@ -512,7 +512,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -693,7 +693,7 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -779,7 +779,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -877,7 +877,7 @@ func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -975,7 +975,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -1055,7 +1055,7 @@ func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -1133,7 +1133,7 @@ func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -1316,7 +1316,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, "Path to values file(s) for removal actions")
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -1445,7 +1445,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
@@ -1605,7 +1605,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}

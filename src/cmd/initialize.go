@@ -107,7 +107,10 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	_ = cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature validation now occurs on every execution. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
