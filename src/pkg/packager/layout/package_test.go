@@ -1110,4 +1110,41 @@ func TestGetDocumentation(t *testing.T) {
 		err = pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
 		require.ErrorContains(t, err, "not found in package documentation")
 	})
+
+	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		docTempDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme1-README.md"), []byte("readme1 content"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(docTempDir, "readme2-README.md"), []byte("readme2 content"), 0o644))
+
+		tarPath := filepath.Join(pkgDir, DocumentationTar)
+		err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+		require.NoError(t, err)
+
+		pkg := v1alpha1.ZarfPackage{
+			Metadata: v1alpha1.ZarfMetadata{Name: "test"},
+			Documentation: map[string]string{
+				"readme1": "path/to/README.md",
+				"readme2": "other/path/README.md",
+			},
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			Pkg:     pkg,
+		}
+
+		outputDir := filepath.Join(tmpDir, "output")
+		err = pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme1"})
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(outputDir, "readme1-README.md"))
+		content, err := os.ReadFile(filepath.Join(outputDir, "readme1-README.md"))
+		require.NoError(t, err)
+		require.Equal(t, "readme1 content", string(content))
+	})
 }

@@ -364,8 +364,9 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
+	// check for duplicates across all documentation files in the package, not just keysToExtract
 	basenameCounts := make(map[string]int)
-	for _, file := range keysToExtract {
+	for _, file := range p.Pkg.Documentation {
 		basename := filepath.Base(file)
 		basenameCounts[basename]++
 	}
