@@ -96,4 +96,4 @@ Additionally, inspecting a package deployed to a cluster will not be able to sho
 
 Documentation can be stored in a package using the top level `documentation` field.  This field maps descriptive keys, such as `readme` or `variables`, to the filepaths of your documentation files. Common use cases for documentation include package configuration options, changelogs, or application specific information.
 
-Package consumers can extract documentation using the command [zarf package inspect documentation](/commands/zarf_package_inspect_documentation). If two files have the same basename, then the key will be prepended to the duplicate filenames. View an example of the `documentation` field in the [dos-games](/ref/examples/dos-games) package.
+Package consumers can extract documentation using the command [zarf package inspect documentation](/commands/zarf_package_inspect_documentation). If multiple files have the same basename, then the key will be prepended to the duplicate filenames. View an example of the `documentation` field in the [dos-games](/ref/examples/dos-games) package.
