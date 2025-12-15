@@ -43,8 +43,6 @@ type LoadOptions struct {
 	CachePath string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
-	// Verification options
-	VerifyBlobOptions utils.VerifyBlobOptions
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -131,10 +129,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:     opts.PublicKeyPath,
-		Verify:            opts.Verify,
-		VerifyBlobOptions: opts.VerifyBlobOptions,
-		Filter:            opts.Filter,
+		PublicKeyPath: opts.PublicKeyPath,
+		Verify:        opts.Verify,
+		Filter:        opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {

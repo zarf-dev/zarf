@@ -33,7 +33,7 @@ import (
 type PullOptions struct {
 	// SHASum uniquely identifies a package based on its contents.
 	SHASum string
-	// Verify validates the create-time signage of a package.
+	// Verify validates the package signature
 	Verify bool
 	// Architecture is the package architecture.
 	Architecture string
@@ -103,8 +103,7 @@ type pullOCIOptions struct {
 	CachePath      string
 	PublicKeyPath  string
 	RemoteOptions
-	VerifyBlobOptions utils.VerifyBlobOptions
-	Verify            bool
+	Verify bool
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -159,11 +158,10 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:     opts.PublicKeyPath,
-		Verify:            opts.Verify,
-		VerifyBlobOptions: opts.VerifyBlobOptions,
-		IsPartial:         isPartial,
-		Filter:            opts.Filter,
+		PublicKeyPath: opts.PublicKeyPath,
+		Verify:        opts.Verify,
+		IsPartial:     isPartial,
+		Filter:        opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

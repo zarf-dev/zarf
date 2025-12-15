@@ -309,11 +309,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	opts.SigRef = signaturePath
 
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	err := utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
 
 // IsSigned returns true if the package is signed.

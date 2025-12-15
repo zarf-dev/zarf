@@ -43,6 +43,7 @@ func TestLoadPackage(t *testing.T) {
 				opt := LoadOptions{
 					Shasum:        shasum,
 					PublicKeyPath: "",
+					Verify:        true,
 					Filter:        filters.Empty(),
 				}
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
@@ -56,6 +57,7 @@ func TestLoadPackage(t *testing.T) {
 			opt := LoadOptions{
 				Shasum:        "foo",
 				PublicKeyPath: "",
+				Verify:        true,
 				Filter:        filters.Empty(),
 			}
 			_, err := LoadPackage(ctx, tt.source, opt)
@@ -106,7 +108,7 @@ func TestLoadSplitPackage(t *testing.T) {
 			// Load the split package, verify that the split package became one
 			opt := LoadOptions{
 				PublicKeyPath: "",
-				Verify:        false,
+				Verify:        true,
 				Filter:        filters.Empty(),
 			}
 			_, err = LoadPackage(ctx, packageSource, opt)

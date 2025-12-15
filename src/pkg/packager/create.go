@@ -68,6 +68,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 			LayersSelector: zoci.MetadataLayers,
 			OCIConcurrency: opts.OCIConcurrency,
 			CachePath:      opts.CachePath,
+			Verify:         false,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to load differential package: %w", err)
