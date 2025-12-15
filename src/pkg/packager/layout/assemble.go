@@ -167,6 +167,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+		return nil, err
+	}
+
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
 		return nil, err
@@ -221,6 +225,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -945,6 +953,48 @@ func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string
 	// Set appropriate file permissions
 	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	}
+
+	return nil
+}
+
+func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath string) (err error) {
+	if len(pkg.Documentation) == 0 {
+		return nil
+	}
+
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	// Get the mapping of keys to their final filenames (with deduplication logic)
+	fileNames := GetDocumentationFileNames(pkg.Documentation)
+
+	for key, file := range pkg.Documentation {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+
+		docFilename := fileNames[key]
+		dst := filepath.Join(tmpDir, docFilename)
+
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+		}
+
+		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+		}
+	}
+
+	tarPath := filepath.Join(buildPath, DocumentationTar)
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
 	return nil

@@ -1242,6 +1242,13 @@
       },
       "type": "array"
     },
+    "documentation": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Documentation files to be added to the package",
+      "type": "object"
+    },
     "kind": {
       "default": "ZarfPackageConfig",
       "description": "The kind of Zarf package.",

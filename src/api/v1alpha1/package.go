@@ -70,6 +70,8 @@ type ZarfPackage struct {
 	Variables []InteractiveVariable `json:"variables,omitempty"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values ZarfValues `json:"values,omitempty"`
+	// Documentation files to be added to the package
+	Documentation map[string]string `json:"documentation,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
