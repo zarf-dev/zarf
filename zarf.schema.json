@@ -78,6 +78,31 @@
       },
       "type": "object"
     },
+    "ImageArchive": {
+      "additionalProperties": false,
+      "description": "ImageArchive points to an archived file containing an OCI layout",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "images": {
+          "description": "Images within the OCI layout to be brought into the package",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "Path to file containing an OCI-layout",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "images"
+      ],
+      "type": "object"
+    },
     "InteractiveVariable": {
       "additionalProperties": false,
       "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
@@ -543,6 +568,13 @@
           "description": "List of resources to health check after deployment",
           "items": {
             "$ref": "#/$defs/NamespacedObjectKindReference"
+          },
+          "type": "array"
+        },
+        "imageArchives": {
+          "description": "List of Tar files of images to bring into the package.",
+          "items": {
+            "$ref": "#/$defs/ImageArchive"
           },
           "type": "array"
         },

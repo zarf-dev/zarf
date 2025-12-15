@@ -582,7 +582,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	images, repos := 0, 0
 	// Let's count the images and repos in the package
 	for _, component := range pkgLayout.Pkg.Components {
-		images += len(component.Images)
+		images += len(component.GetImages())
 		repos += len(component.Repos)
 	}
 	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
@@ -1059,7 +1059,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	images := make([]string, 0)
 	for _, component := range pkg.Components {
-		images = append(images, component.Images...)
+		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
 	if len(images) == 0 {

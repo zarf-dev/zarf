@@ -105,7 +105,28 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	for _, component := range pkg.Components {
+	manifests := []images.ImageWithManifest{}
+	for i, component := range pkg.Components {
+		for j, imageArchive := range component.ImageArchives {
+			if !filepath.IsAbs(imageArchive.Path) {
+				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
+			}
+
+			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, archiveImageManifests...)
+			var imageList []string
+			for _, imageManifest := range archiveImageManifests {
+				err := checkForDuplicateImage(pkg.Components, component.ImageArchives[j], imageManifest.Image.Reference)
+				if err != nil {
+					return nil, err
+				}
+				imageList = append(imageList, imageManifest.Image.Reference)
+			}
+			pkg.Components[i].ImageArchives[j].Images = imageList
+		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -127,15 +148,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
+		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
-			if ok {
-				sbomImageList = append(sbomImageList, image)
-			}
+		manifests = append(manifests, imageManifests...)
+	}
+
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
+		if ok {
+			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 
 		// Sort images index to make build reproducible.
@@ -752,6 +775,18 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
+	var versionRequirements []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	pkg.Build.VersionRequirements = versionRequirements
+
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
 	for i := range registryOverrides {
@@ -922,6 +957,23 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
 
+	return nil
+}
+
+func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive v1alpha1.ImageArchive, imageRef string) error {
+	for _, comp := range components {
+		for _, imageArchive := range comp.ImageArchives {
+			if imageArchive.Path == currentArchive.Path {
+				continue
+			}
+			if slices.Contains(imageArchive.Images, imageRef) {
+				return fmt.Errorf("image %s from %s is also pulled by archive %s", imageRef, currentArchive.Path, imageArchive.Path)
+			}
+		}
+		if slices.Contains(comp.Images, imageRef) {
+			return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
+		}
+	}
 	return nil
 }
 
