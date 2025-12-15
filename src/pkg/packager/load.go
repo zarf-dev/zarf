@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -29,8 +30,9 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum                  string
-	Architecture            string
+	Shasum       string
+	Architecture string
+	// [Deprecated] Path to public key file - use VerifyBlobOptions instead
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
@@ -43,10 +45,13 @@ type LoadOptions struct {
 	CachePath string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
+	// VerifyBlobOptions are the options for Cosign Verification
+	VerifyBlobOptions *utils.VerifyBlobOptions
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
 func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layout.PackageLayout, err error) {
+	l := logger.From(ctx)
 	if source == "" {
 		return nil, fmt.Errorf("must provide a package source")
 	}
@@ -56,6 +61,26 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 
 	if opts.LayersSelector == "" {
 		opts.LayersSelector = zoci.AllLayers
+	}
+
+	// Initialize VerifyBlobOptions with defaults if not provided
+	if opts.VerifyBlobOptions == nil {
+		defaults := utils.DefaultVerifyBlobOptions()
+		opts.VerifyBlobOptions = &defaults
+	}
+
+	// Handle deprecated PublicKeyPath field
+	if opts.PublicKeyPath != "" {
+		// Log deprecation warning
+		l.Warn("option PublicKeyPath is deprecated and will be removed in a future version. Please use VerifyBlobOptions.KeyRef instead.")
+
+		// Check for collision - if both are set and different, that's an error
+		if opts.VerifyBlobOptions.KeyRef != "" && opts.VerifyBlobOptions.KeyRef != opts.PublicKeyPath {
+			return nil, fmt.Errorf("cannot specify both PublicKeyPath and VerifyBlobOptions.KeyRef with different values")
+		}
+
+		// If no collision, use the deprecated field value
+		opts.VerifyBlobOptions.KeyRef = opts.PublicKeyPath
 	}
 
 	srcType, err := identifySource(source)

@@ -152,12 +152,16 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// assemble the verify options - preparing for future verification optionality
+	verifyOptions := utils.DefaultVerifyBlobOptions()
+	verifyOptions.KeyRef = o.publicKeyPath
+
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
 		SkipSignatureValidation: o.skipSignatureValidation,
 		Filter:                  filters.Empty(),
 		Architecture:            config.GetArch(),
 		CachePath:               cachePath,
+		VerifyBlobOptions:       &verifyOptions,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
