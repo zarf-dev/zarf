@@ -94,6 +94,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
+<<<<<<< Updated upstream
 	Source                  string
 	Shasum                  string
 	Architecture            string
@@ -103,6 +104,15 @@ type pullOCIOptions struct {
 	CachePath               string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
+=======
+	Source         string
+	Shasum         string
+	Architecture   string
+	LayersSelector zoci.LayersSelector
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	CachePath      string
+>>>>>>> Stashed changes
 	RemoteOptions
 }
 

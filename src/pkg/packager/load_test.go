@@ -41,10 +41,15 @@ func TestLoadPackage(t *testing.T) {
 
 			for _, shasum := range []string{tt.shasum, ""} {
 				opt := LoadOptions{
+<<<<<<< Updated upstream
 					Shasum:                  shasum,
 					PublicKeyPath:           "",
 					SkipSignatureValidation: false,
 					Filter:                  filters.Empty(),
+=======
+					Shasum: shasum,
+					Filter: filters.Empty(),
+>>>>>>> Stashed changes
 				}
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
@@ -55,10 +60,15 @@ func TestLoadPackage(t *testing.T) {
 			}
 
 			opt := LoadOptions{
+<<<<<<< Updated upstream
 				Shasum:                  "foo",
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
+=======
+				Shasum: "foo",
+				Filter: filters.Empty(),
+>>>>>>> Stashed changes
 			}
 			_, err := LoadPackage(ctx, tt.source, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
@@ -107,9 +117,14 @@ func TestLoadSplitPackage(t *testing.T) {
 
 			// Load the split package, verify that the split package became one
 			opt := LoadOptions{
+<<<<<<< Updated upstream
 				PublicKeyPath:           "",
 				SkipSignatureValidation: false,
 				Filter:                  filters.Empty(),
+=======
+				Verify: false,
+				Filter: filters.Empty(),
+>>>>>>> Stashed changes
 			}
 			_, err = LoadPackage(ctx, packageSource, opt)
 			require.NoError(t, err)

@@ -29,12 +29,20 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
+<<<<<<< Updated upstream
 	Shasum                  string
 	Architecture            string
 	PublicKeyPath           string
 	SkipSignatureValidation bool
 	Filter                  filters.ComponentFilterStrategy
 	Output                  string
+=======
+	Shasum       string
+	Architecture string
+	Verify       bool
+	Filter       filters.ComponentFilterStrategy
+	Output       string
+>>>>>>> Stashed changes
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// Layers to pull during OCI pull
@@ -76,6 +84,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
+<<<<<<< Updated upstream
 			Source:                  source,
 			PublicKeyPath:           opts.PublicKeyPath,
 			SkipSignatureValidation: opts.SkipSignatureValidation,
@@ -86,6 +95,18 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			OCIConcurrency:          opts.OCIConcurrency,
 			RemoteOptions:           opts.RemoteOptions,
 			CachePath:               opts.CachePath,
+=======
+			Source:            source,
+			Verify:            opts.Verify,
+			Shasum:            opts.Shasum,
+			Architecture:      config.GetArch(opts.Architecture),
+			Filter:            opts.Filter,
+			LayersSelector:    opts.LayersSelector,
+			OCIConcurrency:    opts.OCIConcurrency,
+			RemoteOptions:     opts.RemoteOptions,
+			CachePath:         opts.CachePath,
+			VerifyBlobOptions: opts.VerifyBlobOptions,
+>>>>>>> Stashed changes
 		}
 
 		pkgLayout, err := pullOCI(ctx, ociOpts)
@@ -129,9 +150,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
+<<<<<<< Updated upstream
 		PublicKeyPath:           opts.PublicKeyPath,
 		SkipSignatureValidation: opts.SkipSignatureValidation,
 		Filter:                  opts.Filter,
+=======
+		Verify:            opts.Verify,
+		VerifyBlobOptions: opts.VerifyBlobOptions,
+		Filter:            opts.Filter,
+>>>>>>> Stashed changes
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
