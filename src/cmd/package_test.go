@@ -497,14 +497,14 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			packageName:   "documentation",
 			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
 			keys:          []string{},
-			expectedFiles: []string{"readme-README.md", "contributing-CONTRIBUTE.md"},
+			expectedFiles: []string{"README.md", "CONTRIBUTE.md"},
 		},
 		{
 			name:          "documentation inspect - specific key",
 			packageName:   "documentation",
 			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
 			keys:          []string{"readme"},
-			expectedFiles: []string{"readme-README.md"},
+			expectedFiles: []string{"README.md"},
 		},
 		{
 			name:          "documentation inspect - nonexistent key",

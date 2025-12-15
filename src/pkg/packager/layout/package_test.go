@@ -1006,7 +1006,6 @@ func TestGetDocumentation(t *testing.T) {
 				"license": "LICENSE",
 			},
 		}
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
@@ -1043,7 +1042,6 @@ func TestGetDocumentation(t *testing.T) {
 				"license": "LICENSE",
 			},
 		}
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
@@ -1067,7 +1065,6 @@ func TestGetDocumentation(t *testing.T) {
 			Metadata:      v1alpha1.ZarfMetadata{Name: "test"},
 			Documentation: map[string]string{},
 		}
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
@@ -1099,7 +1096,6 @@ func TestGetDocumentation(t *testing.T) {
 				"readme": "README.md",
 			},
 		}
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
@@ -1131,7 +1127,6 @@ func TestGetDocumentation(t *testing.T) {
 				"readme2": "other/path/README.md",
 			},
 		}
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), []byte("test"), 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: pkgDir,
