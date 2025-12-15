@@ -424,6 +424,10 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 		return fmt.Errorf("unable to print package definition: %w", err)
 	}
 
+	if len(pkgLayout.Pkg.Documentation) > 0 {
+		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
+	}
+
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
 		l.Warn("this package does NOT contain an SBOM. If you require an SBOM, the package must be built without the --skip-sbom flag")
 	}
@@ -607,7 +611,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	images, repos := 0, 0
 	// Let's count the images and repos in the package
 	for _, component := range pkgLayout.Pkg.Components {
-		images += len(component.Images)
+		images += len(component.GetImages())
 		repos += len(component.Repos)
 	}
 	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
@@ -699,9 +703,10 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.AddCommand(newPackageInspectSBOMCommand(v))
 	cmd.AddCommand(newPackageInspectImagesCommand(v))
-	cmd.AddCommand(newPackageInspectShowManifestsCommand(v))
+	cmd.AddCommand(newPackageInspectManifestsCommand(v))
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
+	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
@@ -878,7 +883,7 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 	}
 }
 
-func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
+func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
 		Use:   "manifests [ PACKAGE ]",
@@ -1142,7 +1147,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	images := make([]string, 0)
 	for _, component := range pkg.Components {
-		images = append(images, component.Images...)
+		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
 	if len(images) == 0 {
@@ -1153,6 +1158,69 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		fmt.Println("-", image)
 	}
 	return nil
+}
+
+type packageInspectDocumentationOptions struct {
+	skipSignatureValidation bool
+	keys                    []string
+	outputDir               string
+	ociConcurrency          int
+	publicKeyPath           string
+}
+
+func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
+	return &packageInspectDocumentationOptions{}
+}
+
+func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
+	o := newPackageInspectDocumentationOptions()
+	cmd := &cobra.Command{
+		Use:   "documentation [ PACKAGE_SOURCE ]",
+		Short: "Extract documentation files from the package",
+		Args:  cobra.MaximumNArgs(1),
+		RunE:  o.run,
+	}
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
+
+	return cmd
+}
+
+func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
+	ctx := cmd.Context()
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := packager.LoadOptions{
+		SkipSignatureValidation: o.skipSignatureValidation,
+		Architecture:            config.GetArch(),
+		Filter:                  filters.Empty(),
+		PublicKeyPath:           o.publicKeyPath,
+		OCIConcurrency:          o.ociConcurrency,
+		RemoteOptions:           defaultRemoteOptions(),
+		CachePath:               cachePath,
+		LayersSelector:          zoci.DocLayers,
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
+	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
 type packageInspectDefinitionOptions struct {

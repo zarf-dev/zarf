@@ -426,6 +426,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 	}
 
 	comp.HealthChecks = append(comp.HealthChecks, override.HealthChecks...)
+	comp.ImageArchives = append(comp.ImageArchives, override.ImageArchives...)
 
 	return comp
 }
@@ -444,6 +445,11 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed
+	}
+
+	for idx, imageArchive := range child.ImageArchives {
+		composed := makePathRelativeTo(imageArchive.Path, relativeToHead)
+		child.ImageArchives[idx].Path = composed
 	}
 
 	for chartIdx, chart := range child.Charts {
