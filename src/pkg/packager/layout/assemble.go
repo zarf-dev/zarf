@@ -189,7 +189,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{Verify: false})
 	if err != nil {
 		return nil, err
 	}
@@ -259,8 +259,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	layoutOpts := PackageLayoutOptions{
-		SkipSignatureValidation: true,
-		IsPartial:               false,
+		Verify:    false,
+		IsPartial: false,
 	}
 	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {

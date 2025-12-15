@@ -103,8 +103,8 @@ type pullOCIOptions struct {
 	CachePath      string
 	PublicKeyPath  string
 	RemoteOptions
-	VertifyBlobOptions utils.VerifyBlobOptions
-	Verify             bool
+	VerifyBlobOptions utils.VerifyBlobOptions
+	Verify            bool
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -161,7 +161,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:     opts.PublicKeyPath,
 		Verify:            opts.Verify,
-		VerifyBlobOptions: opts.VertifyBlobOptions,
+		VerifyBlobOptions: opts.VerifyBlobOptions,
 		IsPartial:         isPartial,
 		Filter:            opts.Filter,
 	}

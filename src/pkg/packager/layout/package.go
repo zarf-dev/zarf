@@ -35,12 +35,11 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	Verify                  bool
-	IsPartial               bool
-	Filter                  filters.ComponentFilterStrategy
-	VerifyBlobOptions       utils.VerifyBlobOptions
+	PublicKeyPath     string
+	Verify            bool
+	IsPartial         bool
+	Filter            filters.ComponentFilterStrategy
+	VerifyBlobOptions utils.VerifyBlobOptions
 }
 
 // DirPath returns base directory of the package layout
