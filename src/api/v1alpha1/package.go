@@ -271,8 +271,6 @@ type ZarfBuildData struct {
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
-	// Whether this package has been successfully verified
-	Verified *bool `json:"verified,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 }
