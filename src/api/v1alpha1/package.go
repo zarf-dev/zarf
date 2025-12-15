@@ -70,7 +70,7 @@ type ZarfPackage struct {
 	Variables []InteractiveVariable `json:"variables,omitempty"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values ZarfValues `json:"values,omitempty"`
-	// Documentation maps keys to file paths for package documentation files.
+	// Documentation files to be added to the package
 	Documentation map[string]string `json:"documentation,omitempty"`
 }
 

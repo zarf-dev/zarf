@@ -1246,7 +1246,7 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Documentation maps keys to file paths for package documentation files.",
+      "description": "Documentation files to be added to the package",
       "type": "object"
     },
     "kind": {
