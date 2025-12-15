@@ -364,23 +364,10 @@ func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, k
 		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
 	}
 
-	// check for duplicates across all documentation files in the package, not just keysToExtract
-	basenameCounts := make(map[string]int)
-	for _, file := range p.Pkg.Documentation {
-		basename := filepath.Base(file)
-		basenameCounts[basename]++
-	}
+	fileNames := GetDocumentationFileNames(p.Pkg.Documentation)
 
 	for key, file := range keysToExtract {
-		basename := filepath.Base(file)
-		var docFileName string
-
-		// If basename is unique, use it directly; otherwise use key prefix
-		if basenameCounts[basename] == 1 {
-			docFileName = basename
-		} else {
-			docFileName = FormatDocumentFileName(key, file)
-		}
+		docFileName := fileNames[key]
 
 		srcPath := filepath.Join(tmpDir, docFileName)
 		dstPath := filepath.Join(destPath, docFileName)
@@ -401,18 +388,15 @@ func FormatDocumentFileName(key, file string) string {
 // GetDocumentationFileNames returns a map of documentation keys to their final filenames.
 // Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
 func GetDocumentationFileNames(documentation map[string]string) map[string]string {
-	// Count basenames to detect conflicts
 	basenameCounts := make(map[string]int)
 	for _, file := range documentation {
 		basename := filepath.Base(file)
 		basenameCounts[basename]++
 	}
 
-	// Build map of key -> final filename
 	result := make(map[string]string)
 	for key, file := range documentation {
 		basename := filepath.Base(file)
-		// If basename is unique, use it directly; otherwise use key prefix
 		if basenameCounts[basename] == 1 {
 			result[key] = basename
 		} else {
