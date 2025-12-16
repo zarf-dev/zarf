@@ -366,14 +366,26 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
+			opts := cluster.InjectorOpts{
+				ImagesDir:        pkgLayout.GetImageDirPath(),
+				InjectorSeedSrcs: component.Images,
+				PkgName:          pkgLayout.Pkg.Metadata.Name,
+			}
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), opts)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), d.s.InjectorInfo.Port, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), cluster.InjectorOpts{
+				ImagesDir:        pkgLayout.GetImageDirPath(),
+				InjectorSeedSrcs: component.Images,
+				InjectorNodePort: d.s.InjectorInfo.Port,
+				RegistryNodePort: d.s.RegistryInfo.NodePort,
+				PkgName:          pkgLayout.Pkg.Metadata.Name,
+				Architecture:     pkgLayout.Pkg.Metadata.Architecture,
+			})
 			if err != nil {
 				return nil, err
 			}
