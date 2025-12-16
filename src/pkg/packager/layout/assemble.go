@@ -216,7 +216,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{Verify: false})
+	// skip verification on package creation
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{Verify: VerifyNever})
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +291,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	layoutOpts := PackageLayoutOptions{
-		Verify:    false,
+		Verify:    VerifyNever,
 		IsPartial: false,
 	}
 	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)

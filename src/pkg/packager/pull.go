@@ -157,9 +157,15 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+
+	verificationStrategy := layout.VerifyIfPossible
+	if opts.Verify {
+		verificationStrategy = layout.VerifyAlways
+	}
+
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath: opts.PublicKeyPath,
-		Verify:        opts.Verify,
+		Verify:        verificationStrategy,
 		IsPartial:     isPartial,
 		Filter:        opts.Filter,
 	}

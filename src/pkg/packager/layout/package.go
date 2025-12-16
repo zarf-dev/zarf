@@ -38,11 +38,26 @@ type PackageLayoutOptions struct {
 	PublicKeyPath string
 	// Deprecated: SkipSignatureValidation is no longer used and will be removed in a future version.
 	SkipSignatureValidation bool
-	Verify                  bool
-	IsPartial               bool
-	Filter                  filters.ComponentFilterStrategy
-	VerifyBlobOptions       utils.VerifyBlobOptions
+	// Verify specifies whether verification is enforced
+	Verify            VerificationStrategy
+	IsPartial         bool
+	Filter            filters.ComponentFilterStrategy
+	VerifyBlobOptions utils.VerifyBlobOptions
 }
+
+// VerificationStrategy describes a strategy for determining whether to verify a package.
+type VerificationStrategy int
+
+const (
+	// VerifyNever will skip all verification of a package.
+	VerifyNever VerificationStrategy = iota
+	// VerifyIfPossible will attempt a verification, it will not error if verification
+	// data is missing. But it will not stop processing if verification fails.
+	VerifyIfPossible
+	// VerifyAlways will always attempt a verification, and will fail if the
+	// verification fails.
+	VerifyAlways
+)
 
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
@@ -99,13 +114,15 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	verifyOptions := utils.DefaultVerifyBlobOptions()
 	verifyOptions.KeyRef = opts.PublicKeyPath
 
-	err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
-	if err != nil {
-		if !opts.Verify {
-			l.Debug("package signature could not be verified:", "error", err.Error())
-			return pkgLayout, nil
+	if opts.Verify > VerifyNever {
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
+		if err != nil {
+			if opts.Verify == VerifyIfPossible {
+				l.Warn("package signature could not be verified:", "error", err.Error())
+				return pkgLayout, nil
+			}
+			return nil, fmt.Errorf("signature verification failed: %w", err)
 		}
-		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
 
 	return pkgLayout, nil
