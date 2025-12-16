@@ -125,14 +125,14 @@ func testHelmServerSideApply(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify podinfo-with-ssa was deployed with server-side apply
-	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "podinfo-with-ssa", "-n", "podinfo-with-ssa")
-	require.NoError(t, err, "unable to get helm metadata for podinfo-with-ssa")
+	// Verify configmap-with-ssa was deployed with server-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "configmap-with-ssa", "-n", "configmap-with-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-with-ssa")
 	require.Contains(t, stdOut, "APPLY_METHOD: server-side apply")
 
-	// Verify podinfo-without-ssa was deployed with client-side apply
-	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "podinfo-without-ssa", "-n", "podinfo-without-ssa")
-	require.NoError(t, err, "unable to get helm metadata for podinfo-without-ssa")
+	// Verify configmap-without-ssa was deployed with client-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "configmap-without-ssa", "-n", "configmap-without-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
 	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")

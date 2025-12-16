@@ -7,16 +7,14 @@ components:
   - name: ssa-test
     required: true
     charts:
-      - name: podinfo-without-ssa
-        version: 6.4.0
-        namespace: podinfo-without-ssa
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
+      - name: configmap-without-ssa
+        version: 0.1.0
+        namespace: configmap-without-ssa
+        localPath: chart
         serverSideApply: "false"
 
-      - name: podinfo-with-ssa
-        version: 6.4.0
-        namespace: podinfo-with-ssa
-        url: oci://ghcr.io/stefanprodan/charts/podinfo
+      - name: configmap-with-ssa
+        version: 0.1.0
+        namespace: configmap-with-ssa
+        localPath: chart
         serverSideApply: "true"
-    images:
-      - ghcr.io/stefanprodan/podinfo:6.4.0
