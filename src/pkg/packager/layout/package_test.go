@@ -978,3 +978,132 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestGetDocumentation(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	// Helper function to set up a test package with documentation
+	setupDocTest := func(t *testing.T, documentation map[string]string, tarFiles map[string]string) (*PackageLayout, string) {
+		t.Helper()
+
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		// Create documentation.tar if tar files are provided
+		if len(tarFiles) > 0 {
+			docTempDir := t.TempDir()
+			for filename, content := range tarFiles {
+				require.NoError(t, os.WriteFile(filepath.Join(docTempDir, filename), []byte(content), 0o644))
+			}
+
+			tarPath := filepath.Join(pkgDir, DocumentationTar)
+			err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+			require.NoError(t, err)
+		}
+
+		pkg := v1alpha1.ZarfPackage{
+			Metadata:      v1alpha1.ZarfMetadata{Name: "test"},
+			Documentation: documentation,
+		}
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			Pkg:     pkg,
+		}
+
+		outputDir := filepath.Join(tmpDir, "output")
+		return pkgLayout, outputDir
+	}
+
+	// Helper to assert file exists and has expected content
+	assertFileContent := func(t *testing.T, path, expectedContent string) {
+		t.Helper()
+		require.FileExists(t, path)
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		require.Equal(t, expectedContent, string(content))
+	}
+
+	t.Run("extract all documentation files", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme":  "README.md",
+				"license": "LICENSE",
+			},
+			map[string]string{
+				"README.md": "readme content",
+				"LICENSE":   "license content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
+	})
+
+	t.Run("extract specific documentation keys", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme":  "README.md",
+				"license": "LICENSE",
+			},
+			map[string]string{
+				"README.md": "readme content",
+				"LICENSE":   "license content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
+	})
+
+	t.Run("error when no documentation in package", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{},
+			nil,
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.ErrorContains(t, err, "no documentation files found in package")
+	})
+
+	t.Run("error when key not found", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme": "README.md",
+			},
+			map[string]string{
+				"README.md": "readme content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
+		require.ErrorContains(t, err, "not found in package documentation")
+	})
+
+	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme1": "path/to/README.md",
+				"readme2": "other/path/README.md",
+			},
+			map[string]string{
+				"readme1-README.md": "readme1 content",
+				"readme2-README.md": "readme2 content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme1"})
+		require.NoError(t, err)
+
+		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
+	})
+}
