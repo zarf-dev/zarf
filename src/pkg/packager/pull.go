@@ -164,10 +164,10 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath: opts.PublicKeyPath,
-		Verify:        verificationStrategy,
-		IsPartial:     isPartial,
-		Filter:        opts.Filter,
+		PublicKeyPath:        opts.PublicKeyPath,
+		VerificationStrategy: verificationStrategy,
+		IsPartial:            isPartial,
+		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

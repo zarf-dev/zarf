@@ -38,11 +38,11 @@ type PackageLayoutOptions struct {
 	PublicKeyPath string
 	// Deprecated: SkipSignatureValidation is no longer used and will be removed in a future version.
 	SkipSignatureValidation bool
-	// Verify specifies whether verification is enforced
-	Verify            VerificationStrategy
-	IsPartial         bool
-	Filter            filters.ComponentFilterStrategy
-	VerifyBlobOptions utils.VerifyBlobOptions
+	// VerificationStrategy specifies whether verification is enforced
+	VerificationStrategy VerificationStrategy
+	IsPartial            bool
+	Filter               filters.ComponentFilterStrategy
+	VerifyBlobOptions    utils.VerifyBlobOptions
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -114,10 +114,10 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	verifyOptions := utils.DefaultVerifyBlobOptions()
 	verifyOptions.KeyRef = opts.PublicKeyPath
 
-	if opts.Verify > VerifyNever {
+	if opts.VerificationStrategy > VerifyNever {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
-			if opts.Verify == VerifyIfPossible {
+			if opts.VerificationStrategy == VerifyIfPossible {
 				l.Warn("package signature could not be verified:", "error", err.Error())
 				return pkgLayout, nil
 			}

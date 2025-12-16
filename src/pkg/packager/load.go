@@ -136,9 +136,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath: opts.PublicKeyPath,
-		Verify:        verificationStrategy,
-		Filter:        opts.Filter,
+		PublicKeyPath:        opts.PublicKeyPath,
+		VerificationStrategy: verificationStrategy,
+		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {
