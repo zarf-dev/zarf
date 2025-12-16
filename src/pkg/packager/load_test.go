@@ -64,6 +64,32 @@ func TestLoadPackage(t *testing.T) {
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
 		})
 	}
+
+	t.Run("Verify flag integration", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+
+		// Verify: false should warn but continue on unsigned package (maps to VerifyIfPossible)
+		opt := LoadOptions{
+			Verify:        false,
+			PublicKeyPath: filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:        filters.Empty(),
+		}
+		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err) // Should succeed with warning
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// Verify: true should fail on unsigned package (maps to VerifyAlways)
+		opt = LoadOptions{
+			Verify:        true,
+			PublicKeyPath: filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:        filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
 }
 
 func TestLoadSplitPackage(t *testing.T) {
