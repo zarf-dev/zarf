@@ -25,6 +25,7 @@ import (
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/cli/values"
 	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/kube"
 )
 
 var contentCachePath = filepath.Join("helm", "content")
@@ -131,6 +132,10 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
+	// Set the field manager to "zarf" for all package deployment operations.
+	// This function is called before any Helm operation that interacts with the cluster,
+	// making it a centralized place to ensure the field manager is set consistently
+	kube.ManagedFieldsManager = "zarf"
 	l := logger.From(ctx)
 	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(l.Handler()))
 	actionConfig.SetLogger(l.Handler())

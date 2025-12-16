@@ -50,8 +50,6 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, releaser := range releases {
-		// FIXME: maybe this function should return an error
-		// Type assert to concrete Release type
 		release, ok := releaser.(*releasev1.Release)
 		if !ok {
 			l.Error("unable to cast release to v1.Release type")
