@@ -366,7 +366,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			opts := cluster.InjectorOpts{
+			opts := cluster.ZarfInjectorOptions{
 				ImagesDir:        pkgLayout.GetImageDirPath(),
 				InjectorSeedSrcs: component.Images,
 				PkgName:          pkgLayout.Pkg.Metadata.Name,
@@ -378,11 +378,11 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), cluster.InjectorOpts{
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), cluster.ZarfInjectorOptions{
 				ImagesDir:        pkgLayout.GetImageDirPath(),
 				InjectorSeedSrcs: component.Images,
-				InjectorNodePort: d.s.InjectorInfo.Port,
-				RegistryNodePort: d.s.RegistryInfo.NodePort,
+				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
+				RegistryNodePort: uint16(d.s.RegistryInfo.NodePort),
 				PkgName:          pkgLayout.Pkg.Metadata.Name,
 				Architecture:     pkgLayout.Pkg.Metadata.Architecture,
 			})
