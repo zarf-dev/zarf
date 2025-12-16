@@ -22,7 +22,7 @@ zarf package inspect documentation [ PACKAGE_SOURCE ] [flags]
       --keys strings                Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --output string               Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+      --skip-signature-validation   [Deprecated] Skip validating the signature of the Zarf package
 ```
 
 ### Options inherited from parent commands
