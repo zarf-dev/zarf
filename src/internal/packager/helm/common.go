@@ -129,14 +129,12 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	//FIXME: use constructor
-	actionConfig := new(action.Configuration)
 	l := logger.From(ctx)
+	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(l.Handler()))
 	actionConfig.SetLogger(l.Handler())
 	// Set the settings for the helm SDK
 	settings := cli.New()
 	settings.SetNamespace(namespace)
-	// Note: v4 removed the logger parameter from Init()
 	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "")
 	if err != nil {
 		return nil, fmt.Errorf("could not get Helm action configuration: %w", err)

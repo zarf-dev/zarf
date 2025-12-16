@@ -21,8 +21,6 @@ builds:
       - -X k8s.io/component-base/version.gitVersion=v{{.Env.K8S_MODULES_MAJOR_VER}}.{{.Env.K8S_MODULES_MINOR_VER}}.{{.Env.K8S_MODULES_PATCH_VER}}
       - -X k8s.io/component-base/version.gitCommit={{.FullCommit}}
       - -X k8s.io/component-base/version.buildDate={{.Date}}
-      ## FIXME: I would like to examine what we actually need lint rules for
-      ## For sure we need common.k8sVersionMajor for the chart.yaml requirement
       - -X helm.sh/helm/v4/pkg/chart/v2/lint/rules.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
       - -X helm.sh/helm/v4/pkg/chart/v2/lint/rules.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
       - -X helm.sh/helm/v4/pkg/chart/common.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
