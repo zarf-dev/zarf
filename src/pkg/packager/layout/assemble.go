@@ -50,7 +50,7 @@ type AssembleOptions struct {
 	// When DifferentialPackage is set the zarf package created only includes images and repos not in the differential package
 	DifferentialPackage v1alpha1.ZarfPackage
 	OCIConcurrency      int
-	// CachePath is the path to the Zarf cache, used to cache images
+	// CachePath is the path to the Zarf cache, used to cache images and charts
 	CachePath string
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
@@ -98,7 +98,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
+		err := assemblePackageComponent(ctx, component, packagePath, buildPath, opts.CachePath)
 		if err != nil {
 			return nil, err
 		}
@@ -311,7 +311,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	return pkgLayout, nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath, cachePath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -334,7 +334,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	for _, chart := range component.Charts {
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
 		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath)
+		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath, cachePath)
 		if err != nil {
 			return err
 		}
@@ -532,7 +532,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, chartPath, valuesFilePath, cachePath string) error {
 	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
 		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 	}
@@ -545,7 +545,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
-	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, cachePath); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles

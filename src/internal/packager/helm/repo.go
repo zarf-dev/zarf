@@ -36,7 +36,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
 	if len(chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -51,18 +51,18 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 				chart.URL = fmt.Sprintf("%s@%s", chart.URL, chart.Version)
 			}
 
-			err = PackageChartFromGit(ctx, chart, chartPath, valuesPath)
+			err = PackageChartFromGit(ctx, chart, chartPath, valuesPath, cachePath)
 			if err != nil {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 			}
 		} else {
-			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath)
+			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath, cachePath)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
 			}
 		}
 	} else {
-		err := PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath)
+		err := PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", chart.Name, err)
 		}
@@ -71,7 +71,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, valuesPath string) error {
+func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, valuesPath string, cachePath string) error {
 	l := logger.From(ctx)
 	l.Info("processing local helm chart",
 		"name", chart.Name,
@@ -89,7 +89,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	var saved string
 	temp := filepath.Join(chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = buildChartDependencies(ctx, chart)
+		err = buildChartDependencies(ctx, chart, cachePath)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -128,7 +128,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", chart.Name)
 
@@ -145,11 +145,11 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 
 	// Set the directory for the chart and package it
 	chart.LocalPath = filepath.Join(gitPath, chart.GitPath)
-	return PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath)
+	return PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("processing Helm chart",
@@ -220,16 +220,13 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		}
 	}
 
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
+	contentCache := filepath.Join(cachePath, contentCachePath)
 
 	// Set up the chart chartDownloader
 	chartDownloader := downloader.ChartDownloader{
 		Out:            io.Discard,
 		RegistryClient: regClient,
-		ContentCache:   cachePath,
+		ContentCache:   contentCache,
 		// TODO: Further research this with regular/OCI charts
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
@@ -251,7 +248,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		}
 	}(l)
 
-	saved, _, err := chartDownloader.DownloadTo(chartURL, pull.Version, temp)
+	saved, _, err := chartDownloader.DownloadToCache(chartURL, pull.Version)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
@@ -324,7 +321,7 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error {
+func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string) error {
 	l := logger.From(ctx)
 	// Download and build the specified dependencies
 	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
@@ -333,15 +330,12 @@ func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart) error
 	}
 
 	settings := cli.New()
-	// FIXME: is this the right place to put this? Should it be placed in a subdir?
-	cachePath, err := config.GetAbsCachePath()
-	if err != nil {
-		return err
-	}
+
+	contentCache := filepath.Join(cachePath, contentCachePath)
 
 	man := &downloader.Manager{
 		Out:            &logger.LogWriter{Logger: l, Level: logger.Debug},
-		ContentCache:   cachePath,
+		ContentCache:   contentCache,
 		ChartPath:      chart.LocalPath,
 		Getters:        getter.All(settings),
 		RegistryClient: regClient,

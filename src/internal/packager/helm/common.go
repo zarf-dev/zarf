@@ -27,6 +27,8 @@ import (
 	"helm.sh/helm/v4/pkg/getter"
 )
 
+var contentCachePath = filepath.Join("helm", "content")
+
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
 func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chartv2.Chart, error) {
 	// Generate a new chart.
