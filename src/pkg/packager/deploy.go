@@ -370,6 +370,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 				ImagesDir:        pkgLayout.GetImageDirPath(),
 				InjectorSeedSrcs: component.Images,
 				PkgName:          pkgLayout.Pkg.Metadata.Name,
+				Architecture:     pkgLayout.Pkg.Metadata.Architecture,
 			}
 			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), opts)
 			if err != nil {
