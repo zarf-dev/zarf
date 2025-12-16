@@ -207,7 +207,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 
 		// FIXME: This is needed, I'm not sure why
 		if lastRelease.ApplyMethod == "ssa" {
-			client.ForceConflicts = true
+			// client.ForceConflicts = true
 		}
 
 		// Let each chart run for the default timeout.
@@ -241,6 +241,8 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
 	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, adoptExistingResources bool) (*releasev1.Release, error) {
+	// FIXME: I believe I will need to expose force conflicts as a CLI option. There is some consideration for combining for conflicts with adopt existing resources
+
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
