@@ -105,7 +105,28 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	for _, component := range pkg.Components {
+	manifests := []images.ImageWithManifest{}
+	for i, component := range pkg.Components {
+		for j, imageArchive := range component.ImageArchives {
+			if !filepath.IsAbs(imageArchive.Path) {
+				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
+			}
+
+			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, archiveImageManifests...)
+			var imageList []string
+			for _, imageManifest := range archiveImageManifests {
+				err := checkForDuplicateImage(pkg.Components, component.ImageArchives[j], imageManifest.Image.Reference)
+				if err != nil {
+					return nil, err
+				}
+				imageList = append(imageList, imageManifest.Image.Reference)
+			}
+			pkg.Components[i].ImageArchives[j].Images = imageList
+		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -127,15 +148,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
+		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
-			if ok {
-				sbomImageList = append(sbomImageList, image)
-			}
+		manifests = append(manifests, imageManifests...)
+	}
+
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
+		if ok {
+			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 
 		// Sort images index to make build reproducible.
@@ -165,6 +188,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err
 		}
+	}
+
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
@@ -221,6 +248,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -744,6 +775,18 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
+	var versionRequirements []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	pkg.Build.VersionRequirements = versionRequirements
+
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
 	for i := range registryOverrides {
@@ -917,6 +960,23 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 	return nil
 }
 
+func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive v1alpha1.ImageArchive, imageRef string) error {
+	for _, comp := range components {
+		for _, imageArchive := range comp.ImageArchives {
+			if imageArchive.Path == currentArchive.Path {
+				continue
+			}
+			if slices.Contains(imageArchive.Images, imageRef) {
+				return fmt.Errorf("image %s from %s is also pulled by archive %s", imageRef, currentArchive.Path, imageArchive.Path)
+			}
+		}
+		if slices.Contains(comp.Images, imageRef) {
+			return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
+		}
+	}
+	return nil
+}
+
 // copyValuesSchema validates and copies a values schema file to the build directory.
 // It validates the schema is valid JSON Schema, checks for path traversal, and copies
 // the file to the package root.
@@ -945,6 +1005,48 @@ func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string
 	// Set appropriate file permissions
 	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	}
+
+	return nil
+}
+
+func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath string) (err error) {
+	if len(pkg.Documentation) == 0 {
+		return nil
+	}
+
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	// Get the mapping of keys to their final filenames (with deduplication logic)
+	fileNames := GetDocumentationFileNames(pkg.Documentation)
+
+	for key, file := range pkg.Documentation {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+
+		docFilename := fileNames[key]
+		dst := filepath.Join(tmpDir, docFilename)
+
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+		}
+
+		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+		}
+	}
+
+	tarPath := filepath.Join(buildPath, DocumentationTar)
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
 	return nil
