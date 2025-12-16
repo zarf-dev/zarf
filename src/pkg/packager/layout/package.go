@@ -103,7 +103,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		if !opts.Verify {
 			l.Warn("package signature could not be verified:", "error", err.Error())
-			return nil, nil
+			return pkgLayout, nil
 		}
 		return nil, fmt.Errorf("signature verification failed: %w", err)
 	}
