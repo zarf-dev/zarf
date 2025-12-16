@@ -38,7 +38,7 @@ func TestCustomInit(t *testing.T) {
 	// Test that we get an error when trying to deploy a package without providing the public key
 	stdOut, stdErr, err = e2e.Zarf(t, "init", "--verify", "--confirm")
 	require.Error(t, err, stdOut, stdErr)
-	require.Contains(t, stdErr, "unable to load package: package is signed but no public key was provided (use --key)")
+	require.Contains(t, stdErr, "package is signed but no verification material was provided")
 
 	/* Test operations during package deploy */
 	// Test that we can deploy the package with the public key
