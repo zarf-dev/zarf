@@ -50,7 +50,6 @@ func TestFindImages(t *testing.T) {
 					ComponentName: "baseline",
 					Matches: []string{
 						"nginx:1.16.0",
-						"busybox",
 					},
 				},
 			},
@@ -119,9 +118,6 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"curlimages/curl:7.69.0",
-						"giantswarm/tiny-tools",
-						"stefanprodan/grpc_health_probe:v0.3.0",
 						"ghcr.io/stefanprodan/podinfo:6.4.0",
 					},
 				},

@@ -24,7 +24,7 @@ func TestChartTemplate(t *testing.T) {
 		LocalPath: chartPath,
 	}
 	tmpdir := t.TempDir()
-	err := PackageChart(ctx, chart, tmpdir, tmpdir)
+	err := PackageChart(ctx, chart, tmpdir, tmpdir, tmpdir)
 	require.NoError(t, err)
 	kubeVersion := ""
 	vc := template.GetZarfVariableConfig(ctx, false)

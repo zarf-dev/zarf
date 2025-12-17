@@ -38,6 +38,7 @@ type initOptions struct {
 	artifactServer          state.ArtifactServerInfo
 	injectorPort            int
 	adoptExistingResources  bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	publicKeyPath           string
@@ -99,6 +100,7 @@ func newInitCommand() *cobra.Command {
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -172,6 +174,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		RegistryInfo:           o.registryInfo,
 		ArtifactServer:         o.artifactServer,
 		AdoptExistingResources: o.adoptExistingResources,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,

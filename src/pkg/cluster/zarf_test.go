@@ -13,6 +13,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -72,18 +73,13 @@ func TestGetDeployedPackage(t *testing.T) {
 func TestRegistryHPA(t *testing.T) {
 	ctx := context.Background()
 	cs := fake.NewClientset()
-	hpa := autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zarf-docker-registry",
-			Namespace: state.ZarfNamespaceName,
-		},
-		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
-				ScaleDown: &autoscalingv2.HPAScalingRules{},
-			},
-		},
-	}
-	_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
+
+	hpa := autoscalingv2ac.HorizontalPodAutoscaler("zarf-docker-registry", state.ZarfNamespaceName).
+		WithSpec(autoscalingv2ac.HorizontalPodAutoscalerSpec().
+			WithBehavior(autoscalingv2ac.HorizontalPodAutoscalerBehavior().WithScaleDown(
+				autoscalingv2ac.HPAScalingRules())))
+
+	_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(*hpa.GetNamespace()).Apply(ctx, hpa, metav1.ApplyOptions{Force: true, FieldManager: "zarf"})
 	require.NoError(t, err)
 	c := &Cluster{
 		Clientset: cs,
@@ -91,13 +87,13 @@ func TestRegistryHPA(t *testing.T) {
 
 	err = c.EnableRegHPAScaleDown(ctx)
 	require.NoError(t, err)
-	enableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
+	enableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(*hpa.GetNamespace()).Get(ctx, *hpa.GetName(), metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, autoscalingv2.MinChangePolicySelect, *enableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
 
 	err = c.DisableRegHPAScaleDown(ctx)
 	require.NoError(t, err)
-	disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
+	disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(*hpa.GetNamespace()).Get(ctx, *hpa.GetName(), metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
 }
