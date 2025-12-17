@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
@@ -135,7 +136,7 @@ func createActionConfig(ctx context.Context, namespace string) (*action.Configur
 	// Set the field manager to "zarf" for all package deployment operations.
 	// This function is called before any Helm operation that interacts with the cluster,
 	// making it a centralized place to ensure the field manager is set consistently
-	kube.ManagedFieldsManager = "zarf"
+	kube.ManagedFieldsManager = cluster.FieldManagerName
 	l := logger.From(ctx)
 	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(l.Handler()))
 	actionConfig.SetLogger(l.Handler())
