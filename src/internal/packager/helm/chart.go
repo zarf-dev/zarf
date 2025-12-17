@@ -42,6 +42,8 @@ const maxHelmHistory = 10
 type InstallUpgradeOptions struct {
 	// AdoptExistingResources is true if the chart should adopt existing namespaces
 	AdoptExistingResources bool
+	// ForceConflicts causes Helm to take ownership of conflicting fields during Server-Side Apply
+	ForceConflicts bool
 	// VariableConfig is used to template the variables in the chart
 	VariableConfig *variables.VariableConfig
 	// State is used to update the registry / git server secrets
@@ -57,7 +59,6 @@ type InstallUpgradeOptions struct {
 	NamespaceOverride string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
-	// FIXME: need to have an option for force conflicts
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -102,7 +103,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		_, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
+		_, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
@@ -114,7 +115,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return nil, zarfChart.ReleaseName, fmt.Errorf("unable to cast release to v1.Release type")
 		}
 
-		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.Cluster, lastRelease)
+		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastRelease)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -236,12 +237,12 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer) (*releasev1.Release, error) {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) (*releasev1.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
 	// Let each chart run for the default timeout.
-	client.Timeout = timeout
+	client.Timeout = opts.Timeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
 	if zarfChart.NoWait {
@@ -266,6 +267,8 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	useSSA := zarfChart.ServerSideApply != "false"
 	client.ServerSideApply = useSSA
+	// Only force conflicts if SSA is enabled and the option is set
+	client.ForceConflicts = useSSA && opts.ForceConflicts
 
 	// Perform the loadedChart installation.
 	releaser, err := client.RunWithContext(ctx, chart, chartValues)
@@ -282,9 +285,9 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, c *cluster.Cluster, lastRelease *releasev1.Release) (*releasev1.Release, error) {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease *releasev1.Release) (*releasev1.Release, error) {
 	// Migrate any deprecated APIs (if applicable)
-	err := migrateDeprecatedAPIs(ctx, c, actionConfig, lastRelease)
+	err := migrateDeprecatedAPIs(ctx, opts.Cluster, actionConfig, lastRelease)
 	if err != nil {
 		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
 	}
@@ -293,7 +296,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client := action.NewUpgrade(actionConfig)
 
 	// Let each chart run for the default timeout.
-	client.Timeout = timeout
+	client.Timeout = opts.Timeout
 
 	// Default helm behavior for Zarf is to wait for the resources to deploy, NoWait overrides that for special cases (such as data-injection).
 	if zarfChart.NoWait {
@@ -306,6 +309,9 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		zarfChart.ServerSideApply = "auto"
 	}
 	client.ServerSideApply = zarfChart.ServerSideApply
+	// Only force conflicts if SSA is enabled and the option is set
+	useSSA := zarfChart.ServerSideApply != "false" && zarfChart.ServerSideApply != ""
+	client.ForceConflicts = useSSA && opts.ForceConflicts
 
 	client.SkipCRDs = true
 
