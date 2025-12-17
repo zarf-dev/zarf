@@ -57,6 +57,7 @@ type InstallUpgradeOptions struct {
 	NamespaceOverride string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// FIXME: need to have an option for force conflicts
 }
 
 // InstallOrUpgradeChart performs a helm install of the given chart.
@@ -101,7 +102,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		_, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender, opts.AdoptExistingResources)
+		_, err = installChart(helmCtx, zarfChart, chart, values, opts.Timeout, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
@@ -205,11 +206,6 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Setup a new upgrade action
 		client := action.NewUpgrade(actionConfig)
 
-		// FIXME: This is needed, I'm not sure why
-		if lastRelease.ApplyMethod == "ssa" {
-			// client.ForceConflicts = true
-		}
-
 		// Let each chart run for the default timeout.
 		client.Timeout = opts.Timeout
 
@@ -240,9 +236,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer, adoptExistingResources bool) (*releasev1.Release, error) {
-	// FIXME: I believe I will need to expose force conflicts as a CLI option. There is some consideration for combining for conflicts with adopt existing resources
-
+	timeout time.Duration, actionConfig *action.Configuration, postRender *renderer) (*releasev1.Release, error) {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
@@ -255,10 +249,6 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	} else {
 		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
-
-	// Force conflicts to handle Helm 3 -> Helm 4 migration (server-side apply field ownership)
-	// This can only be enabled when ssa is enabled
-	client.ForceConflicts = adoptExistingResources
 
 	// We need to include CRDs or operator installations will fail spectacularly.
 	client.SkipCRDs = false

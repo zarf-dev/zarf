@@ -290,6 +290,7 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error)
 func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, saved string) error {
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(chartPath, chart) + ".tgz"
+	// FIXME: maybe not the way to go with helm 4 since we have a cache we're using
 	err := helpers.CreatePathAndCopy(saved, destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)
