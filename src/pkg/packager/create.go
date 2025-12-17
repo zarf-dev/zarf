@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -60,6 +61,16 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", err
 	}
 
+	// Determine base directory for assembly: if packagePath is a directory, use it; otherwise use its parent directory
+	basePath := packagePath
+	fileInfo, err := os.Stat(packagePath)
+	if err != nil {
+		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+	if !fileInfo.IsDir() {
+		basePath = filepath.Dir(packagePath)
+	}
+
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
@@ -90,7 +101,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, basePath, assembleOpt)
 	if err != nil {
 		return "", err
 	}
