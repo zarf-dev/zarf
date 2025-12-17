@@ -294,10 +294,21 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packageDeployOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
+	}
+
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -542,10 +553,21 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packageMirrorResourcesOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
+	}
+
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 
 	// post flag validation - perform both if neither were set
@@ -705,10 +727,20 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packageInspectOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
+	}
+
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -767,10 +799,11 @@ func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
 func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectValuesFilesOptions()
 	cmd := &cobra.Command{
-		Use:   "values-files [ PACKAGE ]",
-		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
-		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
-		Args:  cobra.MaximumNArgs(1),
+		Use:    "values-files [ PACKAGE ]",
+		Short:  "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:   "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			return o.run(ctx, args)
@@ -789,6 +822,19 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
 	return cmd
+}
+
+func (o *packageInspectValuesFilesOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []string) (err error) {
@@ -866,9 +912,10 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
-		Use:   "manifests [ PACKAGE ]",
-		Short: "Template and output all manifests and charts in a package",
-		Args:  cobra.MaximumNArgs(1),
+		Use:    "manifests [ PACKAGE ]",
+		Short:  "Template and output all manifests and charts in a package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			return o.run(ctx, args)
@@ -887,6 +934,19 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
 	return cmd
+}
+
+func (o *packageInspectManifestsOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string) (err error) {
@@ -969,10 +1029,11 @@ func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
-		Use:   "sbom [ PACKAGE ]",
-		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "sbom [ PACKAGE ]",
+		Short:  "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -985,6 +1046,19 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
 	return cmd
+}
+
+func (o *packageInspectSBOMOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 // run performs the execution of 'package inspect sbom' sub-command.
@@ -1049,10 +1123,11 @@ func newPackageInspectImagesOptions() *packageInspectImagesOptions {
 func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectImagesOptions()
 	cmd := &cobra.Command{
-		Use:   "images [ PACKAGE_SOURCE ]",
-		Short: "List all container images contained in the package",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "images [ PACKAGE_SOURCE ]",
+		Short:  "List all container images contained in the package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1065,6 +1140,19 @@ func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
 	return cmd
+}
+
+func (o *packageInspectImagesOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) error {
@@ -1116,6 +1204,7 @@ type packageInspectDocumentationOptions struct {
 	outputDir               string
 	ociConcurrency          int
 	publicKeyPath           string
+	verify                  bool
 }
 
 func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
@@ -1125,10 +1214,11 @@ func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions
 func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDocumentationOptions()
 	cmd := &cobra.Command{
-		Use:   "documentation [ PACKAGE_SOURCE ]",
-		Short: "Extract documentation files from the package",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "documentation [ PACKAGE_SOURCE ]",
+		Short:  "Extract documentation files from the package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1136,8 +1226,25 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
-
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectDocumentationOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
@@ -1152,14 +1259,14 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	}
 
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           o.publicKeyPath,
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
-		LayersSelector:          zoci.DocLayers,
+		Verify:         o.verify,
+		Architecture:   config.GetArch(),
+		Filter:         filters.Empty(),
+		PublicKeyPath:  o.publicKeyPath,
+		OCIConcurrency: o.ociConcurrency,
+		RemoteOptions:  defaultRemoteOptions(),
+		CachePath:      cachePath,
+		LayersSelector: zoci.DocLayers,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1190,10 +1297,11 @@ func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
 func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDefinitionOptions()
 	cmd := &cobra.Command{
-		Use:   "definition [ PACKAGE_SOURCE ]",
-		Short: "Displays the 'zarf.yaml' definition for the specified package",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "definition [ PACKAGE_SOURCE ]",
+		Short:  "Displays the 'zarf.yaml' definition for the specified package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1206,6 +1314,19 @@ func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
 	return cmd
+}
+
+func (o *packageInspectDefinitionOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
@@ -1391,10 +1512,21 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageRemoveOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packageRemoveOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
+	}
+
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -1520,10 +1652,21 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
+func (o *packagePublishOptions) preRun(cmd *cobra.Command, _ []string) {
 	// If --insecure was provided, set --skip-signature-validation to match
 	if config.CommonOptions.Insecure {
 		o.skipSignatureValidation = true
+	}
+
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -1664,6 +1807,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 		Short:   lang.CmdPackagePullShort,
 		Example: lang.CmdPackagePullExample,
 		Args:    cobra.ExactArgs(1),
+		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
 
@@ -1679,6 +1823,19 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func (o *packagePullOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {

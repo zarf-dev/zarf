@@ -56,6 +56,7 @@ func newInitCommand() *cobra.Command {
 		Short:   lang.CmdInitShort,
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
+		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
 
@@ -120,6 +121,19 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
+}
+
+func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
