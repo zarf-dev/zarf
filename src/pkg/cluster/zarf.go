@@ -216,14 +216,11 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 		return err
 	}
 
-	hpaApply := hpaAc.WithSpec(
-		hpaAc.Spec.WithBehavior(
-			hpaAc.Spec.Behavior.WithScaleDown(
-				hpaAc.Spec.Behavior.ScaleDown.WithSelectPolicy(policy))))
+	hpaAc.Spec.Behavior.ScaleDown.WithSelectPolicy(policy)
 
 	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Apply(
 		ctx,
-		hpaApply,
+		hpaAc,
 		metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName},
 	)
 	if err != nil {
