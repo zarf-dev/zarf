@@ -32,11 +32,9 @@ type LoadOptions struct {
 	Shasum        string
 	Architecture  string
 	PublicKeyPath string
-	// Deprecated: SkipSignatureValidation is no longer used and will be removed in a future version.
-	SkipSignatureValidation bool
-	Verify                  bool
-	Filter                  filters.ComponentFilterStrategy
-	Output                  string
+	Verify        bool
+	Filter        filters.ComponentFilterStrategy
+	Output        string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// Layers to pull during OCI pull

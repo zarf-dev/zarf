@@ -36,8 +36,6 @@ type PackageLayout struct {
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
 	PublicKeyPath string
-	// Deprecated: SkipSignatureValidation is no longer used and will be removed in a future version.
-	SkipSignatureValidation bool
 	// VerificationStrategy specifies whether verification is enforced
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
