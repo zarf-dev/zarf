@@ -49,14 +49,14 @@ type PackageLayoutOptions struct {
 type VerificationStrategy int
 
 const (
-	// VerifyNever will skip all verification of a package.
-	VerifyNever VerificationStrategy = iota
 	// VerifyIfPossible will attempt a verification, it will not error if verification
 	// data is missing. But it will not stop processing if verification fails.
-	VerifyIfPossible
+	VerifyIfPossible VerificationStrategy = iota
 	// VerifyAlways will always attempt a verification, and will fail if the
 	// verification fails.
 	VerifyAlways
+	// VerifyNever will skip all verification of a package.
+	VerifyNever
 )
 
 // DirPath returns base directory of the package layout
@@ -114,7 +114,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	verifyOptions := utils.DefaultVerifyBlobOptions()
 	verifyOptions.KeyRef = opts.PublicKeyPath
 
-	if opts.VerificationStrategy > VerifyNever {
+	if opts.VerificationStrategy < VerifyNever {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
 			if opts.VerificationStrategy == VerifyIfPossible {
