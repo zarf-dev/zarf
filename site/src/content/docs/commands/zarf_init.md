@@ -60,6 +60,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server
   -c, --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --force-conflicts                 Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl scale, HPAs, etc.) have modified resources.
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server

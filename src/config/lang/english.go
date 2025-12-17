@@ -667,6 +667,7 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 # NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
+	CmdToolsUpdateCredsFlagForceConflicts   = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations"
 	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"
