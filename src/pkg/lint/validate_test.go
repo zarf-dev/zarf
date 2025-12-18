@@ -493,5 +493,3 @@ func TestValidateComponentAction(t *testing.T) {
 		})
 	}
 }
-
-
