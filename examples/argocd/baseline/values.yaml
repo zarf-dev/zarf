@@ -31,3 +31,28 @@ configs:
 redis:
   image:
     repository: docker.io/library/redis
+
+# Required for 'src/test/external' to validate external git server.
+# It uses 'curloptResolve' to force-map 'gitea.localhost' for test environments
+# where the system's libcurl/RFC 6761 implementation would otherwise ignore 
+# /etc/hosts entries.
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: git-config-localhost-resolve
+    data:
+      gitconfig: |
+        [http]
+            curloptResolve = gitea.localhost:3000:172.31.0.99
+
+repoServer:
+  volumes:
+    - name: gitconfig-volume
+      configMap:
+        name: git-config-localhost-resolve
+
+  volumeMounts:
+    - name: gitconfig-volume
+      mountPath: /etc/gitconfig
+      subPath: gitconfig
