@@ -356,10 +356,14 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
 				}
 
-				if existingArchive, exists := imageToArchive[refInfo.Reference]; exists {
-					return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchive, archive.Path)
+				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
+					// A user may want to represent the same tar twice across components if both components need the same image
+					if existingArchivePath != archive.Path {
+						return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchivePath, archive.Path)
+					}
+				} else {
+					imageToArchive[refInfo.Reference] = archive.Path
 				}
-				imageToArchive[refInfo.Reference] = archive.Path
 			}
 		}
 	}

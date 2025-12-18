@@ -569,21 +569,6 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 			errorContains: "is also pulled by component",
 		},
 		{
-			name: "duplicate image within same archive",
-			components: []v1alpha1.ZarfComponent{
-				{
-					Name: "component1",
-					ImageArchives: []v1alpha1.ImageArchive{
-						{
-							Path:   "/path/to/archive1.tar",
-							Images: []string{"nginx:1.21", "nginx:1.21"},
-						},
-					},
-				},
-			},
-			errorContains: "appears in multiple image archives",
-		},
-		{
 			name: "duplicate across multiple components",
 			components: []v1alpha1.ZarfComponent{
 				{
@@ -625,6 +610,29 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 				{
 					Name:   "component2",
 					Images: []string{"nginx:1.21"},
+				},
+			},
+		},
+		{
+			name: "same archive path used by multiple components is allowed",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name: "component1",
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Path:   "/path/to/shared-archive.tar",
+							Images: []string{"nginx:1.21", "redis:6.2"},
+						},
+					},
+				},
+				{
+					Name: "component2",
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Path:   "/path/to/shared-archive.tar",
+							Images: []string{"nginx:1.21", "postgres:13"},
+						},
+					},
 				},
 			},
 		},
