@@ -11,6 +11,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 func TestGetChecksum(t *testing.T) {
@@ -135,7 +136,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 			currentArchive: v1alpha1.ImageArchive{
 				Path: "/path/to/archive1.tar",
 			},
-			imageRef:      "docker.io/library/nginx:1.21",
+			imageRef:      "nginx:1.21",
 			errorContains: "is also pulled by component",
 		},
 		{
@@ -201,7 +202,10 @@ func TestCheckImageDuplicate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := checkForDuplicateImage(tt.components, tt.currentArchive, tt.imageRef)
+			imageToCheck, err := transform.ParseImageRef(tt.imageRef)
+			require.NoError(t, err)
+
+			err = checkForDuplicateImage(tt.components, tt.currentArchive, imageToCheck)
 
 			if tt.errorContains != "" {
 				require.Error(t, err)
