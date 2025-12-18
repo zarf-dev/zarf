@@ -61,6 +61,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
+	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
+		return nil, err
+	}
+
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
 		allIncludedImagesMap := map[string]bool{}
