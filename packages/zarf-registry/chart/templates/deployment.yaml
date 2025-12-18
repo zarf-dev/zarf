@@ -33,14 +33,14 @@ spec:
       {{- end }}
       priorityClassName: system-node-critical
       securityContext:
-        runAsUser: 1000
-        fsGroup: 2000
-        runAsGroup: 2000
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsGroup: {{ .Values.securityContext.runAsGroup }}
         seccompProfile:
           type: "RuntimeDefault"
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: "{{ include "registry.image.repository" . }}:{{ .Values.image.tag }}"
           imagePullPolicy: IfNotPresent
           command:
           - /bin/registry
@@ -71,6 +71,8 @@ spec:
               value: "Registry Realm"
             - name: REGISTRY_AUTH_HTPASSWD_PATH
               value: "/etc/docker/registry/htpasswd"
+            - name: OTEL_TRACES_EXPORTER
+              value: {{ .Values.opentelemetry.exporter | default "otlp" }}
 {{- if .Values.persistence.enabled }}
             - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
               value: "/var/lib/registry"

@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,24 @@ func isJSONPathWaitType(condition string) bool {
 	return true
 }
 
+// unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
+var unsafeShellCharsRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
+
+// Source: https://github.com/alessio/shellescape/blob/v1.6.0/shellescape.go#L30-L42
+// SPDX-License-Identifier: MIT
+// Minor edits: Simplified for use case
+func shellQuote(s string) string {
+	if len(s) == 0 {
+		return "''"
+	}
+
+	if unsafeShellCharsRegex.MatchString(s) {
+		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
+	}
+
+	return s
+}
+
 // ExecuteWait executes the wait-for command.
 func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
 	l := logger.From(ctx)
@@ -45,6 +64,8 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	// Check if waitType is JSONPath or condition
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
+		// Ensure any conditions aren't shell escaped
+		condition = shellQuote(condition)
 	} else {
 		waitType = "condition="
 	}
@@ -110,7 +131,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 				continue
 			}
 
-			resourceNotFound := strings.Contains(stderr, "No resources found") && identifier == ""
+			resourceNotFound := strings.Contains(stderr, "No resources found")
 			if resourceNotFound {
 				l.Debug("resource not found", "error", err)
 				continue
@@ -128,7 +149,10 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
 
 			// If there is an error, log it and try again.
-			if _, _, err := exec.Cmd(shell, append(shellArgs, zarfKubectlWait)...); err != nil {
+			waitCmd := append(shellArgs, zarfKubectlWait)
+			waitStdout, waitStderr, err := exec.Cmd(shell, waitCmd...)
+			l.Debug("wait done", "cmd", waitCmd, "stdout", waitStdout, "stderr", waitStderr, "error", err)
+			if err != nil {
 				l.Debug("wait error", "error", err)
 				continue
 			}
@@ -152,6 +176,12 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 		condition = "success"
 	}
 
+	// Create an HTTP client with a per-request timeout that is slightly shorter than our wait-interval to prevent
+	// hanging on slow or unresponsive servers.
+	httpClient := &http.Client{
+		Timeout: waitInterval - (time.Millisecond * 5),
+	}
+
 	delay := 100 * time.Millisecond
 
 	for {
@@ -173,10 +203,14 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				// Default to checking for a 2xx response.
 				if condition == "success" {
 					// Try to get the URL and check the status code.
-					resp, err := http.Get(url)
+					resp, err := httpClient.Get(url)
 					if err != nil {
 						l.Debug(err.Error())
 						continue
+					}
+					err = resp.Body.Close()
+					if err != nil {
+						l.Debug(err.Error())
 					}
 
 					// If the status code is not in the 2xx range, try again.
@@ -199,11 +233,16 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				}
 
 				// Try to get the URL and check the status code.
-				resp, err := http.Get(url)
+				resp, err := httpClient.Get(url)
 				if err != nil {
 					l.Debug(err.Error())
 					continue
 				}
+				err = resp.Body.Close()
+				if err != nil {
+					l.Debug(err.Error())
+				}
+
 				if resp.StatusCode != code {
 					l.Debug("did not receive expected status code", "expected", code, "actual", resp.StatusCode)
 					continue

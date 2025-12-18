@@ -12,14 +12,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func TestDevInspectManifests(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
+
+	// Enable values feature for tests
+	err := feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}})
+	require.NoError(t, err)
 
 	tests := []struct {
 		name               string
@@ -28,6 +30,8 @@ func TestDevInspectManifests(t *testing.T) {
 		packageName        string
 		deploySetVariables map[string]string
 		createSetVariables map[string]string
+		valuesFiles        []string
+		setValues          map[string]string
 		kubeVersion        string
 		flavor             string
 		expectedErr        string
@@ -79,6 +83,38 @@ func TestDevInspectManifests(t *testing.T) {
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
 			expectedErr:   "0 manifests found",
 		},
+		{
+			name:           "manifest with CLI values only",
+			packageName:    "manifest-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "expected.yaml"),
+			valuesFiles: []string{
+				filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml"),
+			},
+			setValues: map[string]string{
+				"replicas": "5",
+				"imageTag": "latest",
+			},
+		},
+		{
+			name:           "manifest with package default values",
+			packageName:    "manifest-with-package-values",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values", "expected-default.yaml"),
+		},
+		{
+			name:           "manifest with package values overridden by CLI",
+			packageName:    "manifest-with-package-values",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-package-values", "expected-override.yaml"),
+			setValues: map[string]string{
+				"app.name":             "overridden-app",
+				"app.replicas":         "5",
+				"app.image.repository": "nginx",
+				"app.image.tag":        "latest",
+				"app.port":             "8080",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -92,6 +128,8 @@ func TestDevInspectManifests(t *testing.T) {
 				kubeVersion:        tc.kubeVersion,
 				deploySetVariables: tc.deploySetVariables,
 				createSetVariables: tc.createSetVariables,
+				valuesFiles:        tc.valuesFiles,
+				setValues:          tc.setValues,
 				flavor:             tc.flavor,
 			}
 			err := opts.run(context.Background(), []string{tc.definitionDir})
@@ -116,7 +154,6 @@ func TestDevInspectManifests(t *testing.T) {
 
 func TestDevInspectValuesFiles(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name           string
@@ -124,6 +161,8 @@ func TestDevInspectValuesFiles(t *testing.T) {
 		expectedOutput string
 		packageName    string
 		setVariables   map[string]string
+		valuesFiles    []string
+		setValues      map[string]string
 		expectedErr    string
 		components     string
 	}{
@@ -145,6 +184,21 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedErr:   "0 values files found",
 		},
+		{
+			name:           "chart with values from file and CLI",
+			packageName:    "chart-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "3",
+			},
+			valuesFiles: []string{
+				filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml"),
+			},
+			setValues: map[string]string{
+				"customField": "fromCLI",
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -156,6 +210,8 @@ func TestDevInspectValuesFiles(t *testing.T) {
 			opts := devInspectValuesFilesOptions{
 				outputWriter:       buf,
 				deploySetVariables: tc.setVariables,
+				valuesFiles:        tc.valuesFiles,
+				setValues:          tc.setValues,
 			}
 			err := opts.run(context.Background(), []string{tc.definitionDir})
 			if tc.expectedErr != "" {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mholt/archives"
+	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -35,7 +36,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -96,7 +97,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath, skipVersionCheck)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -116,6 +117,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			importedPkg, err = remote.FetchZarfYAML(ctx)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
+			}
+			if !skipVersionCheck {
+				// Validate skeleton package is compatible with new package
+				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+				}
 			}
 		}
 
@@ -419,6 +426,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 	}
 
 	comp.HealthChecks = append(comp.HealthChecks, override.HealthChecks...)
+	comp.ImageArchives = append(comp.ImageArchives, override.ImageArchives...)
 
 	return comp
 }
@@ -437,6 +445,11 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed
+	}
+
+	for idx, imageArchive := range child.ImageArchives {
+		composed := makePathRelativeTo(imageArchive.Path, relativeToHead)
+		child.ImageArchives[idx].Path = composed
 	}
 
 	for chartIdx, chart := range child.Charts {

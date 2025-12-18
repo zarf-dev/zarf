@@ -15,7 +15,7 @@ import (
 )
 
 // Build reads a kustomization and builds it into a single yaml file.
-func Build(path string, destination string, kustomizeAllowAnyDirectory bool) error {
+func Build(path string, destination string, kustomizeAllowAnyDirectory bool, enableKustomizePlugins bool) error {
 	// Kustomize has to write to the filesystem on-disk
 	fSys := filesys.MakeFsOnDisk()
 
@@ -24,6 +24,10 @@ func Build(path string, destination string, kustomizeAllowAnyDirectory bool) err
 
 	if kustomizeAllowAnyDirectory {
 		buildOptions.LoadRestrictions = krustytypes.LoadRestrictionsNone
+	}
+
+	if enableKustomizePlugins {
+		buildOptions.PluginConfig = krustytypes.MakePluginConfig(krustytypes.PluginRestrictionsNone, krustytypes.BploUseStaticallyLinked)
 	}
 
 	kustomizer := krusty.MakeKustomizer(buildOptions)
