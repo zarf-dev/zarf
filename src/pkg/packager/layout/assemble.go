@@ -963,8 +963,14 @@ func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive 
 			if imageArchive.Path == currentArchive.Path {
 				continue
 			}
-			if slices.Contains(imageArchive.Images, imageToCheck.Reference) {
-				return fmt.Errorf("image %s from %s is also pulled by archive %s", imageToCheck.Reference, currentArchive.Path, imageArchive.Path)
+			for _, image := range imageArchive.Images {
+				refInfo, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("failed to create ref for image %s: %w", image, err)
+				}
+				if refInfo.Reference == imageToCheck.Reference {
+					return fmt.Errorf("image %s from %s is also pulled by archive %s", imageToCheck.Reference, currentArchive.Path, imageArchive.Path)
+				}
 			}
 		}
 		for _, image := range comp.Images {
