@@ -68,7 +68,6 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
-	PkgValidateErrImageArchiveDuplicate   = "image %s appears in multiple image archives: %s and %s"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -160,7 +159,6 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 
-	// Validate no duplicate images across image archives
 	if archiveErr := validateImageArchivesNoDuplicates(pkg.Components); archiveErr != nil {
 		err = errors.Join(err, archiveErr)
 	}

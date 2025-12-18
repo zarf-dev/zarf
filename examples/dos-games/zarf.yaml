@@ -18,8 +18,13 @@ components:
         files:
           - manifests/deployment.yaml
           - manifests/service.yaml
-    images:
-      - ghcr.io/zarf-dev/doom-game:0.0.1
+    # images:
+    #   - ghcr.io/zarf-dev/doom-game:0.0.1
+    imageArchives:
+      - path: /home/austin/code/zarf/examples/dos-games/regular.tar
+        images: 
+          - ghcr.io/zarf-dev/doom-game:0.0.1
+          - rancher/k3s:v1.33.6-k3s1
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
