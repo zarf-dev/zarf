@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -67,6 +68,7 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrImageArchiveDuplicate   = "image %s appears in multiple image archives: %s and %s"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -157,6 +159,12 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
+
+	// Validate no duplicate images across image archives
+	if archiveErr := validateImageArchivesNoDuplicates(pkg.Components); archiveErr != nil {
+		err = errors.Join(err, archiveErr)
+	}
+
 	return err
 }
 
@@ -333,4 +341,40 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	}
 
 	return err
+}
+
+// validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
+// and that images in image archives don't conflict with images in component.Images.
+func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) error {
+	imageToArchive := make(map[string]string)
+
+	for _, comp := range components {
+		for _, archive := range comp.ImageArchives {
+			for _, image := range archive.Images {
+				refInfo, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+				}
+
+				if existingArchive, exists := imageToArchive[refInfo.Reference]; exists {
+					return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchive, archive.Path)
+				}
+				imageToArchive[refInfo.Reference] = archive.Path
+			}
+		}
+	}
+
+	for _, comp := range components {
+		for _, image := range comp.Images {
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image, comp.Name, err)
+			}
+			if archivePath, exists := imageToArchive[refInfo.Reference]; exists {
+				return fmt.Errorf("image %s from %s is also pulled by component %s", refInfo.Reference, archivePath, comp.Name)
+			}
+		}
+	}
+
+	return nil
 }

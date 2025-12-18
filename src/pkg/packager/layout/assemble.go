@@ -107,7 +107,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	componentImages := []transform.Image{}
 	manifests := []images.ImageWithManifest{}
 	for _, component := range pkg.Components {
-		for j, imageArchive := range component.ImageArchives {
+		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
@@ -117,12 +117,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 				return nil, err
 			}
 			manifests = append(manifests, archiveImageManifests...)
-			for _, imageManifest := range archiveImageManifests {
-				err := checkForDuplicateImage(pkg.Components, component.ImageArchives[j], imageManifest.Image)
-				if err != nil {
-					return nil, err
-				}
-			}
 		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
@@ -954,35 +948,6 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
 
-	return nil
-}
-
-func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive v1alpha1.ImageArchive, imageToCheck transform.Image) error {
-	for _, comp := range components {
-		for _, imageArchive := range comp.ImageArchives {
-			if imageArchive.Path == currentArchive.Path {
-				continue
-			}
-			for _, image := range imageArchive.Images {
-				refInfo, err := transform.ParseImageRef(image)
-				if err != nil {
-					return fmt.Errorf("failed to create ref for image %s: %w", image, err)
-				}
-				if refInfo.Reference == imageToCheck.Reference {
-					return fmt.Errorf("image %s from %s is also pulled by archive %s", imageToCheck.Reference, currentArchive.Path, imageArchive.Path)
-				}
-			}
-		}
-		for _, image := range comp.Images {
-			refInfo, err := transform.ParseImageRef(image)
-			if err != nil {
-				return fmt.Errorf("failed to create ref for image %s: %w", image, err)
-			}
-			if refInfo.Reference == imageToCheck.Reference {
-				return fmt.Errorf("image %s from %s is also pulled by component %s", imageToCheck.Reference, currentArchive.Path, comp.Name)
-			}
-		}
-	}
 	return nil
 }
 
