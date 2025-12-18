@@ -115,13 +115,27 @@ func TestCheckImageDuplicate(t *testing.T) {
 			components: []v1alpha1.ZarfComponent{
 				{
 					Name:   "component1",
-					Images: []string{"nginx:1.21", "postgres:13"},
+					Images: []string{"nginx:1.21", "ghcr.io/zarf-dev/zarf/agent:0.65.0"},
 				},
 			},
 			currentArchive: v1alpha1.ImageArchive{
 				Path: "/path/to/archive1.tar",
 			},
-			imageRef:      "postgres:13",
+			imageRef:      "ghcr.io/zarf-dev/zarf/agent:0.65.0",
+			errorContains: "is also pulled by component",
+		},
+		{
+			name: "duplicate in component with docker ref",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name:   "component1",
+					Images: []string{"nginx:1.21"},
+				},
+			},
+			currentArchive: v1alpha1.ImageArchive{
+				Path: "/path/to/archive1.tar",
+			},
+			imageRef:      "docker.io/library/nginx:1.21",
 			errorContains: "is also pulled by component",
 		},
 		{

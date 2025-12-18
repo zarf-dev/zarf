@@ -106,7 +106,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	componentImages := []transform.Image{}
 	manifests := []images.ImageWithManifest{}
-	for i, component := range pkg.Components {
+	for _, component := range pkg.Components {
 		for j, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
@@ -117,15 +117,12 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 				return nil, err
 			}
 			manifests = append(manifests, archiveImageManifests...)
-			var imageList []string
 			for _, imageManifest := range archiveImageManifests {
 				err := checkForDuplicateImage(pkg.Components, component.ImageArchives[j], imageManifest.Image.Reference)
 				if err != nil {
 					return nil, err
 				}
-				imageList = append(imageList, imageManifest.Image.Reference)
 			}
-			pkg.Components[i].ImageArchives[j].Images = imageList
 		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
@@ -970,8 +967,14 @@ func checkForDuplicateImage(components []v1alpha1.ZarfComponent, currentArchive 
 				return fmt.Errorf("image %s from %s is also pulled by archive %s", imageRef, currentArchive.Path, imageArchive.Path)
 			}
 		}
-		if slices.Contains(comp.Images, imageRef) {
-			return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
+		for _, image := range comp.Images {
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return fmt.Errorf("failed to create ref for image %s: %w", image, err)
+			}
+			if refInfo.Reference == imageRef {
+				return fmt.Errorf("image %s from %s is also pulled by component %s", imageRef, currentArchive.Path, comp.Name)
+			}
 		}
 	}
 	return nil
