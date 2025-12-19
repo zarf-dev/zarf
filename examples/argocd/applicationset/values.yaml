@@ -1,0 +1,31 @@
+applicationsets:
+  - name: cluster-addons
+    namespace: argocd
+    goTemplate: true
+    goTemplateOptions:
+      - missingkey=error
+    generators:
+      - git:
+          repoURL: https://github.com/argoproj/argo-cd.git
+          revision: v3.2.2
+          directories:
+            - path: applicationset/examples/git-generator-directory/cluster-addons/*
+            - path: applicationset/examples/git-generator-directory/cluster-addons/prometheus-operator
+              exclude: true
+    template:
+      metadata:
+        name: '{{.path.basename}}'
+      spec:
+        project: default
+        source:
+          repoURL: https://github.com/argoproj/argo-cd.git
+          targetRevision: HEAD
+          path: '{{.path.path}}'
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: '{{.path.basename}}'
+        syncPolicy:
+          automated:
+            enabled: true
+          syncOptions:
+            - CreateNamespace=true
