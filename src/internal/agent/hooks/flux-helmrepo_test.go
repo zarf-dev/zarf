@@ -110,7 +110,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -140,7 +140,6 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 							Port:     5000,
 						},
 					},
-					ClusterIP: "10.11.12.13",
 				},
 			},
 			code: http.StatusOK,
@@ -181,14 +180,14 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 					Name: "no-mutate-this",
 				},
 				Spec: flux.HelmRepositorySpec{
-					URL:  "oci://10.11.12.13:5000/stefanprodan/charts",
+					URL:  "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 					Type: "oci",
 				},
 			}),
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -218,7 +217,6 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 							Port:     5000,
 						},
 					},
-					ClusterIP: "10.11.12.13",
 				},
 			},
 			code: http.StatusOK,
