@@ -45,6 +45,31 @@ components:
                 name: app.kubernetes.io/name=apps-podinfo
                 namespace: podinfo
                 condition: ready
+  - name: argocd-applicationset
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.6.1
+        namespace: argo-workflows
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - applicationset/values.yaml
+    repos:
+      - https://github.com/argoproj/argo-cd.git
+    images:
+      - quay.io/argoproj/argocli:v3.4.0
+      - quay.io/argoproj/workflow-controller:v3.4.0
+    actions:
+      onDeploy:
+        after:
+          - description: Wait for Argo CD Application argo-workflows to be spawned
+            wait:
+              cluster:
+                kind: Application
+                name: argo-workflows
+                namespace: argocd
+                condition: exists
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

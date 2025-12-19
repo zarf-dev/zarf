@@ -155,7 +155,7 @@ The `zarf-agent` is responsible for modifying [Kubernetes PodSpec](https://kuber
 
 The `zarf-agent` modifies the following [flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`. During the mutation of OCIRepositories, a call is made to the zarf registry to determine the media type of the OCI artifact. If the artifact is a helm chart the mutation will __NOT__ include the crc32 hash as including the hash interferes with the Flux deployment of the chart.
 
-The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/) & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
+The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/), [ArgoCD ApplicationSet](https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/), & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
 
 :::note
 
