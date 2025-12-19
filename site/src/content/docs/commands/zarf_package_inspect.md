@@ -21,12 +21,12 @@ zarf package inspect [ PACKAGE_SOURCE ] [flags]
 ### Options
 
 ```
-  -h, --help                        help for inspect
-  -k, --key string                  Path to public key file for validating signed packages
-      --list-images                 List images in the package (prints to stdout)
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --sbom-out string             Specify an output directory for the SBOMs from the inspected Zarf package
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+  -h, --help                  help for inspect
+  -k, --key string            Path to public key file for validating signed packages
+      --list-images           List images in the package (prints to stdout)
+      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --sbom-out string       Specify an output directory for the SBOMs from the inspected Zarf package
+      --verify                Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands
