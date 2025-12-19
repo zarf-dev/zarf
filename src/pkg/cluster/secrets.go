@@ -190,8 +190,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 		if len(svc.Spec.Ports) == 0 {
 			return "", fmt.Errorf("registry service has no ports")
 		}
-		// {SERVICE_NAME}.{NAMESPACE}.svc.cluster.local:{PORT}:
-		return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, svc.Spec.Ports[0].Port), nil
+		return fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port), nil
 	}
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
@@ -206,5 +205,5 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 		return registryInfo.Address, nil
 	}
 
-	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
+	return fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port), nil
 }
