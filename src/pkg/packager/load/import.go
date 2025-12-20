@@ -40,16 +40,26 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	l := logger.From(ctx)
 	start := time.Now()
 
+	// Determine base directory: if packagePath is a directory, use it; otherwise use its parent directory
+	basePath := packagePath
+	fileInfo, err := os.Stat(packagePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+	if !fileInfo.IsDir() {
+		basePath = filepath.Dir(packagePath)
+	}
+
 	// Zarf imports merge in the top level package objects variables and constants
 	// however, imports are defined at the component level.
 	// Two packages can both import one another as long as the importing components are on a different chains.
 	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
 	// Recursive calls only include components from the imported pkg that have the name of the component to import
-	importStack = append(importStack, packagePath)
+	importStack = append(importStack, basePath)
 
 	l.Debug("start layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,
-		"path", packagePath,
+		"path", basePath,
 		"arch", arch,
 		"flavor", flavor,
 		"importStack", len(importStack),
@@ -76,10 +86,10 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
-			importPath := filepath.Join(packagePath, component.Import.Path)
+			importPath := filepath.Join(basePath, component.Import.Path)
 			for _, sp := range importStack {
 				if sp == importPath {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(basePath), component.Name)
 				}
 			}
 			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))

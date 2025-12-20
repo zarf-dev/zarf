@@ -188,7 +188,7 @@ func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, erro
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
@@ -225,7 +225,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		SkipVersionCheck:        o.skipVersionCheck,
 		WithBuildMachineInfo:    o.withBuildMachineInfo,
 	}
-	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, basePath, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
