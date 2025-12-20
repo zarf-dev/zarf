@@ -61,7 +61,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", err
 	}
 
-	// Determine base directory for assembly: if packagePath is a directory, use it; otherwise use its parent directory
+	// Determine base directory for assembly
 	basePath := packagePath
 	fileInfo, err := os.Stat(packagePath)
 	if err != nil {

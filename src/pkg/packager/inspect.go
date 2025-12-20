@@ -189,7 +189,7 @@ type InspectDefinitionResourcesOptions struct {
 	IsInteractive bool
 }
 
-// InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the zarf.yaml at the given path
+// InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the definition at the given path
 func InspectDefinitionResources(ctx context.Context, packagePath string, opts InspectDefinitionResourcesOptions) (_ []Resource, err error) {
 	s, err := state.Default()
 	if err != nil {
@@ -211,12 +211,22 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
+	// Determine base directory for assembly
+	basePath := packagePath
+	fileInfo, err := os.Stat(packagePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+	if !fileInfo.IsDir() {
+		basePath = filepath.Dir(packagePath)
+	}
+
 	// Load package-level default values and merge with CLI-provided values
 	packageValues := value.Values{}
 	if len(pkg.Values.Files) > 0 {
 		valuesPaths := make([]string, len(pkg.Values.Files))
 		for i, file := range pkg.Values.Files {
-			valuesPaths[i] = filepath.Join(packagePath, file)
+			valuesPaths[i] = filepath.Join(basePath, file)
 		}
 		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
 		if err != nil {
@@ -251,7 +261,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, basePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}
@@ -275,7 +285,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, basePath, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}

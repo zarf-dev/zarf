@@ -57,10 +57,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
 	if fileInfo.IsDir() {
-		l.Debug("packagePath is a directory", "packagePath", packagePath)
 		configPath = filepath.Join(packagePath, layout.ZarfYAML)
-	} else {
-		l.Debug("packagePath is a file", "packagePath", configPath)
 	}
 
 	b, err := os.ReadFile(configPath)
