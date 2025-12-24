@@ -145,7 +145,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	require.NoError(t, err)
 	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
+	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")

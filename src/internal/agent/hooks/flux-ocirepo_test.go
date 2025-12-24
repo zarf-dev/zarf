@@ -209,7 +209,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -239,7 +239,6 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 							Port:     5000,
 						},
 					},
-					ClusterIP: "10.11.12.13",
 				},
 			},
 			code: http.StatusOK,
@@ -286,7 +285,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					Name: "mutate-this",
 				},
 				Spec: flux.OCIRepositorySpec{
-					URL: "oci://10.11.12.13:5000/stefanprodan/charts",
+					URL: "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 					Reference: &flux.OCIRepositoryRef{
 						Digest: "sha256:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
 					},
@@ -295,7 +294,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -325,7 +324,6 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 							Port:     5000,
 						},
 					},
-					ClusterIP: "10.11.12.13",
 				},
 			},
 			code: http.StatusOK,

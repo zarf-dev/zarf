@@ -273,6 +273,7 @@ func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) 
 }
 
 // TODO: Refactor to use netip.AddrPort instead of a string for nodePortURL.
+// This functions assumes that the nodePortURL is in the form 127.0.0.1:<port>
 func serviceInfoFromNodePortURL(services []corev1.Service, nodePortURL string) (corev1.Service, int, error) {
 	// Attempt to parse as normal, if this fails add a scheme to the URL (docker registries don't use schemes)
 	parsedURL, err := url.Parse(nodePortURL)

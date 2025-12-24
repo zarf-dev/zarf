@@ -93,9 +93,9 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      - name: Run tests
+      - name: Run proxy tests
         run: |
-          build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
+          make test-proxy
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster

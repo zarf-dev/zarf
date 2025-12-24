@@ -33,6 +33,19 @@ type DockerConfigEntryWithAuth struct {
 	Auth string `json:"auth"`
 }
 
+// addRegistryAuthEntries adds registry authentication entries for a service's ClusterIP and DNS hostname.
+func addRegistryAuthEntries(auths DockerConfigEntry, svc *corev1.Service, port int32, authValue string) {
+	kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
+	auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
+		Auth: authValue,
+	}
+
+	kubeDNSRegistryHostname := fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port)
+	auths[kubeDNSRegistryHostname] = DockerConfigEntryWithAuth{
+		Auth: authValue,
+	}
+}
+
 // GenerateRegistryPullCreds generates a secret containing the registry credentials.
 func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name string, registryInfo state.RegistryInfo) (*v1ac.SecretApplyConfiguration, error) {
 	// Auth field must be username:password and base64 encoded
@@ -48,21 +61,27 @@ func (c *Cluster) GenerateRegistryPullCreds(ctx context.Context, namespace, name
 		},
 	}
 
-	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	// Build zarf-docker-registry service address and internal dns string
-	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
-	if err == nil {
-		kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
-		dockerConfigJSON.Auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
-			Auth: authEncodedValue,
+	if registryInfo.RegistryMode == state.RegistryModeProxy {
+		svc, err := c.Clientset.CoreV1().Services("zarf").Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+		if err != nil && !kerrors.IsNotFound(err) {
+			return nil, err
 		}
-
-		kubeDNSRegistryHostname := fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port)
-		dockerConfigJSON.Auths[kubeDNSRegistryHostname] = DockerConfigEntryWithAuth{
-			Auth: authEncodedValue,
+		if !kerrors.IsNotFound(err) {
+			if len(svc.Spec.Ports) == 0 {
+				return nil, fmt.Errorf("registry service has no ports")
+			}
+			port := svc.Spec.Ports[0].Port
+			addRegistryAuthEntries(dockerConfigJSON.Auths, svc, port, authEncodedValue)
+		}
+	} else {
+		serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		// Build zarf-docker-registry service address and internal dns string
+		svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
+		if err == nil {
+			addRegistryAuthEntries(dockerConfigJSON.Auths, &svc, int32(port), authEncodedValue)
 		}
 	}
 
@@ -162,18 +181,29 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 }
 
 // GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
-func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, stateRegistryAddress string) (string, error) {
+func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registryInfo state.RegistryInfo) (string, error) {
+	if registryInfo.RegistryMode == state.RegistryModeProxy {
+		svc, err := c.Clientset.CoreV1().Services("zarf").Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+		if err != nil {
+			return "", err
+		}
+		if len(svc.Spec.Ports) == 0 {
+			return "", fmt.Errorf("registry service has no ports")
+		}
+		return fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port), nil
+	}
+
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return "", err
 	}
 
 	// If this is an internal service then we need to look it up and
-	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, stateRegistryAddress)
+	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 	if err != nil {
-		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", stateRegistryAddress)
-		return stateRegistryAddress, nil
+		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", registryInfo.Address)
+		return registryInfo.Address, nil
 	}
 
-	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
+	return fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port), nil
 }
