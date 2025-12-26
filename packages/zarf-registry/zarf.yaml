@@ -165,15 +165,15 @@ components:
   - name: zarf-seed-registry
     description: |
       Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
-    charts:
-      - name: docker-registry
-        releaseName: zarf-docker-registry
-        localPath: chart
-        version: 1.0.1
-        namespace: zarf
-        valuesFiles:
-          - registry-values.yaml
-          - registry-values-seed.yaml
+    # charts:
+    #   - name: docker-registry
+    #     releaseName: zarf-docker-registry
+    #     localPath: chart
+    #     version: 1.0.1
+    #     namespace: zarf
+    #     valuesFiles:
+    #       - registry-values.yaml
+    #       - registry-values-seed.yaml
     images:
       # The seed image (or images) that will be injected (see zarf-config.toml)
       - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
@@ -184,23 +184,23 @@ components:
       Updates the Zarf Registry to use the self-hosted registry image.
       Serves as the primary docker registry for the cluster.
     manifests:
-      - name: registry-connect
-        namespace: zarf
-        files:
-          - connect.yaml
+      # - name: registry-connect
+      #   namespace: zarf
+      #   files:
+      #     - connect.yaml
       - name: kep-1755-registry-annotation
         namespace: zarf
         files:
           - configmap.yaml
-    charts:
-      - name: docker-registry
-        releaseName: zarf-docker-registry
-        localPath: chart
-        version: 1.0.1
-        namespace: zarf
-        valuesFiles:
-          - registry-values.yaml
-    images:
-      # This image (or images) must match that used for injection (see zarf-config.toml)
-      - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
-      - "###ZARF_PKG_TMPL_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_PROXY_IMAGE###:###ZARF_PKG_TMPL_PROXY_IMAGE_TAG###"
+    # charts:
+    #   - name: docker-registry
+    #     releaseName: zarf-docker-registry
+    #     localPath: chart
+    #     version: 1.0.1
+    #     namespace: zarf
+    #     valuesFiles:
+    #       - registry-values.yaml
+    # images:
+    #   # This image (or images) must match that used for injection (see zarf-config.toml)
+    #   - "###ZARF_PKG_TMPL_REGISTRY_IMAGE_DOMAIN######ZARF_PKG_TMPL_REGISTRY_IMAGE###:###ZARF_PKG_TMPL_REGISTRY_IMAGE_TAG###"
+    #   - "###ZARF_PKG_TMPL_PROXY_IMAGE_DOMAIN######ZARF_PKG_TMPL_PROXY_IMAGE###:###ZARF_PKG_TMPL_PROXY_IMAGE_TAG###"
