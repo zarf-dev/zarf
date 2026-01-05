@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: kiwix
-  description: Demo Zarf data injection with Kiwix (https://www.kiwix.org/en/)
+  description: Zarf data loading with Kiwix (https://www.kiwix.org/en/)
   # (optional) Some large datasets may already be compressed making Zarf compression less efficient
   uncompressed: true
   version: 3.5.0
@@ -40,6 +40,6 @@ components:
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
-  This example shows how to save data during package create so that it can be injected into a container running in a pod, in this case to initialize a [Kiwix server](https://www.kiwix.org/en/) to allow offline viewing of documentation and wiki pages.
+  This example shows how to save data during package create so that it can be loaded into a container running in a pod, in this case to initialize a [Kiwix server](https://www.kiwix.org/en/) to allow offline viewing of documentation and wiki pages.
 
-  By saving the kiwix data to a container image, we can spin up an init container that will copy the data to the main container running Kiwix.
+  By saving the Kiwix data to a container image, we can spin up an init container that will copy the data to the main container running Kiwix.
