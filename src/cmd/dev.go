@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -103,10 +104,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
-		Flavor:        o.flavor,
-		SetVariables:  o.setVariables,
-		CachePath:     cachePath,
-		IsInteractive: true,
+		Flavor:           o.flavor,
+		SetVariables:     o.setVariables,
+		CachePath:        cachePath,
+		IsInteractive:    true,
+		SkipVersionCheck: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
@@ -124,6 +126,8 @@ type devInspectManifestsOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -149,6 +153,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -164,9 +170,29 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -201,6 +227,8 @@ type devInspectValuesFilesOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -227,6 +255,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -242,9 +272,29 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -283,6 +333,7 @@ type devDeployOptions struct {
 	optionalComponents     string
 	noYOLO                 bool
 	ociConcurrency         int
+	skipVersionCheck       bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -318,6 +369,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	_ = cmd.Flags().MarkHidden("skip-version-check")
 
 	return cmd
 }
@@ -355,6 +408,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:     o.ociConcurrency,
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
+		SkipVersionCheck:   o.skipVersionCheck,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -615,6 +669,7 @@ type devFindImagesOptions struct {
 	why                 string
 	skipCosign          bool
 	registryURL         string
+	update              bool
 }
 
 func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
@@ -650,6 +705,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.why, "why", "", lang.CmdDevFlagFindImagesWhy)
 	// skip searching cosign artifacts in find images
 	cmd.Flags().BoolVar(&o.skipCosign, "skip-cosign", false, lang.CmdDevFlagFindImagesSkipCosign)
+	// update images in zarf.yaml file
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagFindImagesUpdate)
 
 	cmd.Flags().StringVar(&o.registryURL, "registry-url", defaultRegistry, lang.CmdDevFlagRegistry)
 
@@ -732,6 +789,13 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 	fmt.Println(componentDefinition)
+
+	if o.update {
+		if err := packager.UpdateImages(ctx, baseDir, imagesScans); err != nil {
+			return fmt.Errorf("unable to create update: %w", err)
+		}
+	}
+
 	return nil
 }
 

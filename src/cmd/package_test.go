@@ -16,15 +16,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/test/testutil"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -133,7 +132,6 @@ func TestPackageList(t *testing.T) {
 
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []struct {
 		name           string
@@ -254,7 +252,6 @@ type ValuesFilesTestData struct {
 
 func TestPackageInspectValuesFiles(t *testing.T) {
 	t.Parallel()
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 
 	tests := []ValuesFilesTestData{
 		{
@@ -300,7 +297,6 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 }
 
 func TestPackageInspectRemoteValuesFiles(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../zarf.schema.json")
 	// set up a test http server that serves test values file:
 	remoteValuesFile := filepath.Join("testdata", "inspect-values-files", "chart-remote", "remote-values", "values.yaml")
 	fileServer := newYAMLFileServer(t, remoteValuesFile)
@@ -481,6 +477,82 @@ func TestParseRegistryOverrides(t *testing.T) {
 			t.Parallel()
 			_, err := parseRegistryOverrides(tc.provided)
 			require.ErrorContains(t, err, tc.errorContents)
+		})
+	}
+}
+
+func TestPackageInspectDocumentation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		definitionDir string
+		packageName   string
+		keys          []string
+		expectedFiles []string
+		expectedErr   string
+	}{
+		{
+			name:          "documentation inspect - all files",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{},
+			expectedFiles: []string{"README.md", "CONTRIBUTE.md"},
+		},
+		{
+			name:          "documentation inspect - specific key",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{"readme"},
+			expectedFiles: []string{"README.md"},
+		},
+		{
+			name:          "documentation inspect - nonexistent key",
+			packageName:   "documentation",
+			definitionDir: filepath.Join("testdata", "inspect-documentation", "simple"),
+			keys:          []string{"nonexistent"},
+			expectedErr:   "not found in package documentation",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			tmpdir := t.TempDir()
+
+			// Create package
+			createOpts := packageCreateOptions{
+				confirm: true,
+				output:  tmpdir,
+			}
+			err := createOpts.run(ctx, []string{tc.definitionDir})
+			require.NoError(t, err)
+
+			// Inspect documentation
+			outputDir := filepath.Join(tmpdir, "extracted")
+			opts := packageInspectDocumentationOptions{
+				keys:      tc.keys,
+				outputDir: outputDir,
+			}
+			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
+
+			// Create a cobra command with context for the run method
+			cmd := &cobra.Command{}
+			cmd.SetContext(ctx)
+			err = opts.run(cmd, []string{packagePath})
+
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+
+			// Validate extracted files
+			extractedDir := filepath.Join(outputDir, fmt.Sprintf("%s-documentation", tc.packageName))
+			for _, file := range tc.expectedFiles {
+				require.FileExists(t, filepath.Join(extractedDir, file))
+			}
 		})
 	}
 }

@@ -66,6 +66,7 @@ const (
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
+	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -87,7 +88,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	groupedComponents := make(map[string][]string)
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
-			if len(component.Images) > 0 {
+			if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 				err = errors.Join(err, errors.New(PkgValidateErrYOLONoOCI))
 			}
 			if len(component.Repos) > 0 {
@@ -156,6 +157,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
+
 	return err
 }
 
@@ -167,6 +169,10 @@ func validateActions(a v1alpha1.ZarfComponentActions) error {
 
 	if hasSetVariables(a.OnCreate) {
 		err = errors.Join(err, fmt.Errorf("cannot contain setVariables outside of onDeploy in actions"))
+	}
+
+	if hasTemplating(a.OnCreate) {
+		err = errors.Join(err, errors.New(PkgValidateErrActionTemplateOnCreate))
 	}
 
 	err = errors.Join(err, validateActionSet(a.OnDeploy))
@@ -192,6 +198,31 @@ func hasSetVariables(as v1alpha1.ZarfComponentActionSet) bool {
 	}
 
 	return check(as.Before) || check(as.After) || check(as.OnSuccess) || check(as.OnFailure)
+}
+
+// hasTemplating returns true if any of the actions have templating enabled.
+func hasTemplating(as v1alpha1.ZarfComponentActionSet) bool {
+	check := func(actions []v1alpha1.ZarfComponentAction) bool {
+		for _, action := range actions {
+			if action.ShouldTemplate() {
+				return true
+			}
+		}
+		return false
+	}
+
+	switch {
+	case check(as.Before):
+		return true
+	case check(as.After):
+		return true
+	case check(as.OnSuccess):
+		return true
+	case check(as.OnFailure):
+		return true
+	default:
+		return false
+	}
 }
 
 // validateActionSet runs all validation checks on component action sets.

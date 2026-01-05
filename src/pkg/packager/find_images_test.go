@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -17,8 +16,6 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
-
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 
 	tests := []struct {
 		name           string
@@ -175,6 +172,13 @@ func TestFindImages(t *testing.T) {
 						"registry.k8s.io/sig-storage/csi-snapshotter:v8.2.1",
 					},
 				},
+				{
+					ComponentName: "underscores",
+					Matches:       []string{},
+					PotentialMatches: []string{
+						"docker.io/percona/mongodb_exporter:0.47.1",
+					},
+				},
 			},
 		},
 	}
@@ -211,7 +215,6 @@ func TestBuildImageMap(t *testing.T) {
 			},
 		},
 		Containers: []corev1.Container{
-
 			{
 				Image: "container-image",
 			},

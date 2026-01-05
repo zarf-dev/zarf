@@ -5,7 +5,7 @@ metadata:
 
 values:
   files:
-    - values.yaml
+    - values/values.yaml
 
 components:
   - name: test-values-component
@@ -22,16 +22,23 @@ components:
             setValues:
               - key: .yaml
                 type: yaml
-          # Test that template: false prevents Zarf from processing go-templates
+          # Test that template: false (or omitted, since false is default) prevents Zarf from processing go-templates
           - cmd: echo 'template={{ .shouldNotBeProcessed }}'
-            template: false
             setValues:
               - key: .rawTemplate
+                type: string
+          # Test that template: true enables Zarf go-template processing
+          - cmd: echo 'processed={{ .Values.json.myKey }}'
+            template: true
+            setValues:
+              - key: .processedTemplate
                 type: string
       onRemove:
         before:
           - cmd: echo "REMOVE_TEST_VALUE={{ .Values.test }}"
+            template: true
           - cmd: echo "REMOVE_CUSTOM_VALUE={{ .Values.removeKey }}"
+            template: true
     manifests:
       - name: test-configmap
         template: true
@@ -45,3 +52,7 @@ components:
         template: true
         files:
           - raw-template-configmap.yaml
+      - name: test-processed-template-configmap
+        template: true
+        files:
+          - processed-template-configmap.yaml

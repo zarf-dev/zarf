@@ -19,14 +19,15 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/feature"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -62,16 +63,18 @@ type DeployOptions struct {
 	// Remote Options for image pushes
 	RemoteOptions
 	// How to configure Zarf state if it's not already been configured
-	GitServer        state.GitServerInfo
-	RegistryInfo     state.RegistryInfo
-	ArtifactServer   state.ArtifactServerInfo
-	StorageClass     string
-	InjectorHostPort int
+	GitServer      state.GitServerInfo
+	RegistryInfo   state.RegistryInfo
+	ArtifactServer state.ArtifactServerInfo
+	StorageClass   string
+	InjectorPort   int
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	// SkipVersionCheck skips version requirement validation
+	SkipVersionCheck bool
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -93,11 +96,18 @@ type DeployResult struct {
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
+	// Validate operational requirements before proceeding
+	if !opts.SkipVersionCheck {
+		if err := requirements.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
+			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
+		}
+	}
+
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
-	if opts.InjectorHostPort == 0 {
-		opts.InjectorHostPort = state.ZarfInjectorHostPort
+	if opts.InjectorPort == 0 && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		opts.InjectorPort = state.ZarfInjectorDefaultHostPort
 	}
 	l := logger.From(ctx)
 	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
@@ -132,19 +142,25 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
-	// Read the default package values off of the pkgLayout.Pkg.Values.Files.
-	// Resolve values file paths relative to the package directory
-	valueFilePaths := make([]string, len(pkgLayout.Pkg.Values.Files))
-	for i, vf := range pkgLayout.Pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgLayout.DirPath(), layout.ValuesDir, vf)
-	}
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	// Read the package values from values.yaml if it exists
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
 	if err != nil {
 		return DeployResult{}, err
 	}
+
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
 	l.Debug("package values", "values", vals)
+
+	// Validate merged values against schema if provided
+	if pkgLayout.Pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{}); err != nil {
+			return DeployResult{}, fmt.Errorf("values validation failed: %w", err)
+		}
+		l.Debug("values validated against schema", "schemaPath", schemaPath)
+	}
 
 	d := deployer{
 		vc:   variableConfig,
@@ -322,15 +338,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ArtifactServer: opts.ArtifactServer,
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
+			InjectorPort:   opts.InjectorPort,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
 		}
 	}
 
-	if !opts.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
-		l.Info("skipping init package component since external registry information was provided", "component", component.Name)
-		return nil, nil
+	if d.s != nil {
+		if !d.s.RegistryInfo.IsInternal() && (isSeedRegistry || isInjector || isRegistry) {
+			l.Info("skipping init package component since external registry information was provided", "component", component.Name)
+			return nil, nil
+		}
 	}
 
 	if isRegistry {
@@ -347,15 +366,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
+
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
-			d.s.InjectorInfo.Port = opts.InjectorHostPort
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
+				RegistryNodePort: uint16(d.s.RegistryInfo.NodePort),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -390,7 +412,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	l.Info("deploying component", "name", component.Name)
 
-	hasImages := len(component.Images) > 0 && !noImgPush
+	hasImages := len(component.GetImages()) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
@@ -441,18 +463,15 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	if hasImages {
 		refs := []transform.Image{}
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
 			}
 			refs = append(refs, ref)
 		}
-		pushConfig := images.PushConfig{
+		pushOpts := images.PushOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			SourceDirectory:       pkgLayout.GetImageDirPath(),
-			RegistryInfo:          d.s.RegistryInfo,
-			ImageList:             refs,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
 			Arch:                  pkgLayout.Pkg.Build.Architecture,
@@ -460,7 +479,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
 		}
-		err := images.Push(ctx, pushConfig)
+		err := images.Push(ctx, refs, pkgLayout.GetImageDirPath(), d.s.RegistryInfo, pushOpts)
 		if err != nil {
 			return nil, fmt.Errorf("unable to push images to the registry: %w", err)
 		}

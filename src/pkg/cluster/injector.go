@@ -39,10 +39,22 @@ import (
 
 var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
+// ZarfInjectorOptions represents the options used by injector pod
+type ZarfInjectorOptions struct {
+	// - RegistryNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	RegistryNodePort uint16
+	// - InjectorNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	InjectorNodePort uint16
+}
+
 // StartInjection initializes a Zarf injection into the cluster
-func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, registryNodePort int, pkgName string) (int, error) {
+func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, injectorSeedSrcs []string, pkgName string, architecture string, opts ZarfInjectorOptions) (int, error) {
 	l := logger.From(ctx)
 	start := time.Now()
+
+	// The injector breaks if the same image is added multiple times
+	injectorSeedSrcs = helpers.Unique(injectorSeedSrcs)
+
 	// Stop any previous running injection before starting.
 	err := c.StopInjection(ctx)
 	if err != nil {
@@ -50,6 +62,11 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 	}
 
 	l.Info("creating Zarf injector resources")
+
+	svc, err := c.createInjectorNodeportService(ctx, pkgName, opts)
+	if err != nil {
+		return 0, err
+	}
 
 	payloadCmNames, shasum, err := c.CreateInjectorConfigMaps(ctx, tmpDir, imagesDir, injectorSeedSrcs, pkgName)
 	if err != nil {
@@ -65,12 +82,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq)
-	if err != nil {
-		return 0, err
-	}
-
-	svc, err := c.createInjectorNodeportService(ctx, registryNodePort, pkgName)
+	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
 	if err != nil {
 		return 0, err
 	}
@@ -260,7 +272,7 @@ func (c *Cluster) createPayloadConfigMaps(ctx context.Context, tmpDir, imagesDir
 }
 
 // getImagesAndNodesForInjection checks for images on schedulable nodes within a cluster.
-func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration) (string, string, error) {
+func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.ResourceRequirementsApplyConfiguration, architecture string) (string, string, error) {
 	l := logger.From(ctx)
 
 	// List all nodes and running pods once
@@ -290,6 +302,10 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 	for _, node := range nodeList.Items {
 		if hasBlockingTaints(node.Spec.Taints) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
+			continue
+		}
+
+		if node.Status.NodeInfo.Architecture != "" && node.Status.NodeInfo.Architecture != architecture {
 			continue
 		}
 
@@ -579,17 +595,21 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 }
 
 // createInjectorNodeportService creates the injector service on an available port different than the registryNodePort service
-func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNodePort int, pkgName string) (*corev1.Service, error) {
+func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName string, opts ZarfInjectorOptions) (*corev1.Service, error) {
 	l := logger.From(ctx)
 	var svc *corev1.Service
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
+	portConfiguration := v1ac.ServicePort().WithPort(int32(5000))
+	if opts.InjectorNodePort != 0 {
+		portConfiguration.WithNodePort(int32(opts.InjectorNodePort))
+	}
 	err := retry.Do(func() error {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
 				WithPorts(
-					v1ac.ServicePort().WithPort(int32(5000)),
+					portConfiguration,
 				).WithSelector(map[string]string{
 				"app": "zarf-injector",
 			})).WithLabels(map[string]string{
@@ -603,13 +623,13 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, registryNod
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
-		if assignedNodePort == registryNodePort {
+		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
 			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
 			if deleteErr != nil {
 				return deleteErr
 			}
-			return fmt.Errorf("nodePort conflict with registry port %d", registryNodePort)
+			return fmt.Errorf("nodePort conflict with registry port %d", opts.RegistryNodePort)
 		}
 		return nil
 	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))

@@ -42,6 +42,9 @@ type ZarfComponent struct {
 	// List of OCI images to include in the package.
 	Images []string `json:"images,omitempty"`
 
+	// List of Tar files of images to bring into the package.
+	ImageArchives []ImageArchive `json:"imageArchives,omitempty"`
+
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
 
@@ -53,6 +56,14 @@ type ZarfComponent struct {
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+}
+
+// ImageArchive points to an archived file containing an OCI layout
+type ImageArchive struct {
+	// Path to file containing an OCI-layout
+	Path string `json:"path"`
+	// Images within the OCI layout to be brought into the package
+	Images []string `json:"images"`
 }
 
 // NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
@@ -70,13 +81,14 @@ type NamespacedObjectKindReference struct {
 // RequiresCluster returns if the component requires a cluster connection to deploy.
 func (c ZarfComponent) RequiresCluster() bool {
 	hasImages := len(c.Images) > 0
+	hasImageArchives := len(c.ImageArchives) > 0
 	hasCharts := len(c.Charts) > 0
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
 	hasDataInjections := len(c.DataInjections) > 0
 	hasHealthChecks := len(c.HealthChecks) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
+	if hasImageArchives || hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections || hasHealthChecks {
 		return true
 	}
 
@@ -90,6 +102,19 @@ func (c ZarfComponent) IsRequired() bool {
 	}
 
 	return false
+}
+
+// GetImages returns all images specified in the component, including those from ImageArchives.
+func (c ZarfComponent) GetImages() []string {
+	images := []string{}
+
+	images = append(images, c.Images...)
+
+	for _, imageArchives := range c.ImageArchives {
+		images = append(images, imageArchives.Images...)
+	}
+
+	return images
 }
 
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
@@ -190,8 +215,8 @@ type ZarfChartVariable struct {
 
 // ZarfChartValue maps a Zarf Value key to a Helm Value.
 type ZarfChartValue struct {
-	SourcePath string `json:"sourcePath"`
-	TargetPath string `json:"targetPath"`
+	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$"`
+	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
@@ -206,6 +231,8 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
+	// Enable kustomize plugins during kustomize builds.
+	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
 	// [alpha]
@@ -315,8 +342,10 @@ func (a ZarfComponentAction) ShouldTemplate() bool {
 	if a.Template != nil {
 		return *a.Template
 	}
-	// Default to true
-	return true
+	// Default to false
+	// NOTE(mkcp): Making users opt-out of go-templates in actions was a breaking change for cmds that passed templates
+	//  to CLI tooling. This pattern was more common than anticipated, so we're making these opt-in for the time being.
+	return false
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing

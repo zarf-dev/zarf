@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -110,7 +111,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	tmpdir := t.TempDir()
 	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
-	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
@@ -148,13 +149,13 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
 	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
 	suite.NoError(err)
-	deployArgs = []string{"package", "deploy", filepath.Join(temp, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	deployArgs = []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }
@@ -205,6 +206,13 @@ func (suite *ExtOutClusterTestSuite) Test_4_SubpathAgentTlsUpdate() {
 
 	err := exec.CmdWithPrint(zarfBinPath, updateCredsArgs...)
 	suite.NoError(err, "Unable to find images, helm auth likely failed")
+}
+
+func (suite *ExtOutClusterTestSuite) Test_5_ReInitialize() {
+	// Ensure that Zarf can re-initialize without having to re-enter existing flags for state
+	initArgs := []string{"init", "--confirm"}
+	err := exec.CmdWithPrint(zarfBinPath, initArgs...)
+	suite.NoError(err, "unable to initialize the k8s server with zarf")
 }
 
 func (suite *ExtOutClusterTestSuite) createHelmChartInGitea(baseURL string, username string, password string) {

@@ -14,7 +14,7 @@ imagePullSecrets:
 
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
-  hostNetwork: ###ZARF_VAR_HOST_NETWORK###
+  hostNetwork: ###ZARF_VAR_HOST_NETWORK_PROXY###
   tolerations:
     ###ZARF_VAR_PROXY_TOLERATIONS###
   image:
@@ -81,3 +81,11 @@ serviceAccount:
   name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
   annotations:
     ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
+
+opentelemetry:
+  exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###
+
+securityContext:
+  runAsUser: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_USER###
+  fsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_FS_GROUP###
+  runAsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP###

@@ -22,16 +22,15 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -53,12 +52,18 @@ type AssembleOptions struct {
 	OCIConcurrency      int
 	// CachePath is the path to the Zarf cache, used to cache images
 	CachePath string
+	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
+	WithBuildMachineInfo bool
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
 func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
+
+	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
+		return nil, err
+	}
 
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
@@ -104,7 +109,19 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
+	manifests := []images.ImageWithManifest{}
 	for _, component := range pkg.Components {
+		for _, imageArchive := range component.ImageArchives {
+			if !filepath.IsAbs(imageArchive.Path) {
+				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
+			}
+
+			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			if err != nil {
+				return nil, err
+			}
+			manifests = append(manifests, archiveImageManifests...)
+		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
 			if err != nil {
@@ -118,25 +135,25 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
-		pullCfg := images.PullConfig{
+		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			DestinationDirectory:  filepath.Join(buildPath, ImagesDir),
-			ImageList:             componentImages,
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             config.CommonOptions.PlainHTTP,
 			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
 		}
-		manifests, err := images.Pull(ctx, pullCfg)
+		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		for image, manifest := range manifests {
-			ok := images.OnlyHasImageLayers(manifest)
-			if ok {
-				sbomImageList = append(sbomImageList, image)
-			}
+		manifests = append(manifests, imageManifests...)
+	}
+
+	for _, manifest := range manifests {
+		ok := images.OnlyHasImageLayers(manifest.Manifest)
+		if ok {
+			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 
 		// Sort images index to make build reproducible.
@@ -156,11 +173,20 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	l.Debug("copying values files to package", "files", pkg.Values.Files)
-	for _, file := range pkg.Values.Files {
-		if err = copyValuesFile(ctx, file, packagePath, buildPath); err != nil {
+	l.Debug("merging values files to package", "files", pkg.Values.Files)
+	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+		return nil, err
+	}
+
+	// Copy schema file if specified
+	if pkg.Values.Schema != "" {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
 			return nil, err
 		}
+	}
+
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
@@ -174,7 +200,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -185,12 +211,17 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
 	if err != nil {
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -200,9 +231,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 // AssembleSkeletonOptions are the options for creating a skeleton package
 type AssembleSkeletonOptions struct {
-	SigningKeyPath     string
-	SigningKeyPassword string
-	Flavor             string
+	SigningKeyPath       string
+	SigningKeyPassword   string
+	Flavor               string
+	WithBuildMachineInfo bool
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
@@ -211,6 +243,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
+		return nil, err
+	}
+
+	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -237,18 +273,13 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil)
+	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
 		return nil, err
 	}
 	err = os.WriteFile(filepath.Join(buildPath, ZarfYAML), b, helpers.ReadWriteUser)
-	if err != nil {
-		return nil, err
-	}
-
-	err = signPackage(buildPath, opts.SigningKeyPath, opts.SigningKeyPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +293,57 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		return nil, fmt.Errorf("unable to load skeleton: %w", err)
 	}
 
+	// Sign the package with the provided options
+	signOpts := utils.DefaultSignBlobOptions()
+	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Password = opts.SigningKeyPassword
+
+	err = pkgLayout.SignPackage(ctx, signOpts)
+	if err != nil {
+		return nil, err
+	}
+
 	return pkgLayout, nil
+}
+
+// validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
+// and that images in image archives don't conflict with images in component.Images.
+func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) error {
+	imageToArchive := make(map[string]string)
+
+	for _, comp := range components {
+		for _, archive := range comp.ImageArchives {
+			for _, image := range archive.Images {
+				refInfo, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+				}
+
+				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
+					// A user may want to represent the same tar twice across components if both components need the same image
+					if existingArchivePath != archive.Path {
+						return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchivePath, archive.Path)
+					}
+				} else {
+					imageToArchive[refInfo.Reference] = archive.Path
+				}
+			}
+		}
+	}
+
+	for _, comp := range components {
+		for _, image := range comp.Images {
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image, comp.Name, err)
+			}
+			if archivePath, exists := imageToArchive[refInfo.Reference]; exists {
+				return fmt.Errorf("image %s from %s is also pulled by component %s", refInfo.Reference, archivePath, comp.Name)
+			}
+		}
+	}
+
+	return nil
 }
 
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
@@ -364,7 +445,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
@@ -478,7 +559,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		if !helpers.IsURL(path) && !filepath.IsAbs(path) {
 			path = filepath.Join(packagePath, path)
 		}
-		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+		if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 			return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 		}
 	}
@@ -597,7 +678,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
@@ -663,7 +744,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 
 			// Build() requires the path be present - otherwise will throw an error.
-			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory); err != nil {
+			if err := kustomize.Build(path, dst, manifest.KustomizeAllowAnyDirectory, manifest.EnableKustomizePlugins); err != nil {
 				return fmt.Errorf("unable to build kustomization %s: %w", path, err)
 			}
 		}
@@ -696,21 +777,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
 	now := time.Now()
-	// Just use $USER env variable to avoid CGO issue.
-	// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
-	// Record the name of the user creating the package.
-	if runtime.GOOS == "windows" {
-		pkg.Build.User = os.Getenv("USERNAME")
-	} else {
-		pkg.Build.User = os.Getenv("USER")
-	}
+	if withBuildMachineInfo {
+		// Just use $USER env variable to avoid CGO issue.
+		// https://groups.google.com/g/golang-dev/c/ZFDDX3ZiJ84.
+		// Record the name of the user creating the package.
+		if runtime.GOOS == "windows" {
+			pkg.Build.User = os.Getenv("USERNAME")
+		} else {
+			pkg.Build.User = os.Getenv("USER")
+		}
 
-	// Record the hostname of the package creation terminal.
-	//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
-	hostname, _ := os.Hostname()
-	pkg.Build.Terminal = hostname
+		// Record the hostname of the package creation terminal.
+		//nolint: errcheck // The error here is ignored because the hostname is not critical to the package creation.
+		hostname, _ := os.Hostname()
+		pkg.Build.Terminal = hostname
+	}
 
 	if pkg.IsInitConfig() && pkg.Metadata.Version == "" {
 		pkg.Metadata.Version = config.CLIVersion
@@ -727,6 +810,18 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
+	var versionRequirements []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	pkg.Build.VersionRequirements = versionRequirements
+
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
 	for i := range registryOverrides {
@@ -734,6 +829,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	}
 
 	pkg.Build.RegistryOverrides = overrides
+
+	// set signed to false by default - this is updated if signing occurs.
+	signed := false
+	pkg.Build.Signed = &signed
 
 	return pkg
 }
@@ -769,35 +868,6 @@ func getChecksum(dirPath string) (string, string, error) {
 	checksumContent := strings.Join(checksumData, "\n") + "\n"
 	sha := sha256.Sum256([]byte(checksumContent))
 	return checksumContent, hex.EncodeToString(sha[:]), nil
-}
-
-func signPackage(dirPath, signingKeyPath, signingKeyPassword string) error {
-	if signingKeyPath == "" {
-		return nil
-	}
-	passFunc := func(_ bool) ([]byte, error) {
-		return []byte(signingKeyPassword), nil
-	}
-	keyOpts := options.KeyOpts{
-		KeyRef:   signingKeyPath,
-		PassFunc: passFunc,
-	}
-	rootOpts := &options.RootOptions{
-		Verbose: false,
-		Timeout: options.DefaultTimeout,
-	}
-	_, err := sign.SignBlobCmd(
-		rootOpts,
-		keyOpts,
-		filepath.Join(dirPath, ZarfYAML),
-		true,
-		filepath.Join(dirPath, Signature),
-		"",
-		false)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
@@ -888,35 +958,113 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func copyValuesFile(ctx context.Context, file, packagePath, buildPath string) error {
+func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	// Process local values file
-	src := file
-	if !filepath.IsAbs(src) {
-		src = filepath.Join(packagePath, ValuesDir, file)
-	}
-	// Validate src
-	if _, err := os.Stat(src); err != nil {
-		return fmt.Errorf("unable to access values file %s: %w", src, err)
+	if len(files) == 0 {
+		return nil
 	}
 
-	// Ensure relative paths don't munge the destination and write outside of the package tmpdir
-	cleanFile := filepath.Clean(file)
-	if strings.HasPrefix(cleanFile, "..") {
-		return fmt.Errorf("values file path %s escapes package directory", file)
+	// Build absolute paths for all values files
+	valueFilePaths := make([]string, len(files))
+	for i, file := range files {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+		// Validate src exists
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("unable to access values file %s: %w", src, err)
+		}
+		valueFilePaths[i] = src
 	}
 
-	//Copy file to pre-archive package - destination includes ValuesDir
-	dst := filepath.Join(buildPath, ValuesDir, cleanFile)
-	l.Debug("copying values file", "src", src, "dst", dst)
-	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-		return fmt.Errorf("failed to copy values file %s: %w", src, err)
+	// Parse and merge all values files
+	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to parse values files: %w", err)
+	}
+
+	// Write merged values to YAML
+	dst := filepath.Join(buildPath, ValuesYAML)
+	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
+	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to write merged values file: %w", err)
+	}
+
+	return nil
+}
+
+// copyValuesSchema validates and copies a values schema file to the build directory.
+// It validates the schema is valid JSON Schema, checks for path traversal, and copies
+// the file to the package root.
+func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+	l := logger.From(ctx)
+	l.Debug("copying values schema file to package", "schema", schema)
+
+	// Resolve the schema source path from package root
+	schemaSrc := schema
+	if !filepath.IsAbs(schemaSrc) {
+		schemaSrc = filepath.Join(packagePath, schema)
+	}
+
+	// Validate the schema is valid JSON Schema
+	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
+		return fmt.Errorf("values schema validation failed: %w", err)
+	}
+
+	// Copy schema file to package root
+	schemaDst := filepath.Join(buildPath, ValuesSchema)
+	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
+	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
+		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
 	}
 
 	// Set appropriate file permissions
-	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
-		return fmt.Errorf("failed to set permissions on values file %s: %w", dst, err)
+	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	}
+
+	return nil
+}
+
+func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath string) (err error) {
+	if len(pkg.Documentation) == 0 {
+		return nil
+	}
+
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory for documentation: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	// Get the mapping of keys to their final filenames (with deduplication logic)
+	fileNames := GetDocumentationFileNames(pkg.Documentation)
+
+	for key, file := range pkg.Documentation {
+		src := file
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, file)
+		}
+
+		docFilename := fileNames[key]
+		dst := filepath.Join(tmpDir, docFilename)
+
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", src, err)
+		}
+
+		if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+			return fmt.Errorf("failed to set permissions on documentation file %s: %w", dst, err)
+		}
+	}
+
+	tarPath := filepath.Join(buildPath, DocumentationTar)
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
 	return nil
