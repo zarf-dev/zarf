@@ -2,7 +2,7 @@
 title: "Migrate off of Data injections"
 ---
 
-This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections are deprecated in the current Zarf schema version amd will be fully removed in the next schema version. There are several reasons behind this:
+This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections are deprecated in the current Zarf schema version and will be fully removed in the next schema version. There are several reasons behind this:
 
 - **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
 - **Host dependency**: Data injections shells out to `tar`. This makes testing difficult and introduces differences across environments.
