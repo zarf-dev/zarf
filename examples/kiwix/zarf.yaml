@@ -20,7 +20,7 @@ components:
       - ghcr.io/kiwix/kiwix-serve:3.5.0-2
     # Use image archive to include the locally built data container
     imageArchives:
-      - path: zim-data/kiwix-data.tar
+      - path: kiwix-data.tar
         images:
           - kiwix-data:local
     actions:
@@ -36,7 +36,7 @@ components:
           - cmd: docker build -t kiwix-data:local .
 
           # Export the container image to a tar archive for use as an image archive
-          - cmd: docker save kiwix-data:local -o zim-data/kiwix-data.tar
+          - cmd: docker save kiwix-data:local -o kiwix-data.tar
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples

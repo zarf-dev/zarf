@@ -1,6 +1,0 @@
-# Ignore generated image archive
-kiwix-data.tar
-
-# Ignore built Zarf packages
-*.tar.zst
-zarf-package-*.tar
