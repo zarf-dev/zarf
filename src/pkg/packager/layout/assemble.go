@@ -445,7 +445,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
@@ -678,7 +678,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
