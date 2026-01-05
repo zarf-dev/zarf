@@ -2,7 +2,7 @@
 title: "Migrate off of Data injections"
 ---
 
-This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections is planned to be deprecated the current Zarf schema version and fully removed by Zarf v1.0.0. There are for several reasons behind this:
+This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections is deprecated in the current Zarf schema version will be fully removed from the next schema version. There are for several reasons behind this:
 
 - **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
 - **Host dependency**: Data injections shells out to `tar`. This makes testing difficult and introduces differences across environments.
@@ -15,7 +15,7 @@ This guide explains how to migrate your Zarf deployment from the data injections
 First, create a container image containing your data:
 
 ```dockerfile
-FROM alpine:3.18
+FROM cgr.dev/chainguard/static:latest
 COPY your-data-file /your-data/your-data-file
 ```
 
@@ -25,7 +25,11 @@ docker build -t your-registry/your-data:tag .
 docker push your-registry/your-data:tag
 ```
 
-Some registries will not accept images over a certain size. In this case, you can load the image from the Docker Daemon. This can be slow, users are recommended to try out [this strategy for improving the speed of image loads](https://docs.zarf.dev/faq#how-can-i-improve-the-speed-of-loading-large-images-from-docker-on-zarf-package-create). Additionally, before Data Injections is removed Zarf will allow users to load images directly from a tar file, ([#2181](https://github.com/zarf-dev/zarf/issues/)), this will be significantly faster than Docker daemon pulls.
+:::tip
+
+Some registries will not accept images over a certain size or you may want to avoid pushing your data to a connected registry. To build the package with a local image use [Image Archives](/ref/components#container-image-archives).
+
+:::
 
 ### Step 2: Update zarf.yaml
 
@@ -33,8 +37,7 @@ Some registries will not accept images over a certain size. In this case, you ca
 ```yaml
 kind: ZarfPackageConfig
 metadata:
-  name: my-data-app
-
+  name: data-injections
 components:
   - name: my-app
     required: true
@@ -56,7 +59,6 @@ components:
 kind: ZarfPackageConfig
 metadata:
   name: init-data-loading
-
 components:
   - name: my-app
     required: true
