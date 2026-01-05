@@ -64,7 +64,7 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 		}
 
 		if len(comp.DataInjections) != 0 {
-			warnings = append(warnings, fmt.Sprintf("Component %s is using data injections which has been deprecated and will be removed in the next schema version. Please migrate to.", comp.Name))
+			warnings = append(warnings, fmt.Sprintf("Component %s is using data injections which has been deprecated and will be removed in the next schema version. Please migrate to another solution.", comp.Name))
 		}
 
 		migratedComponents = append(migratedComponents, comp)
