@@ -18,17 +18,11 @@ components:
           - manifests/service.yaml
     images:
       - ghcr.io/kiwix/kiwix-serve:3.5.0-2
-      - alpine:3.18
-    # Add new data into the cluster, these will keep trying up until their timeout
-    dataInjections:
-      # Injection in the data directory using the data-loader init container
-      - source: zim-data
-        target:
-          namespace: kiwix
-          selector: app=kiwix-serve
-          container: data-loader
-          path: /data
-        compress: true
+    # Use image archive to include the locally built data container
+    imageArchives:
+      - path: zim-data/kiwix-data.tar
+        images:
+          - kiwix-data:local
     actions:
       onCreate:
         before:
@@ -38,17 +32,15 @@ components:
           # https://library.kiwix.org/?lang=eng
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
 
+          # Build a container image containing the ZIM data file
+          - cmd: docker build -t kiwix-data:local .
+
+          # Export the container image to a tar archive for use as an image archive
+          - cmd: docker save kiwix-data:local -o zim-data/kiwix-data.tar
+
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
-  This example shows Zarf's ability to inject data into a container running in a pod, in this case to initialize a [Kiwix server](https://www.kiwix.org/en/) to allow offline viewing of documentation and wiki pages.
+  This example shows how to save data during package create so that it can be injected into a container running in a pod, in this case to initialize a [Kiwix server](https://www.kiwix.org/en/) to allow offline viewing of documentation and wiki pages.
 
-  Data injections allow for data that is not included in the container image to be injected at deploy time and are declared using the `dataInjections` key within a component.  Once the specified container is started, Zarf will copy the files and folders from the specified source into the specified container and path.
-
-  :::caution
-
-  Data injections depend on the `tar` (and for `compress`, `gzip`) executables and their implementation across operating systems.  Between macOS and Linux there is general agreement on how these utilities should function, however on Windows you may see issues enabling compression.
-
-  To resolve this you can either disable compression or use the GNU core-utils version of `tar` and `gzip`.
-
-  :::
+  By saving the kiwix data to a container image, we can spin up an init container that will copy the data to the main container running Kiwix.

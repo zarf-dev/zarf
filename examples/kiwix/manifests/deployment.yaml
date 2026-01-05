@@ -16,18 +16,16 @@ spec:
       labels:
         app: kiwix-serve
     spec:
-      # Kiwix can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
-      # It's necessary to include the ###ZARF_DATA_INJECTION_MARKER### somewhere in the podspec, otherwise data injections will not occur.
       initContainers:
         - name: data-loader
-          image: alpine:3.18
+          image: kiwix-data:local
           command:
-            [
-              "sh",
-              "-c",
-              # This command looks for the Zarf "data injection marker" which is a timestamped file that is injected after everything else and marks the injection as complete.
-              'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
-            ]
+            - sh
+            - -c
+            - |
+              echo "Copying ZIM data files to /data..."
+              cp /zim-data/*.zim /data/
+              ls -la /data
           resources:
             requests:
               memory: "16Mi"
