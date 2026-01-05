@@ -27,8 +27,6 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
@@ -158,37 +156,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	if !zarfChart.NoWait {
 		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
 		l.Info("running health checks", "chart", zarfChart.Name)
-
-		// Start goroutine to watch ConfigMaps in kube-public namespace
-		go func() {
-			watcher, err := opts.Cluster.Clientset.CoreV1().ConfigMaps("kube-public").Watch(helmCtx, metav1.ListOptions{})
-			if err != nil {
-				l.Info("failed to start configmap watch", "namespace", "kube-public", "error", err.Error())
-				return
-			}
-			defer watcher.Stop()
-
-			l.Info("started watching configmaps", "namespace", "kube-public")
-
-			for {
-				select {
-				case <-helmCtx.Done():
-					l.Info("stopped watching configmaps", "namespace", "kube-public")
-					return
-				case event, ok := <-watcher.ResultChan():
-					if !ok {
-						l.Info("configmap watch channel closed", "namespace", "kube-public")
-						return
-					}
-					if event.Object != nil {
-						if cm, ok := event.Object.(*corev1.ConfigMap); ok {
-							l.Info("configmap event", "namespace", "kube-public", "type", event.Type, "name", cm.Name)
-						}
-					}
-				}
-			}
-		}()
-
 		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
 			return nil, zarfChart.ReleaseName, err
 		}
