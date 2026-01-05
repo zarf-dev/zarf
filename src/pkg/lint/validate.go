@@ -157,6 +157,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
+
 	return err
 }
 

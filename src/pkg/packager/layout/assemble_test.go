@@ -58,15 +58,13 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.Equal(t, "c09d17f612f241cdf549e5fb97c9e063a8ad18ae7a9f3af066332ed6b38556ad", shaSum)
 }
 
-func TestCheckImageDuplicate(t *testing.T) {
+func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		components     []v1alpha1.ZarfComponent
-		currentArchive v1alpha1.ImageArchive
-		imageRef       string
-		errorContains  string
+		name          string
+		components    []v1alpha1.ZarfComponent
+		errorContains string
 	}{
 		{
 			name: "no duplicates",
@@ -82,10 +80,6 @@ func TestCheckImageDuplicate(t *testing.T) {
 					Images: []string{"redis:6.2"},
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
-			},
-			imageRef: "postgres:13",
 		},
 		{
 			name: "duplicate in different image archive",
@@ -95,7 +89,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Path:   "/path/to/archive1.tar",
-							Images: []string{"nginx:1.21"},
+							Images: []string{"postgres:13"},
 						},
 						{
 							Path:   "/path/to/archive2.tar",
@@ -104,28 +98,26 @@ func TestCheckImageDuplicate(t *testing.T) {
 					},
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
-			},
-			imageRef:      "postgres:13",
-			errorContains: "is also pulled by archive /path/to/archive2.tar",
+			errorContains: "appears in multiple image archives",
 		},
 		{
 			name: "duplicate in component images",
 			components: []v1alpha1.ZarfComponent{
 				{
-					Name:   "component1",
-					Images: []string{"nginx:1.21", "postgres:13"},
+					Name: "component1",
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Path:   "/path/to/archive1.tar",
+							Images: []string{"ghcr.io/zarf-dev/zarf/agent:0.65.0"},
+						},
+					},
+					Images: []string{"nginx:1.21", "ghcr.io/zarf-dev/zarf/agent:0.65.0"},
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
-			},
-			imageRef:      "postgres:13",
 			errorContains: "is also pulled by component",
 		},
 		{
-			name: "same archive path should be skipped",
+			name: "duplicate in component with docker ref",
 			components: []v1alpha1.ZarfComponent{
 				{
 					Name: "component1",
@@ -135,12 +127,10 @@ func TestCheckImageDuplicate(t *testing.T) {
 							Images: []string{"nginx:1.21"},
 						},
 					},
+					Images: []string{"nginx:1.21"},
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
-			},
-			imageRef: "nginx:1.21",
+			errorContains: "is also pulled by component",
 		},
 		{
 			name: "duplicate across multiple components",
@@ -149,7 +139,8 @@ func TestCheckImageDuplicate(t *testing.T) {
 					Name: "component1",
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
-							Path: "/path/to/archive1.tar",
+							Path:   "/path/to/archive1.tar",
+							Images: []string{"nginx:1.21"},
 						},
 					},
 				},
@@ -163,11 +154,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 					},
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
-			},
-			imageRef:      "nginx:1.21",
-			errorContains: "is also pulled by archive /path/to/archive2.tar",
+			errorContains: "appears in multiple image archives",
 		},
 		{
 			name: "empty components",
@@ -176,10 +163,42 @@ func TestCheckImageDuplicate(t *testing.T) {
 					Name: "component1",
 				},
 			},
-			currentArchive: v1alpha1.ImageArchive{
-				Path: "/path/to/archive1.tar",
+		},
+		{
+			name: "duplicate images in component.Images is allowed",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name:   "component1",
+					Images: []string{"nginx:1.21"},
+				},
+				{
+					Name:   "component2",
+					Images: []string{"nginx:1.21"},
+				},
 			},
-			imageRef: "nginx:1.21",
+		},
+		{
+			name: "same archive path used by multiple components is allowed",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name: "component1",
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Path:   "/path/to/shared-archive.tar",
+							Images: []string{"nginx:1.21", "redis:6.2"},
+						},
+					},
+				},
+				{
+					Name: "component2",
+					ImageArchives: []v1alpha1.ImageArchive{
+						{
+							Path:   "/path/to/shared-archive.tar",
+							Images: []string{"nginx:1.21", "postgres:13"},
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -187,7 +206,7 @@ func TestCheckImageDuplicate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := checkForDuplicateImage(tt.components, tt.currentArchive, tt.imageRef)
+			err := validateImageArchivesNoDuplicates(tt.components)
 
 			if tt.errorContains != "" {
 				require.Error(t, err)
