@@ -14,10 +14,14 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
-	ifneq ($(UNAME_S),Linux)
-		ifeq ($(UNAME_S),Darwin)
-			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+	UNAME_M := $(shell uname -m)
+	ifeq ($(UNAME_S),Linux)
+		ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+			ZARF_BIN := $(addsuffix -arm,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-linux-arm
 		endif
+	else ifeq ($(UNAME_S),Darwin)
+		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
 			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
@@ -102,8 +106,9 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
+	go generate ./src/pkg/schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
-	hack/schema/create-zarf-schema.sh
+	cp src/pkg/schema/zarf-v1alpha1-schema.json zarf.schema.json
 	hack/cots/update-gitea.sh
 
 init-package-with-agent: build build-local-agent-image init-package

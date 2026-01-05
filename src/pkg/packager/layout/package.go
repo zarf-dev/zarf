@@ -319,6 +319,93 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 	return nil
 }
 
+// GetDocumentation extracts documentation files from the package to the given destination path.
+// If keys is empty, all documentation files are extracted.
+// If keys are provided, only those specific documentation files are extracted.
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
+	l := logger.From(ctx)
+
+	if len(p.Pkg.Documentation) == 0 {
+		return fmt.Errorf("no documentation files found in package")
+	}
+
+	tarPath := filepath.Join(p.dirPath, DocumentationTar)
+	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
+		return fmt.Errorf("documentation.tar not found in package")
+	}
+
+	keysToExtract := maps.Clone(p.Pkg.Documentation)
+	if len(keys) > 0 {
+		keysToExtract = make(map[string]string)
+		for _, key := range keys {
+			if filePath, ok := p.Pkg.Documentation[key]; ok {
+				keysToExtract[key] = filePath
+			} else {
+				return fmt.Errorf("key %s not found in package documentation", key)
+			}
+		}
+	}
+
+	// Extract tar to temp directory
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
+	if err != nil {
+		return fmt.Errorf("failed to extract documentation.tar: %w", err)
+	}
+
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
+	}
+
+	fileNames := GetDocumentationFileNames(p.Pkg.Documentation)
+
+	for key, file := range keysToExtract {
+		docFileName := fileNames[key]
+
+		srcPath := filepath.Join(tmpDir, docFileName)
+		dstPath := filepath.Join(destPath, docFileName)
+		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
+		}
+	}
+
+	l.Info("documentation successfully extracted", "path", destPath)
+	return nil
+}
+
+// FormatDocumentFileName for storing the document in the package or presenting it to the user
+func FormatDocumentFileName(key, file string) string {
+	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
+}
+
+// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
+// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) map[string]string {
+	basenameCounts := make(map[string]int)
+	for _, file := range documentation {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
+	result := make(map[string]string)
+	for key, file := range documentation {
+		basename := filepath.Base(file)
+		if basenameCounts[basename] == 1 {
+			result[key] = basename
+		} else {
+			result[key] = FormatDocumentFileName(key, file)
+		}
+	}
+	return result
+}
+
 // GetComponentDir returns a path to the directory in the given component.
 func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, componentName string, ct ComponentDir) (_ string, err error) {
 	sourcePath := filepath.Join(p.dirPath, ComponentsDir, fmt.Sprintf("%s.tar", componentName))
