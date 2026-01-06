@@ -400,6 +400,68 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "should be mutated with registry proxy mode and ipv6",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this-proxy-ipv6",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://[fd00:10:96::68a3]:5000/stefanprodan/charts/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/insecure",
+					true,
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-1339621772",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Port: 5000,
+						},
+					},
+					ClusterIP: "fd00:10:96::68a3",
+				},
+			},
+			registryInfo: state.RegistryInfo{
+				Address:      fmt.Sprintf("127.0.0.1:%d", port),
+				RegistryMode: state.RegistryModeProxy,
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	var artifacts = []transform.Image{

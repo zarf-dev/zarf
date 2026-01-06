@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,7 +36,7 @@ type DockerConfigEntryWithAuth struct {
 
 // addRegistryAuthEntries adds registry authentication entries for a service's ClusterIP and DNS hostname.
 func addRegistryAuthEntries(auths DockerConfigEntry, svc *corev1.Service, port int32, authValue string) {
-	kubeDNSRegistryURL := fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port)
+	kubeDNSRegistryURL := net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", port))
 	auths[kubeDNSRegistryURL] = DockerConfigEntryWithAuth{
 		Auth: authValue,
 	}
@@ -190,7 +191,7 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 		if len(svc.Spec.Ports) == 0 {
 			return "", fmt.Errorf("registry service has no ports")
 		}
-		return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, svc.Spec.Ports[0].Port), nil
+		return net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", svc.Spec.Ports[0].Port)), nil
 	}
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
@@ -205,5 +206,5 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 		return registryInfo.Address, nil
 	}
 
-	return fmt.Sprintf("%s:%d", svc.Spec.ClusterIP, port), nil
+	return net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", port)), nil
 }
