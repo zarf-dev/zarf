@@ -65,5 +65,4 @@ spec:
               port: 80
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: kiwix-data
+          emptyDir: {}

@@ -6,6 +6,7 @@ This guide explains how to migrate your Zarf deployment from the data injections
 
 - **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
 - **Host dependency**: Data injections shells out to `tar`. This makes testing difficult and introduces differences across environments.
+- **Ephemeral Storage**: Because Data Injections only loads data during `zarf package deploy` the data must be saved to persistent storage. Otherwise, when a pod restarts any data injected will be lost.
 - **Better alternatives**: OCI images provide a Kubernetes native solution for data delivery, and neatly fit into the Zarf delivery paradigm.
 
 ## Migration guide
@@ -79,7 +80,7 @@ spec:
   template:
     spec:
       initContainers:
-        - name: data-loader
+        - name: data-injector
           image: alpine:3.18
           command: ["sh", "-c"]
           args:
@@ -95,18 +96,18 @@ spec:
   template:
     spec:
       initContainers:
-        - name: data-puller
+        - name: data-loader
           image: your-registry/your-data:tag
           command: ["sh", "-c"]
           args:
             - |
               cp /your-data/your-data-file /data/my-app-data-location
-              ls -la /data
-              echo "Data initialization complete"
           volumeMounts:
             - mountPath: /data
               name: data
 ```
+
+With the image-based approach, data can use ephemeral storage, such as emptyDir, since the init container repopulates the data from the container image on each pod restart.
 
 **Key Changes:**
 - Replace data injection marker waiting logic with direct data copying.

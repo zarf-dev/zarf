@@ -2,8 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: kiwix
   description: Zarf data loading with Kiwix (https://www.kiwix.org/en/)
-  # (optional) Some large datasets may already be compressed making Zarf compression less efficient
-  uncompressed: true
   version: 3.5.0
 
 components:
@@ -13,7 +11,6 @@ components:
       - name: kiwix-serve
         namespace: kiwix
         files:
-          - manifests/persistence.yaml
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
@@ -25,7 +22,7 @@ components:
     actions:
       onCreate:
         before:
-          # Download a .zim file of a DevOps Stack Exchange snapshot into the data directory for use with Kiwix
+          # Download a .zim file of a DevOps Stack Exchange snapshot so that it can placed in the image we're building
           - cmd: curl https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
           # Below are some more examples of *.zim files of available content:
           # https://library.kiwix.org/?lang=eng
