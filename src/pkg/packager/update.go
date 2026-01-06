@@ -20,9 +20,17 @@ import (
 )
 
 // UpdateImages updates the images field for components in a zarf.yaml
-func UpdateImages(ctx context.Context, baseDir string, imagesScans []ComponentImageScan) error {
+func UpdateImages(ctx context.Context, packagePath string, imagesScans []ComponentImageScan) error {
 	l := logger.From(ctx)
-	packageConfigFile := filepath.Join(baseDir, layout.ZarfYAML)
+
+	packageConfigFile := packagePath
+	fileInfo, err := os.Stat(packagePath)
+	if err != nil {
+		return fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+	if fileInfo.IsDir() {
+		packageConfigFile = filepath.Join(packagePath, layout.ZarfYAML)
+	}
 
 	packageConfigBytes, err := os.ReadFile(packageConfigFile)
 	if err != nil {
