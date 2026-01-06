@@ -61,6 +61,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
+	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
+		return nil, err
+	}
+
 	if opts.DifferentialPackage.Metadata.Name != "" {
 		l.Debug("creating differential package", "differential", opts.DifferentialPackage)
 		allIncludedImagesMap := map[string]bool{}
@@ -302,6 +306,46 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	return pkgLayout, nil
 }
 
+// validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
+// and that images in image archives don't conflict with images in component.Images.
+func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) error {
+	imageToArchive := make(map[string]string)
+
+	for _, comp := range components {
+		for _, archive := range comp.ImageArchives {
+			for _, image := range archive.Images {
+				refInfo, err := transform.ParseImageRef(image)
+				if err != nil {
+					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
+				}
+
+				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
+					// A user may want to represent the same tar twice across components if both components need the same image
+					if existingArchivePath != archive.Path {
+						return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchivePath, archive.Path)
+					}
+				} else {
+					imageToArchive[refInfo.Reference] = archive.Path
+				}
+			}
+		}
+	}
+
+	for _, comp := range components {
+		for _, image := range comp.Images {
+			refInfo, err := transform.ParseImageRef(image)
+			if err != nil {
+				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image, comp.Name, err)
+			}
+			if archivePath, exists := imageToArchive[refInfo.Reference]; exists {
+				return fmt.Errorf("image %s from %s is also pulled by component %s", refInfo.Reference, archivePath, comp.Name)
+			}
+		}
+	}
+
+	return nil
+}
+
 func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -401,7 +445,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
@@ -634,7 +678,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 

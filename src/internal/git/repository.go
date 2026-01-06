@@ -113,6 +113,8 @@ func Clone(ctx context.Context, rootPath, address string, shallow bool) (*Reposi
 		return nil
 	}
 
+	l.Info("cloning Git repository", "address", address)
+
 	repo, err := git.PlainCloneContext(ctx, r.path, false, cloneOpts)
 	if err != nil {
 		l.Info("falling back to host 'git', failed to clone the repo with Zarf", "url", gitURLNoRef, "error", err)

@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -157,10 +156,6 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		if len(componentNames) == 1 {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
-	}
-
-	if archiveErr := validateImageArchivesNoDuplicates(pkg.Components); archiveErr != nil {
-		err = errors.Join(err, archiveErr)
 	}
 
 	return err
@@ -339,44 +334,4 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	}
 
 	return err
-}
-
-// validateImageArchivesNoDuplicates ensures no image appears in multiple image archives
-// and that images in image archives don't conflict with images in component.Images.
-func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) error {
-	imageToArchive := make(map[string]string)
-
-	for _, comp := range components {
-		for _, archive := range comp.ImageArchives {
-			for _, image := range archive.Images {
-				refInfo, err := transform.ParseImageRef(image)
-				if err != nil {
-					return fmt.Errorf("failed to parse image ref %s in archive %s: %w", image, archive.Path, err)
-				}
-
-				if existingArchivePath, exists := imageToArchive[refInfo.Reference]; exists {
-					// A user may want to represent the same tar twice across components if both components need the same image
-					if existingArchivePath != archive.Path {
-						return fmt.Errorf("image %s appears in multiple image archives: %s and %s", refInfo.Reference, existingArchivePath, archive.Path)
-					}
-				} else {
-					imageToArchive[refInfo.Reference] = archive.Path
-				}
-			}
-		}
-	}
-
-	for _, comp := range components {
-		for _, image := range comp.Images {
-			refInfo, err := transform.ParseImageRef(image)
-			if err != nil {
-				return fmt.Errorf("failed to parse image ref %s in component %s: %w", image, comp.Name, err)
-			}
-			if archivePath, exists := imageToArchive[refInfo.Reference]; exists {
-				return fmt.Errorf("image %s from %s is also pulled by component %s", refInfo.Reference, archivePath, comp.Name)
-			}
-		}
-	}
-
-	return nil
 }

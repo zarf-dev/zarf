@@ -58,7 +58,7 @@ func TestRunHealthChecks(t *testing.T) {
 		{
 			name:       "One pod is never ready",
 			podYamls:   []string{podYaml, podCurrentYaml},
-			expectErrs: []error{errors.New("in-progress-pod: Pod not ready"), context.DeadlineExceeded},
+			expectErrs: []error{errors.New("in-progress-pod: Pod not ready, status is InProgress"), context.DeadlineExceeded},
 		},
 	}
 
