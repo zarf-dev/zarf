@@ -14,6 +14,11 @@ configs:
       url: https://github.com/stefanprodan/podinfo.git
       username: ""
       password: ""
+    argo-cd:
+      name: argo-cd
+      url: https://github.com/argoproj/argo-cd.git
+      username: ""
+      password: ""
 
 redis:
   image:
