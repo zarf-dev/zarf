@@ -92,7 +92,15 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(basePath), component.Name)
 				}
 			}
-			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
+			// support importing a specific zarf manifest by path/name
+			fileInfo, err := os.Stat(importPath)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+			}
+			if fileInfo.IsDir() {
+				importPath = filepath.Join(importPath, layout.ZarfYAML)
+			}
+			b, err := os.ReadFile(importPath)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -150,11 +158,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, packagePath, cachePath)
+		importPath, err := fetchOCISkeleton(ctx, component, basePath, cachePath)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
-		importedComponent = fixPaths(importedComponent, importPath, packagePath)
+		//TODO(brandtkeller): importPath needs to be a directory
+		importedComponent = fixPaths(importedComponent, importPath, basePath)
 		composed, err := overrideMetadata(importedComponent, component)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
