@@ -269,33 +269,6 @@ zarf dev inspect manifests \
 - Values are correctly interpolated
 - Conditionals evaluate correctly
 
-## Handle Missing Values Gracefully
-
-Protect against missing or nil values:
-
-```yaml
-# ✅ GOOD: Safe against missing values
-{{- if .Values.monitoring }}
-  {{- if .Values.monitoring.enabled }}
-annotations:
-  prometheus.io/scrape: "true"
-  {{- end }}
-{{- end }}
-
-# Alternative: Use default for the entire object
-{{- $monitoring := .Values.monitoring | default dict -}}
-{{- if $monitoring.enabled }}
-annotations:
-  prometheus.io/scrape: "true"
-{{- end }}
-
-# ❌ RISKY: Will fail if monitoring is undefined
-{{- if .Values.monitoring.enabled }}
-annotations:
-  prometheus.io/scrape: "true"
-{{- end }}
-```
-
 ## Be Consistent with Indentation
 
 Use the `indent` and `nindent` functions consistently:
@@ -340,11 +313,6 @@ Error: template: :5:14: executing "" at <.Values.app.missing>: map has no entry 
 ```yaml
 # Use default for optional values
 value: {{ .Values.app.missing | default "fallback" }}
-
-# Or check if exists first
-{{- if .Values.app.missing }}
-value: {{ .Values.app.missing }}
-{{- end }}
 ```
 
 ### Type Errors
