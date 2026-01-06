@@ -352,7 +352,6 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	s := &state.State{RegistryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)}}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			// t.Parallel()
 			c := createTestClientWithZarfState(ctx, t, s)
