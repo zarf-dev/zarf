@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -237,28 +236,11 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 		}
 	}
 
-	// Generate a patch to upgrade the managed fields on the server
-	upgradePatch, err := csaupgrade.UpgradeManagedFieldsPatch(hpa, csaManagers, FieldManagerName)
+	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
 	if err != nil {
-		return fmt.Errorf("failed to create upgrade patch: %w", err)
+		return fmt.Errorf("failed to upgrade managed fields: %w", err)
 	}
 
-	// Apply the upgrade patch to the server if there's work to be done
-	if len(upgradePatch) > 0 {
-		hpa, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Patch(
-			ctx,
-			"zarf-docker-registry",
-			types.JSONPatchType,
-			upgradePatch,
-			metav1.PatchOptions{},
-		)
-		if err != nil {
-			return fmt.Errorf("failed to apply upgrade patch: %w", err)
-		}
-		l.Info("Successfully upgraded HPA managed fields from CSA to SSA")
-	}
-
-	// Now extract from the upgraded object
 	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
 	if err != nil {
 		return err
@@ -277,7 +259,7 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Apply(
 		ctx,
 		hpaAc,
-		metav1.ApplyOptions{FieldManager: FieldManagerName},
+		metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to apply hpa: %w", err)
