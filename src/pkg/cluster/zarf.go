@@ -20,7 +20,6 @@ import (
 	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/csaupgrade"
-	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -211,19 +210,9 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 // FIXME: I will also have to test moving down from server side apply to client side apply
 // It handles the transition from Client-Side Apply to Server-Side Apply.
 func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
-	l := logger.From(ctx)
-
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
-	}
-
-	// Debug: Print original HPA as YAML
-	hpaYAML, err := yaml.Marshal(hpa)
-	if err != nil {
-		l.Warn("failed to marshal hpa to yaml", "error", err)
-	} else {
-		l.Info("Original HPA from Get()", "yaml", "\n"+string(hpaYAML))
 	}
 
 	// Discover all Client-Side Apply managers from the HPA's managed fields
@@ -244,14 +233,6 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
 	if err != nil {
 		return err
-	}
-
-	// Debug: Print extracted HPA ApplyConfiguration as YAML
-	hpaAcYAML, err := yaml.Marshal(hpaAc)
-	if err != nil {
-		l.Warn("failed to marshal hpaAc to yaml", "error", err)
-	} else {
-		l.Info("Extracted HPA ApplyConfiguration", "fieldManager", FieldManagerName, "yaml", "\n"+string(hpaAcYAML))
 	}
 
 	hpaAc.Spec.Behavior.ScaleDown.WithSelectPolicy(policy)
