@@ -126,7 +126,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	// Ensure we find the release - otherwise this can return without an error and not do anything
 	found := false
 	for _, releaser := range releases {
-		// Type assert to concrete Release type
 		release, ok := releaser.(*releasev1.Release)
 		if !ok {
 			return fmt.Errorf("unable to cast release to v1.Release type")

@@ -23,7 +23,6 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ```
       --components string           Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
   -c, --confirm                     Confirms the removal action
-      --force-conflicts             Force Helm to take ownership of conflicting fields during Server-Side Apply operations
   -h, --help                        help for remove
   -k, --key string                  Path to public key file for validating signed packages
   -n, --namespace string            [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.

@@ -345,7 +345,6 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 func rollbackChart(name string, version int, actionConfig *action.Configuration, timeout time.Duration) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	// client.ForceReplace = true
 	client.ServerSideApply = "auto"
 	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout

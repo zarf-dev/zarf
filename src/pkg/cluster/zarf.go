@@ -213,8 +213,8 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 		return err
 	}
 
-	// This could have been deployed with a previous version of Zarf using client side apply
-	// This block updates the field manager to "Zarf", so we can we can properly extract the fields
+	// If the hpa was deployed with client side apply then we need to update the fields to be managed by Zarf
+	// so the fields can be properly extracted
 	csaManagers := sets.New[string]()
 	for _, mf := range hpa.ManagedFields {
 		if mf.Operation == metav1.ManagedFieldsOperationUpdate {

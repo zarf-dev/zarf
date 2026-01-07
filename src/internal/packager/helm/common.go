@@ -133,13 +133,11 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	// Set the field manager to "zarf" for all package deployment operations.
-	// This function is called before any Helm operation that interacts with the cluster,
-	// making it a centralized place to ensure the field manager is set consistently
+	// This sets the field manager to Zarf. Every Helm operation requires an action config
+	// so this ensures the field is properly set prior to each operation.
 	kube.ManagedFieldsManager = cluster.FieldManagerName
 	l := logger.From(ctx)
 	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(l.Handler()))
-	actionConfig.SetLogger(l.Handler())
 	// Set the settings for the helm SDK
 	settings := cli.New()
 	settings.SetNamespace(namespace)

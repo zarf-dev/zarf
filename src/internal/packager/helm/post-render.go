@@ -79,7 +79,6 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
 	} else if rend.adoptExistingResources {
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
-		namespace.SetManagedFields(nil)
 		rend.namespaces[rend.chart.Namespace] = namespace
 	}
 
