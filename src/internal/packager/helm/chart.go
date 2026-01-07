@@ -224,6 +224,8 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
+		client.ForceConflicts = opts.ForceConflicts
+
 		// Perform the loadedChart upgrade.
 		_, err := client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
 		if err != nil {

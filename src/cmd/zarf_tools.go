@@ -373,6 +373,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
+		ForceConflicts: o.forceConflicts,
 	}
 
 	// Update Zarf 'init' component Helm releases if present
