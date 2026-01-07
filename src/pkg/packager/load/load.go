@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -48,12 +49,12 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		"setVariables", opts.SetVariables,
 	)
 
-	pkgPath, err := resolvePackagePath(packagePath)
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 
-	b, err := os.ReadFile(pkgPath.manifestFile)
+	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -62,7 +63,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, pkgPath.manifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
+	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -78,7 +79,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.manifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -139,7 +140,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 
 	l := logger.From(ctx)
 
-	pkgPath, err := resolvePackagePath(packagePath)
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return err
 	}
@@ -147,7 +148,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkg.Values.Files))
 	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgPath.baseDir, vf)
+		valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
 	}
 
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
@@ -156,7 +157,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 	}
 
 	// Resolve declared schema path relative to package root
-	schemaPath := filepath.Join(pkgPath.baseDir, pkg.Values.Schema)
+	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
