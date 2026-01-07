@@ -151,7 +151,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
-	l.Debug("package values", "values", vals)
 
 	// Validate merged values against schema if provided
 	if pkgLayout.Pkg.Values.Schema != "" {
@@ -590,7 +589,6 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
-		l.Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -607,12 +605,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
-		l.Debug("loaded chart",
-			"metadata", helmChart.Metadata,
-			"chartValues", helmChart.Values,
-			"valuesOverrides", values,
-			"countValuesOverrides", len(values),
-		)
+		l.Debug("loaded chart", "metadata", helmChart.Metadata, "chartValues", helmChart.Values)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {
