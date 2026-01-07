@@ -215,13 +215,20 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 		return err
 	}
 
-	// Upgrade managed fields from Client-Side Apply to Server-Side Apply in-place
-	// This transfers ownership from Helm/kubectl to our SSA field manager
-	csaManagers := sets.New("helm", "kubectl", "kubectl-client-side-apply", "zarf", "k3s")
+	// Discover all Client-Side Apply managers from the HPA's managed fields
+	// CSA uses "Update" operation, SSA uses "Apply" operation
+	csaManagers := sets.New[string]()
+	for _, mf := range hpa.ManagedFields {
+		if mf.Operation == metav1.ManagedFieldsOperationUpdate {
+			csaManagers.Insert(mf.Manager)
+		}
+	}
+
 	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
 	if err != nil {
 		return fmt.Errorf("failed to upgrade managed fields: %w", err)
 	}
+
 	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
 	if err != nil {
 		return err
