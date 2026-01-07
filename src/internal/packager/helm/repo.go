@@ -236,18 +236,6 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		},
 	}
 
-	// Download the file into a temp directory since we don't control what name helm creates here
-	temp := filepath.Join(chartPath, "temp")
-	if err = helpers.CreateDirectory(temp, helpers.ReadWriteExecuteUser); err != nil {
-		return fmt.Errorf("unable to create helm chart temp directory: %w", err)
-	}
-	defer func(l *slog.Logger) {
-		err := os.RemoveAll(temp)
-		if err != nil {
-			l.Error(err.Error())
-		}
-	}(l)
-
 	saved, _, err := chartDownloader.DownloadToCache(chartURL, pull.Version)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
@@ -290,7 +278,6 @@ func DownloadChartFromGitToTemp(ctx context.Context, url string) (string, error)
 func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, saved string) error {
 	// Ensure the name is consistent for deployments
 	destinationTarball := StandardName(chartPath, chart) + ".tgz"
-	// FIXME: maybe not the way to go with helm 4 since we have a cache we're using
 	err := helpers.CreatePathAndCopy(saved, destinationTarball)
 	if err != nil {
 		return fmt.Errorf("unable to save the final chart tarball: %w", err)

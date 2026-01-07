@@ -224,7 +224,8 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
-		client.ForceConflicts = opts.ForceConflicts
+		methodIsSSA := lastRelease.ApplyMethod == "ssa"
+		client.ForceConflicts = methodIsSSA && opts.ForceConflicts
 
 		// Perform the loadedChart upgrade.
 		_, err := client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
@@ -278,7 +279,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		return nil, err
 	}
 
-	// Type assert to concrete Release type
+	// releasev1 is the only implementation of the releaser interface currently
 	release, ok := releaser.(*releasev1.Release)
 	if !ok {
 		return nil, fmt.Errorf("unable to cast release to v1.Release type")
