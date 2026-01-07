@@ -211,14 +211,9 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
-	// Determine base directory for assembly
-	basePath := packagePath
-	fileInfo, err := os.Stat(packagePath)
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
-	if !fileInfo.IsDir() {
-		basePath = filepath.Dir(packagePath)
 	}
 
 	// Load package-level default values and merge with CLI-provided values
@@ -226,7 +221,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	if len(pkg.Values.Files) > 0 {
 		valuesPaths := make([]string, len(pkg.Values.Files))
 		for i, file := range pkg.Values.Files {
-			valuesPaths[i] = filepath.Join(basePath, file)
+			valuesPaths[i] = filepath.Join(pkgPath.BaseDir, file)
 		}
 		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
 		if err != nil {
@@ -261,7 +256,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, basePath, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
 			if err != nil {
 				return nil, err
 			}
@@ -285,7 +280,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, basePath, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}

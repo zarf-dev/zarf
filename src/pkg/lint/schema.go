@@ -6,8 +6,6 @@ package lint
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -23,17 +21,12 @@ import (
 func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
 
-	// Determine config path: if path is directory, append layout.ZarfYAML; otherwise use as-is
-	configPath := path
-	fileInfo, err := os.Stat(path)
+	pkgPath, err := layout.ResolvePackagePath(path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to access path %q: %w", path, err)
 	}
-	if fileInfo.IsDir() {
-		configPath = filepath.Join(path, layout.ZarfYAML)
-	}
 
-	if err := utils.ReadYaml(configPath, &untypedZarfPackage); err != nil {
+	if err := utils.ReadYaml(pkgPath.ManifestFile, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 	jsonSchema := schema.GetV1Alpha1Schema()
