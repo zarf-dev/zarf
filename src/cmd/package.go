@@ -1309,7 +1309,6 @@ func (o *packageListOptions) run(ctx context.Context) error {
 type packageRemoveOptions struct {
 	namespaceOverride       string
 	confirm                 bool
-	forceConflicts          bool
 	optionalComponents      string
 	skipSignatureValidation bool
 	skipVersionCheck        bool
@@ -1336,7 +1335,6 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackageRemoveFlagConfirm)
-	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageRemoveFlagForceConflicts)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
