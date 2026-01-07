@@ -439,7 +439,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !d.hpaModified && d.s.RegistryInfo.IsInternal() {
 			if err := d.c.DisableRegHPAScaleDown(ctx); err != nil {
-				l.Debug("unable to disable the registry HPA scale down", "error", err.Error())
+				l.Error("unable to disable the registry HPA scale down", "error", err.Error())
 			} else {
 				d.hpaModified = true
 			}
