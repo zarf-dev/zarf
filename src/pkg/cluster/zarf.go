@@ -16,8 +16,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/util/csaupgrade"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -205,12 +207,21 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 }
 
 // setRegHPAScaleDownPolicy sets the HPA scale down policy for the Zarf Registry using Server-Side Apply.
+// FIXME: I will also have to test moving down from server side apply to client side apply
+// It handles the transition from Client-Side Apply to Server-Side Apply.
 func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
+	// Upgrade managed fields from Client-Side Apply to Server-Side Apply in-place
+	// This transfers ownership from Helm/kubectl to our SSA field manager
+	csaManagers := sets.New("helm", "kubectl", "kubectl-client-side-apply", "zarf", "k3s")
+	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
+	if err != nil {
+		return fmt.Errorf("failed to upgrade managed fields: %w", err)
+	}
 	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
 	if err != nil {
 		return err
@@ -221,7 +232,7 @@ func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscali
 	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Apply(
 		ctx,
 		hpaAc,
-		metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName},
+		metav1.ApplyOptions{FieldManager: FieldManagerName},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to apply hpa: %w", err)
