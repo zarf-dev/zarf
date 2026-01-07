@@ -16,10 +16,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/util/csaupgrade"
+	"sigs.k8s.io/yaml"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -210,28 +212,64 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 // FIXME: I will also have to test moving down from server side apply to client side apply
 // It handles the transition from Client-Side Apply to Server-Side Apply.
 func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
+	l := logger.From(ctx)
+
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
+	}
+
+	// Debug: Print original HPA as YAML
+	hpaYAML, err := yaml.Marshal(hpa)
+	if err != nil {
+		l.Warn("failed to marshal hpa to yaml", "error", err)
+	} else {
+		l.Info("Original HPA from Get()", "yaml", "\n"+string(hpaYAML))
 	}
 
 	// Discover all Client-Side Apply managers from the HPA's managed fields
 	// CSA uses "Update" operation, SSA uses "Apply" operation
 	csaManagers := sets.New[string]()
 	for _, mf := range hpa.ManagedFields {
+		fmt.Println("managers are", mf.Manager, "operations is", mf.Operation)
 		if mf.Operation == metav1.ManagedFieldsOperationUpdate {
 			csaManagers.Insert(mf.Manager)
 		}
 	}
 
-	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
+	// Generate a patch to upgrade the managed fields on the server
+	upgradePatch, err := csaupgrade.UpgradeManagedFieldsPatch(hpa, csaManagers, FieldManagerName)
 	if err != nil {
-		return fmt.Errorf("failed to upgrade managed fields: %w", err)
+		return fmt.Errorf("failed to create upgrade patch: %w", err)
 	}
 
+	// Apply the upgrade patch to the server if there's work to be done
+	if len(upgradePatch) > 0 {
+		hpa, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Patch(
+			ctx,
+			"zarf-docker-registry",
+			types.JSONPatchType,
+			upgradePatch,
+			metav1.PatchOptions{},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to apply upgrade patch: %w", err)
+		}
+		l.Info("Successfully upgraded HPA managed fields from CSA to SSA")
+	}
+
+	// Now extract from the upgraded object
 	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
 	if err != nil {
 		return err
+	}
+
+	// Debug: Print extracted HPA ApplyConfiguration as YAML
+	hpaAcYAML, err := yaml.Marshal(hpaAc)
+	if err != nil {
+		l.Warn("failed to marshal hpaAc to yaml", "error", err)
+	} else {
+		l.Info("Extracted HPA ApplyConfiguration", "fieldManager", FieldManagerName, "yaml", "\n"+string(hpaAcYAML))
 	}
 
 	hpaAc.Spec.Behavior.ScaleDown.WithSelectPolicy(policy)
