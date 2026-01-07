@@ -38,9 +38,8 @@ func TestConnectAndCreds(t *testing.T) {
 
 	connectToZarfServices(ctx, t)
 
-	//FIXME: probably don't need console / no color
-	// Because we use kubectl scale in an earlier command we use force conflicts to get those fields back. FIXME: Maybe a better way to do this
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm", "--log-format=console", "--no-color", "--force-conflicts")
+	// Because we use kubectl scale in an earlier command we use force conflicts to get those fields back
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "update-creds", "--confirm", "--force-conflicts")
 	require.NoError(t, err, stdOut, stdErr)
 
 	newAgentSecretData, _, err := e2e.Kubectl(t, "get", "secret", "agent-hook-tls", "-n", "zarf", "-o", "jsonpath={.data}")
