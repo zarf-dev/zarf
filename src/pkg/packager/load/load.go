@@ -20,7 +20,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -49,18 +48,12 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		"setVariables", opts.SetVariables,
 	)
 
-	// Load PackageConfig from disk
-	// If packagePath is a directory, append layout.ZarfYAML; otherwise use it as-is
-	configPath := packagePath
-	fileInfo, err := os.Stat(packagePath)
+	pkgPath, err := resolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
-	if fileInfo.IsDir() {
-		configPath = filepath.Join(packagePath, layout.ZarfYAML)
+		return v1alpha1.ZarfPackage{}, err
 	}
 
-	b, err := os.ReadFile(configPath)
+	b, err := os.ReadFile(pkgPath.manifestFile)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -69,7 +62,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, configPath, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
+	pkg, err = resolveImports(ctx, pkg, pkgPath.manifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -85,7 +78,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, configPath, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.manifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -146,20 +139,15 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 
 	l := logger.From(ctx)
 
-	// Determine base directory: if packagePath is a directory, use it; otherwise use its parent directory
-	basePath := packagePath
-	fileInfo, err := os.Stat(packagePath)
+	pkgPath, err := resolvePackagePath(packagePath)
 	if err != nil {
-		return fmt.Errorf("unable to access package path %q: %w", packagePath, err)
-	}
-	if !fileInfo.IsDir() {
-		basePath = filepath.Dir(packagePath)
+		return err
 	}
 
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkg.Values.Files))
 	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(basePath, vf)
+		valueFilePaths[i] = filepath.Join(pkgPath.baseDir, vf)
 	}
 
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
@@ -168,7 +156,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 	}
 
 	// Resolve declared schema path relative to package root
-	schemaPath := filepath.Join(basePath, pkg.Values.Schema)
+	schemaPath := filepath.Join(pkgPath.baseDir, pkg.Values.Schema)
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
