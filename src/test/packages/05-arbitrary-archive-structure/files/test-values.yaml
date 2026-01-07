@@ -1,0 +1,10 @@
+podAnnotations:
+  zarf.dev/dataInjections: ###ZARF_DATA_INJECTION_MARKER###
+
+resources:
+  limits:
+  requests:
+    cpu: 1m
+    memory: 16Mi
+    # Add some ephemeral storage for data injections
+    ephemeral-storage: 16Mi
