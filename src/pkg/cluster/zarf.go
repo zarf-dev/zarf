@@ -207,24 +207,20 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 }
 
 // setRegHPAScaleDownPolicy sets the HPA scale down policy for the Zarf Registry using Server-Side Apply.
-// FIXME: I will also have to test moving down from server side apply to client side apply
-// It handles the transition from Client-Side Apply to Server-Side Apply.
 func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
 	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
-	// Discover all Client-Side Apply managers from the HPA's managed fields
-	// CSA uses "Update" operation, SSA uses "Apply" operation
+	// This could have been deployed with a previous version of Zarf using client side apply
+	// This block updates the field manager to "Zarf", so we can we can properly extract the fields
 	csaManagers := sets.New[string]()
 	for _, mf := range hpa.ManagedFields {
-		fmt.Println("managers are", mf.Manager, "operations is", mf.Operation)
 		if mf.Operation == metav1.ManagedFieldsOperationUpdate {
 			csaManagers.Insert(mf.Manager)
 		}
 	}
-
 	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
 	if err != nil {
 		return fmt.Errorf("failed to upgrade managed fields: %w", err)
