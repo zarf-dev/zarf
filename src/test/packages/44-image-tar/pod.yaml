@@ -9,5 +9,5 @@ spec:
   containers:
   - name: alpine
     image: ghcr.io/zarf-dev/images/alpine:3.21.3
-    command: ["sleep", "1"]
+    command: ["sleep", "infinity"]
   restartPolicy: Always
