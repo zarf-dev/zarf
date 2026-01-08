@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart"
 	"helm.sh/helm/v4/pkg/release"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
@@ -135,7 +136,12 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		// Before the Zarf agent was converted to a Helm chart, the name could differ depending on the name of the init package
 		// To stay backwards compatible with these package , we exclude the package name section of the release name
 		// FIXME: make sure this is right
-		if strings.Contains(rel.Name(), "zarf-agent-zarf-agent") {
+
+		chartAcc, err := chart.NewAccessor(rel.Chart())
+		if err != nil {
+			return err
+		}
+		if strings.Contains(chartAcc.Name(), "zarf-agent-zarf-agent") {
 			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",

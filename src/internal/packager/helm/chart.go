@@ -171,11 +171,11 @@ func RemoveChart(ctx context.Context, namespace string, name string, timeout tim
 
 // UpdateReleaseValues updates values for a given chart release
 // (note: this only works on single-deep charts, charts with dependencies (like loki-stack) will not work)
-func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
+func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, updatedValues map[string]interface{}, opts InstallUpgradeOptions) error {
 	l := logger.From(ctx)
-	l.Debug("updating values for helm release", "name", chart.ReleaseName)
+	l.Debug("updating values for helm release", "name", zarfChart.ReleaseName)
 
-	actionConfig, err := createActionConfig(ctx, chart.Namespace)
+	actionConfig, err := createActionConfig(ctx, zarfChart.Namespace)
 	if err != nil {
 		return fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
@@ -183,20 +183,20 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
 
-	postRender, err := newRenderer(ctx, chart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}
 
 	histClient := action.NewHistory(actionConfig)
 	histClient.Max = 1
-	releases, histErr := histClient.Run(chart.ReleaseName)
+	releases, histErr := histClient.Run(zarfChart.ReleaseName)
 	if histErr == nil && len(releases) > 0 {
 		lastReleaser := releases[len(releases)-1]
 		// Type assert to concrete Release type
 		lastRelease, err := release.NewAccessor(lastReleaser)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to access release: %w", err)
 		}
 
 		// Setup a new upgrade action
@@ -208,7 +208,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		client.SkipCRDs = true
 
 		// Namespace must be specified.
-		client.Namespace = chart.Namespace
+		client.Namespace = zarfChart.Namespace
 
 		// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 		client.PostRenderer = postRender
@@ -223,7 +223,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		client.ForceConflicts = methodIsSSA && opts.ForceConflicts
 
 		// Perform the loadedChart upgrade.
-		_, err = client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, lastRelease.Chart(), updatedValues)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		return nil
 	}
 
-	return fmt.Errorf("unable to find the %s helm release", chart.ReleaseName)
+	return fmt.Errorf("unable to find the %s helm release", zarfChart.ReleaseName)
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
