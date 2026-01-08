@@ -2,12 +2,14 @@
 kind: ZarfPackageConfig
 metadata:
   name: pod-volume-image
-  version: 1.0.0
 components:
   - name: baseline
     required: true
     manifests:
       - name: pod-volume-image
-        namespace: default
+        namespace: pod-volume-image
         files:
           - deployment.yaml
+    images:
+      - quay.io/almalinuxorg/10-minimal:10
+      - ghcr.io/zarf-dev/zarf/agent:v0.68.1

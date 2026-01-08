@@ -1,8 +1,10 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: agent
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: agent
@@ -12,10 +14,24 @@ spec:
         app: agent
     spec:
       containers:
-        - name: agent
-          image: ghcr.io/zarf-dev/zarf/agent:v0.38.1
+        - name: shell
+          command:
+            - "sleep"
+            - "infinity"
+          image: quay.io/almalinuxorg/10-minimal:10
+          resources:
+            limits:
+              cpu: 50m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 8Mi
+          volumeMounts:
+            - name: volume
+              mountPath: /volume
+              subPath: dir
       volumes:
-        - name: image
+        - name: volume
           image:
-            reference: quay.io/crio/artifact:v1
+            reference: ghcr.io/zarf-dev/zarf/agent:v0.68.1
             pullPolicy: IfNotPresent

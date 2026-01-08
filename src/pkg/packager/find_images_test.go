@@ -191,8 +191,8 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
-						"quay.io/crio/artifact:v1",
+						"ghcr.io/zarf-dev/zarf/agent:v0.68.1",
+						"quay.io/almalinuxorg/10-minimal:10",
 					},
 				},
 			},
