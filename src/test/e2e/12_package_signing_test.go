@@ -48,12 +48,10 @@ func TestPackageSigning(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", testCreate, "-o", tmpdir)
 		require.NoError(t, err, stdOut, stdErr)
 
-		// verify unsigned package (should succeed with warning)
+		// verify unsigned package (should fail)
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "verify", testPath)
-		require.NoError(t, err, stdOut, stdErr)
-		require.Contains(t, stdErr, "package is unsigned")
-		require.Contains(t, stdErr, "verification complete")
-		require.Contains(t, stdErr, "SUCCESS")
+		require.Error(t, err, stdOut, stdErr)
+		require.Contains(t, stdErr, "package is not signed - verification cannot be performed")
 	})
 
 	t.Run("Verify signed package without key fails", func(t *testing.T) {
@@ -71,7 +69,7 @@ func TestPackageSigning(t *testing.T) {
 		// try to verify without key (should fail)
 		_, stdErr, err = e2e.Zarf(t, "package", "verify", testPath)
 		require.Error(t, err)
-		require.Contains(t, stdErr, "no public key was provided")
+		require.Contains(t, stdErr, "no verification material was provided")
 	})
 
 	t.Run("Verify with key but unsigned package fails", func(t *testing.T) {

@@ -75,6 +75,7 @@ const (
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
 	VPkgPublicKey      = "package.public_key"
+	VPkgVerify         = "package.verify"
 
 	// Package create config keys
 
