@@ -5,20 +5,45 @@
 package proxy
 
 import (
+	"fmt"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func TestRegistryProxyInit(t *testing.T) {
-	// Run zarf init with registry proxy mode enabled
-	stdOut, stdErr, err := e2e.Zarf(t, "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
+type RegistryProxyTestSuite struct {
+	suite.Suite
+	*require.Assertions
+}
 
+func (suite *RegistryProxyTestSuite) SetupSuite() {
+	suite.Assertions = require.New(suite.T())
+}
+
+func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--components=git-server", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
 	// Verify the registry proxy TLS secrets were created
-	_, _, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-registry-server-tls")
-	require.NoError(t, err, "zarf-registry-server-tls secret should exist")
+	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-server-tls")
+	suite.NoError(err, "zarf-registry-server-tls secret should exist")
 
-	_, _, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-registry-client-tls")
-	require.NoError(t, err, "zarf-registry-client-tls secret should exist")
+	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-client-tls")
+	suite.NoError(err, "zarf-registry-client-tls secret should exist")
+}
+
+func (suite *RegistryProxyTestSuite) Test_1_Flux() {
+	tmpdir := suite.T().TempDir()
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/podinfo-flux", "-o", tmpdir)
+	suite.NoError(err, stdOut, stdErr)
+
+	deployPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", runtime.GOARCH))
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+}
+
+func TestRegistryProxy(t *testing.T) {
+	suite.Run(t, new(RegistryProxyTestSuite))
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -125,6 +126,8 @@ type devInspectManifestsOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -150,6 +153,8 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -165,9 +170,29 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -202,6 +227,8 @@ type devInspectValuesFilesOptions struct {
 	flavor             string
 	createSetVariables map[string]string
 	deploySetVariables map[string]string
+	valuesFiles        []string
+	setValues          map[string]string
 	kubeVersion        string
 	outputWriter       io.Writer
 }
@@ -228,6 +255,8 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -243,9 +272,29 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 	if err != nil {
 		return err
 	}
+
+	// Parse values from files
+	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse values files: %w", err)
+	}
+
+	// Apply CLI --set-values overrides
+	for key, val := range o.setValues {
+		// Convert key to path format (ensure it starts with .)
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+
 	opts := packager.InspectDefinitionResourcesOptions{
 		CreateSetVariables: o.createSetVariables,
 		DeploySetVariables: o.deploySetVariables,
+		Values:             values,
 		Flavor:             o.flavor,
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
@@ -328,7 +377,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	v := getViper()
 	o.createSetVariables = helpers.TransformAndMergeMap(
@@ -346,7 +395,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}
 
-	err = packager.DevDeploy(ctx, baseDir, packager.DevDeployOptions{
+	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
 		AirgapMode:         o.noYOLO,
 		Flavor:             o.flavor,
 		RegistryURL:        o.registryURL,
@@ -666,7 +715,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	v := getViper()
 
@@ -692,7 +741,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		CachePath:           cachePath,
 		IsInteractive:       true,
 	}
-	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
+	imagesScans, err := packager.FindImages(ctx, basePath, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -742,7 +791,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	fmt.Println(componentDefinition)
 
 	if o.update {
-		if err := packager.UpdateImages(ctx, baseDir, imagesScans); err != nil {
+		if err := packager.UpdateImages(ctx, basePath, imagesScans); err != nil {
 			return fmt.Errorf("unable to create update: %w", err)
 		}
 	}
@@ -808,7 +857,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
@@ -816,7 +865,7 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = packager.Lint(ctx, baseDir, packager.LintOptions{
+	err = packager.Lint(ctx, basePath, packager.LintOptions{
 		Flavor:       o.flavor,
 		SetVariables: o.setVariables,
 		CachePath:    cachePath,

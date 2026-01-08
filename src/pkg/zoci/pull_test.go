@@ -13,7 +13,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -37,7 +36,6 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 }
 
 func TestAssembleLayers(t *testing.T) {
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../zarf.schema.json")
 	tt := []struct {
 		name string
 		path string
@@ -89,7 +87,7 @@ func TestAssembleLayers(t *testing.T) {
 			// get all layers
 			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
 			require.NoError(t, err)
-			require.Len(t, layers, 9)
+			require.Len(t, layers, 10)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
@@ -118,6 +116,12 @@ func TestAssembleLayers(t *testing.T) {
 			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
 			require.NoError(t, err)
 			require.Len(t, componentLayers, 3)
+
+			// get documentation layers
+			docLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.DocLayers)
+			require.NoError(t, err)
+			// 2 metadata layers (zarf.yaml, checksums.txt) + 1 documentation.tar
+			require.Len(t, docLayers, 3)
 		})
 	}
 }

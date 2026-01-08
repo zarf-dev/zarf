@@ -182,8 +182,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInternalGenerateCliDocsShort   = "Creates auto-generated markdown of all the commands for the CLI"
 	CmdInternalGenerateCliDocsSuccess = "Successfully created the CLI documentation"
 
-	CmdInternalConfigSchemaShort = "Generates a JSON schema for the zarf.yaml configuration"
-
 	CmdInternalTypesSchemaShort = "Generates a JSON schema for the Zarf types (DeployedPackage ZarfPackage ZarfState)"
 
 	CmdInternalCreateReadOnlyGiteaUserShort = "Creates a read-only user in Gitea"
@@ -209,7 +207,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
+	CmdPackageFlagVerify                  = "Verify the Zarf package signature"
+	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package"
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"

@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: chart
+
+components:
+  - name: test
+    charts:
+      - name: test-chart
+        version: 1.0.0
+        namespace: test
+        localPath: chart
+        variables:
+          - name: REPLICAS
+            description: Number of replicas
+            path: replicaCount

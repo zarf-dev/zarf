@@ -4,6 +4,8 @@
 package layout
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -819,7 +821,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "signature not found")
+		require.Contains(t, err.Error(), "a key was provided but the package is not signed")
 	})
 
 	t.Run("verification fails with empty dirPath", func(t *testing.T) {
@@ -899,7 +901,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts.KeyRef = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.EqualError(t, err, "package is signed but no key was provided")
+		require.EqualError(t, err, "package is signed but no verification material was provided (Public Key, etc.)")
 	})
 
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {
@@ -976,5 +978,423 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.Error(t, err)
+	})
+}
+
+func TestGetDocumentation(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	// Helper function to set up a test package with documentation
+	setupDocTest := func(t *testing.T, documentation map[string]string, tarFiles map[string]string) (*PackageLayout, string) {
+		t.Helper()
+
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		// Create documentation.tar if tar files are provided
+		if len(tarFiles) > 0 {
+			docTempDir := t.TempDir()
+			for filename, content := range tarFiles {
+				require.NoError(t, os.WriteFile(filepath.Join(docTempDir, filename), []byte(content), 0o644))
+			}
+
+			tarPath := filepath.Join(pkgDir, DocumentationTar)
+			err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+			require.NoError(t, err)
+		}
+
+		pkg := v1alpha1.ZarfPackage{
+			Metadata:      v1alpha1.ZarfMetadata{Name: "test"},
+			Documentation: documentation,
+		}
+
+		pkgLayout := &PackageLayout{
+			dirPath: pkgDir,
+			Pkg:     pkg,
+		}
+
+		outputDir := filepath.Join(tmpDir, "output")
+		return pkgLayout, outputDir
+	}
+
+	// Helper to assert file exists and has expected content
+	assertFileContent := func(t *testing.T, path, expectedContent string) {
+		t.Helper()
+		require.FileExists(t, path)
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		require.Equal(t, expectedContent, string(content))
+	}
+
+	t.Run("extract all documentation files", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme":  "README.md",
+				"license": "LICENSE",
+			},
+			map[string]string{
+				"README.md": "readme content",
+				"LICENSE":   "license content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.FileExists(t, filepath.Join(outputDir, "LICENSE"))
+	})
+
+	t.Run("extract specific documentation keys", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme":  "README.md",
+				"license": "LICENSE",
+			},
+			map[string]string{
+				"README.md": "readme content",
+				"LICENSE":   "license content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme"})
+		require.NoError(t, err)
+
+		require.FileExists(t, filepath.Join(outputDir, "README.md"))
+		require.NoFileExists(t, filepath.Join(outputDir, "LICENSE"))
+	})
+
+	t.Run("error when no documentation in package", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{},
+			nil,
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, nil)
+		require.ErrorContains(t, err, "no documentation files found in package")
+	})
+
+	t.Run("error when key not found", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme": "README.md",
+			},
+			map[string]string{
+				"README.md": "readme content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"nonexistent"})
+		require.ErrorContains(t, err, "not found in package documentation")
+	})
+
+	t.Run("extract single key when multiple files have same basename", func(t *testing.T) {
+		pkgLayout, outputDir := setupDocTest(t,
+			map[string]string{
+				"readme1": "path/to/README.md",
+				"readme2": "other/path/README.md",
+			},
+			map[string]string{
+				"readme1-README.md": "readme1 content",
+				"readme2-README.md": "readme2 content",
+			},
+		)
+
+		err := pkgLayout.GetDocumentation(ctx, outputDir, []string{"readme1"})
+		require.NoError(t, err)
+
+		assertFileContent(t, filepath.Join(outputDir, "readme1-README.md"), "readme1 content")
+	})
+}
+
+func TestLoadFromDir_VerificationStrategies(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	// Helper to create a test package directory with optional signature
+	setupTestPackage := func(t *testing.T, signed bool) (string, string) {
+		t.Helper()
+
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		// Create a minimal valid package
+		pkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name:              "test-verification",
+				Version:           "1.0.0",
+				Architecture:      "amd64",
+				AggregateChecksum: "placeholder",
+			},
+			Build: v1alpha1.ZarfBuildData{
+				Architecture: "amd64",
+			},
+		}
+
+		// Write zarf.yaml
+		yamlPath := filepath.Join(pkgDir, ZarfYAML)
+		yamlContent, err := goyaml.Marshal(pkg)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(yamlPath, yamlContent, 0o644))
+
+		// Create a valid checksums file
+		checksumsPath := filepath.Join(pkgDir, Checksums)
+		// Calculate checksum of zarf.yaml
+		checksumsContent := ""
+		// Empty checksums with matching aggregate
+		sha := sha256.Sum256([]byte(checksumsContent))
+		pkg.Metadata.AggregateChecksum = hex.EncodeToString(sha[:])
+
+		// Rewrite zarf.yaml with correct checksum
+		yamlContent, err = goyaml.Marshal(pkg)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(yamlPath, yamlContent, 0o644))
+		require.NoError(t, os.WriteFile(checksumsPath, []byte(checksumsContent), 0o644))
+
+		if signed {
+			// Sign the package
+			pkgLayout := &PackageLayout{
+				dirPath: pkgDir,
+				Pkg:     pkg,
+			}
+
+			passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+				return []byte("test"), nil
+			})
+			signOpts := utils.DefaultSignBlobOptions()
+			signOpts.KeyRef = "./testdata/cosign.key"
+			signOpts.PassFunc = passFunc
+
+			err = pkgLayout.SignPackage(ctx, signOpts)
+			require.NoError(t, err)
+
+			return pkgDir, "./testdata/cosign.pub"
+		}
+
+		return pkgDir, ""
+	}
+
+	t.Run("VerifyNever skips verification entirely", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true) // Even with signed package
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyNever,
+			PublicKeyPath:        "./testdata/cosign.pub",
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test-verification", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyNever with unsigned package succeeds", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, false)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyNever,
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyIfPossible with signed package and valid key succeeds", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			PublicKeyPath:        pubKeyPath,
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test-verification", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyIfPossible with signed package and no key warns but continues", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			PublicKeyPath:        "", // No key provided
+		}
+
+		// Should warn but not fail
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test-verification", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyIfPossible with signed package and wrong key warns but continues", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			PublicKeyPath:        "./testdata/nonexistent.pub",
+		}
+
+		// Should warn but not fail
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyIfPossible with unsigned package warns but continues", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, false)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			PublicKeyPath:        "./testdata/cosign.pub",
+		}
+
+		// Should warn about unsigned package but not fail
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyAlways with signed package and valid key succeeds", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        pubKeyPath,
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test-verification", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyAlways with signed package and invalid key fails", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "./testdata/nonexistent.pub",
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Nil(t, pkgLayout)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
+
+	t.Run("VerifyAlways with signed package and no key fails", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "",
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Nil(t, pkgLayout)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
+
+	t.Run("VerifyAlways with unsigned package fails", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, false)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "./testdata/cosign.pub",
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Nil(t, pkgLayout)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
+
+	t.Run("default strategy value is VerifyNever", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, false)
+
+		// Empty options - should default to VerifyNever (zero value)
+		opts := PackageLayoutOptions{}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+}
+
+func TestLoadFromTar_VerificationStrategies(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	pathToPackage := filepath.Join("..", "testdata", "load-package", "compressed")
+	tarPath := filepath.Join(pathToPackage, "zarf-package-test-amd64-0.0.1.tar.zst")
+
+	t.Run("VerifyNever allows tarball load", func(t *testing.T) {
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyNever,
+		}
+
+		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, pkgLayout.Cleanup())
+		})
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyIfPossible warns but continues on unsigned tarball", func(t *testing.T) {
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			PublicKeyPath:        "./testdata/cosign.pub",
+		}
+
+		// Should succeed with warning since package is unsigned
+		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, pkgLayout.Cleanup())
+		})
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+	})
+
+	t.Run("VerifyAlways fails on unsigned tarball", func(t *testing.T) {
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "./testdata/cosign.pub",
+		}
+
+		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+		if pkgLayout != nil {
+			t.Cleanup(func() {
+				require.NoError(t, pkgLayout.Cleanup())
+			})
+		}
+	})
+
+	t.Run("default options work with tarball", func(t *testing.T) {
+		// Verify zero-value options (VerifyNever) work correctly
+		opts := PackageLayoutOptions{}
+
+		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, pkgLayout.Cleanup())
+		})
+		require.NotNil(t, pkgLayout)
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
 	})
 }

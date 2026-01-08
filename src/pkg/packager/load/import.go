@@ -40,16 +40,21 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	l := logger.From(ctx)
 	start := time.Now()
 
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
 	// Zarf imports merge in the top level package objects variables and constants
 	// however, imports are defined at the component level.
 	// Two packages can both import one another as long as the importing components are on a different chains.
 	// To detect cyclic imports, the stack is checked to see if the package has already been imported on that chain.
 	// Recursive calls only include components from the imported pkg that have the name of the component to import
-	importStack = append(importStack, packagePath)
+	importStack = append(importStack, pkgPath.BaseDir)
 
 	l.Debug("start layout.ResolveImports",
 		"pkg", pkg.Metadata.Name,
-		"path", packagePath,
+		"path", pkgPath.ManifestFile,
 		"arch", arch,
 		"flavor", flavor,
 		"importStack", len(importStack),
@@ -76,13 +81,19 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		var importedPkg v1alpha1.ZarfPackage
 		if component.Import.Path != "" {
-			importPath := filepath.Join(packagePath, component.Import.Path)
+			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
 			for _, sp := range importStack {
 				if sp == importPath {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(packagePath), component.Name)
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(pkgPath.BaseDir), component.Name)
 				}
 			}
-			b, err := os.ReadFile(filepath.Join(importPath, layout.ZarfYAML))
+
+			importPkgPath, err := layout.ResolvePackagePath(importPath)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access import package path %q: %w", importPath, err)
+			}
+
+			b, err := os.ReadFile(importPkgPath.ManifestFile)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -97,7 +108,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPath, arch, flavor, importStack, cachePath, skipVersionCheck)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -140,11 +151,21 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, packagePath, cachePath)
+		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
-		importedComponent = fixPaths(importedComponent, importPath, packagePath)
+
+		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
+		// we check that the path is valid but ensure the value remains relative for fixing
+		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access import path %q: %w", importPath, err)
+		}
+		if !fileInfo.IsDir() {
+			importPath = filepath.Dir(importPath)
+		}
+		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
 		composed, err := overrideMetadata(importedComponent, component)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
@@ -426,6 +447,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 	}
 
 	comp.HealthChecks = append(comp.HealthChecks, override.HealthChecks...)
+	comp.ImageArchives = append(comp.ImageArchives, override.ImageArchives...)
 
 	return comp
 }
@@ -444,6 +466,11 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 	for fileIdx, file := range child.Files {
 		composed := makePathRelativeTo(file.Source, relativeToHead)
 		child.Files[fileIdx].Source = composed
+	}
+
+	for idx, imageArchive := range child.ImageArchives {
+		composed := makePathRelativeTo(imageArchive.Path, relativeToHead)
+		child.ImageArchives[idx].Path = composed
 	}
 
 	for chartIdx, chart := range child.Charts {

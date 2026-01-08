@@ -117,6 +117,15 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 	}
 	layerMap[SbomLayers] = sbomLayers
 
+	docLayers := make([]ocispec.Descriptor, 0)
+	if len(pkg.Documentation) > 0 {
+		docDescriptor := root.Locate(layout.DocumentationTar)
+		if !oci.IsEmptyDescriptor(docDescriptor) {
+			docLayers = append(docLayers, docDescriptor)
+		}
+	}
+	layerMap[DocLayers] = docLayers
+
 	return filterLayers(layerMap, layersSelector)
 }
 
@@ -138,7 +147,7 @@ func (r *Remote) LayersFromComponents(ctx context.Context, pkg v1alpha1.ZarfPack
 		if component.Name == "" {
 			return nil, nil, fmt.Errorf("component %s does not exist in this package", rc.Name)
 		}
-		for _, image := range component.Images {
+		for _, image := range component.GetImages() {
 			images[image] = true
 		}
 		desc := root.Locate(filepath.Join(layout.ComponentsDir, fmt.Sprintf(tarballFormat, component.Name)))
@@ -201,22 +210,22 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 	layers := make([]ocispec.Descriptor, 0)
 
 	switch layersSelector {
-	case "":
+	case AllLayers:
 		layers = append(layers, layerMap[AllLayers]...)
-	case "sbom":
+	case SbomLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[SbomLayers]...)
-	case "metadata":
+	case MetadataLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
-	case "manifests":
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[ComponentLayers]...)
-	case "components":
+	case ComponentLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ComponentLayers]...)
-	case "images":
+	case ImageLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ImageLayers]...)
+	case DocLayers:
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[DocLayers]...)
 	default:
 		return nil, fmt.Errorf("unknown inspect target %s", layersSelector)
 	}

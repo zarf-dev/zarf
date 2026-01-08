@@ -36,6 +36,10 @@ type SignBlobOptions struct {
 	// Embed Cosign's KeyOpts for signing configuration
 	options.KeyOpts
 
+	// Certificate signing support - X.509 certificate
+	Cert      string
+	CertChain string
+
 	// Zarf-specific options for output control
 	OutputSignature   string // Custom path for signature file
 	OutputCertificate string // Where to write certificate (keyless mode)
@@ -141,9 +145,12 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	tlogUpload := false // Zarf default: don't upload to transparency log (offline/air-gap friendly)
 
 	sig, err := sign.SignBlobCmd(
+		ctx,
 		rootOpts,
 		keyOpts,
 		blobPath,
+		opts.Cert,
+		opts.CertChain,
 		b64,
 		opts.OutputSignature,
 		opts.OutputCertificate,

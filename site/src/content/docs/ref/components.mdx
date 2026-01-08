@@ -139,6 +139,26 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 <ExampleYAML src={import("../../../../../examples/podinfo-flux/zarf.yaml?raw")} component="flux" />
 
+### Container Image Archives
+
+<Properties item="ZarfComponent" include={["imageArchives"]} />
+
+Another way to bring OCI images can into the package is via archives of [OCI layouts](https://specs.opencontainers.org/image-spec/image-layout/). Common ways to create OCI archives are through the [docker save](https://docs.docker.com/reference/cli/docker/image/save/) and [podman save --format=oci-archive](https://docs.podman.io/en/latest/markdown/podman-save.1.html) commands. The Docker engine version must be >= [25.0.0](https://docs.docker.com/engine/release-notes/25.0/#2500) as this was the release that the save command became compliant with the OCI layout specification.
+
+An OCI layout can have any number of images, Zarf will pull all images that are listed in the sub-field `imageArchives.images`. If a listed image is not found in the archive then Zarf will error. In order for Zarf to find an image its [descriptor](https://specs.opencontainers.org/image-spec/descriptor/?v=v1.1.1) in the OCI-layout index.json must include the annotation "io.containerd.image.name" or "org.opencontainers.image.ref.name". `docker save` and `podman save` will automatically add at least one of these annotations.
+
+
+```yaml
+- name: image-archive
+  description: "pull in an image from a tar archive"
+  required: true
+  imageArchives:
+  - path: image.tar
+    images:
+    - ghcr.io/fluxcd/helm-controller:v1.1.0
+    - ghcr.io/fluxcd/image-automation-controller:v0.39.0
+```
+
 ### Git Repositories
 
 <Properties item="ZarfComponent" include={["repos"]} />
