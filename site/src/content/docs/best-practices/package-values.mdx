@@ -33,11 +33,6 @@ monitoring:
   retention: "30d"
 ```
 
-**Benefits:**
-- Clear ownership and grouping of related configuration
-- Easier to override specific sections
-- Better aligns with Helm chart structures for value mapping
-
 ## Use Meaningful Defaults
 
 Provide sensible defaults in your package values files that work out-of-the-box:
@@ -56,12 +51,6 @@ features:
   experimental: false
   debug: false
 ```
-
-**Guidelines:**
-- Defaults should work for the most common use case (usually production)
-- Use conservative resource limits to avoid cluster issues
-- Disable experimental or debug features by default
-- Make optional features opt-in rather than opt-out
 
 ## Separate Environment-Specific Values
 
@@ -146,12 +135,6 @@ values:
   schema: values-schema.json
 ```
 
-**Benefits:**
-- Catch configuration errors before deployment
-- Provide clear error messages to users
-- Document valid values and constraints
-- Enable IDE autocomplete and validation
-
 ## Leverage Templating Functions
 
 Use [functions](/ref/templating/) for dynamic configuration:
@@ -192,11 +175,6 @@ Don't commit sensitive data to your values files:
 database:
   password: "super-secret-password"
   apiKey: "sk-1234567890"
-
-# ✅ GOOD: Reference secrets or use setValues
-database:
-  passwordSecretName: "db-credentials"
-  passwordSecretKey: "password"
 ```
 
 For dynamic secrets, use `setValues` in actions:
