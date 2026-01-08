@@ -25,7 +25,7 @@ func TestVolumeImageMount(t *testing.T) {
 	_, _, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--skip-version-check")
 	require.NoError(t, err)
 
-	stdOut, _, err := e2e.Kubectl(t, "get", "pod", "-l", "app=agent", "-n", "pod-volume-image", "-o", "jsonpath={.status.phase}")
+	stdOut, _, err := e2e.Kubectl(t, "get", "pod", "-l", "app=agent", "-n", "pod-volume-image", "-o", "jsonpath={.items[].status.phase}")
 	require.NoError(t, err)
 	require.Equal(t, "Running", stdOut)
 
