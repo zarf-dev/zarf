@@ -60,6 +60,11 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", err
 	}
 
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return "", fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
@@ -90,7 +95,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, assembleOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}
