@@ -16,7 +16,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/agnivade/levenshtein v1.2.1
 	github.com/anchore/clio v0.0.0-20250715152405-a0fa658e5084
-	github.com/anchore/stereoscope v0.1.13
+	github.com/anchore/stereoscope v0.1.17
 	github.com/anchore/syft v1.38.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
@@ -363,7 +363,7 @@ require (
 	github.com/cockroachdb/apd/v3 v3.2.1 // indirect
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/containerd/containerd v1.7.29 // indirect
+	github.com/containerd/containerd v1.7.30 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/fifo v1.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
@@ -381,7 +381,7 @@ require (
 	github.com/digitorus/pkcs7 v0.0.0-20230818184609-3a137a874352 // indirect
 	github.com/digitorus/timestamp v0.0.0-20231217203849-220c5c2851b7 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
-	github.com/docker/cli v29.0.4+incompatible
+	github.com/docker/cli v29.1.3+incompatible
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.4 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
@@ -527,7 +527,7 @@ require (
 	github.com/open-policy-agent/opa v1.10.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/runtime-spec v1.2.1 // indirect
-	github.com/opencontainers/selinux v1.13.0 // indirect
+	github.com/opencontainers/selinux v1.13.1 // indirect
 	github.com/openvex/go-vex v0.2.7 // indirect
 	github.com/otiai10/copy v1.14.1
 	github.com/owenrumney/go-sarif v1.1.2-0.20231003122901-1000f5e05554 // indirect
