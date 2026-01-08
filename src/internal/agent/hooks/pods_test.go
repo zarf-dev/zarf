@@ -198,7 +198,7 @@ func TestPodMutationWebhook(t *testing.T) {
 					"127.0.0.1:31999/library/nginx:latest-zarf-3793515731",
 				),
 				operations.ReplacePatchOperation(
-					"/spec/volume/0/image/reference",
+					"/spec/volumes/0/image/reference",
 					"127.0.0.1:31999/crio/artifact:v1-zarf-2568457951",
 				),
 				operations.ReplacePatchOperation(
