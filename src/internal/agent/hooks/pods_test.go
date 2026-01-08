@@ -208,8 +208,8 @@ func TestPodMutationWebhook(t *testing.T) {
 				operations.ReplacePatchOperation(
 					"/metadata/annotations",
 					map[string]string{
-						"zarf.dev/original-image-nginx":     "nginx",
-						"zarf.dev/original-image-vol-image": "quay.io/crio/artifact:v1",
+						"zarf.dev/original-image-nginx":  "nginx",
+						"zarf.dev/original-volume-image": "quay.io/crio/artifact:v1",
 					},
 				),
 			},

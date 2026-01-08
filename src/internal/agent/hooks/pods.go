@@ -44,12 +44,20 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 }
 
 func getImageAnnotationKey(ctx context.Context, containerName string) string {
-	annotationName := fmt.Sprintf("original-image-%s", containerName)
+	return getAnnotationKey(ctx, "image-"+containerName)
+}
+
+func getVolumeAnnotationKey(ctx context.Context, volumeName string) string {
+	return getAnnotationKey(ctx, "volume-"+volumeName)
+}
+
+func getAnnotationKey(ctx context.Context, image string) string {
+	annotationName := fmt.Sprintf("original-%s", image)
 	// The name segment is required and must be 63 characters or less, beginning and ending with
 	// an alphanumeric character ([a-z0-9A-Z]) with dashes (-), underscores (_), dots (.), and alphanumerics between.
 	// https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
 	if len(annotationName) > 63 {
-		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", containerName)
+		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", image)
 		annotationName = annotationName[:63]
 	}
 	// container names follow RFC 1123 which allows only lowercase alphanumeric characters and hyphens
@@ -128,7 +136,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			if err != nil {
 				return nil, err
 			}
-			updatedAnnotations[getImageAnnotationKey(ctx, "vol-"+volume.Name)] = volume.Image.Reference
+			updatedAnnotations[getVolumeAnnotationKey(ctx, volume.Name)] = volume.Image.Reference
 			patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 		}
 	}
