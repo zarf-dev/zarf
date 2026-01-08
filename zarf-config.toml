@@ -8,6 +8,7 @@ agent_image_tag = 'local'
 # The image reference to use for the registry that Zarf deploys into the cluster
 registry_image_domain = ''
 registry_image = 'library/registry'
+registry_image_tag = '3.0.0'
 
 proxy_image_domain = ''
 proxy_image = 'alpine/socat'
