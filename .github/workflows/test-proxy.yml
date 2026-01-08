@@ -60,6 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-zarf
     strategy:
+      fail-fast: false
       matrix:
         ipfamily: [ipv4, ipv6]
     steps:
@@ -93,9 +94,9 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      - name: Run tests
+      - name: Run proxy tests
         run: |
-          build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
+          make test-proxy
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
