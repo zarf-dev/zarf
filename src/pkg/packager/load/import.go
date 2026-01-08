@@ -156,12 +156,16 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			return v1alpha1.ZarfPackage{}, err
 		}
 
-		importPackagePath, err := layout.ResolvePackagePath(filepath.Join(pkgPath.BaseDir, importPath))
+		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
+		// we check that the path is valid but ensure the value remains relative for fixing
+		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access import path %q: %w", importPath, err)
 		}
-
-		importedComponent = fixPaths(importedComponent, importPackagePath.BaseDir, pkgPath.BaseDir)
+		if !fileInfo.IsDir() {
+			importPath = filepath.Dir(importPath)
+		}
+		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
 		composed, err := overrideMetadata(importedComponent, component)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
