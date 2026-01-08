@@ -126,7 +126,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		// Check for previous releases that successfully deployed
 		for _, releaser := range releases {
-			// Type assert to concrete Release type
 			rel, err := release.NewAccessor(releaser)
 			if err != nil {
 				return nil, zarfChart.ReleaseName, errors.Join(err, installErr)

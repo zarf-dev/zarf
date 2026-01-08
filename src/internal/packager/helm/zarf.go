@@ -135,8 +135,6 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 		// Update the Zarf Agent release with the new values
 		// Before the Zarf agent was converted to a Helm chart, the name could differ depending on the name of the init package
 		// To stay backwards compatible with these package , we exclude the package name section of the release name
-		// FIXME: make sure this is right
-
 		chartAcc, err := chart.NewAccessor(rel.Chart())
 		if err != nil {
 			return err
