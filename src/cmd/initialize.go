@@ -42,6 +42,7 @@ type initOptions struct {
 	timeout                 time.Duration
 	retries                 int
 	publicKeyPath           string
+	verify                  bool
 	skipSignatureValidation bool
 	confirm                 bool
 	ociConcurrency          int
@@ -56,6 +57,7 @@ func newInitCommand() *cobra.Command {
 		Short:   lang.CmdInitShort,
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
+		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
 
@@ -105,8 +107,13 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
@@ -116,6 +123,19 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
+}
+
+func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
@@ -155,11 +175,11 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		CachePath:               cachePath,
+		PublicKeyPath: o.publicKeyPath,
+		Verify:        o.verify,
+		Filter:        filters.Empty(),
+		Architecture:  config.GetArch(),
+		CachePath:     cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

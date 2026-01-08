@@ -78,10 +78,10 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
-      --skip-signature-validation       Skip validating the signature of the Zarf package
+      --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [CAMEL_SPIDER=black])
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --verify                          Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

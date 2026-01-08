@@ -29,12 +29,12 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum                  string
-	Architecture            string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	Filter                  filters.ComponentFilterStrategy
-	Output                  string
+	Shasum        string
+	Architecture  string
+	PublicKeyPath string
+	Verify        bool
+	Filter        filters.ComponentFilterStrategy
+	Output        string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// Layers to pull during OCI pull
@@ -76,16 +76,16 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
-			Source:                  source,
-			PublicKeyPath:           opts.PublicKeyPath,
-			SkipSignatureValidation: opts.SkipSignatureValidation,
-			Shasum:                  opts.Shasum,
-			Architecture:            config.GetArch(opts.Architecture),
-			Filter:                  opts.Filter,
-			LayersSelector:          opts.LayersSelector,
-			OCIConcurrency:          opts.OCIConcurrency,
-			RemoteOptions:           opts.RemoteOptions,
-			CachePath:               opts.CachePath,
+			Source:         source,
+			PublicKeyPath:  opts.PublicKeyPath,
+			Verify:         opts.Verify,
+			Shasum:         opts.Shasum,
+			Architecture:   config.GetArch(opts.Architecture),
+			Filter:         opts.Filter,
+			LayersSelector: opts.LayersSelector,
+			OCIConcurrency: opts.OCIConcurrency,
+			RemoteOptions:  opts.RemoteOptions,
+			CachePath:      opts.CachePath,
 		}
 
 		pkgLayout, err := pullOCI(ctx, ociOpts)
@@ -128,10 +128,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		}
 	}
 
+	verificationStrategy := layout.VerifyIfPossible
+	if opts.Verify {
+		verificationStrategy = layout.VerifyAlways
+	}
+
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Filter:                  opts.Filter,
+		PublicKeyPath:        opts.PublicKeyPath,
+		VerificationStrategy: verificationStrategy,
+		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {

@@ -17,12 +17,12 @@ zarf package inspect documentation [ PACKAGE_SOURCE ] [flags]
 ### Options
 
 ```
-  -h, --help                        help for documentation
-  -k, --key string                  Path to public key file for validating signed packages
-      --keys strings                Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --output string               Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+  -h, --help                  help for documentation
+  -k, --key string            Path to public key file for validating signed packages
+      --keys strings          Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')
+      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --output string         Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)
+      --verify                Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

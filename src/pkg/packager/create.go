@@ -68,12 +68,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	var differentialPkg v1alpha1.ZarfPackage
 	if opts.DifferentialPackagePath != "" {
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
-			Architecture:            pkg.Metadata.Architecture,
-			RemoteOptions:           opts.RemoteOptions,
-			LayersSelector:          zoci.MetadataLayers,
-			OCIConcurrency:          opts.OCIConcurrency,
-			CachePath:               opts.CachePath,
-			SkipSignatureValidation: true,
+			Architecture:   pkg.Metadata.Architecture,
+			RemoteOptions:  opts.RemoteOptions,
+			LayersSelector: zoci.MetadataLayers,
+			OCIConcurrency: opts.OCIConcurrency,
+			CachePath:      opts.CachePath,
+			Verify:         false,
 		})
 		if err != nil {
 			return "", fmt.Errorf("failed to load differential package: %w", err)
