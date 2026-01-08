@@ -23,7 +23,7 @@ zarf dev inspect definition [ DIRECTORY ] [flags]
 ```
   -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                 help for definition
-      --set stringToString   Specify package variables to set on the command line (KEY=value) (default [REGISTRY_IMAGE_TAG=3.0])
+      --set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
 ```
 
 ### Options inherited from parent commands

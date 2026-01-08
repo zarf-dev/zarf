@@ -17,8 +17,8 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
 ### Options
 
 ```
-      --create-set stringToString   Specify package variables to set on the command line (KEY=value) (default [REGISTRY_IMAGE_TAG=3.0])
-      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [CAMEL_SPIDER=black])
+      --create-set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+      --deploy-set stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                        help for manifests
       --kube-version string         Override the default helm template KubeVersion when performing a package chart template
