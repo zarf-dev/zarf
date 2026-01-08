@@ -13,7 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 
 	"helm.sh/helm/v4/pkg/action"
-	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/release"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/cli-utils/pkg/object"
 
@@ -126,18 +126,20 @@ func UpdateZarfAgentValues(ctx context.Context, opts InstallUpgradeOptions) erro
 	// Ensure we find the release - otherwise this can return without an error and not do anything
 	found := false
 	for _, releaser := range releases {
-		release, ok := releaser.(*releasev1.Release)
-		if !ok {
-			return fmt.Errorf("unable to cast release to v1.Release type")
+		rel, err := release.NewAccessor(releaser)
+		if err != nil {
+			return err
 		}
+
 		// Update the Zarf Agent release with the new values
 		// Before the Zarf agent was converted to a Helm chart, the name could differ depending on the name of the init package
 		// To stay backwards compatible with these package , we exclude the package name section of the release name
-		if strings.Contains(release.Chart.Name(), "zarf-agent-zarf-agent") {
+		// FIXME: make sure this is right
+		if strings.Contains(rel.Name(), "zarf-agent-zarf-agent") {
 			found = true
 			chart := v1alpha1.ZarfChart{
 				Namespace:   "zarf",
-				ReleaseName: release.Name,
+				ReleaseName: rel.Name(),
 			}
 			opts.VariableConfig.SetConstants([]v1alpha1.Constant{
 				{

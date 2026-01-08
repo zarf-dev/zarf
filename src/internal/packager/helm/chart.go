@@ -103,19 +103,14 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		_, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
+		err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
 		lastReleaser := releases[len(releases)-1]
-		// Type assert to concrete Release type
-		lastRelease, ok := lastReleaser.(*releasev1.Release)
-		if !ok {
-			return nil, zarfChart.ReleaseName, fmt.Errorf("unable to cast release to v1.Release type")
-		}
 
-		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastRelease)
+		err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastReleaser)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -132,12 +127,12 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// Check for previous releases that successfully deployed
 		for _, releaser := range releases {
 			// Type assert to concrete Release type
-			rel, ok := releaser.(*releasev1.Release)
-			if !ok {
-				continue
+			rel, err := release.NewAccessor(releaser)
+			if err != nil {
+				return nil, zarfChart.ReleaseName, errors.Join(err, installErr)
 			}
-			if rel.Info.Status == releasecommon.StatusDeployed {
-				previouslyDeployedVersion = rel.Version
+			if releasecommon.Status(rel.Status()) == releasecommon.StatusDeployed {
+				previouslyDeployedVersion = rel.Version()
 			}
 		}
 
@@ -199,9 +194,9 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 	if histErr == nil && len(releases) > 0 {
 		lastReleaser := releases[len(releases)-1]
 		// Type assert to concrete Release type
-		lastRelease, ok := lastReleaser.(*releasev1.Release)
-		if !ok {
-			return fmt.Errorf("unable to cast release to v1.Release type")
+		lastRelease, err := release.NewAccessor(lastReleaser)
+		if err != nil {
+			return err
 		}
 
 		// Setup a new upgrade action
@@ -224,11 +219,11 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
-		methodIsSSA := lastRelease.ApplyMethod == "ssa"
+		methodIsSSA := lastRelease.ApplyMethod() == "ssa"
 		client.ForceConflicts = methodIsSSA && opts.ForceConflicts
 
 		// Perform the loadedChart upgrade.
-		_, err := client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
+		_, err = client.RunWithContext(ctx, chart.ReleaseName, lastRelease.Chart, updatedValues)
 		if err != nil {
 			return err
 		}
@@ -240,7 +235,7 @@ func UpdateReleaseValues(ctx context.Context, chart v1alpha1.ZarfChart, updatedV
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) (*releasev1.Release, error) {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) error {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
@@ -274,25 +269,20 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ForceConflicts = useSSA && opts.ForceConflicts
 
 	// Perform the loadedChart installation.
-	releaser, err := client.RunWithContext(ctx, chart, chartValues)
+	_, err := client.RunWithContext(ctx, chart, chartValues)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// releasev1 is the only implementation of the releaser interface currently
-	release, ok := releaser.(*releasev1.Release)
-	if !ok {
-		return nil, fmt.Errorf("unable to cast release to v1.Release type")
-	}
-	return release, nil
+	return nil
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease *releasev1.Release) (*releasev1.Release, error) {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease release.Releaser) error {
 	// Migrate any deprecated APIs (if applicable)
 	err := migrateDeprecatedAPIs(ctx, opts.Cluster, actionConfig, lastRelease)
 	if err != nil {
-		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
+		return fmt.Errorf("unable to check for API deprecations: %w", err)
 	}
 
 	// Setup a new upgrade action
@@ -329,17 +319,11 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.MaxHistory = maxHelmHistory
 
 	// Perform the loadedChart upgrade.
-	releaser, err := client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
+	_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	// Type assert to concrete Release type
-	release, ok := releaser.(*releasev1.Release)
-	if !ok {
-		return nil, fmt.Errorf("unable to cast release to v1.Release type")
-	}
-	return release, nil
+	return nil
 }
 
 func rollbackChart(name string, version int, actionConfig *action.Configuration, timeout time.Duration) error {
@@ -377,7 +361,13 @@ func LoadChartData(zarfChart v1alpha1.ZarfChart, chartPath string, valuesPath st
 
 // migrateDeprecatedAPIs searches through all the objects from the latest release and migrates any deprecated APIs to the latest version.
 // If any deprecated fields are found, the release will be updated and saved back to the cluster.
-func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig *action.Configuration, latestRelease *releasev1.Release) error {
+func migrateDeprecatedAPIs(ctx context.Context, c *cluster.Cluster, actionConfig *action.Configuration, latestReleaser release.Releaser) error {
+	// We can re-evaluate handling this functionality for chart v3 / release v2 when available.
+	// Potentially we stop doing this functionality for future chart APIs, as it could be outside of the intended scope of Zarf.
+	latestRelease, ok := latestReleaser.(*releasev1.Release)
+	if !ok {
+		return nil
+	}
 	// Get the Kubernetes version from the current cluster
 	kubeVersion, err := c.Clientset.Discovery().ServerVersion()
 	if err != nil {

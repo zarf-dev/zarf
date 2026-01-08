@@ -21,7 +21,7 @@ import (
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
-	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/release"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -79,15 +79,19 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	}
 
 	// Type assert to concrete Release type
-	templatedChart, ok := templatedReleaser.(*releasev1.Release)
-	if !ok {
-		return "", fmt.Errorf("unable to cast release to v1.Release type")
+	templatedRelease, err := release.NewAccessor(templatedReleaser)
+	if err != nil {
+		return "", err
 	}
 
-	manifest := templatedChart.Manifest
+	manifest := templatedRelease.Manifest()
 
-	for _, hook := range templatedChart.Hooks {
-		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
+	for _, hook := range templatedRelease.Hooks() {
+		hook, err := release.NewHookAccessor(hook)
+		if err != nil {
+			return "", err
+		}
+		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest())
 	}
 
 	return manifest, nil

@@ -14,7 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v4/pkg/action"
-	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	"helm.sh/helm/v4/pkg/release"
 )
 
 // Destroy removes ZarfInitPackage charts from the cluster and optionally all Zarf-installed charts.
@@ -50,19 +50,19 @@ func Destroy(ctx context.Context, purgeAllZarfInstallations bool) {
 
 	// Iterate over all releases
 	for _, releaser := range releases {
-		release, ok := releaser.(*releasev1.Release)
-		if !ok {
-			l.Error("unable to cast release to v1.Release type")
+		rel, err := release.NewAccessor(releaser)
+		if err != nil {
+			l.Error("failed to get release", "error", err.Error())
 			continue
 		}
-		if !purgeAllZarfInstallations && release.Namespace != state.ZarfNamespaceName {
+		if !purgeAllZarfInstallations && rel.Namespace() != state.ZarfNamespaceName {
 			// Don't process releases outside the zarf namespace unless purge all is true
 			continue
 		}
 		// Filter on zarf releases
-		if zarfPrefix.MatchString(release.Name) {
-			l.Info("uninstalling helm chart", "namespace", release.Namespace, "name", release.Name)
-			if err = RemoveChart(ctx, release.Namespace, release.Name, config.ZarfDefaultTimeout); err != nil {
+		if zarfPrefix.MatchString(rel.Name()) {
+			l.Info("uninstalling helm chart", "namespace", rel.Namespace(), "name", rel.Name())
+			if err = RemoveChart(ctx, rel.Namespace(), rel.Name(), config.ZarfDefaultTimeout); err != nil {
 				// Don't fatal since this is a removal action
 				l.Error("unable to uninstall the chart", "error", err.Error())
 			}
