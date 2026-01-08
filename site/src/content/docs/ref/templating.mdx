@@ -10,7 +10,7 @@ Templating with Package Values is currently an **alpha feature** and requires th
 
 :::
 
-Zarf supports Go template syntax and `text/template` engine with powerful features including control flow and functions. Zarf includes the full library of [Sprig functions](http://masterminds.github.io/sprig/) and some builtins for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution.
+Zarf supports Go template syntax and `text/template` engine with powerful features including control flow and functions. Zarf includes the full library of [Sprig functions](http://masterminds.github.io/sprig/) and some builtins for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution. Zarf and Helm templates largely work the same, with similar custom functions as well, but they work on different layers. Zarf templates provide Zarf-specific template objects for actions and component items like manifests and files.
 
 ## Template Objects
 

@@ -137,7 +137,7 @@ values:
 
 ## Leverage Templating Functions
 
-Use [functions](/ref/templating/) for dynamic configuration:
+Use [functions](/ref/templating/#template-functions) for dynamic configuration:
 
 ```yaml
 # In manifests with template: true
@@ -166,18 +166,52 @@ you can instead express the problem with data.
 
 See the [Templating Reference](/ref/templating/) for complete function documentation.
 
-## Avoid Sensitive Data in Values Files
+## Do Not Commit Sensitive Values in Package
 
-Don't commit sensitive data to your values files:
+Values are the best way to pass secrets into your Zarf package, but those secrets should not be baked into the values files a package is created with:
 
 ```yaml
-# ❌ BAD: Secrets in values files
+# values.yaml
+# DO NOT DO THIS
 database:
   password: "super-secret-password"
   apiKey: "sk-1234567890"
 ```
 
-For dynamic secrets, use `setValues` in actions:
+```yaml
+# zarf.yaml
+values:
+  files:
+    - values.yaml
+```
+
+Instead, pass secret values to Zarf on deploy or remove with `-f` or by declaring the files in `.zarf-config.yaml`
+
+```bash
+zarf package deploy \
+  --features="values=true" \
+  -f production.yaml
+```
+
+or
+
+```yaml
+# ~/.zarf-config.yaml
+package:
+  deploy:
+    values:
+      - production.yaml
+```
+
+Or set the values directly with `--set-values`,
+```bash
+zarf package deploy \
+  --features="values=true" \
+  --set-values=".database.password=$(DB_PASSWORD)"
+  --set-values=".database.apiKey=$(DB_API_KEY)"
+```
+
+Secrets can also be set dynamically by using `actions` and `setValues`:
 
 ```yaml
 components:
