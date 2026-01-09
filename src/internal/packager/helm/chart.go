@@ -335,7 +335,7 @@ func rollbackChart(zarfChart v1alpha1.ZarfChart, version int, actionConfig *acti
 	client.Timeout = timeout
 	client.Version = version
 	client.MaxHistory = maxHelmHistory
-	return client.Run(zarfChart.Name)
+	return client.Run(zarfChart.ReleaseName)
 }
 
 func uninstallChart(name string, actionConfig *action.Configuration, timeout time.Duration) (*release.UninstallReleaseResponse, error) {
