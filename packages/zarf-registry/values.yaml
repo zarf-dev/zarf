@@ -1,0 +1,92 @@
+persistence:
+  enabled: true
+  # TODO(mkcp): Internal builtin - needs to come from cluster state
+  storageClass: "###ZARF_STORAGE_CLASS###"
+  size: "20Gi"
+  existingClaim: ""
+  accessMode: "ReadWriteOnce"
+
+image:
+  # TODO(mkcp): Internal builtins - need to come from cluster state
+  repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  tag: "###ZARF_CONST_REGISTRY_IMAGE_TAG###"
+
+imagePullSecrets:
+  - name: private-registry
+
+proxy:
+  # TODO(mkcp): Internal builtin - needs to come from cluster state
+  enabled: "###ZARF_REGISTRY_PROXY###"
+  hostNetwork: false
+  tolerations: []
+  image:
+    # TODO(mkcp): Internal builtins - need to come from cluster state
+    repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_PROXY_IMAGE###"
+    tag: "###ZARF_CONST_PROXY_IMAGE_TAG###"
+  registry:
+    image:
+      # TODO(mkcp): Internal builtins - need to come from cluster state
+      repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
+  injector:
+    # TODO(mkcp): Internal builtins - need to come from cluster state
+    hostPort: "###ZARF_INJECTOR_HOSTPORT###"
+    image: "###ZARF_INJECTOR_IMAGE###"
+    payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
+    shasum: "###ZARF_INJECTOR_SHASUM###"
+
+secrets:
+  # TODO(mkcp): Internal builtins - need to come from cluster state
+  htpasswd: "###ZARF_HTPASSWD###"
+  configData:
+    http:
+      secret: "###ZARF_REGISTRY_SECRET###"
+
+# TODO(mkcp): Internal builtin - needs to come from cluster state
+ipv6Only: "###ZARF_IPV6_ONLY###"
+
+service:
+  # TODO(mkcp): Internal builtin - needs to come from cluster state
+  nodePort: "###ZARF_NODEPORT###"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "3"
+    memory: "2Gi"
+
+fullnameOverride: "zarf-docker-registry"
+
+podLabels:
+  zarf.dev/agent: "ignore"
+
+affinity:
+  enabled: true
+  custom: {}
+
+tolerations: []
+
+autoscaling:
+  enabled: true
+  mapReplicasToNodes: false
+  minReplicas: "1"
+  maxReplicas: "5"
+  targetCPUUtilizationPercentage: 80
+
+caBundle: ""
+
+extraEnvVars: []
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+opentelemetry:
+  exporter: none
+
+securityContext:
+  runAsUser: 1000
+  fsGroup: 2000
+  runAsGroup: 2000
