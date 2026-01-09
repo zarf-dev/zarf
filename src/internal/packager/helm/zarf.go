@@ -37,6 +37,12 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 		return fmt.Errorf("error finding init package with zarf-registry component")
 	}
 	opts.PkgName = initPkgName
+	if opts.State.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		err := opts.Cluster.GenerateOrRenewRegistryCerts(ctx)
+		if err != nil {
+			return err
+		}
+	}
 	pushUser, err := utils.GetHtpasswdString(opts.State.RegistryInfo.PushUsername, opts.State.RegistryInfo.PushPassword)
 	if err != nil {
 		return fmt.Errorf("error generating htpasswd string: %w", err)

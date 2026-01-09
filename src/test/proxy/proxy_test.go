@@ -26,6 +26,12 @@ func (suite *RegistryProxyTestSuite) SetupSuite() {
 func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+	// Verify the registry proxy TLS secrets were created
+	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-server-tls")
+	suite.NoError(err, "zarf-registry-server-tls secret should exist")
+
+	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-client-tls")
+	suite.NoError(err, "zarf-registry-client-tls secret should exist")
 }
 
 func (suite *RegistryProxyTestSuite) Test_1_Flux() {

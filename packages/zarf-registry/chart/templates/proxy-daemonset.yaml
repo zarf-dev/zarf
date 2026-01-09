@@ -13,20 +13,29 @@ spec:
         app: zarf-registry-proxy
         # Don't mutate this pod
         zarf.dev/agent: ignore
+      annotations:
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-client-tls") }}
+{{- if $tlsSecret }}
+        checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
+{{- end }}
     spec:
       priorityClassName: system-node-critical
       containers:
         - args:
           {{ if .Values.ipv6Only }}
-            - tcp6-listen:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
-            - tcp6:{{ template "docker-registry.fullname" . }}:5000
+            - TCP6-LISTEN:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- else }}
-            - tcp4-listen:{{ .Values.service.nodePort }},reuseaddr,fork
-            - tcp4:{{ template "docker-registry.fullname" . }}:5000
+            - TCP4-LISTEN:{{ .Values.service.nodePort }},reuseaddr,fork
+            - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
           imagePullPolicy: IfNotPresent
           name: zarf-registry-proxy
+          volumeMounts:
+          - name: proxy-certs
+            mountPath: /certs/client
+            readOnly: true
           ports:
             - containerPort: {{ .Values.service.nodePort }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
@@ -47,6 +56,10 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
             runAsNonRoot: true
+      volumes:
+        - name: proxy-certs
+          secret:
+            secretName: zarf-registry-client-tls
     # IPV6 does not support rewriting packets to localhost so it needs to use hostNetwork over hostPort
     {{- if eq (include "proxy.hostNetwork" .) "true" }}
       dnsPolicy: ClusterFirstWithHostNet
