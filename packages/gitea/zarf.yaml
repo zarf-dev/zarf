@@ -37,8 +37,8 @@ components:
       onDeploy:
         before:
           - cmd: ./zarf internal update-gitea-pvc
-            setVariables:
-              - name: GIT_SERVER_CREATE_PVC
+            setValues:
+              - key: .persistence.create
             mute: true
         after:
           - cmd: ./zarf internal create-read-only-gitea-user

@@ -1,4 +1,5 @@
 persistence:
+  # FIXME(mkcp): How do we set a template object to a helm value without the template system
   storageClass: "###ZARF_STORAGE_CLASS###"
   # "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
   claimName: "data-zarf-gitea-0"
@@ -7,13 +8,14 @@ persistence:
   # The access mode of the persistent volume claim for the git server
   accessModes:
     - "ReadWriteOnce"
-  create: "###ZARF_VAR_GIT_SERVER_CREATE_PVC###"
+  create: ""
 
 # The number of git server replicas to deploy
 replicaCount: 1
 
 gitea:
   admin:
+    # FIXME(mkcp): How do we set a template object to a helm value without the template system
     username: "###ZARF_GIT_PUSH###"
     password: "###ZARF_GIT_AUTH_PUSH###"
     email: "zarf@localhost"
