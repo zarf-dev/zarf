@@ -142,7 +142,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 		// Attempt to rollback on a failed upgrade.
 		l.Info("performing Helm rollback", "chart", zarfChart.Name)
-		err = rollbackChart(zarfChart.ReleaseName, previouslyDeployedVersion, actionConfig, opts.Timeout)
+		err = rollbackChart(zarfChart, previouslyDeployedVersion, actionConfig, opts.Timeout)
 		if err != nil {
 			return nil, zarfChart.ReleaseName, fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
@@ -192,7 +192,6 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 	releases, histErr := histClient.Run(zarfChart.ReleaseName)
 	if histErr == nil && len(releases) > 0 {
 		lastReleaser := releases[len(releases)-1]
-		// Type assert to concrete Release type
 		lastRelease, err := release.NewAccessor(lastReleaser)
 		if err != nil {
 			return fmt.Errorf("unable to access release: %w", err)
@@ -325,15 +324,18 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	return nil
 }
 
-func rollbackChart(name string, version int, actionConfig *action.Configuration, timeout time.Duration) error {
+func rollbackChart(zarfChart v1alpha1.ZarfChart, version int, actionConfig *action.Configuration, timeout time.Duration) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	client.ServerSideApply = "auto"
+	if zarfChart.ServerSideApply == "" {
+		zarfChart.ServerSideApply = "auto"
+	}
+	client.ServerSideApply = zarfChart.ServerSideApply
 	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
 	client.Version = version
 	client.MaxHistory = maxHelmHistory
-	return client.Run(name)
+	return client.Run(zarfChart.Name)
 }
 
 func uninstallChart(name string, actionConfig *action.Configuration, timeout time.Duration) (*release.UninstallReleaseResponse, error) {
