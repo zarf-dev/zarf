@@ -1,0 +1,3 @@
+mode:
+  namespaces: "###ZARF_VAR_AGENT_NAMESPACES_MODE###"
+  objects: "###ZARF_VAR_AGENT_OBJECTS_MODE###"
