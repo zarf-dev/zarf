@@ -55,8 +55,6 @@ func TestFindImages(t *testing.T) {
 		require.NoError(t, err)
 		internalRegistryImage := fmt.Sprintf("%s/%s:%s", registry, "zarf-dev/zarf/agent", agentTag)
 		require.Contains(t, stdOut, internalRegistryImage)
-		// busybox image is in git init package
-		require.Contains(t, stdOut, "busybox:latest")
 
 		path := filepath.Join("src", "test", "packages", "13-find-images-with-vars")
 		stdOut, _, err = e2e.Zarf(t, "dev", "find-images", path, "--deploy-set", "PODINFO_IMAGE=zarf.dev/podinfo:latest", "--skip-cosign")

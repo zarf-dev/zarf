@@ -18,16 +18,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/common"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/release"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 
 	"github.com/zarf-dev/zarf/src/config"
 )
 
 // TemplateChart generates a helm template from a given chart.
-func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values,
+func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, values common.Values,
 	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
@@ -43,15 +44,14 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	// Bind the helm action.
 	client := action.NewInstall(actionCfg)
 
-	client.DryRun = true
+	client.DryRunStrategy = action.DryRunClient
 	client.Replace = true // Skip the name check.
-	client.ClientOnly = true
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
 	client.InsecureSkipTLSverify = config.CommonOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
-		parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
+		parsedKubeVersion, err := common.ParseKubeVersion(kubeVersion)
 		if err != nil {
 			return "", fmt.Errorf("invalid kube version %s: %w", kubeVersion, err)
 		}
@@ -73,15 +73,24 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	}
 
 	// Perform the loadedChart installation.
-	templatedChart, err := client.RunWithContext(ctx, chart, values)
+	templatedReleaser, err := client.RunWithContext(ctx, chart, values)
 	if err != nil {
 		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest := templatedChart.Manifest
+	templatedRelease, err := release.NewAccessor(templatedReleaser)
+	if err != nil {
+		return "", err
+	}
 
-	for _, hook := range templatedChart.Hooks {
-		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
+	manifest := templatedRelease.Manifest()
+
+	for _, hook := range templatedRelease.Hooks() {
+		hook, err := release.NewHookAccessor(hook)
+		if err != nil {
+			return "", err
+		}
+		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest())
 	}
 
 	return manifest, nil
