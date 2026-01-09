@@ -78,7 +78,6 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	// Type assert to concrete Release type
 	templatedRelease, err := release.NewAccessor(templatedReleaser)
 	if err != nil {
 		return "", err
