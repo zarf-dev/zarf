@@ -1,0 +1,120 @@
+---
+title: "Migrate off of Data injections"
+---
+
+This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections are deprecated in the current Zarf schema version and will be fully removed in the next schema version. There are several reasons behind this:
+
+- **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
+- **Host dependency**: Data injections shells out to `tar`. This makes testing difficult and introduces differences across environments.
+- **Ephemeral Storage**: Because Data Injections only loads data during `zarf package deploy` the data must be saved to persistent storage. Otherwise, when a pod restarts any data injected will be lost.
+- **Better alternatives**: OCI images provide a Kubernetes native solution for data delivery, and neatly fit into the Zarf delivery paradigm.
+
+## Migration guide
+
+### Step 1: Package Your Data in an OCI Image
+
+First, create a container image containing your data:
+
+```dockerfile
+FROM alpine:3.18
+COPY your-data-file /your-data/your-data-file
+```
+
+Build and push this image:
+```bash
+docker build -t your-registry/your-data:tag .
+docker push your-registry/your-data:tag
+```
+
+:::tip
+
+Some registries will not accept images over a certain size or you may want to avoid pushing your data to a connected registry. To build the package with a local image use [Image Archives](/ref/components#container-image-archives). The [Kiwix example](/ref/examples/kiwix) utilizes this strategy
+
+:::
+
+### Step 2: Update zarf.yaml
+
+**Before (Data Injections):**
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: data-injections
+components:
+  - name: my-app
+    required: true
+    images:
+      - ghcr.io/my-app:1.0.0
+      - alpine:3.18
+    dataInjections:
+      - source: my-folder
+        target:
+          namespace: my-app
+          selector: app=my-app
+          container: data-loader
+          path: /data
+        compress: true
+```
+
+**After (Init Container Strategy):**
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: init-data-loading
+components:
+  - name: my-app
+    required: true
+    images:
+      - ghcr.io/my-app:1.0.0
+      - your-registry/your-data:tag  # Your container with your data file
+```
+
+**Key Changes:**
+- Remove `dataInjections` section entirely.
+- Replace the init container image, alpine:3.18, used during data injections with the data image.
+
+### Step 3: Update Deployment Manifest
+
+**Before (Data Injections):**
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: data-injector
+          image: alpine:3.18
+          command: ["sh", "-c"]
+          args:
+            - 'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"'
+          volumeMounts:
+            - mountPath: /data
+              name: data
+```
+
+**After (Init Container Strategy):**
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: data-loader
+          image: your-registry/your-data:tag
+          command: ["sh", "-c"]
+          args:
+            - |
+              cp /your-data/your-data-file /data/my-app-data-location
+          volumeMounts:
+            - mountPath: /data
+              name: data
+```
+
+With the image-based approach, data can use ephemeral storage, such as emptyDir, since the init container repopulates the data from the container image on each pod restart.
+
+**Key Changes:**
+- Replace data injection marker waiting logic with direct data copying.
+- Use your data container image.
+
+Your app should be ready to deploy. If there are any reasons that this method does not work for you, please comment in issue [#3926](https://github.com/zarf-dev/zarf/issues/3926)
+
+## Future Alternatives
+
+The Kubernetes feature [OCI volume sources](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source) is considered stable as of 1.35. Once this feature is supported by Zarf, [#3235](https://github.com/zarf-dev/zarf/pull/3235), this document will recommend that method. OCI volumes sources provide a simple way to mount data from an image into a pod.
