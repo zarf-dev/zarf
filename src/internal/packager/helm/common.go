@@ -9,6 +9,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -137,10 +138,14 @@ func createActionConfig(ctx context.Context, namespace string) (*action.Configur
 	// so this ensures the field is properly set prior to each operation.
 	kube.ManagedFieldsManager = cluster.FieldManagerName
 	l := logger.From(ctx)
-	actionConfig := action.NewConfiguration(action.ConfigurationSetLogger(l.Handler()))
+	actionConfig := action.NewConfiguration()
+	actionConfig.SetLogger(l.Handler())
 	// Set the settings for the helm SDK
 	settings := cli.New()
 	settings.SetNamespace(namespace)
+	if l.Enabled(ctx, slog.LevelDebug) {
+		settings.Debug = true
+	}
 	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "")
 	if err != nil {
 		return nil, fmt.Errorf("could not get Helm action configuration: %w", err)
