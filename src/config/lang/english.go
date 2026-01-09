@@ -275,7 +275,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
-	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl scale, HPAs, etc.) have modified resources."
+	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
@@ -667,7 +667,6 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 # NOTE: Not specifying a pull username/password will keep the previous pull username/password.
 `
 	CmdToolsUpdateCredsConfirmFlag          = "Confirm updating credentials without prompting"
-	CmdToolsUpdateCredsFlagForceConflicts   = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations"
 	CmdToolsUpdateCredsConfirmProvided      = "Confirm flag specified, continuing without prompting."
 	CmdToolsUpdateCredsConfirmContinue      = "Continue with these changes?"
 	CmdToolsUpdateCredsUnableUpdateRegistry = "Unable to update Zarf Registry values: %s"

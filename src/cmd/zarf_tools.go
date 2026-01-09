@@ -244,7 +244,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
-	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdToolsUpdateCredsFlagForceConflicts)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
