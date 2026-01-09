@@ -192,6 +192,7 @@ components:
         namespace: zarf
         files:
           - configmap.yaml
+        template: true
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry

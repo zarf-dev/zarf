@@ -6,5 +6,5 @@ metadata:
   namespace: kube-public
 data:
   localRegistryHosting.v1: |
-    host: "###ZARF_REGISTRY###"
+    host: {{ .Variables.ZARF_REGISTRY | quote }}
     help: "https://github.com/zarf-dev/zarf"
