@@ -277,10 +277,18 @@ When merging components together Zarf will adopt the following strategies depend
 
 | Kind                       | Key(s)                                 | Description |
 |----------------------------|----------------------------------------|-------------|
-| Component Behavior         | `name`, `group`, `default`, `required` | These keys control how Zarf interacts with a given component and will *always* take the value of the overriding component |
-| Component Description      | `description` | This key will only take the value of the overriding component if it is not empty |
-| Un'name'd Primitive Arrays | `actions`, `dataInjections`, `files`, `images`, `repos` | These keys will append the overriding component's version of the array to the end of the base component's array |
-| 'name'd Primitive Arrays   | `charts`, `manifests` | For any given element in the overriding component, if the element matches based on `name` then its values will be merged with the base element of the same `name`. If not then the element will be appended to the end of the array |
+| Component Behavior         | `name`, `group`, `default`, `required` | These keys control how Zarf interacts with a given component and will *always* take the value of the importing component |
+| Component Description      | `description` | This key will only take the value of the importing component if it is not empty, otherwise it will take the value of the imported component |
+| Un'name'd Primitive Arrays | `actions`, `dataInjections`, `files`, `images`, `repos` | These keys will append the importing component's array to the end of the imported component's array |
+| 'name'd Primitive Arrays   | `charts`, `manifests` | For any given element in the importing component, if the element matches based on `name` then its values will be merged with the imported element of the same `name`. If not, then the element will be appended to the end of the array |
+
+Some package level fields from imported components will also be merged with the importing package.  These fields will be processed from the first component to the last component in a Zarf package definition.
+
+| Kind                       | Field(s)                 | Description |
+|----------------------------|--------------------------|-------------|
+| 'name'd Globals            | `constants`, `variables` | These fields will match on `name` building up a map as components are processed (starting with the importing package definition).  Any names that already exist will be skipped so the parent or an earlier component import will take precedence. |
+| Un'name'd Primitive Arrays | `values.files`           | The importing package definition's array will be appended to the end of the array from the imported component's package definition.  Elements will be reappended regardless of whether they already exist in the array (since merge order impacts the final values). |
+| Global Behavior            | `values.schema`           | This field will always keep the value of the importing component's package definition (even if it is empty) |
 
 ### Health Checks
 
