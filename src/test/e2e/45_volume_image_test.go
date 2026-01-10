@@ -47,7 +47,7 @@ func TestVolumeImageMount(t *testing.T) {
 
 		stdOut, _, err := e2e.Kubectl(t, "get", "pod", "-l", "app=agent", "-n", "pod-volume-image", "-o", "jsonpath={.items[].spec.volumes[].image.reference}")
 		require.NoError(t, err)
-		require.Equal(t, "127.0.0.1:31999/zarf-dev/zarf/agent:v0.68.1-zarf-2203613481", stdOut)
+		require.Equal(t, "127.0.0.1:31337/zarf-dev/zarf/agent:v0.68.1-zarf-2203613481", stdOut)
 
 		_, _, err = e2e.Zarf(t, "package", "remove", "pod-volume-image", "--confirm")
 		require.NoError(t, err)
