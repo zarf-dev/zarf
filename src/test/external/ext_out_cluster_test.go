@@ -45,7 +45,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000/test"}
+	"--registry-url=k3d-" + registryHost + ":5001/test"}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -68,12 +68,12 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
+	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5001")
 	suite.NoError(err, "unable to create the k3d registry")
 
 	// Create a k3d cluster with the proper networking and aliases
 	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use",
-		"k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+		"k3d-"+registryHost+":5001", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -117,7 +117,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s:5000/v2/_catalog", registryUser, commonPassword, registryHost)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s:5001/v2/_catalog", registryUser, commonPassword, registryHost)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
