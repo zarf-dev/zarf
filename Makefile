@@ -1,8 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-# Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
-ARCH ?= amd64
+# Detect the system architecture, but allow override via make argument, e.g. "make test-e2e ARCH=arm64"
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+	ARCH ?= amd64
+else ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+	ARCH ?= arm64
+else
+	ARCH ?= amd64
+endif
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -14,7 +21,6 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
-	UNAME_M := $(shell uname -m)
 	ifeq ($(UNAME_S),Linux)
 		ifneq ($(filter $(UNAME_M),aarch64 arm64),)
 			ZARF_BIN := $(addsuffix -arm,$(ZARF_BIN))
@@ -199,12 +205,6 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/external && go test -failfast -v -timeout 30m
-
-.PHONY: test-proxy
-test-proxy:
-	@test -s $(ZARF_BIN) || $(MAKE)
-	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
-	cd src/test/proxy && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade
