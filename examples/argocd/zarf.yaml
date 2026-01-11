@@ -56,7 +56,7 @@ components:
         valuesFiles:
           - applicationset/values.yaml
     repos:
-      - https://github.com/argoproj/argo-cd.git
+      - https://github.com/argoproj/argo-cd.git@v3.2.2
     images:
       - quay.io/argoproj/argocli:v3.4.0
       - quay.io/argoproj/workflow-controller:v3.4.0
