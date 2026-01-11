@@ -63,13 +63,13 @@ components:
     actions:
       onDeploy:
         after:
-          - description: Wait for Argo CD Application argo-workflows to be spawned
+          - description: Workflow controller pod to be ready via wait action
             wait:
               cluster:
-                kind: Application
-                name: argo-workflows
-                namespace: argocd
-                condition: exists
+                kind: pod
+                name: app=workflow-controller
+                namespace: argo-workflows
+                condition: ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
