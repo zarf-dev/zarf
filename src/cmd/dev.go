@@ -377,7 +377,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	v := getViper()
 	o.createSetVariables = helpers.TransformAndMergeMap(
@@ -395,7 +395,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("error parsing registry override: %w", err)
 	}
 
-	err = packager.DevDeploy(ctx, baseDir, packager.DevDeployOptions{
+	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
 		AirgapMode:         o.noYOLO,
 		Flavor:             o.flavor,
 		RegistryURL:        o.registryURL,
@@ -715,7 +715,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	v := getViper()
 
@@ -741,7 +741,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		CachePath:           cachePath,
 		IsInteractive:       true,
 	}
-	imagesScans, err := packager.FindImages(ctx, baseDir, findImagesOptions)
+	imagesScans, err := packager.FindImages(ctx, basePath, findImagesOptions)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -791,7 +791,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	fmt.Println(componentDefinition)
 
 	if o.update {
-		if err := packager.UpdateImages(ctx, baseDir, imagesScans); err != nil {
+		if err := packager.UpdateImages(ctx, basePath, imagesScans); err != nil {
 			return fmt.Errorf("unable to create update: %w", err)
 		}
 	}
@@ -857,7 +857,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 	v := getViper()
 	o.setVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
@@ -865,7 +865,7 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	err = packager.Lint(ctx, baseDir, packager.LintOptions{
+	err = packager.Lint(ctx, basePath, packager.LintOptions{
 		Flavor:       o.flavor,
 		SetVariables: o.setVariables,
 		CachePath:    cachePath,

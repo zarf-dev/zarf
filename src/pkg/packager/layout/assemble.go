@@ -211,7 +211,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{SkipSignatureValidation: true})
+	// skip verification on package creation
+	pkgLayout, err := LoadFromDir(ctx, buildPath, PackageLayoutOptions{VerificationStrategy: VerifyNever})
 	if err != nil {
 		return nil, err
 	}
@@ -285,8 +286,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	layoutOpts := PackageLayoutOptions{
-		SkipSignatureValidation: true,
-		IsPartial:               false,
+		VerificationStrategy: VerifyNever,
+		IsPartial:            false,
 	}
 	pkgLayout, err := LoadFromDir(ctx, buildPath, layoutOpts)
 	if err != nil {
@@ -445,7 +446,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 
@@ -678,7 +679,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 		// Abort packaging on invalid shasum (if one is specified).
 		if file.Shasum != "" {
 			if err := helpers.SHAsMatch(dst, file.Shasum); err != nil {
-				return err
+				return fmt.Errorf("sha mismatch for %s: %w", file.Source, err)
 			}
 		}
 

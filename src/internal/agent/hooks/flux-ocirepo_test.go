@@ -77,7 +77,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				),
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "should be mutated",
@@ -112,7 +113,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				),
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "bad oci url",
@@ -124,8 +126,9 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					URL: "bad://ghcr.io/$",
 				},
 			}),
-			errContains: "unable to transform the OCIRepo URL",
-			code:        http.StatusInternalServerError,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			errContains:  "unable to transform the OCIRepo URL",
+			code:         http.StatusInternalServerError,
 		},
 		{
 			name: "should be mutated with no internal service registry",
@@ -160,7 +163,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				),
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "test semver tag",
@@ -191,7 +195,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				),
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "should be mutated with internal service registry",
@@ -242,7 +247,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					ClusterIP: "10.11.12.13",
 				},
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "should not mutate URL if it has the same hostname as Zarf s",
@@ -277,7 +283,8 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					},
 				),
 			},
-			code: http.StatusOK,
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 		{
 			name: "should not mutate URL if it has the same hostname as Zarfs internal repo",
@@ -328,6 +335,131 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 					ClusterIP: "10.11.12.13",
 				},
 			},
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
+		},
+		{
+			name: "should be mutated with registry proxy mode",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this-proxy",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://10.20.30.40:5000/stefanprodan/charts/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/insecure",
+					true,
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-1339621772",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Port: 5000,
+						},
+					},
+					ClusterIP: "10.20.30.40",
+				},
+			},
+			registryInfo: state.RegistryInfo{
+				Address:      fmt.Sprintf("127.0.0.1:%d", port),
+				RegistryMode: state.RegistryModeProxy,
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated with registry proxy mode and ipv6",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Create, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this-proxy-ipv6",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://ghcr.io/stefanprodan/charts/podinfo",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://[fd00:10:96::68a3]:5000/stefanprodan/charts/podinfo",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/insecure",
+					true,
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-1339621772",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Port: 5000,
+						},
+					},
+					ClusterIP: "fd00:10:96::68a3",
+				},
+			},
+			registryInfo: state.RegistryInfo{
+				Address:      fmt.Sprintf("127.0.0.1:%d", port),
+				RegistryMode: state.RegistryModeProxy,
+			},
 			code: http.StatusOK,
 		},
 	}
@@ -349,12 +481,10 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 	_, err = setupRegistry(ctx, t, port, artifacts, oras.DefaultCopyOptions)
 	require.NoError(t, err)
 
-	s := &state.State{RegistryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)}}
-
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			// t.Parallel()
+			s := &state.State{RegistryInfo: tt.registryInfo}
 			c := createTestClientWithZarfState(ctx, t, s)
 			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {

@@ -35,11 +35,27 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	IsPartial               bool
-	Filter                  filters.ComponentFilterStrategy
+	PublicKeyPath string
+	// VerificationStrategy specifies whether verification is enforced
+	VerificationStrategy VerificationStrategy
+	IsPartial            bool
+	Filter               filters.ComponentFilterStrategy
+	VerifyBlobOptions    utils.VerifyBlobOptions
 }
+
+// VerificationStrategy describes a strategy for determining whether to verify a package.
+type VerificationStrategy int
+
+const (
+	// VerifyIfPossible will attempt a verification, it will not error if verification
+	// data is missing. But it will not stop processing if verification fails.
+	VerifyIfPossible VerificationStrategy = iota
+	// VerifyAlways will always attempt a verification, and will fail if the
+	// verification fails.
+	VerifyAlways
+	// VerifyNever will skip all verification of a package.
+	VerifyNever
+)
 
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
@@ -67,6 +83,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions)
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -91,13 +108,18 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	// Note: VerifyBlobOptions should replace PublicKeyPath in the future
+	verifyOptions := utils.DefaultVerifyBlobOptions()
+	verifyOptions.KeyRef = opts.PublicKeyPath
 
+	if opts.VerificationStrategy < VerifyNever {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
-			return nil, err
+			if opts.VerificationStrategy == VerifyIfPossible {
+				l.Warn("package signature could not be verified:", "error", err.Error())
+				return pkgLayout, nil
+			}
+			return nil, fmt.Errorf("signature verification failed: %w", err)
 		}
 	}
 
@@ -263,10 +285,20 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
-	// Validate that we have a public key
+	// Handle the case where the package is not signed
+	if !p.IsSigned() {
+		// Note: add future logic for verification material here
+		if opts.KeyRef != "" {
+			return errors.New("a key was provided but the package is not signed")
+		}
+
+		return errors.New("package is not signed - verification cannot be performed")
+	}
+
+	// Validate that we have required verification material
 	// Note: this will later be replaced when verification enhancements are made
 	if opts.KeyRef == "" {
-		return errors.New("package is signed but no key was provided")
+		return errors.New("package is signed but no verification material was provided (Public Key, etc.)")
 	}
 
 	// Validate that the signature exists
