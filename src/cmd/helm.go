@@ -26,7 +26,6 @@ func newHelmCommand() *cobra.Command {
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
 		logger.Default().Error("Helm command initialization", slog.Any("error", err))
-		os.Exit(1)
 	}
 
 	return cmd
