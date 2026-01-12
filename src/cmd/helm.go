@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	helmcmd "helm.sh/helm/v4/pkg/cmd"
 	"helm.sh/helm/v4/pkg/kube"
 )
@@ -24,7 +25,7 @@ func newHelmCommand() *cobra.Command {
 
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
-		slog.Warn("command failed", slog.Any("error", err))
+		logger.Default().Warn("command failed", slog.Any("error", err))
 		os.Exit(1)
 	}
 
