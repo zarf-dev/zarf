@@ -37,6 +37,7 @@ const (
 	giteaUser      = "git-user"
 	registryUser   = "push-user"
 	commonPassword = "superSecurePassword"
+	registryPort   = "5001" // Port 5001 to avoid macOS port 5000 conflict
 )
 
 var outClusterCredentialArgs = []string{
@@ -45,7 +46,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000/test"}
+	fmt.Sprintf("--registry-url=%s:%s/test", registryHost, registryPort)}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -58,22 +59,49 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	// Teardown any leftovers from previous tests
 	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
 	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
-	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost) //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName) //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "rm", "-f", registryHost)      //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "compose", "down")             //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)  //nolint:errcheck
 
 	// Setup a network for everything to live inside
 	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
 	suite.NoError(err, "unable to create the k3d registry")
 
-	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
-	suite.NoError(err, "unable to create the k3d registry")
+	// Install a registry:3 server configured to listen on port 5001 (avoids macOS port 5000 conflict)
+	// Using registry:3 directly allows us to configure the listen port, ensuring consistent
+	// port usage for both external push operations and internal cluster pull operations
+	err = exec.CmdWithPrint("docker", "run", "-d",
+		"--name", registryHost,
+		"--network", network,
+		"-p", registryPort+":"+registryPort,
+		"-e", "REGISTRY_HTTP_ADDR=0.0.0.0:"+registryPort,
+		"-e", "REGISTRY_HTTP_DEBUG_ADDR=", // Disable debug server to avoid port conflict
+		"-e", "REGISTRY_STORAGE_DELETE_ENABLED=true",
+		"-e", "REGISTRY_HTTP_SECRET="+commonPassword, // Consistent secret
+		"registry:3")
+	suite.NoError(err, "unable to create the registry")
+
+	// Wait for registry to be ready
+	registryArgs := []string{"exec", registryHost, "wget", "-q", "-O-", "http://localhost:" + registryPort + "/v2/_catalog"}
+	err = waitForCondition(suite.T(), 1, "docker", registryArgs, `{"repositories"`)
+	suite.NoError(err, "registry failed to start")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use",
-		"k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
+	// Configure containerd to use our registry:3 instance on port 5001
+	registryConfigPath := filepath.Join(suite.T().TempDir(), "registries.yaml")
+	registryConfig := fmt.Sprintf(`mirrors:
+  "%s:%s":
+    endpoint:
+      - http://%s:%s
+`, registryHost, registryPort, registryHost, registryPort)
+	err = os.WriteFile(registryConfigPath, []byte(registryConfig), 0600)
+	suite.NoError(err, "unable to write registry config")
+
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName,
+		"--network", network,
+		"--host-alias", giteaIP+":"+giteaHost,
+		"--registry-config", registryConfigPath)
 	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Install a gitea server via docker compose to act as the 'remote' git server
@@ -98,8 +126,8 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	err = exec.CmdWithPrint("docker", "compose", "down")
 	suite.NoError(err, "unable to teardown the gitea-server")
 
-	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
-	suite.NoError(err, "unable to teardown the k3d registry")
+	err = exec.CmdWithPrint("docker", "rm", "-f", registryHost)
+	suite.NoError(err, "unable to teardown the registry")
 
 	err = exec.CmdWithPrint("docker", "network", "remove", network)
 	suite.NoError(err, "unable to teardown the docker test network")
@@ -117,7 +145,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s:5000/v2/_catalog", registryUser, commonPassword, registryHost)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@%s:%s/v2/_catalog", registryUser, commonPassword, registryHost, registryPort)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
