@@ -1,8 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-# Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
-ARCH ?= amd64
+# Detect the system architecture, but allow override via make argument, e.g. "make test-e2e ARCH=arm64"
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+	ARCH ?= amd64
+else ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+	ARCH ?= arm64
+else
+	ARCH ?= amd64
+endif
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -14,10 +21,13 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
-	ifneq ($(UNAME_S),Linux)
-		ifeq ($(UNAME_S),Darwin)
-			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+	ifeq ($(UNAME_S),Linux)
+		ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+			ZARF_BIN := $(addsuffix -arm,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-linux-arm
 		endif
+	else ifeq ($(UNAME_S),Darwin)
+		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
 			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
@@ -102,8 +112,9 @@ build-cli-linux: build-cli-linux-amd build-cli-linux-arm ## Build the Zarf CLI f
 build-cli: build-cli-linux-amd build-cli-linux-arm build-cli-mac-intel build-cli-mac-apple build-cli-windows-amd build-cli-windows-arm ## Build the CLI
 
 docs-and-schema: ## Generate the Zarf Documentation and Schema
+	go generate ./src/pkg/schema
 	ZARF_CONFIG=hack/empty-config.toml go run main.go internal gen-cli-docs
-	hack/schema/create-zarf-schema.sh
+	cp src/pkg/schema/zarf-v1alpha1-schema.json zarf.schema.json
 	hack/cots/update-gitea.sh
 
 init-package-with-agent: build build-local-agent-image init-package
@@ -194,6 +205,18 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s $(ZARF_BIN) || $(MAKE)
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/external && go test -failfast -v -timeout 30m
+
+.PHONY: test-external-out-cluster
+test-external-out-cluster: ## Run only the external out-of-cluster registry tests (registry:3 on port 5001)
+	@test -s $(ZARF_BIN) || $(MAKE)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOurClusterTestSuite
+
+.PHONY: test-proxy
+test-proxy:
+	@test -s $(ZARF_BIN) || $(MAKE)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/proxy && go test -failfast -v -timeout 30m
 
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade

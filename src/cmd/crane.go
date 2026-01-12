@@ -18,8 +18,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -362,7 +362,7 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 		for _, component := range pkg.Data.Components {
 			if _, ok := deployedComponents[component.Name]; ok {
-				for _, image := range component.Images {
+				for _, image := range component.GetImages() {
 					// We use the no checksum image since it will always exist and will share the same digest with other tags
 					transformedImageNoCheck, err := transform.ImageTransformHostWithoutChecksum(registryEndpoint, image)
 					if err != nil {

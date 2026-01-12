@@ -17,7 +17,7 @@ zarf dev generate NAME [flags]
 ### Examples
 
 ```
-zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo
+zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo --output-directory ./podinfo
 ```
 
 ### Options

@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	// Kubernetes’ compiled-in default if the apiserver flag
+	// Kubernetes' compiled-in default if the apiserver flag
 	// --service-node-port-range is not overridden.
 	defaultNodePortMin = 30000
 	defaultNodePortMax = 32767
@@ -135,7 +135,6 @@ func TestConfigMediaTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
@@ -167,7 +166,7 @@ func GetAvailableNodePort() (int, error) {
 		return 0, err
 	}
 
-	// Seed a *local* rand.Rand so concurrent callers don’t step on each other.
+	// Seed a *local* rand.Rand so concurrent callers don't step on each other.
 	seed := int64(binary.LittleEndian.Uint64(random64()))
 	r := rand.New(rand.NewSource(seed))
 

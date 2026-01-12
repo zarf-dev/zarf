@@ -66,6 +66,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
+      --injector-port int               the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
   -k, --key string                      Path to public key file for validating signed packages
       --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
       --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
@@ -77,9 +78,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set stringToString              Specify deployment variables to set on the command line (KEY=value) (default [])
-      --skip-signature-validation       Skip validating the signature of the Zarf package
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --verify                          Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

@@ -9,8 +9,9 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/images"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -84,6 +85,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if !opts.AirgapMode {
 		for idx := range pkg.Components {
 			pkg.Components[idx].Images = []string{}
+			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
 			pkg.Components[idx].Repos = []string{}
 		}
 	}

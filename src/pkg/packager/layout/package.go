@@ -35,11 +35,27 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	IsPartial               bool
-	Filter                  filters.ComponentFilterStrategy
+	PublicKeyPath string
+	// VerificationStrategy specifies whether verification is enforced
+	VerificationStrategy VerificationStrategy
+	IsPartial            bool
+	Filter               filters.ComponentFilterStrategy
+	VerifyBlobOptions    utils.VerifyBlobOptions
 }
+
+// VerificationStrategy describes a strategy for determining whether to verify a package.
+type VerificationStrategy int
+
+const (
+	// VerifyIfPossible will attempt a verification, it will not error if verification
+	// data is missing. But it will not stop processing if verification fails.
+	VerifyIfPossible VerificationStrategy = iota
+	// VerifyAlways will always attempt a verification, and will fail if the
+	// verification fails.
+	VerifyAlways
+	// VerifyNever will skip all verification of a package.
+	VerifyNever
+)
 
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
@@ -67,6 +83,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions)
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -91,13 +108,18 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	// Note: VerifyBlobOptions should replace PublicKeyPath in the future
+	verifyOptions := utils.DefaultVerifyBlobOptions()
+	verifyOptions.KeyRef = opts.PublicKeyPath
 
+	if opts.VerificationStrategy < VerifyNever {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
-			return nil, err
+			if opts.VerificationStrategy == VerifyIfPossible {
+				l.Warn("package signature could not be verified:", "error", err.Error())
+				return pkgLayout, nil
+			}
+			return nil, fmt.Errorf("signature verification failed: %w", err)
 		}
 	}
 
@@ -277,10 +299,20 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
-	// Validate that we have a public key
+	// Handle the case where the package is not signed
+	if !p.IsSigned() {
+		// Note: add future logic for verification material here
+		if opts.KeyRef != "" {
+			return errors.New("a key was provided but the package is not signed")
+		}
+
+		return errors.New("package is not signed - verification cannot be performed")
+	}
+
+	// Validate that we have required verification material
 	// Note: this will later be replaced when verification enhancements are made
 	if opts.KeyRef == "" {
-		return errors.New("package is signed but no key was provided")
+		return errors.New("package is signed but no verification material was provided (Public Key, etc.)")
 	}
 
 	// Check for bundle format signature (preferred)
@@ -347,6 +379,93 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 		return err
 	}
 	return nil
+}
+
+// GetDocumentation extracts documentation files from the package to the given destination path.
+// If keys is empty, all documentation files are extracted.
+// If keys are provided, only those specific documentation files are extracted.
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
+	l := logger.From(ctx)
+
+	if len(p.Pkg.Documentation) == 0 {
+		return fmt.Errorf("no documentation files found in package")
+	}
+
+	tarPath := filepath.Join(p.dirPath, DocumentationTar)
+	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
+		return fmt.Errorf("documentation.tar not found in package")
+	}
+
+	keysToExtract := maps.Clone(p.Pkg.Documentation)
+	if len(keys) > 0 {
+		keysToExtract = make(map[string]string)
+		for _, key := range keys {
+			if filePath, ok := p.Pkg.Documentation[key]; ok {
+				keysToExtract[key] = filePath
+			} else {
+				return fmt.Errorf("key %s not found in package documentation", key)
+			}
+		}
+	}
+
+	// Extract tar to temp directory
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
+	if err != nil {
+		return fmt.Errorf("failed to extract documentation.tar: %w", err)
+	}
+
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
+	}
+
+	fileNames := GetDocumentationFileNames(p.Pkg.Documentation)
+
+	for key, file := range keysToExtract {
+		docFileName := fileNames[key]
+
+		srcPath := filepath.Join(tmpDir, docFileName)
+		dstPath := filepath.Join(destPath, docFileName)
+		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
+		}
+	}
+
+	l.Info("documentation successfully extracted", "path", destPath)
+	return nil
+}
+
+// FormatDocumentFileName for storing the document in the package or presenting it to the user
+func FormatDocumentFileName(key, file string) string {
+	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
+}
+
+// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
+// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) map[string]string {
+	basenameCounts := make(map[string]int)
+	for _, file := range documentation {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
+	result := make(map[string]string)
+	for key, file := range documentation {
+		basename := filepath.Base(file)
+		if basenameCounts[basename] == 1 {
+			result[key] = basename
+		} else {
+			result[key] = FormatDocumentFileName(key, file)
+		}
+	}
+	return result
 }
 
 // GetComponentDir returns a path to the directory in the given component.

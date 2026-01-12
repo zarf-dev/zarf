@@ -28,6 +28,7 @@ type admissionTest struct {
 	code         int
 	errContains  string
 	svc          *corev1.Service
+	registryInfo state.RegistryInfo
 }
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.State) *cluster.Cluster {

@@ -88,7 +88,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	groupedComponents := make(map[string][]string)
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
-			if len(component.Images) > 0 {
+			if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 				err = errors.Join(err, errors.New(PkgValidateErrYOLONoOCI))
 			}
 			if len(component.Repos) > 0 {
@@ -157,6 +157,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrGroupOneComponent, groupKey, componentNames[0]))
 		}
 	}
+
 	return err
 }
 

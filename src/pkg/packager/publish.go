@@ -202,12 +202,18 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
 	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
-		CachePath:        opts.CachePath,
-		Flavor:           opts.Flavor,
-		SkipVersionCheck: opts.SkipVersionCheck,
+		CachePath:          opts.CachePath,
+		Flavor:             opts.Flavor,
+		SkipVersionCheck:   opts.SkipVersionCheck,
+		SkipRequiredValues: true,
 	})
 	if err != nil {
 		return registry.Reference{}, err
+	}
+	for _, comp := range pkg.Components {
+		if comp.ImageArchives != nil {
+			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
+		}
 	}
 	// Create skeleton buildpath
 	createOpts := layout.AssembleSkeletonOptions{
