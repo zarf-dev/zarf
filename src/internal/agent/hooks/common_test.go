@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -142,7 +143,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			require.NoError(t, err)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-			mediaType, err := getManifestConfigMediaType(ctx, s, tt.image)
+			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, tt.image)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, mediaType)
 		})

@@ -191,7 +191,9 @@ func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registr
 		if len(svc.Spec.Ports) == 0 {
 			return "", fmt.Errorf("registry service has no ports")
 		}
-		return net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", svc.Spec.Ports[0].Port)), nil
+		// Return DNS name instead of ClusterIP so the certificate (which has the DNS name in SANs) is valid
+		serviceDNS := fmt.Sprintf("%s.%s.svc.cluster.local", ZarfRegistryName, state.ZarfNamespaceName)
+		return net.JoinHostPort(serviceDNS, fmt.Sprintf("%d", svc.Spec.Ports[0].Port)), nil
 	}
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})

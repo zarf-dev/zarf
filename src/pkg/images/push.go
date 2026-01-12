@@ -126,7 +126,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil && !kerrors.IsNotFound(err) {
 				return err
 			}
-			useMTLS = !kerrors.IsNotFound(err)
+			// FIXME: I should make a test for this
+			useMTLS = !kerrors.IsNotFound(err) && registryInfo.IsInternal()
 		}
 
 		if useMTLS {

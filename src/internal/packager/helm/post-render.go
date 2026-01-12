@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 )
 
 type renderer struct {
@@ -160,6 +161,24 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
 		if err != nil {
 			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
+		}
+
+		// Copy mTLS client secret if it exists in the Zarf namespace
+		mtlsSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
+		if err != nil {
+			if !kerrors.IsNotFound(err) {
+				return fmt.Errorf("failed to get mTLS client secret: %w", err)
+			}
+		} else {
+			mtlsSecretApply := v1ac.Secret(mtlsSecret.Name, name).
+				WithData(mtlsSecret.Data).
+				WithType(mtlsSecret.Type).
+				WithLabels(mtlsSecret.Labels)
+
+			_, err = c.Clientset.CoreV1().Secrets(name).Apply(ctx, mtlsSecretApply, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+			if err != nil {
+				return fmt.Errorf("problem applying mTLS client secret for the %s namespace: %w", name, err)
+			}
 		}
 	}
 	return nil

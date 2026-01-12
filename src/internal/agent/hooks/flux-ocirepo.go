@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -18,8 +19,10 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
@@ -83,6 +86,8 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	patchedURL := src.Spec.URL
 	patchedRef := src.Spec.Reference
+	var certs pki.GeneratedPKI
+	useMTLS := false
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
 	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
@@ -96,6 +101,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	// Mutate the oci repo URL if necessary
+	// FIXME: I need to also test the case of an existing service using a clusterIP
 	if isCreate || (isUpdate && !isPatched) {
 		if src.Spec.Reference.Digest != "" {
 			patchedURL = fmt.Sprintf("%s@%s", patchedURL, src.Spec.Reference.Digest)
@@ -109,11 +115,28 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 		}
 
+		certs, useMTLS, err = getRegistryClientMTLS(ctx, cluster)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
+		}
+
 		timeoutCtx, cancel := context.WithTimeout(ctx, registryFetchTimeout)
 		defer cancel()
 
+		// Set up transport based on mTLS availability
+		var transport http.RoundTripper
+		if useMTLS {
+			transport, err = transportFromClientCert(certs)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create transport from client cert: %w", err)
+			}
+		} else {
+			// Use default retry transport when mTLS is not available
+			transport = orasRetry.DefaultClient.Transport
+		}
+
 		// Get the media type of the oci image
-		mediaType, err := getManifestConfigMediaType(timeoutCtx, zarfState, patchedSrc)
+		mediaType, err := getManifestConfigMediaType(timeoutCtx, zarfState, transport, patchedSrc)
 
 		// If we get an error, we fall back to existing mutation logic
 		if err != nil {
@@ -146,7 +169,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	l.Debug("mutating the Flux OCIRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
-	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), patchedRef)
+	patches = populateOCIRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), useMTLS, patchedRef)
 	patches = append(patches, getLabelPatch(src.Labels))
 
 	return &operations.Result{
@@ -155,14 +178,18 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}, nil
 }
 
-func populateOCIRepoPatchOperations(repoURL string, isInternal bool, ref *flux.OCIRepositoryRef) []operations.PatchOperation {
+func populateOCIRepoPatchOperations(repoURL string, isInternal bool, useMTLS bool, ref *flux.OCIRepositoryRef) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
 
-	if isInternal {
+	if isInternal && !useMTLS {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	}
+
+	if useMTLS && isInternal {
+		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
 	}
 
 	// If semver is used we don't want to add the ":latest" tag + crc to the spec

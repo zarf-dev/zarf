@@ -102,7 +102,12 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	var patches []operations.PatchOperation
 
-	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal())
+	_, useMTLS, err := getRegistryClientMTLS(ctx, cluster)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check cluster for mTLS certs: %w", err)
+	}
+
+	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), useMTLS)
 	patches = append(patches, getLabelPatch(src.Labels))
 
 	return &operations.Result{
@@ -111,12 +116,17 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	}, nil
 }
 
-func populateHelmRepoPatchOperations(repoURL string, isInternal bool) []operations.PatchOperation {
+func populateHelmRepoPatchOperations(repoURL string, isInternal bool, useMTLS bool) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	patches = append(patches, operations.ReplacePatchOperation("/spec/url", repoURL))
 
-	if isInternal {
+	if isInternal && !useMTLS {
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
+	}
+
+	// FIXME: need a test for this and the oci repo
+	if useMTLS && isInternal {
+		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
 	}
 
 	patches = append(patches, operations.AddPatchOperation("/spec/secretRef", meta.LocalObjectReference{Name: config.ZarfImagePullSecretName}))
