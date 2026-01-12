@@ -25,6 +25,8 @@ builds:
       - -X helm.sh/helm/v4/pkg/chart/v2/lint/rules.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
       - -X helm.sh/helm/v4/pkg/chart/common.k8sVersionMajor={{.Env.K8S_MODULES_MAJOR_VER}}
       - -X helm.sh/helm/v4/pkg/chart/common.k8sVersionMinor={{.Env.K8S_MODULES_MINOR_VER}}
+      - -X helm.sh/helm/v4/internal/version.kubeClientVersionMajor=$(K8S_MODULES_MAJOR_VER)
+      - -X helm.sh/helm/v4/internal/version.kubeClientVersionMinor=$(K8S_MODULES_MINOR_VER)
       - -X github.com/derailed/k9s/cmd.version={{.Env.K9S_VERSION}}
       - -X github.com/google/go-containerregistry/cmd/crane/cmd.Version={{.Env.CRANE_VERSION}}
       - -X github.com/zarf-dev/zarf/src/cmd.syftVersion={{.Env.SYFT_VERSION}}

@@ -49,6 +49,8 @@ BUILD_ARGS += -X helm.sh/helm/v4/pkg/chart/v2/lint/rules.k8sVersionMajor=$(K8S_M
 BUILD_ARGS += -X helm.sh/helm/v4/pkg/chart/v2/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v4/pkg/chart/common.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
 BUILD_ARGS += -X helm.sh/helm/v4/pkg/chart/common.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
+BUILD_ARGS += -X helm.sh/helm/v4/internal/version.kubeClientVersionMajor=$(K8S_MODULES_MAJOR_VER)
+BUILD_ARGS += -X helm.sh/helm/v4/internal/version.kubeClientVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
