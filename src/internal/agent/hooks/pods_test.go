@@ -215,6 +215,28 @@ func TestPodMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "empty image ref",
+			admissionReq: createPodAdmissionRequest(t, v1.Create, &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: nil,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "nginx", Image: "nginx"}},
+					Volumes: []corev1.Volume{
+						{Name: "image",
+							VolumeSource: corev1.VolumeSource{
+								Image: &corev1.ImageVolumeSource{
+									Reference: "",
+								},
+							},
+						},
+					},
+				},
+			}, ""),
+			errContains: "has an ImageVolumeSource with empty reference - this is invalid and must be specified",
+			code:        http.StatusInternalServerError,
+		},
 	}
 
 	for _, tt := range tests {
