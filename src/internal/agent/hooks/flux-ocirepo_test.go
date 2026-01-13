@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
@@ -611,23 +610,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if tt.useMTLS {
-				// Generate proper mTLS certificates for testing
-				certs, err := pki.GeneratePKI("zarf-docker-registry.zarf.svc.cluster.local")
-				require.NoError(t, err)
-
-				// Create mTLS secret with generated cert data
-				mtlsSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      cluster.RegistryClientTLSSecret,
-						Namespace: state.ZarfNamespaceName,
-					},
-					Data: map[string][]byte{
-						"ca.crt":  certs.CA,
-						"tls.crt": certs.Cert,
-						"tls.key": certs.Key,
-					},
-				}
-				_, err = c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, mtlsSecret, metav1.CreateOptions{})
+				err := c.GenerateOrRenewRegistryCerts(ctx)
 				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
