@@ -75,10 +75,18 @@ func sendAdmissionRequest(t *testing.T, admissionReq *v1.AdmissionRequest, handl
 func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admissionTest) {
 	t.Helper()
 
-	require.Equal(t, expected.code, rr.Code)
-
 	var admissionReview v1.AdmissionReview
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
+	require.NoError(t, err)
+
+	// Print error message if test failed with 500
+	if rr.Code == 500 && expected.code != 500 {
+		if admissionReview.Response != nil && admissionReview.Response.Result != nil {
+			t.Logf("Error message: %s", admissionReview.Response.Result.Message)
+		}
+	}
+
+	require.Equal(t, expected.code, rr.Code)
 
 	if expected.errContains != "" {
 		require.Contains(t, admissionReview.Response.Result.Message, expected.errContains)
@@ -86,7 +94,6 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admis
 	}
 
 	resp := admissionReview.Response
-	require.NoError(t, err)
 	if expected.patch == nil {
 		require.Empty(t, string(resp.Patch))
 	} else {

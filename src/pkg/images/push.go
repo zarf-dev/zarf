@@ -31,7 +31,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const defaultRetries = 3
@@ -122,12 +121,12 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		useMTLS := false
 		var certs pki.GeneratedPKI
 		if cfg.Cluster != nil {
-			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
-			if err != nil && !kerrors.IsNotFound(err) {
+			var certsFound bool
+			certs, certsFound, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if err != nil {
 				return err
 			}
-			// FIXME: I should make a test for this
-			useMTLS = !kerrors.IsNotFound(err) && registryInfo.IsInternal()
+			useMTLS = registryInfo.IsInternal() && certsFound
 		}
 
 		if useMTLS {

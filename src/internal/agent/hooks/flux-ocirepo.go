@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
@@ -87,7 +86,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	patchedURL := src.Spec.URL
 	patchedRef := src.Spec.Reference
-	var certs pki.GeneratedPKI
 	useMTLS := false
 
 	// Check if this is an update operation and the hostname is different from what we have in the zarfState
@@ -130,10 +128,11 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			}
 		}
 
-		certs, useMTLS, err = getRegistryClientMTLS(ctx, cluster)
+		certs, certsFound, err := cluster.GetRegistryClientMTLSCert(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
 		}
+		useMTLS = zarfState.RegistryInfo.IsInternal() && certsFound
 
 		timeoutCtx, cancel := context.WithTimeout(ctx, registryFetchTimeout)
 		defer cancel()
@@ -203,7 +202,7 @@ func populateOCIRepoPatchOperations(repoURL string, isInternal bool, useMTLS boo
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	if useMTLS && isInternal {
+	if useMTLS {
 		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
 	}
 

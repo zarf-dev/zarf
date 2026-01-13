@@ -118,10 +118,11 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	var patches []operations.PatchOperation
 
-	_, useMTLS, err := getRegistryClientMTLS(ctx, cluster)
+	_, certsFound, err := cluster.GetRegistryClientMTLSCert(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check cluster for mTLS certs: %w", err)
+		return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
 	}
+	useMTLS := zarfState.RegistryInfo.IsInternal() && certsFound
 
 	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), useMTLS)
 	patches = append(patches, getLabelPatch(src.Labels))
@@ -140,7 +141,7 @@ func populateHelmRepoPatchOperations(repoURL string, isInternal bool, useMTLS bo
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	if useMTLS && isInternal {
+	if useMTLS {
 		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
 	}
 

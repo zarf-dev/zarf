@@ -15,11 +15,9 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -32,25 +30,6 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	}
 	currLabels["zarf-agent"] = "patched"
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
-}
-
-// getRegistryClientMTLS retrieves the mTLS cert for the registry client if available.
-// Returns the cert, a boolean indicating if mTLS should be used, and any error encountered.
-// FIXME: de-duplicate this
-func getRegistryClientMTLS(ctx context.Context, c *cluster.Cluster) (pki.GeneratedPKI, bool, error) {
-	var certs pki.GeneratedPKI
-	useMTLS := false
-
-	if c != nil {
-		var err error
-		certs, err = c.GetRegistryClientMTLSCert(ctx)
-		if err != nil && !kerrors.IsNotFound(err) {
-			return pki.GeneratedPKI{}, false, err
-		}
-		useMTLS = !kerrors.IsNotFound(err)
-	}
-
-	return certs, useMTLS, nil
 }
 
 // transportFromClientCert creates an HTTP transport configured with client mTLS certificates.
