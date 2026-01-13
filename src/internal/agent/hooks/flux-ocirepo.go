@@ -46,8 +46,9 @@ func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var (
-		patches   []operations.PatchOperation
-		isPatched bool
+		patches            []operations.PatchOperation
+		isPatched          bool
+		isPatchedClusterIP bool
 
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
@@ -74,7 +75,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -98,10 +99,19 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
+		if clusterIP != "" {
+			zarfStateClusterIPAddress := helpers.OCIURLPrefix + clusterIP
+			isPatchedClusterIP, err = helpers.DoHostnamesMatch(zarfStateClusterIPAddress, src.Spec.URL)
+			if err != nil {
+				return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+			}
+		}
 	}
 
 	// Mutate the oci repo URL if necessary
-	// FIXME: I need to also test the case of an existing service using a clusterIP
+	// TODO
+	// 1. Create a test case where we check if the service cluster ip was used
+	// 2. Add code that mutates the service cluster ip to the service DNS name
 	if isCreate || (isUpdate && !isPatched) {
 		if src.Spec.Reference.Digest != "" {
 			patchedURL = fmt.Sprintf("%s@%s", patchedURL, src.Spec.Reference.Digest)
@@ -109,10 +119,18 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 			patchedURL = fmt.Sprintf("%s:%s", patchedURL, src.Spec.Reference.Tag)
 		}
 
-		// Initially, we patch the src to include the crc32 hash
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, patchedURL)
-		if err != nil {
-			return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+		var patchedSrc string
+		if isPatchedClusterIP {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+			}
+		} else {
+			// Initially, we patch the src to include the crc32 hash
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+			}
 		}
 
 		certs, useMTLS, err = getRegistryClientMTLS(ctx, cluster)

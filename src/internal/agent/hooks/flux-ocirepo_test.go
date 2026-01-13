@@ -214,7 +214,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -287,7 +287,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			code:         http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as Zarfs internal repo",
+			name: "should mutate cluster IP to DNS",
 			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "mutate-this",
@@ -302,7 +302,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -354,7 +354,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.20.30.40:5000/stefanprodan/charts/podinfo",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -391,7 +391,6 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 							Port: 5000,
 						},
 					},
-					ClusterIP: "10.20.30.40",
 				},
 			},
 			registryInfo: state.RegistryInfo{
@@ -416,7 +415,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://[fd00:10:96::68a3]:5000/stefanprodan/charts/podinfo",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -461,6 +460,62 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 				RegistryMode: state.RegistryModeProxy,
 			},
 			code: http.StatusOK,
+		},
+		{
+			name: "should not mutate already patched cluster DNS url",
+			admissionReq: createFluxOCIRepoAdmissionRequest(t, v1.Update, &flux.OCIRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "do-not-mutate-this",
+				},
+				Spec: flux.OCIRepositorySpec{
+					URL: "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
+					Reference: &flux.OCIRepositoryRef{
+						Tag: "6.9.0-zarf-1339621772",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/spec/ref/tag",
+					"6.9.0-zarf-1339621772",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: int32(port),
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			registryInfo: state.RegistryInfo{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+			code:         http.StatusOK,
 		},
 	}
 
