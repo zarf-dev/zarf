@@ -181,7 +181,9 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 	return nil
 }
 
-// GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
+// GetServiceInfoFromRegistryAddress gets the service info for a registry address
+// If the address is not a service then it is returned
+// If the address is a service then the service DNS name and clusterIP is returned
 func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registryInfo state.RegistryInfo) (string, string, error) {
 	if registryInfo.RegistryMode == state.RegistryModeProxy {
 		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})

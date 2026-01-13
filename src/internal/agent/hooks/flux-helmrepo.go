@@ -55,8 +55,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	//fixme;
-	registryAddress, _, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,8 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	patchedURL := src.Spec.URL
 
 	var (
-		isPatched bool
+		isPatched          bool
+		isPatchedClusterIP bool
 
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
@@ -83,13 +83,28 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		if err != nil {
 			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 		}
+		if clusterIP != "" {
+			zarfStateClusterIPAddress := helpers.OCIURLPrefix + clusterIP
+			isPatchedClusterIP, err = helpers.DoHostnamesMatch(zarfStateClusterIPAddress, src.Spec.URL)
+			if err != nil {
+				return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
+			}
+		}
 	}
 
 	// Mutate the helm repo URL if necessary
 	if isCreate || (isUpdate && !isPatched) {
-		patchedSrc, err := transform.ImageTransformHost(registryAddress, src.Spec.URL)
-		if err != nil {
-			return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
+		var patchedSrc string
+		if isPatchedClusterIP {
+			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, src.Spec.URL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
+			}
+		} else {
+			patchedSrc, err = transform.ImageTransformHost(registryAddress, src.Spec.URL)
+			if err != nil {
+				return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
+			}
 		}
 
 		patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
