@@ -109,9 +109,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	}
 
 	// Mutate the oci repo URL if necessary
-	// TODO
-	// 1. Create a test case where we check if the service cluster ip was used
-	// 2. Add code that mutates the service cluster ip to the service DNS name
 	if isCreate || (isUpdate && !isPatched) {
 		if src.Spec.Reference.Digest != "" {
 			patchedURL = fmt.Sprintf("%s@%s", patchedURL, src.Spec.Reference.Digest)

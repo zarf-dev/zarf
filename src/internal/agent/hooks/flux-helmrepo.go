@@ -140,7 +140,6 @@ func populateHelmRepoPatchOperations(repoURL string, isInternal bool, useMTLS bo
 		patches = append(patches, operations.ReplacePatchOperation("/spec/insecure", true))
 	}
 
-	// FIXME: need a test for this and the oci repo
 	if useMTLS && isInternal {
 		patches = append(patches, operations.AddPatchOperation("/spec/certSecretRef", meta.LocalObjectReference{Name: cluster.RegistryClientTLSSecret}))
 	}

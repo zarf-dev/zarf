@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -272,15 +273,95 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "should be mutated with mTLS enabled",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Create, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-with-mtls",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://ghcr.io/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/certSecretRef",
+					fluxmeta.LocalObjectReference{Name: "zarf-registry-client-tls"},
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Port: 5000,
+						},
+					},
+				},
+			},
+			registryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				RegistryMode: state.RegistryModeProxy,
+			},
+			useMTLS: true,
+			code:    http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := createTestClientWithZarfState(ctx, t, s)
+			testState := s
+			if tt.registryInfo.Address != "" {
+				testState = &state.State{RegistryInfo: tt.registryInfo}
+			}
+			c := createTestClientWithZarfState(ctx, t, testState)
 			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			if tt.useMTLS {
+				// Generate proper mTLS certificates for testing
+				certs, err := pki.GeneratePKI("zarf-docker-registry.zarf.svc.cluster.local")
+				require.NoError(t, err)
+
+				// Create mTLS secret with generated cert data
+				mtlsSecret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "zarf-registry-client-tls",
+						Namespace: "zarf",
+					},
+					Data: map[string][]byte{
+						"ca.crt":  certs.CA,
+						"tls.crt": certs.Cert,
+						"tls.key": certs.Key,
+					},
+				}
+				_, err = c.Clientset.CoreV1().Secrets("zarf").Create(ctx, mtlsSecret, metav1.CreateOptions{})
 				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

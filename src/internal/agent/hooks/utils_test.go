@@ -29,6 +29,7 @@ type admissionTest struct {
 	errContains  string
 	svc          *corev1.Service
 	registryInfo state.RegistryInfo
+	useMTLS      bool
 }
 
 func createTestClientWithZarfState(ctx context.Context, t *testing.T, s *state.State) *cluster.Cluster {
@@ -77,7 +78,6 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admis
 	require.Equal(t, expected.code, rr.Code)
 
 	var admissionReview v1.AdmissionReview
-
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
 
 	if expected.errContains != "" {
