@@ -117,7 +117,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				Password: registryInfo.PushPassword,
 			}),
 		}
-		// Use MTLS if the registry client cert exists in cluster
+
 		useMTLS := false
 		var certs pki.GeneratedPKI
 		if cfg.Cluster != nil {
