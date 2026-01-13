@@ -34,10 +34,10 @@ func TestVolumeImageMount(t *testing.T) {
 	if k8sVersion.LessThan(semver.MustParse("v1.35.0")) {
 		t.Skipf("Skipping test: Kubernetes version %s is less than 1.35.0", versionInfo.ServerVersion.GitVersion)
 	} 
-	
+
 	pkgDefinitionPath := filepath.Join("src", "pkg", "packager", "testdata", "find-images", "pod-volume-image")
 	tmpdir := t.TempDir()
-	_, _, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", tmpdir)
+	_, _, err = e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", tmpdir)
 	require.NoError(t, err)
 
 	packageName := fmt.Sprintf("zarf-package-pod-volume-image-%s.tar.zst", e2e.Arch)
