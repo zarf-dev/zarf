@@ -38,7 +38,7 @@ func UpdateZarfRegistryValues(ctx context.Context, opts InstallUpgradeOptions) e
 	}
 	opts.PkgName = initPkgName
 	if opts.State.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-		err := opts.Cluster.GenerateOrRenewRegistryCerts(ctx)
+		err := opts.Cluster.InitRegistryCerts(ctx)
 		if err != nil {
 			return err
 		}

@@ -293,7 +293,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-		err = c.GenerateOrRenewRegistryCerts(ctx)
+		err = c.InitRegistryCerts(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
@@ -378,73 +378,52 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 	return false, nil
 }
 
-// GenerateOrRenewRegistryCerts creates CA, server, and client certificates for registry mTLS
-// and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
-// Only generates certificates if they don't exist or have less than 50% remaining life.
-func (c *Cluster) GenerateOrRenewRegistryCerts(ctx context.Context) error {
-	l := logger.From(ctx)
-
+// ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client)
+// need renewal. Returns true if any certificate is missing or has less than 50% remaining life.
+func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context) (bool, error) {
 	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath)
 	if err != nil {
-		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+		return false, fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
 
 	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
 	if err != nil {
-		return fmt.Errorf("failed to check server certificate renewal: %w", err)
+		return false, fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
 	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
 	if err != nil {
-		return fmt.Errorf("failed to check proxy certificate renewal: %w", err)
+		return false, fmt.Errorf("failed to check client certificate renewal: %w", err)
 	}
 
-	if !needsServerRenewal && !needsClientRenewal && !needsCARenewal {
-		return nil
-	}
+	return needsCARenewal || needsServerRenewal || needsClientRenewal, nil
+}
 
-	caCert, caKey, err := pki.GenerateCA("Zarf Registry CA")
-	if err != nil {
-		return fmt.Errorf("failed to generate CA certificate: %w", err)
-	}
-
-	serverHosts := []string{
-		"zarf-docker-registry",
-		"zarf-docker-registry.zarf.svc.cluster.local",
-		"localhost",
-		"127.0.0.1",
-		"[::1]",
-	}
-	serverCert, serverKey, err := pki.GenerateServerCert(caCert, caKey, "zarf-docker-registry", serverHosts)
-	if err != nil {
-		return fmt.Errorf("failed to generate server certificate: %w", err)
-	}
-
-	clientCert, clientKey, err := pki.GenerateClientCert(caCert, caKey, "zarf-registry-proxy")
-	if err != nil {
-		return fmt.Errorf("failed to generate client certificate: %w", err)
-	}
+// ApplyRegistryCerts applies the provided server and client certificates to the cluster as Kubernetes secrets.
+// Both the server and client PKI bundles should contain the same CA certificate.
+func (c *Cluster) ApplyRegistryCerts(ctx context.Context, serverPKI, clientPKI pki.GeneratedPKI) error {
+	l := logger.From(ctx)
 
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			RegistrySecretCertPath: serverCert,
-			RegistrySecretKeyPath:  serverKey,
-			RegistrySecretCAPath:   caCert,
+			RegistrySecretCertPath: serverPKI.Cert,
+			RegistrySecretKeyPath:  serverPKI.Key,
+			RegistrySecretCAPath:   serverPKI.CA,
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	proxySecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
+	clientSecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
 		WithData(map[string][]byte{
-			RegistrySecretCertPath: clientCert,
-			RegistrySecretKeyPath:  clientKey,
-			RegistrySecretCAPath:   caCert,
+			RegistrySecretCertPath: clientPKI.Cert,
+			RegistrySecretKeyPath:  clientPKI.Key,
+			RegistrySecretCAPath:   clientPKI.CA,
 		})
-	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, proxySecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
-		return fmt.Errorf("failed to create proxy TLS secret: %w", err)
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, clientSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create client TLS secret: %w", err)
 	}
 
 	l.Info("certificates for registry mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
@@ -559,4 +538,33 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 	default:
 		return "", fmt.Errorf("unable to determine IP family of cluster")
 	}
+}
+
+// InitRegistryCerts creates CA, server, and client certificates for registry mTLS
+// and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
+// Only generates certificates if they don't exist or have less than 50% remaining life.
+func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
+	needsRenewal, err := c.ShouldRenewRegistryCerts(ctx)
+	if err != nil {
+		return err
+	}
+
+	if !needsRenewal {
+		return nil
+	}
+
+	serverHosts := []string{
+		"zarf-docker-registry",
+		"zarf-docker-registry.zarf.svc.cluster.local",
+		"localhost",
+		"127.0.0.1",
+		"[::1]",
+	}
+
+	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(serverHosts, "zarf-docker-registry", "zarf-registry-proxy")
+	if err != nil {
+		return err
+	}
+
+	return c.ApplyRegistryCerts(ctx, serverPKI, clientPKI)
 }

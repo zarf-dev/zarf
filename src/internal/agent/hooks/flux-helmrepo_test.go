@@ -344,7 +344,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if tt.useMTLS {
-				err := c.GenerateOrRenewRegistryCerts(ctx)
+				err := c.InitRegistryCerts(ctx)
 				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

@@ -115,13 +115,13 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		}
 
 		var patchedSrc string
+		// If it's patched with a cluster IP then we transform it without a checksum to the DNS name
 		if isPatchedClusterIP {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
 			if err != nil {
 				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
 			}
 		} else {
-			// Initially, we patch the src to include the crc32 hash
 			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
 			if err != nil {
 				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
@@ -137,7 +137,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		timeoutCtx, cancel := context.WithTimeout(ctx, registryFetchTimeout)
 		defer cancel()
 
-		// Set up transport based on mTLS availability
 		var transport http.RoundTripper
 		if useMTLS {
 			transport, err = transportFromClientCert(certs)
@@ -145,7 +144,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 				return nil, fmt.Errorf("failed to create transport from client cert: %w", err)
 			}
 		} else {
-			// Use default retry transport when mTLS is not available
 			transport = orasRetry.DefaultClient.Transport
 		}
 
