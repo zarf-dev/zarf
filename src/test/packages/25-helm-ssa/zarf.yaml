@@ -17,4 +17,4 @@ components:
         version: 0.1.0
         namespace: configmap-with-ssa
         localPath: chart
-        serverSideApply: "true"
+        serverSideApply: "whatever"

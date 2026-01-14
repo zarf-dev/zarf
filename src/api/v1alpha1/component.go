@@ -207,7 +207,6 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 }
 
 // GetServerSideApply returns server side apply with default of "auto" if it is not set
-// FIXME: make sure this can only be set to true false auto
 func (zc ZarfChart) GetServerSideApply() string {
 	if zc.ServerSideApply == "" {
 		return "auto"
