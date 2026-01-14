@@ -209,6 +209,16 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
+type MTLSStrategy string
+
+const (
+	// MTLSStrategyNone indicates no mTLS certificate management
+	MTLSStrategyNone MTLSStrategy = ""
+	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
+	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
+)
+
 // RegistryMode defines how the registry is accessed
 type RegistryMode string
 
@@ -239,6 +249,8 @@ type RegistryInfo struct {
 	Secret string `json:"secret"`
 	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
 	RegistryMode RegistryMode `json:"registryMode"`
+	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
+	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package

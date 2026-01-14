@@ -297,6 +297,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
 
 	switch s.Distro {
