@@ -50,25 +50,24 @@ components:
     charts:
       - name: argocd-apps
         version: 1.6.1
-        namespace: argo-workflows
+        namespace: guestbook
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps
         valuesFiles:
           - applicationset/values.yaml
     repos:
-      - https://github.com/argoproj/argo-cd.git@v3.2.2
+      - https://github.com/argoproj/argocd-example-apps.git@0d521c6e049889134f3122eb32d7ed342f43ca0d
     images:
-      - quay.io/argoproj/argocli:v3.4.0
-      - quay.io/argoproj/workflow-controller:v3.4.0
+      - gcr.io/google-samples/gb-frontend:v5
     actions:
       onDeploy:
         after:
-          - description: Workflow controller pod to be ready via wait action
+          - description: Guestbook UI pod to be ready via wait action
             wait:
               cluster:
                 kind: pod
-                name: app=workflow-controller
-                namespace: argo-workflows
+                name: app=guestbook-ui
+                namespace: guestbook
                 condition: ready
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
