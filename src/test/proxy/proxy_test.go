@@ -12,25 +12,34 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type RegistryProxyTestSuite struct {
 	suite.Suite
 	*require.Assertions
+	cluster *cluster.Cluster
 }
 
 func (suite *RegistryProxyTestSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
+	var err error
+	suite.cluster, err = cluster.New(suite.T().Context())
+	suite.NoError(err)
 }
 
 func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
+	ctx := suite.T().Context()
+
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
+
 	// Verify the registry proxy TLS secrets were created
-	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-server-tls")
+	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, cluster.RegistryServerTLSSecret, metav1.GetOptions{})
 	suite.NoError(err, "zarf-registry-server-tls secret should exist")
 
-	_, _, err = e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-client-tls")
+	_, err = suite.cluster.Clientset.CoreV1().Secrets("zarf").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err, "zarf-registry-client-tls secret should exist")
 }
 
@@ -45,27 +54,30 @@ func (suite *RegistryProxyTestSuite) Test_1_Flux() {
 }
 
 func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
-	// Get the original client TLS secret data from the podinfo-oci namespace (created by Test_1)
-	originalCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "podinfo-oci", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
-	suite.NoError(err)
-	suite.NotEmpty(originalCert)
+	ctx := suite.T().Context()
 
-	// Run update-creds for registry
+	// Get the original client TLS secret from the zarf namespace
+	originalPKI, err := suite.cluster.GetRegistryClientMTLSCert(ctx)
+	suite.NoError(err)
+	suite.NotEmpty(originalPKI.Cert)
+
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "tools", "update-creds", "registry", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
-	// Get the updated client TLS secret data
-	updatedCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "podinfo-oci", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
+	// Get the updated client TLS secret from the zarf namespace
+	updatedPKI, err := suite.cluster.GetRegistryClientMTLSCert(ctx)
 	suite.NoError(err)
-	suite.NotEmpty(updatedCert)
+	suite.NotEmpty(updatedPKI.Cert)
 
 	// Verify that the certificate was regenerated
-	suite.NotEqual(originalCert, updatedCert)
+	suite.NotEqual(originalPKI.Cert, updatedPKI.Cert)
 
-	// Verify the secret in zarf namespace was also updated
-	zarfNSCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
+	// Get the updated client TLS secret from the podinfo-oci namespace
+	updatedNamespaceSecret, err := suite.cluster.Clientset.CoreV1().Secrets("podinfo-oci").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err)
-	suite.Equal(zarfNSCert, updatedCert)
+
+	// Verify the secret in podinfo-oci namespace matches the zarf namespace
+	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[cluster.RegistrySecretCertPath])
 }
 
 func TestRegistryProxy(t *testing.T) {
