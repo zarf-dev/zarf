@@ -336,6 +336,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+
+		if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+			err := c.UpdateZarfManagedMTLSSecrets(ctx)
+			if err != nil {
+				return err
+			}
+		}
 	}
 	if slices.Contains(args, state.GitKey) {
 		err := c.UpdateZarfManagedGitSecrets(ctx, newState)

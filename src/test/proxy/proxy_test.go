@@ -44,6 +44,30 @@ func (suite *RegistryProxyTestSuite) Test_1_Flux() {
 	suite.NoError(err, stdOut, stdErr)
 }
 
+func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
+	// Get the original client TLS secret data from the podinfo-oci namespace (created by Test_1)
+	originalCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "podinfo-oci", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
+	suite.NoError(err)
+	suite.NotEmpty(originalCert)
+
+	// Run update-creds for registry
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "tools", "update-creds", "registry", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	// Get the updated client TLS secret data
+	updatedCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "podinfo-oci", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
+	suite.NoError(err)
+	suite.NotEmpty(updatedCert)
+
+	// Verify that the certificate was regenerated
+	suite.NotEqual(originalCert, updatedCert)
+
+	// Verify the secret in zarf namespace was also updated
+	zarfNSCert, _, err := e2e.Kubectl(suite.T(), "get", "secret", "-n", "zarf", "zarf-registry-client-tls", "-o", "jsonpath={.data.tls\\.crt}")
+	suite.NoError(err)
+	suite.Equal(zarfNSCert, updatedCert)
+}
+
 func TestRegistryProxy(t *testing.T) {
 	suite.Run(t, new(RegistryProxyTestSuite))
 }

@@ -81,7 +81,21 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
+	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
+	// ZarfRegistryMTLSClientCommonName is the common name for the registry client certificate
+	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
 )
+
+// ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate
+var ZarfRegistryMTLSServerHosts = []string{
+	"zarf-docker-registry",
+	"zarf-docker-registry.zarf.svc.cluster.local",
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+}
 
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"

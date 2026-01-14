@@ -551,15 +551,11 @@ func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
 		return nil
 	}
 
-	serverHosts := []string{
-		"zarf-docker-registry",
-		"zarf-docker-registry.zarf.svc.cluster.local",
-		"localhost",
-		"127.0.0.1",
-		"[::1]",
-	}
-
-	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(serverHosts, "zarf-docker-registry", "zarf-registry-proxy")
+	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(
+		state.ZarfRegistryMTLSServerHosts,
+		state.ZarfRegistryMTLSServerCommonName,
+		state.ZarfRegistryMTLSClientCommonName,
+	)
 	if err != nil {
 		return err
 	}
