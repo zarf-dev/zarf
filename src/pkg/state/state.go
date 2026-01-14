@@ -214,7 +214,7 @@ type MTLSStrategy string
 
 const (
 	// MTLSStrategyNone indicates no mTLS certificate management
-	MTLSStrategyNone MTLSStrategy = ""
+	MTLSStrategyNone MTLSStrategy = "none"
 	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
 	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
 )
@@ -261,6 +261,11 @@ func (ri RegistryInfo) IsInternal() bool {
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
+}
+
+// ShouldUseMTLS returns true if mTLS should be used for the registry connection.
+func (ri RegistryInfo) ShouldUseMTLS() bool {
+	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -327,6 +332,10 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
+	}
+
+	if ri.MTLSStrategy == "" {
+		ri.MTLSStrategy = MTLSStrategyNone
 	}
 
 	return nil

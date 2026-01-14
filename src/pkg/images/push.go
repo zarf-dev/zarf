@@ -119,7 +119,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		}
 
 		var certs pki.GeneratedPKI
-		if cfg.Cluster != nil && registryInfo.MTLSStrategy != state.MTLSStrategyNone {
+		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
 			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return err

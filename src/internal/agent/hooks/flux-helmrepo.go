@@ -18,7 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -119,7 +118,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	var patches []operations.PatchOperation
 
-	useMTLS := zarfState.RegistryInfo.MTLSStrategy != state.MTLSStrategyNone
+	useMTLS := zarfState.RegistryInfo.ShouldUseMTLS()
 	if useMTLS {
 		_, err = cluster.GetRegistryClientMTLSCert(ctx)
 		if err != nil {
