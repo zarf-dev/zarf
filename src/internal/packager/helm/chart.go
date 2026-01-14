@@ -122,8 +122,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		if err != nil {
 			return nil, zarfChart.ReleaseName, errors.Join(err, installErr)
 		}
-		previouslyDeployedVersion := 0
-
+		var previouslyDeployedRelease release.Accessor
 		// Check for previous releases that successfully deployed
 		for _, releaser := range releases {
 			rel, err := release.NewAccessor(releaser)
@@ -131,18 +130,18 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 				return nil, zarfChart.ReleaseName, errors.Join(err, installErr)
 			}
 			if releasecommon.Status(rel.Status()) == releasecommon.StatusDeployed {
-				previouslyDeployedVersion = rel.Version()
+				previouslyDeployedRelease = rel
 			}
 		}
 
 		// No prior releases means this was an initial install.
-		if previouslyDeployedVersion == 0 {
+		if previouslyDeployedRelease == nil {
 			return nil, zarfChart.ReleaseName, installErr
 		}
 
 		// Attempt to rollback on a failed upgrade.
 		l.Info("performing Helm rollback", "chart", zarfChart.Name)
-		err = rollbackChart(zarfChart, previouslyDeployedVersion, actionConfig, opts.Timeout)
+		err = rollbackChart(zarfChart, previouslyDeployedRelease, actionConfig, opts.Timeout, opts.ForceConflicts)
 		if err != nil {
 			return nil, zarfChart.ReleaseName, fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
@@ -261,7 +260,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	// Post-processing our manifests to apply vars and run zarf helm logic in cluster
 	client.PostRenderer = postRender
 
-	useSSA := zarfChart.ServerSideApply != "false"
+	useSSA := zarfChart.GetServerSideApply() != "false"
 	client.ServerSideApply = useSSA
 	// Only force conflicts if SSA is enabled and the option is set
 	client.ForceConflicts = useSSA && opts.ForceConflicts
@@ -296,13 +295,17 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
 
-	if zarfChart.ServerSideApply == "" {
-		zarfChart.ServerSideApply = "auto"
+	client.ServerSideApply = zarfChart.GetServerSideApply()
+	canForceConflicts := zarfChart.GetServerSideApply() != "false"
+	if zarfChart.GetServerSideApply() == "auto" {
+		rel, err := release.NewAccessor(lastRelease)
+		if err != nil {
+			return err
+		}
+		canForceConflicts = rel.ApplyMethod() == "ssa"
 	}
-	client.ServerSideApply = zarfChart.ServerSideApply
 	// Only force conflicts if SSA is enabled and the option is set
-	useSSA := zarfChart.ServerSideApply != "false"
-	client.ForceConflicts = useSSA && opts.ForceConflicts
+	client.ForceConflicts = canForceConflicts && opts.ForceConflicts
 
 	client.SkipCRDs = true
 
@@ -324,16 +327,18 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	return nil
 }
 
-func rollbackChart(zarfChart v1alpha1.ZarfChart, version int, actionConfig *action.Configuration, timeout time.Duration) error {
+func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
 	client := action.NewRollback(actionConfig)
 	client.CleanupOnFail = true
-	if zarfChart.ServerSideApply == "" {
-		zarfChart.ServerSideApply = "auto"
+	client.ServerSideApply = zarfChart.GetServerSideApply()
+	canForceConflicts := zarfChart.GetServerSideApply() != "false"
+	if zarfChart.GetServerSideApply() == "auto" {
+		canForceConflicts = rel.ApplyMethod() == "ssa"
 	}
-	client.ServerSideApply = zarfChart.ServerSideApply
+	client.ForceConflicts = canForceConflicts && forceConflicts
 	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
-	client.Version = version
+	client.Version = rel.Version()
 	client.MaxHistory = maxHelmHistory
 	return client.Run(zarfChart.ReleaseName)
 }

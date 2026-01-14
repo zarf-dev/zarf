@@ -206,6 +206,15 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 	return true
 }
 
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+// FIXME: make sure this can only be set to true false auto
+func (zc ZarfChart) GetServerSideApply() string {
+	if zc.ServerSideApply == "" {
+		return "auto"
+	}
+	return zc.ServerSideApply
+}
+
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
 type ZarfChartVariable struct {
 	// The name of the variable.
