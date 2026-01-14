@@ -839,7 +839,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "signature not found: neither bundle nor legacy signature exists")
+		require.Contains(t, err.Error(), "a key was provided but the package is not signed")
 	})
 
 	t.Run("verification fails with empty dirPath", func(t *testing.T) {

@@ -44,8 +44,8 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/pterm/pterm v0.12.82
 	github.com/sergi/go-diff v1.4.0
-	github.com/sigstore/cosign/v3 v3.0.4
-	github.com/sigstore/sigstore-go v1.1.4
+	github.com/sigstore/cosign/v3 v3.0.3
+	github.com/sigstore/sigstore-go v1.1.4-0.20251201121426-2cdedea80894
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.3
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.3
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.3
@@ -59,9 +59,9 @@ require (
 	golang.org/x/sync v0.19.0
 	golang.org/x/term v0.39.0
 	helm.sh/helm/v3 v3.19.4
-	k8s.io/api v0.35.0
-	k8s.io/apimachinery v0.35.0
-	k8s.io/client-go v0.35.0
+	k8s.io/api v0.34.3
+	k8s.io/apimachinery v0.34.3
+	k8s.io/client-go v0.34.3
 	k8s.io/component-base v0.34.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.34.3
