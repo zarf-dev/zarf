@@ -12,7 +12,7 @@ Package Values is currently an **alpha feature** and requires the `--features="v
 
 :::
 
-Package Values provide a familiar way to define and reusable configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses Go templates with access to structured data and types, [go's templating engine](https://pkg.go.dev/text/template), and custom functions like those offered by [Sprig](/ref/templating/).
+Package Values provide a familiar way to define reusable configuration data in your Zarf packages. Unlike the legacy [Variables and Constants](/ref/values/) system that uses string substitution with `###ZARF_VAR_###` syntax, Package Values uses Go templates with access to structured data and types, [go's templating engine](https://pkg.go.dev/text/template), and custom functions like those offered by [Sprig](/ref/templating/).
 
 ## Overview
 
@@ -259,7 +259,7 @@ With `sourcePath: "."` and `targetPath: "."`, all these values are passed direct
 
 - Mappings are evaluated in order from top to bottom
 - Later mappings to the same `targetPath` override earlier ones
-- Source paths reference your Package Values e.g. eveything within `.Values.*`.
+- Source paths reference your Package Values e.g. everything within `.Values.*`.
 - Target paths reference the Helm chart's `values.yaml` structure
 
 <Properties item="ZarfChartValue" />
@@ -286,24 +286,24 @@ zarf package remove my-package \
 
 ### Using Values Files
 
-Provide entire values files with the `-f` or `--values` flag:
+Provide entire values files with the `-v` or `--values` flag:
 
 ```bash
 # Deploy with custom values file
 zarf package deploy my-package.tar.zst \
   --features="values=true" \
-  -f custom-values.yaml
+  -v custom-values.yaml
 
 # Multiple values files (later files override earlier ones)
 zarf package deploy my-package.tar.zst \
   --features="values=true" \
-  -f base-values.yaml \
-  -f override-values.yaml
+  -v base-values.yaml \
+  -v override-values.yaml
 
 # Also works with zarf dev deploy
 zarf dev deploy \
   --features="values=true" \
-  -f dev-values.yaml
+  -v dev-values.yaml
 ```
 
 ### Configuration Files

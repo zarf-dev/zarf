@@ -185,12 +185,12 @@ values:
     - values.yaml
 ```
 
-Instead, pass secret values to Zarf on deploy or remove with `-f` or by declaring the files in `.zarf-config.yaml`
+Instead, pass secret values to Zarf on deploy or remove with `-v`, `--values`, or by declaring the files in `.zarf-config.yaml`
 
 ```bash
 zarf package deploy \
   --features="values=true" \
-  -f production.yaml
+  -v production.yaml
 ```
 
 or
@@ -211,7 +211,7 @@ zarf package deploy \
   --set-values=".database.apiKey=$(DB_API_KEY)"
 ```
 
-Secrets can also be set dynamically by using `actions` and `setValues`:
+Secrets can also be retrieved dynamically using `actions` and `setValues`:
 
 ```yaml
 components:
@@ -235,7 +235,7 @@ zarf dev inspect manifests --features="values=true"
 # Test with custom values
 zarf dev inspect manifests \
   --features="values=true" \
-  -f custom-values.yaml \
+  --values custom-values.yaml \
   --set-values="app.replicas=5"
 ```
 

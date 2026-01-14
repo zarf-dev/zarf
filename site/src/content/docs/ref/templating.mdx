@@ -434,10 +434,7 @@ For comprehensive examples combining multiple template functions, see the [value
 - Real-world ConfigMap and Deployment examples
 
 ## Using Helm charts within Zarf:
-- Helm templating happens inside chart templates (standard Helm behavior)
-- Zarf templating happens at the package level
-- Use [Helm value mappings](/ref/package-values/#mapping-to-helm-chart-values) to pass Zarf values to charts
-
+Helm templating happens inside Helm charts (the standard Helm behavior). Use [Helm value mappings](/ref/package-values/#mapping-to-helm-chart-values) to pass Zarf values into Helm charts so they may be accessed in Helm chart templates.
 
 ## Related Documentation
 
