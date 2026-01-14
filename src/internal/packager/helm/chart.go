@@ -301,7 +301,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	}
 	client.ServerSideApply = zarfChart.ServerSideApply
 	// Only force conflicts if SSA is enabled and the option is set
-	useSSA := zarfChart.ServerSideApply != "false" && zarfChart.ServerSideApply != ""
+	useSSA := zarfChart.ServerSideApply != "false"
 	client.ForceConflicts = useSSA && opts.ForceConflicts
 
 	client.SkipCRDs = true
