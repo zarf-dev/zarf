@@ -226,13 +226,15 @@ Git repositories included in a package can be deployed with `zarf package deploy
 
 ### Data Injections
 
+:::caution[Deprecated]
+
+Data injections are deprecated and will be removed in the next schema version. Please migrate to using OCI image-based data delivery instead. See the [Data Injections Migration Guide](/best-practices/data-injections-migration/) for instructions.
+
+:::
+
 <Properties item="ZarfComponent" include={["dataInjections"]} />
 
 During `zarf package create`, data injections pull files from the host at the path specified by the `source` key. During `zarf package deploy`, these files are injected into the container specified by the `target` key. The pod holding the targeted container must have the variable `###ZARF_DATA_INJECTION_MARKER###` within the pod spec otherwise the data injection will not occur. This variable gets templated at deploy time to become the name of the extra file Zarf injects into the pod to signify that the data injection is complete.
-
-The [`kiwix`](/ref/examples/kiwix/) example showcases a simple data injection use case.
-
-<ExampleYAML src={import("../../../../../examples/kiwix/zarf.yaml?raw")} component="kiwix-serve" />
 
 ### Component Imports
 

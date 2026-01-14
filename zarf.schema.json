@@ -548,7 +548,7 @@
           "type": "array"
         },
         "dataInjections": {
-          "description": "Datasets to inject into a container in the target cluster.",
+          "description": "[Deprecated] Datasets to inject into a container in the target cluster.",
           "items": {
             "$ref": "#/$defs/ZarfDataInjection"
           },
