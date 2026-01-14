@@ -44,12 +44,20 @@ func parsePod(object []byte) (*corev1.Pod, error) {
 }
 
 func getImageAnnotationKey(ctx context.Context, containerName string) string {
-	annotationName := fmt.Sprintf("original-image-%s", containerName)
+	return getAnnotationKey(ctx, "image-"+containerName)
+}
+
+func getVolumeAnnotationKey(ctx context.Context, volumeName string) string {
+	return getAnnotationKey(ctx, "volume-"+volumeName)
+}
+
+func getAnnotationKey(ctx context.Context, image string) string {
+	annotationName := fmt.Sprintf("original-%s", image)
 	// The name segment is required and must be 63 characters or less, beginning and ending with
 	// an alphanumeric character ([a-z0-9A-Z]) with dashes (-), underscores (_), dots (.), and alphanumerics between.
 	// https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/#syntax-and-character-set
 	if len(annotationName) > 63 {
-		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", containerName)
+		logger.From(ctx).Debug("truncating container name to fit Kubernetes 63 character annotation name limit", "container", image)
 		annotationName = annotationName[:63]
 	}
 	// container names follow RFC 1123 which allows only lowercase alphanumeric characters and hyphens
@@ -118,6 +126,22 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		}
 		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
+	}
+
+	// update the image host for each volume that contains an "image" reference
+	for idx, volume := range pod.Spec.Volumes {
+		if volume.Image != nil {
+			if volume.Image.Reference == "" {
+				return nil, fmt.Errorf("volume %q (index %d) has an ImageVolumeSource with empty reference - this is invalid and must be specified", volume.Name, idx)
+			}
+			path := fmt.Sprintf("/spec/volumes/%d/image/reference", idx)
+			replacement, err := transform.ImageTransformHost(registryURL, volume.Image.Reference)
+			if err != nil {
+				return nil, fmt.Errorf("failed to transform volume %q (index %d) image reference %q: %w", volume.Name, idx, volume.Image.Reference, err)
+			}
+			updatedAnnotations[getVolumeAnnotationKey(ctx, volume.Name)] = volume.Image.Reference
+			patches = append(patches, operations.ReplacePatchOperation(path, replacement))
+		}
 	}
 
 	// Add the "zarf-agent"="patched" label patch
