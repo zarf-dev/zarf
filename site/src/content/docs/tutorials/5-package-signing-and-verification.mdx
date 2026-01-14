@@ -1,0 +1,305 @@
+---
+title: Package Signing and Verification
+sidebar:
+  order: 5
+---
+
+## Introduction
+
+In this tutorial, we will demonstrate how to cryptographically sign Zarf packages and verify their signatures to ensure package integrity and authenticity. Package signing is a critical security practice for airgap environments, allowing you to verify that packages have not been tampered with and come from a trusted source.
+
+Zarf uses [Cosign](https://github.com/sigstore/cosign) for signing and verification, supporting both the modern [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/) and cloud-based Key Management Services (KMS).
+
+## Prerequisites
+
+Before beginning this tutorial you will need the following:
+
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- A Zarf package to sign (you can create one by following the [Creating a Zarf Package](/tutorials/0-creating-a-zarf-package/) tutorial)
+
+## Understanding Package Signing
+
+Zarf package signatures provide:
+
+- **Authenticity**: Verify that a package comes from a trusted source
+- **Integrity**: Ensure the package has not been modified or corrupted
+- **Non-repudiation**: Prove who signed the package and when
+
+Zarf signs the `zarf.yaml` file within a package, which contains metadata and checksums for all package contents. This allows verification of the entire package through a single signature.
+
+:::note
+
+As of Zarf's recent updates, packages are signed using the **Sigstore bundle format** (`zarf.bundle.sig`), which is the modern, recommended format. The legacy signature format (`zarf.yaml.sig`) is being deprecated.
+
+:::
+
+## Generating a Signing Key Pair
+
+To sign packages, you'll need a private/public key pair. You can generate one using Zarf:
+
+```bash
+# Generate a key pair (you'll be prompted for a password)
+zarf tools gen-key
+
+# This creates two files:
+# - cosign.key (private key - keep this secure!)
+# - cosign.pub (public key - share this for verification)
+```
+
+:::caution
+
+Keep your private key (`cosign.key`) secure and never share it. Anyone with access to your private key can sign packages as you.
+
+:::
+
+## Signing a Zarf Package
+
+### Signing During Package Creation
+
+You can sign a package automatically during creation by providing the signing key:
+
+```bash
+# Create and sign a package in one step
+zarf package create . --signing-key cosign.key --signing-key-pass <your-password>
+```
+
+### Signing an Existing Package
+
+You can also sign a package after it has been created using the `zarf package sign` command:
+
+```bash
+# Sign an unsigned package
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst --signing-key cosign.key
+```
+
+The signature will be embedded within the package archive, and the package's `zarf.yaml` will be updated to indicate it is signed.
+
+### Re-signing a Package
+
+If you need to replace an existing signature with a new one (for example, when rotating keys), use the `--overwrite` flag:
+
+```bash
+# Re-sign with a new key (overwrite existing signature)
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key new-cosign.key \
+  --overwrite
+```
+
+### Signing Packages in OCI Registries
+
+Zarf supports signing packages stored in OCI registries:
+
+```bash
+# Sign a package from an OCI registry and output to local directory
+zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 \
+  --signing-key cosign.key \
+  --output ./signed/
+
+# Sign a package and publish directly to OCI registry
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key cosign.key \
+  --output oci://ghcr.io/my-org/signed-packages
+
+# Sign a package from OCI and re-publish to OCI (in place)
+zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 \
+  --signing-key cosign.key
+```
+
+### Using Cloud KMS for Signing
+
+For production environments, you can use cloud-based Key Management Services instead of local key files:
+
+```bash
+# Sign with AWS KMS
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key awskms://alias/my-signing-key
+
+# Sign with Google Cloud KMS
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key gcpkms://projects/PROJECT/locations/LOCATION/keyRings/RING/cryptoKeys/KEY
+
+# Sign with Azure Key Vault
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key azurekms://VAULT_NAME.vault.azure.net/keys/KEY_NAME/KEY_VERSION
+
+# Sign with HashiCorp Vault
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key hashivault://KEY_NAME
+```
+
+:::note
+
+Cloud KMS providers require proper authentication and permissions configured on your system. Refer to each provider's documentation for setup instructions. Additionally you need to ensure your KMS key is an Asymmetric key.
+
+:::
+
+## Verifying Package Signatures
+
+### Verifying a Signed Package
+
+To verify a package's signature, use the `zarf package verify` command with the public key:
+
+```bash
+# Verify a signed package
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
+```
+
+If the signature is valid, you'll see a success message:
+
+```
+2025-11-15 14:17:13 INF checksum verification status=PASSED
+Verified OK
+2025-11-15 14:17:16 INF signature verification status=PASSED
+2025-11-15 14:17:16 INF verification complete status=SUCCESS
+```
+
+If verification fails, the command will exit with a non-zero status code and display an error message.
+
+### Verifying Unsigned Packages
+
+You can also verify the integrity (checksums) of unsigned packages without providing a key:
+
+```bash
+# Verify checksums only (no signature verification)
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst
+```
+
+This confirms that the package files match their expected checksums but does not verify authenticity.
+
+### Automatic Verification During Deployment
+
+By default, Zarf attempts to verify signatures. You must provide the public key:
+
+```bash
+# Deploy with automatic signature verification
+zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub --verify
+```
+
+If signature verification fails during deployment and verification is enforced with `--verify`, Zarf will abort the deployment to prevent deploying potentially compromised packages.
+
+## Signature Format Migration
+
+### Understanding the Sigstore Bundle Format
+
+Zarf now uses the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/) for package signatures. This format provides several advantages over the legacy signature format:
+
+- **Self-contained**: Bundles include all verification materials in a single file
+- **Standardized**: Based on the widely-adopted Sigstore specification
+- **Better interoperability**: Compatible with other Sigstore tooling and services
+
+The bundle format is stored as `zarf.bundle.sig` within the package, following the [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md).
+
+### Legacy Signature Format Deprecation
+
+:::caution[Signature Format Deprecation]
+
+The legacy signature format (`zarf.yaml.sig`) is being deprecated in favor of the Sigstore bundle format (`zarf.bundle.sig`). While Zarf currently supports both formats for backward compatibility, the legacy format will be removed in a future release although zarf will retain the ability to verify legacy signatures.
+
+**Reasons for deprecation:**
+
+1. **Limited metadata**: The legacy format only stores the raw signature without additional verification context
+2. **Non-standard**: Uses a custom format not compatible with other Sigstore tooling
+3. **Reduced functionality**: Cannot support advanced features like keyless signing or transparency log integration
+4. **Maintenance burden**: Supporting multiple formats increases complexity and testing requirements
+
+**Migration path:**
+
+- New packages are automatically signed using the bundle format
+- Existing packages with legacy signatures will display a deprecation warning during verification
+- Re-sign legacy packages with the `zarf package sign` command to upgrade to the bundle format
+
+:::
+
+## Complete Example Workflow
+
+Here's a complete workflow demonstrating package signing and verification:
+
+```bash
+# Step 1: Generate a signing key pair
+zarf tools gen-key
+# Enter password when prompted
+# Creates: cosign.key and cosign.pub
+
+# Step 2: Create and sign a package
+zarf package create . --signing-key cosign.key --signing-key-pass <password>
+# Creates a signed package - zarf-package-wordpress-amd64-26.0.0.tar.zst for example
+
+# Step 3: Verify the package signature
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
+# Output: ✔ Package signature verified successfully
+
+# Step 4: Deploy the package with signature verification
+zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub --confirm --verify
+# Package is verified before deployment
+```
+
+## Best Practices for Package Signing
+
+1. **Protect private keys**: Store private keys securely and never commit them to version control
+2. **Use strong passwords**: Encrypt private keys with strong, unique passwords
+3. **Consider KMS for production**: Use cloud KMS for production signing operations
+4. **Verify before deployment**: Always verify package signatures before deploying to critical environments
+5. **Document your process**: Maintain clear documentation of your signing and verification procedures
+6. **Automate verification**: Integrate signature verification into your CI/CD pipelines
+
+## Troubleshooting
+
+### Package is Signed But No Key Provided
+
+```
+✖ package is signed but no key was provided
+```
+
+:::note[Remediation]
+
+When deploying or inspecting a signed package, you must provide the public key:
+
+```bash
+# Add the --key flag with the path to the public key
+zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
+```
+
+:::
+
+### Private Key Password Incorrect
+
+```
+ERR failed to sign package: failed to sign package: reading key: decrypt: encrypted: decryption failed
+```
+
+:::note[Remediation]
+
+The password provided for the private key is incorrect. Try again with the correct password:
+
+```bash
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst --signing-key cosign.key --signing-key-pass <password>
+```
+
+:::
+
+### Cannot Overwrite Existing Signature
+
+```
+✖ package is already signed. Use --overwrite to replace the existing signature
+```
+
+:::note[Remediation]
+
+The package already has a signature. If you want to replace it with a new signature, use the `--overwrite` flag:
+
+```bash
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --signing-key cosign.key \
+  --overwrite
+```
+
+:::
+
+## Additional Resources
+
+- [Cosign GitHub Repository](https://github.com/sigstore/cosign)
+- [Sigstore Bundle Format Documentation](https://docs.sigstore.dev/about/bundle/)
+- [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md)
+- [Zarf Package Sign Command Reference](/commands/zarf_package_sign/)
+- [Zarf Package Verify Command Reference](/commands/zarf_package_verify/)
+- [Zarf Package Create Command Reference](/commands/zarf_package_create/)

@@ -337,7 +337,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	}
 
 	// Legacy signature found
-	l.Warn("non-bundle format signature is being deprecated in favor of the sigstore bundle format")
+	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package.")
 	opts.SigRef = signaturePath
 
 	opts.NewBundleFormat = false
