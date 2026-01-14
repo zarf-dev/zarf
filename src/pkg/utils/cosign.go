@@ -83,13 +83,13 @@ func DefaultSignBlobOptions() SignBlobOptions {
 	return SignBlobOptions{
 		KeyOpts: options.KeyOpts{
 			Slot:             "signature",
-			OIDCIssuer:       "https://oauth2.sigstore.dev/auth",
+			OIDCIssuer:       "", // https://oauth2.sigstore.dev/auth
 			OIDCClientID:     "sigstore",
-			OIDCRedirectURL:  "http://localhost:0/auth/callback",
+			OIDCRedirectURL:  "", // http://localhost:0/auth/callback
 			FulcioAuthFlow:   "normal",
-			FulcioURL:        "https://fulcio.sigstore.dev",
-			RekorURL:         "https://rekor.sigstore.dev",
-			NewBundleFormat:  false,
+			FulcioURL:        "", // https://fulcio.sigstore.dev
+			RekorURL:         "", // https://rekor.sigstore.dev
+			NewBundleFormat:  true,
 			SkipConfirmation: false,
 		},
 		Timeout: CosignDefaultTimeout,
@@ -101,6 +101,9 @@ func DefaultSignBlobOptions() SignBlobOptions {
 // Configures sensible defaults for offline/air-gapped environments.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	return VerifyBlobOptions{
+		KeyOpts: options.KeyOpts{
+			NewBundleFormat: true,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			IgnoreSCT: true, // Skip SCT verification by default
 		},
