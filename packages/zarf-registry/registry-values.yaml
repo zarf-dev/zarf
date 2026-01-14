@@ -29,6 +29,7 @@ proxy:
     payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
     shasum: "###ZARF_INJECTOR_SHASUM###"
 
+#FIXME: this should be done differently now
 mtls:
   enabled: ###ZARF_REGISTRY_PROXY###
 
