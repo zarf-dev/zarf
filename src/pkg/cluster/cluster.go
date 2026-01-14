@@ -328,14 +328,11 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 }
 
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.
-// Boolean returns true if certs are found and false if not
-func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, bool, error) {
+// Returns an error if the secret is not found or incomplete.
+func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedPKI, error) {
 	clientSecret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
 	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return pki.GeneratedPKI{}, false, nil
-		}
-		return pki.GeneratedPKI{}, false, fmt.Errorf("failed to get client TLS secret: %w", err)
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to get client TLS secret: %w", err)
 	}
 
 	caCertPEM := clientSecret.Data[RegistrySecretCAPath]
@@ -343,14 +340,14 @@ func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedP
 	clientKeyPEM := clientSecret.Data[RegistrySecretKeyPath]
 
 	if len(caCertPEM) == 0 || len(clientCertPEM) == 0 || len(clientKeyPEM) == 0 {
-		return pki.GeneratedPKI{}, false, nil
+		return pki.GeneratedPKI{}, fmt.Errorf("client TLS secret is incomplete")
 	}
 
 	return pki.GeneratedPKI{
 		CA:   caCertPEM,
 		Cert: clientCertPEM,
 		Key:  clientKeyPEM,
-	}, true, nil
+	}, nil
 }
 
 // needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life

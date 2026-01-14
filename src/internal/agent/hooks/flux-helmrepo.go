@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
@@ -118,11 +119,13 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	var patches []operations.PatchOperation
 
-	_, certsFound, err := cluster.GetRegistryClientMTLSCert(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
+	useMTLS := zarfState.RegistryInfo.MTLSStrategy != state.MTLSStrategyNone
+	if useMTLS {
+		_, err = cluster.GetRegistryClientMTLSCert(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
+		}
 	}
-	useMTLS := zarfState.RegistryInfo.IsInternal() && certsFound
 
 	patches = populateHelmRepoPatchOperations(patchedURL, zarfState.RegistryInfo.IsInternal(), useMTLS)
 	patches = append(patches, getLabelPatch(src.Labels))

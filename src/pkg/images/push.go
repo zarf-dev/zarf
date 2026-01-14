@@ -118,18 +118,12 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
-		useMTLS := false
 		var certs pki.GeneratedPKI
-		if cfg.Cluster != nil {
-			var certsFound bool
-			certs, certsFound, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+		if cfg.Cluster != nil && registryInfo.MTLSStrategy != state.MTLSStrategyNone {
+			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return err
 			}
-			useMTLS = registryInfo.IsInternal() && certsFound
-		}
-
-		if useMTLS {
 			client.Client.Transport, err = transportFromClientCert(certs)
 			if err != nil {
 				return err

@@ -612,6 +612,9 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			if tt.useMTLS {
 				err := c.InitRegistryCerts(ctx)
 				require.NoError(t, err)
+				s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+				err = c.SaveState(ctx, s)
+				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)

@@ -346,6 +346,9 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			if tt.useMTLS {
 				err := c.InitRegistryCerts(ctx)
 				require.NoError(t, err)
+				testState.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+				err = c.SaveState(ctx, testState)
+				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
