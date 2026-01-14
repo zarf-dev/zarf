@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -308,10 +309,15 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	v := getViper()
+
+	// Merge variables
 	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+		v.GetStringMapString(VPkgDeploySet),
+		o.setVariables,
+		strings.ToUpper,
+	)
+	// Merge values
+	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
 
 	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
 	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
