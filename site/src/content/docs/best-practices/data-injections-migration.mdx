@@ -13,7 +13,7 @@ This guide explains how to migrate your Zarf deployment from the Data Injections
 
 There are two recommended approaches to replacing Data Injections.
 
-The first, and preferred approach, is the Kubernetes Feature [read-only OCI based volumes](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source). This feature is generally available as of Kubernetes 1.35 and compatible with the Zarf agent as of v0.69.1. It provides a direct path for consuming container images as read only data sources.
+The first, and preferred approach, is the Kubernetes Feature [read-only OCI based volumes](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source). This feature is generally available as of Kubernetes 1.35 and compatible with the Zarf agent as of v0.70.0. It provides a direct path for consuming container images as read only data sources.
 
 The second approach uses init containers to migrate data to volumes. This approach has been widely adopted among Kubernetes users for years. It uses an init container from an OCI image that holds the required data. This data is then persisted to a common volume which the long running container(s) in the pod can use.
 
@@ -113,7 +113,7 @@ spec:
             claimName: my-data
 ```
 
-If your cluster supports OCI volume sources (GA in Kubernetes 1.35+, Zarf v0.69.1+), the read-only volume approach is recommended. Otherwise, use the init container approach.
+If your cluster supports OCI volume sources (GA in Kubernetes 1.35+, Zarf v0.70.0+), the read-only volume approach is recommended. Otherwise, use the init container approach.
 
 #### Read-Only Volume Approach
 
