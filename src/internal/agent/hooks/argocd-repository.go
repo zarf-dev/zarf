@@ -73,7 +73,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	isOCIURL := helpers.IsOCIURL(repoCreds.URL)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
+	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
