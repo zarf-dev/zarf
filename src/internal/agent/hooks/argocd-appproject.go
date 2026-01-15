@@ -63,7 +63,7 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 		"name", proj.Name,
 		"git-server", s.GitServer.Address)
 
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
+	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
