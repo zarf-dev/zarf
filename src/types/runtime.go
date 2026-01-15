@@ -6,8 +6,6 @@ package types
 
 // ZarfCommonOptions tracks the user-defined preferences used across commands.
 type ZarfCommonOptions struct {
-	// Allow insecure connections for remote packages
-	Insecure bool
 	// Disable checking the server TLS certificate for validity
 	InsecureSkipTLSVerify bool
 	// Force connections to be over http instead of https

@@ -134,7 +134,6 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "no-progress")
 					addHiddenDummyFlag(toolCmd, "zarf-cache")
 					addHiddenDummyFlag(toolCmd, "tmpdir")
-					addHiddenDummyFlag(toolCmd, "insecure")
 					addHiddenDummyFlag(toolCmd, "no-color")
 				}
 
