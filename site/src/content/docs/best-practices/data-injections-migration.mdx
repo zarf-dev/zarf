@@ -76,7 +76,7 @@ components:
       - your-registry/your-data:tag  # Your container with your data files
 ```
 
-Rather than storing the data in the package through data injections, the data is stored in the `your-registry/your-data:tag` container.
+Rather than storing the data in the package through data injections, the data is stored in the `your-registry/your-data:tag` image.
 
 ### Read-Only Volume Approach
 
@@ -139,7 +139,7 @@ spec:
             reference: your-registry/your-data:tag
 ```
 
-This method reduces the surface area of image execution and speeds up the process by directly mounting the data in place rather than copying it from an init container to another volume.
+OCI image volumes reduces the surface area of image execution and are more efficient since the data is directly mounted into the pod rather than copied to a volume in an init container.
 
 ### Init Container Approach
 
