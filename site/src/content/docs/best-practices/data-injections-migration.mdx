@@ -11,6 +11,14 @@ This guide explains how to migrate your Zarf deployment from the data injections
 
 ## Migration guide
 
+There are two recommended approaches to replacing data injections.
+
+The first, and preferred approach, is the Kubernetes Feature, [read-only OCI based volumes](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source). This feature generally available as of Kubernetes 1.35 and compatible with the Zarf agent as of v0.69.1. It provides a direct path for consuming container images as read only data sources.
+
+The second approach uses init containers to migrate data to volumes. This approach has has been widely adopted among Kubernetes users for years. It involves spinning up an init container from an OCI image that holds the required data. This data is then persisted to a common volume which the long running container(s) in the pod can use.
+
+Migration for both of these approaches will require packaging an OCI image. Their implementation will differ in the pod specification.
+
 ### Step 1: Package Your Data in an OCI Image
 
 First, create a container image containing your data:
@@ -68,9 +76,9 @@ components:
       - your-registry/your-data:tag  # Your container with your data file
 ```
 
-**Key Changes:**
-- Remove `dataInjections` section entirely.
-- Replace the init container image, alpine:3.18, used during data injections with the data image.
+Rather than storing the data in the package through data injections, the data is stored in the `your-registry/your-data:tag` container.
+
+### Read Only volume approach
 
 ### Step 3: Update Deployment Manifest
 
@@ -88,6 +96,85 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: data
+      containers:
+        - name: my-app
+          image: "ghcr.io/my-app:1.0.0"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /data", # This will list all files copied by data injections
+            ]
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: my-data
+```
+
+**After (Read-Only OCI Volume Strategy):**
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: kiwix-serve
+          image: "ghcr.io/my-app:1.0.0"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /mount-path", # This will list all files in the base directory of the your-registry/your-data:tag image.
+            ]
+          ...
+          volumeMounts:
+            - name: data
+              mountPath: /mount-path
+      volumes:
+        - name: data
+          image:
+            reference: your-registry/your-data:tag
+```
+
+This method reduces the surface area of image execution and speeds up the process by directly mounting the data in place rather than copying it from an init container to another volume.
+
+### Init Container approach
+
+### Step 3: Update Deployment Manifest
+
+**Before (Data Injections):**
+```yaml
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: data-injector
+          image: alpine:3.18
+          command: ["sh", "-c"]
+          args:
+            - 'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"'
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      containers:
+        - name: my-app
+          image: "ghcr.io/my-app:1.0.0"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /data", # This will list all files added to this directory through data injections
+            ]
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: my-data
 ```
 
 **After (Init Container Strategy):**
@@ -105,16 +192,25 @@ spec:
           volumeMounts:
             - mountPath: /data
               name: data
+      containers:
+        - name: my-app
+          image: "ghcr.io/my-app:1.0.0"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /data/my-app-data-location", # This will list all files copied during the init container run
+            ]
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      volumes:
+        - name: data
+          emptyDir: {}
 ```
 
 With the image-based approach, data can use ephemeral storage, such as emptyDir, since the init container repopulates the data from the container image on each pod restart.
 
-**Key Changes:**
-- Replace data injection marker waiting logic with direct data copying.
-- Use your data container image.
+## Need Help?
 
-Your app should be ready to deploy. If there are any reasons that this method does not work for you, please comment in issue [#3926](https://github.com/zarf-dev/zarf/issues/3926)
-
-## Future Alternatives
-
-The Kubernetes feature [OCI volume sources](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source) is considered stable as of 1.35. Once this feature is supported by Zarf, [#3235](https://github.com/zarf-dev/zarf/pull/3235), this document will recommend that method. OCI volumes sources provide a simple way to mount data from an image into a pod.
+If there are any reasons that these method do not work for you, please comment in issue [#3926](https://github.com/zarf-dev/zarf/issues/3926)
