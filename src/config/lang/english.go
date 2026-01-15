@@ -45,7 +45,6 @@ const (
 	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
-	RootCmdFlagInsecure              = "Allow access to insecure registries and disable other recommended security enforcements such as package checksum and signature validation. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."
 	RootCmdFlagInsecureSkipTLSVerify = "Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture."
 
@@ -207,7 +206,8 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageFlagSkipSignatureValidation = "Skip validating the signature of the Zarf package"
+	CmdPackageFlagVerify                  = "Verify the Zarf package signature"
+	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Skip validating the signature of the Zarf package"
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
 	CmdPackageCreateShort = "Creates a Zarf package from a given directory or the current directory"

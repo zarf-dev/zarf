@@ -141,7 +141,6 @@ func TestZarfPackageValidate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := ValidatePackage(tt.pkg)
@@ -180,7 +179,6 @@ func TestValidateManifest(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateManifest(tt.manifest)
@@ -244,7 +242,6 @@ func TestValidateReleaseName(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateReleaseName(tt.chartName, tt.releaseName)
@@ -313,7 +310,6 @@ func TestValidateChart(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateChart(tt.chart)
@@ -434,7 +430,6 @@ func TestValidateComponentActions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateActions(tt.actions)
@@ -480,7 +475,6 @@ func TestValidateComponentAction(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			err := validateAction(tt.action)

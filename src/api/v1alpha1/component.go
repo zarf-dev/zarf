@@ -33,8 +33,8 @@ type ZarfComponent struct {
 	// Helm charts to install during package deploy.
 	Charts []ZarfChart `json:"charts,omitempty"`
 
-	// Datasets to inject into a container in the target cluster.
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty"`
+	// [Deprecated] Datasets to inject into a container in the target cluster.
+	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty" jsonschema:"deprecated=true"`
 
 	// Files or folders to place on disk during package deployment.
 	Files []ZarfFile `json:"files,omitempty"`

@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -20,13 +19,17 @@ import (
 )
 
 // UpdateImages updates the images field for components in a zarf.yaml
-func UpdateImages(ctx context.Context, baseDir string, imagesScans []ComponentImageScan) error {
+func UpdateImages(ctx context.Context, packagePath string, imagesScans []ComponentImageScan) error {
 	l := logger.From(ctx)
-	packageConfigFile := filepath.Join(baseDir, layout.ZarfYAML)
 
-	packageConfigBytes, err := os.ReadFile(packageConfigFile)
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return fmt.Errorf("failed to read %s: %w", packageConfigFile, err)
+		return fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+
+	packageConfigBytes, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return fmt.Errorf("failed to read %s: %w", pkgPath.ManifestFile, err)
 	}
 
 	zarfPackage := v1alpha1.ZarfPackage{}
@@ -35,13 +38,13 @@ func UpdateImages(ctx context.Context, baseDir string, imagesScans []ComponentIm
 	}
 
 	if !updateNeeded(zarfPackage, imagesScans) {
-		l.Info("no update needed, images are already up to date", "path", packageConfigFile)
+		l.Info("no update needed, images are already up to date", "path", pkgPath.ManifestFile)
 		return nil
 	}
 
 	astFile, err := parser.ParseBytes(packageConfigBytes, parser.ParseComments)
 	if err != nil {
-		return fmt.Errorf("failed to parse %s as AST: %w", packageConfigFile, err)
+		return fmt.Errorf("failed to parse %s as AST: %w", pkgPath.ManifestFile, err)
 	}
 
 	updatedZarfYaml, err := createUpdate(zarfPackage, imagesScans, astFile)
@@ -49,11 +52,11 @@ func UpdateImages(ctx context.Context, baseDir string, imagesScans []ComponentIm
 		return fmt.Errorf("failed to create update: %w", err)
 	}
 
-	if err := os.WriteFile(packageConfigFile, []byte(updatedZarfYaml), helpers.ReadAllWriteUser); err != nil {
-		return fmt.Errorf("failed to write updated %s: %w", packageConfigFile, err)
+	if err := os.WriteFile(pkgPath.ManifestFile, []byte(updatedZarfYaml), helpers.ReadAllWriteUser); err != nil {
+		return fmt.Errorf("failed to write updated %s: %w", pkgPath.ManifestFile, err)
 	}
 
-	l.Info("successfully updated images", "path", packageConfigFile)
+	l.Info("successfully updated images", "path", pkgPath.ManifestFile)
 	return nil
 }
 

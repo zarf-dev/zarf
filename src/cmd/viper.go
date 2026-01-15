@@ -27,7 +27,6 @@ const (
 	VArchitecture          = "architecture"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
-	VInsecure              = "insecure"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 
@@ -75,6 +74,7 @@ const (
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
 	VPkgPublicKey      = "package.public_key"
+	VPkgVerify         = "package.verify"
 
 	// Package create config keys
 

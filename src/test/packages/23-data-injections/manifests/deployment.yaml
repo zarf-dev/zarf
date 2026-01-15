@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kiwix-serve
+  namespace: kiwix
+  labels:
+    app: kiwix-serve
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: kiwix-serve
+  template:
+    metadata:
+      labels:
+        app: kiwix-serve
+    spec:
+      # Kiwix can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
+      # It's necessary to include the ###ZARF_DATA_INJECTION_MARKER### somewhere in the podspec, otherwise data injections will not occur.
+      initContainers:
+        - name: data-loader
+          image: alpine:3.18
+          command:
+            [
+              "sh",
+              "-c",
+              # This command looks for the Zarf "data injection marker" which is a timestamped file that is injected after everything else and marks the injection as complete.
+              'while [ ! -f /data/###ZARF_DATA_INJECTION_MARKER### ]; do echo "waiting for zarf data sync" && sleep 1; done; echo "we are done waiting!"',
+            ]
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+          volumeMounts:
+            - mountPath: /data
+              name: data
+      containers:
+        - name: kiwix-serve
+          image: "ghcr.io/kiwix/kiwix-serve:3.5.0-2"
+          command:
+            [
+              "sh",
+              "-c",
+              "ls -la /data && kiwix-serve -v /data/*.zim",
+            ]
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kiwix-data
