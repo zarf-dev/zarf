@@ -1,0 +1,29 @@
+applicationsets:
+  - name: guestbook
+    namespace: argocd
+    goTemplate: true
+    goTemplateOptions:
+      - missingkey=error
+    generators:
+      - git:
+          repoURL: https://github.com/argoproj/argocd-example-apps.git
+          revision: 0d521c6e049889134f3122eb32d7ed342f43ca0d
+          directories:
+            - path: guestbook
+    template:
+      metadata:
+        name: '{{.path.basename}}'
+      spec:
+        project: default
+        source:
+          repoURL: https://github.com/argoproj/argocd-example-apps.git
+          targetRevision: 0d521c6e049889134f3122eb32d7ed342f43ca0d
+          path: '{{.path.path}}'
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: '{{.path.basename}}'
+        syncPolicy:
+          automated:
+            enabled: true
+          syncOptions:
+            - CreateNamespace=true
