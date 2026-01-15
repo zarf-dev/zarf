@@ -6,12 +6,8 @@ package images
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -124,7 +120,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return err
 			}
-			client.Client.Transport, err = transportFromClientCert(certs)
+			client.Client.Transport, err = pki.TransportWithKey(certs)
 			if err != nil {
 				return err
 			}
@@ -252,30 +248,6 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	return nil
-}
-
-func transportFromClientCert(certs pki.GeneratedPKI) (http.RoundTripper, error) {
-	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load client certificate: %w", err)
-	}
-
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(certs.CA) {
-		return nil, fmt.Errorf("failed to parse CA certificate")
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-	}
-	transport, ok := http.DefaultTransport.(*http.Transport)
-	if !ok {
-		return nil, errors.New("could not get default transport")
-	}
-	transport = transport.Clone()
-	transport.TLSClientConfig = tlsConfig
-	return transport, nil
 }
 
 func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {

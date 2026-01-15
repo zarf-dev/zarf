@@ -8,12 +8,15 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -365,4 +368,29 @@ func GenerateMTLSCerts(serverDNSNames []string, serverCommonName string, clientC
 	}
 
 	return serverPKI, clientPKI, nil
+}
+
+// TransportWithKey creates an HTTP transport configured with mTLS certificates.
+func TransportWithKey(certs GeneratedPKI) (http.RoundTripper, error) {
+	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client certificate: %w", err)
+	}
+
+	caCertPool := x509.NewCertPool()
+	if !caCertPool.AppendCertsFromPEM(certs.CA) {
+		return nil, fmt.Errorf("failed to parse CA certificate")
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	}
+	transport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, errors.New("could not get default transport")
+	}
+	transport = transport.Clone()
+	transport.TLSClientConfig = tlsConfig
+	return transport, nil
 }

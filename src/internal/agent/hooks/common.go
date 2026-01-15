@@ -6,17 +6,13 @@ package hooks
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/images"
-	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
@@ -30,31 +26,6 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	}
 	currLabels["zarf-agent"] = "patched"
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
-}
-
-// transportFromClientCert creates an HTTP transport configured with client mTLS certificates.
-func transportFromClientCert(certs pki.GeneratedPKI) (http.RoundTripper, error) {
-	cert, err := tls.X509KeyPair(certs.Cert, certs.Key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load client certificate: %w", err)
-	}
-
-	caCertPool := x509.NewCertPool()
-	if !caCertPool.AppendCertsFromPEM(certs.CA) {
-		return nil, fmt.Errorf("failed to parse CA certificate")
-	}
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-	}
-	transport, ok := http.DefaultTransport.(*http.Transport)
-	if !ok {
-		return nil, errors.New("could not get default transport")
-	}
-	transport = transport.Clone()
-	transport.TLSClientConfig = tlsConfig
-	return transport, nil
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {
