@@ -15,7 +15,7 @@ There are two recommended approaches to replacing Data Injections.
 
 The first, and preferred approach, is the Kubernetes Feature, [read-only OCI based volumes](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source). This feature is generally available as of Kubernetes 1.35 and compatible with the Zarf agent as of v0.69.1. It provides a direct path for consuming container images as read only data sources.
 
-The second approach uses init containers to migrate data to volumes. This approach has been widely adopted among Kubernetes users for years. It involves spinning up an init container from an OCI image that holds the required data. This data is then persisted to a common volume which the long running container(s) in the pod can use.
+The second approach uses init containers to migrate data to volumes. This approach has been widely adopted among Kubernetes users for years. It uses an init container from an OCI image that holds the required data. This data is then persisted to a common volume which the long running container(s) in the pod can use.
 
 Migration for both of these approaches will require packaging an OCI image. Their implementation will differ in the pod specification.
 
