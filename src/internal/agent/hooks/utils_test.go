@@ -79,7 +79,6 @@ func verifyAdmission(t *testing.T, rr *httptest.ResponseRecorder, expected admis
 	err := json.NewDecoder(rr.Body).Decode(&admissionReview)
 	require.NoError(t, err)
 
-	// Print error message if test failed with 500
 	if rr.Code == 500 && expected.code != 500 {
 		if admissionReview.Response != nil && admissionReview.Response.Result != nil {
 			t.Logf("Error message: %s", admissionReview.Response.Result.Message)
