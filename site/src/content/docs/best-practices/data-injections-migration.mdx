@@ -2,16 +2,16 @@
 title: "Migrate From Data injections"
 ---
 
-This guide explains how to migrate your Zarf deployment from the data injections feature to OCI image-based data delivery methods. Data injections are deprecated in the current Zarf schema version and will be fully removed in the next schema version. There are several reasons behind this:
+This guide explains how to migrate your Zarf deployment from the Data Injections feature to OCI image-based data delivery methods. Data injections are deprecated in the current Zarf schema version and will be fully removed in the next schema version. There are several reasons behind this:
 
-- **Poor User Experience**: Many users have struggled to figure out how to adopt data injections.
-- **Host dependency**: Data injections shell out to `tar`. This makes testing difficult and introduces differences across environments.
+- **Poor User Experience**: Many users have struggled to figure out how to adopt Data Injections.
+- **Host dependency**: Data Injections shell out to `tar`. This makes testing difficult and introduces differences across environments.
 - **Ephemeral Storage**: Because Data Injections only load data during `zarf package deploy` the data must be saved to persistent storage. Otherwise, when a pod restarts any data injected will be lost.
 - **Better alternatives**: OCI images provide a Kubernetes native solution for data delivery, and neatly fit into the Zarf delivery paradigm.
 
 ## Migration guide
 
-There are two recommended approaches to replacing data injections.
+There are two recommended approaches to replacing Data Injections.
 
 The first, and preferred approach, is the Kubernetes Feature, [read-only OCI based volumes](https://github.com/kubernetes/enhancements/tree/master/keps/sig-node/4639-oci-volume-source). This feature is generally available as of Kubernetes 1.35 and compatible with the Zarf agent as of v0.69.1. It provides a direct path for consuming container images as read only data sources.
 
@@ -36,7 +36,7 @@ docker push your-registry/your-data:tag
 
 :::tip
 
-Some registries will not accept images over a certain size or you may want to avoid pushing your data to a connected registry. To build the package with a local image use [Image Archives](/ref/components#container-image-archives). The [Kiwix example](/ref/examples/kiwix) utilizes this strategy
+Some registries will not accept images over a certain size or you may want to avoid pushing your data to a connected registry. To build the package with a local image use [Image Archives](/ref/components#container-image-archives). The [Kiwix example](/ref/examples/kiwix) uses this strategy
 
 :::
 
@@ -121,7 +121,7 @@ spec:
   template:
     spec:
       containers:
-        - name: kiwix-serve
+        - name: my-app
           image: "ghcr.io/my-app:1.0.0"
           command:
             [
