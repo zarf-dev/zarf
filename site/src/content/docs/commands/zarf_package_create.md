@@ -33,7 +33,6 @@ zarf package create [ DIRECTORY ] [flags]
       --registry-override strings      Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
   -s, --sbom                           View SBOM contents after creating the package
       --sbom-out string                Specify an output directory for the SBOMs from the created Zarf package
-      --set stringToString             Alias for --set-variables (default [])
       --set-variables stringToString   Specify package variables to set on the command line (KEY=value) (default [])
       --signing-key string             Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string        Password to the private key used for signing packages
