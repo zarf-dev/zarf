@@ -295,11 +295,6 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packageDeployOptions) preRun(cmd *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-
 	// Handle deprecated --skip-signature-validation flag for backwards compatibility
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
@@ -554,11 +549,6 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packageMirrorResourcesOptions) preRun(cmd *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-
 	// Handle deprecated --skip-signature-validation flag for backwards compatibility
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
@@ -728,11 +718,6 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packageInspectOptions) preRun(cmd *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
 
@@ -1513,11 +1498,6 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packageRemoveOptions) preRun(cmd *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-
 	// Handle deprecated --skip-signature-validation flag for backwards compatibility
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
@@ -1653,11 +1633,6 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packagePublishOptions) preRun(cmd *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-
 	// Handle deprecated --skip-signature-validation flag for backwards compatibility
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
