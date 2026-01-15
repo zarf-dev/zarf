@@ -1,57 +1,42 @@
 ---
-title: Zarf 2025 Roadmap
+title: Zarf 2026 Roadmap
 ---
 
 ## Introduction
 
-2025 is about building resilience, empowering extensibility, and preparing the system for broader integrations through SDKs.
-
-## Core Themes for 2025
-
-- **SDK Support & Decoupled Architecture**
-  Enable integration and extensibility by refactoring the core to cleanly separate CLI operations from library logic. This will unlock use cases for tooling integration, programmatic workflows, and community enhancements.
-
-- **Resilient-by-Design Infrastructure**
-  Invest in the internal consistency, recovery, and upgrade mechanisms of Zarf to ensure performance across edge and connected environments.
-
-- **Operational Enhancements**
-  Improve package lifecycle operations, diagnostics, and user observability to make Zarf more usable and reliable in production.
-
-- **Workflow Stability & Expansion**
-  Mature the package lifecycle, extend schema-based definitions, and reduce the learning curve for new users through simplification and documentation.
-
----
+2026 is about building long-term sustainability, provenance, and enhancing the package lifecycle from creation through deployment with enhanced state.
 
 ## Development Story
 
-### SDK Readiness (Q1 - Q2)
+### Sustainability and Provenance (Q1 - Q2)
 
-We began the year with a deliberate push to lay the groundwork for SDK support. This involves:
+Support the advancement of the project with schema updates, new features, and required deprecations/removals. Additionally establishing parity with the signing and verification ecosystem that aligns natively to the airgapped environments through offline verification:
 
-- Refactor internal logic to split the CLI from the shared library.
-- Establish SDK entry points for Zarf functionality.
-- Standardize on logging patterns for package lifecycle execution.
+- Introduce next schema version, improve structure, and identify deprecations removals
+- Zarf Package Signing and Verification Enhancements
+- Enhance values patterns to improve configuration user experience and migration
+- Extend, validate, and document Zarf's support across different Kubernetes distributions.
 
-Parallel to these efforts, we also focused on extending our test suite to cover decoupled components and ensure changes did not regress GA stability.
+These allow the project to iterate towards a sustainable baseline that can be supported once v1.0.0 is reached.
 
-### Operational Enhancements (Q2 - Q3)
+### Operations and Security (Q2 - Q3)
 
-As the architecture matures, attention turns to reliability and transparency:
+As the architecture matures, package creation should establish transparency and security, as well as improving state management:
 
-- Improve support for chaining packages and dynamic variable injection during deploy.
-- Enhance package and chart values patterns and enhance configuration opportunities.
-- Improve supply chain lifecycle with enhanced artifact delivery and discovery.
+- SBOM packaging, management, and publishing
+- Package creation security verification enhancements
+- Improve state management to enable more dynamic deployment scenarios and ensure resource traceability.
+- Security and Threat Model enhancements (mTLS for Zarf infrastructure)
 
-These upgrades strengthen Zarf's use in production pipelines and across disconnected systems.
+These improvements provide greater trust to the packaging process and allow greater control of how deployed operations occur.
 
-### Package Lifecycle and UX Enhancements (Q3 - Q4)
+### Package and Infrastructure adaptability (Q3 - Q4)
 
 Actively investing in enhancements that simplify and expand what Zarf can do:
 
-- Add observable error messages and diagnostic metadata to simplify user troubleshooting.
-- Introduce schema enhancements from new features and deprecation removals.
-- Improve state management to enable more dynamic deployment scenarios and ensure resource traceability.
-- Extend, validate, and document Zarf's support across different Kubernetes distributions.
+- Package maintainability, Improve component imports, YOLO package support
+- Builtin Support for multi-architecture clusters
+- Package resource evaluation and optimization
 
 We believe these improvements can assist in making zarf more operationally effective.
 
@@ -60,8 +45,9 @@ We believe these improvements can assist in making zarf more operationally effec
 Throughout the year, the Zarf team remains committed to open governance and community development:
 
 - Bi-weekly community [meetups](https://zoom-lfx.platform.linuxfoundation.org/meeting/97461829237?password=add48ad5-fc07-4951-96d2-531b72d2a5dc) to showcase demos and field feature proposals.
-- [Zarf Enhancements Proposal](https://github.com/zarf-dev/proposals) process introduced to align contributors and consumers of proposed features or changes.
+- [Zarf Enhancements Proposal](https://github.com/zarf-dev/proposals) process to align contributors and consumers of proposed features or changes.
 - Continued engagement with the OpenSSF Incubation process and secure software practices.
+- Broader support and Documentation for Kubernetes Distribution operations.
 - Creation and maintenance of learning and community materials.
 - Improve sustainability and governance of the project.
 - Respond to Critical bug fixes and vulnerabilities.
