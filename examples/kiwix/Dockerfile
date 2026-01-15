@@ -1,4 +1,4 @@
-# simple base image with shell for copying within the init container
-FROM alpine:3.18
+# It's ideal to use scratch as the base for OCI volumes as no shell is required
+FROM scratch
 
 COPY zim-data/*.zim /data/

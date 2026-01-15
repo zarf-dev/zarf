@@ -24,6 +24,7 @@ Migration for both of these approaches will require packaging an OCI image. Thei
 First, create a container image containing your data:
 
 ```dockerfile
+# The init containers approach requires a shell, for read only OCI volumes "FROM scratch" is sufficient.
 FROM alpine:3.18
 COPY your-data-file /your-data/your-data-file
 ```
