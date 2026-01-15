@@ -245,7 +245,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// duplicate warning for overwriting the bundle signature
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	if _, err := os.Stat(actualBundlePath); err != nil {
+	if _, err := os.Stat(actualBundlePath); err == nil {
 		l.Warn("overwriting existing package bundle signature", "path", actualBundlePath)
 	}
 
