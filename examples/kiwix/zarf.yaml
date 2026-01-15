@@ -41,4 +41,4 @@ x-mdx: |
 
   By utilizing read-only OCI volumes the filesystem of the kiwix-data:local image is directly mounted into the pod.
 
-  To test this example read-only OCI volumes must be enabled in your Kubernetes cluster, and the cluster must be initialized with Zarf version 0.69.1 or greater. OCI volumes are generally available in Kubernetes 1.35.
+  To test this example read-only OCI volumes must be enabled in your Kubernetes cluster, and the cluster must be initialized with Zarf version 0.70.0 or greater. OCI volumes are generally available in Kubernetes 1.35.
