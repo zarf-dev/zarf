@@ -63,7 +63,7 @@ components:
         compress: true
 ```
 
-**After (Init Container Strategy):**
+**After:**
 ```yaml
 kind: ZarfPackageConfig
 metadata:
@@ -73,7 +73,7 @@ components:
     required: true
     images:
       - ghcr.io/my-app:1.0.0
-      - your-registry/your-data:tag  # Your container with your data file
+      - your-registry/your-data:tag  # Your container with your data files
 ```
 
 Rather than storing the data in the package through data injections, the data is stored in the `your-registry/your-data:tag` container.
