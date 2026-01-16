@@ -267,11 +267,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	// Perform the loadedChart installation.
 	_, err := client.RunWithContext(ctx, chart, chartValues)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
@@ -321,10 +317,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 
 	// Perform the loadedChart upgrade.
 	_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
