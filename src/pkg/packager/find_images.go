@@ -80,18 +80,34 @@ type ComponentImageScan struct {
 	WhyResources []Resource
 }
 
-// FindImages iterates over the manifests and charts within each component to find any container images
+// FindImages iterates over the manifests, charts and imageArchives within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
+		Flavor:                  opts.Flavor,
+		SetVariables:            opts.CreateSetVariables,
+		CachePath:               opts.CachePath,
+		IsInteractive:           opts.IsInteractive,
+		SkipVersionCheck:        true,
+		SkipImageArchivesImages: true,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	pkg, err := load.PackageDefinitionWithoutValidation(ctx, packagePath, loadOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	// // We need to set a placeholder images list if no images list already exists to pass schema validation
+	// for i, component := range pkg.Components {
+	// 	for j, archive := range component.ImageArchives {
+	// 		if len(archive.Images) == 0 {
+	// 			pkg.Components[i].ImageArchives[j].Images = []string{"placeholder"}
+	// 		}
+	// 	}
+	// }
+
+	err = load.Validate(ctx, pkg, packagePath, loadOpts.SetVariables, loadOpts.Flavor, loadOpts.SkipVersionCheck, loadOpts.SkipImageArchivesImages)
+
 	if err != nil {
 		return nil, err
 	}
@@ -117,8 +133,8 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
-		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
-			// Skip if there are no manifests, charts, or repos
+		if len(component.Charts)+len(component.Manifests)+len(component.Repos)+len(component.ImageArchives) < 1 {
+			// Skip if there are no manifests, charts, imageArchives, or repos
 			continue
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
