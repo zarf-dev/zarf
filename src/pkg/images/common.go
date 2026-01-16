@@ -187,7 +187,7 @@ func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Durati
 func NoopOpt(*crane.Options) {}
 
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
-// based upon Zarf's global --insecure-skip-tls-verify (and --insecure) flags.
+// based upon Zarf's global --insecure-skip-tls-verify flag.
 func WithGlobalInsecureFlag() []crane.Option {
 	if config.CommonOptions.InsecureSkipTLSVerify {
 		return []crane.Option{crane.Insecure}
