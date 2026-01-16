@@ -194,7 +194,7 @@ func (d *deployer) resetRegistryHPA(ctx context.Context) {
 	l := logger.From(ctx)
 	if d.c != nil && d.hpaModified {
 		if err := d.c.EnableRegHPAScaleDown(ctx); err != nil {
-			l.Error("unable to reenable the registry HPA scale down", "error", err.Error())
+			l.Error("unable to re-enable the registry HPA scale down", "error", err.Error())
 		}
 	}
 }

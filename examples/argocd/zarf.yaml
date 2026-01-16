@@ -24,7 +24,7 @@ components:
     required: true
     charts:
       - name: argocd-apps
-        version: 1.6.1
+        version: 2.0.4
         namespace: podinfo
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps
@@ -42,14 +42,14 @@ components:
             wait:
               cluster:
                 kind: pod
-                name: app.kubernetes.io/name=apps-podinfo
+                name: app.kubernetes.io/name=podinfo
                 namespace: podinfo
                 condition: ready
   - name: argocd-applicationset
     required: true
     charts:
       - name: argocd-apps
-        version: 1.6.1
+        version: 2.0.4
         namespace: guestbook
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-apps
