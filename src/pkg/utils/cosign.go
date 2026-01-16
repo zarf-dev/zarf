@@ -6,6 +6,8 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -50,6 +52,8 @@ type SignBlobOptions struct {
 
 	// Password provides password for encrypted keys without requiring cosign.PassFunc import
 	Password string
+	// Overwrite allows for opting-into the overwrite of an existing signature
+	Overwrite bool
 }
 
 // VerifyBlobOptions embeds Cosign's native options for verification.
@@ -75,6 +79,22 @@ type VerifyBlobOptions struct {
 // This checks if any signing key material is configured (KeyRef, IDToken, or Sk).
 func (opts SignBlobOptions) ShouldSign() bool {
 	return opts.KeyRef != "" || opts.IDToken != "" || opts.Sk
+}
+
+// checkOverwrite validates that output files can be written, returning an error if they exist and Overwrite is false.
+func (opts SignBlobOptions) checkOverwrite(ctx context.Context) error {
+	for _, path := range []string{opts.BundlePath, opts.OutputCertificate} {
+		if path == "" {
+			continue
+		}
+		if _, err := os.Stat(path); err == nil {
+			if !opts.Overwrite {
+				return fmt.Errorf("file at path %s already exists", path)
+			}
+			logger.From(ctx).Debug("overwriting existing file", "path", path)
+		}
+	}
+	return nil
 }
 
 // DefaultSignBlobOptions returns SignBlobOptions with Zarf defaults.
@@ -135,6 +155,11 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		keyOpts.PassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte(password), nil
 		})
+	}
+
+	// Note: OutputCertificate check will be removed when zarf no longer includes the legacy signature
+	if err := opts.checkOverwrite(ctx); err != nil {
+		return nil, err
 	}
 
 	l.Debug("signing blob with cosign",

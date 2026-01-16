@@ -239,15 +239,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// Check if signature already exists in actual layout and warn
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
-	if _, err := os.Stat(actualSignaturePath); err == nil {
-		l.Warn("overwriting existing package signature", "path", actualSignaturePath)
-	}
-
-	// duplicate warning for overwriting the bundle signature
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	if _, err := os.Stat(actualBundlePath); err == nil {
-		l.Warn("overwriting existing package bundle signature", "path", actualBundlePath)
-	}
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)

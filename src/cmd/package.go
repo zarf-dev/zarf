@@ -2001,6 +2001,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
