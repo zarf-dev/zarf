@@ -380,8 +380,8 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 
-	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
-	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
+	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts, manifests, and image archives"
+	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts, manifests, and image archives.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
 
 	CmdDevGenerateConfigShort = "Generates a config file for Zarf"
