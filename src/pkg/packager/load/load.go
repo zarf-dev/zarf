@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,51 +40,7 @@ type DefinitionOptions struct {
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
 	// SkipImageArchivesImages ignores schema validation errors when imageArchives does not include an images list
-	SkipImageArchivesImages bool
-}
-
-// PackageDefinitionWithoutValidation returns a non-validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinitionWithoutValidation(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
-	l := logger.From(ctx)
-	start := time.Now()
-	l.Debug("start layout.LoadPackage",
-		"path", packagePath,
-		"flavor", opts.Flavor,
-		"setVariables", opts.SetVariables,
-	)
-
-	pkgPath, err := layout.ResolvePackagePath(packagePath)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-
-	b, err := os.ReadFile(pkgPath.ManifestFile)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg, err := pkgcfg.Parse(ctx, b)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-
-	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
-			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
-	}
-
-	if opts.SetVariables != nil {
-		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
+	SkipEmptyImageArchivesImages bool
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -125,7 +83,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = Validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipImageArchivesImages)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipEmptyImageArchivesImages)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -133,7 +91,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func Validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues, skipImageArchivesImages bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues, skipEmptyImageArchivesImages bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -153,6 +111,16 @@ func Validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
+
+	// ignore missing images in imageArchives finding
+	if skipEmptyImageArchivesImages {
+		for i, finding := range findings {
+			if finding.Description == "images is required" && strings.Contains(finding.YqPath, "imageArchives") {
+				findings = slices.Delete(findings, i, i+1)
+			}
+		}
+	}
+
 	if len(findings) != 0 {
 		return &lint.LintError{
 			PackageName: pkg.Metadata.Name,

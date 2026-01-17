@@ -85,29 +85,14 @@ type ComponentImageScan struct {
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	loadOpts := load.DefinitionOptions{
-		Flavor:                  opts.Flavor,
-		SetVariables:            opts.CreateSetVariables,
-		CachePath:               opts.CachePath,
-		IsInteractive:           opts.IsInteractive,
-		SkipVersionCheck:        true,
-		SkipImageArchivesImages: true,
+		Flavor:                       opts.Flavor,
+		SetVariables:                 opts.CreateSetVariables,
+		CachePath:                    opts.CachePath,
+		IsInteractive:                opts.IsInteractive,
+		SkipVersionCheck:             true,
+		SkipEmptyImageArchivesImages: true,
 	}
-	pkg, err := load.PackageDefinitionWithoutValidation(ctx, packagePath, loadOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	// // We need to set a placeholder images list if no images list already exists to pass schema validation
-	// for i, component := range pkg.Components {
-	// 	for j, archive := range component.ImageArchives {
-	// 		if len(archive.Images) == 0 {
-	// 			pkg.Components[i].ImageArchives[j].Images = []string{"placeholder"}
-	// 		}
-	// 	}
-	// }
-
-	err = load.Validate(ctx, pkg, packagePath, loadOpts.SetVariables, loadOpts.Flavor, loadOpts.SkipVersionCheck, loadOpts.SkipImageArchivesImages)
-
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
