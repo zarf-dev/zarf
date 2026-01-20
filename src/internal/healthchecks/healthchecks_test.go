@@ -17,6 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
+	clientfeatures "k8s.io/client-go/features"
+	clientfeaturestesting "k8s.io/client-go/features/testing"
 	"k8s.io/kubectl/pkg/scheme"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
 	"sigs.k8s.io/cli-utils/pkg/testutil"
@@ -44,7 +46,16 @@ metadata:
 `
 
 func TestRunHealthChecks(t *testing.T) {
+	// Workaround for Kubernetes client-go v0.35.0 breaking change where WatchListClient
+	// feature gate (enabled by default in client-go v0.35.0) is incompatible
+	// with fake client watch functionality. The fake client doesn't emit bookmark events
+	// required by WatchListClient, causing watchers to hang indefinitely waiting for events.
+	// References:
+	// - KEP-3157: https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/3157-watch-list/README.md
+	// - Issue #135895 (open, confirmed breaking change): https://github.com/kubernetes/kubernetes/issues/135895
 	t.Parallel()
+	clientfeaturestesting.SetFeatureDuringTest(t, clientfeatures.WatchListClient, false)
+
 	tests := []struct {
 		name       string
 		podYamls   []string
