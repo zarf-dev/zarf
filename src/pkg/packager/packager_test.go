@@ -41,6 +41,38 @@ func TestOverridePackageNamespace(t *testing.T) {
 			namespace: "test-override",
 		},
 		{
+			name: "override namespace with wait action",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+		},
+		{
 			name: "multiple namespaces",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
@@ -54,6 +86,39 @@ func TestOverridePackageNamespace(t *testing.T) {
 							{
 								Name:      "test-2",
 								Namespace: "test-2",
+							},
+						},
+					},
+				},
+			},
+			namespace:   "test-override",
+			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+		},
+		{
+			name: "multiple namespaces from wait action",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "different-namespace",
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -125,6 +190,11 @@ func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, namespace 
 		}
 		for _, manifest := range component.Manifests {
 			require.Equal(t, manifest.Namespace, namespace)
+		}
+		for _, action := range component.Actions.GetAll() {
+			if action.Wait != nil && action.Wait.Cluster != nil && action.Wait.Cluster.Namespace != "" {
+				require.Equal(t, action.Wait.Cluster.Namespace, namespace)
+			}
 		}
 	}
 }

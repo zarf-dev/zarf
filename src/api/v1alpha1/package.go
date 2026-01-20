@@ -109,6 +109,11 @@ func (pkg ZarfPackage) UniqueNamespaceCount() int {
 		for _, manifest := range component.Manifests {
 			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
+		for _, action := range component.Actions.GetAll() {
+			if action.Wait != nil && action.Wait.Cluster != nil && action.Wait.Cluster.Namespace != "" {
+				uniqueNamespaces[action.Wait.Cluster.Namespace] = struct{}{}
+			}
+		}
 	}
 	return len(uniqueNamespaces)
 }
@@ -123,6 +128,7 @@ func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
 		for k := range comp.Manifests {
 			comp.Manifests[k].Namespace = namespace
 		}
+		pkg.Components[i].Actions.UpdateWaitNamespaces(namespace)
 	}
 }
 
