@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -63,9 +64,10 @@ type VerifyBlobOptions struct {
 	options.CertVerifyOptions
 
 	// Verification-specific options
-	SigRef     string // Path to signature file
-	Offline    bool   // Enable offline verification mode
-	IgnoreTlog bool   // Skip transparency log verification
+	SigRef          string // Path to signature file
+	TrustedRootPath string // Custom path to trusted root (optional, for private deployments)
+	Offline         bool   // Enable offline verification mode
+	IgnoreTlog      bool   // Skip transparency log verification
 
 	// General options
 	Timeout time.Duration // Timeout for verification operations
@@ -89,7 +91,7 @@ func DefaultSignBlobOptions() SignBlobOptions {
 			FulcioAuthFlow:   "normal",
 			FulcioURL:        "https://fulcio.sigstore.dev",
 			RekorURL:         "https://rekor.sigstore.dev",
-			NewBundleFormat:  false,
+			NewBundleFormat:  true,
 			SkipConfirmation: false,
 		},
 		Timeout: CosignDefaultTimeout,
@@ -101,6 +103,9 @@ func DefaultSignBlobOptions() SignBlobOptions {
 // Configures sensible defaults for offline/air-gapped environments.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	return VerifyBlobOptions{
+		KeyOpts: options.KeyOpts{
+			NewBundleFormat: true,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			IgnoreSCT: true, // Skip SCT verification by default
 		},
@@ -167,6 +172,10 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 // CosignVerifyBlobWithOptions verifies a blob signature with comprehensive cosign options.
 // This function supports all cosign v3 verify-blob capabilities by leveraging
 // the embedded KeyOpts and CertVerifyOptions structures.
+//
+// For air-gapped/offline verification, this function automatically uses the embedded
+// Sigstore trusted root (fetched via TUF at build time). No network calls are made
+// during verification.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
 	l := logger.From(ctx)
 
@@ -174,10 +183,22 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 	keyOpts := opts.KeyOpts
 	certVerifyOpts := opts.CertVerifyOptions
 
+	// Get trusted root path with automatic fallback to embedded root
+	// This prevents network calls - the embedded root was fetched via TUF at build time
+	if opts.NewBundleFormat {
+		trustedRootPath, cleanup, err := GetTrustedRootPath(opts.TrustedRootPath)
+		if err != nil {
+			return fmt.Errorf("failed to get trusted root: %w", err)
+		}
+		opts.TrustedRootPath = trustedRootPath
+		defer cleanup()
+	}
+
 	cmd := &verify.VerifyBlobCmd{
 		KeyOpts:           keyOpts,
 		CertVerifyOptions: certVerifyOpts,
 		SigRef:            opts.SigRef,
+		TrustedRootPath:   opts.TrustedRootPath,
 		IgnoreSCT:         opts.IgnoreSCT, // From CertVerifyOptions
 		Offline:           opts.Offline,
 		IgnoreTlog:        opts.IgnoreTlog,
@@ -185,8 +206,9 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 
 	l.Debug("verifying blob with cosign",
 		"keyRef", opts.KeyRef,
-		"sigRef", opts.SigRef,
-		"offline", opts.Offline)
+		"bundlePath", opts.BundlePath,
+		"trustedRootPath", opts.TrustedRootPath,
+		"newBundleFormat", opts.NewBundleFormat)
 
 	err := cmd.Exec(ctx, blobPath)
 	if err != nil {
