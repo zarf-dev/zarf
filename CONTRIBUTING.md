@@ -73,7 +73,9 @@ Contributions are highly welcome. When adding an example, be sure to also add it
 
 ## Zarf Enhancement Proposals (ZEP)
 
-Zarf Enhancement Proposals provides a process to propose and document important decision points. Proposal topics includes large features, significant changes to the UX, and architecture re-designs requiring considerable effort. Anyone can create a ZEP by visiting the [zarf-dev/proposals repository](https://github.com/zarf-dev/proposals)
+Zarf Enhancement Proposals (ZEP) provides a process to propose and document important decision points. Proposal topics includes large features, significant changes to the UX, and architecture re-designs requiring considerable effort. Anyone can create a ZEP by visiting the [zarf-dev/proposals repository](https://github.com/zarf-dev/proposals).
+
+ZEPs replace Architecture Decision Records (ADRs) which are kept at the base of the Zarf repository for historical purposes.
 
 ## Governance
 
