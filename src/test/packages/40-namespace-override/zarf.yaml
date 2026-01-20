@@ -22,7 +22,7 @@ components:
           - wait:
               cluster:
                 kind: ConfigMap
-                name: configmap1
+                name: chart-config-same-component
                 namespace: test
   - name: test-package-component-2
     required: true
@@ -31,3 +31,11 @@ components:
         namespace: test
         files:
           - manifests/configmap2.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: ConfigMap
+                name: manifest-config-different-component
+                namespace: test
