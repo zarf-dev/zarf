@@ -73,7 +73,8 @@ release:
     - glob: ./build/zarf-init-*
 
 # Update the 'generic' brew formula and create a versioned brew formula for artifacts from this release
-brews:
+# brews is being phased out in favor of homebrew_casks, check https://goreleaser.com/deprecations#brews for more info
+homebrew_casks:
   - name: "{{ .Env.BREW_NAME }}"
     repository:
       owner: defenseunicorns
@@ -108,3 +109,16 @@ brews:
     commit_msg_template: "build(release): {{ .ProjectName }}@{{ .Tag }}"
     homepage: "https://zarf.dev/"
     description: "The Airgap Native Packager Manager for Kubernetes"
+
+# UPX compression to minimize binary size
+upx:
+  - enabled: true
+    compress: best
+    lzma: true
+    brute: false
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
