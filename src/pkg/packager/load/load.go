@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
@@ -79,7 +80,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validateLoadedPackage(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -87,7 +88,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validateLoadedPackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -100,7 +101,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if !hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := lint.ValidatePackage(pkg); err != nil {
+	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
