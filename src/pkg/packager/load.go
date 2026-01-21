@@ -78,16 +78,17 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
-			Source:         source,
-			PublicKeyPath:  opts.PublicKeyPath,
-			Verify:         opts.Verify,
-			Shasum:         opts.Shasum,
-			Architecture:   config.GetArch(opts.Architecture),
-			Filter:         opts.Filter,
-			LayersSelector: opts.LayersSelector,
-			OCIConcurrency: opts.OCIConcurrency,
-			RemoteOptions:  opts.RemoteOptions,
-			CachePath:      opts.CachePath,
+			Source:               source,
+			PublicKeyPath:        opts.PublicKeyPath,
+			Verify:               opts.Verify,
+			VerificationStrategy: opts.VerificationStrategy,
+			Shasum:               opts.Shasum,
+			Architecture:         config.GetArch(opts.Architecture),
+			Filter:               opts.Filter,
+			LayersSelector:       opts.LayersSelector,
+			OCIConcurrency:       opts.OCIConcurrency,
+			RemoteOptions:        opts.RemoteOptions,
+			CachePath:            opts.CachePath,
 		}
 
 		pkgLayout, err := pullOCI(ctx, ociOpts)

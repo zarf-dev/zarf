@@ -16,6 +16,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -87,6 +88,59 @@ func TestLoadPackage(t *testing.T) {
 			Filter:        filters.Empty(),
 		}
 		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
+
+	t.Run("VerificationStrategy explicit values", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+
+		// VerifyNever should skip verification entirely and succeed
+		opt := LoadOptions{
+			VerificationStrategy: layout.VerifyNever,
+			PublicKeyPath:        filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:               filters.Empty(),
+		}
+		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err)
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// VerifyIfPossible should warn but continue on unsigned package
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyIfPossible,
+			PublicKeyPath:        filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:               filters.Empty(),
+		}
+		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err)
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// VerifyAlways should fail on unsigned package
+		opt = LoadOptions{
+			VerificationStrategy: layout.VerifyAlways,
+			PublicKeyPath:        filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:               filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
+
+	t.Run("Verify flag overrides VerificationStrategy", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+
+		// Verify: true should override VerificationStrategy: VerifyNever to VerifyAlways
+		opt := LoadOptions{
+			Verify:               true,
+			VerificationStrategy: layout.VerifyNever,
+			PublicKeyPath:        filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:               filters.Empty(),
+		}
+		_, err := LoadPackage(ctx, tarPath, opt)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "signature verification failed")
 	})

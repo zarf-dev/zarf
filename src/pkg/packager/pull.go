@@ -44,6 +44,8 @@ type PullOptions struct {
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // Pull takes a source URL and destination directory, fetches the Zarf package from the given sources, and returns the path to the fetched package.
@@ -69,14 +71,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
-		Shasum:         opts.SHASum,
-		Architecture:   arch,
-		PublicKeyPath:  opts.PublicKeyPath,
-		Verify:         opts.Verify,
-		Output:         destination,
-		OCIConcurrency: opts.OCIConcurrency,
-		RemoteOptions:  opts.RemoteOptions,
-		CachePath:      opts.CachePath,
+		Shasum:               opts.SHASum,
+		Architecture:         arch,
+		PublicKeyPath:        opts.PublicKeyPath,
+		Verify:               opts.Verify,
+		VerificationStrategy: opts.VerificationStrategy,
+		Output:               destination,
+		OCIConcurrency:       opts.OCIConcurrency,
+		RemoteOptions:        opts.RemoteOptions,
+		CachePath:            opts.CachePath,
 	})
 	if err != nil {
 		return "", err
