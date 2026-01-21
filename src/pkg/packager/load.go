@@ -32,7 +32,6 @@ type LoadOptions struct {
 	Shasum        string
 	Architecture  string
 	PublicKeyPath string
-	Verify        bool
 	Filter        filters.ComponentFilterStrategy
 	Output        string
 	// number of layers to pull in parallel
@@ -80,7 +79,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		ociOpts := pullOCIOptions{
 			Source:               source,
 			PublicKeyPath:        opts.PublicKeyPath,
-			Verify:               opts.Verify,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
@@ -131,15 +129,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		}
 	}
 
-	verificationStrategy := opts.VerificationStrategy
-	// always override VerificationStrategy if setting Verify
-	if opts.Verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:        opts.PublicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)

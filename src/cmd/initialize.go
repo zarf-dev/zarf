@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -172,12 +173,18 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// Establish default stance
+	verificationStrategy := layout.VerifyIfPossible
+	if o.verify {
+		verificationStrategy = layout.VerifyAlways
+	}
+
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath: o.publicKeyPath,
-		Verify:        o.verify,
-		Filter:        filters.Empty(),
-		Architecture:  config.GetArch(),
-		CachePath:     cachePath,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: verificationStrategy,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
