@@ -104,6 +104,7 @@ type pullOCIOptions struct {
 	PublicKeyPath  string
 	RemoteOptions
 	Verify bool
+	layout.VerificationStrategy
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -158,7 +159,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 
-	verificationStrategy := layout.VerifyIfPossible
+	verificationStrategy := opts.VerificationStrategy
 	if opts.Verify {
 		verificationStrategy = layout.VerifyAlways
 	}

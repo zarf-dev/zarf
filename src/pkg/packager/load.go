@@ -43,6 +43,8 @@ type LoadOptions struct {
 	CachePath string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -128,7 +130,8 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		}
 	}
 
-	verificationStrategy := layout.VerifyIfPossible
+	verificationStrategy := opts.VerificationStrategy
+	// always override VerificationStrategy if setting Verify
 	if opts.Verify {
 		verificationStrategy = layout.VerifyAlways
 	}
