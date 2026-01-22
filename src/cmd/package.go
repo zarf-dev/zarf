@@ -330,16 +330,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
 		PublicKeyPath:        o.publicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
@@ -590,16 +584,10 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
 		PublicKeyPath:        o.publicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
@@ -849,16 +837,10 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayersSelector:       zoci.ComponentLayers,
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
@@ -967,16 +949,10 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayersSelector:       zoci.ComponentLayers,
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1083,16 +1059,10 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayersSelector:       zoci.SbomLayers,
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1183,15 +1153,9 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
 		PublicKeyPath:        o.publicKeyPath,
@@ -1279,14 +1243,8 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	loadOpts := packager.LoadOptions{
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
 		PublicKeyPath:        o.publicKeyPath,
@@ -1369,15 +1327,9 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
 		PublicKeyPath:        o.publicKeyPath,
@@ -1592,15 +1544,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filter,
 		PublicKeyPath:        o.publicKeyPath,
@@ -1768,10 +1714,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
+	verificationStrategy := getVerificationStrategy(o.verify)
 
 	if helpers.IsOCIURL(packageSource) && o.signingKeyPath != "" {
 		l.Info("pulling source package locally to sign", "reference", packageSource)
@@ -1890,15 +1833,9 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
 		SHASum:               o.shasum,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 		PublicKeyPath:        o.publicKeyPath,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
@@ -2010,12 +1947,6 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Establish default stance
-	verificationStrategy := layout.VerifyIfPossible
-	if o.verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	// Load the package
 	loadOpts := packager.LoadOptions{
 		PublicKeyPath:        o.publicKeyPath,
@@ -2024,7 +1955,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 	}
 
 	l.Info("loading package", "source", packageSource)
@@ -2205,4 +2136,11 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 	}
 
 	return pkgCandidates, cobra.ShellCompDirectiveDefault
+}
+
+func getVerificationStrategy(verify bool) layout.VerificationStrategy {
+	if verify {
+		return layout.VerifyAlways
+	}
+	return layout.VerifyIfPossible
 }
