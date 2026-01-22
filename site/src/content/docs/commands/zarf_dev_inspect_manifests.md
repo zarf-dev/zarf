@@ -18,7 +18,6 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
 
 ```
       --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
-      --deploy-set stringToString             Alias for --deploy-set-variables (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                                  help for manifests
