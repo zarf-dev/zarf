@@ -22,6 +22,7 @@ import (
 	"helm.sh/helm/v4/pkg/chart/common"
 	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
 	"helm.sh/helm/v4/pkg/release"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 
 	"github.com/zarf-dev/zarf/src/config"
@@ -112,12 +113,16 @@ func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.Varia
 // Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
+	hooks, resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	finalManifestsOutput := bytes.NewBuffer(nil)
+
+	for _, hook := range hooks {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", hook.Path, hook.Manifest)
+	}
 
 	for _, resource := range resources {
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
@@ -126,35 +131,35 @@ func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer,
 	return finalManifestsOutput, nil
 }
 
-func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]releaseutil.Manifest, error) {
+func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]*releasev1.Hook, []releaseutil.Manifest, error) {
 	tempDir, err := utils.MakeTempDir("")
 	if err != nil {
-		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
+		return nil, nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
 	path := filepath.Join(tempDir, "chart.yaml")
 
 	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
-		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+		return nil, nil, fmt.Errorf("unable to write the post-render file for the helm chart")
 	}
 
 	// Run the template engine against the chart output
 	if err := variableConfig.ReplaceTextTemplate(path); err != nil {
-		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+		return nil, nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+		return nil, nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
 	}
 
 	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
-	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
+	hooks, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
 		actionConfig.Capabilities.APIVersions,
 		releaseutil.InstallOrder,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
+		return nil, nil, fmt.Errorf("error re-rendering helm output: %w", err)
 	}
-	return resources, nil
+	return hooks, resources, nil
 }

@@ -88,12 +88,17 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 // Run satisfies the Helm post-renderer interface. It templates the Zarf variables, finds connect strings, adopts namespaces, and applies Zarf state secrets
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
+	hooks, resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
 	if err != nil {
 		return nil, err
 	}
 	finalManifestsOutput := bytes.NewBuffer(nil)
 	ctx := context.Background()
+
+	for _, hook := range hooks {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", hook.Path, hook.Manifest)
+	}
+
 	if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
 		return nil, err
 	}
