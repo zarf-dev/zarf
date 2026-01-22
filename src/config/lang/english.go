@@ -255,6 +255,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
+	CmdPackageCreateFlagSetPkgTmpl            = "Specify package templates to set on the command line (KEY=value)"
 	CmdPackageCreateFlagSetVariables          = "Specify package variables to set on the command line (KEY=value)"
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
@@ -391,6 +392,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
 	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
+	CmdDevFlagSetPkgTmpl           = "Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagSetVariables         = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
