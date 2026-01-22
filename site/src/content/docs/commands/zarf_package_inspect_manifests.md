@@ -22,7 +22,6 @@ zarf package inspect manifests [ PACKAGE ] [flags]
   -k, --key string                     Path to public key file for validating signed packages
       --kube-version string            Override the default helm template KubeVersion when performing a package chart template
       --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --set stringToString             Alias for --set-variables (default [])
       --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --verify                         Verify the Zarf package signature
 ```
