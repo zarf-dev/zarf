@@ -45,7 +45,7 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	// Bind the helm action.
 	client := action.NewInstall(actionCfg)
 
-	client.DryRunStrategy = action.DryRunClient
+	client.DryRunStrategy = action.DryRunServer
 	client.Replace = true // Skip the name check.
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
