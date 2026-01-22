@@ -180,7 +180,12 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		rawData := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
+		// Ensure content ends with a newline before unmarshaling to preserve YAML trailing newlines.
+		content := resource.Content
+		if len(content) > 0 && content[len(content)-1] != '\n' {
+			content += "\n"
+		}
+		if err := yaml.Unmarshal([]byte(content), rawData); err != nil {
 			return fmt.Errorf("failed to unmarshal manifest: %w", err)
 		}
 		// If the object is empty, it's a blank resource, so we skip it. If the package name is empty we don't want to add labels.
