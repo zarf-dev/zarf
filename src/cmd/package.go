@@ -331,14 +331,14 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:         o.shasum,
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		Filter:         filters.Empty(),
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Shasum:               o.shasum,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -585,14 +585,14 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:         o.shasum,
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		Filter:         filter,
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Shasum:               o.shasum,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filter,
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpt)
 	if err != nil {
@@ -838,14 +838,14 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:   config.GetArch(),
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		LayersSelector: zoci.ComponentLayers,
-		Filter:         filters.BySelectState(o.components),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Architecture:         config.GetArch(),
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayersSelector:       zoci.ComponentLayers,
+		Filter:               filters.BySelectState(o.components),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -950,14 +950,14 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:   config.GetArch(),
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		LayersSelector: zoci.ComponentLayers,
-		Filter:         filters.BySelectState(o.components),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Architecture:         config.GetArch(),
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayersSelector:       zoci.ComponentLayers,
+		Filter:               filters.BySelectState(o.components),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1060,14 +1060,14 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:   config.GetArch(),
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		LayersSelector: zoci.SbomLayers,
-		Filter:         filters.Empty(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		Architecture:         config.GetArch(),
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayersSelector:       zoci.SbomLayers,
+		Filter:               filters.Empty(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1155,13 +1155,13 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		Verify:         o.verify,
-		Architecture:   config.GetArch(),
-		Filter:         filters.Empty(),
-		PublicKeyPath:  o.publicKeyPath,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		PublicKeyPath:        o.publicKeyPath,
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1244,14 +1244,14 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	}
 
 	loadOpts := packager.LoadOptions{
-		Verify:         o.verify,
-		Architecture:   config.GetArch(),
-		Filter:         filters.Empty(),
-		PublicKeyPath:  o.publicKeyPath,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
-		LayersSelector: zoci.DocLayers,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		PublicKeyPath:        o.publicKeyPath,
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		LayersSelector:       zoci.DocLayers,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1329,13 +1329,13 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		Verify:         o.verify,
-		Architecture:   config.GetArch(),
-		Filter:         filters.Empty(),
-		PublicKeyPath:  o.publicKeyPath,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		PublicKeyPath:        o.publicKeyPath,
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1543,15 +1543,16 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
-		Verify:         o.verify,
-		Architecture:   config.GetArch(),
-		Filter:         filter,
-		PublicKeyPath:  o.publicKeyPath,
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filter,
+		PublicKeyPath:        o.publicKeyPath,
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1712,6 +1713,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
 
+	// Establish default stance
+	verificationStrategy := getVerificationStrategy(o.verify)
+
 	if helpers.IsOCIURL(packageSource) && o.signingKeyPath != "" {
 		l.Info("pulling source package locally to sign", "reference", packageSource)
 		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -1723,12 +1727,12 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		}()
 
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
-			Verify:         o.verify,
-			PublicKeyPath:  o.publicKeyPath,
-			Architecture:   config.GetArch(),
-			OCIConcurrency: o.ociConcurrency,
-			RemoteOptions:  defaultRemoteOptions(),
-			CachePath:      cachePath,
+			VerificationStrategy: verificationStrategy,
+			PublicKeyPath:        o.publicKeyPath,
+			Architecture:         config.GetArch(),
+			OCIConcurrency:       o.ociConcurrency,
+			RemoteOptions:        defaultRemoteOptions(),
+			CachePath:            cachePath,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
@@ -1737,13 +1741,13 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         o.verify,
-		Filter:         filters.Empty(),
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: verificationStrategy,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -1828,14 +1832,15 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
-		SHASum:         o.shasum,
-		Verify:         o.verify,
-		PublicKeyPath:  o.publicKeyPath,
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
+		SHASum:               o.shasum,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		PublicKeyPath:        o.publicKeyPath,
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	})
 	if err != nil {
 		return err
@@ -1944,13 +1949,13 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Load the package
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:  o.publicKeyPath,
-		Filter:         filters.Empty(),
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
-		Verify:         o.verify,
+		PublicKeyPath:        o.publicKeyPath,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
 	}
 
 	l.Info("loading package", "source", packageSource)
@@ -2030,17 +2035,17 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Load the package with verification enabled
-	// The verify command always uses strict verification (Verify=true)
+	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:  o.publicKeyPath,
-		Verify:         true, // Always enforce strict verification
-		Filter:         filters.Empty(),
-		Architecture:   config.GetArch(),
-		OCIConcurrency: o.ociConcurrency,
-		RemoteOptions:  defaultRemoteOptions(),
-		CachePath:      cachePath,
-		LayersSelector: zoci.MetadataLayers,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		LayersSelector:       zoci.MetadataLayers,
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
@@ -2058,7 +2063,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 
 	// Log signature verification status
 	if pkgLayout.IsSigned() {
-		// If signed and we got here, signature verification passed (key was required by Verify=true)
+		// If signed and we got here, signature verification passed
 		l.Info("signature verification", "status", "PASSED")
 	}
 
@@ -2131,4 +2136,11 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 	}
 
 	return pkgCandidates, cobra.ShellCompDirectiveDefault
+}
+
+func getVerificationStrategy(verify bool) layout.VerificationStrategy {
+	if verify {
+		return layout.VerifyAlways
+	}
+	return layout.VerifyIfPossible
 }
