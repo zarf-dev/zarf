@@ -73,8 +73,8 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 type devInspectDefinitionOptions struct {
-	flavor       string
-	setVariables map[string]string
+	flavor     string
+	setPkgTmpl map[string]string
 }
 
 func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
@@ -89,7 +89,7 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 
 	return cmd
 }
@@ -97,15 +97,15 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
 		Flavor:           o.flavor,
-		SetVariables:     o.setVariables,
+		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
 		IsInteractive:    true,
 		SkipVersionCheck: true,
@@ -124,7 +124,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 
 type devInspectManifestsOptions struct {
 	flavor             string
-	createSetVariables map[string]string
+	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
 	setValues          map[string]string
@@ -151,10 +151,12 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -162,10 +164,12 @@ func newDevInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -184,13 +188,14 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
+		// Update values entry
 		if err := values.Set(path, val); err != nil {
 			return fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
 		Values:             values,
 		Flavor:             o.flavor,
@@ -225,7 +230,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 
 type devInspectValuesFilesOptions struct {
 	flavor             string
-	createSetVariables map[string]string
+	createSetPkgTmpl   map[string]string
 	deploySetVariables map[string]string
 	valuesFiles        []string
 	setValues          map[string]string
@@ -253,10 +258,12 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, "Path to values file(s) for templating")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
 
 	return cmd
@@ -264,10 +271,12 @@ func newDevInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) error {
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -286,13 +295,14 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		if !strings.HasPrefix(key, ".") {
 			path = value.Path("." + key)
 		}
+		// Update values entry
 		if err := values.Set(path, val); err != nil {
 			return fmt.Errorf("unable to set value at path %s: %w", key, err)
 		}
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
 		Values:             values,
 		Flavor:             o.flavor,
@@ -322,7 +332,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetVariables     map[string]string
+	createSetPkgTmpl       map[string]string
 	deploySetVariables     map[string]string
 	registryOverrides      []string
 	flavor                 string
@@ -347,7 +357,7 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		RunE:  o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringArrayVar(&o.registryOverrides, "registry-override", v.GetStringSlice(VPkgCreateRegistryOverride), lang.CmdPackageCreateFlagRegistryOverride)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
@@ -357,7 +367,9 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-deploy flag as hidden", "error", err)
 	}
 
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
@@ -380,8 +392,8 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	basePath := setBaseDirectory(args)
 
 	v := getViper()
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
@@ -400,7 +412,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		Flavor:             o.flavor,
 		RegistryURL:        o.registryURL,
 		RegistryOverrides:  overrides,
-		CreateSetVariables: o.createSetVariables,
+		CreateSetVariables: o.createSetPkgTmpl,
 		DeploySetVariables: o.deploySetVariables,
 		OptionalComponents: o.optionalComponents,
 		Timeout:            o.timeout,
@@ -662,7 +674,7 @@ func (o *devSha256SumOptions) run(cmd *cobra.Command, args []string) (err error)
 
 type devFindImagesOptions struct {
 	repoHelmChartPath   string
-	createSetVariables  map[string]string
+	createSetPkgTmpl    map[string]string
 	flavor              string
 	deploySetVariables  map[string]string
 	kubeVersionOverride string
@@ -686,7 +698,7 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.repoHelmChartPath, "repo-chart-path", "p", "", lang.CmdDevFlagRepoChartPath)
 	// use the package create config for this and reset it here to avoid overwriting the config.CreateOptions.SetVariables
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
 
 	err := cmd.Flags().MarkDeprecated("set", "this field is replaced by create-set")
 	if err != nil {
@@ -697,8 +709,10 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 		logger.Default().Debug("unable to mark dev-find-images flag as hidden", "error", err)
 	}
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.createSetVariables, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSet)
-	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.createSetPkgTmpl, "create-set", v.GetStringMapString(VPkgCreateSet), lang.CmdDevFlagSetPkgTmpl)
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
+	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
+	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -719,8 +733,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 
 	v := getViper()
 
-	o.createSetVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.createSetVariables, strings.ToUpper)
+	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
 
@@ -733,7 +747,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		RepoHelmChartPath:   o.repoHelmChartPath,
 		RegistryURL:         o.registryURL,
 		KubeVersionOverride: o.kubeVersionOverride,
-		CreateSetVariables:  o.createSetVariables,
+		CreateSetVariables:  o.createSetPkgTmpl,
 		DeploySetVariables:  o.deploySetVariables,
 		Flavor:              o.flavor,
 		Why:                 o.why,
@@ -833,8 +847,8 @@ func (o *devGenerateConfigOptions) run(_ *cobra.Command, args []string) error {
 }
 
 type devLintOptions struct {
-	setVariables map[string]string
-	flavor       string
+	setPkgTmpl map[string]string
+	flavor     string
 }
 
 func newDevLintCommand(v *viper.Viper) *cobra.Command {
@@ -849,7 +863,7 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackageCreateFlagFlavor)
 
 	return cmd
@@ -859,15 +873,15 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	basePath := setBaseDirectory(args)
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
 		Flavor:       o.flavor,
-		SetVariables: o.setVariables,
+		SetVariables: o.setPkgTmpl,
 		CachePath:    cachePath,
 	})
 	var lintErr *lint.LintError

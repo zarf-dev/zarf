@@ -17,13 +17,13 @@ zarf package inspect manifests [ PACKAGE ] [flags]
 ### Options
 
 ```
-      --components string     comma separated list of components to show manifests for
-  -h, --help                  help for manifests
-  -k, --key string            Path to public key file for validating signed packages
-      --kube-version string   Override the default helm template KubeVersion when performing a package chart template
-      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --set stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
-      --verify                Verify the Zarf package signature
+      --components string              comma separated list of components to show manifests for
+  -h, --help                           help for manifests
+  -k, --key string                     Path to public key file for validating signed packages
+      --kube-version string            Override the default helm template KubeVersion when performing a package chart template
+      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --verify                         Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands
