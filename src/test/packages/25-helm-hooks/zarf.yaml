@@ -2,7 +2,6 @@ kind: ZarfPackageConfig
 metadata:
   name: helm-hooks
   version: 0.1.0
-  description: "Test for Helm pre-install hook behavior"
 
 components:
   - name: hook-test

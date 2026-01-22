@@ -53,6 +53,8 @@ func TestHelm(t *testing.T) {
 	t.Run("helm escaping", testHelmEscaping)
 
 	t.Run("helm server-side apply", testHelmServerSideApply)
+
+	t.Run("helm hooks", testHelmHooks)
 }
 
 func testHelmChartsExample(t *testing.T) {
@@ -266,5 +268,26 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 
 	// Remove the package.
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+}
+
+func testHelmHooks(t *testing.T) {
+	tmpdir := t.TempDir()
+	packagePath := filepath.Join("src", "test", "packages", "25-helm-hooks")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "-o", tmpdir)
+	require.NoError(t, err, stdOut, stdErr)
+
+	pkgPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-helm-hooks-%s-0.1.0.tar.zst", e2e.Arch))
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	_, _, err = e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "pre-install-hook-config")
+	require.NoError(t, err)
+
+	_, _, err = e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "post-install-hook-config")
+	require.NoError(t, err)
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-hooks", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
