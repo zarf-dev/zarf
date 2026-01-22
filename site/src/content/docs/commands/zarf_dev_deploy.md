@@ -23,8 +23,7 @@ zarf dev deploy [flags]
 ```
       --adopt-existing-resources              Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string                     Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-      --create-set stringToString             Alias for --create-set-variables (default [])
-      --create-set-variables stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+      --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
       --deploy-set stringToString             Alias for --deploy-set-variables (default [])
       --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
   -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
