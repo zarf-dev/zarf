@@ -80,7 +80,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validateLoadedPackage(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -88,7 +88,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func validateLoadedPackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
