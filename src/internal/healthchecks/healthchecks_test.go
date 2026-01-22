@@ -126,38 +126,38 @@ func TestRunHealthChecks(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
 
-	t.Run("Failed is a terminal status", func(t *testing.T) {
-		t.Parallel()
-		fakeClient := dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
-		fakeMapper := testutil.NewFakeRESTMapper(
-			batchv1.SchemeGroupVersion.WithKind("Job"),
-		)
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
+func TestFailedHealthChecks(t *testing.T) {
+	t.Parallel()
+	fakeClient := dynamicfake.NewSimpleDynamicClient(scheme.Scheme)
+	fakeMapper := testutil.NewFakeRESTMapper(
+		batchv1.SchemeGroupVersion.WithKind("Job"),
+	)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	statusWatcher := watcher.NewDefaultStatusWatcher(fakeClient, fakeMapper)
 
-		m := make(map[string]any)
-		err := yaml.Unmarshal([]byte(jobFailedYaml), &m)
-		require.NoError(t, err)
-		job := &unstructured.Unstructured{Object: m}
-		jobGVR := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
-		err = fakeClient.Tracker().Create(jobGVR, job, job.GetNamespace())
-		require.NoError(t, err)
+	m := make(map[string]any)
+	err := yaml.Unmarshal([]byte(jobFailedYaml), &m)
+	require.NoError(t, err)
+	job := &unstructured.Unstructured{Object: m}
+	jobGVR := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
+	err = fakeClient.Tracker().Create(jobGVR, job, job.GetNamespace())
+	require.NoError(t, err)
 
-		objs := []v1alpha1.NamespacedObjectKindReference{
-			{
-				APIVersion: job.GetAPIVersion(),
-				Kind:       job.GetKind(),
-				Namespace:  job.GetNamespace(),
-				Name:       job.GetName(),
-			},
-		}
+	objs := []v1alpha1.NamespacedObjectKindReference{
+		{
+			APIVersion: job.GetAPIVersion(),
+			Kind:       job.GetKind(),
+			Namespace:  job.GetNamespace(),
+			Name:       job.GetName(),
+		},
+	}
 
-		err = Run(ctx, statusWatcher, objs)
+	err = Run(ctx, statusWatcher, objs)
 
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed-job: Job not ready, status is Failed")
-		require.NotContains(t, err.Error(), "context deadline exceeded")
-	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed-job: Job not ready, status is Failed")
+	require.NotContains(t, err.Error(), "context deadline exceeded")
 }
