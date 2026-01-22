@@ -21,10 +21,9 @@ zarf dev inspect definition [ DIRECTORY ] [flags]
 ### Options
 
 ```
-  -f, --flavor string                  The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                           help for definition
-      --set stringToString             Alias for --set-variables (default [])
-      --set-variables stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                 help for definition
+      --set stringToString   Specify package templates to set on the command line (KEY=value) (default [])
 ```
 
 ### Options inherited from parent commands

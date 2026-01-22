@@ -23,21 +23,21 @@ zarf package create [ DIRECTORY ] [flags]
 ### Options
 
 ```
-  -c, --confirm                        Confirm package creation without prompting
-      --differential string            Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
-  -f, --flavor string                  The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
-  -h, --help                           help for create
-  -m, --max-package-size int           Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
-      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string                  Specify the output (either a directory or an oci:// URL) for the created Zarf package
-      --registry-override strings      Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
-  -s, --sbom                           View SBOM contents after creating the package
-      --sbom-out string                Specify an output directory for the SBOMs from the created Zarf package
-      --set-variables stringToString   Specify package variables to set on the command line (KEY=value) (default [])
-      --signing-key string             Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
-      --signing-key-pass string        Password to the private key used for signing packages
-      --skip-sbom                      Skip generating SBOM for this package
-      --with-build-machine-info        Include build machine information (hostname and username) in the package metadata
+  -c, --confirm                     Confirm package creation without prompting
+      --differential string         Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
+  -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                        help for create
+  -m, --max-package-size int        Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
+      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf package
+      --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+  -s, --sbom                        View SBOM contents after creating the package
+      --sbom-out string             Specify an output directory for the SBOMs from the created Zarf package
+      --set stringToString          Specify package templates to set on the command line (KEY=value) (default [])
+      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string     Password to the private key used for signing packages
+      --skip-sbom                   Skip generating SBOM for this package
+      --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
 ```
 
 ### Options inherited from parent commands
