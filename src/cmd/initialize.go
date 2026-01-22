@@ -173,11 +173,11 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath: o.publicKeyPath,
-		Verify:        o.verify,
-		Filter:        filters.Empty(),
-		Architecture:  config.GetArch(),
-		CachePath:     cachePath,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

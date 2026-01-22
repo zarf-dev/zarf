@@ -33,8 +33,6 @@ import (
 type PullOptions struct {
 	// SHASum uniquely identifies a package based on its contents.
 	SHASum string
-	// Verify validates the package signature
-	Verify bool
 	// Architecture is the package architecture.
 	Architecture string
 	// PublicKeyPath validates the create-time signage of a package.
@@ -44,6 +42,8 @@ type PullOptions struct {
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // Pull takes a source URL and destination directory, fetches the Zarf package from the given sources, and returns the path to the fetched package.
@@ -69,14 +69,14 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
-		Shasum:         opts.SHASum,
-		Architecture:   arch,
-		PublicKeyPath:  opts.PublicKeyPath,
-		Verify:         opts.Verify,
-		Output:         destination,
-		OCIConcurrency: opts.OCIConcurrency,
-		RemoteOptions:  opts.RemoteOptions,
-		CachePath:      opts.CachePath,
+		Shasum:               opts.SHASum,
+		Architecture:         arch,
+		PublicKeyPath:        opts.PublicKeyPath,
+		VerificationStrategy: opts.VerificationStrategy,
+		Output:               destination,
+		OCIConcurrency:       opts.OCIConcurrency,
+		RemoteOptions:        opts.RemoteOptions,
+		CachePath:            opts.CachePath,
 	})
 	if err != nil {
 		return "", err
@@ -103,7 +103,7 @@ type pullOCIOptions struct {
 	CachePath      string
 	PublicKeyPath  string
 	RemoteOptions
-	Verify bool
+	layout.VerificationStrategy
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -158,14 +158,9 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		return nil, err
 	}
 
-	verificationStrategy := layout.VerifyIfPossible
-	if opts.Verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:        opts.PublicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,
 	}
