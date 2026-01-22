@@ -41,10 +41,10 @@ func TestLoadPackage(t *testing.T) {
 
 			for _, shasum := range []string{tt.shasum, ""} {
 				opt := LoadOptions{
-					Shasum:                  shasum,
-					PublicKeyPath:           "",
-					SkipSignatureValidation: false,
-					Filter:                  filters.Empty(),
+					Shasum:        shasum,
+					PublicKeyPath: "",
+					Verify:        false,
+					Filter:        filters.Empty(),
 				}
 				pkgLayout, err := LoadPackage(ctx, tt.source, opt)
 				require.NoError(t, err)
@@ -55,15 +55,41 @@ func TestLoadPackage(t *testing.T) {
 			}
 
 			opt := LoadOptions{
-				Shasum:                  "foo",
-				PublicKeyPath:           "",
-				SkipSignatureValidation: false,
-				Filter:                  filters.Empty(),
+				Shasum:        "foo",
+				PublicKeyPath: "",
+				Verify:        false,
+				Filter:        filters.Empty(),
 			}
 			_, err := LoadPackage(ctx, tt.source, opt)
 			require.ErrorContains(t, err, fmt.Sprintf("to be %s, found %s", opt.Shasum, tt.shasum))
 		})
 	}
+
+	t.Run("Verify flag integration", func(t *testing.T) {
+		t.Parallel()
+
+		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+
+		// Verify: false should warn but continue on unsigned package (maps to VerifyIfPossible)
+		opt := LoadOptions{
+			Verify:        false,
+			PublicKeyPath: filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:        filters.Empty(),
+		}
+		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
+		require.NoError(t, err) // Should succeed with warning
+		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+
+		// Verify: true should fail on unsigned package (maps to VerifyAlways)
+		opt = LoadOptions{
+			Verify:        true,
+			PublicKeyPath: filepath.Join("layout", "testdata", "cosign.pub"),
+			Filter:        filters.Empty(),
+		}
+		_, err = LoadPackage(ctx, tarPath, opt)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+	})
 }
 
 func TestLoadSplitPackage(t *testing.T) {
@@ -107,9 +133,9 @@ func TestLoadSplitPackage(t *testing.T) {
 
 			// Load the split package, verify that the split package became one
 			opt := LoadOptions{
-				PublicKeyPath:           "",
-				SkipSignatureValidation: false,
-				Filter:                  filters.Empty(),
+				PublicKeyPath: "",
+				Verify:        false,
+				Filter:        filters.Empty(),
 			}
 			_, err = LoadPackage(ctx, packageSource, opt)
 			require.NoError(t, err)
@@ -164,7 +190,6 @@ func TestIdentifySource(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

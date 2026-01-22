@@ -30,6 +30,7 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
       --set-values stringToString   Specify deployment package values to set on the command line (key.path=value). (default [])
       --skip-signature-validation   Skip validating the signature of the Zarf package
   -v, --values strings              Path to values file(s) for removal actions
+      --verify                      Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

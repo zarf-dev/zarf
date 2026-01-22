@@ -109,7 +109,11 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, 0, 31999, "test")
+		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+			InjectorNodePort: 0,
+			RegistryNodePort: 31999,
+		})
+
 		require.NoError(t, err)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
@@ -219,6 +223,9 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("10Gi"),
 				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "amd64",
+				},
 			},
 		}}
 		pods := []corev1.Pod{{
@@ -231,10 +238,38 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		image, node, err := c.getInjectorImageAndNode(ctx, resReq)
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.NoError(t, err)
 		require.Equal(t, "nginx", image)
 		require.Equal(t, "good", node)
+	})
+
+	t.Run("wrong architecture", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{
+					Architecture: "arm64",
+				},
+			},
+		}}
+		pods := []corev1.Pod{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good-pod", Namespace: "default"},
+			Spec: corev1.PodSpec{
+				NodeName:   "good",
+				Containers: []corev1.Container{{Image: "nginx"}},
+			},
+			Status: corev1.PodStatus{Phase: corev1.PodRunning},
+		}}
+		c := setupCluster(t, nodes, pods)
+
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
 
 	t.Run("insufficient resources", func(t *testing.T) {
@@ -249,7 +284,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, nil)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 	})
@@ -277,7 +312,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
 	})
 
@@ -301,7 +336,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 		}}
 		c := setupCluster(t, nodes, pods)
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
 	})
 
@@ -342,7 +377,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("200Mi"), // too big
 		})
 
-		_, _, err := c.getInjectorImageAndNode(ctx, resReq)
+		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no suitable injector image or node")
 
@@ -353,7 +388,7 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("50Mi"), // fits in 100Mi left
 		})
 
-		image, node, err := c.getInjectorImageAndNode(ctx, smallReq)
+		image, node, err := c.getInjectorImageAndNode(ctx, smallReq, "amd64")
 		require.NoError(t, err)
 		require.Equal(t, "busybox", image)
 		require.Equal(t, "crowded", node)

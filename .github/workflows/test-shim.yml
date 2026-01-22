@@ -68,7 +68,7 @@ jobs:
         run: |
           echo skipped
 
-  validate-kind:
+  validate-kind-arm64:
     runs-on: ubuntu-latest
     steps:
       - name: Skipped

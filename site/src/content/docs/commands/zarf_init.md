@@ -82,6 +82,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --skip-signature-validation       Skip validating the signature of the Zarf package
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --verify                          Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

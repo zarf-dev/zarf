@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Setup golang
-        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
         with:
           go-version-file: go.mod
 
@@ -49,7 +49,7 @@ jobs:
 
       # Upload the contents of the build directory for later stages to use
       - name: Upload build artifacts
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: build-artifacts
           path: build/
@@ -60,6 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-zarf
     strategy:
+      fail-fast: false
       matrix:
         ipfamily: [ipv4, ipv6]
     steps:
@@ -67,7 +68,7 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
       - name: Download build artifacts
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
         with:
           name: build-artifacts
           path: build/
@@ -93,9 +94,9 @@ jobs:
         run: |
           chmod +x build/zarf
 
-      - name: Run tests
+      - name: Run proxy tests
         run: |
-          build/zarf init --features=registry-proxy=true --registry-mode=proxy --confirm
+          make test-proxy
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster

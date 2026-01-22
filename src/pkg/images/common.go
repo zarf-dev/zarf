@@ -148,6 +148,15 @@ func getIndexFromOCILayout(dir string) (ocispec.Index, error) {
 	return idx, nil
 }
 
+func addNameAnnotationsToDesc(desc ocispec.Descriptor, ref string) ocispec.Descriptor {
+	if desc.Annotations == nil {
+		desc.Annotations = make(map[string]string)
+	}
+	desc.Annotations[ocispec.AnnotationRefName] = ref
+	desc.Annotations[ocispec.AnnotationBaseImageName] = ref
+	return desc
+}
+
 func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 	idxPath := filepath.Join(dir, "index.json")
 	b, err := json.Marshal(idx)
@@ -178,7 +187,7 @@ func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Durati
 func NoopOpt(*crane.Options) {}
 
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
-// based upon Zarf's global --insecure-skip-tls-verify (and --insecure) flags.
+// based upon Zarf's global --insecure-skip-tls-verify flag.
 func WithGlobalInsecureFlag() []crane.Option {
 	if config.CommonOptions.InsecureSkipTLSVerify {
 		return []crane.Option{crane.Insecure}

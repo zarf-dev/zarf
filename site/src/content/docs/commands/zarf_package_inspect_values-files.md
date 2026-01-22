@@ -29,6 +29,7 @@ zarf package inspect values-files [ PACKAGE ] [flags]
       --set stringToString             Alias for --set-variables (default [])
       --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
       --skip-signature-validation      Skip validating the signature of the Zarf package
+      --verify                Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

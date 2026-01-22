@@ -68,7 +68,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
       --repos                           mirror only the git repositories
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --shasum string                   Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
-      --skip-signature-validation       Skip validating the signature of the Zarf package
+      --verify                          Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

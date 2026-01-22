@@ -151,7 +151,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
-	l.Debug("package values", "values", vals)
 
 	// Validate merged values against schema if provided
 	if pkgLayout.Pkg.Values.Schema != "" {
@@ -366,14 +365,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
+
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.InjectorInfo.Port, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
+				RegistryNodePort: uint16(d.s.RegistryInfo.NodePort),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -408,7 +411,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	l.Info("deploying component", "name", component.Name)
 
-	hasImages := len(component.Images) > 0 && !noImgPush
+	hasImages := len(component.GetImages()) > 0 && !noImgPush
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
 	hasRepos := len(component.Repos) > 0
@@ -459,7 +462,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	if hasImages {
 		refs := []transform.Image{}
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
@@ -586,7 +589,6 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
-		l.Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
@@ -603,12 +605,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
-		l.Debug("loaded chart",
-			"metadata", helmChart.Metadata,
-			"chartValues", helmChart.Values,
-			"valuesOverrides", values,
-			"countValuesOverrides", len(values),
-		)
+		l.Debug("loaded chart", "metadata", helmChart.Metadata, "chartValues", helmChart.Values)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {

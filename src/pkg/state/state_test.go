@@ -46,6 +46,25 @@ func TestMergeStateRegistry(t *testing.T) {
 			},
 		},
 		{
+			name: "internal server explicit same password is preserved",
+			oldRegistry: RegistryInfo{
+				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort:     1,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			initRegistry: RegistryInfo{
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			expectedRegistry: RegistryInfo{
+				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort:     1,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+		},
+		{
 			name: "init options merged",
 			oldRegistry: RegistryInfo{
 				PushUsername: "doesn't matter",
@@ -81,7 +100,6 @@ func TestMergeStateRegistry(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -98,6 +116,13 @@ func TestMergeStateRegistry(t *testing.T) {
 			require.Equal(t, tt.expectedRegistry.Address, newState.RegistryInfo.Address)
 			require.Equal(t, tt.expectedRegistry.NodePort, newState.RegistryInfo.NodePort)
 			require.Equal(t, tt.expectedRegistry.Secret, newState.RegistryInfo.Secret)
+			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
+			if tt.expectedRegistry.PushPassword != "" {
+				require.Equal(t, tt.expectedRegistry.PushPassword, newState.RegistryInfo.PushPassword)
+			}
+			if tt.expectedRegistry.PullPassword != "" {
+				require.Equal(t, tt.expectedRegistry.PullPassword, newState.RegistryInfo.PullPassword)
+			}
 		})
 	}
 }
@@ -135,6 +160,23 @@ func TestMergeStateGit(t *testing.T) {
 			},
 		},
 		{
+			name: "internal server explicit same password is preserved",
+			oldGitServer: GitServerInfo{
+				Address:      ZarfInClusterGitServiceURL,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			initGitServer: GitServerInfo{
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			expectedGitServer: GitServerInfo{
+				Address:      ZarfInClusterGitServiceURL,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+		},
+		{
 			name: "init options merged",
 			oldGitServer: GitServerInfo{
 				Address:      "doesn't matter",
@@ -162,7 +204,6 @@ func TestMergeStateGit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -177,6 +218,13 @@ func TestMergeStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
+			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
+			if tt.expectedGitServer.PushPassword != "" {
+				require.Equal(t, tt.expectedGitServer.PushPassword, newState.GitServer.PushPassword)
+			}
+			if tt.expectedGitServer.PullPassword != "" {
+				require.Equal(t, tt.expectedGitServer.PullPassword, newState.GitServer.PullPassword)
+			}
 		})
 	}
 }
@@ -252,7 +300,6 @@ func TestMergeStateArtifact(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 

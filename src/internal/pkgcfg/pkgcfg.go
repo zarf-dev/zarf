@@ -60,7 +60,11 @@ func migrateDeprecated(pkg v1alpha1.ZarfPackage) (v1alpha1.ZarfPackage, []string
 
 		// Show a warning if the component contains a group as that has been deprecated and will be removed.
 		if comp.DeprecatedGroup != "" {
-			warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in v1.0.0.  Please migrate to another solution.", comp.Name))
+			warnings = append(warnings, fmt.Sprintf("Component %s is using group which has been deprecated and will be removed in the next schema version. Please migrate to another solution.", comp.Name))
+		}
+
+		if len(comp.DataInjections) != 0 {
+			warnings = append(warnings, fmt.Sprintf("Component %s is using data injections which has been deprecated and will be removed in the next schema version. Please migrate to another solution.", comp.Name))
 		}
 
 		migratedComponents = append(migratedComponents, comp)
@@ -128,7 +132,7 @@ func migrateScriptsToActions(c v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, 
 
 	// Leave deprecated scripts in place, but warn users
 	if hasScripts {
-		return c, fmt.Sprintf("Component '%s' is using scripts which will be removed in Zarf v1.0.0. Please migrate to actions.", c.Name)
+		return c, fmt.Sprintf("Component '%s' is using scripts which will be removed in the next schema version. Please migrate to actions.", c.Name)
 	}
 
 	return c, ""
@@ -173,7 +177,7 @@ func migrateSetVariableToSetVariables(c v1alpha1.ZarfComponent) (v1alpha1.ZarfCo
 
 	// Leave deprecated setVariable in place, but warn users
 	if hasSetVariable {
-		return c, fmt.Sprintf("Component '%s' is using setVariable in actions which will be removed in Zarf v1.0.0. Please migrate to the list form of setVariables.", c.Name)
+		return c, fmt.Sprintf("Component '%s' is using setVariable in actions which will be removed in the next schema version. Please migrate to the list form of setVariables.", c.Name)
 	}
 
 	return c, ""
