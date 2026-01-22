@@ -28,7 +28,6 @@ zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
   -n, --namespace string            [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
       --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --set-values stringToString   Specify deployment package values to set on the command line (key.path=value). (default [])
-      --skip-signature-validation   Skip validating the signature of the Zarf package
   -v, --values strings              Path to values file(s) for removal actions
       --verify                      Verify the Zarf package signature
 ```
