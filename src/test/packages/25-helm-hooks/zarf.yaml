@@ -3,6 +3,10 @@ metadata:
   name: helm-hooks
   version: 0.1.0
 
+variables:
+  - name: POST_HOOK_MESSAGE
+    default: "Zarf-templated post-install hook"
+
 components:
   - name: hook-test
     required: true

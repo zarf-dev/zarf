@@ -7,4 +7,4 @@ metadata:
     "helm.sh/hook": post-install
     "helm.sh/hook-weight": "-5"
 data:
-  message: "This was created by a post-install hook"
+  message: "###ZARF_VAR_POST_HOOK_MESSAGE###"
