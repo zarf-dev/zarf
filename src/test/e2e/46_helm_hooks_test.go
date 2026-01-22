@@ -13,7 +13,7 @@ import (
 )
 
 func TestHelmPostInstallHook(t *testing.T) {
-	t.Log("E2E: Helm post-install hook")
+	t.Log("E2E: Helm hooks (pre-install and post-install)")
 
 	tmpdir := t.TempDir()
 	packagePath := filepath.Join("src", "test", "packages", "46-helm-hooks")
@@ -27,8 +27,13 @@ func TestHelmPostInstallHook(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
+	// Verify the pre-install hook ConfigMap was created
+	kubectlOut, _, err := e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "pre-install-hook-config", "-o", "jsonpath={.data.message}")
+	require.NoError(t, err, "pre-install hook ConfigMap should exist")
+	require.Equal(t, "This was created by a pre-install hook", kubectlOut, "pre-install hook ConfigMap should have correct data")
+
 	// Verify the post-install hook ConfigMap was created
-	kubectlOut, _, err := e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "post-install-hook-config", "-o", "jsonpath={.data.message}")
+	kubectlOut, _, err = e2e.Kubectl(t, "-n", "helm-hooks", "get", "configmap", "post-install-hook-config", "-o", "jsonpath={.data.message}")
 	require.NoError(t, err, "post-install hook ConfigMap should exist")
 	require.Equal(t, "This was created by a post-install hook", kubectlOut, "post-install hook ConfigMap should have correct data")
 
