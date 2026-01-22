@@ -64,6 +64,7 @@ func newInitCommand() *cobra.Command {
 
 	// Init package set variable flags
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments

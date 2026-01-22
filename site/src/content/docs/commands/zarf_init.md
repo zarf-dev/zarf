@@ -77,7 +77,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-secret string          Registry secret value
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --set stringToString              Alias for --set-variables (default [])
       --set-variables stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
       --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
       --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
