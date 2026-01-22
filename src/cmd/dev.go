@@ -73,8 +73,8 @@ func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 type devInspectDefinitionOptions struct {
-	flavor       string
-	setVariables map[string]string
+	flavor     string
+	setPkgTmpl map[string]string
 }
 
 func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
@@ -89,8 +89,7 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), "Alias for --set-variables")
-	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetVariables)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 
 	return cmd
 }
@@ -98,15 +97,15 @@ func newDevInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgCreateSet), o.setVariables, strings.ToUpper)
+	o.setPkgTmpl = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 	loadOpts := load.DefinitionOptions{
 		Flavor:           o.flavor,
-		SetVariables:     o.setVariables,
+		SetVariables:     o.setPkgTmpl,
 		CachePath:        cachePath,
 		IsInteractive:    true,
 		SkipVersionCheck: true,
