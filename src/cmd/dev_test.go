@@ -29,7 +29,7 @@ func TestDevInspectManifests(t *testing.T) {
 		expectedOutput     string
 		packageName        string
 		deploySetVariables map[string]string
-		createSetVariables map[string]string
+		createSetPkgTmpl   map[string]string
 		valuesFiles        []string
 		setValues          map[string]string
 		kubeVersion        string
@@ -68,7 +68,7 @@ func TestDevInspectManifests(t *testing.T) {
 			packageName:    "variable-templates",
 			definitionDir:  filepath.Join("testdata", "inspect-manifests", "variable-templates"),
 			expectedOutput: filepath.Join("testdata", "inspect-manifests", "variable-templates", "expected.yaml"),
-			createSetVariables: map[string]string{
+			createSetPkgTmpl: map[string]string{
 				"HTTPD_VERSION": "1.0.0",
 				"LABEL":         "httpd",
 			},
@@ -127,7 +127,7 @@ func TestDevInspectManifests(t *testing.T) {
 				outputWriter:       buf,
 				kubeVersion:        tc.kubeVersion,
 				deploySetVariables: tc.deploySetVariables,
-				createSetVariables: tc.createSetVariables,
+				createSetPkgTmpl:   tc.createSetPkgTmpl,
 				valuesFiles:        tc.valuesFiles,
 				setValues:          tc.setValues,
 				flavor:             tc.flavor,

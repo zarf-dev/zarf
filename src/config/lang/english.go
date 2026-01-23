@@ -141,7 +141,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitPullConfirm   = "Do you want to pull this init package?"
 	CmdInitPullErrManual = "pull the init package manually and place it in the current working directory"
 
-	CmdInitFlagSet = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdInitFlagSetVariables = "Specify deployment variables to set on the command line (KEY=value)"
 
 	CmdInitFlagConfirm      = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdInitFlagComponents   = "Specify which optional components to install.  E.g. --components=git-server"
@@ -248,14 +248,14 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	--git-push-password <git-push-password>
 `
 
-	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
-	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
+	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
 
 	CmdPackageCreateFlagConfirm               = "Confirm package creation without prompting"
-	CmdPackageCreateFlagSet                   = "Specify package variables to set on the command line (KEY=value)"
+	CmdPackageCreateFlagSetPkgTmpl            = "Specify package templates to set on the command line (KEY=value)"
+	CmdPackageCreateFlagSetVariables          = "Specify package variables to set on the command line (KEY=value)"
 	CmdPackageCreateFlagOutput                = "Specify the output (either a directory or an oci:// URL) for the created Zarf package"
 	CmdPackageCreateFlagSbom                  = "View SBOM contents after creating the package"
 	CmdPackageCreateFlagSbomOut               = "Specify an output directory for the SBOMs from the created Zarf package"
@@ -274,7 +274,8 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
-	CmdPackageDeployFlagSet                    = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
+	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value)."
 	CmdPackageDeployFlagComponents             = "Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported."
 	CmdPackageDeployFlagShasum                 = "Shasum of the package to deploy. Required if deploying a remote https package."
 	CmdPackageDeployFlagTimeout                = "Timeout for health checks and Helm operations such as installs and rollbacks"
@@ -290,11 +291,12 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	CmdPackageInspectFlagListImages = "List images in the package (prints to stdout)"
 	CmdPackageInspectFlagNamespace  = "[Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag."
 
-	CmdPackageRemoveShort          = "Removes a Zarf package that has been deployed already (runs offline)"
-	CmdPackageRemoveLong           = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
-	CmdPackageRemoveFlagConfirm    = "Confirms the removal action"
-	CmdPackageRemoveFlagComponents = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
-	CmdPackageRemoveFlagNamespace  = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
+	CmdPackageRemoveShort           = "Removes a Zarf package that has been deployed already (runs offline)"
+	CmdPackageRemoveLong            = "Removes a Zarf package that has been deployed already (runs offline). Remove reverses the deployment order, the last component is removed first."
+	CmdPackageRemoveFlagConfirm     = "Confirms the removal action"
+	CmdPackageRemoveFlagComponents  = "Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported."
+	CmdPackageRemoveFlagNamespace   = "[Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag."
+	CmdPackageRemoveFlagValuesFiles = "Path to values file(s) for removal actions"
 
 	CmdPackagePublishShort   = "Publishes a Zarf package to a remote registry"
 	CmdPackagePublishExample = `
@@ -389,7 +391,8 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
 		"NOTE: This file must not already exist. If no filename is provided, the config will be written to the current working directory as zarf-config.toml."
 
 	CmdDevFlagExtractPath          = `The path inside of an archive to use to calculate the sha256sum (i.e. for use with "files.extractPath")`
-	CmdDevFlagSet                  = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagSetPkgTmpl           = "Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
+	CmdDevFlagSetVariables         = "Specify package variables to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]."
 	CmdDevFlagRepoChartPath        = `If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"`
 	CmdDevFlagGitAccount           = "User or organization name for the git account that the repos are created under."
 	CmdDevFlagKubeVersion          = "Override the default helm template KubeVersion when performing a package chart template"

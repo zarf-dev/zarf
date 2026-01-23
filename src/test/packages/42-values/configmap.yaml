@@ -6,3 +6,4 @@ metadata:
 data:
   value: "{{ .Values.test }}"
   additional: "{{ .Values.additional }}"
+  cliOverride: "{{ .Values.cliOverride }}"
