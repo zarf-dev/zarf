@@ -6,7 +6,9 @@ package v1alpha1
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"time"
 )
 
@@ -109,16 +111,25 @@ func (pkg ZarfPackage) UniqueNamespaceCount() int {
 		for _, manifest := range component.Manifests {
 			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
-		for _, action := range component.Actions.GetAll() {
-			if action.Wait != nil && action.Wait.Cluster != nil && action.Wait.Cluster.Namespace != "" {
-				uniqueNamespaces[action.Wait.Cluster.Namespace] = struct{}{}
-			}
-		}
 	}
 	return len(uniqueNamespaces)
 }
 
-// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
+// UniqueNamespaces returns a slice of all unique namespaces in the package
+func (pkg ZarfPackage) UniqueNamespaces() []string {
+	uniqueNamespaces := make(map[string]struct{})
+	for _, component := range pkg.Components {
+		for _, chart := range component.Charts {
+			uniqueNamespaces[chart.Namespace] = struct{}{}
+		}
+		for _, manifest := range component.Manifests {
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
+		}
+	}
+	return slices.Collect(maps.Keys(uniqueNamespaces))
+}
+
+// UpdateAllComponentNamespaces updates all existing chart/manifest namespaces to the provided one
 func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
 	for i := range pkg.Components {
 		comp := pkg.Components[i]
@@ -128,7 +139,25 @@ func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
 		for k := range comp.Manifests {
 			comp.Manifests[k].Namespace = namespace
 		}
-		pkg.Components[i].Actions.UpdateWaitNamespaces(namespace)
+	}
+}
+
+// UpdateAllComponentNamespacesByName updates all matching namespaces to the provided one
+func (pkg ZarfPackage) UpdateAllComponentNamespacesByName(original, target string) {
+	// In order to only update matching existing namespaces we need to identify
+	for i := range pkg.Components {
+		comp := pkg.Components[i]
+		for j := range comp.Charts {
+			if comp.Charts[j].Namespace == original {
+				comp.Charts[j].Namespace = target
+			}
+		}
+		for k := range comp.Manifests {
+			if comp.Manifests[k].Namespace == original {
+				comp.Manifests[k].Namespace = target
+			}
+		}
+		pkg.Components[i].Actions.UpdateWaitNamespacesByName(original, target)
 	}
 }
 

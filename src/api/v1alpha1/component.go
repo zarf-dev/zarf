@@ -295,12 +295,12 @@ func (a ZarfComponentActions) GetAll() []ZarfComponentAction {
 	return actions
 }
 
-// UpdateWaitNamespaces updates all wait action cluster namespaces to the provided namespace.
-func (a *ZarfComponentActions) UpdateWaitNamespaces(namespace string) {
+// UpdateWaitNamespacesByName updates all wait action cluster namespaces to the provided namespace.
+func (a *ZarfComponentActions) UpdateWaitNamespacesByName(original, target string) {
 	// theoretically possible to run a wait command on create...
-	a.OnCreate.updateWaitNamespaces(namespace)
-	a.OnDeploy.updateWaitNamespaces(namespace)
-	a.OnRemove.updateWaitNamespaces(namespace)
+	a.OnCreate.updateWaitNamespaces(original, target)
+	a.OnDeploy.updateWaitNamespaces(original, target)
+	a.OnRemove.updateWaitNamespaces(original, target)
 }
 
 // ZarfComponentActionSet is a set of actions to run during a zarf package operation.
@@ -317,17 +317,17 @@ type ZarfComponentActionSet struct {
 	OnFailure []ZarfComponentAction `json:"onFailure,omitempty"`
 }
 
-func (s *ZarfComponentActionSet) updateWaitNamespaces(namespace string) {
-	updateActionsWaitNamespace(s.Before, namespace)
-	updateActionsWaitNamespace(s.After, namespace)
-	updateActionsWaitNamespace(s.OnSuccess, namespace)
-	updateActionsWaitNamespace(s.OnFailure, namespace)
+func (s *ZarfComponentActionSet) updateWaitNamespaces(original, target string) {
+	updateActionsWaitNamespace(s.Before, original, target)
+	updateActionsWaitNamespace(s.After, original, target)
+	updateActionsWaitNamespace(s.OnSuccess, original, target)
+	updateActionsWaitNamespace(s.OnFailure, original, target)
 }
 
-func updateActionsWaitNamespace(actions []ZarfComponentAction, namespace string) {
+func updateActionsWaitNamespace(actions []ZarfComponentAction, original, target string) {
 	for i := range actions {
-		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace != "" {
-			actions[i].Wait.Cluster.Namespace = namespace
+		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
+			actions[i].Wait.Cluster.Namespace = target
 		}
 	}
 }
