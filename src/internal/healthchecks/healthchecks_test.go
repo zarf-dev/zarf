@@ -87,7 +87,7 @@ func TestRunHealthChecks(t *testing.T) {
 		{
 			name:       "One pod is never ready",
 			podYamls:   []string{podYaml, podCurrentYaml},
-			expectErrs: []error{errors.New("in-progress-pod: Pod not ready, status is InProgress"), context.DeadlineExceeded},
+			expectErrs: []error{errors.New("in-progress-pod: Pod not ready, status is InProgress, message: Pod phase not available"), context.DeadlineExceeded},
 		},
 	}
 
@@ -158,6 +158,5 @@ func TestFailedHealthChecks(t *testing.T) {
 	err = Run(ctx, statusWatcher, objs)
 
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed-job: Job not ready, status is Failed")
-	require.NotContains(t, err.Error(), "context deadline exceeded")
+	require.Equal(t, "failed-job: Job not ready, status is Failed, message: Job Failed. failed: 1/1", err.Error())
 }
