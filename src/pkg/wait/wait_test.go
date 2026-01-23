@@ -5,7 +5,6 @@
 package wait
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -84,6 +83,7 @@ func TestForNetwork(t *testing.T) {
 		host      string
 		condition string
 		timeout   time.Duration
+		interval  time.Duration
 		expectErr bool
 	}{
 		{
@@ -91,6 +91,7 @@ func TestForNetwork(t *testing.T) {
 			host:      successServerURL,
 			condition: "success",
 			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
 			expectErr: false,
 		},
 		{
@@ -98,6 +99,7 @@ func TestForNetwork(t *testing.T) {
 			host:      notFoundServerURL,
 			condition: "success",
 			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
 			expectErr: true,
 		},
 		{
@@ -105,6 +107,7 @@ func TestForNetwork(t *testing.T) {
 			host:      notFoundServerURL,
 			condition: "404",
 			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
 			expectErr: false,
 		},
 		{
@@ -112,6 +115,7 @@ func TestForNetwork(t *testing.T) {
 			host:      "localhost:1",
 			condition: "success",
 			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 10,
 			expectErr: true,
 		},
 		{
@@ -119,6 +123,7 @@ func TestForNetwork(t *testing.T) {
 			host:      hangingServerURL,
 			condition: "success",
 			timeout:   time.Millisecond * 500,
+			interval:  time.Millisecond * 100,
 			expectErr: true,
 		},
 	}
@@ -126,7 +131,7 @@ func TestForNetwork(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := ForNetwork(context.Background(), "http", tt.host, tt.condition, tt.timeout)
+			err := forNetwork(t.Context(), "http", tt.host, tt.condition, tt.timeout, tt.interval)
 			if tt.expectErr {
 				require.Error(t, err)
 				return
