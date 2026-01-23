@@ -104,11 +104,7 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 	if ctx.Err() != nil {
 		errs = append(errs, ctx.Err())
 	}
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
-
-	return nil
+	return errors.Join(errs...)
 }
 
 // ImmediateWatcher should only be used for testing and returns the set status immediately.
