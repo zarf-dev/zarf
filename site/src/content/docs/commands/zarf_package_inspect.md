@@ -10,6 +10,10 @@ tableOfContents: false
 
 Commands for gathering information from a built package
 
+```
+zarf package inspect [flags]
+```
+
 ### Options
 
 ```
