@@ -106,7 +106,7 @@ zarf tools helm upgrade [RELEASE] [CHART] [flags]
   -f, --values strings                             specify values in a YAML file or a URL (can specify multiple)
       --verify                                     verify the package before using it
       --version string                             specify a version constraint for the chart version to use. This constraint can be a specific tag (e.g. 1.1.1) or it may reference a valid range (e.g. ^2.0.0). If this is not specified, the latest version is used
-      --wait WaitStrategy[=watcher]                if specified, will wait until all resources are in the expected state before marking the operation as successful. It will wait for as long as --timeout. Valid inputs are 'watcher' and 'legacy' (default hookOnly)
+      --wait WaitStrategy[=watcher]                if specified, wait until resources are ready (up to --timeout). Values: 'watcher', 'hookOnly', and 'legacy'. (default hookOnly)
       --wait-for-jobs                              if set and --wait enabled, will wait until all Jobs have been completed before marking the release as successful. It will wait for as long as --timeout
 ```
 

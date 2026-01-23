@@ -32,7 +32,6 @@ type LoadOptions struct {
 	Shasum        string
 	Architecture  string
 	PublicKeyPath string
-	Verify        bool
 	Filter        filters.ComponentFilterStrategy
 	Output        string
 	// number of layers to pull in parallel
@@ -43,6 +42,8 @@ type LoadOptions struct {
 	CachePath string
 	// Only applicable to OCI + HTTP
 	RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -76,16 +77,16 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	switch srcType {
 	case "oci":
 		ociOpts := pullOCIOptions{
-			Source:         source,
-			PublicKeyPath:  opts.PublicKeyPath,
-			Verify:         opts.Verify,
-			Shasum:         opts.Shasum,
-			Architecture:   config.GetArch(opts.Architecture),
-			Filter:         opts.Filter,
-			LayersSelector: opts.LayersSelector,
-			OCIConcurrency: opts.OCIConcurrency,
-			RemoteOptions:  opts.RemoteOptions,
-			CachePath:      opts.CachePath,
+			Source:               source,
+			PublicKeyPath:        opts.PublicKeyPath,
+			VerificationStrategy: opts.VerificationStrategy,
+			Shasum:               opts.Shasum,
+			Architecture:         config.GetArch(opts.Architecture),
+			Filter:               opts.Filter,
+			LayersSelector:       opts.LayersSelector,
+			OCIConcurrency:       opts.OCIConcurrency,
+			RemoteOptions:        opts.RemoteOptions,
+			CachePath:            opts.CachePath,
 		}
 
 		pkgLayout, err := pullOCI(ctx, ociOpts)
@@ -128,14 +129,9 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		}
 	}
 
-	verificationStrategy := layout.VerifyIfPossible
-	if opts.Verify {
-		verificationStrategy = layout.VerifyAlways
-	}
-
 	layoutOpts := layout.PackageLayoutOptions{
 		PublicKeyPath:        opts.PublicKeyPath,
-		VerificationStrategy: verificationStrategy,
+		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)

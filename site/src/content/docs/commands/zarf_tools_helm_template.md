@@ -19,6 +19,16 @@ Any values that would normally be looked up or retrieved in-cluster will be
 faked locally. Additionally, none of the server-side testing of chart validity
 (e.g. whether an API is supported) is done.
 
+To specify the Kubernetes API versions used for Capabilities.APIVersions, use
+the '--api-versions' flag. This flag can be specified multiple times or as a
+comma-separated list:
+
+    $ helm template --api-versions networking.k8s.io/v1 --api-versions cert-manager.io/v1 mychart ./mychart
+
+or
+
+    $ helm template --api-versions networking.k8s.io/v1,cert-manager.io/v1 mychart ./mychart
+
 
 ```
 zarf tools helm template [NAME] [CHART] [flags]
@@ -78,7 +88,7 @@ zarf tools helm template [NAME] [CHART] [flags]
   -f, --values strings                             specify values in a YAML file or a URL (can specify multiple)
       --verify                                     verify the package before using it
       --version string                             specify a version constraint for the chart version to use. This constraint can be a specific tag (e.g. 1.1.1) or it may reference a valid range (e.g. ^2.0.0). If this is not specified, the latest version is used
-      --wait WaitStrategy[=watcher]                if specified, will wait until all resources are in the expected state before marking the operation as successful. It will wait for as long as --timeout. Valid inputs are 'watcher' and 'legacy' (default hookOnly)
+      --wait WaitStrategy[=watcher]                if specified, wait until resources are ready (up to --timeout). Values: 'watcher', 'hookOnly', and 'legacy'. (default hookOnly)
       --wait-for-jobs                              if set and --wait enabled, will wait until all Jobs have been completed before marking the release as successful. It will wait for as long as --timeout
 ```
 

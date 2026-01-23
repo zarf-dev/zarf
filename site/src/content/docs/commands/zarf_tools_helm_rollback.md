@@ -38,7 +38,7 @@ zarf tools helm rollback <RELEASE> [REVISION] [flags]
       --no-hooks                      prevent hooks from running during rollback
       --server-side string            must be "true", "false" or "auto". Object updates run in the server instead of the client ("auto" defaults the value from the previous chart release's method)
       --timeout duration              time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)
-      --wait WaitStrategy[=watcher]   if specified, will wait until all resources are in the expected state before marking the operation as successful. It will wait for as long as --timeout. Valid inputs are 'watcher' and 'legacy' (default hookOnly)
+      --wait WaitStrategy[=watcher]   if specified, wait until resources are ready (up to --timeout). Values: 'watcher', 'hookOnly', and 'legacy'. (default hookOnly)
       --wait-for-jobs                 if set and --wait enabled, will wait until all Jobs have been completed before marking the release as successful. It will wait for as long as --timeout
 ```
 

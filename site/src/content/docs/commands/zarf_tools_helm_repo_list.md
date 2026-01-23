@@ -18,6 +18,7 @@ zarf tools helm repo list [flags]
 
 ```
   -h, --help            help for list
+      --no-headers      suppress headers in the output
   -o, --output format   prints the output in the specified format. Allowed values: table, json, yaml (default table)
 ```
 

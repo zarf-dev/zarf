@@ -37,7 +37,7 @@ zarf tools helm uninstall RELEASE_NAME [...] [flags]
       --keep-history                  remove all associated resources and mark the release as deleted, but retain the release history
       --no-hooks                      prevent hooks from running during uninstallation
       --timeout duration              time to wait for any individual Kubernetes operation (like Jobs for hooks) (default 5m0s)
-      --wait WaitStrategy[=watcher]   if specified, will wait until all resources are in the expected state before marking the operation as successful. It will wait for as long as --timeout. Valid inputs are 'watcher' and 'legacy' (default hookOnly)
+      --wait WaitStrategy[=watcher]   if specified, wait until resources are ready (up to --timeout). Values: 'watcher', 'hookOnly', and 'legacy'. (default hookOnly)
 ```
 
 ### Options inherited from parent commands
