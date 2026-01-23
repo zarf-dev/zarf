@@ -248,8 +248,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	--git-push-password <git-push-password>
 `
 
-	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
-	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
+	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"

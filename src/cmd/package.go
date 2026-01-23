@@ -698,25 +698,11 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	return nil
 }
 
-type packageInspectOptions struct {
-	sbomOutputDir           string
-	listImages              bool
-	verify                  bool
-	skipSignatureValidation bool
-	ociConcurrency          int
-	publicKeyPath           string
-}
-
 func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
-	o := &packageInspectOptions{}
 	cmd := &cobra.Command{
 		Use:     "inspect [ PACKAGE_SOURCE ]",
 		Aliases: []string{"i"},
 		Short:   lang.CmdPackageInspectShort,
-		Long:    lang.CmdPackageInspectLong,
-		Args:    cobra.MaximumNArgs(1),
-		PreRun:  o.preRun,
-		RunE:    o.run,
 	}
 
 	cmd.AddCommand(newPackageInspectSBOMCommand(v))
@@ -725,65 +711,7 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
 	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
-
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().StringVar(&o.sbomOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	cmd.Flags().BoolVar(&o.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
-	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
-	if errSig != nil {
-		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
-	}
 	return cmd
-}
-
-func (o *packageInspectOptions) preRun(cmd *cobra.Command, _ []string) {
-	if cmd.Flags().Changed("skip-signature-validation") {
-		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
-
-		if cmd.Flags().Changed("verify") {
-			return
-		}
-
-		o.verify = !o.skipSignatureValidation
-	}
-}
-
-func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
-
-	if o.listImages && o.sbomOutputDir != "" {
-		return fmt.Errorf("cannot use --sbom-out and --list-images at the same time")
-	}
-
-	if o.sbomOutputDir != "" {
-		sbomOpts := packageInspectSBOMOptions{
-			verify:         o.verify,
-			outputDir:      o.sbomOutputDir,
-			ociConcurrency: o.ociConcurrency,
-			publicKeyPath:  o.publicKeyPath,
-		}
-		return sbomOpts.run(cmd, args)
-	}
-
-	if o.listImages {
-		imagesOpts := packageInspectImagesOptions{
-			verify:         o.verify,
-			ociConcurrency: o.ociConcurrency,
-			publicKeyPath:  o.publicKeyPath,
-		}
-		return imagesOpts.run(cmd, args)
-	}
-
-	definitionOpts := packageInspectDefinitionOptions{
-		verify:         o.verify,
-		ociConcurrency: o.ociConcurrency,
-		publicKeyPath:  o.publicKeyPath,
-	}
-	return definitionOpts.run(cmd, args)
 }
 
 type packageInspectValuesFilesOptions struct {
