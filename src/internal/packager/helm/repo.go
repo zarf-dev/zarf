@@ -213,7 +213,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			repov1.WithChartVersion(chart.Version),
 			repov1.WithUsernamePassword(username, password),
 			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
-			repov1.WithInsecureSkipTLSverify(config.CommonOptions.InsecureSkipTLSVerify),
+			repov1.WithInsecureSkipTLSVerify(config.CommonOptions.InsecureSkipTLSVerify),
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)

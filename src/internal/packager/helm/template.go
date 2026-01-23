@@ -50,7 +50,7 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	client.InsecureSkipTLSverify = config.CommonOptions.InsecureSkipTLSVerify
+	client.InsecureSkipTLSVerify = config.CommonOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
 		parsedKubeVersion, err := common.ParseKubeVersion(kubeVersion)
 		if err != nil {
