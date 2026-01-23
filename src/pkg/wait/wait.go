@@ -33,9 +33,9 @@ func isJSONPathWaitType(condition string) bool {
 // unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
 var unsafeShellCharsRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
 
-// shellQuote quotes a string for safe shell usage.
 // Source: https://github.com/alessio/shellescape/blob/v1.6.0/shellescape.go#L30-L42
 // SPDX-License-Identifier: MIT
+// Minor edits: Simplified for use case
 func shellQuote(s string) string {
 	if len(s) == 0 {
 		return "''"
@@ -159,13 +159,14 @@ func ForResource(ctx context.Context, waitTimeout, namespace, condition, kind, i
 
 // ForNetwork waits for a network endpoint to respond.
 func ForNetwork(ctx context.Context, protocol, address, condition string, timeout time.Duration) error {
-	l := logger.From(ctx)
 	waitInterval := time.Second
+	return forNetwork(ctx, protocol, address, condition, timeout, waitInterval)
+}
 
-	// Set the timeout for the wait-for command.
+func forNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration) error {
+	l := logger.From(ctx)
 	expired := time.After(timeout)
 
-	// Setup the spinner messages.
 	condition = strings.ToLower(condition)
 	if condition == "" {
 		condition = "success"
