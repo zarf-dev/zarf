@@ -699,10 +699,19 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 }
 
 func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "inspect [ PACKAGE_SOURCE ]",
-		Aliases: []string{"i"},
-		Short:   lang.CmdPackageInspectShort,
+cmd := &cobra.Command{
+Use:     "inspect [ PACKAGE_SOURCE ]",
+Aliases: []string{"i"},
+Short:   lang.CmdPackageInspectShort,
+Args: func(cmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("'zarf package inspect' requires a subcommand; did you mean 'zarf package inspect definition %s'?", args[0])
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return cmd.Help()
+		},
 	}
 
 	cmd.AddCommand(newPackageInspectSBOMCommand(v))
