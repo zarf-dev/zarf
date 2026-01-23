@@ -36,6 +36,68 @@ const (
 	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
 )
 
+// FindImagesInArchive takes an image tar and extracts it into an OCI layout directory.
+// It returns a list of images found in the extracted OCI layout.
+func FindImagesInArchive(ctx context.Context, imageArchive, destDir string) ([]string, error) {
+	// Create a temporary directory for extraction
+	tmpdir, err := utils.MakeTempDir("")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpdir))
+	}()
+
+	if err := archive.Decompress(ctx, imageArchive, tmpdir, archive.DecompressOpts{}); err != nil {
+		return nil, fmt.Errorf("failed to extract tar: %w", err)
+	}
+
+	// Determine the image directory:
+	// - If there's a single directory entry, the tar had a wrapping directory (e.g., "my-image/")
+	// - If there are multiple entries, the tar contents are at the top level
+	entries, err := os.ReadDir(tmpdir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
+	}
+
+	var imageDir string
+	if len(entries) == 1 && entries[0].IsDir() {
+		imageDir = filepath.Join(tmpdir, entries[0].Name())
+	} else {
+		imageDir = tmpdir
+	}
+
+	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	// Read the index.json from the source to get the manifest descriptors of each image
+	srcIdx, err := getIndexFromOCILayout(imageDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source index.json: %w", err)
+	}
+
+	if len(srcIdx.Manifests) == 0 {
+		return nil, errors.New("no manifests found in index.json")
+	}
+
+	var foundImages []string
+	for _, manifestDesc := range srcIdx.Manifests {
+		imageName := getRefFromManifest(manifestDesc)
+		if imageName == "" {
+			continue
+		}
+		manifestImg, err := transform.ParseImageRef(imageName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
+		}
+		foundImages = append(foundImages, manifestImg.Reference)
+
+	}
+
+	return foundImages, nil
+}
+
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of ImageWithManifest for all images in the tar.
 func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
