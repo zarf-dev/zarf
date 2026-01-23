@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
 // Run runs all provided actions.
@@ -170,7 +171,7 @@ retryCmd:
 
 func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, start time.Time) error {
 	l := logger.From(ctx)
-	wait := action.Wait
+	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
 	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
@@ -180,18 +181,18 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, sta
 
 	var kind, identifier, condition, namespace string
 
-	if wait.Cluster != nil {
-		kind = wait.Cluster.Kind
-		identifier = wait.Cluster.Name
-		condition = wait.Cluster.Condition
-		namespace = wait.Cluster.Namespace
-	} else if wait.Network != nil {
-		kind = strings.ToLower(wait.Network.Protocol)
-		identifier = wait.Network.Address
-		if strings.HasPrefix(kind, "http") && wait.Network.Code == 0 {
+	if waitCfg.Cluster != nil {
+		kind = waitCfg.Cluster.Kind
+		identifier = waitCfg.Cluster.Name
+		condition = waitCfg.Cluster.Condition
+		namespace = waitCfg.Cluster.Namespace
+	} else if waitCfg.Network != nil {
+		kind = strings.ToLower(waitCfg.Network.Protocol)
+		identifier = waitCfg.Network.Address
+		if strings.HasPrefix(kind, "http") && waitCfg.Network.Code == 0 {
 			condition = "200"
-		} else if wait.Network.Code != 0 {
-			condition = strconv.Itoa(wait.Network.Code)
+		} else if waitCfg.Network.Code != 0 {
+			condition = strconv.Itoa(waitCfg.Network.Code)
 		}
 	} else {
 		return fmt.Errorf("wait action is missing a cluster or network")
@@ -203,7 +204,15 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, sta
 	}
 	l.Info("running wait action", "description", desc)
 
-	if err := utils.ExecuteWait(ctx, timeoutStr, namespace, condition, kind, identifier, timeout); err != nil {
+	// Route to the appropriate wait function based on the kind/protocol.
+	var err error
+	switch kind {
+	case "http", "https", "tcp":
+		err = wait.ForNetwork(ctx, kind, identifier, condition, timeout)
+	default:
+		err = wait.ForResource(ctx, timeoutStr, namespace, condition, kind, identifier, timeout)
+	}
+	if err != nil {
 		return err
 	}
 
