@@ -228,7 +228,12 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 		for _, archive := range component.ImageArchives {
 			tmpArchivePath := filepath.Join(tmpBuildPath, "find-images")
-			archiveImages, err := images.FindImagesInArchive(ctx, archive.Path, tmpArchivePath)
+			pkgPath, err := layout.ResolvePackagePath(packagePath)
+			if err != nil {
+				return nil, err
+			}
+			archivePath := pkgPath.BaseDir + archive.Path
+			archiveImages, err := images.FindImagesInArchive(ctx, archivePath, tmpArchivePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
 			}
