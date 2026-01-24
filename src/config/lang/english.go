@@ -165,6 +165,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
 	CmdInitFlagArtifactPushToken = "[alpha] API Token for the push-user to access the artifact registry"
 
+	CmdInitFlagAgentNamespacesMode = "The namespace selection mode for the Zarf agent: 'active' (mutates all namespaces except ignored ones) or 'passive' (only mutates namespaces with zarf.dev/agent=mutate label)"
+	CmdInitFlagAgentObjectsMode    = "The object selection mode for the Zarf agent: 'active' (mutates all objects except ignored ones) or 'passive' (only mutates objects with zarf.dev/agent=mutate label)"
+
 	// zarf internal
 	CmdInternalShort = "Internal tools used by zarf"
 

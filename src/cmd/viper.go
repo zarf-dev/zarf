@@ -70,6 +70,11 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
+	// Init Agent config keys
+
+	VInitAgentNamespacesMode = "init.agent.namespaces_mode"
+	VInitAgentObjectsMode    = "init.agent.objects_mode"
+
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
@@ -241,6 +246,10 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Init defaults
+	v.SetDefault(VInitAgentNamespacesMode, "active")
+	v.SetDefault(VInitAgentObjectsMode, "active")
 }
 
 // GetStringSlice returns a string slice from viper
