@@ -197,6 +197,29 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "image archives",
+			packagePath: "./testdata/find-images/image-archives/",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "image-archive-component",
+					Matches: []string{
+						"docker.io/library/scratch:latest",
+					},
+				},
+			},
+		},
+		{
+			name:        "image archives",
+			packagePath: "./testdata/find-images/image-archives-bad-path/",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedErr: ""
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
