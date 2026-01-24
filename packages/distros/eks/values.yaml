@@ -1,0 +1,15 @@
+cluster:
+  # The name for the EKS cluster (required)
+  name: ""
+  # The AWS region to setup the cluster and associated networking
+  region: "us-east-1"
+
+nodeGroups:
+  # The EC2 instance type for the worker nodes
+  instanceType: "t3.small"
+
+iam:
+  # The ARN of the IAM permissions boundary to apply to the cluster resources
+  permissionsBoundaryArn: ""
+  # The tag to apply to the cluster resources to indicate the permissions boundary
+  permissionsBoundaryTag: ""
