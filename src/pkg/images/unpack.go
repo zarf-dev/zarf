@@ -92,7 +92,6 @@ func FindImagesInArchive(ctx context.Context, imageArchive, destDir string) ([]s
 			return nil, fmt.Errorf("failed to parse image reference %s: %w", imageName, err)
 		}
 		foundImages = append(foundImages, manifestImg.Reference)
-
 	}
 
 	return foundImages, nil

@@ -218,7 +218,7 @@ func TestFindImages(t *testing.T) {
 			opts: FindImagesOptions{
 				SkipCosign: true,
 			},
-			expectedErr: ""
+			expectedErr: "",
 		},
 	}
 	for _, tt := range tests {
