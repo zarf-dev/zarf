@@ -47,7 +47,7 @@ func shellQuote(s string) string {
 }
 
 // ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
-func ForResource(ctx context.Context, waitTimeout, namespace, condition, kind, identifier string, timeout time.Duration) error {
+func ForResource(ctx context.Context, namespace, condition, kind, identifier string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 
@@ -138,8 +138,8 @@ func ForResource(ctx context.Context, waitTimeout, namespace, condition, kind, i
 
 			l.Info(conditionMsg)
 			// Wait for the resource to meet the given condition.
-			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
-				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
+			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%ds",
+				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, int(timeout.Seconds()))
 
 			// If there is an error, log it and try again.
 			waitCmd := append(shellArgs, zarfKubectlWait)
