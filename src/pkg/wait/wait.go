@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/cli-utils/pkg/object"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -54,10 +55,53 @@ func shellQuote(s string) string {
 	return s
 }
 
+// containsIgnoreCase checks if a string slice contains a string, ignoring case.
+func containsIgnoreCase(slice []string, s string) bool {
+	lower := strings.ToLower(s)
+	for _, item := range slice {
+		if strings.ToLower(item) == lower {
+			return true
+		}
+	}
+	return false
+}
+
+// resolveResourceKind resolves a user-provided resource name (e.g., "pod", "pods", "po")
+// to the canonical Kind (e.g., "Pod") using the cluster's Discovery API.
+func resolveResourceKind(restConfig *rest.Config, apiVersion, userInput string) (string, error) {
+	clientset, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to create clientset: %w", err)
+	}
+
+	// Get API resources for this group/version
+	resourceList, err := clientset.Discovery().ServerResourcesForGroupVersion(apiVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to get API resources for %s: %w", apiVersion, err)
+	}
+
+	userInputLower := strings.ToLower(userInput)
+
+	for _, resource := range resourceList.APIResources {
+		// Skip subresources (they contain "/")
+		if strings.Contains(resource.Name, "/") {
+			continue
+		}
+		// Match against: plural name, kind, or short names
+		// Example: pvc - name=persistentvolumeclaims, kind=PersistentVolumeClaim, short_names=pvc
+		if strings.ToLower(resource.Name) == userInputLower ||
+			strings.ToLower(resource.Kind) == userInputLower ||
+			containsIgnoreCase(resource.ShortNames, userInput) {
+			return resource.Kind, nil
+		}
+	}
+
+	return "", fmt.Errorf("resource %q not found in API version %s", userInput, apiVersion)
+}
+
 // ForResource waits for a Kubernetes resource using kstatus when condition is not specified or "ready" and an API version is provided.
 // Otherwise it will use kubectl as the engine.
 func ForResource(ctx context.Context, apiVersion, kind, identifier, condition, namespace string, timeout time.Duration) error {
-	// If a specific condition is provided, use kubectl wait
 	if (condition != "" && condition != "ready") || apiVersion == "" {
 		return forResourceWithKubectl(ctx, kind, identifier, condition, namespace, timeout)
 	}
@@ -70,16 +114,19 @@ func forResourceWithKStatus(ctx context.Context, apiVersion, kind, identifier, n
 	l := logger.From(ctx)
 	l.Info("waiting for resource readiness", "engine", "kstatus")
 
-	// Parse the API version to get group and version
-	gv, err := schema.ParseGroupVersion(apiVersion)
-	if err != nil {
-		return fmt.Errorf("invalid API version %q: %w", apiVersion, err)
-	}
-
-	// Create cluster connection
 	c, err := cluster.New(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to connect to cluster: %w", err)
+	}
+
+	resolvedKind, err := resolveResourceKind(c.RestConfig, apiVersion, kind)
+	if err != nil {
+		return fmt.Errorf("failed to resolve resource kind: %w", err)
+	}
+
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return fmt.Errorf("invalid API version %q: %w", apiVersion, err)
 	}
 
 	// Check if identifier is a label selector
@@ -89,8 +136,8 @@ func forResourceWithKStatus(ctx context.Context, apiVersion, kind, identifier, n
 
 	if isSelector {
 		// List resources matching the selector and wait for each
-		l.Info("waiting for resources matching selector", "selector", identifier, "kind", kind, "namespace", namespace)
-		objs, err = listResourcesWithSelector(ctx, c, gv, kind, identifier, namespace)
+		l.Info("waiting for resources matching selector", "selector", identifier, "kind", resolvedKind, "namespace", namespace)
+		objs, err = listResourcesWithSelector(ctx, c, gv, resolvedKind, identifier, namespace)
 		if err != nil {
 			return err
 		}
@@ -103,13 +150,13 @@ func forResourceWithKStatus(ctx context.Context, apiVersion, kind, identifier, n
 		obj := object.ObjMetadata{
 			GroupKind: schema.GroupKind{
 				Group: gv.Group,
-				Kind:  kind,
+				Kind:  resolvedKind,
 			},
 			Namespace: namespace,
 			Name:      identifier,
 		}
 		objs = []object.ObjMetadata{obj}
-		l.Info("waiting for resource to be ready", "kind", kind, "name", identifier, "namespace", namespace)
+		l.Info("waiting for resource to be ready", "kind", resolvedKind, "name", identifier, "namespace", namespace)
 	}
 
 	// Create a context with timeout
@@ -122,7 +169,7 @@ func forResourceWithKStatus(ctx context.Context, apiVersion, kind, identifier, n
 		return err
 	}
 
-	l.Info("resource is ready", "kind", kind, "identifier", identifier)
+	l.Info("resource is ready", "kind", resolvedKind, "identifier", identifier)
 	return nil
 }
 
