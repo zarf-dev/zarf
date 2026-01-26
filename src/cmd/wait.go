@@ -54,17 +54,15 @@ func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 		identifier = args[1]
 	}
 
-	// Condition is optional, default to "exists".
 	condition := ""
 	if len(args) > 2 {
 		condition = args[2]
 	}
 
-	// Route to the appropriate wait function based on the kind/protocol.
 	switch kind {
 	case "http", "https", "tcp":
 		return wait.ForNetwork(cmd.Context(), kind, identifier, condition, timeout)
 	default:
-		return wait.ForResource(cmd.Context(), o.waitTimeout, o.waitNamespace, condition, kind, identifier, timeout)
+		return wait.ForResource(cmd.Context(), o.waitNamespace, condition, kind, identifier, timeout)
 	}
 }
