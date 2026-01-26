@@ -22,19 +22,20 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ### Options
 
 ```
-      --adopt-existing-resources   Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
-      --components string          Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
-  -c, --confirm                    Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
-  -h, --help                       help for deploy
-  -k, --key string                 Path to public key file for validating signed packages
-  -n, --namespace string           [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --retries int                Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --set stringToString         Specify deployment variables to set on the command line (KEY=value) (default [])
-      --shasum string              Shasum of the package to deploy. Required if deploying a remote https package.
-      --timeout duration           Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
-  -v, --values strings             [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
-      --verify                     Verify the Zarf package signature
+      --adopt-existing-resources       Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --components string              Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
+  -c, --confirm                        Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+  -h, --help                           help for deploy
+  -k, --key string                     Path to public key file for validating signed packages
+  -n, --namespace string               [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
+      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --retries int                    Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --set-values stringToString      Specify deployment package values to set on the command line (key.path=value). (default [])
+      --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --shasum string                  Shasum of the package to deploy. Required if deploying a remote https package.
+      --timeout duration               Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+  -v, --values strings                 [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --verify                         Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

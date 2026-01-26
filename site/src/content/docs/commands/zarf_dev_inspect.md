@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf dev inspect
 
-Commands to get information about a Zarf package using a `zarf.yaml`
+Commands to gather information about a Zarf package using its package definition
 
 ### Options
 

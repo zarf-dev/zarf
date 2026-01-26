@@ -4,7 +4,6 @@ no_log_file = true
 no_progress = true
 tmp_dir = 'tmp_dir: c457359e'
 zarf_cache = 'zarf_cache: 978499a5'
-insecure = true
 
 [init]
 components = 'components: 359049b9'
