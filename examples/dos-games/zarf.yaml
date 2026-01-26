@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: dos-games
   description: Simple example to load classic DOS games into K8s in the airgap
-  version: 1.2.0
+  version: 1.3.0
 
 # The documentation key can be utilized to pass information to package consumers
 # Commonly used to detail package configuration, or as in this instance, application specific documentation.
