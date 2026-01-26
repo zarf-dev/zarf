@@ -38,7 +38,7 @@ type RegistryOverride struct {
 }
 
 const (
-	//DockerMediaTypeManifest is the Legacy Docker manifest format, replaced by OCI manifest
+	// DockerMediaTypeManifest is the Legacy Docker manifest format, replaced by OCI manifest
 	DockerMediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
 	// DockerMediaTypeManifestList is the legacy Docker manifest list, replaced by OCI index
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
@@ -61,7 +61,7 @@ func isLayer(mediaType string) bool {
 	return false
 }
 
-// OnlyHasImageLayers returns true when an OCI manifest only containers container image layers.
+// OnlyHasImageLayers returns true when an OCI manifest only contains container image layers.
 func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	for _, layer := range manifest.Layers {
 		if !isLayer(string(layer.MediaType)) {
@@ -127,6 +127,7 @@ func isManifest(mediaType string) bool {
 	}
 	return false
 }
+
 func isIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
