@@ -192,7 +192,6 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) err
 
 func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
 	l := logger.From(ctx)
-	timeoutStr := fmt.Sprintf("%ds", int(timeout.Seconds()))
 
 	kind := cluster.Kind
 	identifier := cluster.Name
@@ -205,7 +204,7 @@ func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentAc
 	}
 	l.Info("running wait action", "description", desc)
 
-	return wait.ForResource(ctx, timeoutStr, namespace, condition, kind, identifier, timeout)
+	return wait.ForResource(ctx, namespace, condition, kind, identifier, timeout)
 }
 
 func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {

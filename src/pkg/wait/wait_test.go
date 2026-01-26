@@ -12,48 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
-
-type TestIsJSONPathWaitTypeSuite struct {
-	suite.Suite
-	*require.Assertions
-	waitTypes testWaitTypes
-}
-
-type testWaitTypes struct {
-	jsonPathType  []string
-	conditionType []string
-}
-
-func (suite *TestIsJSONPathWaitTypeSuite) SetupSuite() {
-	suite.Assertions = require.New(suite.T())
-
-	suite.waitTypes.jsonPathType = []string{
-		"{.status.availableReplicas}=1",
-		"{.status.containerStatuses[0].ready}=true",
-		"{.spec.containers[0].ports[0].containerPort}=80",
-		"{.spec.nodeName}=knode0",
-	}
-	suite.waitTypes.conditionType = []string{
-		"Ready",
-		"delete",
-		"",
-	}
-}
-
-func (suite *TestIsJSONPathWaitTypeSuite) Test_0_IsJSONPathWaitType() {
-	for _, waitType := range suite.waitTypes.conditionType {
-		suite.False(isJSONPathWaitType(waitType), "Expected %s not to be a JSONPath wait type", waitType)
-	}
-	for _, waitType := range suite.waitTypes.jsonPathType {
-		suite.True(isJSONPathWaitType(waitType), "Expected %s to be a JSONPath wait type", waitType)
-	}
-}
-
-func TestIsJSONPathWaitType(t *testing.T) {
-	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))
-}
 
 func TestForNetwork(t *testing.T) {
 	t.Parallel()
@@ -62,9 +21,7 @@ func TestForNetwork(t *testing.T) {
 	}))
 	t.Cleanup(successServer.Close)
 
-	// Server that accepts connection but never responds (simulates hanging)
 	hangingServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		// Block until the request context is cancelled
 		<-r.Context().Done()
 	}))
 	t.Cleanup(hangingServer.Close)

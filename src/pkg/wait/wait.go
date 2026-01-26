@@ -8,152 +8,121 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/client-go/dynamic"
+	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
+	"k8s.io/utils/ptr"
 )
 
-// isJSONPathWaitType checks if the condition is a JSONPath or condition.
-func isJSONPathWaitType(condition string) bool {
-	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
-		return false
+// ForResource waits for a Kubernetes resource to meet the specified condition.
+// It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
+func ForResource(ctx context.Context, namespace, condition, kind, identifier string, timeout time.Duration) error {
+	if kind == "" {
+		return errors.New("kind is required")
 	}
-	return true
-}
-
-// unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
-var unsafeShellCharsRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
-
-// Source: https://github.com/alessio/shellescape/blob/v1.6.0/shellescape.go#L30-L42
-// SPDX-License-Identifier: MIT
-// Minor edits: Simplified for use case
-func shellQuote(s string) string {
-	if len(s) == 0 {
-		return "''"
-	}
-	if unsafeShellCharsRegex.MatchString(s) {
-		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
-	}
-	return s
-}
-
-// ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
-func ForResource(ctx context.Context, waitTimeout, namespace, condition, kind, identifier string, timeout time.Duration) error {
-	l := logger.From(ctx)
-	waitInterval := time.Second
-
-	// Type of wait, condition or JSONPath
-	var waitType string
-
-	// Check if waitType is JSONPath or condition
-	if isJSONPathWaitType(condition) {
-		waitType = "jsonpath="
-		// Ensure any conditions aren't shell escaped
-		condition = shellQuote(condition)
-	} else {
-		waitType = "condition="
+	if identifier == "" {
+		return errors.New("identifier is required")
 	}
 
-	// Get the Zarf command configuration.
-	zarfCommand, err := utils.GetFinalExecutableCommand()
-	if err != nil {
-		return fmt.Errorf("could not locate the current Zarf binary path: %w", err)
-	}
-
-	identifierMsg := identifier
-
-	// If the identifier contains an equals sign, convert to a label selector.
-	if strings.ContainsRune(identifier, '=') {
-		identifierMsg = fmt.Sprintf(" with label `%s`", identifier)
-		identifier = fmt.Sprintf("-l %s", identifier)
-	}
-
-	// Set the timeout for the wait-for command.
-	expired := time.After(timeout)
-
-	// Set the custom message for optional namespace.
-	namespaceMsg := ""
-	namespaceFlag := ""
+	// Create ConfigFlags which handles kubeconfig loading
+	configFlags := genericclioptions.NewConfigFlags(true)
 	if namespace != "" {
-		namespaceFlag = fmt.Sprintf("-n %s", namespace)
-		namespaceMsg = fmt.Sprintf(" in namespace %s", namespace)
+		configFlags.Namespace = ptr.To(namespace)
 	}
 
-	// Setup the spinner messages.
-	conditionMsg := fmt.Sprintf("waiting for %s%s to be %s.", path.Join(kind, identifierMsg), namespaceMsg, condition)
-	existMsg := fmt.Sprintf("waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
-	completedMsg := fmt.Sprintf("wait for %s%s complete.", path.Join(kind, identifierMsg), namespaceMsg)
+	// Create dynamic client
+	restConfig, err := configFlags.ToRESTConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get REST config: %w", err)
+	}
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %w", err)
+	}
 
-	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
+	// Build the resource argument (e.g., "pod/nginx" or "pods" with label selector)
+	var args []string
+	var labelSelector string
+	if strings.ContainsRune(identifier, '=') {
+		// Label selector
+		args = []string{kind}
+		labelSelector = identifier
+	} else {
+		// Named resource
+		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
+	}
 
-	l.Info(existMsg)
+	// Determine the --for condition
+	forCondition := "create" // default: wait for existence
+	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
+		if strings.HasPrefix(condition, "{") {
+			// JSONPath condition
+			forCondition = fmt.Sprintf("jsonpath=%s", condition)
+		} else {
+			// Status condition
+			forCondition = fmt.Sprintf("condition=%s", condition)
+		}
+	}
+
+	// Retry loop to handle resources that don't exist yet
+	waitInterval := time.Second
+	deadline := time.Now().Add(timeout)
+
 	for {
-		// Delay the check for 1 second
-		time.Sleep(waitInterval)
+		// Check if we've exceeded the timeout
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
+		}
 
-		select {
-		case <-expired:
-			return errors.New("wait timed out")
-		case <-ctx.Done():
-			return errors.New("received interrupt")
+		// Create wait flags - discard all output since we handle logging ourselves
+		streams := genericiooptions.IOStreams{
+			In:     strings.NewReader(""),
+			Out:    io.Discard,
+			ErrOut: io.Discard,
+		}
+		flags := cmdwait.NewWaitFlags(configFlags, streams)
+		flags.Timeout = remaining
+		flags.ForCondition = forCondition
+		if labelSelector != "" {
+			flags.ResourceBuilderFlags.LabelSelector = &labelSelector
+		}
 
-		default:
-			// Check if the resource exists.
-			l.Debug("checking resource existence", "namespace", namespaceFlag, "kind", kind, "identifier", identifier)
-			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			cmd := append(shellArgs, zarfKubectlGet)
-			stdout, stderr, err := exec.Cmd(shell, cmd...)
-			l.Debug("cmd done", "cmd", cmd, "stdout", stdout, "stderr", stderr, "error", err)
-			if err != nil {
-				if strings.Contains(stderr, "connect: connection refused") {
-					l.Info("api server unavailable")
-					continue
-				}
-				// otherwise just log and retry
-				l.Info("resource error", "error", err)
-				continue
-			}
+		// Convert to options
+		opts, err := flags.ToOptions(args)
+		if err != nil {
+			return fmt.Errorf("failed to create wait options: %w", err)
+		}
+		opts.DynamicClient = dynamicClient
 
-			resourceNotFound := strings.Contains(stderr, "No resources found")
-			if resourceNotFound {
-				l.Debug("resource not found", "error", err)
-				continue
-			}
-
-			// If only checking for existence, exit here.
-			switch condition {
-			case "", "exist", "exists":
-				return nil
-			}
-
-			l.Info(conditionMsg)
-			// Wait for the resource to meet the given condition.
-			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
-				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
-
-			// If there is an error, log it and try again.
-			waitCmd := append(shellArgs, zarfKubectlWait)
-			waitStdout, waitStderr, err := exec.Cmd(shell, waitCmd...)
-			l.Debug("wait done", "cmd", waitCmd, "stdout", waitStdout, "stderr", waitStderr, "error", err)
-			if err != nil {
-				l.Debug("wait error", "error", err)
-				continue
-			}
-
-			// And just like that, success!
-			l.Info(completedMsg)
+		// Run the wait
+		err = opts.RunWait()
+		if err == nil {
 			return nil
 		}
+
+		// Check if it's a "not found" error - if so, retry
+		errStr := err.Error()
+		if strings.Contains(errStr, "not found") || strings.Contains(errStr, "no matching resources") {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(waitInterval):
+				continue
+			}
+		}
+
+		// For other errors, return immediately
+		return err
 	}
 }
 
