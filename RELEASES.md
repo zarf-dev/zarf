@@ -2,7 +2,25 @@
 
 This document provides guidance on how to create Zarf releases, address release issues, and other helpful tips.
 
-This project uses [goreleaser](https://github.com/goreleaser/goreleaser-action) for releasing. Releases are defined in the [`.github/workflows/release.yml`](.github/workflows/release.yml) file and are triggered by pushing a signed tag starting with `v`.
+This project uses [Release Please](https://github.com/googleapis/release-please) to automate release management and [goreleaser](https://github.com/goreleaser/goreleaser-action) for building and publishing release artifacts.
+
+## How Releases Work
+
+### Automated Releases (Release Please)
+
+Release Please automatically:
+1. Monitors commits to `main` and creates/updates a release PR with changelog entries
+2. When the release PR is merged, it creates and pushes a version tag (e.g., `v0.71.0`)
+3. The tag push triggers the existing release workflow ([`.github/workflows/release.yml`](.github/workflows/release.yml))
+
+The release PR accumulates changes based on [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` commits trigger a minor version bump
+- `fix:` commits trigger a patch version bump
+- `feat!:` or `fix!:` (breaking changes) trigger a major version bump
+
+### Manual Release Candidates
+
+Release candidates are still created manually by pushing signed tags with an `-rcX` suffix. This allows testing the release process before cutting a final release.
 
 ## Release Cadence
 
@@ -40,6 +58,19 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 
 ## Release Checklist
 
+### Standard Releases (via Release Please)
+
+* [ ] Review and merge the open Release Please PR
+* [ ] The tag is automatically created and pushed, triggering the release workflow
+* [ ] Review the GitHub release:
+  * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
+* [ ] Ensure goreleaser workflows execute successfully and review the release assets
+* [ ] Review, approve, and merge the [homebrew-tap](https://github.com/defenseunicorns/homebrew-tap) PR for the zarf release
+
+### Manual Releases (if needed)
+
+For cases where you need to manually create a release (e.g., release candidates):
+
 * [ ] Review open [Pull Requests](https://github.com/zarf-dev/zarf/pulls)
 * [ ] Cut the new release by tagging and pushing:
 
@@ -47,6 +78,7 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
   git tag -sa vX.Y.Z -m "vX.Y.Z"
   git push origin vX.Y.Z
   ```
+* [ ] Update `.release-please-manifest.json` to reflect the new version
 * [ ] Review the GitHub release:
   * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
 * [ ] Ensure goreleaser workflows execute successfully and review the release assets
