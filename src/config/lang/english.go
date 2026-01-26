@@ -624,6 +624,45 @@ $ zarf tools wait-for http google.com success                           #  wait 
 	CmdToolsWaitForFlagTimeout   = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForFlagNamespace = "Specify the namespace of the resources to wait for."
 
+	CmdToolsWaitForResourceShort = "Waits for a Kubernetes resource to reach a specified condition"
+	CmdToolsWaitForResourceLong  = "Waits for a Kubernetes resource to exist and optionally meet a specified condition.\n" +
+		"This can be used to wait for resources created by GitOps tools or Kubernetes operators."
+	CmdToolsWaitForResourceExample = `
+# Wait for a pod to be ready
+$ zarf tools wait-for-resource pod my-pod-name ready -n default
+
+# Wait for a deployment to be available
+$ zarf tools wait-for-resource deployment podinfo available -n podinfo
+
+# Wait for a pod with a label selector to be ready
+$ zarf tools wait-for-resource pod app=podinfo ready -n podinfo
+
+# Wait for a service to exist (default condition)
+$ zarf tools wait-for-resource svc zarf-docker-registry -n zarf
+
+# Wait for a CRD to exist
+$ zarf tools wait-for-resource crd addons.k3s.cattle.io exists
+
+# Wait for a statefulset with a JSONPath condition
+$ zarf tools wait-for-resource sts test-sts '{.status.availableReplicas}=23'
+`
+
+	CmdToolsWaitForNetworkShort   = "Waits for a network endpoint to respond"
+	CmdToolsWaitForNetworkLong    = "Waits for a network endpoint to respond with an expected status code or connection."
+	CmdToolsWaitForNetworkExample = `
+# Wait for a 200 response from an HTTP endpoint
+$ zarf tools wait-for-network http localhost:8080 200
+
+# Wait for any 2xx response (default)
+$ zarf tools wait-for-network http google.com
+
+# Wait for a TCP connection
+$ zarf tools wait-for-network tcp localhost:8080
+
+# Wait for an HTTPS endpoint
+$ zarf tools wait-for-network https 1.1.1.1 200
+`
+
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"

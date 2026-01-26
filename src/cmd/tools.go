@@ -27,6 +27,8 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newKubectlCommand())
 	cmd.AddCommand(newSbomCommand())
 	cmd.AddCommand(newWaitForCommand())
+	cmd.AddCommand(newWaitForResourceCommand())
+	cmd.AddCommand(newWaitForNetworkCommand())
 	cmd.AddCommand(newYQCommand())
 	cmd.AddCommand(newGetCredsCommand())
 	cmd.AddCommand(newUpdateCredsCommand(v))
