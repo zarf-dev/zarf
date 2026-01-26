@@ -81,9 +81,9 @@ func (opts SignBlobOptions) ShouldSign() bool {
 	return opts.KeyRef != "" || opts.IDToken != "" || opts.Sk
 }
 
-// checkOverwrite validates that output files can be written, returning an error if they exist and Overwrite is false.
-func (opts SignBlobOptions) checkOverwrite(ctx context.Context) error {
-	for _, path := range []string{opts.BundlePath, opts.OutputCertificate} {
+// CheckOverwrite validates that output files can be written, returning an error if they exist and Overwrite is false.
+func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
+	for _, path := range []string{opts.BundlePath, opts.OutputCertificate, opts.OutputSignature} {
 		if path == "" {
 			continue
 		}
@@ -157,8 +157,7 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		})
 	}
 
-	// Note: OutputCertificate check will be removed when zarf no longer includes the legacy signature
-	if err := opts.checkOverwrite(ctx); err != nil {
+	if err := opts.CheckOverwrite(ctx); err != nil {
 		return nil, err
 	}
 

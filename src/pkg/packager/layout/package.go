@@ -234,12 +234,19 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// Configure signing to write to temp directory
 	signOpts := opts
-	signOpts.OutputSignature = tmpSignaturePath
-	signOpts.BundlePath = tmpBundlePath
 
-	// Check if signature already exists in actual layout and warn
+	// Validate outputs before setting temporary paths
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
+	signOpts.BundlePath = actualBundlePath
+	signOpts.OutputSignature = actualSignaturePath
+	err = signOpts.CheckOverwrite(ctx)
+	if err != nil {
+		return err
+	}
+
+	signOpts.OutputSignature = tmpSignaturePath
+	signOpts.BundlePath = tmpBundlePath
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)

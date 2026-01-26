@@ -348,9 +348,11 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts := utils.DefaultSignBlobOptions()
 		opts.KeyRef = "./testdata/cosign.key"
 		opts.PassFunc = passFunc
+		opts.Overwrite = true
 
 		// Should overwrite the existing signatures (with warning logged)
 		err = pkgLayout.SignPackage(ctx, opts)
+
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
 		require.FileExists(t, legacySignaturePath)

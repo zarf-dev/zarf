@@ -16,9 +16,9 @@ Zarf signs the `zarf.yaml` file within a package, which contains metadata and ch
 
 ## Signature Formats
 
-### Sigstore Bundle Format (Recommended)
+### Sigstore Bundle Format
 
-As of recent Zarf releases, packages are signed using the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/), stored as `zarf.bundle.sig` within the package. This format provides:
+Packages are signed using the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/), stored as `zarf.bundle.sig` within the package. This format provides:
 
 - **Self-contained**: Bundles include all verification materials in a single file
 - **Standardized**: Based on the widely-adopted Sigstore specification

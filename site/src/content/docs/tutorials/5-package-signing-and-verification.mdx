@@ -8,14 +8,14 @@ sidebar:
 
 In this tutorial, we will sign a Zarf package and verify its signature to ensure package integrity and authenticity. We'll generate a key pair, sign a package during creation, verify the signature, and deploy the signed package.
 
-Package signing is a critical security practice for airgap environments, allowing you to verify that packages have not been tampered with and come from a trusted source.
+Package signing is a critical security practice, allowing you to verify that packages have not been tampered with and come from a trusted source.
 
 ## Prerequisites
 
 Before beginning this tutorial you will need the following:
 
 - Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
-- A package definition to work with (you can use the WordPress example from [Creating a Zarf Package](/tutorials/0-creating-a-zarf-package/))
+- The Zarf source code repository for creating the wordpress example package.
 
 :::note
 
@@ -23,7 +23,15 @@ For a comprehensive reference on signing methods, signature formats, and advance
 
 :::
 
-## Step 1: Generate a Signing Key Pair
+## Step 1: Clone the Zarf repository
+
+```bash
+git clone https://github.com/zarf-dev/zarf.git
+```
+
+Do not change your working directory to the Zarf directory for the next steps.
+
+## Step 2: Generate a Signing Key Pair
 
 First, we'll generate a private/public key pair for signing packages:
 
@@ -43,24 +51,30 @@ Keep your private key secure and never commit it to version control. Anyone with
 
 :::
 
-## Step 2: Create and Sign a Package
+## Step 3: Create a Package
 
-Now we'll create a package and sign it in one step. Navigate to your package directory (for example, the WordPress package from tutorial 0):
+Now we'll create a wordpress package from the Zarf examples directory:
 
 ```bash
-zarf package create . --signing-key cosign.key --signing-key-pass <your-password> --confirm
+zarf package create ./zarf/examples/wordpress
 ```
 
-When the package creation completes, notice the output confirms the package has been signed:
-
+The path to the created package will be present in the logs:
 ```
-📦 Package created successfully!
-Signed with key: cosign.key
+INF writing package to disk path=zarf-package-wordpress-arm64-26.0.0.tar.zst
+```
+
+## Step 4: Sign the Package
+
+To sign the package, we'll now use the key pair created earlier:
+
+```bash
+zarf package sign zarf-package-wordpress-arm64-26.0.0.tar.zst --signing-key cosign.key --signing-key-password <password>
 ```
 
 Your package (for example, `zarf-package-wordpress-amd64-26.0.0.tar.zst`) now contains a digital signature.
 
-## Step 3: Verify the Package Signature
+## Step 5: Verify the Package Signature
 
 Let's verify that our package signature is valid using the public key:
 
@@ -79,7 +93,7 @@ Verified OK
 
 Notice that verification checks both the signature and the package checksums. This confirms the package is authentic and has not been modified.
 
-## Step 4: Deploy with Signature Verification
+## Step 6: Deploy with Signature Verification
 
 Finally, we'll deploy the package with signature verification enabled. If you have a Kubernetes cluster initialized (see [Initializing a K8s Cluster](/tutorials/1-initializing-a-k8s-cluster/)), you can deploy:
 
@@ -96,17 +110,6 @@ Verifying package signature...
 ✔ Package signature verified successfully
 Deploying package...
 ```
-
-## What You Learned
-
-In this tutorial, you:
-
-1. Generated a cryptographic key pair for signing packages
-2. Created a package with an embedded signature
-3. Verified a package signature using the public key
-4. Deployed a signed package with enforced verification
-
-This workflow ensures that packages you deploy are authentic and have not been tampered with, which is critical for secure airgap deployments.
 
 ## Next Steps
 
