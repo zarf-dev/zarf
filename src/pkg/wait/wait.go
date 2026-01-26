@@ -47,7 +47,7 @@ func shellQuote(s string) string {
 }
 
 // ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
-func ForResource(ctx context.Context, namespace, condition, kind, identifier string, timeout time.Duration) error {
+func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 

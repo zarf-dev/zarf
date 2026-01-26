@@ -63,6 +63,6 @@ func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 	case "http", "https", "tcp":
 		return wait.ForNetwork(cmd.Context(), kind, identifier, condition, timeout)
 	default:
-		return wait.ForResource(cmd.Context(), o.waitNamespace, condition, kind, identifier, timeout)
+		return wait.ForResource(cmd.Context(), kind, identifier, condition, o.waitNamespace, timeout)
 	}
 }
