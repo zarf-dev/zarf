@@ -204,7 +204,7 @@ func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentAc
 	}
 	l.Info("running wait action", "description", desc)
 
-	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+	return wait.ForResource(ctx, "", kind, identifier, condition, namespace, timeout)
 }
 
 func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {

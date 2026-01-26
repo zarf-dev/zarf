@@ -63,7 +63,7 @@ func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 	case "http", "https", "tcp":
 		return wait.ForNetwork(cmd.Context(), kind, identifier, condition, timeout)
 	default:
-		return wait.ForResource(cmd.Context(), kind, identifier, condition, o.waitNamespace, timeout)
+		return wait.ForResource(cmd.Context(), "", kind, identifier, condition, o.waitNamespace, timeout)
 	}
 }
 
@@ -76,11 +76,11 @@ type waitForResourceOptions struct {
 func newWaitForResourceCommand() *cobra.Command {
 	o := waitForResourceOptions{}
 	cmd := &cobra.Command{
-		Use:     "wait-for-resource KIND NAME [CONDITION]",
+		Use:     "wait-for-resource API_VERSION KIND NAME [CONDITION]",
 		Short:   lang.CmdToolsWaitForResourceShort,
 		Long:    lang.CmdToolsWaitForResourceLong,
 		Example: lang.CmdToolsWaitForResourceExample,
-		Args:    cobra.MinimumNArgs(2),
+		Args:    cobra.MinimumNArgs(3),
 		RunE:    o.run,
 	}
 
@@ -96,15 +96,16 @@ func (o *waitForResourceOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid timeout duration %s, use a valid duration string e.g. 1s, 2m, 3h: %w", o.timeout, err)
 	}
 
-	kind := args[0]
-	identifier := args[1]
+	apiVersion := args[0]
+	kind := args[1]
+	identifier := args[2]
 
 	condition := ""
-	if len(args) > 2 {
-		condition = args[2]
+	if len(args) > 3 {
+		condition = args[3]
 	}
 
-	return wait.ForResource(cmd.Context(), kind, identifier, condition, o.namespace, timeout)
+	return wait.ForResource(cmd.Context(), apiVersion, kind, identifier, condition, o.namespace, timeout)
 }
 
 type waitForNetworkOptions struct {

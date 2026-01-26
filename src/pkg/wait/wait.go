@@ -17,9 +17,17 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/cli-utils/pkg/object"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
@@ -46,8 +54,141 @@ func shellQuote(s string) string {
 	return s
 }
 
-// ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
-func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
+// ForResource waits for a Kubernetes resource using kstatus when condition is not specified or "ready" and an API version is provided.
+// Otherwise it will use kubectl as the engine.
+func ForResource(ctx context.Context, apiVersion, kind, identifier, condition, namespace string, timeout time.Duration) error {
+	// If a specific condition is provided, use kubectl wait
+	if (condition != "" && condition != "ready") || apiVersion == "" {
+		return forResourceWithKubectl(ctx, kind, identifier, condition, namespace, timeout)
+	}
+
+	return forResourceWithKStatus(ctx, apiVersion, kind, identifier, namespace, timeout)
+}
+
+// forResourceWithKStatus uses kstatus to wait for resources to reach a ready state.
+func forResourceWithKStatus(ctx context.Context, apiVersion, kind, identifier, namespace string, timeout time.Duration) error {
+	l := logger.From(ctx)
+	l.Info("waiting for resource readiness", "engine", "kstatus")
+
+	// Parse the API version to get group and version
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return fmt.Errorf("invalid API version %q: %w", apiVersion, err)
+	}
+
+	// Create cluster connection
+	c, err := cluster.New(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to connect to cluster: %w", err)
+	}
+
+	// Check if identifier is a label selector
+	isSelector := strings.ContainsRune(identifier, '=')
+
+	var objs []object.ObjMetadata
+
+	if isSelector {
+		// List resources matching the selector and wait for each
+		l.Info("waiting for resources matching selector", "selector", identifier, "kind", kind, "namespace", namespace)
+		objs, err = listResourcesWithSelector(ctx, c, gv, kind, identifier, namespace)
+		if err != nil {
+			return err
+		}
+		if len(objs) == 0 {
+			return fmt.Errorf("no resources found matching selector %s", identifier)
+		}
+		l.Debug("found resources matching selector", "count", len(objs))
+	} else {
+		// Single named resource
+		obj := object.ObjMetadata{
+			GroupKind: schema.GroupKind{
+				Group: gv.Group,
+				Kind:  kind,
+			},
+			Namespace: namespace,
+			Name:      identifier,
+		}
+		objs = []object.ObjMetadata{obj}
+		l.Info("waiting for resource to be ready", "kind", kind, "name", identifier, "namespace", namespace)
+	}
+
+	// Create a context with timeout
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Use kstatus to wait for readiness
+	err = healthchecks.WaitForReady(timeoutCtx, c.Watcher, objs)
+	if err != nil {
+		return err
+	}
+
+	l.Info("resource is ready", "kind", kind, "identifier", identifier)
+	return nil
+}
+
+// listResourcesWithSelector lists resources matching the given label selector.
+func listResourcesWithSelector(ctx context.Context, c *cluster.Cluster, gv schema.GroupVersion, kind, selector, namespace string) ([]object.ObjMetadata, error) {
+	// Get the REST mapper to find the resource
+	gvk := schema.GroupVersionKind{
+		Group:   gv.Group,
+		Version: gv.Version,
+		Kind:    kind,
+	}
+
+	httpClient, err := rest.HTTPClientFor(c.RestConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP client: %w", err)
+	}
+
+	restMapper, err := apiutil.NewDynamicRESTMapper(c.RestConfig, httpClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create REST mapper: %w", err)
+	}
+
+	mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get REST mapping for %s: %w", kind, err)
+	}
+
+	// Create dynamic client
+	dynamicClient, err := dynamic.NewForConfig(c.RestConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	// List resources with the selector
+	var resourceInterface dynamic.ResourceInterface
+	if namespace != "" {
+		resourceInterface = dynamicClient.Resource(mapping.Resource).Namespace(namespace)
+	} else {
+		resourceInterface = dynamicClient.Resource(mapping.Resource)
+	}
+
+	list, err := resourceInterface.List(ctx, metav1.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list resources: %w", err)
+	}
+
+	objs := make([]object.ObjMetadata, 0, len(list.Items))
+	for _, item := range list.Items {
+		obj := object.ObjMetadata{
+			GroupKind: schema.GroupKind{
+				Group: gv.Group,
+				Kind:  kind,
+			},
+			Namespace: item.GetNamespace(),
+			Name:      item.GetName(),
+		}
+		objs = append(objs, obj)
+	}
+
+	return objs, nil
+}
+
+// forResourceWithKubectl uses kubectl wait to wait for a specific condition.
+func forResourceWithKubectl(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 

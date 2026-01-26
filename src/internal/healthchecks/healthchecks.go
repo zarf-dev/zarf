@@ -93,7 +93,7 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		for _, id := range objs {
 			rs := statusCollector.ResourceStatuses[id]
 			if rs.Status != status.CurrentStatus {
-				errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status))
+				errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s message: %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status, rs.Message))
 			}
 		}
 		errs = append(errs, ctx.Err())

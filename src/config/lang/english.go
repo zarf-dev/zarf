@@ -624,27 +624,30 @@ $ zarf tools wait-for http google.com success                           #  wait 
 	CmdToolsWaitForFlagTimeout   = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForFlagNamespace = "Specify the namespace of the resources to wait for."
 
-	CmdToolsWaitForResourceShort = "Waits for a Kubernetes resource to reach a specified condition"
-	CmdToolsWaitForResourceLong  = "Waits for a Kubernetes resource to exist and optionally meet a specified condition.\n" +
+	CmdToolsWaitForResourceShort = "Waits for a Kubernetes resource to be ready"
+	CmdToolsWaitForResourceLong  = "Waits for a Kubernetes resource to be ready using kstatus.\n" +
+		"When no condition is specified, uses kstatus to wait for the resource to be fully reconciled.\n" +
+		"When a specific condition is provided, uses kubectl wait instead.\n\n" +
+		"Requires an API version (e.g., v1, apps/v1) for proper resource identification.\n" +
 		"This can be used to wait for resources created by GitOps tools or Kubernetes operators."
 	CmdToolsWaitForResourceExample = `
-# Wait for a pod to be ready
-$ zarf tools wait-for-resource pod my-pod-name ready -n default
+# Wait for a deployment to be ready (uses kstatus)
+$ zarf tools wait-for-resource apps/v1 Deployment podinfo -n podinfo
 
-# Wait for a deployment to be available
-$ zarf tools wait-for-resource deployment podinfo available -n podinfo
+# Wait for a pod to be ready (uses kstatus)
+$ zarf tools wait-for-resource v1 Pod my-pod-name -n default
 
-# Wait for a pod with a label selector to be ready
-$ zarf tools wait-for-resource pod app=podinfo ready -n podinfo
+# Wait for pods matching a label selector (uses kstatus)
+$ zarf tools wait-for-resource v1 Pod app=podinfo -n podinfo
 
-# Wait for a service to exist (default condition)
-$ zarf tools wait-for-resource svc zarf-docker-registry -n zarf
+# Wait for a service to be ready (uses kstatus)
+$ zarf tools wait-for-resource v1 Service zarf-docker-registry -n zarf
 
-# Wait for a CRD to exist
-$ zarf tools wait-for-resource crd addons.k3s.cattle.io exists
+# Wait for a CRD to be ready (uses kstatus)
+$ zarf tools wait-for-resource apiextensions.k8s.io/v1 CustomResourceDefinition addons.k3s.cattle.io
 
-# Wait for a statefulset with a JSONPath condition
-$ zarf tools wait-for-resource sts test-sts '{.status.availableReplicas}=23'
+# Wait for a statefulset with a specific JSONPath condition (uses kubectl wait)
+$ zarf tools wait-for-resource apps/v1 StatefulSet test-sts '{.status.availableReplicas}=23' -n default
 `
 
 	CmdToolsWaitForNetworkShort   = "Waits for a network endpoint to respond"
