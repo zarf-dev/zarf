@@ -51,7 +51,12 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	start := time.Now()
 
 	if action.Wait != nil {
-		return runWaitAction(ctx, action, start)
+		err := runWaitAction(ctx, action)
+		if err != nil {
+			return err
+		}
+		l.Debug("wait action succeeded", "duration", time.Since(start))
+		return nil
 	}
 
 	tmplObjs := template.NewObjects(values).
@@ -169,33 +174,50 @@ retryCmd:
 	}
 }
 
-func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, start time.Time) error {
-	l := logger.From(ctx)
+func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) error {
 	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
 	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
 		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
-	timeoutStr := fmt.Sprintf("%ds", int(timeout.Seconds()))
-
-	var kind, identifier, condition, namespace string
 
 	if waitCfg.Cluster != nil {
-		kind = waitCfg.Cluster.Kind
-		identifier = waitCfg.Cluster.Name
-		condition = waitCfg.Cluster.Condition
-		namespace = waitCfg.Cluster.Namespace
+		return runWaitClusterAction(ctx, waitCfg.Cluster, timeout)
 	} else if waitCfg.Network != nil {
-		kind = strings.ToLower(waitCfg.Network.Protocol)
-		identifier = waitCfg.Network.Address
-		if strings.HasPrefix(kind, "http") && waitCfg.Network.Code == 0 {
-			condition = "200"
-		} else if waitCfg.Network.Code != 0 {
-			condition = strconv.Itoa(waitCfg.Network.Code)
-		}
-	} else {
-		return fmt.Errorf("wait action is missing a cluster or network")
+		return runWaitNetworkAction(ctx, waitCfg.Network, timeout)
+	}
+	return fmt.Errorf("wait action is missing a cluster or network")
+}
+
+func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
+	l := logger.From(ctx)
+	timeoutStr := fmt.Sprintf("%ds", int(timeout.Seconds()))
+
+	kind := cluster.Kind
+	identifier := cluster.Name
+	condition := cluster.Condition
+	namespace := cluster.Namespace
+
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return wait.ForResource(ctx, timeoutStr, namespace, condition, kind, identifier, timeout)
+}
+
+func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {
+	l := logger.From(ctx)
+
+	kind := strings.ToLower(network.Protocol)
+	identifier := network.Address
+	var condition string
+	if strings.HasPrefix(kind, "http") && network.Code == 0 {
+		condition = "200"
+	} else if network.Code != 0 {
+		condition = strconv.Itoa(network.Code)
 	}
 
 	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
@@ -204,20 +226,7 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, sta
 	}
 	l.Info("running wait action", "description", desc)
 
-	// Route to the appropriate wait function based on the kind/protocol.
-	var err error
-	switch kind {
-	case "http", "https", "tcp":
-		err = wait.ForNetwork(ctx, kind, identifier, condition, timeout)
-	default:
-		err = wait.ForResource(ctx, timeoutStr, namespace, condition, kind, identifier, timeout)
-	}
-	if err != nil {
-		return err
-	}
-
-	l.Debug("wait action succeeded", "description", desc, "duration", time.Since(start))
-	return nil
+	return wait.ForNetwork(ctx, kind, identifier, condition, timeout)
 }
 
 // Perform some basic string mutations to make commands more useful.
