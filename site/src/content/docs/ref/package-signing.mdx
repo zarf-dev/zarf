@@ -20,8 +20,8 @@ Zarf signs the `zarf.yaml` file within a package, which contains metadata and ch
 
 Packages are signed using the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/), stored as `zarf.bundle.sig` within the package. This format provides:
 
-- **Self-contained**: Bundles include all verification materials in a single file
-- **Standardized**: Based on the widely-adopted Sigstore specification
+- **Offline Verification**: Bundles include all verification materials in a single file
+- **Standardized Format**: Based on the widely-adopted Sigstore specification
 - **Better interoperability**: Compatible with other Sigstore tooling and services
 
 The bundle format follows the [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md).
@@ -266,20 +266,6 @@ ERR failed to sign package: failed to sign package: reading key: decrypt: encryp
 zarf package sign zarf-package-example-amd64.tar.zst \
   --signing-key cosign.key \
   --signing-key-pass <correct-password>
-```
-
-### Cannot Overwrite Existing Signature
-
-```
-✖ package is already signed. Use --overwrite to replace the existing signature
-```
-
-**Solution**: Use the `--overwrite` flag to replace the existing signature:
-
-```bash
-zarf package sign zarf-package-example-amd64.tar.zst \
-  --signing-key cosign.key \
-  --overwrite
 ```
 
 ### Signature Verification Failed
