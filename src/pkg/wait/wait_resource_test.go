@@ -35,19 +35,31 @@ func newUnstructured(apiVersion, kind, namespace, name string) *unstructured.Uns
 	}
 }
 
-func addCondition(in *unstructured.Unstructured, condType, status string) *unstructured.Unstructured {
-	conditions, _, _ := unstructured.NestedSlice(in.Object, "status", "conditions")
+func addCondition(t *testing.T, in *unstructured.Unstructured, condType, status string) *unstructured.Unstructured {
+	t.Helper()
+	conditions, _, err := unstructured.NestedSlice(in.Object, "status", "conditions")
+	require.NoError(t, err)
 	conditions = append(conditions, map[string]any{
 		"type":   condType,
 		"status": status,
 	})
-	_ = unstructured.SetNestedSlice(in.Object, conditions, "status", "conditions")
+	err = unstructured.SetNestedSlice(in.Object, conditions, "status", "conditions")
+	require.NoError(t, err)
 	return in
 }
 
-func setNestedField(in *unstructured.Unstructured, value any, fields ...string) *unstructured.Unstructured {
-	_ = unstructured.SetNestedField(in.Object, value, fields...)
+func setNestedField(t *testing.T, in *unstructured.Unstructured, value any, fields ...string) *unstructured.Unstructured {
+	t.Helper()
+	err := unstructured.SetNestedField(in.Object, value, fields...)
+	require.NoError(t, err)
 	return in
+}
+
+// mustEncode encodes v to w, panicking on error (acceptable in test HTTP handlers)
+func mustEncode(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		panic(err)
+	}
 }
 
 // fakeAPIServer creates a test HTTP server that mimics Kubernetes API responses
@@ -61,7 +73,7 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 				TypeMeta: metav1.TypeMeta{Kind: "APIGroupList", APIVersion: "v1"},
 				Groups:   []metav1.APIGroup{},
 			}
-			_ = json.NewEncoder(w).Encode(resp)
+			mustEncode(w, resp)
 			return
 		}
 
@@ -74,7 +86,7 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 					{Name: "pods", Namespaced: true, Kind: "Pod", Verbs: metav1.Verbs{"get", "list", "watch"}},
 				},
 			}
-			_ = json.NewEncoder(w).Encode(resp)
+			mustEncode(w, resp)
 			return
 		}
 
@@ -84,7 +96,7 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 				TypeMeta: metav1.TypeMeta{Kind: "APIVersions"},
 				Versions: []string{"v1"},
 			}
-			_ = json.NewEncoder(w).Encode(resp)
+			mustEncode(w, resp)
 			return
 		}
 
@@ -103,14 +115,14 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 				"metadata":   map[string]any{"resourceVersion": "1"},
 				"items":      items,
 			}
-			_ = json.NewEncoder(w).Encode(resp)
+			mustEncode(w, resp)
 			return
 		}
 
 		// Handle resource requests
 		for path, resource := range resources {
 			if r.URL.Path == path {
-				_ = json.NewEncoder(w).Encode(resource)
+				mustEncode(w, resource)
 				return
 			}
 		}
@@ -123,7 +135,7 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 			Message:  "not found",
 			Code:     http.StatusNotFound,
 		}
-		_ = json.NewEncoder(w).Encode(resp)
+		mustEncode(w, resp)
 	}))
 }
 
@@ -196,7 +208,7 @@ func TestForResourceExistsCondition(t *testing.T) {
 func TestForResourceRegularCondition(t *testing.T) {
 	t.Parallel()
 
-	pod := addCondition(newUnstructured("v1", "Pod", "default", "my-pod"), "Ready", "True")
+	pod := addCondition(t, newUnstructured("v1", "Pod", "default", "my-pod"), "Ready", "True")
 	server := fakeAPIServer(map[string]*unstructured.Unstructured{
 		"/api/v1/namespaces/default/pods/my-pod": pod,
 	})
@@ -219,7 +231,7 @@ func TestForResourceRegularCondition(t *testing.T) {
 func TestForResourceJSONPathCondition(t *testing.T) {
 	t.Parallel()
 
-	pod := setNestedField(newUnstructured("v1", "Pod", "default", "my-pod"), "Running", "status", "phase")
+	pod := setNestedField(t, newUnstructured("v1", "Pod", "default", "my-pod"), "Running", "status", "phase")
 	server := fakeAPIServer(map[string]*unstructured.Unstructured{
 		"/api/v1/namespaces/default/pods/my-pod": pod,
 	})
