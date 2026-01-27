@@ -33,13 +33,11 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 		return errors.New("identifier is required")
 	}
 
-	// Create ConfigFlags which handles kubeconfig loading
 	configFlags := genericclioptions.NewConfigFlags(true)
 	if namespace != "" {
 		configFlags.Namespace = ptr.To(namespace)
 	}
 
-	// Create dynamic client
 	restConfig, err := configFlags.ToRESTConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get REST config: %w", err)
@@ -49,15 +47,17 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	// Build the resource argument (e.g., "pod/nginx" or "pods" with label selector)
+	return forResource(ctx, configFlags, dynamicClient, condition, kind, identifier, timeout)
+}
+
+// forResource is the internal implementation that can be tested with fake clients.
+func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier string, timeout time.Duration) error {
 	var args []string
 	var labelSelector string
 	if strings.ContainsRune(identifier, '=') {
-		// Label selector
 		args = []string{kind}
 		labelSelector = identifier
 	} else {
-		// Named resource
 		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
 	}
 
@@ -65,20 +65,16 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 	forCondition := "create" // default: wait for existence
 	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
 		if strings.HasPrefix(condition, "{") {
-			// JSONPath condition
 			forCondition = fmt.Sprintf("jsonpath=%s", condition)
 		} else {
-			// Status condition
 			forCondition = fmt.Sprintf("condition=%s", condition)
 		}
 	}
 
-	// Retry loop to handle resources that don't exist yet
 	waitInterval := time.Second
 	deadline := time.Now().Add(timeout)
 
 	for {
-		// Check if we've exceeded the timeout
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
 			return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
@@ -97,14 +93,12 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 			flags.ResourceBuilderFlags.LabelSelector = &labelSelector
 		}
 
-		// Convert to options
 		opts, err := flags.ToOptions(args)
 		if err != nil {
 			return fmt.Errorf("failed to create wait options: %w", err)
 		}
 		opts.DynamicClient = dynamicClient
 
-		// Run the wait
 		err = opts.RunWait()
 		if err == nil {
 			return nil
@@ -121,7 +115,6 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 			}
 		}
 
-		// For other errors, return immediately
 		return err
 	}
 }
