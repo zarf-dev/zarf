@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LoadOptions are the options for LoadPackage.
@@ -41,7 +42,7 @@ type LoadOptions struct {
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	// Only applicable to OCI + HTTP
-	RemoteOptions
+	types.RemoteOptions
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -33,7 +34,7 @@ type PublishFromOCIOptions struct {
 	Architecture string
 	// Retries is the number of times to retry a failed push
 	Retries int
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
@@ -107,7 +108,7 @@ type PublishPackageOptions struct {
 	SigningKeyPassword string
 	// Retries specifies the number of retries to use
 	Retries int
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PublishPackage takes a package layout and pushes the package to the given registry.
@@ -173,7 +174,7 @@ type PublishSkeletonOptions struct {
 	SkipVersionCheck bool
 	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
@@ -206,6 +207,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:             opts.Flavor,
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		SkipRequiredValues: true,
+		RemoteOptions:      opts.RemoteOptions,
 	})
 	if err != nil {
 		return registry.Reference{}, err
@@ -255,7 +257,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 }
 
 // pushToRemote pushes a package to the given reference
-func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts RemoteOptions) error {
+func pushToRemote(ctx context.Context, layout *layout.PackageLayout, ref registry.Reference, concurrency int, retries int, remoteOpts types.RemoteOptions) error {
 	arch := layout.Pkg.Metadata.Architecture
 	// Set platform
 	platform := oci.PlatformForArch(arch)

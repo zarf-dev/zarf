@@ -109,6 +109,7 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		CachePath:        cachePath,
 		IsInteractive:    true,
 		SkipVersionCheck: true,
+		RemoteOptions:    defaultRemoteOptions(),
 	}
 	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
@@ -202,6 +203,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,
+		RemoteOptions:      defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
@@ -309,6 +311,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		KubeVersion:        o.kubeVersion,
 		CachePath:          cachePath,
 		IsInteractive:      true,
+		RemoteOptions:      defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
 	var lintErr *lint.LintError
@@ -754,6 +757,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		SkipCosign:          o.skipCosign,
 		CachePath:           cachePath,
 		IsInteractive:       true,
+		RemoteOptions:       defaultRemoteOptions(),
 	}
 	imagesScans, err := packager.FindImages(ctx, basePath, findImagesOptions)
 	var lintErr *lint.LintError
@@ -880,9 +884,10 @@ func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	err = packager.Lint(ctx, basePath, packager.LintOptions{
-		Flavor:       o.flavor,
-		SetVariables: o.setPkgTmpl,
-		CachePath:    cachePath,
+		Flavor:        o.flavor,
+		SetVariables:  o.setPkgTmpl,
+		CachePath:     cachePath,
+		RemoteOptions: defaultRemoteOptions(),
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
