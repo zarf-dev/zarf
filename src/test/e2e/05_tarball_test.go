@@ -83,7 +83,7 @@ func TestReproducibleTarballs(t *testing.T) {
 	var (
 		createPath = filepath.Join("examples", "dos-games")
 		tmp        = t.TempDir()
-		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch))
+		tb         = filepath.Join(tmp, fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch))
 		unpack1    = filepath.Join(tmp, "unpack1")
 		unpack2    = filepath.Join(tmp, "unpack2")
 	)
@@ -121,13 +121,13 @@ func TestDeterministicOCIPull(t *testing.T) {
 	// even with concurrent OCI layer downloads.
 
 	var (
-		ociRef    = "oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0"
+		ociRef    = "oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0"
 		cosignKey = "cosign.pub"
 		tmp       = t.TempDir()
 		pull1Dir  = filepath.Join(tmp, "pull1")
 		pull2Dir  = filepath.Join(tmp, "pull2")
 		pull3Dir  = filepath.Join(tmp, "pull3")
-		pkgName   = fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
+		pkgName   = fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch)
 	)
 
 	// Create output directories

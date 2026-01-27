@@ -14,7 +14,7 @@ jobs:
       packages: write
     steps:
       - name: "Checkout Repo"
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Auth with AWS
         uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
@@ -41,8 +41,8 @@ jobs:
           zarf package create -o build -a arm64 examples/dos-games --signing-key=awskms:///${{ secrets.COSIGN_AWS_KMS_KEY_ARN }} --confirm
 
           # Publish a the signed dos-games package
-          zarf package publish ./build/zarf-package-dos-games-amd64-1.2.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
-          zarf package publish ./build/zarf-package-dos-games-arm64-1.2.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-amd64-1.3.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
+          zarf package publish ./build/zarf-package-dos-games-arm64-1.3.0.tar.zst oci://ghcr.io/zarf-dev/packages --key=https://zarf.dev/cosign.pub
 
           # Publish a skeleton of the dos-games package
           zarf package publish examples/dos-games oci://ghcr.io/zarf-dev/packages

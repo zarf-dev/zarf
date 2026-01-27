@@ -22,7 +22,7 @@ func TestIncludedBuildMachineInfo(t *testing.T) {
 	tmpdir := t.TempDir()
 
 	packagePath := "examples/dos-games"
-	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch)
 
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "-o", tmpdir, "--with-build-machine-info", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
@@ -43,7 +43,7 @@ func TestOmitteddBuildMachineInfo(t *testing.T) {
 	ctx := logger.WithContext(t.Context(), test.GetLogger(t))
 
 	packagePath := "examples/dos-games"
-	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.2.0.tar.zst", e2e.Arch)
+	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch)
 
 	tmpdir := t.TempDir()
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", packagePath, "-o", tmpdir, "--confirm")
