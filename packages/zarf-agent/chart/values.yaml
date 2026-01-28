@@ -40,3 +40,4 @@ resources:
 
 affinity: {}
 tolerations: []
+nodeSelector: {}
