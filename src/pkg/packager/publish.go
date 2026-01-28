@@ -137,6 +137,8 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.KeyRef = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
+	// Publish never re-writes the tarball content - overwrite explicitly
+	signOpts.Overwrite = true
 
 	if err := pkgLayout.SignPackage(ctx, signOpts); err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
