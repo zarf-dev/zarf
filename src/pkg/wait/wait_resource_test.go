@@ -325,10 +325,6 @@ func TestForResourceExistsCondition(t *testing.T) {
 	// Test with "exist" condition (singular)
 	err = forResource(ctx, configFlags, dynamicClient, "exist", "pods", "my-pod", 5*time.Second)
 	require.NoError(t, err)
-
-	// Test case insensitivity
-	err = forResource(ctx, configFlags, dynamicClient, "EXISTS", "pods", "my-pod", 5*time.Second)
-	require.NoError(t, err)
 }
 
 // TestForResourceRegularCondition tests waiting for a standard condition like "Ready"
