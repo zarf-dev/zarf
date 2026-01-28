@@ -58,7 +58,7 @@ func (suite *RegistryProxyTestSuite) Test_1_Flux() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "prune", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 	// verify that an image name is in the prune output
-	suite.Contains(stdOut, "stefanprodan/podinfo")
+	suite.Contains(stdErr, "stefanprodan/podinfo")
 }
 
 func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
