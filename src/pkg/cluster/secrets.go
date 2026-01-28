@@ -182,19 +182,12 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 	return nil
 }
 
-// UpdateZarfManagedMTLSSecrets regenerates and updates all Zarf-managed mTLS secrets.
+// ApplyZarfManagedMTLSSecrets regenerates and updates all Zarf-managed mTLS secrets.
 // It generates fresh certificates, applies them to the zarf namespace, and copies
 // the client certificate to all namespaces that have the mTLS client secret.
-func (c *Cluster) UpdateZarfManagedMTLSSecrets(ctx context.Context) error {
+func (c *Cluster) ApplyZarfManagedMTLSSecrets(ctx context.Context) error {
 	l := logger.From(ctx)
 
-	// Verify that the mTLS client secret exists in the zarf namespace
-	_, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to get mTLS client secret from zarf namespace: %w", err)
-	}
-
-	// Generate new mTLS certificates
 	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(
 		state.ZarfRegistryMTLSServerHosts,
 		state.ZarfRegistryMTLSServerCommonName,
@@ -204,15 +197,15 @@ func (c *Cluster) UpdateZarfManagedMTLSSecrets(ctx context.Context) error {
 		return fmt.Errorf("failed to generate mTLS certificates: %w", err)
 	}
 
-	// Apply the new certificates to the zarf namespace
 	if err := c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI); err != nil {
 		return fmt.Errorf("failed to apply registry certs to zarf namespace: %w", err)
 	}
 
-	// Update all namespaces that have the client secret
-	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
+		LabelSelector: state.ZarfManagedByLabel + "=zarf",
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list Zarf-managed namespaces: %w", err)
 	}
 
 	for _, namespace := range namespaceList.Items {
@@ -220,20 +213,10 @@ func (c *Cluster) UpdateZarfManagedMTLSSecrets(ctx context.Context) error {
 		if namespace.Name == state.ZarfNamespaceName {
 			continue
 		}
-
-		currentSecret, err := c.Clientset.CoreV1().Secrets(namespace.Name).Get(ctx, RegistryClientTLSSecret, metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-
 		// Skip if namespace is skipped/ignored and secret is not managed by Zarf
-		if currentSecret.Labels[state.ZarfManagedByLabel] != "zarf" && (namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore") {
+		if namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore" {
 			continue
 		}
-
 		l.Info("applying Zarf managed mTLS client secret for namespace", "name", namespace.Name)
 		if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, namespace.Name); err != nil {
 			return err
