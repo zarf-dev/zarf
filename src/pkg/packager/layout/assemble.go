@@ -36,6 +36,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // AssembleOptions are the options for creating a package from a package object
@@ -54,6 +55,7 @@ type AssembleOptions struct {
 	CachePath string
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
+	types.RemoteOptions
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -102,7 +104,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
+		err := assemblePackageComponent(ctx, component, packagePath, buildPath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -140,8 +142,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
+			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 		}
 		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
@@ -347,7 +349,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -370,7 +372,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	for _, chart := range component.Charts {
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
 		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath)
+		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath, remoteOpts)
 		if err != nil {
 			return err
 		}
@@ -568,7 +570,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string, remoteOpts types.RemoteOptions) error {
 	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
 		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 	}
@@ -581,7 +583,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
-	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles

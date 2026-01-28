@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 	"helm.sh/helm/v3/pkg/chartutil"
 )
 
@@ -48,6 +49,7 @@ type InspectPackageResourcesOptions struct {
 	KubeVersion  string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	types.RemoteOptions
 }
 
 // InspectPackageResources templates and returns the manifests, charts, and values files in the package as they would be on deploy
@@ -110,7 +112,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				if err != nil {
 					return nil, fmt.Errorf("failed to load chart data: %w", err)
 				}
-				chartTemplate, err := helm.TemplateChart(ctx, chart, helmChart, values, opts.KubeVersion, variableConfig, opts.IsInteractive)
+				chartTemplate, err := helm.TemplateChart(ctx, chart, helmChart, values, opts.KubeVersion, variableConfig, opts.IsInteractive, opts.RemoteOptions)
 				if err != nil {
 					return nil, fmt.Errorf("could not render the Helm template for chart %s: %w", chart.Name, err)
 				}
@@ -187,6 +189,7 @@ type InspectDefinitionResourcesOptions struct {
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	types.RemoteOptions
 }
 
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the definition at the given path
@@ -201,6 +204,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		CachePath:        opts.CachePath,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -256,7 +260,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -361,10 +365,10 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 }
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
-func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, kubeVersion string, isInteractive bool) (Resource, chartutil.Values, error) {
+func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, kubeVersion string, isInteractive bool, remoteOptions types.RemoteOptions) (Resource, chartutil.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
-	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath); err != nil {
+	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath, remoteOptions); err != nil {
 		return Resource{}, chartutil.Values{}, err
 	}
 
@@ -393,7 +397,7 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 	if err != nil {
 		return Resource{}, chartutil.Values{}, fmt.Errorf("failed to load chart data: %w", err)
 	}
-	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig, isInteractive)
+	chartTemplate, err := helm.TemplateChart(ctx, zarfChart, chart, values, kubeVersion, variableConfig, isInteractive, remoteOptions)
 	if err != nil {
 		return Resource{}, chartutil.Values{}, fmt.Errorf("could not render the Helm template for chart %s: %w", zarfChart.Name, err)
 	}

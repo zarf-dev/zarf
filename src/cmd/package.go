@@ -820,6 +820,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -934,6 +935,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)

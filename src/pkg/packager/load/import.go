@@ -19,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -36,7 +37,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -108,7 +109,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -117,7 +118,8 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(), cacheModifier)
+			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
+				cacheModifier, oci.WithPlainHTTP(remoteOptions.PlainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -151,7 +153,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 		importedComponent := found[0]
 
-		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath)
+		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
@@ -239,7 +241,7 @@ func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 }
 
 // TODO (phillebaba): Refactor package structure so that pullOCI can be used instead.
-func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string) (string, error) {
+func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, packagePath string, cachePath string, remoteOptions types.RemoteOptions) (string, error) {
 	if component.Import.URL == "" {
 		return component.Import.Path, nil
 	}
@@ -255,7 +257,8 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 
 	// Get the descriptor for the component.
-	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton())
+	remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
+		oci.WithPlainHTTP(remoteOptions.PlainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 	if err != nil {
 		return "", err
 	}
