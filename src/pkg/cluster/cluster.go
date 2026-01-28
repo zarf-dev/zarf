@@ -397,10 +397,33 @@ func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context) (bool, error) {
 	return needsCARenewal || needsServerRenewal || needsClientRenewal, nil
 }
 
-// ApplyRegistryCerts applies the provided server and client certificates to the cluster as Kubernetes secrets.
+// ApplyRegistryClientCertSecret using the given pki to the given namespace.
+// Accepts a namespace so the secret can live in any namespace that requires interacting with the registry
+func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI pki.GeneratedPKI, namespace string) error {
+	serverSecret := v1ac.Secret(RegistryClientTLSSecret, namespace).
+		WithType(corev1.SecretTypeTLS).
+		WithLabels(map[string]string{
+			state.ZarfManagedByLabel: "zarf",
+		}).
+		WithData(map[string][]byte{
+			RegistrySecretCertPath: clientPKI.Cert,
+			RegistrySecretKeyPath:  clientPKI.Key,
+			RegistrySecretCAPath:   clientPKI.CA,
+		})
+	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+		return fmt.Errorf("failed to create client TLS secret: %w", err)
+	}
+	return nil
+}
+
+// ApplyZarfRegistryCertSecrets applies the provided server and client certificates to the cluster as Kubernetes secrets.
 // Both the server and client PKI bundles should contain the same CA certificate.
-func (c *Cluster) ApplyRegistryCerts(ctx context.Context, serverPKI, clientPKI pki.GeneratedPKI) error {
+func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, clientPKI pki.GeneratedPKI) error {
 	l := logger.From(ctx)
+
+	if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, state.ZarfNamespaceName); err != nil {
+		return err
+	}
 
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
@@ -414,20 +437,6 @@ func (c *Cluster) ApplyRegistryCerts(ctx context.Context, serverPKI, clientPKI p
 		})
 	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
-	}
-
-	clientSecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
-		WithType(corev1.SecretTypeTLS).
-		WithLabels(map[string]string{
-			state.ZarfManagedByLabel: "zarf",
-		}).
-		WithData(map[string][]byte{
-			RegistrySecretCertPath: clientPKI.Cert,
-			RegistrySecretKeyPath:  clientPKI.Key,
-			RegistrySecretCAPath:   clientPKI.CA,
-		})
-	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, clientSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
-		return fmt.Errorf("failed to create client TLS secret: %w", err)
 	}
 
 	l.Info("certificates for registry mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
@@ -566,5 +575,5 @@ func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
 		return err
 	}
 
-	return c.ApplyRegistryCerts(ctx, serverPKI, clientPKI)
+	return c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI)
 }

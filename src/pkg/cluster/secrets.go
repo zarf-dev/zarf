@@ -205,7 +205,7 @@ func (c *Cluster) UpdateZarfManagedMTLSSecrets(ctx context.Context) error {
 	}
 
 	// Apply the new certificates to the zarf namespace
-	if err := c.ApplyRegistryCerts(ctx, serverPKI, clientPKI); err != nil {
+	if err := c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI); err != nil {
 		return fmt.Errorf("failed to apply registry certs to zarf namespace: %w", err)
 	}
 
