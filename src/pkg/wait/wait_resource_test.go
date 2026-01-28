@@ -27,9 +27,10 @@ func newUnstructured(apiVersion, kind, namespace, name string) *unstructured.Uns
 			"apiVersion": apiVersion,
 			"kind":       kind,
 			"metadata": map[string]any{
-				"namespace": namespace,
-				"name":      name,
-				"uid":       "test-uid",
+				"namespace":       namespace,
+				"name":            name,
+				"uid":             "test-uid",
+				"resourceVersion": "1",
 			},
 		},
 	}
@@ -77,6 +78,16 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 			return
 		}
 
+		// Handle API discovery root
+		if r.URL.Path == "/api" {
+			resp := &metav1.APIVersions{
+				TypeMeta: metav1.TypeMeta{Kind: "APIVersions"},
+				Versions: []string{"v1"},
+			}
+			mustEncode(w, resp)
+			return
+		}
+
 		// Handle API discovery for core v1
 		if r.URL.Path == "/api/v1" {
 			resp := &metav1.APIResourceList{
@@ -90,24 +101,86 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 			return
 		}
 
-		// Handle API discovery root
-		if r.URL.Path == "/api" {
-			resp := &metav1.APIVersions{
-				TypeMeta: metav1.TypeMeta{Kind: "APIVersions"},
-				Versions: []string{"v1"},
-			}
-			mustEncode(w, resp)
-			return
-		}
-
-		// Handle list requests (needed for watch operations in condition checks)
+		// Handle list/watch requests for pods
 		if r.URL.Path == "/api/v1/namespaces/default/pods" {
-			// Collect all pod resources into a list
+			// Parse fieldSelector to filter by name if present
+			fieldSelector := r.URL.Query().Get("fieldSelector")
+			nameFilter, _ := strings.CutPrefix(fieldSelector, "metadata.name=")
+
+			// Check if this is a watch request
+			if r.URL.Query().Get("watch") == "true" {
+				flusher, ok := w.(http.Flusher)
+				if !ok {
+					http.Error(w, "streaming not supported", http.StatusInternalServerError)
+					return
+				}
+
+				// Send ADDED events for matching resources (filtered by name if specified)
+				for path, resource := range resources {
+					if !strings.HasPrefix(path, "/api/v1/namespaces/default/pods/") {
+						continue
+					}
+					// Apply name filter if present
+					if nameFilter != "" {
+						resourceName, _, err := unstructured.NestedString(resource.Object, "metadata", "name")
+						if err != nil {
+							http.Error(w, err.Error(), http.StatusInternalServerError)
+							return
+						}
+						if resourceName != nameFilter {
+							continue
+						}
+					}
+					event := map[string]any{
+						"type":   "ADDED",
+						"object": resource.Object,
+					}
+					mustEncode(w, event)
+					flusher.Flush()
+				}
+
+				// Send BOOKMARK to indicate initial events are complete (required for sendInitialEvents)
+				if r.URL.Query().Get("sendInitialEvents") == "true" {
+					bookmark := map[string]any{
+						"type": "BOOKMARK",
+						"object": map[string]any{
+							"apiVersion": "v1",
+							"kind":       "Pod",
+							"metadata": map[string]any{
+								"resourceVersion": "1",
+								"annotations": map[string]any{
+									"k8s.io/initial-events-end": "true",
+								},
+							},
+						},
+					}
+					mustEncode(w, bookmark)
+					flusher.Flush()
+				}
+				// Keep connection open until client disconnects or timeout
+				// The client will close when condition is met
+				<-r.Context().Done()
+				return
+			}
+
+			// Regular list request - collect matching pod resources into a list
 			items := []any{}
 			for path, resource := range resources {
-				if strings.HasPrefix(path, "/api/v1/namespaces/default/pods/") {
-					items = append(items, resource.Object)
+				if !strings.HasPrefix(path, "/api/v1/namespaces/default/pods/") {
+					continue
 				}
+				// Apply name filter if present
+				if nameFilter != "" {
+					resourceName, _, err := unstructured.NestedString(resource.Object, "metadata", "name")
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					if resourceName != nameFilter {
+						continue
+					}
+				}
+				items = append(items, resource.Object)
 			}
 			resp := map[string]any{
 				"apiVersion": "v1",
