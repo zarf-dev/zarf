@@ -410,7 +410,7 @@ func (c *Cluster) ApplyRegistryClientCertSecret(ctx context.Context, clientPKI p
 			RegistrySecretKeyPath:  clientPKI.Key,
 			RegistrySecretCAPath:   clientPKI.CA,
 		})
-	if _, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
+	if _, err := c.Clientset.CoreV1().Secrets(namespace).Apply(ctx, serverSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName}); err != nil {
 		return fmt.Errorf("failed to create client TLS secret: %w", err)
 	}
 	return nil
