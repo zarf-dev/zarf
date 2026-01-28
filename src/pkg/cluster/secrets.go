@@ -234,21 +234,8 @@ func (c *Cluster) UpdateZarfManagedMTLSSecrets(ctx context.Context) error {
 			continue
 		}
 
-		// Apply the updated client secret
-		newSecret := v1ac.Secret(RegistryClientTLSSecret, namespace.Name).
-			WithData(map[string][]byte{
-				RegistrySecretCertPath: clientPKI.Cert,
-				RegistrySecretKeyPath:  clientPKI.Key,
-				RegistrySecretCAPath:   clientPKI.CA,
-			}).
-			WithType(corev1.SecretTypeTLS).
-			WithLabels(map[string]string{
-				state.ZarfManagedByLabel: "zarf",
-			})
-
 		l.Info("applying Zarf managed mTLS client secret for namespace", "name", namespace.Name)
-		_, err = c.Clientset.CoreV1().Secrets(namespace.Name).Apply(ctx, newSecret, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
-		if err != nil {
+		if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, namespace.Name); err != nil {
 			return err
 		}
 	}
