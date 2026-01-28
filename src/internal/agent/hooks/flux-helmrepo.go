@@ -98,12 +98,12 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		if isPatchedClusterIP {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, src.Spec.URL)
 			if err != nil {
-				return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
+				return nil, fmt.Errorf("unable to transform existing patched HelmRepo ClusterIP to %s: %w", registryAddress, err)
 			}
 		} else {
 			patchedSrc, err = transform.ImageTransformHost(registryAddress, src.Spec.URL)
 			if err != nil {
-				return nil, fmt.Errorf("unable to transform the HelmRepo URL: %w", err)
+				return nil, fmt.Errorf("unable to transform the HelmRepo URL to %s: %w", registryAddress, err)
 			}
 		}
 
