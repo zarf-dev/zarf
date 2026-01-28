@@ -17,8 +17,8 @@ Update gets the latest information about charts from the respective chart reposi
 Information is cached locally, where it is used by commands like 'helm search'.
 
 You can optionally specify a list of repositories you want to update.
-	$ zarf tools helm repo update <repo_name> ...
-To update all the repositories, use 'zarf tools helm repo update'.
+	$ helm repo update <repo_name> ...
+To update all the repositories, use 'helm repo update'.
 
 
 ```
@@ -28,14 +28,17 @@ zarf tools helm repo update [REPO1 [REPO2 ...]] [flags]
 ### Options
 
 ```
-      --fail-on-repo-update-fail   update fails if any of the repository updates fail
-  -h, --help                       help for update
+  -h, --help               help for update
+      --timeout duration   time to wait for the index file download to complete (default 2m0s)
 ```
 
 ### Options inherited from parent commands
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.

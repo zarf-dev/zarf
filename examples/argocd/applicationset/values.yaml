@@ -1,5 +1,5 @@
 applicationsets:
-  - name: guestbook
+  guestbook:
     namespace: argocd
     goTemplate: true
     goTemplateOptions:
@@ -24,6 +24,6 @@ applicationsets:
           namespace: '{{.path.basename}}'
         syncPolicy:
           automated:
-            enabled: true
+            selfHeal: true
           syncOptions:
             - CreateNamespace=true

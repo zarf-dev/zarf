@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: main-config
+  namespace: {{ .Release.Namespace }}
+data:
+  message: "This is the main config deployed after hooks"
