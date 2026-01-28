@@ -1,36 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package lint contains functions for verifying zarf yaml files are valid
-package lint
+// Package v1alpha1 contains functions for validating and converting v1alpha1 structs
+package v1alpha1
 
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
-
-var (
-	// IsLowercaseNumberHyphenNoStartHyphen is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
-	// https://regex101.com/r/FLdG9G/2
-	IsLowercaseNumberHyphenNoStartHyphen = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
-	// Define allowed OS, an empty string means it is allowed on all operating systems
-	// same as enums on ZarfComponentOnlyTarget
-	supportedOS = []string{"linux", "darwin", "windows", ""}
-)
-
-// SupportedOS returns the supported operating systems.
-//
-// The supported operating systems are: linux, darwin, windows.
-//
-// An empty string signifies no OS restrictions.
-func SupportedOS() []string {
-	return supportedOS
-}
 
 const (
 	// ZarfMaxChartNameLength limits helm chart name size to account for K8s/helm limits and zarf prefix
