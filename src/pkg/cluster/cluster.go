@@ -575,5 +575,27 @@ func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
 		return err
 	}
 
-	return c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI)
+	if err := c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI); err != nil {
+		return err
+	}
+
+	// Update client certs in all Zarf-managed namespaces
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
+		LabelSelector: state.ZarfManagedByLabel + "=zarf",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list Zarf-managed namespaces: %w", err)
+	}
+
+	for _, namespace := range namespaceList.Items {
+		// Skip the zarf namespace since ApplyZarfRegistryCertSecrets already handles it
+		if namespace.Name == state.ZarfNamespaceName {
+			continue
+		}
+		if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, namespace.Name); err != nil {
+			return fmt.Errorf("failed to apply registry client cert to namespace %s: %w", namespace.Name, err)
+		}
+	}
+
+	return nil
 }
