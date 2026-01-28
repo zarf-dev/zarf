@@ -189,28 +189,27 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
-		rawData := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %w", err)
-		}
-		// If the object is empty, it's a blank resource, so we skip it. If the package name is empty we don't want to add labels.
-		if len(rawData.Object) > 0 {
+		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
 			// Add the package label to all resources
-			labels := rawData.GetLabels()
+			labels := obj.GetLabels()
 			if labels == nil {
 				labels = map[string]string{}
 			}
-			rawData.SetLabels(r.setPackageLabels(labels))
+			obj.SetLabels(r.setPackageLabels(labels))
 			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
-			if err := r.addLabelsToNestedPath(rawData, []string{"spec", "template", "metadata", "labels"}); err != nil {
+			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
-			newContent, err := yaml.Marshal(rawData)
-			if err != nil {
-				return fmt.Errorf("failed to marshal manifest: %w", err)
-			}
-			// Update the resource content with the new labels
-			resource.Content = string(newContent)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		resource.Content = newContent
+
+		// If the object is empty, it's a blank resource, so we skip it.
+		if len(rawData.Object) == 0 {
+			continue
 		}
 
 		switch rawData.GetKind() {
@@ -333,4 +332,39 @@ func (r *renderer) setPackageLabels(labels map[string]string) map[string]string 
 		}
 	}
 	return labels
+}
+
+// processManifestContent unmarshals YAML content into an unstructured object,
+// optionally modifies it via the provided function, and marshals it back to YAML.
+// It ensures the content ends with a newline before unmarshaling to preserve
+// YAML block scalar trailing newlines.
+// Returns the marshaled content, the parsed unstructured object, and any error.
+func processManifestContent(content string, modifyFn func(*unstructured.Unstructured) error) (string, *unstructured.Unstructured, error) {
+	// Ensure content ends with a newline before unmarshaling to preserve YAML trailing newlines.
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		content += "\n"
+	}
+
+	rawData := &unstructured.Unstructured{}
+	if err := yaml.Unmarshal([]byte(content), rawData); err != nil {
+		return "", nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
+	}
+
+	// If the object is empty, return the original content
+	if len(rawData.Object) == 0 {
+		return content, rawData, nil
+	}
+
+	if modifyFn != nil {
+		if err := modifyFn(rawData); err != nil {
+			return "", nil, err
+		}
+	}
+
+	newContent, err := yaml.Marshal(rawData)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	return string(newContent), rawData, nil
 }

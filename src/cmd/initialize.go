@@ -63,7 +63,9 @@ func newInitCommand() *cobra.Command {
 	v := getViper()
 
 	// Init package set variable flags
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
@@ -172,11 +174,11 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath: o.publicKeyPath,
-		Verify:        o.verify,
-		Filter:        filters.Empty(),
-		Architecture:  config.GetArch(),
-		CachePath:     cachePath,
+		PublicKeyPath:        o.publicKeyPath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {

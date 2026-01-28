@@ -72,6 +72,12 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 				if rs == nil {
 					continue
 				}
+				// Failed is a terminal state. This check ensures we don't wait forever for a resource
+				// that has already failed, as intervention is required to resolve the failure.
+				if rs.Status == status.FailedStatus {
+					cancel()
+					return
+				}
 				rss = append(rss, rs)
 			}
 			desired := status.CurrentStatus
@@ -87,20 +93,18 @@ func WaitForReady(ctx context.Context, sw watcher.StatusWatcher, objs []object.O
 		return statusCollector.Error
 	}
 
-	// Only check parent context error, otherwise we would error when desired status is achieved.
-	if ctx.Err() != nil {
-		errs := []error{}
-		for _, id := range objs {
-			rs := statusCollector.ResourceStatuses[id]
-			if rs.Status != status.CurrentStatus {
-				errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status))
-			}
+	errs := []error{}
+	for _, id := range objs {
+		rs := statusCollector.ResourceStatuses[id]
+		if rs.Status != status.CurrentStatus {
+			errs = append(errs, fmt.Errorf("%s: %s not ready, status is %s, message: %s", rs.Identifier.Name, rs.Identifier.GroupKind.Kind, rs.Status, rs.Message))
 		}
-		errs = append(errs, ctx.Err())
-		return errors.Join(errs...)
 	}
-
-	return nil
+	// Only append parent context error, otherwise we would error when desired status is achieved.
+	if ctx.Err() != nil {
+		errs = append(errs, ctx.Err())
+	}
+	return errors.Join(errs...)
 }
 
 // ImmediateWatcher should only be used for testing and returns the set status immediately.

@@ -21,13 +21,13 @@ zarf package inspect values-files [ PACKAGE ] [flags]
 ### Options
 
 ```
-      --components string     comma separated list of components to show values files for
-  -h, --help                  help for values-files
-  -k, --key string            Path to public key file for validating signed packages
-      --kube-version string   Override the default helm template KubeVersion when performing a package chart template
-      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --set stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
-      --verify                Verify the Zarf package signature
+      --components string              comma separated list of components to show values files for
+  -h, --help                           help for values-files
+  -k, --key string                     Path to public key file for validating signed packages
+      --kube-version string            Override the default helm template KubeVersion when performing a package chart template
+      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --verify                         Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands
@@ -46,5 +46,5 @@ zarf package inspect values-files [ PACKAGE ] [flags]
 
 ### SEE ALSO
 
-* [zarf package inspect](/commands/zarf_package_inspect/)	 - Displays the definition of a Zarf package (runs offline)
+* [zarf package inspect](/commands/zarf_package_inspect/)	 - Commands for gathering information from a built package
 
