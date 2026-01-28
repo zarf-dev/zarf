@@ -56,6 +56,39 @@ func setNestedField(t *testing.T, in *unstructured.Unstructured, value any, fiel
 	return in
 }
 
+func setLabels(t *testing.T, in *unstructured.Unstructured, labels map[string]string) *unstructured.Unstructured {
+	t.Helper()
+	labelsAny := make(map[string]any, len(labels))
+	for k, v := range labels {
+		labelsAny[k] = v
+	}
+	err := unstructured.SetNestedField(in.Object, labelsAny, "metadata", "labels")
+	require.NoError(t, err)
+	return in
+}
+
+// matchesLabelSelector checks if a resource matches a simple label selector (key=value format)
+func matchesLabelSelector(resource *unstructured.Unstructured, labelSelector string) (bool, error) {
+	if labelSelector == "" {
+		return true, nil
+	}
+	labels, _, err := unstructured.NestedStringMap(resource.Object, "metadata", "labels")
+	if err != nil {
+		return false, err
+	}
+	// Parse simple label selector (supports key=value,key2=value2 format)
+	for _, part := range strings.Split(labelSelector, ",") {
+		key, value, found := strings.Cut(part, "=")
+		if !found {
+			continue
+		}
+		if labels[key] != value {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // mustEncode encodes v to w, panicking on error (acceptable in test HTTP handlers)
 func mustEncode(w http.ResponseWriter, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
@@ -107,6 +140,9 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 			fieldSelector := r.URL.Query().Get("fieldSelector")
 			nameFilter, _ := strings.CutPrefix(fieldSelector, "metadata.name=")
 
+			// Parse labelSelector to filter by labels
+			labelSelector := r.URL.Query().Get("labelSelector")
+
 			// Check if this is a watch request
 			if r.URL.Query().Get("watch") == "true" {
 				flusher, ok := w.(http.Flusher)
@@ -115,7 +151,7 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 					return
 				}
 
-				// Send ADDED events for matching resources (filtered by name if specified)
+				// Send ADDED events for matching resources (filtered by name and/or labels)
 				for path, resource := range resources {
 					if !strings.HasPrefix(path, "/api/v1/namespaces/default/pods/") {
 						continue
@@ -130,6 +166,15 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 						if resourceName != nameFilter {
 							continue
 						}
+					}
+					matchesLabelSelector, err := matchesLabelSelector(resource, labelSelector)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+					// Apply label selector if present
+					if !matchesLabelSelector {
+						continue
 					}
 					event := map[string]any{
 						"type":   "ADDED",
@@ -179,6 +224,15 @@ func fakeAPIServer(resources map[string]*unstructured.Unstructured) *httptest.Se
 					if resourceName != nameFilter {
 						continue
 					}
+				}
+				matchesLabelSelector, err := matchesLabelSelector(resource, labelSelector)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				// Apply label selector if present
+				if !matchesLabelSelector {
+					continue
 				}
 				items = append(items, resource.Object)
 			}
@@ -297,6 +351,73 @@ func TestForResourceRegularCondition(t *testing.T) {
 
 	// Test waiting for condition=Ready
 	err = forResource(ctx, configFlags, dynamicClient, "Ready", "pods", "my-pod", 5*time.Second)
+	require.NoError(t, err)
+}
+
+// TestForResourceWithMultiplePods tests that the name filter correctly selects the right pod
+// when multiple pods exist in the namespace
+func TestForResourceWithMultiplePods(t *testing.T) {
+	t.Parallel()
+
+	// Create multiple pods - only target-pod has Ready=True
+	targetPod := addCondition(t, newUnstructured("v1", "Pod", "default", "target-pod"), "Ready", "True")
+	otherPod1 := addCondition(t, newUnstructured("v1", "Pod", "default", "other-pod-1"), "Ready", "False")
+	otherPod2 := newUnstructured("v1", "Pod", "default", "other-pod-2") // No Ready condition at all
+
+	server := fakeAPIServer(map[string]*unstructured.Unstructured{
+		"/api/v1/namespaces/default/pods/target-pod":  targetPod,
+		"/api/v1/namespaces/default/pods/other-pod-1": otherPod1,
+		"/api/v1/namespaces/default/pods/other-pod-2": otherPod2,
+	})
+	defer server.Close()
+
+	configFlags := newTestConfigFlagsWithServer(server, "default")
+	restConfig, err := configFlags.ToRESTConfig()
+	require.NoError(t, err)
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Should succeed because target-pod has Ready=True (other pods should be filtered out)
+	err = forResource(ctx, configFlags, dynamicClient, "Ready", "pods", "target-pod", 5*time.Second)
+	require.NoError(t, err)
+}
+
+// TestForResourceWithLabelSelector tests waiting for pods using a label selector
+func TestForResourceWithLabelSelector(t *testing.T) {
+	t.Parallel()
+
+	targetPod := setLabels(t,
+		addCondition(t, newUnstructured("v1", "Pod", "default", "target-pod"), "Ready", "True"),
+		map[string]string{"app": "target", "env": "prod"},
+	)
+	otherPod1 := setLabels(t,
+		addCondition(t, newUnstructured("v1", "Pod", "default", "other-pod-1"), "Ready", "False"),
+		map[string]string{"app": "other", "env": "prod"},
+	)
+	otherPod2 := setLabels(t,
+		addCondition(t, newUnstructured("v1", "Pod", "default", "other-pod-2"), "Ready", "True"),
+		map[string]string{"app": "other", "env": "dev"},
+	)
+
+	server := fakeAPIServer(map[string]*unstructured.Unstructured{
+		"/api/v1/namespaces/default/pods/target-pod":  targetPod,
+		"/api/v1/namespaces/default/pods/other-pod-1": otherPod1,
+		"/api/v1/namespaces/default/pods/other-pod-2": otherPod2,
+	})
+	defer server.Close()
+
+	configFlags := newTestConfigFlagsWithServer(server, "default")
+	restConfig, err := configFlags.ToRESTConfig()
+	require.NoError(t, err)
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	// Use label selector "app=target" - should find target-pod which has Ready=True
+	err = forResource(ctx, configFlags, dynamicClient, "Ready", "pods", "app=target", 5*time.Second)
 	require.NoError(t, err)
 }
 
