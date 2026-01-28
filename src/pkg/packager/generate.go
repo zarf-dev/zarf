@@ -14,7 +14,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -94,7 +94,7 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.CosignArtifacts...)
 	}
 
-	if err := lint.ValidatePackage(pkg); err != nil {
+	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	return pkg, nil

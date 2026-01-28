@@ -7,6 +7,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -454,6 +455,10 @@ type DeployedPackage struct {
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
+
+// DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
+// https://regex101.com/r/FLdG9G/2
+var DeployedPackageNameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 
 // GetSecretName returns the k8s secret name for the deployed package
 func (d *DeployedPackage) GetSecretName() string {
