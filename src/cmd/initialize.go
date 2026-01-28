@@ -51,11 +51,12 @@ func newInitCommand() *cobra.Command {
 	o := &initOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "init [ PACKAGE_SOURCE ]",
 		Aliases: []string{"i"},
 		Short:   lang.CmdInitShort,
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
+		Args:    cobra.MaximumNArgs(1),
 		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
@@ -138,14 +139,16 @@ func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
 	}
 }
 
-func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	if err := o.validateInitFlags(); err != nil {
+	err := o.validateInitFlags()
+	if err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	if err := validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer); err != nil {
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer)
+	if err != nil {
 		return err
 	}
 
@@ -157,12 +160,18 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	initPackageName := config.GetInitPackageName()
+	packageSource := ""
 
-	// Try to use an init-package in the executable directory if none exist in current working directory
-	packageSource, err := o.findInitPackage(cmd.Context(), initPackageName)
-	if err != nil {
-		return err
+	if len(args) > 0 {
+		packageSource = args[0]
+	} else {
+		initPackageName := config.GetInitPackageName()
+
+		// Try to use an init-package in the executable directory if none exist in current working directory
+		packageSource, err = o.findInitPackage(cmd.Context(), initPackageName)
+		if err != nil {
+			return err
+		}
 	}
 
 	v := getViper()
