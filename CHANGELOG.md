@@ -1,0 +1,25 @@
+# Changelog
+
+## [0.71.0](https://github.com/zarf-dev/zarf/compare/v0.70.1...v0.71.0) (2026-01-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* move v1alpha1 validation logic to it's own package ([#4544](https://github.com/zarf-dev/zarf/issues/4544))
+
+### Features
+
+* error early during healthchecks when status is terminal ([#4547](https://github.com/zarf-dev/zarf/issues/4547)) ([eb54546](https://github.com/zarf-dev/zarf/commit/eb5454614545b3710a5c21503d72e14b13943d42))
+* **release:** add release please workflow and docs ([#4558](https://github.com/zarf-dev/zarf/issues/4558)) ([b4cb102](https://github.com/zarf-dev/zarf/commit/b4cb1027e953fc1787c0d124fd5c69105c3ef3a1))
+* remove direct usage of parent command `zarf package inspect` ([#4548](https://github.com/zarf-dev/zarf/issues/4548)) ([1904293](https://github.com/zarf-dev/zarf/commit/19042935276f23f9d50101363008ebce987b7e11))
+* **sign:** implement support for sigstore bundle format ([#4519](https://github.com/zarf-dev/zarf/issues/4519)) ([9c3d446](https://github.com/zarf-dev/zarf/commit/9c3d446509767a823a03ed69cf8366242ac4db9e))
+
+
+### Bug Fixes
+
+* **helm:** preserve block scalar semantics ([#4541](https://github.com/zarf-dev/zarf/issues/4541)) ([8655c1c](https://github.com/zarf-dev/zarf/commit/8655c1c1e846de93bff378d6de19de20721bfbff))
+
+
+### Refactoring
+
+* move v1alpha1 validation logic to it's own package ([#4544](https://github.com/zarf-dev/zarf/issues/4544)) ([502a6be](https://github.com/zarf-dev/zarf/commit/502a6be130ec2d36bf0d67b4a458117e3ac47c7c))
