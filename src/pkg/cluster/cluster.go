@@ -404,6 +404,9 @@ func (c *Cluster) ApplyRegistryCerts(ctx context.Context, serverPKI, clientPKI p
 
 	serverSecret := v1ac.Secret(RegistryServerTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
+		WithLabels(map[string]string{
+			state.ZarfManagedByLabel: "zarf",
+		}).
 		WithData(map[string][]byte{
 			RegistrySecretCertPath: serverPKI.Cert,
 			RegistrySecretKeyPath:  serverPKI.Key,
@@ -415,6 +418,9 @@ func (c *Cluster) ApplyRegistryCerts(ctx context.Context, serverPKI, clientPKI p
 
 	clientSecret := v1ac.Secret(RegistryClientTLSSecret, state.ZarfNamespaceName).
 		WithType(corev1.SecretTypeTLS).
+		WithLabels(map[string]string{
+			state.ZarfManagedByLabel: "zarf",
+		}).
 		WithData(map[string][]byte{
 			RegistrySecretCertPath: clientPKI.Cert,
 			RegistrySecretKeyPath:  clientPKI.Key,
