@@ -122,7 +122,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	if useMTLS {
 		_, err = cluster.GetRegistryClientMTLSCert(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get registry client mTLS cert: %w", err)
+			return nil, fmt.Errorf("failed to find registry client mTLS secret: %w", err)
 		}
 	}
 
