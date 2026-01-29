@@ -94,4 +94,11 @@ func TestWaitFor(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "60s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
+
+	t.Run("wait for cluster-scoped resource by kind and name", func(t *testing.T) {
+		// Wait for a specific CRD that should exist after zarf init (packages.zarf.dev)
+		// This tests waiting for cluster-scoped resources without a namespace
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
+		require.NoError(t, err, stdOut, stdErr)
+	})
 }
