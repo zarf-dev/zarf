@@ -285,8 +285,9 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type registryPruneOptions struct {
-	confirm  bool
-	insecure bool
+	confirm       bool
+	insecure      bool
+	ignoreMissing bool
 }
 
 func newRegistryPruneCommand() *cobra.Command {
@@ -301,6 +302,7 @@ func newRegistryPruneCommand() *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVar(&o.ignoreMissing, "ignore-missing", false, lang.CmdToolsRegistryPruneFlagIgnoreMissing)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
@@ -340,14 +342,14 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error {
-			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 		})
 	}
 
-	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 }
 
-func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool, ignoreMissing bool) error {
 	l := logger.From(ctx)
 	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
@@ -373,8 +375,11 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
 						if isManifestUnknownError(err) {
-							l.Warn("image manifest not found in registry, skipping", "image", transformedImageNoCheck)
-							continue
+							if ignoreMissing {
+								l.Warn("image manifest not found in registry, skipping", "image", transformedImageNoCheck)
+								continue
+							}
+							return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", transformedImageNoCheck, err)
 						}
 						return err
 					}
@@ -401,8 +406,11 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
 				if isManifestUnknownError(err) {
-					l.Warn("image manifest not found in registry, skipping", "image", taggedImageRef)
-					continue
+					if ignoreMissing {
+						l.Warn("image manifest not found in registry, skipping", "image", taggedImageRef)
+						continue
+					}
+					return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", taggedImageRef, err)
 				}
 				return err
 			}
