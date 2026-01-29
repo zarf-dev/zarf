@@ -248,8 +248,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 	--git-push-password <git-push-password>
 `
 
-	CmdPackageInspectShort = "Displays the definition of a Zarf package (runs offline)"
-	CmdPackageInspectLong  = "Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed"
+	CmdPackageInspectShort = "Commands for gathering information from a built package"
 
 	CmdPackageListShort         = "Lists out all of the packages that have been deployed to the cluster (runs offline)"
 	CmdPackageListNoPackageWarn = "Unable to get the packages deployed to the cluster"
@@ -350,13 +349,13 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
 # Pull a package matching the current architecture
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0
 
 # Pull a package matching a specific architecture
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a arm64
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a arm64
 
 # Pull a skeleton package
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton`
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdPackagePullFlagOutputDirectory = "Specify the output directory for the pulled Zarf package"
 	CmdPackagePullFlagShasum          = "Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'"
 

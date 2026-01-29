@@ -42,5 +42,5 @@ zarf dev inspect manifests [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to get information about a Zarf package using a `zarf.yaml`
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
 

@@ -29,7 +29,7 @@ import (
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
 // If identifier is empty, it will wait for any resource of the given kind to exist.
 // This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
-func ForResource(ctx context.Context, namespace, condition, kind, identifier string, timeout time.Duration) error {
+func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	if kind == "" {
 		return errors.New("kind is required")

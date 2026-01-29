@@ -63,7 +63,7 @@ func newDevCommand() *cobra.Command {
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "inspect",
-		Short: "Commands to get information about a Zarf package using a `zarf.yaml`",
+		Short: "Commands to gather information about a Zarf package using its package definition",
 	}
 
 	cmd.AddCommand(newDevInspectDefinitionCommand(v))

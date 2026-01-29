@@ -1,0 +1,127 @@
+---
+title: Package Signing and Verification
+sidebar:
+  order: 5
+---
+
+## Introduction
+
+In this tutorial, we will sign a Zarf package and verify its signature to ensure package integrity and authenticity. We'll generate a key pair, sign a package during creation, verify the signature, and deploy the signed package.
+
+Package signing is a critical security practice, allowing you to verify that packages have not been tampered with and come from a trusted source.
+
+## Prerequisites
+
+Before beginning this tutorial you will need the following:
+
+- Zarf binary installed on your $PATH: ([Installing Zarf](/getting-started/install/))
+- The Zarf source code repository for creating the wordpress example package.
+
+:::note
+
+For a comprehensive reference on signing methods, signature formats, and advanced use cases, see the [Package Signing Reference](/ref/package-signing/).
+
+:::
+
+## Step 1: Clone the Zarf repository
+
+```bash
+git clone https://github.com/zarf-dev/zarf.git
+```
+
+Do not change your working directory to the Zarf directory for the next steps.
+
+## Step 2: Generate a Signing Key Pair
+
+First, we'll generate a private/public key pair for signing packages:
+
+```bash
+zarf tools gen-key
+```
+
+You'll be prompted to enter a password to encrypt the private key. Choose a strong password and remember it.
+
+This creates two files:
+- `cosign.key` - Your private signing key (keep this secure!)
+- `cosign.pub` - Your public verification key (share this with others)
+
+:::caution
+
+Keep your private key secure and never commit it to version control. Anyone with access to your private key can sign packages as you.
+
+:::
+
+## Step 3: Create a Package
+
+Now we'll create a wordpress package from the Zarf examples directory:
+
+```bash
+zarf package create ./zarf/examples/wordpress
+```
+
+The path to the created package will be present in the logs:
+```
+INF writing package to disk path=zarf-package-wordpress-arm64-26.0.0.tar.zst
+```
+
+## Step 4: Sign the Package
+
+To sign the package, we'll now use the key pair created earlier:
+
+```bash
+zarf package sign zarf-package-wordpress-arm64-26.0.0.tar.zst --signing-key cosign.key --signing-key-password <password>
+```
+
+Your package (for example, `zarf-package-wordpress-amd64-26.0.0.tar.zst`) now contains a digital signature.
+
+## Step 5: Verify the Package Signature
+
+Let's verify that our package signature is valid using the public key:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub
+```
+
+You should see successful verification output:
+
+```
+2026-01-15 14:17:13 INF checksum verification status=PASSED
+Verified OK
+2026-01-15 14:17:16 INF signature verification status=PASSED
+2026-01-15 14:17:16 INF verification complete status=SUCCESS
+```
+
+Notice that verification checks both the signature and the package checksums. This confirms the package is authentic and has not been modified.
+
+## Step 6: Deploy with Signature Verification
+
+Finally, we'll deploy the package with signature verification enabled. If you have a Kubernetes cluster initialized (see [Initializing a K8s Cluster](/tutorials/1-initializing-a-k8s-cluster/)), you can deploy:
+
+```bash
+zarf package deploy zarf-package-wordpress-amd64-26.0.0.tar.zst --key cosign.pub --verify --confirm
+```
+
+The `--verify` flag enforces signature verification. If the signature is invalid or the public key doesn't match, Zarf will abort the deployment.
+
+You should see the package being verified before deployment begins:
+
+```
+Verifying package signature...
+✔ Package signature verified successfully
+Deploying package...
+```
+
+## Next Steps
+
+Now that you understand the basics of package signing, you can:
+
+- Learn about signing existing packages with `zarf package sign` in the [Package Signing Reference](/ref/package-signing/)
+- Explore cloud KMS options for production signing in the [Package Signing Reference](/ref/package-signing/#cloud-key-management-services-kms)
+- Integrate signature verification into your CI/CD pipelines
+- Establish key management and rotation procedures for your organization
+
+## Additional Resources
+
+- [Package Signing Reference](/ref/package-signing/) - Comprehensive signing and verification documentation
+- [zarf package sign command](/commands/zarf_package_sign/) - Command reference
+- [zarf package verify command](/commands/zarf_package_verify/) - Command reference
