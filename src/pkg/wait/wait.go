@@ -41,11 +41,12 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	var resolvedKind string
 	deadline := time.Now().Add(timeout)
 	for {
-		configFlags := genericclioptions.NewConfigFlags(true)
+		configFlags = genericclioptions.NewConfigFlags(true)
 		if namespace != "" {
 			configFlags.Namespace = ptr.To(namespace)
 		}
-		restConfig, err := configFlags.ToRESTConfig()
+		var err error
+		restConfig, err = configFlags.ToRESTConfig()
 		if err != nil {
 			return fmt.Errorf("failed to get REST config: %w", err)
 		}
