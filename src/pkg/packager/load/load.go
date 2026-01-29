@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -38,6 +40,8 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// SkipImageArchivesImages ignores schema validation errors when imageArchives does not include an images list
+	SkipEmptyImageArchivesImages bool
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -80,7 +84,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipEmptyImageArchivesImages)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -88,7 +92,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues, skipEmptyImageArchivesImages bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -108,6 +112,16 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
+
+	// ignore missing images in imageArchives finding
+	if skipEmptyImageArchivesImages {
+		for i, finding := range findings {
+			if finding.Description == "images is required" && strings.Contains(finding.YqPath, "imageArchives") {
+				findings = slices.Delete(findings, i, i+1)
+			}
+		}
+	}
+
 	if len(findings) != 0 {
 		return &lint.LintError{
 			PackageName: pkg.Metadata.Name,
