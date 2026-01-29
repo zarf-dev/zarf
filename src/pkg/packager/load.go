@@ -19,7 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -184,7 +183,7 @@ func identifySource(src string) (string, error) {
 		return "split", nil
 	}
 	// match deployed package names: lowercase, digits, hyphens
-	if lint.IsLowercaseNumberHyphenNoStartHyphen(src) {
+	if state.DeployedPackageNameRegex(src) {
 		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)

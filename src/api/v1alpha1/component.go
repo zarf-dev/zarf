@@ -117,6 +117,19 @@ func (c ZarfComponent) GetImages() []string {
 	return images
 }
 
+// Define allowed OS, an empty string means it is allowed on all operating systems
+// same as enums on ZarfComponentOnlyTarget
+var supportedOS = []string{"linux", "darwin", "windows", ""}
+
+// SupportedOS returns the supported operating systems.
+//
+// The supported operating systems are: linux, darwin, windows.
+//
+// An empty string signifies no OS restrictions.
+func SupportedOS() []string {
+	return supportedOS
+}
+
 // ZarfComponentOnlyTarget filters a component to only show it for a given local OS and cluster.
 type ZarfComponentOnlyTarget struct {
 	// Only deploy component to specified OS.

@@ -8,25 +8,16 @@ tableOfContents: false
 
 ## zarf package inspect
 
-Displays the definition of a Zarf package (runs offline)
-
-### Synopsis
-
-Displays the 'zarf.yaml' definition for the specified package and optionally allows SBOMs to be viewed
+Commands for gathering information from a built package
 
 ```
-zarf package inspect [ PACKAGE_SOURCE ] [flags]
+zarf package inspect [flags]
 ```
 
 ### Options
 
 ```
-  -h, --help                  help for inspect
-  -k, --key string            Path to public key file for validating signed packages
-      --list-images           List images in the package (prints to stdout)
-      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --sbom-out string       Specify an output directory for the SBOMs from the inspected Zarf package
-      --verify                Verify the Zarf package signature
+  -h, --help   help for inspect
 ```
 
 ### Options inherited from parent commands

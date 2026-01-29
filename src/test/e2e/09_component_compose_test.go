@@ -60,8 +60,8 @@ func TestComposabilityExample(t *testing.T) {
   - name: multi-games
     namespace: dos-games
     files:
-    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-0.yaml
-    - %s/oci/dirs/9ece174e362633b637e3c6b554b70f7d009d0a27107bee822336fdf2ce9a9def/manifests/multi-games-1.yaml
+    - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-0.yaml
+    - %s/oci/dirs/f1ca184d563e3ad29355ce14797e3ac68b7ef31e22461e494a27510c449949cf/manifests/multi-games-1.yaml
   images:
   - ghcr.io/zarf-dev/doom-game:0.0.1
   actions:

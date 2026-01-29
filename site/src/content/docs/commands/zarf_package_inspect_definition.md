@@ -40,5 +40,5 @@ zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 
 ### SEE ALSO
 
-* [zarf package inspect](/commands/zarf_package_inspect/)	 - Displays the definition of a Zarf package (runs offline)
+* [zarf package inspect](/commands/zarf_package_inspect/)	 - Commands for gathering information from a built package
 
