@@ -469,9 +469,5 @@ func TestForResourcePublicAPIValidation(t *testing.T) {
 		require.Contains(t, err.Error(), "kind is required")
 	})
 
-	t.Run("empty identifier returns error", func(t *testing.T) {
-		err := ForResource(ctx, "default", "", "pod", "", time.Second)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "identifier is required")
-	})
+	// Note: empty identifier is now allowed - it waits for any resource of that kind
 }
