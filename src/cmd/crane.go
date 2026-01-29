@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -371,6 +372,10 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
+						if isManifestUnknownError(err) {
+							l.Warn("image manifest not found in registry, skipping", "image", transformedImageNoCheck)
+							continue
+						}
 						return err
 					}
 					pkgImages[digest] = true
@@ -395,6 +400,10 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
 			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
+				if isManifestUnknownError(err) {
+					l.Warn("image manifest not found in registry, skipping", "image", taggedImageRef)
+					continue
+				}
 				return err
 			}
 			referenceToDigest[taggedImageRef] = digest
@@ -445,6 +454,20 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 		}
 	}
 	return nil
+}
+
+// isManifestUnknownError checks if the error is a MANIFEST_UNKNOWN error from the registry.
+// This can happen when an image push partially failed and the manifest doesn't exist.
+func isManifestUnknownError(err error) bool {
+	var transportErr *transport.Error
+	if errors.As(err, &transportErr) {
+		for _, diagnostic := range transportErr.Errors {
+			if diagnostic.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Wrap the original crane list with a zarf specific version
