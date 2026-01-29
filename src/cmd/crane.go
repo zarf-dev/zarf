@@ -16,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -284,8 +285,9 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type registryPruneOptions struct {
-	confirm  bool
-	insecure bool
+	confirm       bool
+	insecure      bool
+	ignoreMissing bool
 }
 
 func newRegistryPruneCommand() *cobra.Command {
@@ -300,6 +302,7 @@ func newRegistryPruneCommand() *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsRegistryPruneFlagConfirm)
+	cmd.Flags().BoolVar(&o.ignoreMissing, "ignore-missing", false, lang.CmdToolsRegistryPruneFlagIgnoreMissing)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 
 	return cmd
@@ -339,14 +342,14 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		l.Info("opening a tunnel to the Zarf registry", "local-endpoint", registryEndpoint, "cluster-address", zarfState.RegistryInfo.Address)
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error {
-			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+			return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 		})
 	}
 
-	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm)
+	return doPruneImagesForPackages(ctx, options, zarfState, zarfPackages, registryEndpoint, o.confirm, o.ignoreMissing)
 }
 
-func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool) error {
+func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *state.State, zarfPackages []state.DeployedPackage, registryEndpoint string, confirm bool, ignoreMissing bool) error {
 	l := logger.From(ctx)
 	options = append(options, images.WithPushAuth(s.RegistryInfo))
 
@@ -371,6 +374,13 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 
 					digest, err := crane.Digest(transformedImageNoCheck, options...)
 					if err != nil {
+						if isManifestUnknownError(err) {
+							if ignoreMissing {
+								l.Warn("image manifest not found in registry, skipping", "image", transformedImageNoCheck)
+								continue
+							}
+							return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", transformedImageNoCheck, err)
+						}
 						return err
 					}
 					pkgImages[digest] = true
@@ -395,6 +405,13 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 			taggedImageRef := fmt.Sprintf("%s:%s", imageRef, tag)
 			digest, err := crane.Digest(taggedImageRef, options...)
 			if err != nil {
+				if isManifestUnknownError(err) {
+					if ignoreMissing {
+						l.Warn("image manifest not found in registry, skipping", "image", taggedImageRef)
+						continue
+					}
+					return fmt.Errorf("image manifest not found for %q (use --ignore-missing to skip): %w", taggedImageRef, err)
+				}
 				return err
 			}
 			referenceToDigest[taggedImageRef] = digest
@@ -445,6 +462,20 @@ func doPruneImagesForPackages(ctx context.Context, options []crane.Option, s *st
 		}
 	}
 	return nil
+}
+
+// isManifestUnknownError checks if the error is a MANIFEST_UNKNOWN error from the registry.
+// This can happen when an image push partially failed and the manifest doesn't exist.
+func isManifestUnknownError(err error) bool {
+	var transportErr *transport.Error
+	if errors.As(err, &transportErr) {
+		for _, diagnostic := range transportErr.Errors {
+			if diagnostic.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Wrap the original crane list with a zarf specific version
