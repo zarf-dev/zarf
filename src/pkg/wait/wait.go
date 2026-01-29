@@ -28,29 +28,50 @@ import (
 // ForResource waits for a Kubernetes resource to meet the specified condition.
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
 // If identifier is empty, it will wait for any resource of the given kind to exist.
+// This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
 func ForResource(ctx context.Context, namespace, condition, kind, identifier string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	if kind == "" {
 		return errors.New("kind is required")
 	}
 
-	configFlags := genericclioptions.NewConfigFlags(true)
-	if namespace != "" {
-		configFlags.Namespace = ptr.To(namespace)
+	// Fill these out in the Retry loop, which handles the cluster not yet being available
+	var restConfig *rest.Config
+	var configFlags *genericclioptions.ConfigFlags
+	var resolvedKind string
+	deadline := time.Now().Add(timeout)
+	for {
+		configFlags := genericclioptions.NewConfigFlags(true)
+		if namespace != "" {
+			configFlags.Namespace = ptr.To(namespace)
+		}
+		restConfig, err := configFlags.ToRESTConfig()
+		if err != nil {
+			return fmt.Errorf("failed to get REST config: %w", err)
+		}
+
+		waitInterval := time.Second
+
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("timed out waiting for %s", kind)
+		}
+
+		resolvedKind, err = resolveResourceKind(restConfig, kind)
+		if err == nil {
+			break
+		}
+
+		l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitInterval):
+			continue
+		}
 	}
 
-	restConfig, err := configFlags.ToRESTConfig()
-	if err != nil {
-		return fmt.Errorf("failed to get REST config: %w", err)
-	}
-
-	// FIXME: there must be a wait here
-	resolvedKind, err := resolveResourceKind(restConfig, kind)
-	if err != nil {
-		return fmt.Errorf("failed to resolve resource kind %q: %w", kind, err)
-	}
-
-	// If we successfully resolved the kind then we can simply return
+	// If no identifier specified, we just needed to verify the kind exists
 	if identifier == "" {
 		l.Info("found kind in cluster", "kind", resolvedKind)
 		return nil
@@ -61,7 +82,13 @@ func ForResource(ctx context.Context, namespace, condition, kind, identifier str
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	return forResource(ctx, configFlags, dynamicClient, condition, resolvedKind, identifier, timeout)
+	// Calculate remaining time for the resource wait
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
+	}
+
+	return forResource(ctx, configFlags, dynamicClient, condition, resolvedKind, identifier, remaining)
 }
 
 // resolveResourceKind searches all API groups to find the canonical resource name for user input.
