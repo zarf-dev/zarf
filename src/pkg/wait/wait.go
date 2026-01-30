@@ -130,6 +130,13 @@ func resolveResourceKind(restConfig *rest.Config, givenKind string) (string, err
 	return "", fmt.Errorf("failed to find kind %s in cluster", givenKind)
 }
 
+func isJSONPathWaitType(condition string) bool {
+	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
+		return false
+	}
+	return true
+}
+
 // containsIgnoreCase checks if a slice contains a string (case-insensitive).
 func containsIgnoreCase(slice []string, str string) bool {
 	strLower := strings.ToLower(str)
@@ -155,7 +162,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 	// Determine the --for condition
 	forCondition := "create" // default: wait for existence
 	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
-		if strings.HasPrefix(condition, "{") {
+		if isJSONPathWaitType(condition) {
 			forCondition = fmt.Sprintf("jsonpath=%s", condition)
 		} else {
 			forCondition = fmt.Sprintf("condition=%s", condition)
