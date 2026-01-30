@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gpustack/gguf-parser-go/util/ptr"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
@@ -22,7 +23,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
-	"k8s.io/utils/ptr"
 )
 
 // ForResource waits for a Kubernetes resource to meet the specified condition.
@@ -42,6 +42,10 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	deadline := time.Now().Add(timeout)
 	for {
 		configFlags = genericclioptions.NewConfigFlags(true)
+		if namespace != "" {
+			configFlags.Namespace = ptr.To(namespace)
+		}
+
 		var err error
 		restConfig, err = configFlags.ToRESTConfig()
 		if err != nil {
@@ -148,11 +152,6 @@ func containsIgnoreCase(slice []string, str string) bool {
 // forResource is the internal implementation that can be tested with fake clients.
 func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
-
-	if namespace != "" {
-		configFlags.Namespace = ptr.To(namespace)
-	}
-
 	var args []string
 	var labelSelector string
 	if strings.ContainsRune(identifier, '=') {
@@ -174,31 +173,51 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
-	streams := genericiooptions.IOStreams{
-		In:     strings.NewReader(""),
-		Out:    io.Discard,
-		ErrOut: io.Discard,
-	}
-	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.Timeout = timeout
-	flags.ForCondition = forCondition
-	if labelSelector != "" {
-		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
-	}
+	waitInterval := time.Second
+	deadline := time.Now().Add(timeout)
 
-	opts, err := flags.ToOptions(args)
-	if err != nil {
-		return fmt.Errorf("failed to create wait options: %w", err)
-	}
-	opts.DynamicClient = dynamicClient
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
+		}
 
-	// FIXME: have to run this in a loop since it'll exist if a selector is not found
-	err = opts.RunWait()
-	if err != nil {
+		streams := genericiooptions.IOStreams{
+			In:     strings.NewReader(""),
+			Out:    io.Discard,
+			ErrOut: io.Discard,
+		}
+		flags := cmdwait.NewWaitFlags(configFlags, streams)
+		flags.Timeout = timeout
+		flags.ForCondition = forCondition
+		if labelSelector != "" {
+			flags.ResourceBuilderFlags.LabelSelector = &labelSelector
+		}
+
+		opts, err := flags.ToOptions(args)
+		if err != nil {
+			return fmt.Errorf("failed to create wait options: %w", err)
+		}
+		opts.DynamicClient = dynamicClient
+
+		err = opts.RunWait()
+		if err == nil {
+			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+			return nil
+		}
+		// Check if it's a "not found" error - if so, retry
+		errStr := err.Error()
+		if strings.Contains(errStr, "not found") || strings.Contains(errStr, "no matching resources") {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(waitInterval):
+				l.Debug("retrying wait", "err", errStr)
+				continue
+			}
+		}
 		return err
 	}
-	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
-	return nil
 }
 
 // ForNetwork waits for a network endpoint to respond.
