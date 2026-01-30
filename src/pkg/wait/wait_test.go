@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions.
-package utils
+// Package wait provides functions for waiting on Kubernetes resources and network endpoints.
+package wait
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -56,7 +55,7 @@ func TestIsJSONPathWaitType(t *testing.T) {
 	suite.Run(t, new(TestIsJSONPathWaitTypeSuite))
 }
 
-func TestWaitForNetworkEndpoint(t *testing.T) {
+func TestForNetwork(t *testing.T) {
 	t.Parallel()
 	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -132,7 +131,7 @@ func TestWaitForNetworkEndpoint(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			err := waitForNetworkEndpoint(context.Background(), "http", tt.host, tt.condition, tt.timeout, tt.interval)
+			err := forNetwork(t.Context(), "http", tt.host, tt.condition, tt.timeout, tt.interval)
 			if tt.expectErr {
 				require.Error(t, err)
 				return
