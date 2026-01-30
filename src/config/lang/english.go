@@ -117,6 +117,9 @@ $ zarf init
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
 
+# Initializing w/ Zarfs with a custom init package:
+$ zarf init oci://ghcr.io/cool-project/zarf-init:v1.2.3
+
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --nodeport=30333
 
