@@ -150,6 +150,7 @@ func containsIgnoreCase(slice []string, str string) bool {
 
 // forResource is the internal implementation that can be tested with fake clients.
 func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier string, timeout time.Duration) error {
+	l := logger.From(ctx)
 	var args []string
 	var labelSelector string
 	if strings.ContainsRune(identifier, '=') {
@@ -169,55 +170,28 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		}
 	}
 
-	waitInterval := time.Second
-	deadline := time.Now().Add(timeout)
+	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition)
 
-	for {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			if identifier == "" {
-				return fmt.Errorf("timed out waiting for %s", kind)
-			}
-			return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
-		}
-
-		// Create wait flags - discard all output since we handle logging ourselves
-		streams := genericiooptions.IOStreams{
-			In:     strings.NewReader(""),
-			Out:    io.Discard,
-			ErrOut: io.Discard,
-		}
-		flags := cmdwait.NewWaitFlags(configFlags, streams)
-		flags.Timeout = remaining
-		flags.ForCondition = forCondition
-		if labelSelector != "" {
-			flags.ResourceBuilderFlags.LabelSelector = &labelSelector
-		}
-
-		opts, err := flags.ToOptions(args)
-		if err != nil {
-			return fmt.Errorf("failed to create wait options: %w", err)
-		}
-		opts.DynamicClient = dynamicClient
-
-		err = opts.RunWait()
-		if err == nil {
-			return nil
-		}
-
-		// Check if it's a "not found" error - if so, retry
-		errStr := err.Error()
-		if strings.Contains(errStr, "not found") || strings.Contains(errStr, "no matching resources") {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(waitInterval):
-				continue
-			}
-		}
-
-		return err
+	// Create wait flags - discard all output since we handle logging ourselves
+	streams := genericiooptions.IOStreams{
+		In:     strings.NewReader(""),
+		Out:    io.Discard,
+		ErrOut: io.Discard,
 	}
+	flags := cmdwait.NewWaitFlags(configFlags, streams)
+	flags.Timeout = timeout
+	flags.ForCondition = forCondition
+	if labelSelector != "" {
+		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
+	}
+
+	opts, err := flags.ToOptions(args)
+	if err != nil {
+		return fmt.Errorf("failed to create wait options: %w", err)
+	}
+	opts.DynamicClient = dynamicClient
+
+	return opts.RunWait()
 }
 
 // ForNetwork waits for a network endpoint to respond.
