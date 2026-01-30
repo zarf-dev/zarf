@@ -32,7 +32,6 @@ func TestWaitFor(t *testing.T) {
 	t.Run("wait for existing resource succeeds immediately", func(t *testing.T) {
 		podName := "existing-pod"
 
-		// Create a pod first
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
 		require.NoError(t, err)
 
@@ -48,7 +47,6 @@ func TestWaitFor(t *testing.T) {
 	t.Run("wait for resource existence (not condition)", func(t *testing.T) {
 		podName := "exists-test-pod"
 
-		// Create a pod
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
 		require.NoError(t, err)
 
@@ -81,7 +79,6 @@ func TestWaitFor(t *testing.T) {
 	t.Run("wait with jsonpath condition", func(t *testing.T) {
 		podName := "jsonpath-pod"
 
-		// Create a pod
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
 		require.NoError(t, err)
 
@@ -90,14 +87,11 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// Wait using jsonpath condition for pod phase
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "60s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for cluster-scoped resource by kind and name", func(t *testing.T) {
-		// Wait for a specific CRD that should exist after zarf init (packages.zarf.dev)
-		// This tests waiting for cluster-scoped resources without a namespace
+	t.Run("wait for resource by by kind", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
