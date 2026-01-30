@@ -72,6 +72,59 @@ func TestGetRefFromManifest(t *testing.T) {
 	}
 }
 
+func TestFindImagesArchive(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		srcDir         string
+		expectedImages []string
+		expectErr      error
+	}{
+		{
+			name:           "single image, docker image store",
+			srcDir:         filepath.Join("testdata", "docker-graph-driver-image-store"),
+			expectedImages: []string{"docker.io/library/hello-world:linux"},
+		},
+		{
+			name:   "pull several images, including non-container images",
+			srcDir: filepath.Join("testdata", "oras-oci-layout", "images"),
+			expectedImages: []string{
+				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
+				"docker.io/library/local-test:1.0.0",
+				"localhost:9999/local-test:1.0.0",
+				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
+				"ghcr.io/zarf-dev/images/hello-world:latest",
+				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			// Create a tar from the source directory
+			tarFile := filepath.Join(t.TempDir(), "images.tar")
+			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
+			require.NoError(t, err)
+			dstDir := t.TempDir()
+
+			// Run
+			images, err := FindImagesInArchive(ctx, tarFile, dstDir)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			for _, img := range tc.expectedImages {
+				require.Contains(t, images, img)
+			}
+		})
+	}
+}
+
 func TestUnpackMultipleImages(t *testing.T) {
 	t.Parallel()
 

@@ -79,16 +79,17 @@ type ComponentImageScan struct {
 	WhyResources []Resource
 }
 
-// FindImages iterates over the manifests and charts within each component to find any container images
+// FindImages iterates over the manifests, charts and imageArchives within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 	loadOpts := load.DefinitionOptions{
-		Flavor:           opts.Flavor,
-		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
-		IsInteractive:    opts.IsInteractive,
-		SkipVersionCheck: true,
+		Flavor:                       opts.Flavor,
+		SetVariables:                 opts.CreateSetVariables,
+		CachePath:                    opts.CachePath,
+		IsInteractive:                opts.IsInteractive,
+		SkipVersionCheck:             true,
+		SkipEmptyImageArchivesImages: true,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -116,8 +117,8 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
-		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
-			// Skip if there are no manifests, charts, or repos
+		if len(component.Charts)+len(component.Manifests)+len(component.Repos)+len(component.ImageArchives) < 1 {
+			// Skip if there are no manifests, charts, imageArchives, or repos
 			continue
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
@@ -222,6 +223,22 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 						scan.WhyResources = append(scan.WhyResources, w)
 					}
 				}
+			}
+		}
+
+		for _, archive := range component.ImageArchives {
+			tmpArchivePath := filepath.Join(tmpBuildPath, "find-images")
+			pkgPath, err := layout.ResolvePackagePath(packagePath)
+			if err != nil {
+				return nil, err
+			}
+			archivePath := pkgPath.BaseDir + archive.Path
+			archiveImages, err := images.FindImagesInArchive(ctx, archivePath, tmpArchivePath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
+			}
+			for _, image := range archiveImages {
+				matchedImages[image] = true
 			}
 		}
 

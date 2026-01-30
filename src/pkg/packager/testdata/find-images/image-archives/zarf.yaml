@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: image-archive
+  description: image archive
+components:
+  - name: image-archive-component
+    imageArchives:
+      - path: ./scratch.tar
