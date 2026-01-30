@@ -42,9 +42,6 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	deadline := time.Now().Add(timeout)
 	for {
 		configFlags = genericclioptions.NewConfigFlags(true)
-		if namespace != "" {
-			configFlags.Namespace = ptr.To(namespace)
-		}
 		var err error
 		restConfig, err = configFlags.ToRESTConfig()
 		if err != nil {
@@ -89,7 +86,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
 	}
 
-	return forResource(ctx, configFlags, dynamicClient, condition, resolvedKind, identifier, remaining)
+	return forResource(ctx, configFlags, dynamicClient, condition, resolvedKind, identifier, namespace, remaining)
 }
 
 // resolveResourceKind searches all API groups to find the canonical resource name for user input.
@@ -149,8 +146,13 @@ func containsIgnoreCase(slice []string, str string) bool {
 }
 
 // forResource is the internal implementation that can be tested with fake clients.
-func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier string, timeout time.Duration) error {
+func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
+
+	if namespace != "" {
+		configFlags.Namespace = ptr.To(namespace)
+	}
+
 	var args []string
 	var labelSelector string
 	if strings.ContainsRune(identifier, '=') {
@@ -160,6 +162,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
 	}
 
+	// FIXME: this doesn't account for resources that already exist
 	forCondition := "create" // default: wait for existence
 	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
 		if isJSONPathWaitType(condition) {
@@ -169,7 +172,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		}
 	}
 
-	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition)
+	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
 	streams := genericiooptions.IOStreams{
 		In:     strings.NewReader(""),
@@ -189,7 +192,13 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 	}
 	opts.DynamicClient = dynamicClient
 
-	return opts.RunWait()
+	// FIXME: have to run this in a loop since it'll exist if a selector is not found
+	err = opts.RunWait()
+	if err != nil {
+		return err
+	}
+	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	return nil
 }
 
 // ForNetwork waits for a network endpoint to respond.
