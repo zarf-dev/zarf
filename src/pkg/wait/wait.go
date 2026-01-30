@@ -170,7 +170,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		}
 	}
 
-	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", condition, "namespace", namespace)
 
 	waitInterval := time.Second
 	deadline := time.Now().Add(timeout)
@@ -201,7 +201,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 		err = opts.RunWait()
 		if err == nil {
-			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", condition, "namespace", namespace)
 			return nil
 		}
 		select {
