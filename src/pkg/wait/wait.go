@@ -27,7 +27,7 @@ import (
 
 // ForResource waits for a Kubernetes resource to meet the specified condition.
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
-// If identifier is empty, it will wait for any resource of the given kind to exist.
+// If identifier is empty, it will wait for the given kind to exist in the cluster.
 // This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
 func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
