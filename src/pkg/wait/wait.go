@@ -114,7 +114,7 @@ func resolveResourceKind(restConfig *rest.Config, givenKind string) (string, err
 			continue
 		}
 		for _, resource := range resourceList.APIResources {
-			// Skip subresources (they contain "/")
+			// Skip subresources (they contain "/"), for instance pods/status
 			if strings.Contains(resource.Name, "/") {
 				continue
 			}
