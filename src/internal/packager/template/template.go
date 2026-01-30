@@ -48,6 +48,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 		builtinMap := map[string]string{
 			"STORAGE_CLASS":               s.StorageClass,
 			"IPV6_ONLY":                   fmt.Sprintf("%t", s.IPFamily == state.IPFamilyIPv6),
+			"REGISTRY_MTLS_ENABLED":       fmt.Sprintf("%t", s.RegistryInfo.ShouldUseMTLS()),
 			"REGISTRY_PROXY":              fmt.Sprintf("%t", s.RegistryInfo.RegistryMode == state.RegistryModeProxy),
 			"INJECTOR_IMAGE":              s.InjectorInfo.Image,
 			"INJECTOR_HOSTPORT":           fmt.Sprintf("%d", s.InjectorInfo.Port),

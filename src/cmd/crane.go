@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
@@ -284,6 +286,18 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	return o.originalRunFn(cmd, []string{registryEndpoint})
 }
 
+func getZarfRegistryMTLSTransport(ctx context.Context, c *cluster.Cluster) (http.RoundTripper, error) {
+	certs, err := c.GetRegistryClientMTLSCert(ctx)
+	if err != nil {
+		return nil, err
+	}
+	t, err := pki.TransportWithKey(certs)
+	if err != nil {
+		return nil, err
+	}
+	return t, err
+}
+
 type registryPruneOptions struct {
 	confirm       bool
 	insecure      bool
@@ -336,6 +350,13 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 	registryEndpoint, tunnel, err := c.ConnectToZarfRegistryEndpoint(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return err
+	}
+	if zarfState.RegistryInfo.ShouldUseMTLS() {
+		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		if err != nil {
+			return err
+		}
+		options = append(options, crane.WithTransport(t))
 	}
 
 	if tunnel != nil {
@@ -521,6 +542,14 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 		// Add the correct authentication to the crane command options
 		authOption := images.WithPushAuth(s.RegistryInfo)
 		*cranePlatformOptions = append(*cranePlatformOptions, authOption)
+
+		if s.RegistryInfo.ShouldUseMTLS() {
+			t, err := getZarfRegistryMTLSTransport(ctx, c)
+			if err != nil {
+				return err
+			}
+			*cranePlatformOptions = append(*cranePlatformOptions, crane.WithTransport(t))
+		}
 
 		if tunnel != nil {
 			l.Info("opening a tunnel to the Zarf registry", "local-endpoint", endpoint, "cluster-address", s.RegistryInfo.Address)
