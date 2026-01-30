@@ -93,7 +93,7 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for any resource of kind times out when none exist", func(t *testing.T) {
-		// Create a fresh namespace with no configmaps
+		// Create a fresh namespace with no deployments
 		emptyNamespace := "wait-for-empty"
 		_, _, err := e2e.Kubectl(t, "create", "namespace", emptyNamespace)
 		require.NoError(t, err)
@@ -102,8 +102,9 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// Wait for any configmap in the empty namespace - should timeout
-		_, _, err = e2e.Zarf(t, "tools", "wait-for", "configmap", "-n", emptyNamespace, "--timeout", "3s")
+		// Wait for any deployment in the empty namespace - should timeout
+		// Using deployment instead of configmap because configmaps have default kube-root-ca.crt
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "deployment", "-n", emptyNamespace, "--timeout", "3s")
 		require.Error(t, err)
 	})
 

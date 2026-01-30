@@ -17,6 +17,8 @@ import (
 
 	"github.com/gpustack/gguf-parser-go/util/ptr"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/discovery"
@@ -27,7 +29,7 @@ import (
 
 // ForResource waits for a Kubernetes resource to meet the specified condition.
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
-// If identifier is empty, it will wait for the given kind to exist in the cluster.
+// If identifier is empty, it will wait for any resource of the given kind to exist.
 // This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
 func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
@@ -38,8 +40,9 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Fill these out in the Retry loop, which handles the cluster not yet being available
 	var restConfig *rest.Config
 	var configFlags *genericclioptions.ConfigFlags
-	var resolvedKind string
+	var resInfo resourceInfo
 	deadline := time.Now().Add(timeout)
+	waitInterval := time.Second
 	for {
 		configFlags = genericclioptions.NewConfigFlags(true)
 		if namespace != "" {
@@ -52,14 +55,12 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 			return fmt.Errorf("failed to get REST config: %w", err)
 		}
 
-		waitInterval := time.Second
-
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
 			return fmt.Errorf("timed out waiting for %s", kind)
 		}
 
-		resolvedKind, err = resolveResourceKind(restConfig, kind)
+		resInfo, err = resolveResourceKind(restConfig, kind)
 		if err == nil {
 			break
 		}
@@ -73,15 +74,14 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		}
 	}
 
-	// If no identifier specified, we just needed to verify the kind exists
-	if identifier == "" {
-		l.Info("found kind in cluster", "kind", resolvedKind)
-		return nil
-	}
-
 	dynamicClient, err := dynamic.NewForConfig(restConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	// If no identifier specified, wait for any resource of this kind to exist
+	if identifier == "" {
+		return waitForAnyResource(ctx, dynamicClient, resInfo, namespace, deadline)
 	}
 
 	// Calculate remaining time for the resource wait
@@ -90,27 +90,77 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
 	}
 
-	return forResource(ctx, configFlags, dynamicClient, condition, resolvedKind, identifier, namespace, remaining)
+	return forResource(ctx, configFlags, dynamicClient, condition, resInfo.name, identifier, namespace, remaining)
 }
 
+// waitForAnyResource waits for at least one resource of the given kind to exist.
+func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resInfo resourceInfo, namespace string, deadline time.Time) error {
+	l := logger.From(ctx)
+	waitInterval := time.Second
+	l.Info("waiting for any resource", "kind", resInfo.name, "namespace", namespace)
+
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("timed out waiting for any %s", resInfo.name)
+		}
+
+		var resourceClient dynamic.ResourceInterface
+		// FIXME: do I really need to check namespace
+		if resInfo.namespaced && namespace != "" {
+			resourceClient = dynamicClient.Resource(resInfo.gvr).Namespace(namespace)
+		} else {
+			resourceClient = dynamicClient.Resource(resInfo.gvr)
+		}
+
+		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
+		if err == nil && len(list.Items) > 0 {
+			fmt.Println("item found was", list.Items[0].GetName())
+			l.Info("found resource", "kind", resInfo.name, "namespace", namespace)
+			return nil
+		}
+		if err != nil {
+			l.Debug("error listing resources", "error", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitInterval):
+			continue
+		}
+	}
+}
+
+type resourceInfo struct {
+	name       string
+	gvr        schema.GroupVersionResource
+	namespaced bool
+}
+
+// FIXME: I need to check if something like deployment.apps/v1beta1 works
 // resolveResourceKind searches all API groups to find the canonical resource name for user input.
 // This handles aliases like "po" -> "pods", "svc" -> "services", "sc" -> "storageclasses".
-func resolveResourceKind(restConfig *rest.Config, givenKind string) (string, error) {
+func resolveResourceKind(restConfig *rest.Config, givenKind string) (resourceInfo, error) {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
 	if err != nil {
-		return "", fmt.Errorf("failed to create discovery client: %w", err)
+		return resourceInfo{}, fmt.Errorf("failed to create discovery client: %w", err)
 	}
 
 	// Get all API resources from all groups
 	_, resourceLists, err := discoveryClient.ServerGroupsAndResources()
 	if err != nil {
-		return "", fmt.Errorf("failed to get resource list: %w", err)
+		return resourceInfo{}, fmt.Errorf("failed to get resource list: %w", err)
 	}
 
 	userInputLower := strings.ToLower(givenKind)
 
 	for _, resourceList := range resourceLists {
 		if resourceList == nil {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+		if err != nil {
 			continue
 		}
 		for _, resource := range resourceList.APIResources {
@@ -123,12 +173,20 @@ func resolveResourceKind(restConfig *rest.Config, givenKind string) (string, err
 				strings.ToLower(resource.SingularName) == userInputLower ||
 				strings.ToLower(resource.Kind) == userInputLower ||
 				containsIgnoreCase(resource.ShortNames, givenKind) {
-				return resource.Name, nil
+				return resourceInfo{
+					name: resource.Name,
+					gvr: schema.GroupVersionResource{
+						Group:    gv.Group,
+						Version:  gv.Version,
+						Resource: resource.Name,
+					},
+					namespaced: resource.Namespaced,
+				}, nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("failed to find kind %s in cluster", givenKind)
+	return resourceInfo{}, fmt.Errorf("failed to find kind %s in cluster", givenKind)
 }
 
 func isJSONPathWaitType(condition string) bool {
