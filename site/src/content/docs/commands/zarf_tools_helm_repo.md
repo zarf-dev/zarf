@@ -28,6 +28,9 @@ It can be used to add, remove, list, and index chart repositories.
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
@@ -50,7 +53,7 @@ It can be used to add, remove, list, and index chart repositories.
 
 ### SEE ALSO
 
-* [zarf tools helm](/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
+* [zarf tools helm](/commands/zarf_tools_helm/)	 - The Helm package manager for Kubernetes.
 * [zarf tools helm repo add](/commands/zarf_tools_helm_repo_add/)	 - add a chart repository
 * [zarf tools helm repo index](/commands/zarf_tools_helm_repo_index/)	 - generate an index file given a directory containing packaged charts
 * [zarf tools helm repo list](/commands/zarf_tools_helm_repo_list/)	 - list chart repositories

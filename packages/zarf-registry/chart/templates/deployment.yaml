@@ -13,7 +13,9 @@ spec:
     matchLabels:
       app: {{ template "docker-registry.name" . }}
       release: {{ .Release.Name }}
+  {{ if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
+  {{ end }}
   minReadySeconds: 5
   template:
     metadata:
