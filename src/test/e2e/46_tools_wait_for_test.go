@@ -41,22 +41,22 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "30s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "30s", "-l", "debug")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for resource existence (not condition)", func(t *testing.T) {
-		podName := "exists-test-pod"
+	t.Run("wait for resource existence", func(t *testing.T) {
+		configMapName := "exists-test-cm"
 
-		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
+		_, _, err := e2e.Kubectl(t, "create", "configmap", configMapName, "-n", namespace)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			_, _, err = e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			_, _, err = e2e.Kubectl(t, "delete", "configmap", configMapName, "-n", namespace)
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "exists", "-n", namespace, "--timeout", "30s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "exists", "-n", namespace, "--timeout", "30s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -92,7 +92,38 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for resource by by kind", func(t *testing.T) {
+	t.Run("wait for any resource of kind times out when none exist", func(t *testing.T) {
+		// Create a fresh namespace with no deployments
+		emptyNamespace := "wait-for-empty"
+		_, _, err := e2e.Kubectl(t, "create", "namespace", emptyNamespace)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "namespace", emptyNamespace, "--force=true", "--wait=false", "--grace-period=0")
+			require.NoError(t, err)
+		})
+
+		// Wait for any deployment in the empty namespace - should timeout
+		// Using deployment instead of configmap because configmaps have default kube-root-ca.crt
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "deployment", "-n", emptyNamespace, "--timeout", "3s")
+		require.Error(t, err)
+	})
+
+	t.Run("wait for any resource of kind succeeds when one exists", func(t *testing.T) {
+		// Create a configmap in the namespace
+		_, _, err := e2e.Kubectl(t, "create", "configmap", "any-kind-test-cm", "-n", namespace)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "configmap", "any-kind-test-cm", "-n", namespace)
+			require.NoError(t, err)
+		})
+
+		// Wait for any configmap in the namespace - should succeed
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "-n", namespace, "--timeout", "10s")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
+		// Clusters typically have a default storageclass
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
