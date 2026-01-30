@@ -6,6 +6,7 @@ package test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -94,5 +95,32 @@ func TestWaitFor(t *testing.T) {
 	t.Run("wait for resource by by kind", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("wait for pod created after wait starts", func(t *testing.T) {
+		podName := "delayed-pod"
+
+		// Start waiting for the pod in a goroutine before it exists
+		errCh := make(chan error, 1)
+		go func() {
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "60s")
+			errCh <- err
+		}()
+
+		// Let the wait attempt to pull the pod
+		time.Sleep(3 * time.Second)
+
+		// Create the pod after the wait has started
+		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			require.NoError(t, err)
+		})
+
+		// Wait should succeed after the pod is created and becomes ready
+		err = <-errCh
+		require.NoError(t, err)
 	})
 }
