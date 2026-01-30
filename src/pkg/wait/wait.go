@@ -161,7 +161,6 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
 	}
 
-	// FIXME: this doesn't account for resources that already exist
 	forCondition := "create" // default: wait for existence
 	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
 		if isJSONPathWaitType(condition) {
