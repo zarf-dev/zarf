@@ -514,14 +514,15 @@ $ zarf tools registry export 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 -
 $ zarf tools registry export ghcr.io/stefanprodan/podinfo:6.4.0 podinfo.6.4.0.tar
 `
 
-	CmdToolsRegistryPruneShort       = "Prunes images from the registry that are not currently being used by any Zarf packages."
-	CmdToolsRegistryPruneFlagConfirm = "Confirm the image prune action to prevent accidental deletions"
-	CmdToolsRegistryPruneImageList   = "The following image digests will be pruned from the registry:"
-	CmdToolsRegistryPruneNoImages    = "There are no images to prune"
-	CmdToolsRegistryPruneLookup      = "Looking up images within package definitions"
-	CmdToolsRegistryPruneCatalog     = "Cataloging images in the registry"
-	CmdToolsRegistryPruneCalculate   = "Calculating images to prune"
-	CmdToolsRegistryPruneDelete      = "Deleting unused images"
+	CmdToolsRegistryPruneShort             = "Prunes images from the registry that are not currently being used by any Zarf packages."
+	CmdToolsRegistryPruneFlagConfirm       = "Confirm the image prune action to prevent accidental deletions"
+	CmdToolsRegistryPruneFlagIgnoreMissing = "Ignore missing image manifests and continue pruning"
+	CmdToolsRegistryPruneImageList         = "The following image digests will be pruned from the registry:"
+	CmdToolsRegistryPruneNoImages          = "There are no images to prune"
+	CmdToolsRegistryPruneLookup            = "Looking up images within package definitions"
+	CmdToolsRegistryPruneCatalog           = "Cataloging images in the registry"
+	CmdToolsRegistryPruneCalculate         = "Calculating images to prune"
+	CmdToolsRegistryPruneDelete            = "Deleting unused images"
 
 	CmdToolsRegistryFlagVerbose  = "Enable debug logs"
 	CmdToolsRegistryFlagInsecure = "Allow image references to be fetched without TLS"

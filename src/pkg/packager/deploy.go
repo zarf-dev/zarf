@@ -37,6 +37,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -63,7 +64,7 @@ type DeployOptions struct {
 	// Namespace is an optional namespace override for package deployment
 	NamespaceOverride string
 	// Remote Options for image pushes
-	RemoteOptions
+	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer      state.GitServerInfo
 	RegistryInfo   state.RegistryInfo

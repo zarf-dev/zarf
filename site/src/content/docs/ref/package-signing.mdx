@@ -1,0 +1,317 @@
+---
+title: Package Signing
+sidebar:
+  order: 85
+---
+
+## Overview
+
+Zarf supports cryptographic signing and verification of packages using [Cosign](https://github.com/sigstore/cosign). Package signing provides:
+
+- **Authenticity**: Verify that a package comes from a trusted source
+- **Integrity**: Ensure the package has not been modified or corrupted
+- **Non-repudiation**: Prove who signed the package and when
+
+Zarf signs the `zarf.yaml` file within a package, which contains metadata and checksums for all package contents. This allows verification of the entire package through a single signature.
+
+## Signature Formats
+
+### Sigstore Bundle Format
+
+Packages are signed using the [Sigstore bundle format](https://docs.sigstore.dev/about/bundle/), stored as `zarf.bundle.sig` within the package. This format provides:
+
+- **Offline Verification**: Bundles include all verification materials in a single file
+- **Standardized Format**: Based on the widely-adopted Sigstore specification
+- **Better interoperability**: Compatible with other Sigstore tooling and services
+
+The bundle format follows the [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md).
+
+### Legacy Signature Format
+
+:::caution[Deprecated]
+
+The legacy signature format (`zarf.yaml.sig`) is deprecated in favor of the Sigstore bundle format. While Zarf currently supports both formats for backward compatibility, the legacy format will soon no longer be generated for new signatures. Zarf will retain the ability to verify legacy signatures as a fallback for when a package is signed but no bundle signature is present.
+
+**Reasons for deprecation:**
+
+1. **Limited metadata**: Only stores the raw signature without additional verification context
+2. **Non-standard**: Uses a custom format not compatible with other Sigstore tooling
+3. **Reduced functionality**: Cannot support advanced features like keyless signing or transparency log integration
+4. **Maintenance burden**: Supporting multiple formats increases complexity and testing requirements
+
+**Migration:**
+
+Re-sign packages with legacy signatures using the `zarf package sign` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
+
+:::
+
+## Signing Methods
+
+### Local Key Files
+
+The most common approach uses local private/public key pairs:
+
+```bash
+# Generate a key pair (prompts for password)
+zarf tools gen-key
+
+# Creates:
+# - cosign.key (private key - keep this secure!)
+# - cosign.pub (public key - share for verification)
+```
+
+:::caution
+
+Keep your private key (`cosign.key`) secure and never share it. Anyone with access to your private key can sign packages as you. Never commit private keys to version control.
+
+:::
+
+### Cloud Key Management Services (KMS)
+
+For production environments, cloud-based KMS provides enhanced security and key management:
+
+#### AWS KMS
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key awskms://alias/my-signing-key
+```
+
+Requires AWS credentials configured and appropriate IAM permissions. The KMS key must be an asymmetric signing key.
+
+#### Google Cloud KMS
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key gcpkms://projects/PROJECT/locations/LOCATION/keyRings/RING/cryptoKeys/KEY
+```
+
+Requires `gcloud` authentication and appropriate IAM roles. The key must be an asymmetric signing key.
+
+#### Azure Key Vault
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key azurekms://VAULT_NAME.vault.azure.net/keys/KEY_NAME/KEY_VERSION
+```
+
+Requires Azure CLI authentication and appropriate access policies. The key must be an asymmetric signing key.
+
+#### HashiCorp Vault
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key hashivault://KEY_NAME
+```
+
+Requires Vault token authentication and appropriate policies. The transit key must be an asymmetric signing key.
+
+:::note
+
+All KMS providers require proper authentication and permissions configured on your system. Refer to each provider's documentation for setup instructions. KMS keys must be asymmetric signing keys (not encryption keys).
+
+:::
+
+## Signing Operations
+
+### Sign During Package Creation
+
+Automatically sign a package during creation:
+
+```bash
+zarf package create . --signing-key cosign.key --signing-key-pass <password>
+```
+
+The signature is embedded in the package archive during the build process.
+
+### Sign an Existing Package
+
+Sign a package after it has been created:
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst --signing-key cosign.key
+```
+
+The signature is added to the package archive, and the `zarf.yaml` is updated to indicate it is signed.
+
+### Re-sign a Package
+
+Replace an existing signature (useful for key rotation):
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key new-cosign.key \
+  --overwrite
+```
+
+The `--overwrite` flag is required when a signature already exists.
+
+### Sign Packages in OCI Registries
+
+Zarf supports signing packages stored in OCI registries:
+
+```bash
+# Sign a package from OCI and output to local directory
+zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 \
+  --signing-key cosign.key \
+  --output ./signed/
+
+# Sign a package and publish directly to OCI registry
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key cosign.key \
+  --output oci://ghcr.io/my-org/signed-packages
+
+# Sign a package from OCI and re-publish to OCI (in place)
+zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 \
+  --signing-key cosign.key
+```
+
+## Verification Operations
+
+### Verify a Signed Package
+
+Verify a package's signature using the public key:
+
+```bash
+zarf package verify zarf-package-example-amd64.tar.zst --key cosign.pub
+```
+
+Successful verification output:
+
+```
+2025-11-15 14:17:13 INF checksum verification status=PASSED
+Verified OK
+2025-11-15 14:17:16 INF signature verification status=PASSED
+2025-11-15 14:17:16 INF verification complete status=SUCCESS
+```
+
+If verification fails, the command exits with a non-zero status code and displays an error message.
+
+### Verify Checksums Only (Unsigned Packages)
+
+Verify package integrity without signature verification:
+
+```bash
+zarf package verify zarf-package-example-amd64.tar.zst
+```
+
+This confirms that package files match their expected checksums but does not verify authenticity or source.
+
+### Automatic Verification During Deployment
+
+Verify signatures during package deployment:
+
+```bash
+zarf package deploy zarf-package-example-amd64.tar.zst --key cosign.pub --verify
+```
+
+If signature verification fails and `--verify` is specified, Zarf aborts the deployment to prevent deploying potentially compromised packages.
+
+## Best Practices
+
+### Key Management
+
+1. **Protect private keys**: Store private keys securely with restricted file system permissions
+2. **Use strong passwords**: Encrypt private keys with strong, unique passwords
+3. **Consider KMS for production**: Use cloud KMS for production signing operations
+4. **Document key locations**: Maintain clear documentation of where keys are stored and who has access
+
+### Verification Workflow
+
+1. **Verify before deployment**: Always verify package signatures before deploying to critical environments
+2. **Automate verification**: Integrate signature verification into CI/CD pipelines
+3. **Enforce verification**: Use `--verify` flag during deployment to make verification mandatory
+4. **Distribute public keys securely**: Establish a trusted channel for distributing public keys
+5. **Maintain key inventory**: Keep records of which keys were used to sign which packages
+
+### Operational Security
+
+1. **Never commit private keys**: Exclude private keys from version control
+2. **Audit signature operations**: Log all signing and verification operations
+3. **Validate key sources**: Verify public keys come from trusted sources before using them
+4. **Monitor for warnings**: Pay attention to deprecation warnings about signature formats
+5. **Plan for key compromise**: Have a procedure for responding to compromised signing keys
+
+## Troubleshooting
+
+### Signature Verification Failed
+
+```
+✖ failed to verify signature: invalid signature when validating ASN.1 encoded signature
+```
+
+**Solution**: Verify you are using the correct public key for verification.
+
+### Package is Signed But No Key Provided
+
+```
+✖ package is signed but no key was provided
+```
+
+**Solution**: Provide the public key when deploying or inspecting a signed package:
+
+```bash
+zarf package deploy zarf-package-example-amd64.tar.zst --key cosign.pub
+```
+
+### Private Key Password Incorrect
+
+```
+ERR failed to sign package: failed to sign package: reading key: decrypt: encrypted: decryption failed
+```
+
+**Solution**: Verify the password is correct. Use `--signing-key-pass` to provide the password:
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --signing-key cosign.key \
+  --signing-key-pass <correct-password>
+```
+
+### Signature Verification Failed
+
+```
+✖ signature verification failed: invalid signature
+```
+
+**Possible causes**:
+
+1. **Wrong public key**: The public key doesn't match the private key used to sign
+2. **Package modified**: The package contents have been altered after signing
+3. **Corrupted package**: The package file is corrupted or incomplete
+4. **Format mismatch**: Using wrong verification method for signature format
+
+**Solutions**:
+
+- Verify you're using the correct public key that corresponds to the signing key
+- Re-download the package if corruption is suspected
+- Check package checksums to verify integrity
+- Inspect the package to confirm which signature format it uses
+
+### KMS Authentication Failures
+
+```
+✖ failed to sign package: kms authentication failed
+```
+
+**Solutions**:
+
+- Verify cloud provider credentials are configured correctly
+- Ensure the KMS key exists and is accessible
+- Verify IAM permissions allow signing operations
+- Check that the key is an asymmetric signing key (not encryption key)
+- Refer to your KMS provider's documentation for authentication setup
+
+## Command Reference
+
+- [zarf package sign](/commands/zarf_package_sign/) - Sign a Zarf package
+- [zarf package verify](/commands/zarf_package_verify/) - Verify a package signature
+- [zarf package create](/commands/zarf_package_create/) - Create a package with optional signing
+- [zarf tools gen-key](/commands/zarf_tools_gen-key/) - Generate a signing key pair
+
+## Additional Resources
+
+- [Cosign GitHub Repository](https://github.com/sigstore/cosign)
+- [Sigstore Bundle Format Documentation](https://docs.sigstore.dev/about/bundle/)
+- [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md)
+- [Package Signing Tutorial](/tutorials/5-package-signing-and-verification/)

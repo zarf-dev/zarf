@@ -823,6 +823,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -937,6 +938,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
@@ -1913,15 +1915,14 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Load the package
+	// Load the package - do not verify
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		VerificationStrategy: getVerificationStrategy(o.verify),
+		VerificationStrategy: layout.VerifyNever,
 	}
 
 	l.Info("loading package", "source", packageSource)
@@ -1937,8 +1938,19 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	signed := pkgLayout.IsSigned()
 
-	if signed && !o.overwrite {
-		return errors.New("package is already signed, use --overwrite to re-sign")
+	// To prevent a warning for package not being signed - we'll only run verification when enforced
+	if signed {
+		if o.verify {
+			verifyOpts := utils.VerifyBlobOptions{}
+			verifyOpts.KeyRef = o.publicKeyPath
+			err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+			if err != nil {
+				return err
+			}
+		}
+		if !o.overwrite {
+			return errors.New("package is already signed, use --overwrite to re-sign")
+		}
 	}
 
 	// Sign the package
@@ -1947,6 +1959,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {

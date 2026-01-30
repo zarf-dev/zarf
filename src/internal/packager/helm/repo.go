@@ -17,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v4/pkg/action"
@@ -36,7 +37,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string, cachePath string, remoteOptions types.RemoteOptions) error {
 	if len(chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -56,7 +57,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 			}
 		} else {
-			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath, cachePath)
+			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath, cachePath, remoteOptions)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
 			}
@@ -149,7 +150,7 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
+func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("processing Helm chart",
@@ -213,7 +214,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			repov1.WithChartVersion(chart.Version),
 			repov1.WithUsernamePassword(username, password),
 			repov1.WithClientTLS(pull.CertFile, pull.KeyFile, pull.CaFile),
-			repov1.WithInsecureSkipTLSVerify(config.CommonOptions.InsecureSkipTLSVerify),
+			repov1.WithInsecureSkipTLSVerify(remoteOptions.InsecureSkipTLSVerify),
 		)
 		if err != nil {
 			return fmt.Errorf("unable to pull the helm chart: %w", err)
@@ -231,7 +232,8 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
-			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.InsecureSkipTLSVerify),
+			getter.WithPlainHTTP(remoteOptions.PlainHTTP),
+			getter.WithInsecureSkipVerifyTLS(remoteOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
 		},
 	}

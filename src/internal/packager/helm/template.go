@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
@@ -24,13 +25,11 @@ import (
 	"helm.sh/helm/v4/pkg/release"
 	releasev1 "helm.sh/helm/v4/pkg/release/v1"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
-
-	"github.com/zarf-dev/zarf/src/config"
 )
 
 // TemplateChart generates a helm template from a given chart.
 func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, values common.Values,
-	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool) (string, error) {
+	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool, remoteOptions types.RemoteOptions) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
 	}
@@ -50,7 +49,8 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	client.InsecureSkipTLSVerify = config.CommonOptions.InsecureSkipTLSVerify
+	client.PlainHTTP = remoteOptions.PlainHTTP
+	client.InsecureSkipTLSVerify = remoteOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
 		parsedKubeVersion, err := common.ParseKubeVersion(kubeVersion)
 		if err != nil {

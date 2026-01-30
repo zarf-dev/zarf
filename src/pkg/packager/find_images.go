@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -63,6 +64,7 @@ type FindImagesOptions struct {
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	types.RemoteOptions
 }
 
 // ComponentImageScan contains the results of FindImages for a component
@@ -89,6 +91,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		CachePath:        opts.CachePath,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -156,7 +159,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, value.Values{}, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, value.Values{}, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -241,7 +244,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		var validMaybeImages []string
 		if len(sortedExpectedImages) > 0 {
 			for _, image := range sortedExpectedImages {
-				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
+				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag(opts.InsecureSkipTLSVerify)...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {

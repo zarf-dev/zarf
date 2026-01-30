@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
@@ -32,7 +33,7 @@ type ImagePushOptions struct {
 	NoImageChecksum bool
 	Retries         int
 	OCIConcurrency  int
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PushImagesToRegistry pushes images in the package layout to the specified registry
