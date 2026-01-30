@@ -14,6 +14,58 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestIsJSONPathWaitType(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		waitType string
+		expected bool
+	}{
+		{
+			name:     "JSONPath with availableReplicas",
+			waitType: "{.status.availableReplicas}=1",
+			expected: true,
+		},
+		{
+			name:     "JSONPath with container ready status",
+			waitType: "{.status.containerStatuses[0].ready}=true",
+			expected: true,
+		},
+		{
+			name:     "JSONPath with container port",
+			waitType: "{.spec.containers[0].ports[0].containerPort}=80",
+			expected: true,
+		},
+		{
+			name:     "JSONPath with nodeName",
+			waitType: "{.spec.nodeName}=knode0",
+			expected: true,
+		},
+		{
+			name:     "condition type Ready",
+			waitType: "Ready",
+			expected: false,
+		},
+		{
+			name:     "condition type delete",
+			waitType: "delete",
+			expected: false,
+		},
+		{
+			name:     "empty string",
+			waitType: "",
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := isJSONPathWaitType(tt.waitType)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestForNetwork(t *testing.T) {
 	t.Parallel()
 	successServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
