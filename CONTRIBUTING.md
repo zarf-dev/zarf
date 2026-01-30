@@ -94,10 +94,6 @@ GitHub: @dgershman
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
-#### Kit Patella
-Affiliation: Defense Unicorns
-GitHub: @mkcp
-
 #### Wayne Starr
 Affiliation: Defense Unicorns
 GitHub: @Racer159
