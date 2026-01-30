@@ -92,7 +92,37 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for resource by by kind", func(t *testing.T) {
+	t.Run("wait for any resource of kind times out when none exist", func(t *testing.T) {
+		// Create a fresh namespace with no configmaps
+		emptyNamespace := "wait-for-empty"
+		_, _, err := e2e.Kubectl(t, "create", "namespace", emptyNamespace)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "namespace", emptyNamespace, "--force=true", "--wait=false", "--grace-period=0")
+			require.NoError(t, err)
+		})
+
+		// Wait for any configmap in the empty namespace - should timeout
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "configmap", "-n", emptyNamespace, "--timeout", "3s")
+		require.Error(t, err)
+	})
+
+	t.Run("wait for any resource of kind succeeds when one exists", func(t *testing.T) {
+		// Create a configmap in the namespace
+		_, _, err := e2e.Kubectl(t, "create", "configmap", "any-kind-test-cm", "-n", namespace)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "configmap", "any-kind-test-cm", "-n", namespace)
+			require.NoError(t, err)
+		})
+
+		// Wait for any configmap in the namespace - should succeed
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "-n", namespace, "--timeout", "10s")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
+		// Clusters typically have a default storageclass
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
