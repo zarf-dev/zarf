@@ -204,18 +204,13 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 			return nil
 		}
-		// Check if it's a "not found" error - if so, retry
-		errStr := err.Error()
-		if strings.Contains(errStr, "not found") || strings.Contains(errStr, "no matching resources") {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(waitInterval):
-				l.Debug("retrying wait", "err", errStr)
-				continue
-			}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitInterval):
+			l.Debug("retrying wait", "err", err)
+			continue
 		}
-		return err
 	}
 }
 
