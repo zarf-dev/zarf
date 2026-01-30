@@ -45,18 +45,18 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for resource existence (not condition)", func(t *testing.T) {
-		podName := "exists-test-pod"
+	t.Run("wait for resource existence", func(t *testing.T) {
+		configMapName := "exists-test-cm"
 
-		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
+		_, _, err := e2e.Kubectl(t, "create", "configmap", configMapName, "-n", namespace)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			_, _, err = e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			_, _, err = e2e.Kubectl(t, "delete", "configmap", configMapName, "-n", namespace)
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "exists", "-n", namespace, "--timeout", "30s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "exists", "-n", namespace, "--timeout", "30s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
