@@ -351,7 +351,7 @@ func (c *Cluster) GetRegistryClientMTLSCert(ctx context.Context) (pki.GeneratedP
 }
 
 // needsCertRenewal determines if a tls secret needs renewal by checking if it doesn't exist or has less than half of it's remaining life
-func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string) (bool, error) {
+func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath string, renewalThresholdPercentage float64) (bool, error) {
 	secret, err := c.Clientset.CoreV1().Secrets(state.ZarfNamespaceName).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		if kerrors.IsNotFound(err) {
@@ -369,27 +369,26 @@ func (c *Cluster) needsCertRenewal(ctx context.Context, secretName, certPath str
 	if err != nil {
 		return false, err
 	}
-	remainingLifeRenewalThreshold := 50.0
-	if percentageRemainingLife < remainingLifeRenewalThreshold {
+	if percentageRemainingLife < renewalThresholdPercentage {
 		return true, nil
 	}
 	return false, nil
 }
 
-// ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client)
-// need renewal. Returns true if any certificate is missing or has less than 50% remaining life.
-func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context) (bool, error) {
-	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath)
+// ShouldRenewRegistryCerts checks if any of the registry mTLS certificates (CA, server, or client) have less remaining life
+// than the threshold, and renews all certs if so
+func (c *Cluster) ShouldRenewRegistryCerts(ctx context.Context, renewalThresholdPercentage float64) (bool, error) {
+	needsCARenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCAPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check CA certificate renewal: %w", err)
 	}
 
-	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath)
+	needsServerRenewal, err := c.needsCertRenewal(ctx, RegistryServerTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check server certificate renewal: %w", err)
 	}
 
-	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath)
+	needsClientRenewal, err := c.needsCertRenewal(ctx, RegistryClientTLSSecret, RegistrySecretCertPath, renewalThresholdPercentage)
 	if err != nil {
 		return false, fmt.Errorf("failed to check client certificate renewal: %w", err)
 	}
@@ -557,7 +556,8 @@ func (c *Cluster) GetIPFamily(ctx context.Context) (_ state.IPFamily, err error)
 // and applies them to the cluster as Kubernetes secrets with bundled CA certificates.
 // Only generates certificates if they don't exist or have less than 50% remaining life.
 func (c *Cluster) InitRegistryCerts(ctx context.Context) error {
-	needsRenewal, err := c.ShouldRenewRegistryCerts(ctx)
+	renewalThresholdPercentage := 50.0
+	needsRenewal, err := c.ShouldRenewRegistryCerts(ctx, renewalThresholdPercentage)
 	if err != nil {
 		return err
 	}
