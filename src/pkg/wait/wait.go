@@ -171,7 +171,6 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition)
 
-	// Create wait flags - discard all output since we handle logging ourselves
 	streams := genericiooptions.IOStreams{
 		In:     strings.NewReader(""),
 		Out:    io.Discard,
