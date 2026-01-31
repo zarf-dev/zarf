@@ -72,30 +72,92 @@ func TestGetRefFromManifest(t *testing.T) {
 	}
 }
 
-func TestFindImagesArchive(t *testing.T) {
+func TestFindImagesInManifests(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		name           string
-		srcDir         string
+		manifests      []ocispec.Descriptor
 		expectedImages []string
 		expectErr      error
 	}{
 		{
-			name:           "single image, docker image store",
-			srcDir:         filepath.Join("testdata", "docker-graph-driver-image-store"),
+			name: "single manifest descriptor, single image",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world:linux",
+					},
+				},
+			},
 			expectedImages: []string{"docker.io/library/hello-world:linux"},
 		},
 		{
-			name:   "pull several images, including non-container images",
-			srcDir: filepath.Join("testdata", "oras-oci-layout", "images"),
+			name: "multiple manifest descriptors, blank image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
+					},
+				},
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test:1.0.0",
+					},
+				},
+				{
+					Annotations: nil,
+				},
+			},
 			expectedImages: []string{
-				"ghcr.io/stefanprodan/charts/podinfo:6.4.0",
-				"docker.io/library/local-test:1.0.0",
+				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
 				"localhost:9999/local-test:1.0.0",
-				"ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig",
-				"ghcr.io/zarf-dev/images/hello-world:latest",
-				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c"},
+			},
+		},
+		{
+			name: "invalid image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test@hello-world:1.0.0",
+					},
+				},
+			},
+			expectedImages: []string{},
+			expectErr:      errors.New("failed to parse image reference localhost:9999/local-test@hello-world:1.0.0"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			images, err := FindImagesInManifests(tc.manifests)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			for _, img := range tc.expectedImages {
+				require.Contains(t, images, img)
+			}
+		})
+	}
+}
+
+func TestGetManifestsFromArchive(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		srcDir        string
+		expectedImage string
+		expectErr     error
+	}{
+		{
+			name:          "single archive",
+			srcDir:        filepath.Join("testdata", "docker-graph-driver-image-store"),
+			expectedImage: "docker.io/library/hello-world:linux",
 		},
 	}
 
@@ -108,21 +170,18 @@ func TestFindImagesArchive(t *testing.T) {
 			tarFile := filepath.Join(t.TempDir(), "images.tar")
 			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
 			require.NoError(t, err)
-			dstDir := t.TempDir()
-
-			// Run
-			images, err := FindImagesInArchive(ctx, tarFile, dstDir)
+			manifests, err := GetManifestsFromArchive(ctx, tarFile)
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
-				return
 			}
 			require.NoError(t, err)
 
-			for _, img := range tc.expectedImages {
-				require.Contains(t, images, img)
+			for _, manifest := range manifests {
+				require.Equal(t, tc.expectedImage, manifest.Annotations[dockerRefAnnotation])
 			}
 		})
 	}
+
 }
 
 func TestUnpackMultipleImages(t *testing.T) {
