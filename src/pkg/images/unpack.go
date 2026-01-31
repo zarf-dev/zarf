@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -36,53 +35,34 @@ const (
 	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
 )
 
-// FindImagesInArchive takes an image tar and extracts it into an OCI layout directory.
-// It returns a list of images found in the extracted OCI layout.
-func FindImagesInArchive(ctx context.Context, imageArchive, destDir string) ([]string, error) {
+// GetManifestsFromArchive take an image archive and returns a list of image descriptiors
+func GetManifestsFromArchive(ctx context.Context, imageArchive string) ([]ocispec.Descriptor, error) {
 	// Create a temporary directory for extraction
-	tmpdir, err := utils.MakeTempDir("")
+	extractionDir, err := utils.MakeTempDir("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpdir))
+		err = errors.Join(err, os.RemoveAll(extractionDir))
 	}()
 
-	if err := archive.Decompress(ctx, imageArchive, tmpdir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, imageArchive, extractionDir, archive.DecompressOpts{}); err != nil {
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
-
-	// Determine the image directory:
-	// - If there's a single directory entry, the tar had a wrapping directory (e.g., "my-image/")
-	// - If there are multiple entries, the tar contents are at the top level
-	entries, err := os.ReadDir(tmpdir)
+	imageDir, err := determineImageDirectory(extractionDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
+		return nil, fmt.Errorf("failed to determine image directory: %w", err)
 	}
 
-	var imageDir string
-	if len(entries) == 1 && entries[0].IsDir() {
-		imageDir = filepath.Join(tmpdir, entries[0].Name())
-	} else {
-		imageDir = tmpdir
-	}
+	manifests, err := getManifestsFromOCILayout(imageDir)
 
-	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create destination directory: %w", err)
-	}
+	return manifests, err
+}
 
-	// Read the index.json from the source to get the manifest descriptors of each image
-	srcIdx, err := getIndexFromOCILayout(imageDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read source index.json: %w", err)
-	}
-
-	if len(srcIdx.Manifests) == 0 {
-		return nil, errors.New("no manifests found in index.json")
-	}
-
+// FindImagesInManifests takes a list of OCI Descriptors and returns image References
+func FindImagesInManifests(manifests []ocispec.Descriptor) ([]string, error) {
 	var foundImages []string
-	for _, manifestDesc := range srcIdx.Manifests {
+	for _, manifestDesc := range manifests {
 		imageName := getRefFromManifest(manifestDesc)
 		if imageName == "" {
 			continue
@@ -103,36 +83,27 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
-	// Create a temporary directory for extraction
-	tmpdir, err := utils.MakeTempDir("")
+
+	extractionDir, err := utils.MakeTempDir("")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
 	defer func() {
-		err = errors.Join(err, os.RemoveAll(tmpdir))
+		err = errors.Join(err, os.RemoveAll(extractionDir))
 	}()
 
-	if err := archive.Decompress(ctx, imageArchive.Path, tmpdir, archive.DecompressOpts{}); err != nil {
+	if err := archive.Decompress(ctx, imageArchive.Path, extractionDir, archive.DecompressOpts{}); err != nil {
 		return nil, fmt.Errorf("failed to extract tar: %w", err)
 	}
 
-	// Determine the image directory:
-	// - If there's a single directory entry, the tar had a wrapping directory (e.g., "my-image/")
-	// - If there are multiple entries, the tar contents are at the top level
-	entries, err := os.ReadDir(tmpdir)
+	imageDir, err := determineImageDirectory(extractionDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read extracted directory: %w", err)
+		return nil, fmt.Errorf("failed to determine image directory: %w", err)
 	}
 
-	var imageDir string
-	if len(entries) == 1 && entries[0].IsDir() {
-		imageDir = filepath.Join(tmpdir, entries[0].Name())
-	} else {
-		imageDir = tmpdir
-	}
-
-	if err := helpers.CreateDirectory(destDir, helpers.ReadExecuteAllWriteUser); err != nil {
-		return nil, fmt.Errorf("failed to create destination directory: %w", err)
+	manifests, err := getManifestsFromOCILayout(imageDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch manifests from archive: %w", err)
 	}
 
 	dstStore, err := oci.NewWithContext(ctx, destDir)
@@ -140,19 +111,10 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		return nil, fmt.Errorf("failed to create OCI store: %w", err)
 	}
 
+	// imageDir is the directory into which the archive was decompressed
 	srcStore, err := oci.NewWithContext(ctx, imageDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source OCI store: %w", err)
-	}
-
-	// Read the index.json from the source to get the manifest descriptors of each image
-	srcIdx, err := getIndexFromOCILayout(imageDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read source index.json: %w", err)
-	}
-
-	if len(srcIdx.Manifests) == 0 {
-		return nil, errors.New("no manifests found in index.json")
 	}
 
 	// Build a set of requested images for filtering
@@ -167,7 +129,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 
 	var imagesWithManifest []ImageWithManifest
 	var foundImages []string
-	for _, manifestDesc := range srcIdx.Manifests {
+	for _, manifestDesc := range manifests {
 		imageName := getRefFromManifest(manifestDesc)
 		if imageName == "" {
 			continue
@@ -236,6 +198,23 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	return imagesWithManifest, nil
+}
+
+func determineImageDirectory(dir string) (string, error) {
+	// Determine the image directory:
+	// - If there's a single directory entry, the tar had a wrapping directory (e.g., "my-image/")
+	// - If there are multiple entries, the tar contents are at the top level
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read extracted directory: %w", err)
+	}
+	var imageDir string
+	if len(entries) == 1 && entries[0].IsDir() {
+		imageDir = filepath.Join(dir, entries[0].Name())
+	} else {
+		imageDir = dir
+	}
+	return imageDir, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.

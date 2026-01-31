@@ -136,6 +136,19 @@ func isIndex(mediaType string) bool {
 	return false
 }
 
+func getManifestsFromOCILayout(imageDir string) ([]ocispec.Descriptor, error) {
+	// Read the index.json from the source to get the manifest descriptors of each image
+	srcIdx, err := getIndexFromOCILayout(imageDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source index.json: %w", err)
+	}
+
+	if len(srcIdx.Manifests) == 0 {
+		return nil, errors.New("no manifests found in index.json")
+	}
+	return srcIdx.Manifests, nil
+}
+
 func getIndexFromOCILayout(dir string) (ocispec.Index, error) {
 	idxPath := filepath.Join(dir, "index.json")
 	b, err := os.ReadFile(idxPath)
