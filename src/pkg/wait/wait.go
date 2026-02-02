@@ -17,11 +17,11 @@ import (
 
 	"github.com/gpustack/gguf-parser-go/util/ptr"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
@@ -60,7 +60,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 			return fmt.Errorf("timed out waiting for %s", kind)
 		}
 
-		resInfo, err = resolveResourceKind(restConfig, kind)
+		resInfo, err = resolveResourceKind(configFlags, kind)
 		if err == nil {
 			break
 		}
@@ -134,59 +134,76 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 
 type resourceInfo struct {
 	name       string
+	gvk        schema.GroupVersionKind
 	gvr        schema.GroupVersionResource
 	namespaced bool
 }
 
-// FIXME: I need to check if something like deployment.apps/v1beta1 works
-// resolveResourceKind searches all API groups to find the canonical resource name for user input.
-// This handles aliases like "po" -> "pods", "svc" -> "services", "sc" -> "storageclasses".
-func resolveResourceKind(restConfig *rest.Config, givenKind string) (resourceInfo, error) {
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+// resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
+// canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function.
+func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg string) (resourceInfo, error) {
+	restMapper, err := configFlags.ToRESTMapper()
 	if err != nil {
-		return resourceInfo{}, fmt.Errorf("failed to create discovery client: %w", err)
+		return resourceInfo{}, fmt.Errorf("failed to create REST mapper: %w", err)
 	}
 
-	// Get all API resources from all groups
-	_, resourceLists, err := discoveryClient.ServerGroupsAndResources()
-	if err != nil {
-		return resourceInfo{}, fmt.Errorf("failed to get resource list: %w", err)
+	// Parse the resource argument - handles formats like:
+	// - "pods" -> GroupResource{Resource: "pods"}
+	// - "deployments.apps" -> GroupResource{Group: "apps", Resource: "deployments"}
+	// - "deployments.v1.apps" -> GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
+	fullySpecifiedGVR, groupResource := schema.ParseResourceArg(resourceArg)
+
+	var gvk schema.GroupVersionKind
+	// First try fully specified GVR (e.g., "deployments.v1.apps")
+	if fullySpecifiedGVR != nil {
+		gvk, _ = restMapper.KindFor(*fullySpecifiedGVR)
+	}
+	// Fall back to auto-detecting version from GroupResource
+	if gvk.Empty() {
+		gvk, _ = restMapper.KindFor(groupResource.WithVersion(""))
 	}
 
-	userInputLower := strings.ToLower(givenKind)
-
-	for _, resourceList := range resourceLists {
-		if resourceList == nil {
-			continue
-		}
-		gv, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+	// If we found a GVK via resource lookup, get the full mapping
+	if !gvk.Empty() {
+		mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 		if err != nil {
-			continue
+			return resourceInfo{}, fmt.Errorf("failed to get REST mapping for %s: %w", resourceArg, err)
 		}
-		for _, resource := range resourceList.APIResources {
-			// Skip subresources (they contain "/"), for instance pods/status
-			if strings.Contains(resource.Name, "/") {
-				continue
-			}
-			// Match against: plural name, singular name, kind, or short names
-			if strings.ToLower(resource.Name) == userInputLower ||
-				strings.ToLower(resource.SingularName) == userInputLower ||
-				strings.ToLower(resource.Kind) == userInputLower ||
-				containsIgnoreCase(resource.ShortNames, givenKind) {
-				return resourceInfo{
-					name: resource.Name,
-					gvr: schema.GroupVersionResource{
-						Group:    gv.Group,
-						Version:  gv.Version,
-						Resource: resource.Name,
-					},
-					namespaced: resource.Namespaced,
-				}, nil
-			}
+		return resourceInfoFromMapping(mapping), nil
+	}
+
+	// Try parsing as a Kind instead of a Resource (e.g., "Deployment" vs "deployments")
+	fullySpecifiedGVK, groupKind := schema.ParseKindArg(resourceArg)
+	if fullySpecifiedGVK == nil {
+		gvk = groupKind.WithVersion("")
+		fullySpecifiedGVK = &gvk
+	}
+
+	if !fullySpecifiedGVK.Empty() {
+		if mapping, err := restMapper.RESTMapping(fullySpecifiedGVK.GroupKind(), fullySpecifiedGVK.Version); err == nil {
+			return resourceInfoFromMapping(mapping), nil
 		}
 	}
 
-	return resourceInfo{}, fmt.Errorf("failed to find kind %s in cluster", givenKind)
+	// Final fallback: try GroupKind with detected version
+	mapping, err := restMapper.RESTMapping(groupKind, gvk.Version)
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return resourceInfo{}, fmt.Errorf("the server doesn't have a resource type %q", groupResource.Resource)
+		}
+		return resourceInfo{}, err
+	}
+
+	return resourceInfoFromMapping(mapping), nil
+}
+
+func resourceInfoFromMapping(mapping *meta.RESTMapping) resourceInfo {
+	return resourceInfo{
+		name:       mapping.Resource.Resource,
+		gvk:        mapping.GroupVersionKind,
+		gvr:        mapping.Resource,
+		namespaced: mapping.Scope.Name() == meta.RESTScopeNameNamespace,
+	}
 }
 
 func isJSONPathWaitType(condition string) bool {
@@ -194,17 +211,6 @@ func isJSONPathWaitType(condition string) bool {
 		return false
 	}
 	return true
-}
-
-// containsIgnoreCase checks if a slice contains a string (case-insensitive).
-func containsIgnoreCase(slice []string, str string) bool {
-	strLower := strings.ToLower(str)
-	for _, s := range slice {
-		if strings.ToLower(s) == strLower {
-			return true
-		}
-	}
-	return false
 }
 
 // forResource is the internal implementation that can be tested with fake clients.
@@ -228,7 +234,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		}
 	}
 
-	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", condition, "namespace", namespace)
+	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
 	waitInterval := time.Second
 	deadline := time.Now().Add(timeout)
@@ -259,7 +265,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 		err = opts.RunWait()
 		if err == nil {
-			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", condition, "namespace", namespace)
+			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 			return nil
 		}
 		select {
