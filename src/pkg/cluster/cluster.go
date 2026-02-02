@@ -438,7 +438,7 @@ func (c *Cluster) ApplyZarfRegistryCertSecrets(ctx context.Context, serverPKI, c
 		return fmt.Errorf("failed to create server TLS secret: %w", err)
 	}
 
-	l.Info("certificates for registry mTLS generated and stored as secrets in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
+	l.Info("applying secrets for registry mTLS in the Zarf namespace", "secrets", []string{RegistryServerTLSSecret, RegistryClientTLSSecret})
 	return nil
 }
 
