@@ -419,7 +419,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
 			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
-			if newState.RegistryInfo.ShouldUseMTLS() {
+			if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
 				l.Info("registry mTLS certificate authority", "changed", "true")
 				l.Info("registry mTLS public certificate", "changed", "true")
 				l.Info("registry mTLS private key", "changed", "true")
