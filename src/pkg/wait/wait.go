@@ -40,7 +40,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Fill these out in the Retry loop, which handles the cluster not yet being available
 	var restConfig *rest.Config
 	var configFlags *genericclioptions.ConfigFlags
-	var resInfo resourceInfo
+	var mapping *meta.RESTMapping
 	deadline := time.Now().Add(timeout)
 	waitInterval := time.Second
 	for {
@@ -60,7 +60,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 			return fmt.Errorf("timed out waiting for %s", kind)
 		}
 
-		resInfo, err = resolveResourceKind(configFlags, kind)
+		mapping, err = resolveResourceKind(configFlags, kind)
 		if err == nil {
 			break
 		}
@@ -81,7 +81,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 
 	// If no identifier specified, wait for any resource of this kind to exist
 	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, resInfo, namespace, deadline)
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
 	}
 
 	// Calculate remaining time for the resource wait
@@ -90,26 +90,26 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
 	}
 
-	return forResource(ctx, configFlags, dynamicClient, condition, resInfo.name, identifier, namespace, remaining)
+	return forResource(ctx, configFlags, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, remaining)
 }
 
 // waitForAnyResource waits for at least one resource of the given kind to exist.
-func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resInfo resourceInfo, namespace string, deadline time.Time) error {
+func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
-	l.Info("waiting for any resource", "kind", resInfo.name, "namespace", namespace)
+	l.Info("waiting for at least one resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
 
 	for {
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			return fmt.Errorf("timed out waiting for any %s", resInfo.name)
+			return fmt.Errorf("timed out waiting for any %s", resource)
 		}
 
-		resourceClient := dynamicClient.Resource(resInfo.gvr).Namespace(namespace)
+		resourceClient := dynamicClient.Resource(resource).Namespace(namespace)
 
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err == nil && len(list.Items) > 0 {
-			l.Info("found resource", "kind", resInfo.name, "namespace", namespace)
+			l.Info("found resource", "kind", resource.Resource, "namespace", namespace)
 			return nil
 		}
 		if err != nil {
@@ -125,19 +125,12 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 	}
 }
 
-type resourceInfo struct {
-	name       string
-	gvk        schema.GroupVersionKind
-	gvr        schema.GroupVersionResource
-	namespaced bool
-}
-
 // resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
 // canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function.
-func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg string) (resourceInfo, error) {
+func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg string) (*meta.RESTMapping, error) {
 	restMapper, err := configFlags.ToRESTMapper()
 	if err != nil {
-		return resourceInfo{}, fmt.Errorf("failed to create REST mapper: %w", err)
+		return nil, fmt.Errorf("failed to create REST mapper: %w", err)
 	}
 
 	// Parse the resource argument - handles formats like:
@@ -160,9 +153,9 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg
 	if !gvk.Empty() {
 		mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 		if err != nil {
-			return resourceInfo{}, fmt.Errorf("failed to get REST mapping for %s: %w", resourceArg, err)
+			return nil, fmt.Errorf("failed to get REST mapping for %s: %w", resourceArg, err)
 		}
-		return resourceInfoFromMapping(mapping), nil
+		return mapping, nil
 	}
 
 	// Try parsing as a Kind instead of a Resource (e.g., "Deployment" vs "deployments")
@@ -174,7 +167,7 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg
 
 	if !fullySpecifiedGVK.Empty() {
 		if mapping, err := restMapper.RESTMapping(fullySpecifiedGVK.GroupKind(), fullySpecifiedGVK.Version); err == nil {
-			return resourceInfoFromMapping(mapping), nil
+			return mapping, nil
 		}
 	}
 
@@ -182,21 +175,12 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg
 	mapping, err := restMapper.RESTMapping(groupKind, gvk.Version)
 	if err != nil {
 		if meta.IsNoMatchError(err) {
-			return resourceInfo{}, fmt.Errorf("the server doesn't have a resource type %q", groupResource.Resource)
+			return nil, fmt.Errorf("the server doesn't have a resource type %q", groupResource.Resource)
 		}
-		return resourceInfo{}, err
+		return nil, err
 	}
 
-	return resourceInfoFromMapping(mapping), nil
-}
-
-func resourceInfoFromMapping(mapping *meta.RESTMapping) resourceInfo {
-	return resourceInfo{
-		name:       mapping.Resource.Resource,
-		gvk:        mapping.GroupVersionKind,
-		gvr:        mapping.Resource,
-		namespaced: mapping.Scope.Name() == meta.RESTScopeNameNamespace,
-	}
+	return mapping, nil
 }
 
 func isJSONPathWaitType(condition string) bool {
