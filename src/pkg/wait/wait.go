@@ -138,12 +138,12 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceOrK
 	gvk := schema.GroupVersionKind{}
 
 	if fullySpecifiedGVR != nil {
-		gvk, _ = restMapper.KindFor(*fullySpecifiedGVR)
+		gvk, _ = restMapper.KindFor(*fullySpecifiedGVR) //nolint:errcheck // mirrors k8s.io/cli-runtime/pkg/resource/builder.go mappingFor
 	}
 	if gvk.Empty() {
-		gvk, _ = restMapper.KindFor(groupResource.WithVersion(""))
+		gvk, _ = restMapper.KindFor(groupResource.WithVersion("")) //nolint:errcheck // mirrors k8s.io/cli-runtime/pkg/resource/builder.go mappingFor
 	}
-	
+
 	if !gvk.Empty() {
 		return restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	}
