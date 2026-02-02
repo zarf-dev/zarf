@@ -123,7 +123,6 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
-		// Clusters typically have a default storageclass
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})

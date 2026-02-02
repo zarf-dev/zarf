@@ -105,17 +105,10 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 			return fmt.Errorf("timed out waiting for any %s", resInfo.name)
 		}
 
-		var resourceClient dynamic.ResourceInterface
-		// FIXME: do I really need to check namespace
-		if resInfo.namespaced && namespace != "" {
-			resourceClient = dynamicClient.Resource(resInfo.gvr).Namespace(namespace)
-		} else {
-			resourceClient = dynamicClient.Resource(resInfo.gvr)
-		}
+		resourceClient := dynamicClient.Resource(resInfo.gvr).Namespace(namespace)
 
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err == nil && len(list.Items) > 0 {
-			fmt.Println("item found was", list.Items[0].GetName())
 			l.Info("found resource", "kind", resInfo.name, "namespace", namespace)
 			return nil
 		}
