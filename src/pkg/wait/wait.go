@@ -126,42 +126,31 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 }
 
 // resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
-// canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function.
-func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg string) (*meta.RESTMapping, error) {
+// canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function
+// and the code here was taken directly from https://github.com/kubernetes/kubernetes/blob/eba75de1565852be1b1f27c811d1b44527b266e5/staging/src/k8s.io/cli-runtime/pkg/resource/builder.go#L772
+func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceOrKindArg string) (*meta.RESTMapping, error) {
 	restMapper, err := configFlags.ToRESTMapper()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create REST mapper: %w", err)
 	}
 
-	// Parse the resource argument - handles formats like:
-	// - "pods" -> GroupResource{Resource: "pods"}
-	// - "deployments.apps" -> GroupResource{Group: "apps", Resource: "deployments"}
-	// - "deployments.v1.apps" -> GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-	fullySpecifiedGVR, groupResource := schema.ParseResourceArg(resourceArg)
+	fullySpecifiedGVR, groupResource := schema.ParseResourceArg(resourceOrKindArg)
+	gvk := schema.GroupVersionKind{}
 
-	var gvk schema.GroupVersionKind
-	// First try fully specified GVR (e.g., "deployments.v1.apps")
 	if fullySpecifiedGVR != nil {
 		gvk, _ = restMapper.KindFor(*fullySpecifiedGVR)
 	}
-	// Fall back to auto-detecting version from GroupResource
 	if gvk.Empty() {
 		gvk, _ = restMapper.KindFor(groupResource.WithVersion(""))
 	}
-
-	// If we found a GVK via resource lookup, get the full mapping
+	
 	if !gvk.Empty() {
-		mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get REST mapping for %s: %w", resourceArg, err)
-		}
-		return mapping, nil
+		return restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
 	}
 
-	// Try parsing as a Kind instead of a Resource (e.g., "Deployment" vs "deployments")
-	fullySpecifiedGVK, groupKind := schema.ParseKindArg(resourceArg)
+	fullySpecifiedGVK, groupKind := schema.ParseKindArg(resourceOrKindArg)
 	if fullySpecifiedGVK == nil {
-		gvk = groupKind.WithVersion("")
+		gvk := groupKind.WithVersion("")
 		fullySpecifiedGVK = &gvk
 	}
 
@@ -171,7 +160,6 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceArg
 		}
 	}
 
-	// Final fallback: try GroupKind with detected version
 	mapping, err := restMapper.RESTMapping(groupKind, gvk.Version)
 	if err != nil {
 		if meta.IsNoMatchError(err) {
