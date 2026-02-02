@@ -15,6 +15,7 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
@@ -193,6 +194,9 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
+	}
+	if pkgLayout.Pkg.Kind != v1alpha1.ZarfInitConfig {
+		return fmt.Errorf("not a zarf init package")
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
