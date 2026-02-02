@@ -189,6 +189,7 @@ func (c *Cluster) ApplyZarfManagedMTLSSecrets(ctx context.Context) error {
 	l := logger.From(ctx)
 
 	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(
+		state.ZarfRegistryMTLSCASubject,
 		state.ZarfRegistryMTLSServerHosts,
 		state.ZarfRegistryMTLSServerCommonName,
 		state.ZarfRegistryMTLSClientCommonName,

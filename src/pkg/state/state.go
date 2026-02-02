@@ -87,6 +87,7 @@ const (
 	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
 	// ZarfRegistryMTLSClientCommonName is the common name for the registry client certificate
 	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
+	ZarfRegistryMTLSCASubject        = "Zarf Registry CA"
 )
 
 // ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate

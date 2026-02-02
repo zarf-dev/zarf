@@ -339,8 +339,8 @@ func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
 
 // GenerateMTLSCerts generates a complete set of mTLS certificates including CA, server cert, and client cert.
 // Returns two GeneratedPKI structs: one for the server (containing server cert, key, and CA) and one for the client (containing client cert, key, and CA).
-func GenerateMTLSCerts(serverDNSNames []string, serverCommonName string, clientCommonName string) (server GeneratedPKI, client GeneratedPKI, err error) {
-	caCert, caKey, err := GenerateCA("Zarf Registry CA")
+func GenerateMTLSCerts(caSubject string, serverDNSNames []string, serverCommonName string, clientCommonName string) (server GeneratedPKI, client GeneratedPKI, err error) {
+	caCert, caKey, err := GenerateCA(caSubject)
 	if err != nil {
 		return GeneratedPKI{}, GeneratedPKI{}, fmt.Errorf("failed to generate CA certificate: %w", err)
 	}
