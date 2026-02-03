@@ -92,7 +92,7 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for resource by by kind", func(t *testing.T) {
+	t.Run("wait for resource by kind", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
