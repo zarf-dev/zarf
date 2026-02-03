@@ -212,7 +212,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	err = healthchecks.WaitForReady(waitCtx, c.Watcher, objs)
 	suite.NoError(err)
 
-	_, _, err = exec.CmdWithTesting(suite.T(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
+	_, _, err = exec.CmdWithContext(suite.T().Context(), exec.PrintCfg(), zarfBinPath, "destroy", "--confirm")
 	suite.NoError(err, "unable to teardown zarf")
 }
 

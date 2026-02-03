@@ -150,7 +150,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 	}
 	cfg := exec.PrintCfg()
 	cfg.Dir = dir
-	return exec.CmdWithTesting(t, cfg, e2e.ZarfBinPath, args...)
+	return exec.CmdWithContext(t.Context(), cfg, e2e.ZarfBinPath, args...)
 }
 
 // Kubectl executes `zarf tools kubectl ...`
