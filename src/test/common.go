@@ -5,6 +5,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -113,6 +114,7 @@ func (e2e *ZarfE2ETest) Zarf(t *testing.T, args ...string) (_ string, _ string, 
 
 // ZarfInDir executes a Zarf command in specific directory.
 func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ string, _ string, err error) {
+	t.Helper()
 	isToolCall := slices.Contains(args, "tools")
 	isCI := os.Getenv("CI") == "true"
 	isWindows := runtime.GOOS == "windows"
@@ -150,7 +152,7 @@ func (e2e *ZarfE2ETest) ZarfInDir(t *testing.T, dir string, args ...string) (_ s
 	}
 	cfg := exec.PrintCfg()
 	cfg.Dir = dir
-	return exec.CmdWithContext(t.Context(), cfg, e2e.ZarfBinPath, args...)
+	return exec.CmdWithContext(context.Background(), cfg, e2e.ZarfBinPath, args...)
 }
 
 // Kubectl executes `zarf tools kubectl ...`
