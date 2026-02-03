@@ -43,25 +43,7 @@ func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	suite.NoError(err, "zarf-registry-client-tls secret should exist")
 }
 
-func (suite *RegistryProxyTestSuite) Test_1_Flux() {
-	tmpdir := suite.T().TempDir()
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/podinfo-flux", "-o", tmpdir)
-	suite.NoError(err, stdOut, stdErr)
-
-	deployPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", runtime.GOARCH))
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", deployPath, "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "prune", "--confirm")
-	suite.NoError(err, stdOut, stdErr)
-	// verify that an image name is in the prune output
-	suite.Contains(stdErr, "stefanprodan/podinfo")
-}
-
-func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
+func (suite *RegistryProxyTestSuite) Test_1_UpdateCredsUpdatesMTLSSecrets() {
 	ctx := suite.T().Context()
 
 	// Get the original client TLS secret from the zarf namespace
@@ -86,6 +68,24 @@ func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
 
 	// Verify the secret in podinfo-oci namespace matches the zarf namespace
 	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[cluster.RegistrySecretCertPath])
+}
+
+func (suite *RegistryProxyTestSuite) Test_2_Flux() {
+	tmpdir := suite.T().TempDir()
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/podinfo-flux", "-o", tmpdir)
+	suite.NoError(err, stdOut, stdErr)
+
+	deployPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", runtime.GOARCH))
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "prune", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+	// verify that an image name is in the prune output
+	suite.Contains(stdErr, "stefanprodan/podinfo")
 }
 
 func TestRegistryProxy(t *testing.T) {
