@@ -3,7 +3,8 @@ name: PR Title Check
 on:
   pull_request:
     branches: [main]
-    types: [opened, edited, synchronize]
+    # milestoned is added here as a workaround for release-please not triggering PR workflows (PRs should be added to a milestone to trigger the workflow).
+    types: [milestoned, opened, reopened, synchronize, edited]
 
 permissions:
   contents: read

@@ -64,6 +64,9 @@ affinity:
 tolerations:
   ###ZARF_VAR_REGISTRY_TOLERATIONS###
 
+nodeSelector:
+  ###ZARF_VAR_REGISTRY_NODE_SELECTOR###
+
 autoscaling:
   enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###
   mapReplicasToNodes: ###ZARF_VAR_REGISTRY_HPA_AUTO_SIZE###
