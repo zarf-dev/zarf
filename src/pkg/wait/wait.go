@@ -311,7 +311,7 @@ func forNetwork(ctx context.Context, protocol string, address string, condition 
 					return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
 				}
 				if http.StatusText(code) == "" {
-					return errors.New("http status code %s is unknown")
+					return errors.New("http status code is unknown")
 				}
 
 				// Try to get the URL and check the status code.

@@ -17,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"helm.sh/helm/v3/pkg/action"
@@ -36,7 +37,7 @@ import (
 )
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string, remoteOptions types.RemoteOptions) error {
 	if len(chart.URL) > 0 {
 		url, refPlain, err := transform.GitURLSplitRef(chart.URL)
 		// check if the chart is a git url with a ref (if an error is returned url will be empty)
@@ -56,7 +57,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 			}
 		} else {
-			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath)
+			err = DownloadPublishedChart(ctx, chart, chartPath, valuesPath, remoteOptions)
 			if err != nil {
 				return fmt.Errorf("unable to download the published chart %q: %w", chart.Name, err)
 			}
@@ -149,7 +150,7 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
-func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string) error {
+func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("processing Helm chart",
@@ -215,7 +216,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			pull.CertFile,
 			pull.KeyFile,
 			pull.CaFile,
-			config.CommonOptions.InsecureSkipTLSVerify,
+			remoteOptions.InsecureSkipTLSVerify,
 			getter.All(pull.Settings),
 		)
 		if err != nil {
@@ -231,7 +232,8 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
-			getter.WithInsecureSkipVerifyTLS(config.CommonOptions.InsecureSkipTLSVerify),
+			getter.WithPlainHTTP(remoteOptions.PlainHTTP),
+			getter.WithInsecureSkipVerifyTLS(remoteOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
 		},
 	}

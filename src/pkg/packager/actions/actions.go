@@ -182,12 +182,14 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) err
 		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
 
-	if waitCfg.Cluster != nil {
+	switch {
+	case waitCfg.Cluster != nil:
 		return runWaitClusterAction(ctx, waitCfg.Cluster, timeout)
-	} else if waitCfg.Network != nil {
+	case waitCfg.Network != nil:
 		return runWaitNetworkAction(ctx, waitCfg.Network, timeout)
+	default:
+		return fmt.Errorf("wait action is missing a cluster or network")
 	}
-	return fmt.Errorf("wait action is missing a cluster or network")
 }
 
 func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {

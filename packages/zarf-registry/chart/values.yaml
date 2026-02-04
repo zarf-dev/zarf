@@ -76,6 +76,8 @@ affinity:
 
 tolerations: []
 
+nodeSelector: {}
+
 autoscaling:
   enabled: true
   mapReplicasToNodes: false
