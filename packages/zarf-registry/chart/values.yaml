@@ -21,6 +21,10 @@ proxy:
     payLoadConfigMapAmount: 0
     shasum: ""
 
+# If this is enabled, then a secret zarf-registry-server-tls must exist with tls.cert, tls.key, and ca.cert set
+mtls:
+  enabled: false
+
 ipv6Only: false
 
 service:

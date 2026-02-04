@@ -82,7 +82,22 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
+	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
+	// ZarfRegistryMTLSClientCommonName is the common name for the registry client certificate
+	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
+	ZarfRegistryMTLSCASubject        = "Zarf Registry CA"
 )
+
+// ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate
+var ZarfRegistryMTLSServerHosts = []string{
+	"zarf-docker-registry",
+	"zarf-docker-registry.zarf.svc.cluster.local",
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+}
 
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
@@ -210,6 +225,16 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
+type MTLSStrategy string
+
+const (
+	// MTLSStrategyNone indicates no mTLS certificate management
+	MTLSStrategyNone MTLSStrategy = "none"
+	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
+	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
+)
+
 // RegistryMode defines how the registry is accessed
 type RegistryMode string
 
@@ -240,6 +265,8 @@ type RegistryInfo struct {
 	Secret string `json:"secret"`
 	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
 	RegistryMode RegistryMode `json:"registryMode"`
+	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
+	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -250,6 +277,11 @@ func (ri RegistryInfo) IsInternal() bool {
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
+}
+
+// ShouldUseMTLS returns true if mTLS should be used for the registry connection.
+func (ri RegistryInfo) ShouldUseMTLS() bool {
+	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -316,6 +348,10 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		if ri.Secret, err = helpers.RandomString(ZarfGeneratedSecretLen); err != nil {
 			return fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 		}
+	}
+
+	if ri.MTLSStrategy == "" {
+		ri.MTLSStrategy = MTLSStrategyNone
 	}
 
 	return nil
