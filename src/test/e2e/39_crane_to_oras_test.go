@@ -36,7 +36,7 @@ func TestCraneToORAS(t *testing.T) {
 	}()
 	cfg := exec.PrintCfg()
 	pkgDefinitionPath := filepath.Join("src", "test", "packages", "39-crane-to-oras")
-	_, _, err = exec.CmdWithContext(t.Context(), cfg, craneZarfPath, "package", "create", pkgDefinitionPath, "-o", cranePkgDir, "--skip-sbom", "--no-color")
+	_, _, err = exec.CmdWithTesting(t, cfg, craneZarfPath, "package", "create", pkgDefinitionPath, "-o", cranePkgDir, "--skip-sbom", "--no-color")
 	require.NoError(t, err)
 
 	// Then pushed to the registry using ORAS
@@ -56,10 +56,10 @@ func TestCraneToORAS(t *testing.T) {
 	orasPkgPath := filepath.Join(ORASPkgDir, packageName)
 
 	// Then pushed to the registry with Crane
-	_, _, err = exec.CmdWithContext(t.Context(), cfg, craneZarfPath, "package", "deploy", orasPkgPath, "--confirm", "--no-color")
+	_, _, err = exec.CmdWithTesting(t, cfg, craneZarfPath, "package", "deploy", orasPkgPath, "--confirm", "--no-color")
 	require.NoError(t, err)
 	ORASPkgMirrorResourcesArgs := []string{"package", "mirror-resources", orasPkgPath, "--confirm", "--no-color"}
 	ORASPkgMirrorResourcesArgs = append(ORASPkgMirrorResourcesArgs, mirrorResourcesCreds...)
-	_, _, err = exec.CmdWithContext(t.Context(), cfg, craneZarfPath, ORASPkgMirrorResourcesArgs...)
+	_, _, err = exec.CmdWithTesting(t, cfg, craneZarfPath, ORASPkgMirrorResourcesArgs...)
 	require.NoError(t, err)
 }

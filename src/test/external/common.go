@@ -46,7 +46,7 @@ func waitForCondition(t *testing.T, timeoutMinutes time.Duration, cmd string, ar
 			// after delay, try running
 		default:
 			// Check information from the given command
-			stdOut, _, err := exec.CmdWithContext(t.Context(), exec.PrintCfg(), cmd, args...)
+			stdOut, _, err := exec.CmdWithTesting(t, exec.PrintCfg(), cmd, args...)
 			// Log error
 			if err != nil {
 				t.Log(string(stdOut), err)

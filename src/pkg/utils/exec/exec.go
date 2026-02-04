@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"testing"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -43,6 +44,13 @@ func Cmd(command string, args ...string) (string, string, error) {
 func CmdWithPrint(command string, args ...string) error {
 	_, _, err := CmdWithContext(context.Background(), PrintCfg(), command, args...)
 	return err
+}
+
+// CmdWithTesting takes a *testing.T and generates a context the cancels on cleanup
+func CmdWithTesting(t *testing.T, cfg Config, command string, args ...string) (string, string, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return CmdWithContext(ctx, cfg, command, args...)
 }
 
 // CmdWithContext executes a given command with given cfg.

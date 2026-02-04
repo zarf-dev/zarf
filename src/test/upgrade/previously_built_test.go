@@ -18,12 +18,12 @@ var zarfBinPath = path.Join("../../../build", test.GetCLIName())
 func kubectl(t *testing.T, args ...string) (string, string, error) {
 	tk := []string{"tools", "kubectl"}
 	args = append(tk, args...)
-	return exec.CmdWithContext(t.Context(), exec.PrintCfg(), zarfBinPath, args...)
+	return exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, args...)
 }
 
 func zarf(t *testing.T, args ...string) (string, string, error) {
 	args = append(args, "--log-format=console", "--no-color")
-	return exec.CmdWithContext(t.Context(), exec.PrintCfg(), zarfBinPath, args...)
+	return exec.CmdWithTesting(t, exec.PrintCfg(), zarfBinPath, args...)
 }
 
 func TestPreviouslyBuiltZarfPackage(t *testing.T) {
