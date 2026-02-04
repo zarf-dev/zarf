@@ -43,10 +43,22 @@ func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	suite.NoError(err, "zarf-registry-client-tls secret should exist")
 }
 
-func (suite *RegistryProxyTestSuite) Test_1_UpdateCredsUpdatesMTLSSecrets() {
+func (suite *RegistryProxyTestSuite) Test_1_DeployRegularPackage() {
+	tmpdir := suite.T().TempDir()
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/dos-games", "-o", tmpdir)
+	suite.NoError(err, stdOut, stdErr)
+
+	deployPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", runtime.GOARCH))
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "deploy", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+}
+
+func (suite *RegistryProxyTestSuite) Test_2_UpdateCredsUpdatesMTLSSecrets() {
 	ctx := suite.T().Context()
 
-	// Get the original client TLS secret from the zarf namespace
 	originalPKI, err := suite.cluster.GetRegistryClientMTLSCert(ctx)
 	suite.NoError(err)
 	suite.NotEmpty(originalPKI.Cert)
@@ -54,23 +66,21 @@ func (suite *RegistryProxyTestSuite) Test_1_UpdateCredsUpdatesMTLSSecrets() {
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "tools", "update-creds", "registry", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
-	// Get the updated client TLS secret from the zarf namespace
 	updatedPKI, err := suite.cluster.GetRegistryClientMTLSCert(ctx)
 	suite.NoError(err)
 	suite.NotEmpty(updatedPKI.Cert)
 
-	// Verify that the certificate was regenerated
+	// Verify that the original certificate matches what was regenerated
 	suite.NotEqual(originalPKI.Cert, updatedPKI.Cert)
 
-	// Get the updated client TLS secret from the podinfo-oci namespace
-	updatedNamespaceSecret, err := suite.cluster.Clientset.CoreV1().Secrets("podinfo-oci").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
+	// Get the updated client TLS secret from the dos-games namespace
+	updatedNamespaceSecret, err := suite.cluster.Clientset.CoreV1().Secrets("dos-games").Get(ctx, cluster.RegistryClientTLSSecret, metav1.GetOptions{})
 	suite.NoError(err)
 
-	// Verify the secret in podinfo-oci namespace matches the zarf namespace
 	suite.Equal(updatedPKI.Cert, updatedNamespaceSecret.Data[cluster.RegistrySecretCertPath])
 }
 
-func (suite *RegistryProxyTestSuite) Test_2_Flux() {
+func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
 	tmpdir := suite.T().TempDir()
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "package", "create", "examples/podinfo-flux", "-o", tmpdir)
 	suite.NoError(err, stdOut, stdErr)
