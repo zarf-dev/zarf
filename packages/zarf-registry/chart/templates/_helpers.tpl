@@ -98,3 +98,21 @@ Get the appropriate image repository based on proxy configuration
 {{ .Values.image.repository }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Build registry configData with mTLS settings when enabled
+*/}}
+{{- define "docker-registry.configData" -}}
+{{- $config := deepCopy .Values.secrets.configData -}}
+{{- if .Values.mtls.enabled -}}
+{{- $tlsDefaults := dict
+  "certificate" "/certs/server/tls.crt"
+  "key" "/certs/server/tls.key"
+  "clientcas" (list "/certs/server/ca.crt")
+  "clientauth" "verify-client-cert-if-given"
+  "minimumtls" "tls1.2"
+-}}
+{{- $_ := set $config.http "tls" (mergeOverwrite $tlsDefaults (default dict $config.http.tls)) -}}
+{{- end -}}
+{{- toJson $config -}}
+{{- end -}}
