@@ -16,6 +16,7 @@ import (
 	"github.com/mholt/archives"
 	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -175,6 +176,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		composed = overrideDeprecated(composed, component)
 		composed = overrideActions(composed, component)
 		composed = overrideResources(composed, component)
+
+		// namespace the values
+		composed, err = namespaceTemplates(composed)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
@@ -454,6 +461,77 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 	comp.ImageArchives = append(comp.ImageArchives, override.ImageArchives...)
 
 	return comp
+}
+
+// namespaceTemplates updates the paths of templates to be namespaced by the component name
+func namespaceTemplates(comp v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, error) {
+	// namespace chart values should replace sourcePath strings directly
+	for chartIdx, chart := range comp.Charts {
+		if len(chart.Values) > 0 {
+			for valueIdx, value := range chart.Values {
+				comp.Charts[chartIdx].Values[valueIdx].SourcePath = template.InsertObjectKeyInPath(value.SourcePath, comp.Name)
+			}
+		}
+	}
+	// namespace actions should evaluate replacing action contents
+	namespaceActionTemplates(comp.Actions.OnDeploy.Before, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.After, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.OnFailure, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.OnSuccess, comp.Name)
+
+	// namespace manifests should replace all instances of contents by reading/transforming/writing the file
+	for _, manifest := range comp.Manifests {
+		for _, file := range manifest.Files {
+			if helpers.IsURL(file) {
+				continue
+			}
+			if err := transformFileTemplates(file, comp.Name); err != nil {
+				return comp, err
+			}
+		}
+	}
+
+	// namespace files should replace all instances of contents by reading/transforming/writing the file
+	for _, file := range comp.Files {
+		if helpers.IsURL(file.Source) {
+			continue
+		}
+		if err := transformFileTemplates(file.Source, comp.Name); err != nil {
+			return comp, err
+		}
+	}
+
+	return comp, nil
+}
+
+// transformFileTemplates reads a file, transforms template paths to be namespaced by key, and writes it back.
+func transformFileTemplates(path, key string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("failed to stat file %s: %w", path, err)
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s: %w", path, err)
+	}
+
+	transformed := template.InsertObjectKeyInContent(string(content), key)
+
+	if err := os.WriteFile(path, []byte(transformed), info.Mode()); err != nil {
+		return fmt.Errorf("failed to write file %s: %w", path, err)
+	}
+
+	return nil
+}
+
+// namespaceActionTemplates transforms template paths in actions that have templating enabled.
+func namespaceActionTemplates(actions []v1alpha1.ZarfComponentAction, key string) {
+	for i, action := range actions {
+		if action.ShouldTemplate() {
+			actions[i].Cmd = template.InsertObjectKeyInContent(action.Cmd, key)
+		}
+	}
 }
 
 func makePathRelativeTo(path, relativeTo string) string {
