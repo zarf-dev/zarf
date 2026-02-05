@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/dynamic"
@@ -172,7 +173,7 @@ func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceOrK
 }
 
 func isJSONPathWaitType(condition string) bool {
-	return len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}")
+	return len(condition) != 0 && condition[0] == '{' && strings.Contains(condition, "=") && strings.Contains(condition, "}")
 }
 
 // forResource is the internal implementation that can be tested with fake clients.
@@ -199,14 +200,7 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
 	waitInterval := time.Second
-	deadline := time.Now().Add(timeout)
-
-	for {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
-		}
-
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		streams := genericiooptions.IOStreams{
 			In:     strings.NewReader(""),
 			Out:    io.Discard,
@@ -221,23 +215,22 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 		opts, err := flags.ToOptions(args)
 		if err != nil {
-			return fmt.Errorf("failed to create wait options: %w", err)
+			return false, fmt.Errorf("failed to create wait options: %w", err)
 		}
 		opts.DynamicClient = dynamicClient
 
 		err = opts.RunWait()
 		if err == nil {
-			l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
-			return nil
+			return true, nil
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(waitInterval):
-			l.Debug("retrying wait", "err", err)
-			continue
-		}
+		l.Debug("retrying wait", "err", err)
+		return false, nil
+	})
+	if err != nil {
+		return err
 	}
+	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	return nil
 }
 
 // ForNetwork waits for a network endpoint to respond.
