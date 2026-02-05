@@ -9,6 +9,7 @@
 * **wait:** create wait package and call it directly within actions ([#4549](https://github.com/zarf-dev/zarf/issues/4549))
 * remove global plainHTTP and insecureSkipTLSVerify in favor of optional parameters ([#4561](https://github.com/zarf-dev/zarf/issues/4561))
 * move v1alpha1 validation logic to it's own package ([#4544](https://github.com/zarf-dev/zarf/issues/4544))
+* remove direct usage of parent command `zarf package inspect` ([#4548](https://github.com/zarf-dev/zarf/issues/4548)) ([1904293](https://github.com/zarf-dev/zarf/commit/19042935276f23f9d50101363008ebce987b7e11))
 
 ### Features
 
