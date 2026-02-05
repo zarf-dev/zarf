@@ -83,10 +83,10 @@ func TestWaitFor(t *testing.T) {
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
 		require.NoError(t, err)
 
-		// t.Cleanup(func() {
-		// 	_, _, err := e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
-		// 	require.NoError(t, err)
-		// })
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			require.NoError(t, err)
+		})
 
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
