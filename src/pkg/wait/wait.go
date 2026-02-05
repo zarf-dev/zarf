@@ -54,10 +54,9 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Check if waitType is JSONPath or condition
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
-		fmt.Println("condition is", condition)
-		// Ensure any conditions aren't shell escaped
+		// Strip any existing shell quotes before re-quoting for the shell command
+		condition = strings.ReplaceAll(condition, "'", "")
 		condition = shellQuote(condition)
-		fmt.Println("condition is", condition)
 	} else {
 		waitType = "condition="
 	}
