@@ -80,50 +80,46 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	// If no identifier specified, wait for any resource of this kind to exist
-	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
-	}
-
 	// Calculate remaining time for the resource wait
 	remaining := time.Until(deadline)
 	if remaining <= 0 {
 		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
 	}
 
+	// If no identifier specified, wait for any resource of this kind to exist
+	if identifier == "" {
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, remaining)
+	}
+
 	return forResource(ctx, configFlags, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, remaining)
 }
 
 // waitForAnyResource waits for at least one resource of the given kind to exist.
-func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
+func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 	l.Info("waiting for at least one resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
 
-	for {
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			return fmt.Errorf("timed out waiting for any %s", resource)
-		}
-
-		resourceClient := dynamicClient.Resource(resource).Namespace(namespace)
-
+	resourceClient := dynamicClient.Resource(resource).Namespace(namespace)
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
-		if err == nil && len(list.Items) > 0 {
-			l.Info("found resource", "kind", resource.Resource, "namespace", namespace)
-			return nil
-		}
 		if err != nil {
 			l.Debug("error listing resources", "error", err)
+			return false, nil
 		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(waitInterval):
-			continue
+		if len(list.Items) > 0 {
+			return true, nil
 		}
+		return false, nil
+	})
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || wait.Interrupted(err) {
+			return fmt.Errorf("timed out waiting for resource of kind %s", resource)
+		}
+		return err
 	}
+	l.Info("found resource", "kind", resource.Resource, "namespace", namespace)
+	return nil
 }
 
 // resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
@@ -227,6 +223,9 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 		return false, nil
 	})
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || wait.Interrupted(err) {
+			return fmt.Errorf("timed out waiting for %s/%s to be %s", kind, identifier, forCondition)
+		}
 		return err
 	}
 	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
