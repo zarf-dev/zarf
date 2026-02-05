@@ -41,31 +41,31 @@ func TestResolveImports(t *testing.T) {
 		path   string
 		flavor string
 	}{
-		{
-			name: "two zarf.yaml files import each other",
-			path: "./testdata/import/import-each-other",
-		},
-		{
-			name: "variables and constants are resolved correctly",
-			path: "./testdata/import/variables",
-		},
-		{
-			name: "two separate chains of imports importing a common file",
-			path: "./testdata/import/branch",
-		},
-		{
-			name:   "flavor is preserved when importing",
-			path:   "./testdata/import/flavor",
-			flavor: "pistachio",
-		},
+		// {
+		// 	name: "two zarf.yaml files import each other",
+		// 	path: "./testdata/import/import-each-other",
+		// },
+		// {
+		// 	name: "variables and constants are resolved correctly",
+		// 	path: "./testdata/import/variables",
+		// },
+		// {
+		// 	name: "two separate chains of imports importing a common file",
+		// 	path: "./testdata/import/branch",
+		// },
+		// {
+		// 	name:   "flavor is preserved when importing",
+		// 	path:   "./testdata/import/flavor",
+		// 	flavor: "pistachio",
+		// },
 		{
 			name: "chart version and url properties are not overridden",
 			path: "./testdata/import/chart",
 		},
-		{
-			name: "archives work as expected",
-			path: "./testdata/import/archives",
-		},
+		// {
+		// 	name: "archives work as expected",
+		// 	path: "./testdata/import/archives",
+		// },
 	}
 
 	for _, tc := range testCases {

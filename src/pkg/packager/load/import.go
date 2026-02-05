@@ -173,15 +173,14 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
-		composed = overrideDeprecated(composed, component)
-		composed = overrideActions(composed, component)
-		composed = overrideResources(composed, component)
-
-		// namespace the values
+		// namespace the values here before overriding other data from the parent
 		composed, err = namespaceTemplates(composed)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
+		composed = overrideDeprecated(composed, component)
+		composed = overrideActions(composed, component)
+		composed = overrideResources(composed, component)
 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
@@ -469,7 +468,8 @@ func namespaceTemplates(comp v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, er
 	for chartIdx, chart := range comp.Charts {
 		if len(chart.Values) > 0 {
 			for valueIdx, value := range chart.Values {
-				comp.Charts[chartIdx].Values[valueIdx].SourcePath = template.InsertObjectKeyInPath(value.SourcePath, comp.Name)
+				// sourcePath in chart values does not have a protected root - IE ".Values"
+				comp.Charts[chartIdx].Values[valueIdx].SourcePath = fmt.Sprintf(".%s%s", comp.Name, value.SourcePath)
 			}
 		}
 	}
