@@ -38,41 +38,42 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return errors.New("kind is required")
 	}
 
-	// Fill these out in the Retry loop, which handles the cluster not yet being available
+	waitInterval := time.Second
+	deadline := time.Now().Add(timeout)
+
+	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
 	var configFlags *genericclioptions.ConfigFlags
-	var mapping *meta.RESTMapping
-	deadline := time.Now().Add(timeout)
-	waitInterval := time.Second
-	for {
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		configFlags = genericclioptions.NewConfigFlags(true)
 		if namespace != "" {
 			configFlags.Namespace = ptr.To(namespace)
 		}
-
 		var err error
 		restConfig, err = configFlags.ToRESTConfig()
 		if err != nil {
-			return fmt.Errorf("failed to get REST config: %w", err)
+			l.Debug("failed to get REST config, retrying", "error", err)
+			return false, nil
 		}
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("timed out waiting for REST config: %w", err)
+	}
 
-		remaining := time.Until(deadline)
-		if remaining <= 0 {
-			return fmt.Errorf("timed out waiting for %s", kind)
-		}
-
+	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
+	var mapping *meta.RESTMapping
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
+		var err error
 		mapping, err = resolveResourceKind(configFlags, kind)
-		if err == nil {
-			break
+		if err != nil {
+			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
+			return false, nil
 		}
-
-		l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(waitInterval):
-			continue
-		}
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("timed out waiting to resolve resource kind %q: %w", kind, err)
 	}
 
 	dynamicClient, err := dynamic.NewForConfig(restConfig)
@@ -80,13 +81,8 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
-	// Calculate remaining time for the resource wait
-	remaining := time.Until(deadline)
-	if remaining <= 0 {
-		return fmt.Errorf("timed out waiting for %s/%s", kind, identifier)
-	}
-
 	// If no identifier specified, wait for any resource of this kind to exist
+	remaining := time.Until(deadline)
 	if identifier == "" {
 		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, remaining)
 	}
