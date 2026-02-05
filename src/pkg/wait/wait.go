@@ -98,7 +98,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
-	l.Info("waiting for at least one resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
+	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
 
 	resourceClient := dynamicClient.Resource(resource).Namespace(namespace)
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(ctx context.Context) (bool, error) {
@@ -110,6 +110,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 		if len(list.Items) > 0 {
 			return true, nil
 		}
+		l.Debug("retrying wait for any resource of kind", "kind", resource.Resource, "namespace", namespace)
 		return false, nil
 	})
 	if err != nil {
