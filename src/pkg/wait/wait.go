@@ -24,7 +24,10 @@ import (
 
 // isJSONPathWaitType checks if the condition is a JSONPath or condition.
 func isJSONPathWaitType(condition string) bool {
-	return len(condition) >= 2 && (condition[0] == '{' || condition[1] == '{') && strings.Contains(condition, "=") && strings.Contains(condition, "}")
+	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
+		return false
+	}
+	return true
 }
 
 // unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
@@ -51,11 +54,12 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Type of wait, condition or JSONPath
 	var waitType string
 
+	// Strip any existing shell quotes from the condition before processing
+	condition = strings.ReplaceAll(condition, "'", "")
+
 	// Check if waitType is JSONPath or condition
 	if isJSONPathWaitType(condition) {
 		waitType = "jsonpath="
-		// Strip any existing shell quotes before re-quoting for the shell command
-		condition = strings.ReplaceAll(condition, "'", "")
 		condition = shellQuote(condition)
 	} else {
 		waitType = "condition="

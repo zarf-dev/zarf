@@ -31,7 +31,6 @@ func (suite *TestIsJSONPathWaitTypeSuite) SetupSuite() {
 
 	suite.waitTypes.jsonPathType = []string{
 		"{.status.availableReplicas}=1",
-		"'{.status.availableReplicas}'=1",
 		"{.status.containerStatuses[0].ready}=true",
 		"{.spec.containers[0].ports[0].containerPort}=80",
 		"{.spec.nodeName}=knode0",
