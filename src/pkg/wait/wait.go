@@ -173,6 +173,16 @@ func isJSONPathWaitType(condition string) bool {
 	return len(condition) != 0 && condition[0] == '{' && strings.Contains(condition, "=") && strings.Contains(condition, "}")
 }
 
+func isExistsCondition(condition string) bool {
+	reservedConditions := []string{"create", "exist", "exists"}
+	for _, rc := range reservedConditions {
+		if strings.EqualFold(condition, rc) {
+			return true
+		}
+	}
+	return false
+}
+
 // forResource is the internal implementation that can be tested with fake clients.
 func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
@@ -186,12 +196,16 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 	}
 
 	forCondition := "create" // default: wait for existence
-	if condition != "" && !strings.EqualFold(condition, "exist") && !strings.EqualFold(condition, "exists") {
+	if condition != "" && !isExistsCondition(condition) {
 		if isJSONPathWaitType(condition) {
 			forCondition = fmt.Sprintf("jsonpath=%s", condition)
 		} else {
 			forCondition = fmt.Sprintf("condition=%s", condition)
 		}
+	}
+
+	if condition == "delete" {
+		forCondition = "delete"
 	}
 
 	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)

@@ -58,6 +58,13 @@ func TestWaitFor(t *testing.T) {
 
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "exists", "-n", namespace, "--timeout", "30s")
 		require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "configmap", configMapName, "create", "-n", namespace, "--timeout", "30s")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("wait for delete succeeds on non-existent resource", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "does-not-exist", "delete", "-n", namespace, "--timeout", "10s")
+		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait with label selector", func(t *testing.T) {
