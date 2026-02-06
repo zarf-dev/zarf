@@ -61,7 +61,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"flavor", flavor,
 		"importStack", len(importStack),
 	)
-
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -478,6 +477,11 @@ func namespaceTemplates(comp v1alpha1.ZarfComponent) (v1alpha1.ZarfComponent, er
 	namespaceActionTemplates(comp.Actions.OnDeploy.After, comp.Name)
 	namespaceActionTemplates(comp.Actions.OnDeploy.OnFailure, comp.Name)
 	namespaceActionTemplates(comp.Actions.OnDeploy.OnSuccess, comp.Name)
+	// namespace on remove actions as well
+	namespaceActionTemplates(comp.Actions.OnRemove.Before, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.After, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.OnFailure, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.OnSuccess, comp.Name)
 
 	// namespace manifests should replace all instances of contents by reading/transforming/writing the file
 	for _, manifest := range comp.Manifests {

@@ -1,0 +1,16 @@
+# Parent-level values (not namespaced, accessible as .Values.parent.*)
+parent:
+  name: parent-package-name
+  version: "1.0.0"
+  # parent-level override
+  app:
+    replicas: 4
+
+# Child values are namespaced by component name during import
+# The child uses .Values.app.name but after import it becomes .Values.imported-app.app.name
+# These override the child's default values during the values merge process
+imported-app:
+  app:
+    environment: production
+  config:
+    setting: parent-override-setting
