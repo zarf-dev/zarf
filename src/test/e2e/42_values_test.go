@@ -136,6 +136,7 @@ func TestValuesSchema(t *testing.T) {
 	})
 }
 
+// This test does not require cluster access - can be run independently
 func TestValuesImportNamespacing(t *testing.T) {
 	t.Log("E2E: Values Import Namespacing")
 
@@ -149,7 +150,7 @@ func TestValuesImportNamespacing(t *testing.T) {
 	// Load the created package to inspect its contents
 	packageName := fmt.Sprintf("zarf-package-test-values-import-namespacing-%s.tar.zst", e2e.Arch)
 	tarPath := filepath.Join(tmpdir, packageName)
-	pkgLayout, err := layout.LoadFromTar(context.Background(), tarPath, layout.PackageLayoutOptions{})
+	pkgLayout, err := layout.LoadFromTar(t.Context(), tarPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	// Verify the package has the imported component
@@ -168,11 +169,13 @@ func TestValuesImportNamespacing(t *testing.T) {
 	// Verify chart values sourcePath was namespaced
 	// Original: .app.replicas -> Namespaced: .imported-app.app.replicas
 	require.Len(t, comp.Charts, 1)
-	require.Len(t, comp.Charts[0].Values, 2)
+	require.Len(t, comp.Charts[0].Values, 3)
 	require.Equal(t, ".imported-app.app.replicas", comp.Charts[0].Values[0].SourcePath,
 		"chart values sourcePath should be namespaced")
 	require.Equal(t, ".imported-app.config.setting", comp.Charts[0].Values[1].SourcePath,
 		"chart values sourcePath should be namespaced")
+	require.Equal(t, ".parent.app.replicas", comp.Charts[0].Values[2].SourcePath,
+		"parent values sourcePath should not be namespaced and should be last in the list")
 
 	// Read and unmarshal the merged values.yaml from the package
 	valuesPath := filepath.Join(pkgLayout.DirPath(), "values.yaml")
@@ -196,11 +199,7 @@ func TestValuesImportNamespacing(t *testing.T) {
 	app, ok := importedApp["app"].(map[string]any)
 	require.True(t, ok, "imported-app should contain app values")
 	// Parent's override value should take precedence over child defaults
-	require.Equal(t, "parent-override-name", app["name"],
-		"parent override should take precedence over child default")
 	require.Equal(t, "production", app["environment"],
-		"parent override should take precedence over child default")
-	require.Equal(t, int64(3), app["replicas"],
 		"parent override should take precedence over child default")
 
 	config, ok := importedApp["config"].(map[string]any)

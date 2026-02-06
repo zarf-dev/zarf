@@ -56,6 +56,9 @@ type ZarfComponent struct {
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+
+	// Prefix for namespacing all component
+	ValuesPrefix string `json:"valuesPrefix,omitempty"`
 }
 
 // ImageArchive points to an archived file containing an OCI layout

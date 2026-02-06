@@ -28,7 +28,8 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	var tempDir string
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{}, &tempDir)
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -77,7 +78,8 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			var tempDir string
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{}, &tempDir)
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -321,7 +323,8 @@ func TestNamespaceTemplates(t *testing.T) {
 			// Note: This test only validates component structure transformations.
 			// File content transformations (manifests, files) require integration tests
 			// with temp directories to avoid modifying testdata files.
-			result, err := namespaceTemplates(tt.input)
+			var tempDir string
+			result, err := namespaceTemplates(tt.input, "", &tempDir)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, result)
 		})

@@ -69,10 +69,14 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SkipVersionCheck: opts.SkipVersionCheck,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, result.Cleanup())
+	}()
+	pkg := result.Pkg
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),

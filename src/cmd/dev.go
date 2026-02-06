@@ -111,10 +111,14 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		SkipVersionCheck: true,
 		RemoteOptions:    defaultRemoteOptions(),
 	}
-	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
+	result, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
 	if err != nil {
 		return err
 	}
+	defer func() {
+		err = errors.Join(err, result.Cleanup())
+	}()
+	pkg := result.Pkg
 	pkg.Build = v1alpha1.ZarfBuildData{}
 	err = utils.ColorPrintYAML(pkg, nil, false)
 	if err != nil {
