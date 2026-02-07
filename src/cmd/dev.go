@@ -801,6 +801,16 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 			}
 		}
+		if len(finding.ArchiveImages) > 0 {
+			componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
+			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
+			componentDefinition += "    imageArchives:\n"
+			componentDefinition += fmt.Sprintf("      - path: %s\n", finding.Path)
+			componentDefinition += "        images:\n"
+			for _, image := range finding.ArchiveImages {
+				componentDefinition += fmt.Sprintf("          - %s\n", image)
+			}
+		}
 	}
 	fmt.Println(componentDefinition)
 

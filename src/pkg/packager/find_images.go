@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -69,10 +71,14 @@ type FindImagesOptions struct {
 type ComponentImageScan struct {
 	// ComponentName is the name of the component where the images were found
 	ComponentName string
+	// ArchivePath is the path to the imageArchive
+	Path string
 	// Matches contains definitively identified container images, such as those in an image: field
 	Matches []string
 	// PotentialMatches contains potential container images found by a regex
 	PotentialMatches []string
+	// ArchiveImages contains images that are included in Matches, but are provided with an imageArchive
+	ArchiveImages []string
 	// CosignArtifacts contains found cosign artifacts for images
 	CosignArtifacts []string
 	// WhyResources contains the resources where specific images were found (when Why option is used)
@@ -231,18 +237,16 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			if err != nil {
 				return nil, err
 			}
-			archivePath := pkgPath.BaseDir + archive.Path
+			archivePath := path.Join(pkgPath.BaseDir, archive.Path)
 			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve image manifests from archive %s: %w", archive.Path, err)
 			}
-			archiveImages, err := images.FindImagesInManifests(imageManifests)
+			scan.ArchiveImages, err = images.FindImagesInOCIManifests(imageManifests)
 			if err != nil {
 				return nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
 			}
-			for _, image := range archiveImages {
-				matchedImages[image] = true
-			}
+			scan.Path = archivePath
 		}
 
 		imgCompStart := time.Now()
@@ -255,6 +259,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 
 		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
+
 		scan.Matches = sortedMatchedImages
 
 		// Handle the "maybes"
@@ -306,6 +311,19 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 
 		componentImageScans = append(componentImageScans, scan)
+	}
+
+	// Create slice of all archive images
+	var allArchiveImages []string
+	for _, scan := range componentImageScans {
+		allArchiveImages = append(allArchiveImages, scan.ArchiveImages...)
+	}
+
+	// Remove images matches if those images are present in any image imageArchives
+	for i := range componentImageScans {
+		componentImageScans[i].Matches = slices.DeleteFunc(componentImageScans[i].Matches, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
 	}
 
 	if opts.Why != "" {

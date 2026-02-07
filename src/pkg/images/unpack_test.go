@@ -72,7 +72,7 @@ func TestGetRefFromManifest(t *testing.T) {
 	}
 }
 
-func TestFindImagesInManifests(t *testing.T) {
+func TestFindImagesInOCIManifests(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -131,7 +131,7 @@ func TestFindImagesInManifests(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			images, err := FindImagesInManifests(tc.manifests)
+			images, err := FindImagesInOCIManifests(tc.manifests)
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return

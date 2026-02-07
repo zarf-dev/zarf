@@ -59,8 +59,8 @@ func GetManifestsFromArchive(ctx context.Context, imageArchive string) ([]ocispe
 	return manifests, err
 }
 
-// FindImagesInManifests takes a list of OCI Descriptors and returns image References
-func FindImagesInManifests(manifests []ocispec.Descriptor) ([]string, error) {
+// FindImagesInOCIManifests takes a list of OCI Descriptors and returns image References
+func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) {
 	var foundImages []string
 	for _, manifestDesc := range manifests {
 		imageName := getRefFromManifest(manifestDesc)

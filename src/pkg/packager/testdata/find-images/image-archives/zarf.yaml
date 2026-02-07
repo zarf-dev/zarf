@@ -3,6 +3,20 @@ metadata:
   name: image-archive
   description: image archive
 components:
+  - name: manifest-referencing-image-in-archive
+    required: true
+    manifests:
+      - name: scratch-manifest
+        namespace: default
+        files:
+          - deployment.yaml
+  - name: manifest-referencing-image-not-in-archive
+    required: true
+    manifests:
+      - name: alpine-manifest
+        namespace: default
+        files:
+          - deployment-alpine.yaml
   - name: image-archive-component
     imageArchives:
-      - path: ./scratch.tar
+      - path: scratch.tar
