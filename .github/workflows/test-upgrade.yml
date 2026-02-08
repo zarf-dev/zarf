@@ -73,10 +73,8 @@ jobs:
 
       - name: Initialize the cluster with the release version
         # Test will initialize the cluster with the latest released version package, with the current built binary
-        env:
-          RELEASE_VERSION: "${{ steps.install.outputs.version }}"
         run: |
-          sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-${RELEASE_VERSION}.tar.zst
+          sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-${{ steps.install.outputs.version }}.tar.zst
 
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
