@@ -75,6 +75,10 @@ jobs:
         run: |
           sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-$(zarf version).tar.zst
 
+      - name: Upgrade the cluster with the build version
+        run: |
+          sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ./build/zarf-init-amd64-$(./build/zarf version).tar.zst
+
       # Before we run the regular tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files
         uses: ./.github/actions/cleanup-files
