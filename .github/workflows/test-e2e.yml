@@ -119,7 +119,7 @@ jobs:
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
-        if: always()
+        if: failure()
 
   # Run the tests on k3s
   validate-k3s:
@@ -209,4 +209,4 @@ jobs:
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
-        if: always()
+        if: failure()
