@@ -2,7 +2,7 @@ kind: ZarfPackageConfig
 metadata:
   name: test-package
   version: 0.0.1
-  description: This test package has two components with chart/manifests all targeting the same namespace to allow overrides
+  description: This test package has two components with chart/manifests/actions all targeting the same namespace to allow overrides
 components:
   - name: test-package-component-1
     required: true
@@ -16,6 +16,14 @@ components:
         namespace: test
         files:
           - manifests/configmap1.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: ConfigMap
+                name: chart-config-same-component
+                namespace: test
   - name: test-package-component-2
     required: true
     manifests:
@@ -23,3 +31,11 @@ components:
         namespace: test
         files:
           - manifests/configmap2.yaml
+    actions:
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: ConfigMap
+                name: manifest-config-different-component
+                namespace: test
