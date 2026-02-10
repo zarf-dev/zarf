@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -202,8 +201,8 @@ func NoopOpt(*crane.Options) {}
 
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
 // based upon Zarf's global --insecure-skip-tls-verify flag.
-func WithGlobalInsecureFlag() []crane.Option {
-	if config.CommonOptions.InsecureSkipTLSVerify {
+func WithGlobalInsecureFlag(insecure bool) []crane.Option {
+	if insecure {
 		return []crane.Option{crane.Insecure}
 	}
 	// passing a nil option will cause panic

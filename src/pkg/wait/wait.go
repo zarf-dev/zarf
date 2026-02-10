@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic helper functions.
-package utils
+// Package wait provides functions for waiting on Kubernetes resources and network endpoints.
+package wait
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 )
 
@@ -26,7 +27,6 @@ func isJSONPathWaitType(condition string) bool {
 	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
 		return false
 	}
-
 	return true
 }
 
@@ -40,26 +40,22 @@ func shellQuote(s string) string {
 	if len(s) == 0 {
 		return "''"
 	}
-
 	if unsafeShellCharsRegex.MatchString(s) {
 		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
 	}
-
 	return s
 }
 
-// ExecuteWait executes the wait-for command.
-func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kind, identifier string, timeout time.Duration) error {
+// ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
+func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
-	// Handle network endpoints.
-	switch kind {
-	case "http", "https", "tcp":
-		return waitForNetworkEndpoint(ctx, kind, identifier, condition, timeout, waitInterval)
-	}
 
 	// Type of wait, condition or JSONPath
 	var waitType string
+
+	// Strip any existing shell quotes from the condition before processing
+	condition = strings.ReplaceAll(condition, "'", "")
 
 	// Check if waitType is JSONPath or condition
 	if isJSONPathWaitType(condition) {
@@ -71,7 +67,7 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	}
 
 	// Get the Zarf command configuration.
-	zarfCommand, err := GetFinalExecutableCommand()
+	zarfCommand, err := utils.GetFinalExecutableCommand()
 	if err != nil {
 		return fmt.Errorf("could not locate the current Zarf binary path: %w", err)
 	}
@@ -90,9 +86,9 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	// Set the custom message for optional namespace.
 	namespaceMsg := ""
 	namespaceFlag := ""
-	if waitNamespace != "" {
-		namespaceFlag = fmt.Sprintf("-n %s", waitNamespace)
-		namespaceMsg = fmt.Sprintf(" in namespace %s", waitNamespace)
+	if namespace != "" {
+		namespaceFlag = fmt.Sprintf("-n %s", namespace)
+		namespaceMsg = fmt.Sprintf(" in namespace %s", namespace)
 	}
 
 	// Setup the spinner messages.
@@ -145,8 +141,8 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 
 			l.Info(conditionMsg)
 			// Wait for the resource to meet the given condition.
-			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%s",
-				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, waitTimeout)
+			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%ds",
+				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, int(timeout.Seconds()))
 
 			// If there is an error, log it and try again.
 			waitCmd := append(shellArgs, zarfKubectlWait)
@@ -164,13 +160,16 @@ func ExecuteWait(ctx context.Context, waitTimeout, waitNamespace, condition, kin
 	}
 }
 
-// waitForNetworkEndpoint waits for a network endpoint to respond.
-func waitForNetworkEndpoint(ctx context.Context, resource, name, condition string, timeout time.Duration, waitInterval time.Duration) error {
+// ForNetwork waits for a network endpoint to respond.
+func ForNetwork(ctx context.Context, protocol, address, condition string, timeout time.Duration) error {
+	waitInterval := time.Second
+	return forNetwork(ctx, protocol, address, condition, timeout, waitInterval)
+}
+
+func forNetwork(ctx context.Context, protocol string, address string, condition string, timeout time.Duration, waitInterval time.Duration) error {
 	l := logger.From(ctx)
-	// Set the timeout for the wait-for command.
 	expired := time.After(timeout)
 
-	// Setup the spinner messages.
 	condition = strings.ToLower(condition)
 	if condition == "" {
 		condition = "success"
@@ -195,10 +194,10 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 		case <-ctx.Done():
 			return errors.New("received interrupt")
 		default:
-			switch resource {
+			switch protocol {
 			case "http", "https":
 				// Handle HTTP and HTTPS endpoints.
-				url := fmt.Sprintf("%s://%s", resource, name)
+				url := fmt.Sprintf("%s://%s", protocol, address)
 
 				// Default to checking for a 2xx response.
 				if condition == "success" {
@@ -229,7 +228,7 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 					return fmt.Errorf("http status code %s is not an integer: %w", condition, err)
 				}
 				if http.StatusText(code) == "" {
-					return errors.New("http status code %s is unknown")
+					return errors.New("http status code is unknown")
 				}
 
 				// Try to get the URL and check the status code.
@@ -249,7 +248,7 @@ func waitForNetworkEndpoint(ctx context.Context, resource, name, condition strin
 				}
 			default:
 				// Fallback to any generic protocol using net.Dial
-				conn, err := net.Dial(resource, name)
+				conn, err := net.Dial(protocol, address)
 				if err != nil {
 					l.Debug(err.Error())
 					continue

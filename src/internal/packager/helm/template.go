@@ -17,18 +17,17 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/releaseutil"
-
-	"github.com/zarf-dev/zarf/src/config"
 )
 
 // TemplateChart generates a helm template from a given chart.
 func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values,
-	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool) (string, error) {
+	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool, remoteOptions types.RemoteOptions) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
 	}
@@ -49,7 +48,8 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	client.InsecureSkipTLSverify = config.CommonOptions.InsecureSkipTLSVerify
+	client.PlainHTTP = remoteOptions.PlainHTTP
+	client.InsecureSkipTLSverify = remoteOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
 		parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
 		if err != nil {

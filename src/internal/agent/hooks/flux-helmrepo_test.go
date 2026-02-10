@@ -110,7 +110,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -175,20 +175,20 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
-			name: "should not mutate URL if it has the same hostname as State internal repo",
+			name: "should not mutate already patched cluster DNS url",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "no-mutate-this",
 				},
 				Spec: flux.HelmRepositorySpec{
-					URL:  "oci://10.11.12.13:5000/stefanprodan/charts",
+					URL:  "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 					Type: "oci",
 				},
 			}),
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/url",
-					"oci://10.11.12.13:5000/stefanprodan/charts",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
 				),
 				operations.AddPatchOperation(
 					"/spec/secretRef",
@@ -223,15 +223,131 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			},
 			code: http.StatusOK,
 		},
+		{
+			name: "should mutate cluster IP to DNS",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-this",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://10.11.12.13:5000/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: int32(31999),
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated with mTLS enabled",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Create, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "mutate-with-mtls",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://ghcr.io/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/certSecretRef",
+					fluxmeta.LocalObjectReference{Name: "zarf-registry-client-tls"},
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeClusterIP,
+					Ports: []corev1.ServicePort{
+						{
+							Port: 5000,
+						},
+					},
+				},
+			},
+			registryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				RegistryMode: state.RegistryModeProxy,
+			},
+			useMTLS: true,
+			code:    http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			c := createTestClientWithZarfState(ctx, t, s)
+			testState := s
+			if tt.registryInfo.Address != "" {
+				testState = &state.State{RegistryInfo: tt.registryInfo}
+			}
+			c := createTestClientWithZarfState(ctx, t, testState)
 			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			if tt.useMTLS {
+				err := c.InitRegistryCerts(ctx)
+				require.NoError(t, err)
+				testState.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+				err = c.SaveState(ctx, testState)
 				require.NoError(t, err)
 			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

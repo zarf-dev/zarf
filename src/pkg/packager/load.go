@@ -19,12 +19,12 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LoadOptions are the options for LoadPackage.
@@ -41,7 +41,7 @@ type LoadOptions struct {
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
 	// Only applicable to OCI + HTTP
-	RemoteOptions
+	types.RemoteOptions
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }
@@ -184,7 +184,7 @@ func identifySource(src string) (string, error) {
 		return "split", nil
 	}
 	// match deployed package names: lowercase, digits, hyphens
-	if lint.IsLowercaseNumberHyphenNoStartHyphen(src) {
+	if state.DeployedPackageNameRegex(src) {
 		return "cluster", nil
 	}
 	return "", fmt.Errorf("unknown source %s", src)

@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 	"oras.land/oras-go/v2/registry"
 )
@@ -45,7 +46,7 @@ func TestAssembleLayers(t *testing.T) {
 			name: "Assemble layers from a package",
 			path: "testdata/basic",
 			opts: packager.PublishPackageOptions{
-				RemoteOptions: packager.RemoteOptions{
+				RemoteOptions: types.RemoteOptions{
 					PlainHTTP: true,
 				},
 				OCIConcurrency: 3,

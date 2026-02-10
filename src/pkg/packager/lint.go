@@ -9,6 +9,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // LintOptions are the optional parameters to Lint
@@ -16,6 +17,7 @@ type LintOptions struct {
 	SetVariables map[string]string
 	Flavor       string
 	CachePath    string
+	types.RemoteOptions
 }
 
 // Lint lints the given Zarf package
@@ -29,6 +31,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		CachePath:        opts.CachePath,
 		IsInteractive:    false,
 		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
