@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/gpustack/gguf-parser-go/util/ptr"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,7 +28,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
 )
 
@@ -50,10 +50,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	var restConfig *rest.Config
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		var err error
-		restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{},
-		).ClientConfig()
+		_, restConfig, err = cluster.ClientAndConfig()
 		if err != nil {
 			l.Debug("failed to get REST config, retrying", "error", err)
 			return false, nil
