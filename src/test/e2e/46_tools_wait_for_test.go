@@ -141,7 +141,7 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
-	t.Run("wait for CRD resource that does not initially exist in the cluster", func(t *testing.T) {
+	t.Run("wait for CRD and CR that do not exist in the cluster when wait begins", func(t *testing.T) {
 		crdName := "zarfwaittests.test.zarf.dev"
 		resourceName := "my-wait-test"
 
@@ -187,27 +187,26 @@ spec:
 		// Start waiting before the CRD exists
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := e2e.Zarf(t, "tools", "wait-for", "zarfwaittests.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "30s")
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "ZarfWaitTest", resourceName, "exists", "-n", namespace, "--timeout", "30s")
 			errCh <- err
 		}()
 
 		// Let the wait start and fail to resolve the resource kind
 		time.Sleep(3 * time.Second)
 
-		// Apply the CRD
 		_, _, err := e2e.Kubectl(t, "apply", "-f", crdFile)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			_, _, err := e2e.Kubectl(t, "delete", "crd", crdName)
+			_, _, err := e2e.Kubectl(t, "delete", "-f", crdFile)
 			require.NoError(t, err)
 		})
 
 		// Wait for the CRD to be established before creating an instance
-		_, _, err = e2e.Kubectl(t, "wait", "crd", crdName, "--for=condition=Established", "--timeout=10s")
+		// FIXME: shorthand crd should work here
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "customresourcedefinitions", crdName, "established", "--timeout=10s")
 		require.NoError(t, err)
 
-		// Create an instance of the custom resource
 		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
 		require.NoError(t, err)
 
