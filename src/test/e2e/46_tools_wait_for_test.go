@@ -5,6 +5,8 @@
 package test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -137,6 +139,86 @@ func TestWaitFor(t *testing.T) {
 	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
+	})
+
+	t.Run("wait for CRD resource that does not initially exist in the cluster", func(t *testing.T) {
+		crdName := "zarfwaittests.test.zarf.dev"
+		resourceName := "my-wait-test"
+
+		crdYAML := `apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: zarfwaittests.test.zarf.dev
+spec:
+  group: test.zarf.dev
+  names:
+    kind: ZarfWaitTest
+    plural: zarfwaittests
+    singular: zarfwaittest
+  scope: Namespaced
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                name:
+                  type: string
+`
+		crdFile := filepath.Join(t.TempDir(), "crd.yaml")
+		require.NoError(t, os.WriteFile(crdFile, []byte(crdYAML), 0644))
+
+		resourceYAML := `apiVersion: test.zarf.dev/v1
+kind: ZarfWaitTest
+metadata:
+  name: ` + resourceName + `
+  namespace: ` + namespace + `
+spec:
+  name: test
+`
+		resourceFile := filepath.Join(t.TempDir(), "resource.yaml")
+		require.NoError(t, os.WriteFile(resourceFile, []byte(resourceYAML), 0644))
+
+		// Start waiting before the CRD exists
+		errCh := make(chan error, 1)
+		go func() {
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "zarfwaittests.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "30s")
+			errCh <- err
+		}()
+
+		// Let the wait start and fail to resolve the resource kind
+		time.Sleep(3 * time.Second)
+
+		// Apply the CRD
+		_, _, err := e2e.Kubectl(t, "apply", "-f", crdFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "crd", crdName)
+			require.NoError(t, err)
+		})
+
+		// Wait for the CRD to be established before creating an instance
+		_, _, err = e2e.Kubectl(t, "wait", "crd", crdName, "--for=condition=Established", "--timeout=10s")
+		require.NoError(t, err)
+
+		// Create an instance of the custom resource
+		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", resourceFile)
+			require.NoError(t, err)
+		})
+
+		// The wait should succeed now that the CRD and resource exist
+		err = <-errCh
+		require.NoError(t, err)
 	})
 
 	t.Run("wait for pod created after wait starts", func(t *testing.T) {
