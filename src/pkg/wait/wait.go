@@ -41,6 +41,8 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	waitInterval := time.Second
 	deadline := time.Now().Add(timeout)
 
+	condition = strings.ReplaceAll(condition, "'", "")
+
 	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
 	var configFlags *genericclioptions.ConfigFlags
