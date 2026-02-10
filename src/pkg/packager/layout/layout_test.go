@@ -23,11 +23,11 @@ func TestAssembleSkeleton(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
+	result, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
 
 	opt := layout.AssembleSkeletonOptions{}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", opt)
+	pkgLayout, err := layout.AssembleSkeleton(ctx, result.Package, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -70,10 +70,10 @@ func TestGetSBOM(t *testing.T) {
 		},
 	}
 	writePackageToDisk(t, pkg, tmpdir)
-	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	result, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
 
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{})
+	pkgLayout, err := layout.AssemblePackage(ctx, result.Package, tmpdir, layout.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the SBOM does not exist
@@ -161,8 +161,9 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			// Create the zarf.yaml file in the tmpdir
 			writePackageToDisk(t, pkg, tmpdir)
 
-			pkg, err = load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+			result, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 			require.NoError(t, err)
+			pkg = result.Package
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
@@ -247,10 +248,10 @@ func TestCreateAbsolutePathImports(t *testing.T) {
 	err = os.Mkdir(childDir, 0700)
 	require.NoError(t, err)
 	writePackageToDisk(t, childPkg, childDir)
-	pkg, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
+	result, err := load.PackageDefinition(ctx, tmpdir, load.DefinitionOptions{})
 	require.NoError(t, err)
 	// create the package
-	pkgLayout, err := layout.AssemblePackage(context.Background(), pkg, tmpdir, layout.AssembleOptions{})
+	pkgLayout, err := layout.AssemblePackage(context.Background(), result.Package, tmpdir, layout.AssembleOptions{})
 	require.NoError(t, err)
 
 	// Ensure the component has the correct file

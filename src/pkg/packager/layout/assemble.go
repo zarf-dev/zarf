@@ -56,6 +56,7 @@ type AssembleOptions struct {
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
 	types.RemoteOptions
+	AdditionalValues value.Values
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -176,7 +177,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, opts.AdditionalValues, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -961,7 +962,8 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
+// todo: handle accepting []value.Values and merging accordingly.
+func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues value.Values, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
 	if len(files) == 0 {
@@ -987,6 +989,9 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 	if err != nil {
 		return fmt.Errorf("failed to parse values files: %w", err)
 	}
+
+	// DeepMerge any additional values
+	addValues.DeepMerge(vals)
 
 	// Write merged values to YAML
 	dst := filepath.Join(buildPath, ValuesYAML)

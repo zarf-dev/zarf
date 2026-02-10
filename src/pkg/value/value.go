@@ -252,6 +252,17 @@ func (v Values) Set(path Path, newVal any) error {
 	return nil
 }
 
+// Collisions returns root-level keys that exist in both Values maps.
+func (v Values) Collisions(other Values) []string {
+	var collisions []string
+	for key := range other {
+		if _, exists := v[key]; exists {
+			collisions = append(collisions, key)
+		}
+	}
+	return collisions
+}
+
 // ValidateOptions provides optional configuration for Values validation
 type ValidateOptions struct {
 	// SkipRequired skips validation of required fields

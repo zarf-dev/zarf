@@ -57,10 +57,12 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		RemoteOptions:      opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return "", err
 	}
+
+	pkg := result.Package
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
@@ -96,7 +98,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
+		AdditionalValues:     result.Values,
 	}
+	// TODO: consider if additional values from imports should be required parameters to AssemblePackage
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
