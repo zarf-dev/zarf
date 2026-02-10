@@ -23,8 +23,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
 )
 
@@ -45,14 +48,12 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 
 	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
-	var configFlags *genericclioptions.ConfigFlags
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
-		configFlags = genericclioptions.NewConfigFlags(true)
-		if namespace != "" {
-			configFlags.Namespace = ptr.To(namespace)
-		}
 		var err error
-		restConfig, err = configFlags.ToRESTConfig()
+		restConfig, err = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			clientcmd.NewDefaultClientConfigLoadingRules(),
+			&clientcmd.ConfigOverrides{},
+		).ClientConfig()
 		if err != nil {
 			l.Debug("failed to get REST config, retrying", "error", err)
 			return false, nil
@@ -63,11 +64,21 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("timed out waiting for REST config: %w", err)
 	}
 
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create discovery client: %w", err)
+	}
+
 	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
 	var mapping *meta.RESTMapping
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
-		var err error
-		mapping, err = resolveResourceKind(configFlags, kind)
+		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
+		if err != nil {
+			l.Debug("failed to get API group resources, retrying", "error", err)
+			return false, nil
+		}
+		restMapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+		mapping, err = resolveResourceKind(restMapper, kind)
 		if err != nil {
 			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
 			return false, nil
@@ -89,7 +100,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, remaining)
 	}
 
-	return forResource(ctx, configFlags, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, remaining)
+	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, remaining)
 }
 
 // waitForAnyResource waits for at least one resource of the given kind to exist.
@@ -124,12 +135,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 // resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
 // canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function
 // and the code here was taken directly from https://github.com/kubernetes/kubernetes/blob/eba75de1565852be1b1f27c811d1b44527b266e5/staging/src/k8s.io/cli-runtime/pkg/resource/builder.go#L772
-func resolveResourceKind(configFlags *genericclioptions.ConfigFlags, resourceOrKindArg string) (*meta.RESTMapping, error) {
-	restMapper, err := configFlags.ToRESTMapper()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create REST mapper: %w", err)
-	}
-
+func resolveResourceKind(restMapper meta.RESTMapper, resourceOrKindArg string) (*meta.RESTMapping, error) {
 	fullySpecifiedGVR, groupResource := schema.ParseResourceArg(resourceOrKindArg)
 	gvk := schema.GroupVersionKind{}
 
@@ -182,7 +188,7 @@ func isExistsCondition(condition string) bool {
 }
 
 // forResource is the internal implementation that can be tested with fake clients.
-func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
+func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	var args []string
 	var labelSelector string
@@ -208,26 +214,30 @@ func forResource(ctx context.Context, configFlags *genericclioptions.ConfigFlags
 
 	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
+	configFlags := genericclioptions.NewConfigFlags(true)
+	if namespace != "" {
+		configFlags.Namespace = ptr.To(namespace)
+	}
+	streams := genericiooptions.IOStreams{
+		In:     strings.NewReader(""),
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	}
+	flags := cmdwait.NewWaitFlags(configFlags, streams)
+	flags.Timeout = timeout
+	flags.ForCondition = forCondition
+	if labelSelector != "" {
+		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
+	}
+
+	opts, err := flags.ToOptions(args)
+	if err != nil {
+		return fmt.Errorf("failed to create wait options: %w", err)
+	}
+	opts.DynamicClient = dynamicClient
+
 	waitInterval := time.Second
-	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
-		streams := genericiooptions.IOStreams{
-			In:     strings.NewReader(""),
-			Out:    io.Discard,
-			ErrOut: io.Discard,
-		}
-		flags := cmdwait.NewWaitFlags(configFlags, streams)
-		flags.Timeout = timeout
-		flags.ForCondition = forCondition
-		if labelSelector != "" {
-			flags.ResourceBuilderFlags.LabelSelector = &labelSelector
-		}
-
-		opts, err := flags.ToOptions(args)
-		if err != nil {
-			return false, fmt.Errorf("failed to create wait options: %w", err)
-		}
-		opts.DynamicClient = dynamicClient
-
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		err = opts.RunWait()
 		if err == nil {
 			return true, nil
