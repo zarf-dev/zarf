@@ -57,4 +57,4 @@ jobs:
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
-        if: always()
+        if: failure()

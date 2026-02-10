@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.71.1](https://github.com/zarf-dev/zarf/compare/v0.71.0...v0.71.1) (2026-02-06)
+
+
+### Bug Fixes
+
+* **actions:** shell quote action wait bug ([#4588](https://github.com/zarf-dev/zarf/issues/4588)) ([331f46e](https://github.com/zarf-dev/zarf/commit/331f46e4ef28b52a4dcc775e9376c633a1eafea8))
+
 ## [0.71.0](https://github.com/zarf-dev/zarf/compare/v0.70.1...v0.71.0) (2026-02-04)
 
 

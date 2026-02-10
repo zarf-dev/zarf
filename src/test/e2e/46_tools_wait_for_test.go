@@ -41,7 +41,7 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "30s", "-l", "debug")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -80,7 +80,7 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait using label selector
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "60s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -95,7 +95,12 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "60s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.phase}=Running", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "pod", podName, "'{.status.phase}'=Running", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdOut, stdErr)
+		// Advanced condition
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "pod", podName, "{.status.conditions[?(@.type==\"ContainersReady\")].status}=True", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -140,7 +145,7 @@ func TestWaitFor(t *testing.T) {
 		// Start waiting for the pod in a goroutine before it exists
 		errCh := make(chan error, 1)
 		go func() {
-			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "60s")
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
 			errCh <- err
 		}()
 
