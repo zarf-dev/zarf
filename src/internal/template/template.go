@@ -12,6 +12,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	ttmpl "text/template"
 	"time"
@@ -41,6 +42,38 @@ const (
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
 )
+
+// protectedObjectKeys are the root keys that can be namespaced in templates.
+var protectedObjectKeys = []string{
+	objectKeyValues,
+	objectKeyMetadata,
+	objectKeyBuild,
+	objectKeyConstants,
+	objectKeyVariables,
+}
+
+// protectedKeysPattern matches .RootKey. followed by a word character for any protected root key.
+var protectedKeysPattern = regexp.MustCompile(
+	`\.(` + strings.Join(protectedObjectKeys, "|") + `)\.(\w)`,
+)
+
+// templateBlockPattern matches {{ ... }} template blocks (non-greedy).
+var templateBlockPattern = regexp.MustCompile(`\{\{.*?\}\}`)
+
+// InsertObjectKeyInContent transforms template paths only within {{ }} blocks.
+// e.g., "# .Values.app\n{{ .Values.app.name }}" with key "foo" becomes
+// "# .Values.app\n{{ .Values.foo.app.name }}" - only the template block is transformed.
+func InsertObjectKeyInContent(content, key string) string {
+	return templateBlockPattern.ReplaceAllStringFunc(content, func(block string) string {
+		return protectedKeysPattern.ReplaceAllString(block, ".$1."+key+".$2")
+	})
+}
+
+// InsertObjectKeyInPath transforms a single template path (no delimiters required).
+// e.g., ".Values.app.name" with key "foo" becomes ".Values.foo.app.name"
+func InsertObjectKeyInPath(path, key string) string {
+	return protectedKeysPattern.ReplaceAllString(path, ".$1."+key+".$2")
+}
 
 // NewObjects instantiates an Objects map, which provides templating context. The "with" options below allow for
 // additional template Objects to be included.

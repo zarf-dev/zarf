@@ -5,11 +5,15 @@
 package test
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestValues(t *testing.T) {
@@ -130,4 +134,95 @@ func TestValuesSchema(t *testing.T) {
 		// Check that the error message mentions validation failure
 		require.Contains(t, stdErr, "values validation failed", "error should mention schema validation failure")
 	})
+}
+
+// This test does not require cluster access - can be run independently
+func TestValuesImportNamespacing(t *testing.T) {
+	t.Log("E2E: Values Import Namespacing")
+
+	// Create a package that contains a component import
+	// The child component uses .Values.app.name which gets namespaced to .Values.imported-app.app.name
+	src := filepath.Join("src", "test", "packages", "42-values", "import-namespacing")
+	tmpdir := t.TempDir()
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--features=\"values=true\"")
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Load the created package to inspect its contents
+	packageName := fmt.Sprintf("zarf-package-test-values-import-namespacing-%s.tar.zst", e2e.Arch)
+	tarPath := filepath.Join(tmpdir, packageName)
+	pkgLayout, err := layout.LoadFromTar(t.Context(), tarPath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	// Verify the package has the imported component
+	require.Len(t, pkgLayout.Pkg.Components, 1)
+	comp := pkgLayout.Pkg.Components[0]
+	require.Equal(t, "imported-app", comp.Name)
+
+	// Verify action templates were namespaced
+	// Original: {{ .Values.app.name }} -> Namespaced: {{ .Values.imported-app.app.name }}
+	require.Len(t, comp.Actions.OnDeploy.Before, 2)
+	require.Contains(t, comp.Actions.OnDeploy.Before[0].Cmd, ".Values.imported-app.app.name",
+		"action cmd should have namespaced .Values.app.name to .Values.imported-app.app.name")
+	require.Contains(t, comp.Actions.OnDeploy.Before[1].Cmd, ".Values.imported-app.app.environment",
+		"action cmd should have namespaced .Values.app.environment to .Values.imported-app.app.environment")
+
+	// Verify chart values sourcePath was namespaced
+	// Original: .app.replicas -> Namespaced: .imported-app.app.replicas
+	require.Len(t, comp.Charts, 1)
+	require.Len(t, comp.Charts[0].Values, 3)
+	require.Equal(t, ".imported-app.app.replicas", comp.Charts[0].Values[0].SourcePath,
+		"chart values sourcePath should be namespaced")
+	require.Equal(t, ".imported-app.config.setting", comp.Charts[0].Values[1].SourcePath,
+		"chart values sourcePath should be namespaced")
+	require.Equal(t, ".parent.app.replicas", comp.Charts[0].Values[2].SourcePath,
+		"parent values sourcePath should not be namespaced and should be last in the list")
+
+	// Read and unmarshal the merged values.yaml from the package
+	valuesPath := filepath.Join(pkgLayout.DirPath(), "values.yaml")
+	valuesContent, err := os.ReadFile(valuesPath)
+	require.NoError(t, err, "should be able to read merged values.yaml")
+
+	var values map[string]any
+	err = goyaml.Unmarshal(valuesContent, &values)
+	require.NoError(t, err, "should be able to unmarshal values.yaml")
+
+	// Verify parent-level values are present
+	parent, ok := values["parent"].(map[string]any)
+	require.True(t, ok, "merged values should contain parent-level values")
+	require.Equal(t, "parent-package-name", parent["name"], "parent.name should be set")
+	require.Equal(t, "1.0.0", parent["version"], "parent.version should be set")
+
+	// Verify child values were namespaced under component name and merged
+	importedApp, ok := values["imported-app"].(map[string]any)
+	require.True(t, ok, "merged values should contain namespaced child values under component name")
+
+	app, ok := importedApp["app"].(map[string]any)
+	require.True(t, ok, "imported-app should contain app values")
+	// Parent's override value should take precedence over child defaults
+	require.Equal(t, "production", app["environment"],
+		"parent override should take precedence over child default")
+
+	config, ok := importedApp["config"].(map[string]any)
+	require.True(t, ok, "imported-app should contain config values")
+	require.Equal(t, "parent-override-setting", config["setting"],
+		"parent override should take precedence over child default")
+
+	// Verify manifest file contents were namespaced
+	// Extract the manifests directory from the component
+	manifestsDir, err := pkgLayout.GetComponentDir(context.Background(), tmpdir, "imported-app", layout.ManifestsComponentDir)
+	require.NoError(t, err, "should be able to extract manifests directory")
+
+	// Read the configmap manifest file
+	// The manifest name is "app-configmap" so the file is "app-configmap-0.yaml"
+	manifestContent, err := os.ReadFile(filepath.Join(manifestsDir, "app-configmap-0.yaml"))
+	require.NoError(t, err, "should be able to read manifest file")
+
+	// Verify templates in the manifest were namespaced
+	// Original: {{ .Values.app.name }} -> Namespaced: {{ .Values.imported-app.app.name }}
+	require.Contains(t, string(manifestContent), ".Values.imported-app.app.name",
+		"manifest template should have namespaced .Values.app.name")
+	require.Contains(t, string(manifestContent), ".Values.imported-app.app.environment",
+		"manifest template should have namespaced .Values.app.environment")
+	require.Contains(t, string(manifestContent), ".Values.imported-app.config.setting",
+		"manifest template should have namespaced .Values.config.setting")
 }
