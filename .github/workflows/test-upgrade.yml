@@ -150,7 +150,7 @@ jobs:
 
           echo "***** describing nodes *****"
           sudo env "PATH=$PATH" CI=true kubectl describe nodes -A
-        if: always()
+        if: failure()
 
       # Before we run the upgrade tests we need to aggressively cleanup files to reduce disk pressure
       - name: Cleanup files

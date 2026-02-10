@@ -11,3 +11,6 @@ components:
       - name: chart
         url: oci://test/different-value
         version: 2.3.4
+        values:
+          - sourcePath: .overrideValue
+            targetPath: .config.override

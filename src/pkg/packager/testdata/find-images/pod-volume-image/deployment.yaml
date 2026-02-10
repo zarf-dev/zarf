@@ -29,7 +29,6 @@ spec:
           volumeMounts:
             - name: volume
               mountPath: /volume
-              subPath: dir
       volumes:
         - name: volume
           image:

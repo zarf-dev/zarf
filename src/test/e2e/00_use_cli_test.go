@@ -18,6 +18,9 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/test"
 )
 
 func TestUseCLI(t *testing.T) {
@@ -290,4 +293,60 @@ func TestUseCLI(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "4\n", stdOut)
 	})
+}
+
+func TestBuildMachineInfo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name                 string
+		withBuildMachineInfo bool
+	}{
+		{
+			name:                 "included",
+			withBuildMachineInfo: true,
+		},
+		{
+			name:                 "omitted",
+			withBuildMachineInfo: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := logger.WithContext(t.Context(), test.GetLogger(t))
+			tmpdir := t.TempDir()
+
+			packagePath := filepath.Join("src", "test", "packages", "00-no-components")
+			packageName := fmt.Sprintf("zarf-package-no-components-%s.tar.zst", e2e.Arch)
+
+			args := []string{"package", "create", packagePath, "-o", tmpdir}
+			if tt.withBuildMachineInfo {
+				args = append(args, "--with-build-machine-info")
+			}
+
+			stdOut, stdErr, err := e2e.Zarf(t, args...)
+			require.NoError(t, err, stdOut, stdErr)
+
+			pkgPath := filepath.Join(tmpdir, packageName)
+			pkgLayout, err := layout.LoadFromTar(ctx, pkgPath, layout.PackageLayoutOptions{})
+			require.NoError(t, err)
+
+			stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pkgPath)
+			require.NoError(t, err, stdOut, stdErr)
+
+			if tt.withBuildMachineInfo {
+				require.NotEmpty(t, pkgLayout.Pkg.Build.Terminal)
+				require.NotEmpty(t, pkgLayout.Pkg.Build.User)
+				require.Contains(t, stdOut, "terminal:")
+				require.Contains(t, stdOut, "user:")
+			} else {
+				require.Empty(t, pkgLayout.Pkg.Build.Terminal)
+				require.Empty(t, pkgLayout.Pkg.Build.User)
+				require.NotContains(t, stdOut, "terminal:")
+				require.NotContains(t, stdOut, "user:")
+			}
+		})
+	}
 }

@@ -29,6 +29,9 @@ proxy:
     payLoadConfigMapAmount: "###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###"
     shasum: "###ZARF_INJECTOR_SHASUM###"
 
+mtls:
+  enabled: ###ZARF_REGISTRY_MTLS_ENABLED###
+
 secrets:
   htpasswd: "###ZARF_HTPASSWD###"
   configData:
@@ -60,6 +63,9 @@ affinity:
 
 tolerations:
   ###ZARF_VAR_REGISTRY_TOLERATIONS###
+
+nodeSelector:
+  ###ZARF_VAR_REGISTRY_NODE_SELECTOR###
 
 autoscaling:
   enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###

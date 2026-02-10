@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/pkg/wait"
 )
 
 // Run runs all provided actions.
@@ -48,37 +50,18 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	l := logger.From(ctx)
 	start := time.Now()
 
+	if action.Wait != nil {
+		err := runWaitAction(ctx, action)
+		if err != nil {
+			return err
+		}
+		l.Debug("wait action succeeded", "duration", time.Since(start))
+		return nil
+	}
+
 	tmplObjs := template.NewObjects(values).
 		WithConstants(variableConfig.GetConstants()).
 		WithVariables(variableConfig.GetSetVariableMap())
-
-	// If the action is a wait, convert it to a command.
-	if action.Wait != nil {
-		// If the wait has no timeout, set a default of 5 minutes.
-		if action.MaxTotalSeconds == nil {
-			fiveMin := 300
-			action.MaxTotalSeconds = &fiveMin
-		}
-
-		// Convert the wait to a command.
-		if cmd, err = convertWaitToCmd(ctx, *action.Wait, action.MaxTotalSeconds); err != nil {
-			return err
-		}
-
-		// Mute the output because it will be noisy.
-		t := true
-		action.Mute = &t
-
-		// Set the max retries to 0.
-		z := 0
-		action.MaxRetries = &z
-
-		// Not used for wait actions.
-		d := ""
-		action.Dir = &d
-		action.Env = []string{}
-		action.SetVariables = []v1alpha1.Variable{}
-	}
 
 	if action.Description != "" {
 		cmdEscaped = action.Description
@@ -191,40 +174,60 @@ retryCmd:
 	}
 }
 
-// convertWaitToCmd will return the wait command if it exists, otherwise it will return the original command.
-func convertWaitToCmd(_ context.Context, wait v1alpha1.ZarfComponentActionWait, timeout *int) (string, error) {
-	// Build the timeout string.
-	timeoutString := fmt.Sprintf("--timeout %ds", *timeout)
+func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) error {
+	waitCfg := action.Wait
 
-	// If the action has a wait, build a cmd from that instead.
-	cluster := wait.Cluster
-	if cluster != nil {
-		ns := cluster.Namespace
-		if ns != "" {
-			ns = fmt.Sprintf("-n %s", ns)
-		}
-
-		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %s %s %s",
-			cluster.Kind, cluster.Name, cluster.Condition, ns, timeoutString), nil
+	timeout := 5 * time.Minute
+	if action.MaxTotalSeconds != nil && *action.MaxTotalSeconds > 0 {
+		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
 
-	network := wait.Network
-	if network != nil {
-		// Make sure the protocol is lower case.
-		network.Protocol = strings.ToLower(network.Protocol)
+	switch {
+	case waitCfg.Cluster != nil:
+		return runWaitClusterAction(ctx, waitCfg.Cluster, timeout)
+	case waitCfg.Network != nil:
+		return runWaitNetworkAction(ctx, waitCfg.Network, timeout)
+	default:
+		return fmt.Errorf("wait action is missing a cluster or network")
+	}
+}
 
-		// If the protocol is http and no code is set, default to 200.
-		if strings.HasPrefix(network.Protocol, "http") && network.Code == 0 {
-			network.Code = 200
-		}
+func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
+	l := logger.From(ctx)
 
-		// Build a call to the zarf tools wait-for command.
-		return fmt.Sprintf("./zarf tools wait-for %s %s %d %s",
-			network.Protocol, network.Address, network.Code, timeoutString), nil
+	kind := cluster.Kind
+	identifier := cluster.Name
+	condition := cluster.Condition
+	namespace := cluster.Namespace
+
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return wait.ForResource(ctx, kind, identifier, condition, namespace, timeout)
+}
+
+func runWaitNetworkAction(ctx context.Context, network *v1alpha1.ZarfComponentActionWaitNetwork, timeout time.Duration) error {
+	l := logger.From(ctx)
+
+	kind := strings.ToLower(network.Protocol)
+	identifier := network.Address
+	var condition string
+	if strings.HasPrefix(kind, "http") && network.Code == 0 {
+		condition = "200"
+	} else if network.Code != 0 {
+		condition = strconv.Itoa(network.Code)
 	}
 
-	return "", fmt.Errorf("wait action is missing a cluster or network")
+	desc := fmt.Sprintf("wait for %s/%s", kind, identifier)
+	if condition != "" {
+		desc = fmt.Sprintf("%s to be %s", desc, condition)
+	}
+	l.Info("running wait action", "description", desc)
+
+	return wait.ForNetwork(ctx, kind, identifier, condition, timeout)
 }
 
 // Perform some basic string mutations to make commands more useful.
