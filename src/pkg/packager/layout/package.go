@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -216,11 +217,24 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
+	// Save original version requirements for rollback
+	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
+
+	// When bundle signature feature is enabled, record the version requirement
+	// so older CLIs that don't support bundle format will fail with a clear error
+	if feature.IsEnabled(feature.BundleSignature) {
+		p.Pkg.Build.VersionRequirements = append(p.Pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
+			Version: "v0.XX.0",
+			Reason:  "This package was signed with sigstore bundle format which requires v0.XX.0+",
+		})
+	}
+
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -229,6 +243,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -238,15 +253,22 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Validate outputs before setting temporary paths
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	signOpts.BundlePath = actualBundlePath
 	signOpts.OutputSignature = actualSignaturePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = actualBundlePath
+	} else {
+		signOpts.NewBundleFormat = false
+		signOpts.BundlePath = ""
+	}
 	err = signOpts.CheckOverwrite(ctx)
 	if err != nil {
 		return err
 	}
 
 	signOpts.OutputSignature = tmpSignaturePath
-	signOpts.BundlePath = tmpBundlePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = tmpBundlePath
+	}
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
@@ -254,6 +276,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -273,9 +296,11 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	err = os.Rename(tmpBundlePath, actualBundlePath)
-	if err != nil {
-		return fmt.Errorf("failed to move bundle after signing: %w", err)
+	if feature.IsEnabled(feature.BundleSignature) {
+		err = os.Rename(tmpBundlePath, actualBundlePath)
+		if err != nil {
+			return fmt.Errorf("failed to move bundle after signing: %w", err)
+		}
 	}
 
 	l.Info("package signed successfully")

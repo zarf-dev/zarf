@@ -203,9 +203,10 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 // List of feature names
 const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode   Name = "axolotl-mode"
-	RegistryProxy Name = "registry-proxy"
-	Values        Name = "values"
+	AxolotlMode     Name = "axolotl-mode"
+	RegistryProxy   Name = "registry-proxy"
+	Values          Name = "values"
+	BundleSignature Name = "bundle-signature"
 )
 
 func init() {
@@ -242,6 +243,13 @@ func init() {
 			Enabled: false,
 			Since:   "v0.64.0",
 			Stage:   Alpha,
+		},
+		{
+			Name:        BundleSignature,
+			Description: "Enables sigstore bundle format signatures. When disabled, only legacy signature format is produced.",
+			Enabled:     false,
+			Since:       "v0.XX.0",
+			Stage:       Alpha,
 		},
 	}
 
