@@ -43,7 +43,7 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "po", podName, "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
