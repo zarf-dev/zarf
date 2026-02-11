@@ -19,6 +19,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -42,6 +43,8 @@ type PackageLayoutOptions struct {
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
 	VerifyBlobOptions    utils.VerifyBlobOptions
+	// SkipVersionCheck skips version requirement validation during package loading
+	SkipVersionCheck bool
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -103,6 +106,11 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,
 		Pkg:     pkg,
+	}
+	if !opts.SkipVersionCheck {
+		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
+			return nil, err
+		}
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -224,8 +232,8 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// so older CLIs that don't support bundle format will fail with a clear error
 	if feature.IsEnabled(feature.BundleSignature) {
 		p.Pkg.Build.VersionRequirements = append(p.Pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
-			Version: "v0.XX.0",
-			Reason:  "This package was signed with sigstore bundle format which requires v0.XX.0+",
+			Version: "v0.72.0",
+			Reason:  "This package was signed with sigstore bundle format which requires v0.72.0+",
 		})
 	}
 
