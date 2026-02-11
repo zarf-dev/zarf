@@ -74,7 +74,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 			l.Debug("failed to get API group resources, retrying", "error", err)
 			return false, nil
 		}
-		restMapper := restmapper.NewDiscoveryRESTMapper(groupResources)
+		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
 		mapping, err = resolveResourceKind(restMapper, kind)
 		if err != nil {
 			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
