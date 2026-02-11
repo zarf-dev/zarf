@@ -1735,3 +1735,140 @@ func TestLoadFromDir_VersionRequirements(t *testing.T) {
 		require.NotNil(t, pkgLayout)
 	})
 }
+
+func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	// Helper to create a package directory with an extra file and optional supplemental files list
+	setupPackageWithExtra := func(t *testing.T, extraFileName string, supplementalFiles []string) string {
+		t.Helper()
+
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		pkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name:              "test-supplemental",
+				Version:           "1.0.0",
+				AggregateChecksum: "placeholder",
+			},
+			Build: v1alpha1.ZarfBuildData{
+				Architecture:      "amd64",
+				SupplementalFiles: supplementalFiles,
+			},
+		}
+
+		checksumsContent := ""
+		checksumsHash := sha256.Sum256([]byte(checksumsContent))
+		pkg.Metadata.AggregateChecksum = hex.EncodeToString(checksumsHash[:])
+
+		yamlContent, err := goyaml.Marshal(pkg)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), yamlContent, 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, Checksums), []byte(checksumsContent), 0o644))
+
+		if extraFileName != "" {
+			require.NoError(t, os.WriteFile(filepath.Join(pkgDir, extraFileName), []byte("extra"), 0o644))
+		}
+
+		return pkgDir
+	}
+
+	t.Run("supplemental file is excluded from integrity check", func(t *testing.T) {
+		pkgDir := setupPackageWithExtra(t, "zarf.future.sig", []string{Checksums, "zarf.future.sig"})
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("unknown file without supplemental listing fails integrity check", func(t *testing.T) {
+		pkgDir := setupPackageWithExtra(t, "injected.bin", []string{Checksums})
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		_, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "additional files not present in the checksum")
+	})
+
+	t.Run("backward compat: old package without supplemental files field loads fine", func(t *testing.T) {
+		// Simulates an old package with no SupplementalFiles set but with
+		// a legacy signature file present (covered by hardcoded exclusions)
+		pkgDir := setupPackageWithExtra(t, Signature, nil)
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+}
+
+func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	t.Run("signing populates supplemental files with checksums and signature", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
+					SupplementalFiles: []string{Checksums},
+				},
+			},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		require.Contains(t, pkgLayout.Pkg.Build.SupplementalFiles, Checksums)
+		require.Contains(t, pkgLayout.Pkg.Build.SupplementalFiles, Signature)
+	})
+
+	t.Run("signing rollback restores original supplemental files on failure", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		original := []string{Checksums}
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
+					SupplementalFiles: original,
+				},
+			},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("wrongpassword"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.Error(t, err)
+		require.Equal(t, []string{Checksums}, pkgLayout.Pkg.Build.SupplementalFiles)
+	})
+}

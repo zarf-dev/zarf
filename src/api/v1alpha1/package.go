@@ -275,6 +275,10 @@ type ZarfBuildData struct {
 	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// SupplementalFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	// This list is authenticated through the signed zarf.yaml.
+	SupplementalFiles []string `json:"supplementalFiles,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.

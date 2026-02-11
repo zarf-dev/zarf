@@ -227,6 +227,8 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// Save original version requirements for rollback
 	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
+	// Save original supplemental files for rollback
+	originalSupplementalFiles := slices.Clone(p.Pkg.Build.SupplementalFiles)
 
 	// When bundle signature feature is enabled, record the version requirement
 	// so older CLIs that don't support bundle format will fail with a clear error
@@ -237,12 +239,22 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		})
 	}
 
+	// Append signature files to the supplemental files list.
+	// These are created after checksum generation and cannot be in checksums.txt.
+	// Listing them here allows integrity validation to dynamically exclude them
+	// without hardcoded knowledge of every possible signature file.
+	p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Signature)
+	if feature.IsEnabled(feature.BundleSignature) {
+		p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Bundle)
+	}
+
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -252,6 +264,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -285,6 +298,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -659,11 +673,20 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	// Remove files which are not in the checksums.
+	// zarf.yaml is the root of trust and is always excluded from checksums.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
+	// Hardcoded exclusions for backward compatibility with packages that predate
+	// the SupplementalFiles field. These can be removed once all supported
+	// package versions include SupplementalFiles.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Bundle))
+	// Remove supplemental files declared in the signed zarf.yaml.
+	// This enables forward compatibility — new files added by future CLI versions
+	// are excluded from the strict check without requiring code changes.
+	for _, f := range pkgLayout.Pkg.Build.SupplementalFiles {
+		delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+	}
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {
