@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/wait"
 
 	// Import to initialize client auth plugins.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -54,12 +54,15 @@ func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 		identifier = args[1]
 	}
 
-	// Condition is optional, default to "exists".
 	condition := ""
 	if len(args) > 2 {
 		condition = args[2]
 	}
 
-	// Execute the wait command.
-	return utils.ExecuteWait(cmd.Context(), o.waitTimeout, o.waitNamespace, condition, kind, identifier, timeout)
+	switch kind {
+	case "http", "https", "tcp":
+		return wait.ForNetwork(cmd.Context(), kind, identifier, condition, timeout)
+	default:
+		return wait.ForResource(cmd.Context(), kind, identifier, condition, o.waitNamespace, timeout)
+	}
 }

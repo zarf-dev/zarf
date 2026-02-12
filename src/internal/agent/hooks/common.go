@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
@@ -17,7 +18,6 @@ import (
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
@@ -28,27 +28,30 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
 }
 
-func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, imageAddress string) (string, error) {
+func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {
 	ref, err := registry.ParseReference(imageAddress)
 	if err != nil {
 		return "", err
 	}
+
 	client := &auth.Client{
-		Client: orasRetry.DefaultClient,
-		Cache:  auth.NewCache(),
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Cache: auth.NewCache(),
 		Credential: auth.StaticCredential(ref.Registry, auth.Credential{
 			Username: zarfState.RegistryInfo.PullUsername,
 			Password: zarfState.RegistryInfo.PullPassword,
 		}),
 	}
 
-	http, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
+	plainHTTP, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
 	if err != nil {
 		return "", err
 	}
 
 	registry := &orasRemote.Repository{
-		PlainHTTP: http,
+		PlainHTTP: plainHTTP,
 		Reference: ref,
 		Client:    client,
 	}

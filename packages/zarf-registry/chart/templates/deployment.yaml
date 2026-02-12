@@ -27,6 +27,12 @@ spec:
         {{- end }}
       annotations:
         checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+{{- if .Values.mtls.enabled }}
+{{- $tlsSecret := (lookup "v1" "Secret" .Release.Namespace "zarf-registry-server-tls") }}
+{{- if $tlsSecret }}
+        checksum/tls-secret: {{ $tlsSecret.data | toJson | sha256sum }}
+{{- end }}
+{{- end }}
     spec:
       serviceAccountName: {{ include "docker-registry.serviceAccountName" . }}
       {{- if .Values.imagePullSecrets }}
@@ -54,10 +60,12 @@ spec:
             httpGet:
               path: /
               port: 5000
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           readinessProbe:
             httpGet:
               path: /
               port: 5000
+              scheme: {{ if .Values.mtls.enabled }}HTTPS{{ else }}HTTP{{ end }}
           securityContext:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
@@ -87,6 +95,11 @@ spec:
 {{ toYaml .  | indent 12 }}
 {{- end }}
           volumeMounts:
+{{- if .Values.mtls.enabled }}
+            - name: server-certs
+              mountPath: /certs/server
+              readOnly: true
+{{- end }}
             - name: data
               mountPath: /var/lib/registry/
             - name: config
@@ -128,6 +141,11 @@ spec:
 {{ toYaml .Values.nodeSelector | indent 8 }}
 {{- end }}
       volumes:
+{{- if .Values.mtls.enabled }}
+        - name: server-certs
+          secret:
+            secretName: zarf-registry-server-tls
+{{- end }}
         - name: config
           secret:
             secretName: {{ template "docker-registry.fullname" . }}-secret

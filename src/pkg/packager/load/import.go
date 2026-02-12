@@ -420,6 +420,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 				}
 				comp.Charts[idx].ValuesFiles = append(comp.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
 				comp.Charts[idx].Variables = append(comp.Charts[idx].Variables, overrideChart.Variables...)
+				comp.Charts[idx].Values = append(comp.Charts[idx].Values, overrideChart.Values...)
 				existing = true
 			}
 		}

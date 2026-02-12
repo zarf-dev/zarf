@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
@@ -113,13 +114,24 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}),
 		}
 
-		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
-		if err != nil {
-			return err
+		var certs pki.GeneratedPKI
+		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
+			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if err != nil {
+				return err
+			}
+			client.Client.Transport, err = pki.TransportWithKey(certs)
+			if err != nil {
+				return err
+			}
+		} else {
+			client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if err != nil {
+				return err
+			}
 		}
 
 		plainHTTP := cfg.PlainHTTP
-
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)

@@ -166,6 +166,16 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
 		}
+
+		if r.state.RegistryInfo.ShouldUseMTLS() {
+			clientPKI, err := c.GetRegistryClientMTLSCert(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get registry client certs: %w", err)
+			}
+			if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, name); err != nil {
+				return fmt.Errorf("failed to apply registry client secret to ns: %s: %w", name, err)
+			}
+		}
 	}
 	return nil
 }
