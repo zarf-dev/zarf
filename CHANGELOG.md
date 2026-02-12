@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.71.2](https://github.com/zarf-dev/zarf/compare/v0.71.1...v0.71.2) (2026-02-12)
+
+
+### Features
+
+* add ability to supply custom init package ([#4562](https://github.com/zarf-dev/zarf/issues/4562)) ([f09b126](https://github.com/zarf-dev/zarf/commit/f09b1269531e17e90f492d07ebaa29eca0e46081))
+
 ## [0.71.1](https://github.com/zarf-dev/zarf/compare/v0.71.0...v0.71.1) (2026-02-06)
 
 
