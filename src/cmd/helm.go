@@ -5,34 +5,28 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/cmd/helm"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"helm.sh/helm/v3/pkg/action"
+	helmcmd "helm.sh/helm/v4/pkg/cmd"
+	"helm.sh/helm/v4/pkg/kube"
 )
 
-// ldflags github.com/zarf-dev/zarf/src/cmd.helmVersion=x.x.x
-var helmVersion string
-
 func newHelmCommand() *cobra.Command {
-	actionConfig := new(action.Configuration)
-
 	// Truncate Helm's arguments so that it thinks its all alone
 	helmArgs := []string{}
 	if len(os.Args) > 2 {
 		helmArgs = os.Args[3:]
 	}
-	// The inclusion of Helm in this manner should be changed once https://github.com/helm/helm/pull/13617 is merged
-	cmd, err := helm.NewRootCmd(actionConfig, os.Stdout, helmArgs)
+
+	kube.ManagedFieldsManager = "helm"
+
+	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
-		logger.Default().Debug("failed to initialize helm command", "error", err)
+		logger.Default().Error("Helm command initialization", slog.Any("error", err))
 	}
-	cmd.Short = lang.CmdToolsHelmShort
-	cmd.Long = lang.CmdToolsHelmLong
-	cmd.AddCommand(newToolsVersionCmd("helm", helmVersion))
 
 	return cmd
 }

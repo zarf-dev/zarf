@@ -19,14 +19,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"github.com/zarf-dev/zarf/src/types"
 
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/common"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/release"
+	releasev1 "helm.sh/helm/v4/pkg/release/v1"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 )
 
 // TemplateChart generates a helm template from a given chart.
-func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chart.Chart, values chartutil.Values,
+func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, values common.Values,
 	kubeVersion string, variableConfig *variables.VariableConfig, isInteractive bool, remoteOptions types.RemoteOptions) (string, error) {
 	if variableConfig == nil {
 		variableConfig = template.GetZarfVariableConfig(ctx, isInteractive)
@@ -42,16 +44,15 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	// Bind the helm action.
 	client := action.NewInstall(actionCfg)
 
-	client.DryRun = true
+	client.DryRunStrategy = action.DryRunClient
 	client.Replace = true // Skip the name check.
-	client.ClientOnly = true
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
 	client.PlainHTTP = remoteOptions.PlainHTTP
-	client.InsecureSkipTLSverify = remoteOptions.InsecureSkipTLSVerify
+	client.InsecureSkipTLSVerify = remoteOptions.InsecureSkipTLSVerify
 	if kubeVersion != "" {
-		parsedKubeVersion, err := chartutil.ParseKubeVersion(kubeVersion)
+		parsedKubeVersion, err := common.ParseKubeVersion(kubeVersion)
 		if err != nil {
 			return "", fmt.Errorf("invalid kube version %s: %w", kubeVersion, err)
 		}
@@ -73,15 +74,24 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	}
 
 	// Perform the loadedChart installation.
-	templatedChart, err := client.RunWithContext(ctx, chart, values)
+	templatedReleaser, err := client.RunWithContext(ctx, chart, values)
 	if err != nil {
 		return "", fmt.Errorf("error generating helm chart template: %w", err)
 	}
 
-	manifest := templatedChart.Manifest
+	templatedRelease, err := release.NewAccessor(templatedReleaser)
+	if err != nil {
+		return "", err
+	}
 
-	for _, hook := range templatedChart.Hooks {
-		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest)
+	manifest := templatedRelease.Manifest()
+
+	for _, hook := range templatedRelease.Hooks() {
+		hook, err := release.NewHookAccessor(hook)
+		if err != nil {
+			return "", err
+		}
+		manifest += fmt.Sprintf("\n---\n%s", hook.Manifest())
 	}
 
 	return manifest, nil
@@ -103,12 +113,16 @@ func newTemplateRenderer(actionConfig *action.Configuration, vc *variables.Varia
 // Run satisfies the Helm post-renderer interface and templates the Zarf vars in the rendered manifests.
 func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
+	hooks, resources, err := getTemplatedManifests(renderedManifests, tr.variableConfig, tr.actionConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	finalManifestsOutput := bytes.NewBuffer(nil)
+
+	for _, hook := range hooks {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", hook.Path, hook.Manifest)
+	}
 
 	for _, resource := range resources {
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
@@ -117,35 +131,35 @@ func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer,
 	return finalManifestsOutput, nil
 }
 
-func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]releaseutil.Manifest, error) {
+func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]*releasev1.Hook, []releaseutil.Manifest, error) {
 	tempDir, err := utils.MakeTempDir("")
 	if err != nil {
-		return nil, fmt.Errorf("unable to create tmpdir:  %w", err)
+		return nil, nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
 	path := filepath.Join(tempDir, "chart.yaml")
 
 	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
-		return nil, fmt.Errorf("unable to write the post-render file for the helm chart")
+		return nil, nil, fmt.Errorf("unable to write the post-render file for the helm chart")
 	}
 
 	// Run the template engine against the chart output
 	if err := variableConfig.ReplaceTextTemplate(path); err != nil {
-		return nil, fmt.Errorf("error templating the helm chart: %w", err)
+		return nil, nil, fmt.Errorf("error templating the helm chart: %w", err)
 	}
 
 	// Read back the templated file contents
 	buff, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
+		return nil, nil, fmt.Errorf("error reading temporary post-rendered helm chart: %w", err)
 	}
 
 	// Use helm to re-split the manifest byte (same call used by helm to pass this data to postRender)
-	_, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
+	hooks, resources, err := releaseutil.SortManifests(map[string]string{path: string(buff)},
 		actionConfig.Capabilities.APIVersions,
 		releaseutil.InstallOrder,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error re-rendering helm output: %w", err)
+		return nil, nil, fmt.Errorf("error re-rendering helm output: %w", err)
 	}
-	return resources, nil
+	return hooks, resources, nil
 }
