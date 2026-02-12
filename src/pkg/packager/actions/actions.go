@@ -203,9 +203,11 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, var
 	}
 }
 
+// templateString applies variable substitution to a string using ${ZARF_VAR_NAME}
+// shell-style syntax for backward compatibility with the previous shell-based
+// wait implementation.
 func templateString(s string, templates map[string]*variables.TextTemplate) string {
 	for key, tmpl := range templates {
-		s = strings.ReplaceAll(s, key, tmpl.Value)
 		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
 		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
 	}

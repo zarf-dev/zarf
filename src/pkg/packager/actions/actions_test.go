@@ -226,19 +226,9 @@ func Test_templateString(t *testing.T) {
 			expected: "app=podinfo",
 		},
 		{
-			name:     "standard zarf var syntax",
-			input:    "app=###ZARF_VAR_NAME###",
-			expected: "app=agent-hook",
-		},
-		{
 			name:     "shell-style var syntax",
 			input:    "app=${ZARF_VAR_NAME}",
 			expected: "app=agent-hook",
-		},
-		{
-			name:     "standard zarf const syntax",
-			input:    "###ZARF_CONST_FOO###",
-			expected: "bar",
 		},
 		{
 			name:     "shell-style const syntax",
@@ -247,12 +237,7 @@ func Test_templateString(t *testing.T) {
 		},
 		{
 			name:     "multiple variables",
-			input:    "###ZARF_VAR_NAME### in ###ZARF_VAR_NAMESPACE###",
-			expected: "agent-hook in zarf",
-		},
-		{
-			name:     "mixed syntax",
-			input:    "###ZARF_VAR_NAME### in ${ZARF_VAR_NAMESPACE}",
+			input:    "${ZARF_VAR_NAME} in ${ZARF_VAR_NAMESPACE}",
 			expected: "agent-hook in zarf",
 		},
 		{
