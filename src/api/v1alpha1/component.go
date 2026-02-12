@@ -421,6 +421,8 @@ type ZarfComponentImport struct {
 	Path string `json:"path,omitempty"`
 	// [beta] The URL to a Zarf package to import via OCI.
 	URL string `json:"url,omitempty" jsonschema:"pattern=^oci://.*$"`
+	// Root key for component specific values
+	ValuesKey string `json:"valuesKey,omitempty"`
 }
 
 // Shell represents the desired shell to use for a given command
