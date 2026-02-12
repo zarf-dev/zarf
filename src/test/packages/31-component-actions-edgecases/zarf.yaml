@@ -22,12 +22,14 @@ components:
               cluster:
                 kind: ns
                 name: zarf
+          # Ensure variables work during wait
           - wait:
               cluster:
                 kind: deployment
                 name: "zarf-docker-registry"
                 namespace: "zarf"
                 condition: "'{.status.availableReplicas}'=${ZARF_VAR_AVAILABLE_REPLICAS}"
+          # Ensure values work during wait
           - wait:
               cluster:
                 kind: deployment
