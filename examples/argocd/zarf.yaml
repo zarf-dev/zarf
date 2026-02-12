@@ -8,18 +8,18 @@ components:
     required: true
     charts:
       - name: argo-cd
-        version: 5.54.0
+        version: 9.0.5
         namespace: argocd
         url: https://argoproj.github.io/argo-helm
         releaseName: argocd-baseline
         valuesFiles:
           - baseline/values.yaml
     images:
-      - docker.io/library/redis:7.0.15-alpine
-      - quay.io/argoproj/argocd:v2.9.6
-      # Cosign artifacts for images - argocd - argocd-helm-chart
-      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig
-      - quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att
+      - docker.io/library/redis:7.2.11-alpine
+      - quay.io/argoproj/argocd:v3.1.9
+      # Cosign artifacts for images - argocd-helm-chart
+      - quay.io/argoproj/argocd:sha256-9c33285c0b86a66e9cf9fcafc448e48e0ab7c4678b20b3723556bb6cce8ea0b9.sig
+      - quay.io/argoproj/argocd:sha256-9c33285c0b86a66e9cf9fcafc448e48e0ab7c4678b20b3723556bb6cce8ea0b9.att
   - name: argocd-apps
     required: true
     charts:
@@ -69,12 +69,44 @@ components:
                 name: app=guestbook-ui
                 namespace: guestbook
                 condition: ready
+  - name: oci-helm
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.6.1
+        namespace: podinfo-oci
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - oci-helm/values.yaml
+    images:
+      - ghcr.io/stefanprodan/charts/podinfo:6.9.2
+      - ghcr.io/stefanprodan/podinfo:6.9.2
+  - name: oci-manifests
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.6.1
+        namespace: oci-manifests
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - oci-manifests/values.yaml
+    images:
+      - registry-1.docker.io/dhpup/oci-edge:1.0.6
+      - ghcr.io/dhpup/guestbook:0.1.40
 
 # YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
 # The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
 x-mdx: |
-  This example demonstrates how to use ArgoCD with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
+  This example demonstrates how to use ArgoCD with Zarf to deploy the `stefanprodan/podinfo` app using GitOps with multiple sources including Git, OCI Helm charts, and OCI manifests.
 
   It uses a vanilla configuration of ArgoCD with upstream containers.
+
+  :::note
+
+  OCI support for ArgoCD (both Helm charts and manifests) is in alpha and should be tested on non-production clusters before being deployed to production clusters.
+
+  :::
 
   To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/ref/components/#git-repositories) of the package components documentation.
