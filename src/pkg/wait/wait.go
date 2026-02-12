@@ -15,7 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gpustack/gguf-parser-go/util/ptr"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
+	"k8s.io/utils/ptr"
 )
 
 // ForResource waits for a Kubernetes resource to meet the specified condition.
@@ -197,7 +197,7 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 	}
 
 	forCondition := "create" // default: wait for existence
-	if condition != "" && !isExistsCondition(condition) {
+	if condition != "" && condition != "delete" && !isExistsCondition(condition) {
 		if isJSONPathWaitType(condition) {
 			forCondition = fmt.Sprintf("jsonpath=%s", condition)
 		} else {

@@ -36,7 +36,6 @@ require (
 	github.com/golang-cz/devslog v0.0.15
 	github.com/google/go-containerregistry v0.20.7
 	github.com/gosuri/uitable v0.0.4
-	github.com/gpustack/gguf-parser-go v0.22.1
 	github.com/invopop/jsonschema v0.13.0
 	github.com/mholt/archives v0.1.5
 	github.com/opencontainers/image-spec v1.1.1
@@ -150,6 +149,7 @@ require (
 	github.com/gohugoio/hashstructure v0.6.0 // indirect
 	github.com/google/go-github/v73 v73.0.0 // indirect
 	github.com/gorilla/handlers v1.5.2 // indirect
+	github.com/gpustack/gguf-parser-go v0.22.1 // indirect
 	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.4 // indirect
 	github.com/hashicorp/aws-sdk-go-base/v2 v2.0.0-beta.65 // indirect
@@ -636,7 +636,7 @@ require (
 	k8s.io/component-helpers v0.35.0
 	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
 	k8s.io/metrics v0.35.0 // indirect
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 // indirect
+	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
