@@ -13,15 +13,13 @@ import (
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 
-	"helm.sh/helm/v4/pkg/action"
-	"helm.sh/helm/v4/pkg/cli"
-	"helm.sh/helm/v4/pkg/kube"
 	"helm.sh/helm/v4/pkg/storage/driver"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -126,19 +124,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 			slices.Reverse(reverseInstalledCharts)
 			if opts.Cluster != nil {
 				for _, chart := range reverseInstalledCharts {
-					settings := cli.New()
-					settings.SetNamespace(chart.Namespace)
-					actionConfig := &action.Configuration{}
-					// TODO (phillebaba): Get credentials from cluster instead of reading again.
-					err := actionConfig.Init(settings.RESTClientGetter(), chart.Namespace, "")
-					if err != nil {
-						return err
-					}
-					client := action.NewUninstall(actionConfig)
-					client.KeepHistory = false
-					client.WaitStrategy = kube.StatusWatcherStrategy
-					client.Timeout = opts.Timeout
-					_, err = client.Run(chart.ChartName)
+					err := helm.RemoveChart(ctx, chart.Namespace, chart.ChartName, opts.Timeout)
 					if err != nil && !errors.Is(err, driver.ErrReleaseNotFound) {
 						return fmt.Errorf("unable to uninstall the helm chart %s in the namespace %s: %w", chart.ChartName, chart.Namespace, err)
 					}
