@@ -120,7 +120,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 		return false, nil
 	})
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || wait.Interrupted(err) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return fmt.Errorf("timed out waiting for resource of kind %s", resource)
 		}
 		return err
@@ -221,7 +221,7 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 		ErrOut: io.Discard,
 	}
 	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.Timeout = timeout
+	flags.Timeout = time.Second * 10
 	flags.ForCondition = forCondition
 	if labelSelector != "" {
 		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
@@ -234,6 +234,7 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 	opts.DynamicClient = dynamicClient
 
 	waitInterval := time.Second
+	// We wrap opts.RunWait here because it errors immediately when waiting for a condition of a resource that does not yet exist
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		err = opts.RunWait()
 		if err == nil {
@@ -243,7 +244,7 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 		return false, nil
 	})
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || wait.Interrupted(err) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return fmt.Errorf("timed out waiting for %s/%s to be %s", kind, identifier, forCondition)
 		}
 		return err
