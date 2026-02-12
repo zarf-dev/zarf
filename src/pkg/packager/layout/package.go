@@ -19,7 +19,6 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
@@ -43,8 +42,6 @@ type PackageLayoutOptions struct {
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
 	VerifyBlobOptions    utils.VerifyBlobOptions
-	// SkipVersionCheck skips version requirement validation during package loading
-	SkipVersionCheck bool
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -106,11 +103,6 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	pkgLayout := &PackageLayout{
 		dirPath: dirPath,
 		Pkg:     pkg,
-	}
-	if !opts.SkipVersionCheck {
-		if err := requirements.ValidateVersionRequirements(pkg); err != nil {
-			return nil, err
-		}
 	}
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
@@ -684,8 +676,10 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	// Remove supplemental files declared in the signed zarf.yaml.
 	// This enables forward compatibility — new files added by future CLI versions
 	// are excluded from the strict check without requiring code changes.
-	for _, f := range pkgLayout.Pkg.Build.SupplementalFiles {
-		delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+	if pkgLayout.IsSigned() {
+		for _, f := range pkgLayout.Pkg.Build.SupplementalFiles {
+			delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+		}
 	}
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))

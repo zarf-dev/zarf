@@ -44,8 +44,6 @@ type LoadOptions struct {
 	types.RemoteOptions
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
-	// SkipVersionCheck skips version requirement validation during package loading
-	SkipVersionCheck bool
 }
 
 // LoadPackage fetches, verifies, and loads a Zarf package from the specified source.
@@ -89,7 +87,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
 			CachePath:            opts.CachePath,
-			SkipVersionCheck:     opts.SkipVersionCheck,
 		}
 
 		pkgLayout, err := pullOCI(ctx, ociOpts)
@@ -136,7 +133,6 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		PublicKeyPath:        opts.PublicKeyPath,
 		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
-		SkipVersionCheck:     opts.SkipVersionCheck,
 	}
 	pkgLayout, err := layout.LoadFromTar(ctx, tmpPath, layoutOpts)
 	if err != nil {

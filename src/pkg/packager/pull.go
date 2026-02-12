@@ -95,15 +95,14 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source           string
-	Shasum           string
-	Architecture     string
-	LayersSelector   zoci.LayersSelector
-	Filter           filters.ComponentFilterStrategy
-	OCIConcurrency   int
-	CachePath        string
-	PublicKeyPath    string
-	SkipVersionCheck bool
+	Source         string
+	Shasum         string
+	Architecture   string
+	LayersSelector zoci.LayersSelector
+	Filter         filters.ComponentFilterStrategy
+	OCIConcurrency int
+	CachePath      string
+	PublicKeyPath  string
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -165,7 +164,6 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,
-		SkipVersionCheck:     opts.SkipVersionCheck,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

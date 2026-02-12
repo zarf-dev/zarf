@@ -1608,134 +1608,6 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	})
 }
 
-func TestLoadFromDir_VersionRequirements(t *testing.T) {
-	ctx := testutil.TestContext(t)
-
-	// Helper to create a minimal valid package directory with optional version requirements
-	setupPackageWithVersionReq := func(t *testing.T, requirements []v1alpha1.VersionRequirement) string {
-		t.Helper()
-
-		tmpDir := t.TempDir()
-		pkgDir := filepath.Join(tmpDir, "package")
-		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
-
-		pkg := v1alpha1.ZarfPackage{
-			Kind: v1alpha1.ZarfPackageConfig,
-			Metadata: v1alpha1.ZarfMetadata{
-				Name:              "test-version-req",
-				Version:           "1.0.0",
-				AggregateChecksum: "placeholder",
-			},
-			Build: v1alpha1.ZarfBuildData{
-				Architecture:        "amd64",
-				VersionRequirements: requirements,
-			},
-		}
-
-		checksumsContent := ""
-		checksumsHash := sha256.Sum256([]byte(checksumsContent))
-		pkg.Metadata.AggregateChecksum = hex.EncodeToString(checksumsHash[:])
-
-		yamlContent, err := goyaml.Marshal(pkg)
-		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), yamlContent, 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, Checksums), []byte(checksumsContent), 0o644))
-
-		return pkgDir
-	}
-
-	t.Run("version requirement not met fails before integrity check", func(t *testing.T) {
-		originalVersion := config.CLIVersion
-		defer func() { config.CLIVersion = originalVersion }()
-		config.CLIVersion = "v0.70.0"
-
-		pkgDir := setupPackageWithVersionReq(t, []v1alpha1.VersionRequirement{
-			{Version: "v0.72.0", Reason: "requires bundle signature support"},
-		})
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyNever,
-		}
-
-		_, err := LoadFromDir(ctx, pkgDir, opts)
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "v0.72.0")
-		require.Contains(t, err.Error(), "requires bundle signature support")
-	})
-
-	t.Run("version requirement met proceeds to integrity check", func(t *testing.T) {
-		originalVersion := config.CLIVersion
-		defer func() { config.CLIVersion = originalVersion }()
-		config.CLIVersion = "v0.73.0"
-
-		pkgDir := setupPackageWithVersionReq(t, []v1alpha1.VersionRequirement{
-			{Version: "v0.72.0", Reason: "requires bundle signature support"},
-		})
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyNever,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-		require.Equal(t, "test-version-req", pkgLayout.Pkg.Metadata.Name)
-	})
-
-	t.Run("skip version check bypasses validation", func(t *testing.T) {
-		originalVersion := config.CLIVersion
-		defer func() { config.CLIVersion = originalVersion }()
-		config.CLIVersion = "v0.70.0"
-
-		pkgDir := setupPackageWithVersionReq(t, []v1alpha1.VersionRequirement{
-			{Version: "v0.72.0", Reason: "requires bundle signature support"},
-		})
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyNever,
-			SkipVersionCheck:     true,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("no version requirements succeeds", func(t *testing.T) {
-		originalVersion := config.CLIVersion
-		defer func() { config.CLIVersion = originalVersion }()
-		config.CLIVersion = "v0.70.0"
-
-		pkgDir := setupPackageWithVersionReq(t, nil)
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyNever,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-
-	t.Run("development version skips validation", func(t *testing.T) {
-		originalVersion := config.CLIVersion
-		defer func() { config.CLIVersion = originalVersion }()
-		config.CLIVersion = config.UnsetCLIVersion
-
-		pkgDir := setupPackageWithVersionReq(t, []v1alpha1.VersionRequirement{
-			{Version: "v99.0.0", Reason: "future version"},
-		})
-
-		opts := PackageLayoutOptions{
-			VerificationStrategy: VerifyNever,
-		}
-
-		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
-	})
-}
-
 func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 	t.Parallel()
 
@@ -1749,6 +1621,8 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 		pkgDir := filepath.Join(tmpDir, "package")
 		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
 
+		isSigned := true
+
 		pkg := v1alpha1.ZarfPackage{
 			Kind: v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
@@ -1758,6 +1632,7 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 			},
 			Build: v1alpha1.ZarfBuildData{
 				Architecture:      "amd64",
+				Signed:            &isSigned,
 				SupplementalFiles: supplementalFiles,
 			},
 		}

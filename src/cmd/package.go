@@ -361,7 +361,6 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		SkipVersionCheck:     o.skipVersionCheck,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
