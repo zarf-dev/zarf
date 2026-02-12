@@ -51,7 +51,7 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	start := time.Now()
 
 	if action.Wait != nil {
-		err := runWaitAction(ctx, action)
+		err := runWaitAction(ctx, action, variableConfig)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ retryCmd:
 	}
 }
 
-func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) error {
+func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig) error {
 	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
@@ -182,14 +182,34 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) err
 		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
 
+	// Apply variable substitution to wait action fields.
+	templates := variableConfig.GetAllTemplates()
+
 	switch {
 	case waitCfg.Cluster != nil:
-		return runWaitClusterAction(ctx, waitCfg.Cluster, timeout)
+		cluster := waitCfg.Cluster
+		cluster.Kind = templateString(cluster.Kind, templates)
+		cluster.Name = templateString(cluster.Name, templates)
+		cluster.Namespace = templateString(cluster.Namespace, templates)
+		cluster.Condition = templateString(cluster.Condition, templates)
+		return runWaitClusterAction(ctx, cluster, timeout)
 	case waitCfg.Network != nil:
-		return runWaitNetworkAction(ctx, waitCfg.Network, timeout)
+		network := waitCfg.Network
+		network.Protocol = templateString(network.Protocol, templates)
+		network.Address = templateString(network.Address, templates)
+		return runWaitNetworkAction(ctx, network, timeout)
 	default:
 		return fmt.Errorf("wait action is missing a cluster or network")
 	}
+}
+
+func templateString(s string, templates map[string]*variables.TextTemplate) string {
+	for key, tmpl := range templates {
+		s = strings.ReplaceAll(s, key, tmpl.Value)
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
+	}
+	return s
 }
 
 func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {

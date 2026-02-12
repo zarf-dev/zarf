@@ -3,6 +3,10 @@ metadata:
   name: component-actions-edgecases
   description: Component actions edge cases
 
+variables:
+  - name: AVAILABLE_REPLICAS
+    default: "1"
+
 components:
   - name: on-deploy
     required: true
@@ -15,3 +19,9 @@ components:
               cluster:
                 kind: ns
                 name: zarf
+          - wait:
+              cluster:
+                kind: deployment
+                name: "zarf-docker-registry"
+                namespace: "zarf"
+                condition: "'{.status.availableReplicas}'=${ZARF_VAR_AVAILABLE_REPLICAS}"
