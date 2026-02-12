@@ -22,7 +22,7 @@ This command looks for a zarf-init package in the local directory that the comma
 
 
 ```
-zarf init [flags]
+zarf init [ PACKAGE_SOURCE ] [flags]
 ```
 
 ### Examples
@@ -34,6 +34,9 @@ $ zarf init
 
 # Initializing w/ Zarfs internal git server:
 $ zarf init --components=git-server
+
+# Initializing w/ Zarfs with a custom init package:
+$ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
 # Initializing w/ an internal registry but with a different nodeport:
 $ zarf init --nodeport=30333
