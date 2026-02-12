@@ -7,11 +7,14 @@ variables:
   - name: AVAILABLE_REPLICAS
     default: "1"
 
+values:
+  files:
+    - values.yaml
+
 components:
   - name: on-deploy
     required: true
     actions:
-      # runs during "zarf package remove"
       onDeploy:
         before:
           # Wait for something that doesn't have a namespace (no -n)
@@ -25,3 +28,10 @@ components:
                 name: "zarf-docker-registry"
                 namespace: "zarf"
                 condition: "'{.status.availableReplicas}'=${ZARF_VAR_AVAILABLE_REPLICAS}"
+          - wait:
+              cluster:
+                kind: deployment
+                name: "zarf-docker-registry"
+                namespace: "zarf"
+                condition: "'{.status.availableReplicas}'={{ .Values.availableReplicas }}"
+            template: true
