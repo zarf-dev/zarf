@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -216,11 +217,24 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
+	// Save original supplemental files for rollback
+	originalSupplementalFiles := slices.Clone(p.Pkg.Build.SupplementalFiles)
+
+	// Append signature files to the supplemental files list.
+	// These are created after checksum generation and cannot be in checksums.txt.
+	// Listing them here allows integrity validation to dynamically exclude them
+	// without hardcoded knowledge of every possible signature file.
+	p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Signature)
+	if feature.IsEnabled(feature.BundleSignature) {
+		p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Bundle)
+	}
+
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -229,6 +243,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -238,15 +253,22 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Validate outputs before setting temporary paths
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	signOpts.BundlePath = actualBundlePath
 	signOpts.OutputSignature = actualSignaturePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = actualBundlePath
+	} else {
+		signOpts.NewBundleFormat = false
+		signOpts.BundlePath = ""
+	}
 	err = signOpts.CheckOverwrite(ctx)
 	if err != nil {
 		return err
 	}
 
 	signOpts.OutputSignature = tmpSignaturePath
-	signOpts.BundlePath = tmpBundlePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = tmpBundlePath
+	}
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
@@ -254,6 +276,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -273,9 +296,11 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	err = os.Rename(tmpBundlePath, actualBundlePath)
-	if err != nil {
-		return fmt.Errorf("failed to move bundle after signing: %w", err)
+	if feature.IsEnabled(feature.BundleSignature) {
+		err = os.Rename(tmpBundlePath, actualBundlePath)
+		if err != nil {
+			return fmt.Errorf("failed to move bundle after signing: %w", err)
+		}
 	}
 
 	l.Info("package signed successfully")
@@ -626,11 +651,22 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	// Remove files which are not in the checksums.
+	// zarf.yaml is the root of trust and is always excluded from checksums.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
+	// Hardcoded exclusions for backward compatibility with packages that predate
+	// the SupplementalFiles field. These can be removed once all supported
+	// package versions include SupplementalFiles.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Bundle))
+	// Remove supplemental files declared in the signed zarf.yaml.
+	// This enables forward compatibility — new files added by future CLI versions
+	// are excluded from the strict check without requiring code changes.
+	if pkgLayout.IsSigned() {
+		for _, f := range pkgLayout.Pkg.Build.SupplementalFiles {
+			delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+		}
+	}
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {

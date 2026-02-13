@@ -837,6 +837,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	signed := false
 	pkg.Build.Signed = &signed
 
+	// Record checksums.txt as a supplemental file — it cannot checksum itself.
+	// Signature files are appended by SignPackage() if signing occurs.
+	pkg.Build.SupplementalFiles = []string{Checksums}
+
 	return pkg
 }
 
