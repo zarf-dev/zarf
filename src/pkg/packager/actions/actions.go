@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -50,18 +51,18 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	l := logger.From(ctx)
 	start := time.Now()
 
+	tmplObjs := template.NewObjects(values).
+		WithConstants(variableConfig.GetConstants()).
+		WithVariables(variableConfig.GetSetVariableMap())
+
 	if action.Wait != nil {
-		err := runWaitAction(ctx, action)
+		err := runWaitAction(ctx, action, variableConfig, tmplObjs)
 		if err != nil {
 			return err
 		}
 		l.Debug("wait action succeeded", "duration", time.Since(start))
 		return nil
 	}
-
-	tmplObjs := template.NewObjects(values).
-		WithConstants(variableConfig.GetConstants()).
-		WithVariables(variableConfig.GetSetVariableMap())
 
 	if action.Description != "" {
 		cmdEscaped = action.Description
@@ -119,11 +120,6 @@ retryCmd:
 				}
 			}
 
-			if action.Wait != nil {
-				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
-				return nil
-			}
-
 			l.Debug("completed action", "cmd", cmdEscaped, "duration", time.Since(start))
 
 			// If the command ran successfully, continue to the next action.
@@ -174,7 +170,7 @@ retryCmd:
 	}
 }
 
-func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) error {
+func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, variableConfig *variables.VariableConfig, tmplObjs template.Objects) error {
 	waitCfg := action.Wait
 
 	timeout := 5 * time.Minute
@@ -182,14 +178,80 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction) err
 		timeout = time.Duration(*action.MaxTotalSeconds) * time.Second
 	}
 
+	// Apply variable substitution to wait action fields.
+	templates := variableConfig.GetAllTemplates()
+
+	// Apply go-templates if templating is enabled, in the same way as regular actions.
+	var applyTemplates func(s string) (string, error)
+	if action.ShouldTemplate() {
+		applyTemplates = func(s string) (string, error) {
+			return template.Apply(ctx, s, tmplObjs)
+		}
+	}
+
 	switch {
 	case waitCfg.Cluster != nil:
-		return runWaitClusterAction(ctx, waitCfg.Cluster, timeout)
+		cluster := waitCfg.Cluster
+		cluster.Kind = templateString(cluster.Kind, templates)
+		cluster.Name = templateString(cluster.Name, templates)
+		cluster.Namespace = templateString(cluster.Namespace, templates)
+		cluster.Condition = templateString(cluster.Condition, templates)
+		if applyTemplates != nil {
+			var err error
+			if cluster.Kind, err = applyTemplates(cluster.Kind); err != nil {
+				return fmt.Errorf("could not template wait.cluster.kind: %w", err)
+			}
+			if cluster.Name, err = applyTemplates(cluster.Name); err != nil {
+				return fmt.Errorf("could not template wait.cluster.name: %w", err)
+			}
+			if cluster.Namespace, err = applyTemplates(cluster.Namespace); err != nil {
+				return fmt.Errorf("could not template wait.cluster.namespace: %w", err)
+			}
+			if cluster.Condition, err = applyTemplates(cluster.Condition); err != nil {
+				return fmt.Errorf("could not template wait.cluster.condition: %w", err)
+			}
+		}
+		return runWaitClusterAction(ctx, cluster, timeout)
 	case waitCfg.Network != nil:
-		return runWaitNetworkAction(ctx, waitCfg.Network, timeout)
+		network := waitCfg.Network
+		network.Protocol = templateString(network.Protocol, templates)
+		network.Address = templateString(network.Address, templates)
+		if applyTemplates != nil {
+			var err error
+			if network.Protocol, err = applyTemplates(network.Protocol); err != nil {
+				return fmt.Errorf("could not template wait.network.protocol: %w", err)
+			}
+			if network.Address, err = applyTemplates(network.Address); err != nil {
+				return fmt.Errorf("could not template wait.network.address: %w", err)
+			}
+		}
+		return runWaitNetworkAction(ctx, network, timeout)
 	default:
 		return fmt.Errorf("wait action is missing a cluster or network")
 	}
+}
+
+func templateString(s string, templates map[string]*variables.TextTemplate) string {
+	// Replace ${VAR} syntax (unambiguous due to braces).
+	for key, tmpl := range templates {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
+	}
+
+	// Replace bare $VAR syntax, processing longer names first to avoid
+	// partial matches (e.g. $ZARF_VAR_NAME matching inside $ZARF_VAR_NAMESPACE).
+	keys := make([]string, 0, len(templates))
+	for key := range templates {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, key := range keys {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("$%s", envName), templates[key].Value)
+	}
+	return s
 }
 
 func runWaitClusterAction(ctx context.Context, cluster *v1alpha1.ZarfComponentActionWaitCluster, timeout time.Duration) error {
