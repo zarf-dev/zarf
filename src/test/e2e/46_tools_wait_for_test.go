@@ -33,9 +33,10 @@ func TestWaitFor(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("wait for resource without specified namespace only looks in default namespace", func(t *testing.T) {
+	t.Run("wait for resource without specifying the namespace only looks in default namespace", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", "--timeout", "3s")
+		// There are never any jobs by default
+		_, _, err := e2e.Zarf(t, "tools", "wait-for", "jobs", "--timeout", "3s")
 		require.Error(t, err)
 	})
 
