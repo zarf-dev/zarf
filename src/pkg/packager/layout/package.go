@@ -222,15 +222,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Save original supplemental files for rollback
 	originalSupplementalFiles := slices.Clone(p.Pkg.Build.SupplementalFiles)
 
-	// When bundle signature feature is enabled, record the version requirement
-	// so older CLIs that don't support bundle format will fail with a clear error
-	if feature.IsEnabled(feature.BundleSignature) {
-		p.Pkg.Build.VersionRequirements = append(p.Pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
-			Version: "v0.72.0",
-			Reason:  "This package was signed with sigstore bundle format which requires v0.72.0+",
-		})
-	}
-
 	// Append signature files to the supplemental files list.
 	// These are created after checksum generation and cannot be in checksums.txt.
 	// Listing them here allows integrity validation to dynamically exclude them

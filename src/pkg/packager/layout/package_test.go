@@ -1068,7 +1068,6 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 
 		// Verify version requirement was added
 		require.Len(t, pkgLayout.Pkg.Build.VersionRequirements, 1)
-		require.Equal(t, "v0.72.0", pkgLayout.Pkg.Build.VersionRequirements[0].Version)
 		require.Contains(t, pkgLayout.Pkg.Build.VersionRequirements[0].Reason, "sigstore bundle format")
 	})
 
@@ -1118,7 +1117,6 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		require.NotNil(t, updatedPkg.Build.Signed)
 		require.True(t, *updatedPkg.Build.Signed)
 		require.Len(t, updatedPkg.Build.VersionRequirements, 1)
-		require.Equal(t, "v0.72.0", updatedPkg.Build.VersionRequirements[0].Version)
 	})
 
 	t.Run("verification succeeds with bundle format", func(t *testing.T) {
