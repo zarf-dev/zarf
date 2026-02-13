@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -231,9 +232,24 @@ func runWaitAction(ctx context.Context, action v1alpha1.ZarfComponentAction, var
 }
 
 func templateString(s string, templates map[string]*variables.TextTemplate) string {
+	// Replace ${VAR} syntax (unambiguous due to braces).
 	for key, tmpl := range templates {
 		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
 		s = strings.ReplaceAll(s, fmt.Sprintf("${%s}", envName), tmpl.Value)
+	}
+
+	// Replace bare $VAR syntax, processing longer names first to avoid
+	// partial matches (e.g. $ZARF_VAR_NAME matching inside $ZARF_VAR_NAMESPACE).
+	keys := make([]string, 0, len(templates))
+	for key := range templates {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return len(keys[i]) > len(keys[j])
+	})
+	for _, key := range keys {
+		envName := strings.TrimPrefix(strings.TrimSuffix(key, "###"), "###")
+		s = strings.ReplaceAll(s, fmt.Sprintf("$%s", envName), templates[key].Value)
 	}
 	return s
 }

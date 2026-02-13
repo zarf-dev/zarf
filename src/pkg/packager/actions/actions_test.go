@@ -250,6 +250,21 @@ func Test_templateString(t *testing.T) {
 			input:    "${ZARF_VAR_UNKNOWN}",
 			expected: "${ZARF_VAR_UNKNOWN}",
 		},
+		{
+			name:     "bare dollar sign var syntax",
+			input:    "app=$ZARF_VAR_NAME",
+			expected: "app=agent-hook",
+		},
+		{
+			name:     "bare dollar sign multiple variables",
+			input:    "$ZARF_VAR_NAME in $ZARF_VAR_NAMESPACE",
+			expected: "agent-hook in zarf",
+		},
+		{
+			name:     "mixed syntax",
+			input:    "${ZARF_VAR_NAME} in $ZARF_VAR_NAMESPACE",
+			expected: "agent-hook in zarf",
+		},
 	}
 
 	for _, tt := range tests {
