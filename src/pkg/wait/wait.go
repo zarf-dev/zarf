@@ -27,6 +27,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
 	"k8s.io/utils/ptr"
 )
@@ -48,8 +49,11 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 
 	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
+	var clientCfg clientcmd.ClientConfig
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		var err error
+		loader := clientcmd.NewDefaultClientConfigLoadingRules()
+		clientCfg = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
 		_, restConfig, err = cluster.ClientAndConfig()
 		if err != nil {
 			l.Debug("failed to get REST config, retrying", "error", err)
@@ -91,13 +95,19 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("failed to create dynamic client: %w", err)
 	}
 
+	if namespace == "" && mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		ns, _, err := clientCfg.Namespace()
+		if err != nil {
+			return fmt.Errorf("failed to get users' default namespace: %w", err)
+		}
+		namespace = ns
+	}
 	// If no identifier specified, wait for any resource of this kind to exist
-	remaining := time.Until(deadline)
 	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, remaining)
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, time.Until(deadline))
 	}
 
-	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, remaining)
+	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, time.Until(deadline))
 }
 
 // waitForAnyResource waits for at least one resource of the given kind to exist.
@@ -106,7 +116,11 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 	waitInterval := time.Second
 	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
 
-	resourceClient := dynamicClient.Resource(resource).Namespace(namespace)
+	var resourceClient dynamic.ResourceInterface
+	resourceClient = dynamicClient.Resource(resource)
+	if namespace != "" {
+		resourceClient = dynamicClient.Resource(resource).Namespace(namespace)
+	}
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
@@ -184,7 +198,6 @@ func isExistsCondition(condition string) bool {
 	return false
 }
 
-// forResource is the internal implementation that can be tested with fake clients.
 func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	var args []string

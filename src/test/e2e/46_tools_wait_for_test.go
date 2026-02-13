@@ -32,6 +32,17 @@ func TestWaitFor(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("wait for resource without specified namespace only looks in default namespace", func(t *testing.T) {
+		_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", "--timeout", "3s")
+		require.Error(t, err)
+	})
+
+	t.Run("wait for resource pulls from default namespace", func(t *testing.T) {
+		// There's always a kubernetes svc in the default namespace
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "svc", "--timeout", "3s")
+		require.NoError(t, err, stdOut, stdErr)
+	})
+
 	t.Run("wait for existing resource succeeds immediately", func(t *testing.T) {
 		podName := "existing-pod"
 
