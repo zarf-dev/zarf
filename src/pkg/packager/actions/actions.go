@@ -119,11 +119,6 @@ retryCmd:
 				}
 			}
 
-			if action.Wait != nil {
-				l.Debug("wait for action succeeded", "cmd", cmdEscaped, "duration", time.Since(start))
-				return nil
-			}
-
 			l.Debug("completed action", "cmd", cmdEscaped, "duration", time.Since(start))
 
 			// If the command ran successfully, continue to the next action.
