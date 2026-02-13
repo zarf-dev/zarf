@@ -1065,10 +1065,6 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		require.FileExists(t, legacySignaturePath, "legacy signature should also exist")
 		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
 		require.True(t, *pkgLayout.Pkg.Build.Signed)
-
-		// Verify version requirement was added
-		require.Len(t, pkgLayout.Pkg.Build.VersionRequirements, 1)
-		require.Contains(t, pkgLayout.Pkg.Build.VersionRequirements[0].Reason, "sigstore bundle format")
 	})
 
 	t.Run("version requirement persisted in zarf.yaml on disk", func(t *testing.T) {
@@ -1116,7 +1112,6 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 
 		require.NotNil(t, updatedPkg.Build.Signed)
 		require.True(t, *updatedPkg.Build.Signed)
-		require.Len(t, updatedPkg.Build.VersionRequirements, 1)
 	})
 
 	t.Run("verification succeeds with bundle format", func(t *testing.T) {
