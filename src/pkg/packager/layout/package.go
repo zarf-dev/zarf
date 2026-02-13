@@ -217,8 +217,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
-	// Save original version requirements for rollback
-	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
 	// Save original supplemental files for rollback
 	originalSupplementalFiles := slices.Clone(p.Pkg.Build.SupplementalFiles)
 
@@ -236,7 +234,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
@@ -246,7 +243,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
@@ -280,7 +276,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
