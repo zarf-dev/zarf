@@ -28,22 +28,26 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for non-existent resource times out", func(t *testing.T) {
+		t.Parallel()
 		_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
 		require.Error(t, err)
 	})
 
 	t.Run("wait for resource without specified namespace only looks in default namespace", func(t *testing.T) {
+		t.Parallel()
 		_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", "--timeout", "3s")
 		require.Error(t, err)
 	})
 
 	t.Run("wait for resource pulls from default namespace", func(t *testing.T) {
+		t.Parallel()
 		// There's always a kubernetes svc in the default namespace
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "svc", "--timeout", "3s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait for existing resource succeeds immediately", func(t *testing.T) {
+		t.Parallel()
 		podName := "existing-pod"
 
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
@@ -59,6 +63,7 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for resource existence", func(t *testing.T) {
+		t.Parallel()
 		configMapName := "exists-test-cm"
 
 		_, _, err := e2e.Kubectl(t, "create", "configmap", configMapName, "-n", namespace)
@@ -76,11 +81,13 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for delete succeeds on non-existent resource", func(t *testing.T) {
+		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "configmap", "does-not-exist", "delete", "-n", namespace, "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait with label selector", func(t *testing.T) {
+		t.Parallel()
 		podName := "labeled-pod"
 
 		// Create a pod with a specific label
@@ -98,6 +105,7 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait with jsonpath condition", func(t *testing.T) {
+		t.Parallel()
 		podName := "jsonpath-pod"
 
 		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
@@ -118,6 +126,7 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for any resource of kind times out when none exist", func(t *testing.T) {
+		t.Parallel()
 		// Create a fresh namespace with no deployments
 		emptyNamespace := "wait-for-empty"
 		_, _, err := e2e.Kubectl(t, "create", "namespace", emptyNamespace)
@@ -134,6 +143,7 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for any resource of kind succeeds when one exists", func(t *testing.T) {
+		t.Parallel()
 		// Create a configmap in the namespace
 		_, _, err := e2e.Kubectl(t, "create", "configmap", "any-kind-test-cm", "-n", namespace)
 		require.NoError(t, err)
@@ -148,11 +158,13 @@ func TestWaitFor(t *testing.T) {
 	})
 
 	t.Run("wait for any cluster-scoped resource of kind", func(t *testing.T) {
+		t.Parallel()
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "storageclass", "--timeout", "10s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait for CRD and CR that do not exist in the cluster when wait begins", func(t *testing.T) {
+		t.Parallel()
 		crdName := "zarfwaittests.test.zarf.dev"
 		resourceName := "my-wait-test"
 
@@ -232,6 +244,7 @@ spec:
 	})
 
 	t.Run("wait for pod created after wait starts", func(t *testing.T) {
+		t.Parallel()
 		podName := "delayed-pod"
 
 		// Start waiting for the pod in a goroutine before it exists
