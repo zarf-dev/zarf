@@ -98,6 +98,15 @@ func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
 	suite.Contains(stdErr, "stefanprodan/podinfo")
 }
 
+func (suite *RegistryProxyTestSuite) Test_4_SwitchBetweenNodePort() {
+	// FIXME: verify that it actually correctly switched
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=nodeport", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--confirm")
+	suite.NoError(err, stdOut, stdErr)
+}
+
 func TestRegistryProxy(t *testing.T) {
 	suite.Run(t, new(RegistryProxyTestSuite))
 }
