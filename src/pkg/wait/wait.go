@@ -104,14 +104,14 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	}
 	// If no identifier specified, wait for any resource of this kind to exist
 	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, time.Until(deadline))
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
 	}
 
-	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, time.Until(deadline))
+	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
 }
 
 // waitForAnyResource waits for at least one resource of the given kind to exist.
-func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, timeout time.Duration) error {
+func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
@@ -121,7 +121,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 	if namespace != "" {
 		resourceClient = dynamicClient.Resource(resource).Namespace(namespace)
 	}
-	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
 			l.Debug("error listing resources", "error", err)
@@ -198,7 +198,7 @@ func isExistsCondition(condition string) bool {
 	return false
 }
 
-func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, timeout time.Duration) error {
+func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	var args []string
 	var labelSelector string
@@ -234,7 +234,6 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 		ErrOut: io.Discard,
 	}
 	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.Timeout = time.Second * 10
 	flags.ForCondition = forCondition
 	if labelSelector != "" {
 		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
@@ -247,8 +246,10 @@ func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition
 	opts.DynamicClient = dynamicClient
 
 	waitInterval := time.Second
+	// Give a smaller timeout, so that we can occasionally check context, given that opts.RunWait does not accept context
+	flags.Timeout = time.Second * 10
 	// We wrap opts.RunWait here because it errors immediately when waiting for a condition of a resource that does not yet exist
-	err = wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
 		err = opts.RunWait()
 		if err == nil {
 			return true, nil
