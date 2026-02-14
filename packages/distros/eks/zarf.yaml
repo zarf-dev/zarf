@@ -4,24 +4,9 @@ metadata:
   description: Deploy a EKS K8s cluster
   version: 0.0.3
 
-variables:
-  - name: EKS_CLUSTER_NAME
-    description: The name for the EKS cluster
-    prompt: true
-
-  - name: EKS_INSTANCE_TYPE
-    description: The EC2 instance type for the worker nodes
-    default: t3.small
-
-  - name: EKS_CLUSTER_REGION
-    description: The AWS region to setup the cluster and associated networking
-    default: us-east-1
-
-  - name: PERMISSIONS_BOUNDARY_ARN
-    description: The ARN of the IAM permissions boundary to apply to the cluster resources
-
-  - name: PERMISSIONS_BOUNDARY_TAG
-    description: The tag to apply to the cluster resources to indicate the permissions boundary
+values:
+  files:
+    - values.yaml
 
 components:
   - name: load-eksctl
@@ -29,6 +14,7 @@ components:
     files:
       - source: eks.yaml
         target: eks.yaml
+        template: true
       - source: https://github.com/eksctl-io/eksctl/releases/download/v0.214.0/eksctl_Darwin_amd64.tar.gz
         target: binaries/eksctl_Darwin_x86_64
         executable: true
@@ -53,7 +39,8 @@ components:
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster --dry-run -f eks.yaml
           - cmd: sleep 15
           - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) create cluster -f eks.yaml
-          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c ${ZARF_VAR_EKS_CLUSTER_NAME}
+          - cmd: ./binaries/eksctl_$(uname -s)_$(uname -m) utils write-kubeconfig -c {{ .Values.cluster.name }}
+            template: true
 
   - name: teardown-eks-cluster
     description: Delete the EKS cluster that this package was used to create.
