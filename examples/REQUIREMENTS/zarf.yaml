@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: requirements-test
+  description: Simple package to test REQUIREMENTS handling
+  version: 0.0.1
+  architecture: amd64
+
+components:
+  - name: create-namespace
+    description: Creates a test namespace
+    required: true
+    manifests:
+      - name: namespace
+        namespace: ""
+        files:
+          - manifests/namespace.yaml
