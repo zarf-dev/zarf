@@ -1,0 +1,34 @@
+# YAML file named REQUIREMENTS that specifies prereqs for package to have a clean deploy
+# Tooling that must exist on the agent doing the `zarf package deploy`
+agent:
+  tools:
+    - name: yq
+      version: ">= 4.40.5"
+    - name: custom_binary
+      version: ">= 3.14.0"
+      versionCommand: /path/to/custom_binary --flag-for-version
+      reason: "Used in our create onBefore scripts for X"
+
+  env:
+    - name: HTTPS_PROXY
+      required: false
+
+# Things that must be present on the cluster being deployed into
+# Can specify crds, specific resources, or other zarf packages
+cluster:
+  crds:
+    - name: gateways.gateway.networking.k8s.io
+      version: ">= 1.0.0"
+    - name: certificates.cert-manager.io
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      name: cert-manager
+    - apiVersion: apps/v1
+      kind: Deployment
+      namespace: zarf
+      name: zarf-injector
+  packages:
+    - name: iffy-package
+      version: ">=1.4.0, !=1.6.2, !=1.6.3"
+      reason: "our package is incompatible with iffy-package 1.6.2–1.6.3"

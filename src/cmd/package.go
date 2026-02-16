@@ -253,6 +253,7 @@ type packageDeployOptions struct {
 	verify                  bool
 	skipSignatureValidation bool
 	skipVersionCheck        bool
+	SkipRequirementsCheck   bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -291,6 +292,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	cmd.Flags().BoolVar(&o.SkipRequirementsCheck, "skip-requirements-check", false, "Ignore the package's REQUIREMENTS when deploying")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
@@ -381,6 +383,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		SkipVersionCheck:       o.skipVersionCheck,
+		SkipRequirementsCheck:  o.SkipRequirementsCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
