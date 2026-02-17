@@ -1,0 +1,43 @@
+name: Test Version Delta
+on:
+  pull_request:
+    paths-ignore:
+      - "**.md"
+      - "**.jpg"
+      - "**.png"
+      - "**.gif"
+      - "**.svg"
+      - "adr/**"
+      - "docs/**"
+      - "CODEOWNERS"
+  merge_group:
+
+# Abort prior jobs in the same workflow / PR
+concurrency:
+  group: e2e-version-delta-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version-delta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup golang
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version-file: go.mod
+
+      - name: Build PR binary and zarf init package
+        uses: ./.github/actions/packages
+
+      - name: Install release version of Zarf
+        uses: zarf-dev/setup-zarf@10e539efed02f75ec39eb8823e22a5c795f492ae #v1.0.1
+        with:
+          download-init-package: true
+
+      - name: Initialize the cluster with the release version
+        # Test will initialize the cluster with the latest released version package, with the current built binary
+        run: |
+          sudo env CI=true ./build/zarf init --components k3s,git-server --nodeport 31337 --confirm ${HOME}/.zarf-cache/zarf-init-amd64-$(zarf version).tar.zst
