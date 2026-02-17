@@ -227,8 +227,7 @@ spec:
 		})
 
 		// Wait for the CRD to be established before creating an instance
-		// FIXME: shorthand crd should work here
-		_, _, err = e2e.Zarf(t, "tools", "wait-for", "customresourcedefinitions", crdName, "established", "--timeout=10s")
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "crd", crdName, "established", "--timeout=10s")
 		require.NoError(t, err)
 
 		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)

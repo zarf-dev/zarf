@@ -150,7 +150,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// FIXME: test that normal zarf init works
 	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
 		o.registryInfo.RegistryMode = state.RegistryModeExternal
 	}

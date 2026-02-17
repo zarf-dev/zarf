@@ -189,7 +189,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	// Try to create the zarf namespace.
-	// FIXME: check if doing this would get rid of existing labels.
 	l.Debug("creating the Zarf namespace")
 	zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
 	_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
