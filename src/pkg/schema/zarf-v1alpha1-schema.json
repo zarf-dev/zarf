@@ -346,6 +346,13 @@
           },
           "type": "array"
         },
+        "provenanceFiles": {
+          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
@@ -356,13 +363,6 @@
         "signed": {
           "description": "Whether this package was signed",
           "type": "boolean"
-        },
-        "supplementalFiles": {
-          "description": "SupplementalFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
         },
         "terminal": {
           "description": "The machine name that created this package.",

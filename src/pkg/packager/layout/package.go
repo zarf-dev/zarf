@@ -217,16 +217,16 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
-	// Save original supplemental files for rollback
-	originalSupplementalFiles := slices.Clone(p.Pkg.Build.SupplementalFiles)
+	// Save original provenance files for rollback
+	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
 
-	// Append signature files to the supplemental files list.
+	// Append signature files to the provenance files list.
 	// These are created after checksum generation and cannot be in checksums.txt.
 	// Listing them here allows integrity validation to dynamically exclude them
 	// without hardcoded knowledge of every possible signature file.
-	p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Signature)
+	p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
 	if feature.IsEnabled(feature.BundleSignature) {
-		p.Pkg.Build.SupplementalFiles = append(p.Pkg.Build.SupplementalFiles, Bundle)
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
 	}
 
 	// Marshal package with signed:true
@@ -234,7 +234,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -243,7 +243,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -276,7 +276,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.SupplementalFiles = originalSupplementalFiles
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -654,16 +654,16 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	// zarf.yaml is the root of trust and is always excluded from checksums.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
 	// Hardcoded exclusions for backward compatibility with packages that predate
-	// the SupplementalFiles field. These can be removed once all supported
-	// package versions include SupplementalFiles.
+	// the ProvenanceFiles field. These can be removed once all supported
+	// package versions include ProvenanceFiles.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Bundle))
-	// Remove supplemental files declared in the signed zarf.yaml.
+	// Remove provenance files declared in the signed zarf.yaml.
 	// This enables forward compatibility — new files added by future CLI versions
 	// are excluded from the strict check without requiring code changes.
 	if pkgLayout.IsSigned() {
-		for _, f := range pkgLayout.Pkg.Build.SupplementalFiles {
+		for _, f := range pkgLayout.Pkg.Build.ProvenanceFiles {
 			delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
 		}
 	}

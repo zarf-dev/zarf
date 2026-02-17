@@ -1601,13 +1601,13 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	})
 }
 
-func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
+func TestValidatePackageIntegrity_ProvenanceFiles(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 
-	// Helper to create a package directory with an extra file and optional supplemental files list
-	setupPackageWithExtra := func(t *testing.T, extraFileName string, supplementalFiles []string) string {
+	// Helper to create a package directory with an extra file and optional provenance files list
+	setupPackageWithExtra := func(t *testing.T, extraFileName string, provenanceFiles []string) string {
 		t.Helper()
 
 		tmpDir := t.TempDir()
@@ -1619,14 +1619,14 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 		pkg := v1alpha1.ZarfPackage{
 			Kind: v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
-				Name:              "test-supplemental",
+				Name:              "test-provenance",
 				Version:           "1.0.0",
 				AggregateChecksum: "placeholder",
 			},
 			Build: v1alpha1.ZarfBuildData{
-				Architecture:      "amd64",
-				Signed:            &isSigned,
-				SupplementalFiles: supplementalFiles,
+				Architecture:    "amd64",
+				Signed:          &isSigned,
+				ProvenanceFiles: provenanceFiles,
 			},
 		}
 
@@ -1646,7 +1646,7 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 		return pkgDir
 	}
 
-	t.Run("supplemental file is excluded from integrity check", func(t *testing.T) {
+	t.Run("provenance file is excluded from integrity check", func(t *testing.T) {
 		pkgDir := setupPackageWithExtra(t, "zarf.future.sig", []string{Checksums, "zarf.future.sig"})
 
 		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
@@ -1655,7 +1655,7 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 		require.NotNil(t, pkgLayout)
 	})
 
-	t.Run("unknown file without supplemental listing fails integrity check", func(t *testing.T) {
+	t.Run("unknown file without provenance listing fails integrity check", func(t *testing.T) {
 		pkgDir := setupPackageWithExtra(t, "injected.bin", []string{Checksums})
 
 		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
@@ -1664,8 +1664,8 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 		require.Contains(t, err.Error(), "additional files not present in the checksum")
 	})
 
-	t.Run("backward compat: old package without supplemental files field loads fine", func(t *testing.T) {
-		// Simulates an old package with no SupplementalFiles set but with
+	t.Run("backward compat: old package without provenance files field loads fine", func(t *testing.T) {
+		// Simulates an old package with no ProvenanceFiles set but with
 		// a legacy signature file present (covered by hardcoded exclusions)
 		pkgDir := setupPackageWithExtra(t, Signature, nil)
 
@@ -1676,12 +1676,12 @@ func TestValidatePackageIntegrity_SupplementalFiles(t *testing.T) {
 	})
 }
 
-func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
+func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 
-	t.Run("signing populates supplemental files with checksums and signature", func(t *testing.T) {
+	t.Run("signing populates provenance files with checksums and signature", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
 
@@ -1692,7 +1692,7 @@ func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
 			dirPath: tmpDir,
 			Pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					SupplementalFiles: []string{Checksums},
+					ProvenanceFiles: []string{Checksums},
 				},
 			},
 		}
@@ -1707,11 +1707,11 @@ func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
 
-		require.Contains(t, pkgLayout.Pkg.Build.SupplementalFiles, Checksums)
-		require.Contains(t, pkgLayout.Pkg.Build.SupplementalFiles, Signature)
+		require.Contains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Checksums)
+		require.Contains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Signature)
 	})
 
-	t.Run("signing rollback restores original supplemental files on failure", func(t *testing.T) {
+	t.Run("signing rollback restores original provenance files on failure", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
 
@@ -1723,7 +1723,7 @@ func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
 			dirPath: tmpDir,
 			Pkg: v1alpha1.ZarfPackage{
 				Build: v1alpha1.ZarfBuildData{
-					SupplementalFiles: original,
+					ProvenanceFiles: original,
 				},
 			},
 		}
@@ -1737,6 +1737,6 @@ func TestSignPackage_PopulatesSupplementalFiles(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.Error(t, err)
-		require.Equal(t, []string{Checksums}, pkgLayout.Pkg.Build.SupplementalFiles)
+		require.Equal(t, []string{Checksums}, pkgLayout.Pkg.Build.ProvenanceFiles)
 	})
 }
