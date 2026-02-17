@@ -72,10 +72,10 @@ func componentMatrix(t *testing.T) []v1alpha1.ZarfComponent {
 					}
 				}
 
-				name.WriteString(fmt.Sprintf("required=%v", requiredValue))
+				fmt.Fprintf(&name, "required=%v", requiredValue)
 
 				if groupValue != "" {
-					name.WriteString(fmt.Sprintf(" && group=%s && idx=%d && default=%t", groupValue, idx, defaultValue))
+					fmt.Fprintf(&name, " && group=%s && idx=%d && default=%t", groupValue, idx, defaultValue)
 				} else if defaultValue {
 					name.WriteString(" && default=true")
 				}
