@@ -259,10 +259,21 @@ type ZarfManifest struct {
 	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
+	// whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.
+	// Auto uses whichever strategy that chart was previously installed with.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 	// [alpha]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (m ZarfManifest) GetServerSideApply() string {
+	if m.ServerSideApply == "" {
+		return "auto"
+	}
+	return m.ServerSideApply
 }
 
 // IsTemplate returns if the ZarfFile should be templated.

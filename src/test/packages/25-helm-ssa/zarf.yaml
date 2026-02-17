@@ -18,3 +18,14 @@ components:
         namespace: configmap-with-ssa
         localPath: chart
         serverSideApply: "true"
+    manifests:
+      - name: test-with-ssa
+        files:
+          - configmap.yaml
+        namespace: "manifest-with-ssa"
+        serverSideApply: "true"
+      - name: test-without-ssa
+        files:
+          - configmap.yaml
+        serverSideApply: "false"
+        namespace: "manifest-without-ssa"

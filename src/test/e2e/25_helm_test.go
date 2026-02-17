@@ -136,6 +136,16 @@ func testHelmServerSideApply(t *testing.T) {
 	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
 	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
 
+	// Verify manifest-with-ssa was deployed with server-side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "zarf-71016e23f48837b03b2b97da9d8431281380c50c", "-n", "manifest-with-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-with-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: server-side apply")
+
+	// Verify manifest-without-ssa was deployed with client side apply
+	stdOut, _, err = e2e.Zarf(t, "tools", "helm", "get", "metadata", "zarf-36ee54b64d04b2baf257eb9c2cd8208be817ab10", "-n", "manifest-without-ssa")
+	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
+	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
+
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
