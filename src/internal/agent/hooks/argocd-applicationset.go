@@ -75,7 +75,7 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 		"git-server", s.GitServer.Address)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, _, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}

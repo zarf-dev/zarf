@@ -206,7 +206,7 @@ func waitArgoDeployment(t *testing.T) {
 	require.NoError(t, err)
 	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, _, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	require.NoError(t, err)
 	expectedMutatedHelmOCIURL := fmt.Sprintf("oci://%s/stefanprodan/charts/podinfo", registryAddress)
 	expectedMutatedManifestOCIURL := fmt.Sprintf("oci://%s/dhpup/oci-edge", registryAddress)
