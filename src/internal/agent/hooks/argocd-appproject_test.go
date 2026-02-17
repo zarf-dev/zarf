@@ -44,8 +44,6 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 			Address: "127.0.0.1:31999",
 		},
 	}
-	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{
@@ -116,7 +114,7 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/sourceRepos/0",
-					"oci://10.11.12.13:5000/stefanprodan/charts/podinfo",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
@@ -168,6 +166,8 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

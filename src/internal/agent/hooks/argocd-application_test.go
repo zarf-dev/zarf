@@ -44,8 +44,6 @@ func TestArgoAppWebhook(t *testing.T) {
 			Address: "127.0.0.1:31999",
 		},
 	}
-	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
 
 	tests := []admissionTest{
 		{
@@ -137,11 +135,11 @@ func TestArgoAppWebhook(t *testing.T) {
 			patch: []operations.PatchOperation{
 				operations.ReplacePatchOperation(
 					"/spec/source/repoURL",
-					"oci://10.11.12.13:5000/stefanprodan/charts/podinfo",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
 				),
 				operations.ReplacePatchOperation(
 					"/spec/sources/0/repoURL",
-					"oci://10.11.12.13:5000/stefanprodan/manifests/podinfo",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo",
 				),
 				operations.ReplacePatchOperation(
 					"/metadata/labels",
@@ -182,10 +180,94 @@ func TestArgoAppWebhook(t *testing.T) {
 			code:        http.StatusInternalServerError,
 			errContains: AgentErrTransformGitURL,
 		},
+		{
+			name: "should not mutate already patched cluster DNS url",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Update, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo"},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should mutate cluster IP to DNS",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Update, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://10.11.12.13:5000/stefanprodan/charts/podinfo"},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

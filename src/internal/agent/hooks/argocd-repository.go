@@ -73,17 +73,25 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	isOCIURL := helpers.IsOCIURL(repoCreds.URL)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, _, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	patchedURL, err := getPatchedRepoURL(ctx, repoCreds.URL, registryAddress, s.GitServer, r)
+	patchedURL, err := getPatchedRepoURL(ctx, repoCreds.URL, registryAddress, clusterIP, s.GitServer, r)
 	if err != nil {
 		return nil, err
 	}
 
-	patches := populateArgoRepositoryPatchOperations(patchedURL, s.GitServer, s.RegistryInfo, isOCIURL)
+	useMTLS := s.RegistryInfo.ShouldUseMTLS()
+	if useMTLS && isOCIURL {
+		_, err = cluster.GetRegistryClientMTLSCert(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find registry client mTLS secret: %w", err)
+		}
+	}
+
+	patches := populateArgoRepositoryPatchOperations(patchedURL, s.GitServer, s.RegistryInfo, isOCIURL, useMTLS)
 	patches = append(patches, getLabelPatch(secret.Labels))
 
 	return &operations.Result{
@@ -93,7 +101,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 }
 
 // Patch updates of the Argo Repository Secret.
-func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitServerInfo, registryInfo state.RegistryInfo, isOCIURL bool) []operations.PatchOperation {
+func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitServerInfo, registryInfo state.RegistryInfo, isOCIURL bool, useMTLS bool) []operations.PatchOperation {
 	var patches []operations.PatchOperation
 	username, password := getCreds(isOCIURL, gitServer, registryInfo)
 
@@ -101,8 +109,12 @@ func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitSe
 	patches = append(patches, operations.ReplacePatchOperation("/data/username", base64.StdEncoding.EncodeToString([]byte(username))))
 	patches = append(patches, operations.ReplacePatchOperation("/data/password", base64.StdEncoding.EncodeToString([]byte(password))))
 
-	if isOCIURL && registryInfo.IsInternal() {
+	if isOCIURL && registryInfo.IsInternal() && !useMTLS {
 		patches = append(patches, operations.ReplacePatchOperation("/data/insecureOCIForceHttp", base64.StdEncoding.EncodeToString([]byte("true"))))
+	}
+
+	if useMTLS && isOCIURL {
+		patches = append(patches, operations.ReplacePatchOperation("/data/tlsClientCertData", base64.StdEncoding.EncodeToString([]byte(cluster.RegistryClientTLSSecret))))
 	}
 
 	return patches
