@@ -42,6 +42,6 @@ func TestComponentActionEdgeCases(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", sourcePath, "--confirm", "-o", tmpdir, "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--features=\"values=true\"")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
