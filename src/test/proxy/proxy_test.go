@@ -6,6 +6,7 @@ package proxy
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -102,6 +103,9 @@ func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
 }
 
 func (suite *RegistryProxyTestSuite) Test_4_SwitchBetweenNodePort() {
+	if os.Getenv("NODEPORT_COMPATIBLE") != "true" {
+		suite.T().Skip("skipping nodeport switch test: NODEPORT_COMPATIBLE is not true")
+	}
 	ctx := suite.T().Context()
 	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=nodeport", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
