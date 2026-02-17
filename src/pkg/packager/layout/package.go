@@ -224,8 +224,11 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// These are created after checksum generation and cannot be in checksums.txt.
 	// Listing them here allows integrity validation to dynamically exclude them
 	// without hardcoded knowledge of every possible signature file.
-	p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
-	if feature.IsEnabled(feature.BundleSignature) {
+	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Signature) {
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
+	}
+
+	if feature.IsEnabled(feature.BundleSignature) && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
 		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
 	}
 
@@ -361,7 +364,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	}
 
 	// Legacy signature found
-	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package.")
+	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package with the --features='bundle-signature=true' flag.")
 	opts.SigRef = signaturePath
 
 	opts.NewBundleFormat = false
