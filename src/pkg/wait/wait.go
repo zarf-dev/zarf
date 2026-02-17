@@ -8,156 +8,263 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"path"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
+	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
+	"k8s.io/utils/ptr"
 )
 
-// isJSONPathWaitType checks if the condition is a JSONPath or condition.
-func isJSONPathWaitType(condition string) bool {
-	if len(condition) == 0 || condition[0] != '{' || !strings.Contains(condition, "=") || !strings.Contains(condition, "}") {
-		return false
-	}
-	return true
-}
-
-// unsafeShellCharsRegex matches any character that is NOT a letter, digit, underscore (/w) or shell safe special characters
-var unsafeShellCharsRegex = regexp.MustCompile(`[^\w@%+=:,./-]`)
-
-// Source: https://github.com/alessio/shellescape/blob/v1.6.0/shellescape.go#L30-L42
-// SPDX-License-Identifier: MIT
-// Minor edits: Simplified for use case
-func shellQuote(s string) string {
-	if len(s) == 0 {
-		return "''"
-	}
-	if unsafeShellCharsRegex.MatchString(s) {
-		return fmt.Sprintf("'%s'", strings.ReplaceAll(s, "'", "'\"'\"'"))
-	}
-	return s
-}
-
-// ForResource waits for a Kubernetes resource to meet the specified condition using kubectl wait.
+// ForResource waits for a Kubernetes resource to meet the specified condition.
+// It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
+// If identifier is empty, it will wait for any resource of the given kind to exist.
+// This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
 func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
+	if kind == "" {
+		return errors.New("kind is required")
+	}
+
 	waitInterval := time.Second
+	deadline := time.Now().Add(timeout)
 
-	// Type of wait, condition or JSONPath
-	var waitType string
-
-	// Strip any existing shell quotes from the condition before processing
 	condition = strings.ReplaceAll(condition, "'", "")
 
-	// Check if waitType is JSONPath or condition
-	if isJSONPathWaitType(condition) {
-		waitType = "jsonpath="
-		// Ensure any conditions aren't shell escaped
-		condition = shellQuote(condition)
-	} else {
-		waitType = "condition="
-	}
-
-	// Get the Zarf command configuration.
-	zarfCommand, err := utils.GetFinalExecutableCommand()
+	// Wait for the cluster to become available by polling for a successful REST config.
+	var restConfig *rest.Config
+	var clientCfg clientcmd.ClientConfig
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
+		var err error
+		loader := clientcmd.NewDefaultClientConfigLoadingRules()
+		clientCfg = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
+		_, restConfig, err = cluster.ClientAndConfig()
+		if err != nil {
+			l.Debug("failed to get REST config, retrying", "error", err)
+			return false, nil
+		}
+		return true, nil
+	})
 	if err != nil {
-		return fmt.Errorf("could not locate the current Zarf binary path: %w", err)
+		return fmt.Errorf("timed out waiting for REST config: %w", err)
 	}
 
-	identifierMsg := identifier
-
-	// If the identifier contains an equals sign, convert to a label selector.
-	if strings.ContainsRune(identifier, '=') {
-		identifierMsg = fmt.Sprintf(" with label `%s`", identifier)
-		identifier = fmt.Sprintf("-l %s", identifier)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create discovery client: %w", err)
 	}
 
-	// Set the timeout for the wait-for command.
-	expired := time.After(timeout)
+	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
+	var mapping *meta.RESTMapping
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
+		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
+		if err != nil {
+			l.Debug("failed to get API group resources, retrying", "error", err)
+			return false, nil
+		}
+		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
+		mapping, err = resolveResourceKind(restMapper, kind)
+		if err != nil {
+			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("timed out waiting to resolve resource kind %q: %w", kind, err)
+	}
 
-	// Set the custom message for optional namespace.
-	namespaceMsg := ""
-	namespaceFlag := ""
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	if namespace == "" && mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		ns, _, err := clientCfg.Namespace()
+		if err != nil {
+			return fmt.Errorf("failed to get users' default namespace: %w", err)
+		}
+		namespace = ns
+	}
+	// If no identifier specified, wait for any resource of this kind to exist
+	if identifier == "" {
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
+	}
+
+	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
+}
+
+// waitForAnyResource waits for at least one resource of the given kind to exist.
+func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
+	l := logger.From(ctx)
+	waitInterval := time.Second
+	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
+
+	var resourceClient dynamic.ResourceInterface
+	resourceClient = dynamicClient.Resource(resource)
 	if namespace != "" {
-		namespaceFlag = fmt.Sprintf("-n %s", namespace)
-		namespaceMsg = fmt.Sprintf(" in namespace %s", namespace)
+		resourceClient = dynamicClient.Resource(resource).Namespace(namespace)
+	}
+	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
+		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
+		if err != nil {
+			l.Debug("error listing resources", "error", err)
+			return false, nil
+		}
+		if len(list.Items) > 0 {
+			return true, nil
+		}
+		l.Debug("retrying wait for any resource of kind", "kind", resource.Resource, "namespace", namespace)
+		return false, nil
+	})
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("timed out waiting for resource of kind %s", resource)
+		}
+		return err
+	}
+	l.Info("found resource", "kind", resource.Resource, "namespace", namespace)
+	return nil
+}
+
+// resolveResourceKind resolves user input (like "pods", "po", "deployments.v1.apps") to a
+// canonical resource mapping. This follows the same approach as kubectl wait's mappingFor function
+// and the code here was taken directly from https://github.com/kubernetes/kubernetes/blob/eba75de1565852be1b1f27c811d1b44527b266e5/staging/src/k8s.io/cli-runtime/pkg/resource/builder.go#L772
+func resolveResourceKind(restMapper meta.RESTMapper, resourceOrKindArg string) (*meta.RESTMapping, error) {
+	fullySpecifiedGVR, groupResource := schema.ParseResourceArg(resourceOrKindArg)
+	gvk := schema.GroupVersionKind{}
+
+	if fullySpecifiedGVR != nil {
+		gvk, _ = restMapper.KindFor(*fullySpecifiedGVR) //nolint:errcheck // mirrors k8s.io/cli-runtime/pkg/resource/builder.go mappingFor
+	}
+	if gvk.Empty() {
+		gvk, _ = restMapper.KindFor(groupResource.WithVersion("")) //nolint:errcheck // mirrors k8s.io/cli-runtime/pkg/resource/builder.go mappingFor
 	}
 
-	// Setup the spinner messages.
-	conditionMsg := fmt.Sprintf("waiting for %s%s to be %s.", path.Join(kind, identifierMsg), namespaceMsg, condition)
-	existMsg := fmt.Sprintf("waiting for %s%s to exist.", path.Join(kind, identifierMsg), namespaceMsg)
-	completedMsg := fmt.Sprintf("wait for %s%s complete.", path.Join(kind, identifierMsg), namespaceMsg)
+	if !gvk.Empty() {
+		return restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	}
 
-	// Get the OS shell to execute commands in
-	shell, shellArgs := exec.GetOSShell(v1alpha1.Shell{Windows: "cmd"})
+	fullySpecifiedGVK, groupKind := schema.ParseKindArg(resourceOrKindArg)
+	if fullySpecifiedGVK == nil {
+		gvk := groupKind.WithVersion("")
+		fullySpecifiedGVK = &gvk
+	}
 
-	l.Info(existMsg)
-	for {
-		// Delay the check for 1 second
-		time.Sleep(waitInterval)
-
-		select {
-		case <-expired:
-			return errors.New("wait timed out")
-		case <-ctx.Done():
-			return errors.New("received interrupt")
-
-		default:
-			// Check if the resource exists.
-			l.Debug("checking resource existence", "namespace", namespaceFlag, "kind", kind, "identifier", identifier)
-			zarfKubectlGet := fmt.Sprintf("%s tools kubectl get %s %s %s", zarfCommand, namespaceFlag, kind, identifier)
-			cmd := append(shellArgs, zarfKubectlGet)
-			stdout, stderr, err := exec.Cmd(shell, cmd...)
-			l.Debug("cmd done", "cmd", cmd, "stdout", stdout, "stderr", stderr, "error", err)
-			if err != nil {
-				if strings.Contains(stderr, "connect: connection refused") {
-					l.Info("api server unavailable")
-					continue
-				}
-				// otherwise just log and retry
-				l.Info("resource error", "error", err)
-				continue
-			}
-
-			resourceNotFound := strings.Contains(stderr, "No resources found")
-			if resourceNotFound {
-				l.Debug("resource not found", "error", err)
-				continue
-			}
-
-			// If only checking for existence, exit here.
-			switch condition {
-			case "", "exist", "exists":
-				return nil
-			}
-
-			l.Info(conditionMsg)
-			// Wait for the resource to meet the given condition.
-			zarfKubectlWait := fmt.Sprintf("%s tools kubectl wait %s %s %s --for %s%s --timeout=%ds",
-				zarfCommand, namespaceFlag, kind, identifier, waitType, condition, int(timeout.Seconds()))
-
-			// If there is an error, log it and try again.
-			waitCmd := append(shellArgs, zarfKubectlWait)
-			waitStdout, waitStderr, err := exec.Cmd(shell, waitCmd...)
-			l.Debug("wait done", "cmd", waitCmd, "stdout", waitStdout, "stderr", waitStderr, "error", err)
-			if err != nil {
-				l.Debug("wait error", "error", err)
-				continue
-			}
-
-			// And just like that, success!
-			l.Info(completedMsg)
-			return nil
+	if !fullySpecifiedGVK.Empty() {
+		if mapping, err := restMapper.RESTMapping(fullySpecifiedGVK.GroupKind(), fullySpecifiedGVK.Version); err == nil {
+			return mapping, nil
 		}
 	}
+
+	mapping, err := restMapper.RESTMapping(groupKind, gvk.Version)
+	if err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil, fmt.Errorf("the server doesn't have a resource type %q", groupResource.Resource)
+		}
+		return nil, err
+	}
+
+	return mapping, nil
+}
+
+func isJSONPathWaitType(condition string) bool {
+	return len(condition) != 0 && condition[0] == '{' && strings.Contains(condition, "=") && strings.Contains(condition, "}")
+}
+
+func isExistsCondition(condition string) bool {
+	reservedConditions := []string{"create", "exist", "exists"}
+	for _, rc := range reservedConditions {
+		if strings.EqualFold(condition, rc) {
+			return true
+		}
+	}
+	return false
+}
+
+func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, deadline time.Time) error {
+	l := logger.From(ctx)
+	var args []string
+	var labelSelector string
+	if strings.ContainsRune(identifier, '=') {
+		args = []string{kind}
+		labelSelector = identifier
+	} else {
+		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
+	}
+
+	forCondition := "create" // default: wait for existence
+	if condition != "" && condition != "delete" && !isExistsCondition(condition) {
+		if isJSONPathWaitType(condition) {
+			forCondition = fmt.Sprintf("jsonpath=%s", condition)
+		} else {
+			forCondition = fmt.Sprintf("condition=%s", condition)
+		}
+	}
+
+	if condition == "delete" {
+		forCondition = "delete"
+	}
+
+	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+
+	configFlags := genericclioptions.NewConfigFlags(true)
+	if namespace != "" {
+		configFlags.Namespace = ptr.To(namespace)
+	}
+	streams := genericiooptions.IOStreams{
+		In:     strings.NewReader(""),
+		Out:    io.Discard,
+		ErrOut: io.Discard,
+	}
+	flags := cmdwait.NewWaitFlags(configFlags, streams)
+	flags.ForCondition = forCondition
+	if labelSelector != "" {
+		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
+	}
+
+	opts, err := flags.ToOptions(args)
+	if err != nil {
+		return fmt.Errorf("failed to create wait options: %w", err)
+	}
+	opts.DynamicClient = dynamicClient
+
+	waitInterval := time.Second
+	// Give a smaller timeout, so that we can occasionally check context, given that opts.RunWait does not accept context
+	flags.Timeout = time.Second * 10
+	// We wrap opts.RunWait here because it errors immediately when waiting for a condition of a resource that does not yet exist
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
+		err = opts.RunWait()
+		if err == nil {
+			return true, nil
+		}
+		l.Debug("retrying wait", "err", err)
+		return false, nil
+	})
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("timed out waiting for %s/%s to be %s", kind, identifier, forCondition)
+		}
+		return err
+	}
+	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	return nil
 }
 
 // ForNetwork waits for a network endpoint to respond.
