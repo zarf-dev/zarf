@@ -293,7 +293,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	// If the injector mode is changing from nodeport to proxy or vice versa, reset the injector port
 	if (s.RegistryInfo.RegistryMode == state.RegistryModeProxy && opts.RegistryInfo.RegistryMode == state.RegistryModeNodePort) ||
-		s.RegistryInfo.RegistryMode == state.RegistryModeNodePort && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		(s.RegistryInfo.RegistryMode == state.RegistryModeNodePort && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy) {
 		s.InjectorInfo.Port = 0
 	}
 
