@@ -93,10 +93,11 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
+	pkg := result.Package
 
 	s, err := state.Default()
 	if err != nil {

@@ -42,8 +42,16 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
+// DefinitionResult stores the definition type as well as values from component imports
+type DefinitionResult struct {
+	// The Zarf package definition
+	Package v1alpha1.ZarfPackage
+	// All values merged for precedence
+	value.Values
+}
+
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinitionResult, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -54,40 +62,47 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinitionResult{}, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinitionResult{}, err
 	}
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinitionResult{}, err
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		return DefinitionResult{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	pkg, values, err := resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	if err != nil {
+		return DefinitionResult{}, err
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return DefinitionResult{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+
+	result := DefinitionResult{
+		Package: pkg,
+		Values:  values,
+	}
+
+	err = validate(ctx, result.Package, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinitionResult{}, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
+	return result, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
