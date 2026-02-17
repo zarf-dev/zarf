@@ -188,8 +188,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		return nil, fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
-	// Try to create the zarf namespace.
-	l.Debug("creating the Zarf namespace")
+	l.Debug("applying the Zarf namespace")
 	zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
 	_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
 	if err != nil {
@@ -258,14 +257,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			if err != nil {
 				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
 			}
-		}
-
-		// Try to create the zarf namespace.
-		l.Debug("creating the Zarf namespace")
-		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
-		if err != nil {
-			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 
 		// Wait up to 2 minutes for the default service account to be created.
