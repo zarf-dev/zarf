@@ -289,7 +289,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
+		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
 		if err != nil {
 			return nil, err
 		}
