@@ -16,6 +16,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -214,7 +215,6 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 	t.Run("successful signing", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
@@ -234,8 +234,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath, "bundle format signature should exist")
-		require.FileExists(t, legacySignaturePath, "legacy signature should exist for backward compatibility")
+		require.FileExists(t, legacySignaturePath, "legacy signature should exist")
 		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
 		require.True(t, *pkgLayout.Pkg.Build.Signed)
 	})
@@ -325,16 +324,13 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 	t.Run("overwrite existing signature", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
 		require.NoError(t, err)
 
-		// Create existing signature files (both formats)
+		// Create existing legacy signature file
 		err = os.WriteFile(legacySignaturePath, []byte("old legacy signature"), 0o644)
-		require.NoError(t, err)
-		err = os.WriteFile(bundlePath, []byte("old bundle"), 0o644)
 		require.NoError(t, err)
 
 		pkgLayout := &PackageLayout{
@@ -350,21 +346,16 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		opts.PassFunc = passFunc
 		opts.Overwrite = true
 
-		// Should overwrite the existing signatures (with warning logged)
+		// Should overwrite the existing signature (with warning logged)
 		err = pkgLayout.SignPackage(ctx, opts)
 
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
 		require.FileExists(t, legacySignaturePath)
 
-		// Verify the signatures were overwritten (not the old content)
+		// Verify the signature was overwritten (not the old content)
 		legacyContent, err := os.ReadFile(legacySignaturePath)
 		require.NoError(t, err)
 		require.NotEqual(t, "old legacy signature", string(legacyContent))
-
-		bundleContent, err := os.ReadFile(bundlePath)
-		require.NoError(t, err)
-		require.NotEqual(t, "old bundle", string(bundleContent))
 	})
 
 	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
@@ -539,10 +530,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
 
-		// Verify both signature formats exist
-		bundlePath := filepath.Join(tmpDir, Bundle)
+		// Verify only legacy signature exists (bundle disabled by default)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
-		require.FileExists(t, bundlePath, "bundle format signature should exist")
 		require.FileExists(t, legacySignaturePath, "legacy signature should exist")
 
 		// Read the zarf.yaml from disk
@@ -758,7 +747,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	t.Run("successful verification with valid signature", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 		legacySignaturePath := filepath.Join(tmpDir, Signature)
 
 		// Create and sign a package
@@ -770,7 +758,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		// Sign the package
+		// Sign the package (legacy only, bundle feature disabled by default)
 		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 			return []byte("test"), nil
 		})
@@ -780,10 +768,9 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, signOpts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath, "bundle format signature should exist")
 		require.FileExists(t, legacySignaturePath, "legacy signature should exist")
 
-		// Verify the signature (should use bundle format as primary)
+		// Verify the signature (should use legacy format)
 		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
@@ -893,7 +880,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	t.Run("verification fails with no public key", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 
 		// Create signed package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
@@ -914,7 +900,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, signOpts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
 
 		// Try to verify without providing a key
 		verifyOpts := utils.DefaultVerifyBlobOptions()
@@ -927,7 +912,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 
 		// Create and sign package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
@@ -948,13 +932,17 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, signOpts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
 
-		// Corrupt the bundle signature
-		err = os.WriteFile(bundlePath, []byte("corrupted bundle data"), 0o644)
-		require.NoError(t, err)
+		// Corrupt all signature files that were produced
+		for _, sigFile := range []string{Signature, Bundle} {
+			sigPath := filepath.Join(tmpDir, sigFile)
+			if _, statErr := os.Stat(sigPath); statErr == nil {
+				err = os.WriteFile(sigPath, []byte("corrupted data"), 0o644)
+				require.NoError(t, err)
+			}
+		}
 
-		// Try to verify with corrupted signature
+		// Try to verify with corrupted signature(s)
 		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
@@ -965,7 +953,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 	t.Run("verification fails when zarf.yaml is modified after signing", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
-		bundlePath := filepath.Join(tmpDir, Bundle)
 
 		// Create and sign package
 		err := os.WriteFile(yamlPath, []byte("original content"), 0o644)
@@ -986,7 +973,6 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, signOpts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
 
 		// Modify the zarf.yaml after signing (tampering)
 		err = os.WriteFile(yamlPath, []byte("modified content"), 0o644)
@@ -1025,19 +1011,175 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.SignPackage(ctx, signOpts)
 		require.NoError(t, err)
-		require.FileExists(t, bundlePath)
 		require.FileExists(t, legacySignaturePath)
 
-		// Remove the bundle to test legacy fallback
+		// Remove the bundle if it exists to force legacy fallback
 		err = os.Remove(bundlePath)
 		require.NoError(t, err)
 
-		// Verification should still work with legacy signature
+		// Verification should work with legacy signature (fallback path)
 		verifyOpts := utils.DefaultVerifyBlobOptions()
 		verifyOpts.KeyRef = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.NoError(t, err, "verification should succeed with legacy signature format")
+	})
+}
+
+// TestSignPackageBundleSignatureEnabled tests signing behavior when the BundleSignature
+// feature flag is enabled. This test uses feature.Set() which is write-once, so it must
+// be the last signing-related test to run. It is intentionally not parallel.
+func TestSignPackageBundleSignatureEnabled(t *testing.T) {
+	// Enable the BundleSignature feature flag via feature.Set()
+	err := feature.Set([]feature.Feature{
+		{Name: feature.BundleSignature, Enabled: true},
+	})
+	require.NoError(t, err)
+
+	ctx := testutil.TestContext(t)
+
+	t.Run("signing produces both bundle and legacy formats", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		bundlePath := filepath.Join(tmpDir, Bundle)
+		legacySignaturePath := filepath.Join(tmpDir, Signature)
+
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+		require.FileExists(t, bundlePath, "bundle format signature should exist when feature is enabled")
+		require.FileExists(t, legacySignaturePath, "legacy signature should also exist")
+		require.NotNil(t, pkgLayout.Pkg.Build.Signed)
+		require.True(t, *pkgLayout.Pkg.Build.Signed)
+	})
+
+	t.Run("version requirement persisted in zarf.yaml on disk", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		initialPkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name:    "test-package",
+				Version: "1.0.0",
+			},
+			Build: v1alpha1.ZarfBuildData{
+				Architecture: "amd64",
+			},
+		}
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     initialPkg,
+		}
+
+		b, err := goyaml.Marshal(initialPkg)
+		require.NoError(t, err)
+		err = os.WriteFile(yamlPath, b, 0o644)
+		require.NoError(t, err)
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		// Read the zarf.yaml from disk and verify version requirement
+		updatedBytes, err := os.ReadFile(yamlPath)
+		require.NoError(t, err)
+
+		var updatedPkg v1alpha1.ZarfPackage
+		err = goyaml.Unmarshal(updatedBytes, &updatedPkg)
+		require.NoError(t, err)
+
+		require.NotNil(t, updatedPkg.Build.Signed)
+		require.True(t, *updatedPkg.Build.Signed)
+	})
+
+	t.Run("verification succeeds with bundle format", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		bundlePath := filepath.Join(tmpDir, Bundle)
+
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, bundlePath)
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.NoError(t, err)
+	})
+
+	t.Run("verification falls back to legacy when bundle removed", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		bundlePath := filepath.Join(tmpDir, Bundle)
+		legacySignaturePath := filepath.Join(tmpDir, Signature)
+
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		signOpts := utils.DefaultSignBlobOptions()
+		signOpts.KeyRef = "./testdata/cosign.key"
+		signOpts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+		require.FileExists(t, bundlePath)
+		require.FileExists(t, legacySignaturePath)
+
+		// Remove bundle to force legacy fallback
+		err = os.Remove(bundlePath)
+		require.NoError(t, err)
+
+		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub"
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.NoError(t, err, "should fall back to legacy signature")
 	})
 }
 
@@ -1456,5 +1598,145 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 		})
 		require.NotNil(t, pkgLayout)
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
+	})
+}
+
+func TestValidatePackageIntegrity_ProvenanceFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	// Helper to create a package directory with an extra file and optional provenance files list
+	setupPackageWithExtra := func(t *testing.T, extraFileName string, provenanceFiles []string) string {
+		t.Helper()
+
+		tmpDir := t.TempDir()
+		pkgDir := filepath.Join(tmpDir, "package")
+		require.NoError(t, os.MkdirAll(pkgDir, 0o700))
+
+		isSigned := true
+
+		pkg := v1alpha1.ZarfPackage{
+			Kind: v1alpha1.ZarfPackageConfig,
+			Metadata: v1alpha1.ZarfMetadata{
+				Name:              "test-provenance",
+				Version:           "1.0.0",
+				AggregateChecksum: "placeholder",
+			},
+			Build: v1alpha1.ZarfBuildData{
+				Architecture:    "amd64",
+				Signed:          &isSigned,
+				ProvenanceFiles: provenanceFiles,
+			},
+		}
+
+		checksumsContent := ""
+		checksumsHash := sha256.Sum256([]byte(checksumsContent))
+		pkg.Metadata.AggregateChecksum = hex.EncodeToString(checksumsHash[:])
+
+		yamlContent, err := goyaml.Marshal(pkg)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, ZarfYAML), yamlContent, 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, Checksums), []byte(checksumsContent), 0o644))
+
+		if extraFileName != "" {
+			require.NoError(t, os.WriteFile(filepath.Join(pkgDir, extraFileName), []byte("extra"), 0o644))
+		}
+
+		return pkgDir
+	}
+
+	t.Run("provenance file is excluded from integrity check", func(t *testing.T) {
+		pkgDir := setupPackageWithExtra(t, "zarf.future.sig", []string{Checksums, "zarf.future.sig"})
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("unknown file without provenance listing fails integrity check", func(t *testing.T) {
+		pkgDir := setupPackageWithExtra(t, "injected.bin", []string{Checksums})
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		_, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "additional files not present in the checksum")
+	})
+
+	t.Run("backward compat: old package without provenance files field loads fine", func(t *testing.T) {
+		// Simulates an old package with no ProvenanceFiles set but with
+		// a legacy signature file present (covered by hardcoded exclusions)
+		pkgDir := setupPackageWithExtra(t, Signature, nil)
+
+		opts := PackageLayoutOptions{VerificationStrategy: VerifyNever}
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+}
+
+func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	t.Run("signing populates provenance files with checksums and signature", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
+					ProvenanceFiles: []string{Checksums},
+				},
+			},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("test"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.NoError(t, err)
+
+		require.Contains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Checksums)
+		require.Contains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Signature)
+	})
+
+	t.Run("signing rollback restores original provenance files on failure", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
+		require.NoError(t, err)
+
+		original := []string{Checksums}
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg: v1alpha1.ZarfPackage{
+				Build: v1alpha1.ZarfBuildData{
+					ProvenanceFiles: original,
+				},
+			},
+		}
+
+		passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
+			return []byte("wrongpassword"), nil
+		})
+		opts := utils.DefaultSignBlobOptions()
+		opts.KeyRef = "./testdata/cosign.key"
+		opts.PassFunc = passFunc
+
+		err = pkgLayout.SignPackage(ctx, opts)
+		require.Error(t, err)
+		require.Equal(t, []string{Checksums}, pkgLayout.Pkg.Build.ProvenanceFiles)
 	})
 }

@@ -275,6 +275,10 @@ type ZarfBuildData struct {
 	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	// This list is authenticated through the signed zarf.yaml.
+	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.
