@@ -32,6 +32,8 @@ func newWaitForCommand() *cobra.Command {
 		Args:    cobra.MinimumNArgs(1),
 		RunE:    o.run,
 	}
+	cmd.AddCommand(newWaitForResourceCommand())
+	cmd.AddCommand(newWaitForNetworkCommand())
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
@@ -65,4 +67,84 @@ func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
 	default:
 		return wait.ForResource(cmd.Context(), kind, identifier, condition, o.waitNamespace, timeout)
 	}
+}
+
+type waitForResourceOptions struct {
+	timeout   string
+	namespace string
+}
+
+// newWaitForResourceCommand creates the `wait-for-resource` command.
+func newWaitForResourceCommand() *cobra.Command {
+	o := waitForResourceOptions{}
+	cmd := &cobra.Command{
+		Use: "resource KIND NAME [CONDITION]",
+		// FIXME:
+		// Short:   lang.CmdToolsWaitForResourceShort,
+		// Long:    lang.CmdToolsWaitForResourceLong,
+		// Example: lang.CmdToolsWaitForResourceExample,
+		Args: cobra.MinimumNArgs(2),
+		RunE: o.run,
+	}
+
+	cmd.Flags().StringVar(&o.timeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
+	cmd.Flags().StringVarP(&o.namespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
+
+	return cmd
+}
+
+func (o *waitForResourceOptions) run(cmd *cobra.Command, args []string) error {
+	timeout, err := time.ParseDuration(o.timeout)
+	if err != nil {
+		return fmt.Errorf("invalid timeout duration %s, use a valid duration string e.g. 1s, 2m, 3h: %w", o.timeout, err)
+	}
+
+	kind := args[0]
+	identifier := args[1]
+
+	condition := ""
+	if len(args) > 2 {
+		condition = args[2]
+	}
+
+	return wait.ForResourceDefaultReady(cmd.Context(), kind, identifier, condition, o.namespace, timeout)
+}
+
+type waitForNetworkOptions struct {
+	timeout string
+}
+
+// newWaitForNetworkCommand creates the `wait-for-network` command.
+func newWaitForNetworkCommand() *cobra.Command {
+	o := waitForNetworkOptions{}
+	cmd := &cobra.Command{
+		Use: "network PROTOCOL ADDRESS [CODE]",
+		// FIXME:
+		// Short:   lang.CmdToolsWaitForNetworkShort,
+		// Long:    lang.CmdToolsWaitForNetworkLong,
+		// Example: lang.CmdToolsWaitForNetworkExample,
+		Args: cobra.MinimumNArgs(2),
+		RunE: o.run,
+	}
+
+	cmd.Flags().StringVar(&o.timeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
+
+	return cmd
+}
+
+func (o *waitForNetworkOptions) run(cmd *cobra.Command, args []string) error {
+	timeout, err := time.ParseDuration(o.timeout)
+	if err != nil {
+		return fmt.Errorf("invalid timeout duration %s, use a valid duration string e.g. 1s, 2m, 3h: %w", o.timeout, err)
+	}
+
+	protocol := args[0]
+	address := args[1]
+
+	condition := ""
+	if len(args) > 2 {
+		condition = args[2]
+	}
+
+	return wait.ForNetwork(cmd.Context(), protocol, address, condition, timeout)
 }

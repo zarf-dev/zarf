@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	cmdwait "k8s.io/kubectl/pkg/cmd/wait"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/cli-utils/pkg/object"
 )
 
 // ForResource waits for a Kubernetes resource to meet the specified condition.
@@ -110,6 +112,75 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
 }
 
+// ForResourceDefaultReady waits for any resource
+// If identifier is empty, it will wait for any resource of the given kind to exist.
+func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
+	l := logger.From(ctx)
+	if kind == "" {
+		return errors.New("kind is required")
+	}
+
+	waitInterval := time.Second
+	deadline := time.Now().Add(timeout)
+
+	condition = strings.ReplaceAll(condition, "'", "")
+
+	loader := clientcmd.NewDefaultClientConfigLoadingRules()
+	clientCfg := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, nil)
+	_, restConfig, err := cluster.ClientAndConfig()
+	if err != nil {
+		return err
+	}
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create discovery client: %w", err)
+	}
+
+	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
+	var mapping *meta.RESTMapping
+	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
+		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
+		if err != nil {
+			l.Debug("failed to get API group resources, retrying", "error", err)
+			return false, nil
+		}
+		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
+		mapping, err = resolveResourceKind(restMapper, kind)
+		if err != nil {
+			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return fmt.Errorf("timed out waiting to resolve resource kind %q: %w", kind, err)
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create dynamic client: %w", err)
+	}
+
+	if namespace == "" && mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+		ns, _, err := clientCfg.Namespace()
+		if err != nil {
+			return fmt.Errorf("failed to get users' default namespace: %w", err)
+		}
+		namespace = ns
+	}
+	// If no identifier specified, wait for any resource of this kind to exist
+	if identifier == "" {
+		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
+	}
+
+	if condition == "" {
+		return waitForReadyWithHealthchecks(ctx, restConfig, dynamicClient, mapping, identifier, namespace, deadline)
+	}
+
+	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
+}
+
 // waitForAnyResource waits for at least one resource of the given kind to exist.
 func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
@@ -124,8 +195,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
-			l.Debug("error listing resources", "error", err)
-			return false, nil
+			return true, fmt.Errorf("failed to list resources: %w", err)
 		}
 		if len(list.Items) > 0 {
 			return true, nil
@@ -182,6 +252,83 @@ func resolveResourceKind(restMapper meta.RESTMapper, resourceOrKindArg string) (
 	}
 
 	return mapping, nil
+}
+
+func waitForReadyWithHealthchecks(ctx context.Context, restConfig *rest.Config, dynamicClient dynamic.Interface, mapping *meta.RESTMapping,
+	identifier, namespace string, deadline time.Time) error {
+	l := logger.From(ctx)
+
+	watcher, err := cluster.WatcherForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create status watcher: %w", err)
+	}
+
+	var objs []object.ObjMetadata
+
+	waitInterval := time.Second
+
+	if strings.ContainsRune(identifier, '=') {
+		err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
+			objs, err = listResourcesWithSelector(ctx, dynamicClient, mapping, identifier, namespace)
+			if err != nil {
+				return false, err
+			}
+			if len(objs) > 0 {
+				return true, nil
+			}
+			l.Debug("did not find resources matching selector", "kind", mapping.GroupVersionKind.Kind, "selector", identifier)
+			return false, nil
+		})
+		if err != nil {
+			return err
+		}
+
+		l.Info("waiting for resources to be ready", "kind", mapping.GroupVersionKind.Kind, "selector", identifier, "count", len(objs))
+	} else {
+		objs = []object.ObjMetadata{
+			{
+				GroupKind: mapping.GroupVersionKind.GroupKind(),
+				Namespace: namespace,
+				Name:      identifier,
+			},
+		}
+		l.Info("waiting for resource to be ready", "kind", mapping.GroupVersionKind.Kind, "name", identifier, "namespace", namespace)
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Until(deadline))
+	defer cancel()
+
+	err = healthchecks.WaitForReady(timeoutCtx, watcher, objs)
+	if err != nil {
+		return err
+	}
+
+	l.Info("resource(s) are ready", "kind", mapping.GroupVersionKind.Kind, "identifier", identifier)
+	return nil
+}
+
+func listResourcesWithSelector(ctx context.Context, dynamicClient dynamic.Interface,
+	mapping *meta.RESTMapping, selector, namespace string) ([]object.ObjMetadata, error) {
+	var resourceClient dynamic.ResourceInterface
+	resourceClient = dynamicClient.Resource(mapping.Resource)
+	if namespace != "" {
+		resourceClient = dynamicClient.Resource(mapping.Resource).Namespace(namespace)
+	}
+
+	list, err := resourceClient.List(ctx, metav1.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list resources: %w", err)
+	}
+
+	objs := make([]object.ObjMetadata, 0, len(list.Items))
+	for _, item := range list.Items {
+		objs = append(objs, object.ObjMetadata{
+			GroupKind: mapping.GroupVersionKind.GroupKind(),
+			Namespace: item.GetNamespace(),
+			Name:      item.GetName(),
+		})
+	}
+	return objs, nil
 }
 
 func isJSONPathWaitType(condition string) bool {

@@ -5,6 +5,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -252,6 +253,35 @@ spec:
 		errCh := make(chan error, 1)
 		go func() {
 			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
+			errCh <- err
+		}()
+
+		// Let the wait attempt to pull the pod
+		time.Sleep(3 * time.Second)
+
+		// Create the pod after the wait has started
+		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			require.NoError(t, err)
+		})
+
+		// Wait should succeed after the pod is created and becomes ready
+		err = <-errCh
+		require.NoError(t, err)
+	})
+
+	t.Run("wait for resource readiness automatically", func(t *testing.T) {
+		t.Parallel()
+		podName := "pod-readiness"
+
+		// Start waiting for the pod in a goroutine before it exists
+		errCh := make(chan error, 1)
+		go func() {
+			stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "-n", namespace, "--timeout", "20s")
+			fmt.Println(stdout, stderr)
 			errCh <- err
 		}()
 
