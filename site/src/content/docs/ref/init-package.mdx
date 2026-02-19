@@ -37,7 +37,9 @@ An 'init' package requires a series of specially named, and configured component
 - [`zarf-registry`](#zarf-registry)
 - [`zarf-agent`](#zarf-agent)
 
-### `zarf-injector` and `zarf-seed-registry`
+### Registry Components
+
+#### Internal Registry Pre-reqs
 
 One of the most challenging aspects of deploying into an air-gapped environment is the initial bootstrapping of the cluster.
 
@@ -55,24 +57,41 @@ But then we have another problem of how to reassemble the image on the other sid
 
 The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:3` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:3` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:3` image.
 
-> While the `zarf-injector` component *must* be defined and deployed *before* the `zarf-seed-registry` component, the magic doesn't start until `zarf-seed-registry` is deployed. The `zarf-injector` component for the most part just copies the `zarf-injector` binary to `###ZARF_TEMP###/zarf-injector`.
+The `zarf-injector` component copies the injector rust binary to `###ZARF_TEMP###/zarf-injector`, it doesn't launch the injector.
 
-When `zarf init` deploys the `zarf-seed-registry` component, the following happens:
+The behavior of the `zarf-seed-registry` component differs depending on the registry mode, decided by the init flag `--registry-mode=nodeport|proxy`
+
+#### NodePort mode
+
+Nodeport mode relies on a short lived injector to create a localhost NodePort service that the registry Deployment in the `zarf-seed-registry` chart can pull from.
+
+:::note
+
+Doing this keeps Zarf cluster agnostic, however does require that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6 only clusters and NFTables block access to localhost NodePort services.
+
+:::
+
+When `zarf init` deploys the `zarf-seed-registry` component in nodeport mode, the following happens:
 
 1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
 2. Zarf connects to the cluster and grabs a pod that is running an image that is already present in the cluster.
 3. Zarf spins up a pod using the existing image, mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` image chunks and runs the `zarf-injector` binary.
-
-:::note
-
-Doing this keeps Zarf cluster agnostic, however does require that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling.
-
-:::
-
 4. The `zarf-injector` binary reassembles the `registry:3` image and hosts a temporary registry that the cluster can pull from.
 5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
 6. Once the `docker-registry` chart is deployed, the `zarf-seed-registry` component is marked as complete and the `zarf-injector` pod is removed from the cluster.
 7. Deployment proceeds to the `zarf-registry` component.
+
+
+#### Proxy Mode
+
+When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
+
+1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
+2. Zarf connects to the cluster and chooses the [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause)
+  - Because Kubernetes does not expose which pause image is in use, Zarf determines the pause image by choosing the highest version image that meet the following criteria: between major semver versions of 3 or 4, less than 1Mib in size, includes pause in the name.
+3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` and `alpine/socat` image chunks
+4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with the `proxy.enabled: true`. This creates a long lived hostPort or hostNetwork proxy DaemonSet alongside a Zarf Injector Daemonset.
+5. The registry Deployment and Proxy Daemonset have images pointing to the Zarf Injector Daemonset, which is also exposed through a host port or host network proxy. This allows the Kubelet to pull these images.
 
 :::note
 
@@ -80,13 +99,14 @@ The `registry:3` image and the Zarf Agent image can be configured with a custom 
 
 :::
 
-### `zarf-registry`
+#### Long Lived Registry
 
 The `zarf-registry` component is a long-lived container registry service that is deployed into the cluster.
 
 It leverages the same `docker-registry` chart used in `zarf-seed-registry` but with a few key differences:
 
-1. The `image.repository` is set to the value of the built-in variable `###ZARF_REGISTRY###` which is set at runtime to the registry hosted by `zarf-seed-registry`.
+1a. In NodePort mode the `image.repository` is set to the value of the built-in variable `###ZARF_REGISTRY###`. This means the registry image is pulled from the registry.
+1b. In proxy mode the `image.repository` stays pointed to the long lived injector.
 {/* you know, why DO we do this? if we kept the repository the same, and kept running the injector, couldnt this handle cluster full-deaths??? (ofc would need to tweak the zarf-agent to not mutate the image.repository for the docker-registry chart under the zarf namespace, but i think it might be doable) */}
 2. A `connect` manifest for running [`zarf connect registry`](/commands/zarf_connect/) to tunnel to the Zarf Registry.
 3. A configmap to satisfy [KEP-1755](https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry)
