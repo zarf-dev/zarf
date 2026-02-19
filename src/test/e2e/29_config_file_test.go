@@ -7,6 +7,7 @@ package test
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -142,4 +143,41 @@ func TestConfigFileDefault(t *testing.T) {
 	for _, test := range packageDeployFlags {
 		require.Contains(t, stdOut, test)
 	}
+}
+
+func TestInitComponentsConfigFallback(t *testing.T) {
+	t.Run("fallbacks to package.deploy.components", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "zarf-config.yaml")
+		content := `package:
+  deploy:
+    components: from-package-deploy-components
+`
+		err := os.WriteFile(configPath, []byte(content), 0o600)
+		require.NoError(t, err)
+		t.Setenv("ZARF_CONFIG", configPath)
+
+		stdOut, _, err := e2e.Zarf(t, "init", "--help")
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "from-package-deploy-components")
+	})
+
+	t.Run("prefers init.components", func(t *testing.T) {
+		dir := t.TempDir()
+		configPath := filepath.Join(dir, "zarf-config.yaml")
+		content := `init:
+  components: from-init-components
+package:
+  deploy:
+    components: from-package-deploy-components
+`
+		err := os.WriteFile(configPath, []byte(content), 0o600)
+		require.NoError(t, err)
+		t.Setenv("ZARF_CONFIG", configPath)
+
+		stdOut, _, err := e2e.Zarf(t, "init", "--help")
+		require.NoError(t, err)
+		require.Contains(t, stdOut, "from-init-components")
+		require.NotContains(t, stdOut, "from-package-deploy-components")
+	})
 }

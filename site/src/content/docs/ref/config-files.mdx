@@ -22,6 +22,9 @@ While config files set default values, these values can still be overwritten by 
 3. Config file
 4. Default values
 
+For component selection, `zarf init` reads `init.components` and `zarf package deploy` reads `package.deploy.components`.
+If `init.components` is not set, `zarf init` also accepts `package.deploy.components` as a backward-compatible fallback.
+
 ## Config File Location
 
 Zarf searches for the Zarf Config File from either your current working directory or the `~/.zarf/` directory if you don't specify a config file.
