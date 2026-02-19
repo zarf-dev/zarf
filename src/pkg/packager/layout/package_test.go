@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
@@ -76,7 +75,6 @@ func TestPackageLayout(t *testing.T) {
 
 func TestPackageFileName(t *testing.T) {
 	t.Parallel()
-	config.CLIArch = "amd64"
 	tests := []struct {
 		name        string
 		pkg         v1alpha1.ZarfPackage
