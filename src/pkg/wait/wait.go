@@ -37,7 +37,7 @@ import (
 // ForResource waits for a Kubernetes resource to meet the specified condition.
 // It uses the same logic as `kubectl wait`, with retry logic for resources that don't exist yet.
 // If identifier is empty, it will wait for any resource of the given kind to exist.
-// This function retries on cluster connection errors, allowing it to wait for a cluster to become available.
+// This function retries on cluster connection errors, allowing it to wait for a cluster to become available. This is to avoid a breaking change since it used to shell out to kubectl.
 func ForResource(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
 	l := logger.From(ctx)
 	if kind == "" {
@@ -67,59 +67,21 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		return fmt.Errorf("timed out waiting for REST config: %w", err)
 	}
 
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create discovery client: %w", err)
+	if condition == "" {
+		condition = "exists"
 	}
 
-	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
-	var mapping *meta.RESTMapping
-	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
-		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
-		if err != nil {
-			return true, fmt.Errorf("failed to get API group resources: %w", err)
-		}
-		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
-		mapping, err = resolveResourceKind(restMapper, kind)
-		if err != nil {
-			l.Debug("failed to resolve resource kind, retrying", "kind", kind, "error", err)
-			return false, nil
-		}
-		return true, nil
-	})
-	if err != nil {
-		return fmt.Errorf("timed out waiting to resolve resource kind %q: %w", kind, err)
-	}
-
-	dynamicClient, err := dynamic.NewForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create dynamic client: %w", err)
-	}
-
-	if namespace == "" && mapping.Scope.Name() == meta.RESTScopeNameNamespace {
-		ns, _, err := clientCfg.Namespace()
-		if err != nil {
-			return fmt.Errorf("failed to get users' default namespace: %w", err)
-		}
-		namespace = ns
-	}
-	// If no identifier specified, wait for any resource of this kind to exist
-	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
-	}
-
-	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
+	return waitFor(ctx, restConfig, clientCfg, kind, namespace, identifier, condition, deadline)
 }
 
 // ForResourceDefaultReady waits for any resource
-// If identifier is empty, it will wait for any resource of the given kind to exist.
+// If identifier is empty, it will wait for the given kind
+// If condition is empty, it will wait for the given identifier to be fully reconciled using healthchecks.
 func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, namespace string, timeout time.Duration) error {
-	l := logger.From(ctx)
 	if kind == "" {
 		return errors.New("kind is required")
 	}
 
-	waitInterval := time.Second
 	deadline := time.Now().Add(timeout)
 
 	condition = strings.ReplaceAll(condition, "'", "")
@@ -131,6 +93,12 @@ func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, n
 		return err
 	}
 
+	return waitFor(ctx, restConfig, clientCfg, kind, namespace, identifier, condition, deadline)
+}
+
+func waitFor(ctx context.Context, restConfig *rest.Config, clientCfg clientcmd.ClientConfig, kind string, namespace string, identifier string, condition string, deadline time.Time) error {
+	l := logger.From(ctx)
+	waitInterval := time.Second
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create discovery client: %w", err)
@@ -167,20 +135,20 @@ func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, n
 		}
 		namespace = ns
 	}
-	// If no identifier specified, wait for any resource of this kind to exist
+
 	if identifier == "" {
-		return waitForAnyResource(ctx, dynamicClient, mapping.Resource, namespace, deadline)
+		return waitForAnyResourceInNamespace(ctx, dynamicClient, mapping.Resource, namespace, deadline)
 	}
 
 	if condition == "" {
-		return waitForReadyWithHealthchecks(ctx, restConfig, dynamicClient, mapping, identifier, namespace, deadline)
+		return waitForReconciled(ctx, restConfig, dynamicClient, mapping, identifier, namespace, deadline)
 	}
 
-	return forResource(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
+	return waitForResourceCondition(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
 }
 
-// waitForAnyResource waits for at least one resource of the given kind to exist.
-func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
+// waitForAnyResourceInNamespace waits for at least one resource of the given kind to exist.
+func waitForAnyResourceInNamespace(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)
@@ -252,7 +220,7 @@ func resolveResourceKind(restMapper meta.RESTMapper, resourceOrKindArg string) (
 	return mapping, nil
 }
 
-func waitForReadyWithHealthchecks(ctx context.Context, restConfig *rest.Config, dynamicClient dynamic.Interface, mapping *meta.RESTMapping,
+func waitForReconciled(ctx context.Context, restConfig *rest.Config, dynamicClient dynamic.Interface, mapping *meta.RESTMapping,
 	identifier, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 
@@ -343,7 +311,7 @@ func isExistsCondition(condition string) bool {
 	return false
 }
 
-func forResource(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, deadline time.Time) error {
+func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	var args []string
 	var labelSelector string
