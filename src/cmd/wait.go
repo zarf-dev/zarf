@@ -78,11 +78,11 @@ type waitForResourceOptions struct {
 func newWaitForResourceCommand() *cobra.Command {
 	o := waitForResourceOptions{}
 	cmd := &cobra.Command{
-		Use:     "resource KIND NAME [CONDITION]",
+		Use:     "resource KIND [NAME] [CONDITION]",
 		Short:   lang.CmdToolsWaitForResourceShort,
 		Long:    lang.CmdToolsWaitForResourceLong,
 		Example: lang.CmdToolsWaitForResourceExample,
-		Args:    cobra.MinimumNArgs(2),
+		Args:    cobra.RangeArgs(1, 3),
 		RunE:    o.run,
 	}
 
@@ -99,7 +99,11 @@ func (o *waitForResourceOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	kind := args[0]
-	identifier := args[1]
+	// identifier is optional to allow for waiting for any resource of a kind to exist in cluster. For instance, `zarf tools wait-for storageclass`
+	identifier := ""
+	if len(args) > 1 {
+		identifier = args[1]
+	}
 
 	condition := ""
 	if len(args) > 2 {
@@ -120,7 +124,7 @@ func newWaitForNetworkCommand() *cobra.Command {
 		Short:   lang.CmdToolsWaitForNetworkShort,
 		Long:    lang.CmdToolsWaitForNetworkLong,
 		Example: lang.CmdToolsWaitForNetworkExample,
-		Args:    cobra.MinimumNArgs(2),
+		Args:    cobra.RangeArgs(2, 3),
 		RunE:    o.run,
 	}
 
