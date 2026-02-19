@@ -638,6 +638,7 @@ $ zarf tools wait-for pod my-pod-name ready -n default                  #  wait 
 $ zarf tools wait-for pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
 $ zarf tools wait-for deployment zarf-docker-registry exists -n zarf    #  wait for deployment zarf-docker-registry in namespace zarf to exist
 $ zarf tools wait-for svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
+$ zarf tools wait-for pvc -n zarf                                       #  wait for any pvc in namespace zarf to exist
 $ zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
 $ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 `

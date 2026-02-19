@@ -238,7 +238,7 @@ func waitForReconciled(ctx context.Context, restConfig *rest.Config, dynamicClie
 		err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 			objs, err = listResourcesWithSelector(ctx, dynamicClient, mapping, identifier, namespace)
 			if err != nil {
-				return false, err
+				return true, err
 			}
 			if len(objs) > 0 {
 				return true, nil
@@ -249,8 +249,7 @@ func waitForReconciled(ctx context.Context, restConfig *rest.Config, dynamicClie
 		if err != nil {
 			return err
 		}
-
-		l.Info("waiting for resources to be ready", "kind", mapping.GroupVersionKind.Kind, "selector", identifier, "count", len(objs))
+		l.Info("waiting for resources to be reconciled", "kind", mapping.GroupVersionKind.Kind, "selector", identifier, "count", len(objs))
 	} else {
 		objs = []object.ObjMetadata{
 			{
@@ -259,7 +258,7 @@ func waitForReconciled(ctx context.Context, restConfig *rest.Config, dynamicClie
 				Name:      identifier,
 			},
 		}
-		l.Info("waiting for resource to be ready", "kind", mapping.GroupVersionKind.Kind, "name", identifier, "namespace", namespace)
+		l.Info("waiting for resource to be reconciled", "kind", mapping.GroupVersionKind.Kind, "name", identifier, "namespace", namespace)
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Until(deadline))
@@ -270,7 +269,7 @@ func waitForReconciled(ctx context.Context, restConfig *rest.Config, dynamicClie
 		return err
 	}
 
-	l.Info("resource(s) are ready", "kind", mapping.GroupVersionKind.Kind, "identifier", identifier)
+	l.Info("resource(s) are fully reconciled", "kind", mapping.GroupVersionKind.Kind, "identifier", identifier)
 	return nil
 }
 

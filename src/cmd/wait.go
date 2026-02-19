@@ -78,7 +78,7 @@ type waitForResourceOptions struct {
 func newWaitForResourceCommand() *cobra.Command {
 	o := waitForResourceOptions{}
 	cmd := &cobra.Command{
-		Use:     "resource KIND [NAME] [CONDITION]",
+		Use:     "resource KIND [NAME | SELECTOR] [CONDITION]",
 		Short:   lang.CmdToolsWaitForResourceShort,
 		Long:    lang.CmdToolsWaitForResourceLong,
 		Example: lang.CmdToolsWaitForResourceExample,
