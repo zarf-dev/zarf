@@ -81,7 +81,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
 		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
-			return true, fmt.Errorf("failed to get API group resources, retrying: %w", err)
+			return true, fmt.Errorf("failed to get API group resources: %w", err)
 		}
 		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
 		mapping, err = resolveResourceKind(restMapper, kind)
