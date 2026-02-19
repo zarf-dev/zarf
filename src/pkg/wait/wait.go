@@ -50,6 +50,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
 	var clientCfg clientcmd.ClientConfig
+	var discoveryClient *discovery.DiscoveryClient
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		var err error
 		loader := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -59,15 +60,20 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 			l.Debug("failed to get REST config, retrying", "error", err)
 			return false, nil
 		}
+		discoveryClient, err = discovery.NewDiscoveryClientForConfig(restConfig)
+		if err != nil {
+			l.Debug("failed to get discovery client, retrying", "error", err)
+			return false, nil
+		}
+		_, err = discoveryClient.ServerVersion()
+		if err != nil {
+			l.Debug("cluster not reachable, retrying", "error", err)
+			return false, nil
+		}
 		return true, nil
 	})
 	if err != nil {
 		return fmt.Errorf("timed out waiting for REST config: %w", err)
-	}
-
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(restConfig)
-	if err != nil {
-		return fmt.Errorf("failed to create discovery client: %w", err)
 	}
 
 	// Wait for the resource kind to be resolvable (e.g. CRDs may not be registered yet).
@@ -75,8 +81,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
 		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
-			l.Debug("failed to get API group resources, retrying", "error", err)
-			return false, nil
+			return true, fmt.Errorf("failed to get API group resources, retrying: %w", err)
 		}
 		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
 		mapping, err = resolveResourceKind(restMapper, kind)
