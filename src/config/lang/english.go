@@ -609,7 +609,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsWaitForExample = `
 # Wait for Kubernetes resources:
 $ zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
-$ zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
+$ zarf tools wait-for po cool-pod-name ready -n cool                    #  wait for pod (using po alias) cool-pod-name in namespace cool to be ready
 $ zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
 $ zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
 $ zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
@@ -627,6 +627,20 @@ $ zarf tools wait-for http google.com success                           #  wait 
 	CmdToolsWaitForFlagTimeout   = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForFlagNamespace = "Specify the namespace of the resources to wait for."
 
+	CmdToolsWaitForResourceShort = "Waits for a given Kubernetes resource to be fully reconciled"
+	CmdToolsWaitForResourceLong  = "Waits for a given Kubernetes resource to be fully reconciled unless a condition is provided.\n" +
+		"Resource reconciliation is determined according to https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus.\n" +
+		"If a resource does not implement reconciliation statuses, then this command will wait for that resource to exist"
+	CmdToolsWaitForResourceExample = `
+$ zarf tools wait-for deployment my-pod-name -n default                 #  wait for Deployment to be reconciled (default condition)
+$ zarf tools wait-for po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
+$ zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
+$ zarf tools wait-for pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
+$ zarf tools wait-for deployment zarf-docker-registry exists -n zarf    #  wait for deployment zarf-docker-registry in namespace zarf to exist
+$ zarf tools wait-for svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
+$ zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+$ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+`
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"

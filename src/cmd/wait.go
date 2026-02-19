@@ -78,13 +78,12 @@ type waitForResourceOptions struct {
 func newWaitForResourceCommand() *cobra.Command {
 	o := waitForResourceOptions{}
 	cmd := &cobra.Command{
-		Use: "resource KIND NAME [CONDITION]",
-		// FIXME:
-		// Short:   lang.CmdToolsWaitForResourceShort,
-		// Long:    lang.CmdToolsWaitForResourceLong,
-		// Example: lang.CmdToolsWaitForResourceExample,
-		Args: cobra.MinimumNArgs(2),
-		RunE: o.run,
+		Use:     "resource KIND NAME [CONDITION]",
+		Short:   lang.CmdToolsWaitForResourceShort,
+		Long:    lang.CmdToolsWaitForResourceLong,
+		Example: lang.CmdToolsWaitForResourceExample,
+		Args:    cobra.MinimumNArgs(2),
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&o.timeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
@@ -119,7 +118,6 @@ func newWaitForNetworkCommand() *cobra.Command {
 	o := waitForNetworkOptions{}
 	cmd := &cobra.Command{
 		Use: "network PROTOCOL ADDRESS [CODE]",
-		// FIXME:
 		// Short:   lang.CmdToolsWaitForNetworkShort,
 		// Long:    lang.CmdToolsWaitForNetworkLong,
 		// Example: lang.CmdToolsWaitForNetworkExample,
