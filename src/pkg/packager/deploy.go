@@ -53,6 +53,8 @@ type DeployOptions struct {
 	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
+	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
+	ForceConflicts bool
 	// Timeout for Helm operations
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
@@ -193,7 +195,7 @@ func (d *deployer) resetRegistryHPA(ctx context.Context) {
 	l := logger.From(ctx)
 	if d.c != nil && d.hpaModified {
 		if err := d.c.EnableRegHPAScaleDown(ctx); err != nil {
-			l.Debug("unable to reenable the registry HPA scale down", "error", err.Error())
+			l.Error("unable to re-enable the registry HPA scale down", "error", err.Error())
 		}
 	}
 }
@@ -437,7 +439,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
 		if hasImages && !d.hpaModified && d.s.RegistryInfo.IsInternal() {
 			if err := d.c.DisableRegHPAScaleDown(ctx); err != nil {
-				l.Debug("unable to disable the registry HPA scale down", "error", err.Error())
+				l.Error("unable to disable the registry HPA scale down", "error", err.Error())
 			} else {
 				d.hpaModified = true
 			}
@@ -593,6 +595,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
+			ForceConflicts:         opts.ForceConflicts,
 			VariableConfig:         d.vc,
 			State:                  d.s,
 			Cluster:                d.c,
@@ -676,6 +679,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		}
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
+			ForceConflicts:         opts.ForceConflicts,
 			VariableConfig:         d.vc,
 			State:                  d.s,
 			Cluster:                d.c,

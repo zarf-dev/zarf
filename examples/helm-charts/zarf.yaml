@@ -16,6 +16,9 @@ components:
         localPath: chart
         valuesFiles:
           - values.yaml
+        # serverSideApply is a new option in Helm 4
+        # Can be set to true, false, and "auto". Defaults to "auto" which uses SSA on new installs, and automatically selects the previously apply method on upgrade
+        serverSideApply: "true"
         # Variables are used to override the default values in the chart
         # This can be overridden by the user at deployment time with the `--set` flag
         variables:

@@ -223,6 +223,7 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 
 type updateCredsOptions struct {
 	confirm        bool
+	forceConflicts bool
 	gitServer      state.GitServerInfo
 	registryInfo   state.RegistryInfo
 	artifactServer state.ArtifactServerInfo
@@ -243,6 +244,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -378,6 +380,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
+		ForceConflicts: o.forceConflicts,
 	}
 
 	// Update Zarf 'init' component Helm releases if present

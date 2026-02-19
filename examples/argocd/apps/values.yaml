@@ -1,5 +1,5 @@
 applications:
-  - name: apps
+  podinfo:
     namespace: argocd
     finalizers:
       - resources-finalizer.argocd.argoproj.io
@@ -12,7 +12,8 @@ applications:
           valueFiles:
             - values.yaml
     syncPolicy:
-      automated: { }
+      automated:
+        selfHeal: true
     destination:
       namespace: podinfo
       server: https://kubernetes.default.svc

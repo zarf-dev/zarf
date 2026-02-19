@@ -8,7 +8,34 @@ tableOfContents: false
 
 ## zarf tools helm version
 
-Print the version
+print the helm version information
+
+### Synopsis
+
+
+Show the version for Helm.
+
+This will print a representation the version of Helm.
+The output will look something like this:
+
+version.BuildInfo{Version:"v3.2.1", GitCommit:"fe51cd1e31e6a202cba7dead9552a6d418ded79a", GitTreeState:"clean", GoVersion:"go1.13.10"}
+
+- Version is the semantic version of the release.
+- GitCommit is the SHA for the commit that this version was built from.
+- GitTreeState is "clean" if there are no local code changes when this binary was
+  built, and "dirty" if the binary was built from locally modified code.
+- GoVersion is the version of Go that was used to compile Helm.
+
+When using the --template flag the following properties are available to use in
+the template:
+
+- .Version contains the semantic version of Helm
+- .GitCommit is the git commit
+- .GitTreeState is the state of the git tree when Helm was built
+- .GoVersion contains the version of Go that Helm was compiled with
+
+For example, --template='Version: {{.Version}}' outputs 'Version: v3.2.1'.
+
 
 ```
 zarf tools helm version [flags]
@@ -17,13 +44,18 @@ zarf tools helm version [flags]
 ### Options
 
 ```
-  -h, --help   help for version
+  -h, --help              help for version
+      --short             print the version number
+      --template string   template for version string format
 ```
 
 ### Options inherited from parent commands
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
@@ -46,5 +78,5 @@ zarf tools helm version [flags]
 
 ### SEE ALSO
 
-* [zarf tools helm](/commands/zarf_tools_helm/)	 - Subset of the Helm CLI included with Zarf to help manage helm charts.
+* [zarf tools helm](/commands/zarf_tools_helm/)	 - The Helm package manager for Kubernetes.
 

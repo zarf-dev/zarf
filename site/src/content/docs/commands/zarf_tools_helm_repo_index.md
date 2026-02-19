@@ -13,14 +13,16 @@ generate an index file given a directory containing packaged charts
 ### Synopsis
 
 
-Read the current directory and generate an index file based on the charts found.
+Read the current directory, generate an index file based on the charts found
+and write the result to 'index.yaml' in the current directory.
 
 This tool is used for creating an 'index.yaml' file for a chart repository. To
 set an absolute URL to the charts, use '--url' flag.
 
 To merge the generated index with an existing index file, use the '--merge'
 flag. In this case, the charts found in the current directory will be merged
-into the existing index, with local charts taking priority over existing charts.
+into the index passed in with --merge, with local charts taking priority over
+existing charts.
 
 
 ```
@@ -31,6 +33,7 @@ zarf tools helm repo index [DIR] [flags]
 
 ```
   -h, --help           help for index
+      --json           output in JSON format
       --merge string   merge the generated index into the given index
       --url string     url of chart repository
 ```
@@ -39,6 +42,9 @@ zarf tools helm repo index [DIR] [flags]
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.

@@ -8,16 +8,72 @@ tableOfContents: false
 
 ## zarf tools helm
 
-Subset of the Helm CLI included with Zarf to help manage helm charts.
+The Helm package manager for Kubernetes.
 
 ### Synopsis
 
-Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap.
+The Kubernetes package manager
+
+Common actions for Helm:
+
+- helm search:    search for charts
+- helm pull:      download a chart to your local directory to view
+- helm install:   upload the chart to Kubernetes
+- helm list:      list releases of charts
+
+Environment variables:
+
+| Name                               | Description                                                                                                |
+|------------------------------------|------------------------------------------------------------------------------------------------------------|
+| $HELM_CACHE_HOME                   | set an alternative location for storing cached files.                                                      |
+| $HELM_CONFIG_HOME                  | set an alternative location for storing Helm configuration.                                                |
+| $HELM_DATA_HOME                    | set an alternative location for storing Helm data.                                                         |
+| $HELM_DEBUG                        | indicate whether or not Helm is running in Debug mode                                                      |
+| $HELM_DRIVER                       | set the backend storage driver. Values are: configmap, secret, memory, sql.                                |
+| $HELM_DRIVER_SQL_CONNECTION_STRING | set the connection string the SQL storage driver should use.                                               |
+| $HELM_MAX_HISTORY                  | set the maximum number of helm release history.                                                            |
+| $HELM_NAMESPACE                    | set the namespace used for the helm operations.                                                            |
+| $HELM_NO_PLUGINS                   | disable plugins. Set HELM_NO_PLUGINS=1 to disable plugins.                                                 |
+| $HELM_PLUGINS                      | set the path to the plugins directory                                                                      |
+| $HELM_REGISTRY_CONFIG              | set the path to the registry config file.                                                                  |
+| $HELM_REPOSITORY_CACHE             | set the path to the repository cache directory                                                             |
+| $HELM_REPOSITORY_CONFIG            | set the path to the repositories file.                                                                     |
+| $KUBECONFIG                        | set an alternative Kubernetes configuration file (default "~/.kube/config")                                |
+| $HELM_KUBEAPISERVER                | set the Kubernetes API Server Endpoint for authentication                                                  |
+| $HELM_KUBECAFILE                   | set the Kubernetes certificate authority file.                                                             |
+| $HELM_KUBEASGROUPS                 | set the Groups to use for impersonation using a comma-separated list.                                      |
+| $HELM_KUBEASUSER                   | set the Username to impersonate for the operation.                                                         |
+| $HELM_KUBECONTEXT                  | set the name of the kubeconfig context.                                                                    |
+| $HELM_KUBETOKEN                    | set the Bearer KubeToken used for authentication.                                                          |
+| $HELM_KUBEINSECURE_SKIP_TLS_VERIFY | indicate if the Kubernetes API server's certificate validation should be skipped (insecure)                |
+| $HELM_KUBETLS_SERVER_NAME          | set the server name used to validate the Kubernetes API server certificate                                 |
+| $HELM_BURST_LIMIT                  | set the default burst limit in the case the server contains many CRDs (default 100, -1 to disable)         |
+| $HELM_QPS                          | set the Queries Per Second in cases where a high number of calls exceed the option for higher burst values |
+| $HELM_COLOR                        | set color output mode. Allowed values: never, always, auto (default: never)                                |
+| $NO_COLOR                          | set to any non-empty value to disable all colored output (overrides $HELM_COLOR)                           |
+
+Helm stores cache, configuration, and data based on the following configuration order:
+
+- If a HELM_*_HOME environment variable is set, it will be used
+- Otherwise, on systems supporting the XDG base directory specification, the XDG variables will be used
+- When no other location is set a default location will be used based on the operating system
+
+By default, the default directories depend on the Operating System. The defaults are listed below:
+
+| Operating System | Cache Path                | Configuration Path             | Data Path               |
+|------------------|---------------------------|--------------------------------|-------------------------|
+| Linux            | $HOME/.cache/helm         | $HOME/.config/helm             | $HOME/.local/share/helm |
+| macOS            | $HOME/Library/Caches/helm | $HOME/Library/Preferences/helm | $HOME/Library/helm      |
+| Windows          | %TEMP%\helm               | %APPDATA%\helm                 | %APPDATA%\helm          |
+
 
 ### Options
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
   -h, --help                            help for helm
       --kube-apiserver string           the address and the port for the Kubernetes API server
@@ -47,7 +103,29 @@ Subset of the Helm CLI that includes the repo and dependency commands for managi
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools helm completion](/commands/zarf_tools_helm_completion/)	 - generate autocompletion scripts for the specified shell
+* [zarf tools helm create](/commands/zarf_tools_helm_create/)	 - create a new chart with the given name
 * [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
+* [zarf tools helm env](/commands/zarf_tools_helm_env/)	 - helm client environment information
+* [zarf tools helm get](/commands/zarf_tools_helm_get/)	 - download extended information of a named release
+* [zarf tools helm history](/commands/zarf_tools_helm_history/)	 - fetch release history
+* [zarf tools helm install](/commands/zarf_tools_helm_install/)	 - install a chart
+* [zarf tools helm lint](/commands/zarf_tools_helm_lint/)	 - examine a chart for possible issues
+* [zarf tools helm list](/commands/zarf_tools_helm_list/)	 - list releases
+* [zarf tools helm package](/commands/zarf_tools_helm_package/)	 - package a chart directory into a chart archive
+* [zarf tools helm plugin](/commands/zarf_tools_helm_plugin/)	 - install, list, or uninstall Helm plugins
+* [zarf tools helm pull](/commands/zarf_tools_helm_pull/)	 - download a chart from a repository and (optionally) unpack it in local directory
+* [zarf tools helm push](/commands/zarf_tools_helm_push/)	 - push a chart to remote
+* [zarf tools helm registry](/commands/zarf_tools_helm_registry/)	 - login to or logout from a registry
 * [zarf tools helm repo](/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
-* [zarf tools helm version](/commands/zarf_tools_helm_version/)	 - Print the version
+* [zarf tools helm rollback](/commands/zarf_tools_helm_rollback/)	 - roll back a release to a previous revision
+* [zarf tools helm search](/commands/zarf_tools_helm_search/)	 - search for a keyword in charts
+* [zarf tools helm show](/commands/zarf_tools_helm_show/)	 - show information of a chart
+* [zarf tools helm status](/commands/zarf_tools_helm_status/)	 - display the status of the named release
+* [zarf tools helm template](/commands/zarf_tools_helm_template/)	 - locally render templates
+* [zarf tools helm test](/commands/zarf_tools_helm_test/)	 - run tests for a release
+* [zarf tools helm uninstall](/commands/zarf_tools_helm_uninstall/)	 - uninstall a release
+* [zarf tools helm upgrade](/commands/zarf_tools_helm_upgrade/)	 - upgrade a release
+* [zarf tools helm verify](/commands/zarf_tools_helm_verify/)	 - verify that a chart at the given path has been signed and is valid
+* [zarf tools helm version](/commands/zarf_tools_helm_version/)	 - print the helm version information
 

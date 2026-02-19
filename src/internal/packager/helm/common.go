@@ -18,21 +18,25 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
-	"helm.sh/helm/v3/pkg/chart/loader"
-	"helm.sh/helm/v3/pkg/chartutil"
-	"helm.sh/helm/v3/pkg/cli"
-	"helm.sh/helm/v3/pkg/cli/values"
-	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v4/pkg/action"
+	"helm.sh/helm/v4/pkg/chart/common"
+	chartv2 "helm.sh/helm/v4/pkg/chart/v2"
+	"helm.sh/helm/v4/pkg/chart/v2/loader"
+	"helm.sh/helm/v4/pkg/cli"
+	"helm.sh/helm/v4/pkg/cli/values"
+	"helm.sh/helm/v4/pkg/getter"
+	"helm.sh/helm/v4/pkg/kube"
 )
 
+var contentCachePath = filepath.Join("helm", "content")
+
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
-func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chart.Chart, error) {
+func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chartv2.Chart, error) {
 	// Generate a new chart.
-	tmpChart := new(chart.Chart)
-	tmpChart.Metadata = new(chart.Metadata)
+	tmpChart := new(chartv2.Chart)
+	tmpChart.Metadata = new(chartv2.Metadata)
 
 	// Generate a hashed chart name.
 	rawChartName := fmt.Sprintf("raw-%s-%s-%s", packageName, componentName, manifest.Name)
@@ -43,7 +47,7 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 
 	// This is fun, increment forward in a semver-way using epoch so helm doesn't cry.
 	tmpChart.Metadata.Version = fmt.Sprintf("0.1.%d", config.GetStartTime())
-	tmpChart.Metadata.APIVersion = chart.APIVersionV1
+	tmpChart.Metadata.APIVersion = chartv2.APIVersionV2
 
 	// Add the manifest files so helm does its thing.
 	for _, file := range manifest.Files {
@@ -57,17 +61,18 @@ func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, package
 		txt := strconv.Quote(string(data))
 		data = []byte("{{" + txt + "}}")
 
-		tmpChart.Templates = append(tmpChart.Templates, &chart.File{Name: manifest, Data: data})
+		tmpChart.Templates = append(tmpChart.Templates, &common.File{Name: manifest, Data: data})
 	}
 
 	// Generate the struct to pass to InstallOrUpgradeChart().
 	chart := v1alpha1.ZarfChart{
 		Name: tmpChart.Metadata.Name,
 		// Preserve the zarf prefix for chart names to match v0.22.x and earlier behavior.
-		ReleaseName: fmt.Sprintf("zarf-%s", sha1ReleaseName),
-		Version:     tmpChart.Metadata.Version,
-		Namespace:   manifest.Namespace,
-		NoWait:      manifest.NoWait,
+		ReleaseName:     fmt.Sprintf("zarf-%s", sha1ReleaseName),
+		Version:         tmpChart.Metadata.Version,
+		Namespace:       manifest.Namespace,
+		NoWait:          manifest.NoWait,
+		ServerSideApply: manifest.GetServerSideApply(),
 	}
 
 	return chart, tmpChart, nil
@@ -89,7 +94,7 @@ func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) s
 }
 
 // loadChartFromTarball returns a helm chart from a tarball.
-func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chart.Chart, error) {
+func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chartv2.Chart, error) {
 	// Get the path the temporary helm chart tarball
 	sourceFile := StandardName(chartPath, chart) + ".tgz"
 
@@ -107,7 +112,7 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chart.Ch
 }
 
 // parseChartValues reads the context of the chart values into an interface if it exists.
-func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (chartutil.Values, error) {
+func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
 	for idx := range chart.ValuesFiles {
@@ -130,13 +135,19 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	actionConfig := new(action.Configuration)
+	// This sets the field manager to Zarf. Every Helm operation requires an action config
+	// so this ensures the field is properly set prior to each operation.
+	kube.ManagedFieldsManager = cluster.FieldManagerName
+	l := logger.From(ctx)
+	actionConfig := action.NewConfiguration()
+	actionConfig.SetLogger(l.Handler())
 	// Set the settings for the helm SDK
 	settings := cli.New()
 	settings.SetNamespace(namespace)
-	l := logger.From(ctx)
-	helmLogger := slog.NewLogLogger(l.Handler(), slog.LevelDebug).Printf
-	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "", helmLogger)
+	if l.Enabled(ctx, slog.LevelDebug) {
+		settings.Debug = true
+	}
+	err := actionConfig.Init(settings.RESTClientGetter(), namespace, "")
 	if err != nil {
 		return nil, fmt.Errorf("could not get Helm action configuration: %w", err)
 	}
