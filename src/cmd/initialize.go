@@ -28,6 +28,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type initOptions struct {
@@ -71,7 +72,7 @@ func newInitCommand() *cobra.Command {
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
-	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VInitComponents), lang.CmdInitFlagComponents)
+	cmd.Flags().StringVar(&o.optionalComponents, "components", getInitComponentsDefault(v), lang.CmdInitFlagComponents)
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
@@ -124,6 +125,14 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
+}
+
+func getInitComponentsDefault(v *viper.Viper) string {
+	// Prefer the init-specific key, but keep package.deploy.components as a backwards-compatible fallback.
+	if v.IsSet(VInitComponents) {
+		return v.GetString(VInitComponents)
+	}
+	return v.GetString(VPkgDeployComponents)
 }
 
 func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
