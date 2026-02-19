@@ -34,6 +34,7 @@ func newWaitForCommand() *cobra.Command {
 	}
 	cmd.AddCommand(newWaitForResourceCommand())
 	cmd.AddCommand(newWaitForNetworkCommand())
+	cmd.Deprecated = "use `zarf tools wait-for-resource` or `zarf tools wait-for network` instead."
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
@@ -74,7 +75,6 @@ type waitForResourceOptions struct {
 	namespace string
 }
 
-// newWaitForResourceCommand creates the `wait-for-resource` command.
 func newWaitForResourceCommand() *cobra.Command {
 	o := waitForResourceOptions{}
 	cmd := &cobra.Command{
@@ -113,7 +113,6 @@ type waitForNetworkOptions struct {
 	timeout string
 }
 
-// newWaitForNetworkCommand creates the `wait-for-network` command.
 func newWaitForNetworkCommand() *cobra.Command {
 	o := waitForNetworkOptions{}
 	cmd := &cobra.Command{
