@@ -5,7 +5,6 @@
 package test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -244,8 +243,7 @@ func TestWaitFor(t *testing.T) {
 		// Start waiting for the pod in a goroutine before it exists
 		errCh := make(chan error, 1)
 		go func() {
-			stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "-n", namespace, "--timeout", "20s")
-			fmt.Println(stdout, stderr)
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "-n", namespace, "--timeout", "20s")
 			errCh <- err
 		}()
 

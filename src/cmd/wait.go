@@ -43,7 +43,7 @@ func newWaitForCommand() *cobra.Command {
 }
 
 func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
-	logger.From(cmd.Context()).Warn("direct use of `zarf tools wait-for` is deprecated. Use `zarf tools wait-for-resource` or `zarf tools wait-for network` instead.")
+	logger.From(cmd.Context()).Warn("direct use of `zarf tools wait-for` is deprecated. Use `zarf tools wait-for resource` or `zarf tools wait-for network` instead.")
 	// Parse the timeout string
 	timeout, err := time.ParseDuration(o.waitTimeout)
 	if err != nil {
