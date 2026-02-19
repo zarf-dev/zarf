@@ -609,7 +609,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsWaitForExample = `
 # Wait for Kubernetes resources:
 $ zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to be ready
-$ zarf tools wait-for po cool-pod-name ready -n cool                    #  wait for pod (using po alias) cool-pod-name in namespace cool to be ready
+$ zarf tools wait-for p cool-pod-name ready -n cool                     #  wait for pod (using p alias) cool-pod-name in namespace cool to be ready
 $ zarf tools wait-for deployment podinfo available -n podinfo           #  wait for deployment podinfo in namespace podinfo to be available
 $ zarf tools wait-for pod app=podinfo ready -n podinfo                  #  wait for pod with label app=podinfo in namespace podinfo to be ready
 $ zarf tools wait-for svc zarf-docker-registry exists -n zarf           #  wait for service zarf-docker-registry in namespace zarf to exist
@@ -640,6 +640,16 @@ $ zarf tools wait-for deployment zarf-docker-registry exists -n zarf    #  wait 
 $ zarf tools wait-for svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
 $ zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
 $ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+`
+
+	CmdToolsWaitForNetworkShort   = "Waits for a network endpoint to meet the condition"
+	CmdToolsWaitForNetworkLong    = "Waits for an arbitrary network endpoints using REST or TCP to respond with a status codes\n (default 2xx)"
+	CmdToolsWaitForNetworkExample = `
+$ zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+$ zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+$ zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+$ zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
+$ zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
 `
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 

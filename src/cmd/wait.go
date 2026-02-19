@@ -117,12 +117,12 @@ type waitForNetworkOptions struct {
 func newWaitForNetworkCommand() *cobra.Command {
 	o := waitForNetworkOptions{}
 	cmd := &cobra.Command{
-		Use: "network PROTOCOL ADDRESS [CODE]",
-		// Short:   lang.CmdToolsWaitForNetworkShort,
-		// Long:    lang.CmdToolsWaitForNetworkLong,
-		// Example: lang.CmdToolsWaitForNetworkExample,
-		Args: cobra.MinimumNArgs(2),
-		RunE: o.run,
+		Use:     "network PROTOCOL ADDRESS [CODE]",
+		Short:   lang.CmdToolsWaitForNetworkShort,
+		Long:    lang.CmdToolsWaitForNetworkLong,
+		Example: lang.CmdToolsWaitForNetworkExample,
+		Args:    cobra.MinimumNArgs(2),
+		RunE:    o.run,
 	}
 
 	cmd.Flags().StringVar(&o.timeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
