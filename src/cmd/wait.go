@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/wait"
 
 	// Import to initialize client auth plugins.
@@ -34,7 +35,6 @@ func newWaitForCommand() *cobra.Command {
 	}
 	cmd.AddCommand(newWaitForResourceCommand())
 	cmd.AddCommand(newWaitForNetworkCommand())
-	cmd.Deprecated = "use `zarf tools wait-for-resource` or `zarf tools wait-for network` instead."
 
 	cmd.Flags().StringVar(&o.waitTimeout, "timeout", "5m", lang.CmdToolsWaitForFlagTimeout)
 	cmd.Flags().StringVarP(&o.waitNamespace, "namespace", "n", "", lang.CmdToolsWaitForFlagNamespace)
@@ -43,6 +43,7 @@ func newWaitForCommand() *cobra.Command {
 }
 
 func (o *waitForOptions) run(cmd *cobra.Command, args []string) error {
+	logger.From(cmd.Context()).Warn("Direct use of `zarf tools wait-for` is deprecated. use `zarf tools wait-for-resource` or `zarf tools wait-for network` instead.")
 	// Parse the timeout string
 	timeout, err := time.ParseDuration(o.waitTimeout)
 	if err != nil {
