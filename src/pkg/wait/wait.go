@@ -162,7 +162,7 @@ func waitForAnyResourceInNamespace(ctx context.Context, dynamicClient dynamic.In
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
-			return false, fmt.Errorf("failed to list resources: %w", err)
+			return true, fmt.Errorf("failed to list resources: %w", err)
 		}
 		if len(list.Items) > 0 {
 			return true, nil
