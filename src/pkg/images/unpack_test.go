@@ -72,6 +72,118 @@ func TestGetRefFromManifest(t *testing.T) {
 	}
 }
 
+func TestFindImagesInOCIManifests(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		manifests      []ocispec.Descriptor
+		expectedImages []string
+		expectErr      error
+	}{
+		{
+			name: "single manifest descriptor, single image",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world:linux",
+					},
+				},
+			},
+			expectedImages: []string{"docker.io/library/hello-world:linux"},
+		},
+		{
+			name: "multiple manifest descriptors, blank image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
+					},
+				},
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test:1.0.0",
+					},
+				},
+				{
+					Annotations: nil,
+				},
+			},
+			expectedImages: []string{
+				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
+				"localhost:9999/local-test:1.0.0",
+			},
+		},
+		{
+			name: "invalid image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test@hello-world:1.0.0",
+					},
+				},
+			},
+			expectedImages: []string{},
+			expectErr:      errors.New("failed to parse image reference localhost:9999/local-test@hello-world:1.0.0"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			images, err := FindImagesInOCIManifests(tc.manifests)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			for _, img := range tc.expectedImages {
+				require.Contains(t, images, img)
+			}
+		})
+	}
+}
+
+func TestGetManifestsFromArchive(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		srcDir        string
+		expectedImage string
+		expectErr     error
+	}{
+		{
+			name:          "single archive",
+			srcDir:        filepath.Join("testdata", "docker-graph-driver-image-store"),
+			expectedImage: "docker.io/library/hello-world:linux",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			// Create a tar from the source directory
+			tarFile := filepath.Join(t.TempDir(), "images.tar")
+			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
+			require.NoError(t, err)
+			manifests, err := GetManifestsFromArchive(ctx, tarFile)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+			}
+			require.NoError(t, err)
+
+			for _, manifest := range manifests {
+				require.Equal(t, tc.expectedImage, manifest.Annotations[dockerRefAnnotation])
+			}
+		})
+	}
+
+}
+
 func TestUnpackMultipleImages(t *testing.T) {
 	t.Parallel()
 
