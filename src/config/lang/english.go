@@ -629,7 +629,7 @@ $ zarf tools wait-for http google.com success                           #  wait 
 
 	CmdToolsWaitForResourceShort = "Waits for a given Kubernetes resource to be fully reconciled"
 	CmdToolsWaitForResourceLong  = "Waits for a given Kubernetes resource to be fully reconciled unless a condition is provided.\n" +
-		"Resource reconciliation is determined according to https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus.\n" +
+		"Resource reconciliation is determined according to https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus\n" +
 		"If a resource does not implement reconciliation statuses, then this command will wait for that resource to exist"
 	CmdToolsWaitForResourceExample = `
 $ zarf tools wait-for deployment my-pod-name -n default                 #  wait for Deployment to be reconciled (default condition)
@@ -643,7 +643,7 @@ $ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait 
 `
 
 	CmdToolsWaitForNetworkShort   = "Waits for a network endpoint to meet the condition"
-	CmdToolsWaitForNetworkLong    = "Waits for an arbitrary network endpoints using REST or TCP to respond with a status codes\n (default 2xx)"
+	CmdToolsWaitForNetworkLong    = "Waits for a network endpoint using REST or TCP to respond with a status code (default 2xx)"
 	CmdToolsWaitForNetworkExample = `
 $ zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
 $ zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080

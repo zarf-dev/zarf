@@ -77,8 +77,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
 		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
-			l.Debug("failed to get API group resources, retrying", "error", err)
-			return false, nil
+			return true, fmt.Errorf("failed to get API group resources: %w", err)
 		}
 		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
 		mapping, err = resolveResourceKind(restMapper, kind)
@@ -142,8 +141,7 @@ func ForResourceDefaultReady(ctx context.Context, kind, identifier, condition, n
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
 		groupResources, err := restmapper.GetAPIGroupResources(discoveryClient)
 		if err != nil {
-			l.Debug("failed to get API group resources, retrying", "error", err)
-			return false, nil
+			return true, fmt.Errorf("failed to get API group resources: %w", err)
 		}
 		restMapper := restmapper.NewShortcutExpander(restmapper.NewDiscoveryRESTMapper(groupResources), discoveryClient, nil)
 		mapping, err = resolveResourceKind(restMapper, kind)
@@ -195,7 +193,7 @@ func waitForAnyResource(ctx context.Context, dynamicClient dynamic.Interface, re
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
-			return true, fmt.Errorf("failed to list resources: %w", err)
+			return false, fmt.Errorf("failed to list resources: %w", err)
 		}
 		if len(list.Items) > 0 {
 			return true, nil
