@@ -70,4 +70,6 @@ $ zarf tools wait-for http google.com success                           #  wait 
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools wait-for network](/commands/zarf_tools_wait-for_network/)	 - Waits for a network endpoint to meet the condition
+* [zarf tools wait-for resource](/commands/zarf_tools_wait-for_resource/)	 - Waits for a given Kubernetes resource to be fully reconciled
 
