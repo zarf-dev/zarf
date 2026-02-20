@@ -39,8 +39,6 @@ An 'init' package requires a series of specially named, and configured component
 
 ### Registry Components
 
-#### Internal Registry Pre-reqs
-
 One of the most challenging aspects of deploying into an air-gapped environment is the initial bootstrapping of the cluster.
 
 A cluster needs a registry to pull images from, but spinning up a registry requires an image to be pulled from a registry - chicken, meet egg.
@@ -63,14 +61,6 @@ The behavior of the `zarf-seed-registry` component differs depending on the regi
 
 #### NodePort mode
 
-Nodeport mode relies on a short lived injector to create a localhost NodePort service that the registry Deployment in the `zarf-seed-registry` chart can pull from.
-
-:::note
-
-Doing this keeps Zarf cluster agnostic, however does require that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6 only clusters and NFTables block access to localhost NodePort services.
-
-:::
-
 When `zarf init` deploys the `zarf-seed-registry` component in nodeport mode, the following happens:
 
 1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
@@ -80,6 +70,12 @@ When `zarf init` deploys the `zarf-seed-registry` component in nodeport mode, th
 5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
 6. Once the `docker-registry` chart is deployed, the `zarf-seed-registry` component is marked as complete and the `zarf-injector` pod is removed from the cluster.
 7. Deployment proceeds to the `zarf-registry` component.
+
+:::note
+
+NodePort mode requires that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6 only clusters and NFTables block access to localhost NodePort services.
+
+:::
 
 
 #### Proxy Mode
@@ -99,9 +95,9 @@ The `registry:3` image and the Zarf Agent image can be configured with a custom 
 
 :::
 
-#### Long Lived Registry
+#### Zarf Registry
 
-The `zarf-registry` component is a long-lived container registry service that is deployed into the cluster.
+The `zarf-registry` component deploys the long-lived container registry to the cluster.
 
 It leverages the same `docker-registry` chart used in `zarf-seed-registry` but with a few key differences:
 
