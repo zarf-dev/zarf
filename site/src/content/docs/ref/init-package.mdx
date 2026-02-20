@@ -32,8 +32,8 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
 
-- [`zarf-injector`](#zarf-injector-and-zarf-seed-registry)
-- [`zarf-seed-registry`](#zarf-injector-and-zarf-seed-registry)
+- [`zarf-injector`](#zarf-injector)
+- [`zarf-seed-registry`](#zarf-seed-registry)
 - [`zarf-registry`](#zarf-registry)
 - [`zarf-agent`](#zarf-agent)
 
@@ -55,11 +55,22 @@ But then we have another problem of how to reassemble the image on the other sid
 
 The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:3` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:3` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:3` image.
 
-The `zarf-injector` component copies the injector rust binary to `###ZARF_TEMP###/zarf-injector`, it doesn't launch the injector.
+:::note
 
-The behavior of the `zarf-seed-registry` component differs depending on the registry mode, decided by the init flag `--registry-mode=nodeport|proxy`
+The `registry:3` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
 
-#### NodePort mode
+:::
+
+#### Zarf Injector
+
+The `zarf-injector` component simply copies the injector rust binary to `###ZARF_TEMP###/zarf-injector`.
+
+#### Zarf Seed Registry
+
+The behavior of the `zarf-seed-registry` component differs depending on the registry mode, decided by the init flag `--registry-mode=nodeport|proxy`. Alternatively, the registry components are skipped when [using an external registry](#using-external-registries) with `--registry-mode=external`
+{/* FIXME check external flag works how I'd expect */}
+
+##### NodePort mode (Default)
 
 When `zarf init` deploys the `zarf-seed-registry` component in nodeport mode, the following happens:
 
@@ -78,20 +89,21 @@ NodePort mode requires that the kubelet be able to reach out to a cluster NodePo
 :::
 
 
-#### Proxy Mode
+##### Proxy Mode
 
 When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
 
 1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
-2. Zarf connects to the cluster and chooses the [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause)
-  - Because Kubernetes does not expose which pause image is in use, Zarf determines the pause image by choosing the highest version image that meet the following criteria: between major semver versions of 3 or 4, less than 1Mib in size, includes pause in the name.
-3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` and `alpine/socat` image chunks
-4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with the `proxy.enabled: true`. This creates a long lived hostPort or hostNetwork proxy DaemonSet alongside a Zarf Injector Daemonset.
-5. The registry Deployment and Proxy Daemonset have images pointing to the Zarf Injector Daemonset, which is also exposed through a host port or host network proxy. This allows the Kubelet to pull these images.
+2. Zarf connects to the cluster and determines the [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause) to be used by the injector DaemonSet. Because Kubernetes does not expose the cluster's pause image, the pause image is approximated to the highest versioned image in cluster meeting the following criteria: has a major semver version 3 or 4, less than 1Mib in size, includes pause in the name.
+3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
+4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long lived host port or host network socat proxy DaemonSet alongside a Zarf Injector Daemonset.
+5. The registry Deployment and Proxy Daemonset point their images to the Zarf Injector Daemonset, which is also exposed through a host port or host network proxy. This allows the Kubelet to pull these images.
+
+An advantage of proxy mode is that it's automatically secured behind mTLS. The proxy DaemonSet uses mTLS certificates stored in the cluster to secure its connection to the registry. Since the proxy runs on each node, the Kubelet never transmits unencrypted data outside of each host. Additionally, Zarf uses the same mTLS certs to encrypt its calls to the registry when in proxy mode.
 
 :::note
 
-The `registry:3` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+host port connections do not work on IPv6 clusters, so Zarf will automatically configure the proxy and injector to use host network in these cases.
 
 :::
 
@@ -101,8 +113,7 @@ The `zarf-registry` component deploys the long-lived container registry to the c
 
 It leverages the same `docker-registry` chart used in `zarf-seed-registry` but with a few key differences:
 
-1a. In NodePort mode the `image.repository` is set to the value of the built-in variable `###ZARF_REGISTRY###`. This means the registry image is pulled from the registry.
-1b. In proxy mode the `image.repository` stays pointed to the long lived injector.
+1. In NodePort mode, the `image.repository` points to the registry nodeport service deployed by `zarf-seed-registry`. Since this is the same chart, the new registry deployment pulls its image from itself. In proxy mode, the `image.repository` continues to point to the injector.
 {/* you know, why DO we do this? if we kept the repository the same, and kept running the injector, couldnt this handle cluster full-deaths??? (ofc would need to tweak the zarf-agent to not mutate the image.repository for the docker-registry chart under the zarf namespace, but i think it might be doable) */}
 2. A `connect` manifest for running [`zarf connect registry`](/commands/zarf_connect/) to tunnel to the Zarf Registry.
 3. A configmap to satisfy [KEP-1755](https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry)
