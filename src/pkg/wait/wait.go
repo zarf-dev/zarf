@@ -52,6 +52,7 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 	// Wait for the cluster to become available by polling for a successful REST config.
 	var restConfig *rest.Config
 	var clientCfg clientcmd.ClientConfig
+	var discoveryClient *discovery.DiscoveryClient
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, timeout, true, func(_ context.Context) (bool, error) {
 		var err error
 		loader := clientcmd.NewDefaultClientConfigLoadingRules()
@@ -59,6 +60,16 @@ func ForResource(ctx context.Context, kind, identifier, condition, namespace str
 		_, restConfig, err = cluster.ClientAndConfig()
 		if err != nil {
 			l.Debug("failed to get REST config, retrying", "error", err)
+			return false, nil
+		}
+		discoveryClient, err = discovery.NewDiscoveryClientForConfig(restConfig)
+		if err != nil {
+			l.Debug("failed to get discovery client, retrying", "error", err)
+			return false, nil
+		}
+		_, err = discoveryClient.ServerVersion()
+		if err != nil {
+			l.Debug("cluster not reachable, retrying", "error", err)
 			return false, nil
 		}
 		return true, nil
