@@ -234,12 +234,10 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// "services.v1beta1.test.zarf.dev" exercises the fully-specified GVR path in ParseResourceArg,
-		// which correctly sets Group=test.zarf.dev, Version=v1beta1, Resource=services rather than
-		// falling back to the GroupResource path (which could resolve to the built-in v1/Service instead).
-		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		// "services.v1beta1.test.zarf.dev" exercises the group kind instead of falling back to the GroupResource path (which could resolve to the built-in v1/Service instead).
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "service.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
-		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
 	})
 
