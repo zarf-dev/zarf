@@ -156,7 +156,7 @@ func waitFor(ctx context.Context, restConfig *rest.Config, clientCfg clientcmd.C
 		return waitForReconciled(ctx, restConfig, dynamicClient, mapping, identifier, namespace, deadline)
 	}
 
-	return waitForResourceCondition(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
+	return waitForResourceCondition(ctx, dynamicClient, condition, mapping.GroupVersionKind.GroupKind().String(), identifier, namespace, deadline)
 }
 
 // waitForSingleResourceMatchingCriteria waits for at least one resource of the given kind to exist.
@@ -322,15 +322,15 @@ func isExistsCondition(condition string) bool {
 	return false
 }
 
-func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interface, condition, kind, identifier, namespace string, deadline time.Time) error {
+func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interface, condition, groupKind, identifier, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	var args []string
 	var labelSelector string
 	if strings.ContainsRune(identifier, '=') {
-		args = []string{kind}
+		args = []string{groupKind}
 		labelSelector = identifier
 	} else {
-		args = []string{fmt.Sprintf("%s/%s", kind, identifier)}
+		args = []string{fmt.Sprintf("%s/%s", groupKind, identifier)}
 	}
 
 	forCondition := "create" // default: wait for existence
@@ -346,7 +346,7 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 		forCondition = "delete"
 	}
 
-	l.Info("waiting for resource", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	l.Info("waiting for resource", "kind", groupKind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 
 	configFlags := genericclioptions.NewConfigFlags(true)
 	if namespace != "" {
@@ -383,11 +383,11 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 	})
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			return fmt.Errorf("timed out waiting for %s/%s to be %s", kind, identifier, forCondition)
+			return fmt.Errorf("timed out waiting for %s/%s to be %s", groupKind, identifier, forCondition)
 		}
 		return err
 	}
-	l.Info("wait-for condition met", "kind", kind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
+	l.Info("wait-for condition met", "kind", groupKind, "identifier", identifier, "condition", forCondition, "namespace", namespace)
 	return nil
 }
 
