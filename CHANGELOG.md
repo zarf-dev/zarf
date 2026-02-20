@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.73.0](https://github.com/zarf-dev/zarf/compare/v0.72.0...v0.73.0) (2026-02-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **SDK:** avoid os exit in cmd ([#4615](https://github.com/zarf-dev/zarf/issues/4615))
+
+### Features
+
+* **SDK:** avoid os exit in cmd ([#4615](https://github.com/zarf-dev/zarf/issues/4615)) ([7f67816](https://github.com/zarf-dev/zarf/commit/7f67816c654ef22d94b575857c2c4a7c2c59e640))
+* split wait-for command ([#4614](https://github.com/zarf-dev/zarf/issues/4614)) ([3340ead](https://github.com/zarf-dev/zarf/commit/3340ead7248ac411bbaf91921070b583198aa98f))
+
+
+### Bug Fixes
+
+* **wait:** properly resolve kind when group conflicts between resources ([#4628](https://github.com/zarf-dev/zarf/issues/4628)) ([db3cd9d](https://github.com/zarf-dev/zarf/commit/db3cd9d5e31aae78ed99f8f3e2bdfbe46e0a4e13))
+
 ## [0.72.0](https://github.com/zarf-dev/zarf/compare/v0.71.1...v0.72.0) (2026-02-19)
 
 
