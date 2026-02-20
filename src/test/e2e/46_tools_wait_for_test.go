@@ -208,6 +208,38 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("wait for CRD with kind name that conflicts with a built-in resource", func(t *testing.T) {
+		t.Parallel()
+		crdName := "services.test.zarf.dev"
+		resourceName := "my-svc-test"
+
+		crdFile := "src/test/packages/46-manifests/zarf-svc-crd.yaml"
+		resourceFile := "src/test/packages/46-manifests/zarf-svc-cr.yaml"
+
+		_, _, err := e2e.Kubectl(t, "apply", "-f", crdFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", crdFile)
+			require.NoError(t, err)
+		})
+
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "crds", crdName, "established", "--timeout=10s")
+		require.NoError(t, err, stdout, stderr)
+
+		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", resourceFile)
+			require.NoError(t, err)
+		})
+
+		// "Service" also matches the built-in k8s Service kind
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "services.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+	})
+
 	t.Run("wait for pod created after wait starts", func(t *testing.T) {
 		t.Parallel()
 		podName := "delayed-pod"
