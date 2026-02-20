@@ -10,9 +10,21 @@ spec:
     singular: service
   scope: Namespaced
   versions:
-    - name: v1
+    - name: v1beta1
       served: true
       storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                name:
+                  type: string
+    - name: v1beta2
+      served: true
+      storage: false
       schema:
         openAPIV3Schema:
           type: object

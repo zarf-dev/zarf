@@ -25,6 +25,18 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	// Apply the shared CRD (services.test.zarf.dev) used by the conflict and version subtests.
+	svcCRDFile := "src/test/packages/46-manifests/zarf-svc-crd.yaml"
+	svcCRDName := "services.test.zarf.dev"
+	_, _, err = e2e.Kubectl(t, "apply", "-f", svcCRDFile)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "-f", svcCRDFile)
+		require.NoError(t, err)
+	})
+	_, _, err = e2e.Zarf(t, "tools", "wait-for", "crds", svcCRDName, "established", "--timeout=10s")
+	require.NoError(t, err)
+
 	t.Run("wait for non-existent resource times out", func(t *testing.T) {
 		t.Parallel()
 		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
@@ -210,24 +222,11 @@ func TestWaitFor(t *testing.T) {
 
 	t.Run("wait for CRD with kind name that conflicts with a built-in resource", func(t *testing.T) {
 		t.Parallel()
-		crdName := "services.test.zarf.dev"
 		resourceName := "my-svc-test"
-
-		crdFile := "src/test/packages/46-manifests/zarf-svc-crd.yaml"
 		resourceFile := "src/test/packages/46-manifests/zarf-svc-cr.yaml"
 
-		_, _, err := e2e.Kubectl(t, "apply", "-f", crdFile)
-		require.NoError(t, err)
-
-		t.Cleanup(func() {
-			_, _, err := e2e.Kubectl(t, "delete", "-f", crdFile)
-			require.NoError(t, err)
-		})
-
-		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "crds", crdName, "established", "--timeout=10s")
-		require.NoError(t, err, stdout, stderr)
-
-		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
+		// The CRD (services.test.zarf.dev) is applied by the parent test.
+		_, _, err := e2e.Kubectl(t, "apply", "-f", resourceFile)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
@@ -235,8 +234,36 @@ func TestWaitFor(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// "Service" also matches the built-in k8s Service kind
-		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "services.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		// "services.v1beta1.test.zarf.dev" exercises the fully-specified GVR path in ParseResourceArg,
+		// which correctly sets Group=test.zarf.dev, Version=v1beta1, Resource=services rather than
+		// falling back to the GroupResource path (which could resolve to the built-in v1/Service instead).
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+	})
+
+	t.Run("wait for resource created at non-storage version is found via storage version specifier", func(t *testing.T) {
+		t.Parallel()
+		resourceName := "my-svc-v2-test"
+		resourceFile := "src/test/packages/46-manifests/zarf-svc-v2-cr.yaml"
+
+		// The CRD (services.test.zarf.dev) is applied by the parent test. It serves both v1beta1
+		// (storage) and v1beta2 (non-storage). The CR is created at v1beta2.
+		_, _, err := e2e.Kubectl(t, "apply", "-f", resourceFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", resourceFile)
+			require.NoError(t, err)
+		})
+
+		// Even though the CR was created at v1beta2, waiting with "services.v1beta1.test.zarf.dev"
+		// succeeds: Kubernetes serves all CRs under every served version, so the resource is
+		// reachable via v1beta1 (the storage version) as well.
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdout, stderr)
 	})
 
