@@ -188,8 +188,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		return nil, fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
+	l.Debug("applying the Zarf namespace")
+	zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
+	_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
+	if err != nil {
+		return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
+	}
+
+	ipFamily, err := c.GetIPFamily(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+	}
+
 	// If state is nil, this is a new cluster.
-	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
 	if s == nil {
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
@@ -248,20 +259,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			}
 		}
 
-		// Try to create the zarf namespace.
-		l.Debug("creating the Zarf namespace")
-		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
-		if err != nil {
-			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
-		}
-
-		ipFamily, err := c.GetIPFamily(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
-		}
-		s.IPFamily = ipFamily
-
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -283,13 +280,29 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
+		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
 		if err != nil {
 			return nil, err
 		}
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
+	}
+
+	s.IPFamily = ipFamily
+
+	// If the injector mode is changing from nodeport to proxy or vice versa, reset the injector port
+	if (s.RegistryInfo.RegistryMode == state.RegistryModeProxy && opts.RegistryInfo.RegistryMode == state.RegistryModeNodePort) ||
+		(s.RegistryInfo.RegistryMode == state.RegistryModeNodePort && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy) {
+		s.InjectorInfo.Port = 0
+	}
+
+	if opts.RegistryInfo.RegistryMode != "" {
+		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
+	}
+	if opts.RegistryInfo.NodePort != 0 && s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, opts.RegistryInfo.NodePort)
+		s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
 	}
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {

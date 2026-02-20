@@ -105,8 +105,8 @@ func TestZarfInit(t *testing.T) {
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 
-	// Zarf should fail since registry info (nodeport) has changed on a subsequent init
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31338", "--confirm")
+	// Zarf should fail since registry credentials are changing on a subsequent init
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
 }
 

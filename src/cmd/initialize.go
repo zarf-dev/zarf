@@ -78,8 +78,6 @@ func newInitCommand() *cobra.Command {
 		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
 		"the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
-	// While this feature is in early alpha we will hide the flags
-	cmd.Flags().MarkHidden("registry-mode")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -152,12 +150,12 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if o.registryInfo.RegistryMode == "" {
-		if o.registryInfo.Address == "" {
-			o.registryInfo.RegistryMode = state.RegistryModeNodePort
-		} else {
-			o.registryInfo.RegistryMode = state.RegistryModeExternal
-		}
+	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
+		o.registryInfo.RegistryMode = state.RegistryModeExternal
+	}
+
+	if o.registryInfo.NodePort == 0 && o.registryInfo.RegistryMode == state.RegistryModeNodePort {
+		o.registryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
 	}
 
 	packageSource := ""
@@ -333,7 +331,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
-	if helpers.IsNotZeroAndNotEqual(registryInfo, s.RegistryInfo) {
+	if state.CheckIfCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
