@@ -149,7 +149,7 @@ func waitFor(ctx context.Context, restConfig *rest.Config, clientCfg clientcmd.C
 	}
 
 	if identifier == "" {
-		return waitForAnyResourceInNamespace(ctx, dynamicClient, mapping.Resource, namespace, deadline)
+		return waitForSingleResourceMatchingCriteria(ctx, dynamicClient, mapping.Resource, namespace, deadline)
 	}
 
 	if condition == "" {
@@ -159,8 +159,8 @@ func waitFor(ctx context.Context, restConfig *rest.Config, clientCfg clientcmd.C
 	return waitForResourceCondition(ctx, dynamicClient, condition, mapping.Resource.Resource, identifier, namespace, deadline)
 }
 
-// waitForAnyResourceInNamespace waits for at least one resource of the given kind to exist.
-func waitForAnyResourceInNamespace(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
+// waitForSingleResourceMatchingCriteria waits for at least one resource of the given kind to exist.
+func waitForSingleResourceMatchingCriteria(ctx context.Context, dynamicClient dynamic.Interface, resource schema.GroupVersionResource, namespace string, deadline time.Time) error {
 	l := logger.From(ctx)
 	waitInterval := time.Second
 	l.Info("waiting for any resource of kind to exist", "kind", resource.Resource, "namespace", namespace)

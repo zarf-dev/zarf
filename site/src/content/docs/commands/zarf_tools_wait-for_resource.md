@@ -24,7 +24,7 @@ zarf tools wait-for resource KIND [NAME | SELECTOR] [CONDITION] [flags]
 
 ```
 
-$ zarf tools wait-for resource deployment my-pod-name -n default                 #  wait for deployment to be reconciled (default condition)
+$ zarf tools wait-for resource deployment my-deployment -n default               #  wait for deployment to be reconciled (default condition)
 $ zarf tools wait-for resource po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
 $ zarf tools wait-for resource pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
 $ zarf tools wait-for resource pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled

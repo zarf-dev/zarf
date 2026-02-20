@@ -632,7 +632,7 @@ $ zarf tools wait-for http google.com success                           #  wait 
 		"Resource reconciliation is determined according to https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus\n" +
 		"If a resource does not implement reconciliation statuses, then this command will wait for that resource to exist"
 	CmdToolsWaitForResourceExample = `
-$ zarf tools wait-for resource deployment my-pod-name -n default                 #  wait for deployment to be reconciled (default condition)
+$ zarf tools wait-for resource deployment my-deployment -n default               #  wait for deployment to be reconciled (default condition)
 $ zarf tools wait-for resource po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
 $ zarf tools wait-for resource pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
 $ zarf tools wait-for resource pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
