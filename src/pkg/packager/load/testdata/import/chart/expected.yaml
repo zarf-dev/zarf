@@ -9,7 +9,7 @@ components:
     url: oci://test/different-value
     version: 2.3.4
     values:
-    - sourcePath: .baseValue
+    - sourcePath: .common.baseValue
       targetPath: .config.base
     - sourcePath: .overrideValue
       targetPath: .config.override

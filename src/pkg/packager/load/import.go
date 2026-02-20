@@ -6,16 +6,20 @@ package load
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
+	goyaml "github.com/goccy/go-yaml"
 	"github.com/mholt/archives"
 	pkgvalidate "github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -37,7 +41,178 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, error) {
+// getOrCreateComponentTempDir lazily creates a temp directory and returns a component-namespaced
+// subdirectory within it. The tempDir pointer is populated on first call and reused on subsequent calls.
+func getOrCreateComponentTempDir(tempDir *string, componentName string) (string, error) {
+	if *tempDir == "" {
+		dir, err := os.MkdirTemp("", "zarf-import-")
+		if err != nil {
+			return "", fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		*tempDir = dir
+	}
+	componentDir := filepath.Join(*tempDir, componentName)
+	if err := os.MkdirAll(componentDir, helpers.ReadWriteExecuteUser); err != nil {
+		return "", fmt.Errorf("failed to create component temp directory: %w", err)
+	}
+	return componentDir, nil
+}
+
+// namespaceSchema reads a JSON schema, wraps its properties under the component name,
+// and returns the namespaced schema. Returns nil if the schema path is empty.
+func namespaceSchema(packagePath, schemaPath, componentName string) (map[string]any, error) {
+	if schemaPath == "" {
+		return nil, nil
+	}
+
+	// Resolve the full path to the schema file
+	fullPath := schemaPath
+	if !filepath.IsAbs(schemaPath) {
+		fullPath = filepath.Join(packagePath, schemaPath)
+	}
+
+	// Read the schema file
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read schema file %s: %w", fullPath, err)
+	}
+
+	// Parse the JSON schema
+	var schema map[string]any
+	if err := json.Unmarshal(content, &schema); err != nil {
+		return nil, fmt.Errorf("failed to parse schema file %s: %w", fullPath, err)
+	}
+
+	// Create a namespaced schema that wraps the original under the component name
+	namespaced := map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			componentName: schema,
+		},
+	}
+
+	return namespaced, nil
+}
+
+// mergeSchemas merges two JSON schemas by combining their properties.
+// The second schema's properties take precedence in case of conflicts.
+func mergeSchemas(base, overlay map[string]any) map[string]any {
+	if base == nil {
+		return overlay
+	}
+	if overlay == nil {
+		return base
+	}
+
+	result := map[string]any{
+		"type": "object",
+	}
+
+	// Get properties from both schemas
+	baseProps, ok := base["properties"].(map[string]any)
+	if !ok {
+		baseProps = nil
+	}
+	overlayProps, ok := overlay["properties"].(map[string]any)
+	if !ok {
+		overlayProps = nil
+	}
+
+	if baseProps == nil {
+		baseProps = map[string]any{}
+	}
+
+	// Merge properties
+	mergedProps := make(map[string]any)
+	for k, v := range baseProps {
+		mergedProps[k] = v
+	}
+	for k, v := range overlayProps {
+		mergedProps[k] = v
+	}
+
+	result["properties"] = mergedProps
+	return result
+}
+
+// writeMergedSchema writes a merged schema to the temp directory and returns the path.
+func writeMergedSchema(tempDir *string, schema map[string]any) (string, error) {
+	if schema == nil {
+		return "", nil
+	}
+
+	// Ensure temp directory exists
+	if *tempDir == "" {
+		dir, err := os.MkdirTemp("", "zarf-import-")
+		if err != nil {
+			return "", fmt.Errorf("failed to create temp directory: %w", err)
+		}
+		*tempDir = dir
+	}
+
+	// Marshal the schema as JSON with indentation for readability
+	content, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal merged schema: %w", err)
+	}
+
+	// Write to temp directory
+	destPath := filepath.Join(*tempDir, "values.schema.json")
+	if err := os.WriteFile(destPath, content, helpers.ReadWriteUser); err != nil {
+		return "", fmt.Errorf("failed to write merged schema: %w", err)
+	}
+
+	return destPath, nil
+}
+
+// namespaceValuesFile reads a values file, wraps its contents under the component name as a root key,
+// and writes it to the component's temp directory. Returns the path to the new file.
+func namespaceValuesFile(tempDir *string, componentName, packagePath, valuesFilePath string) (string, error) {
+	// Resolve the full path to the values file
+	fullPath := valuesFilePath
+	if !filepath.IsAbs(valuesFilePath) {
+		fullPath = filepath.Join(packagePath, valuesFilePath)
+	}
+
+	// Read the original values file
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read values file %s: %w", fullPath, err)
+	}
+
+	// Parse the YAML content
+	var values map[string]any
+	if err := goyaml.Unmarshal(content, &values); err != nil {
+		return "", fmt.Errorf("failed to parse values file %s: %w", fullPath, err)
+	}
+
+	// Wrap under component name
+	namespaced := map[string]any{
+		componentName: values,
+	}
+
+	// Marshal back to YAML
+	namespacedContent, err := goyaml.Marshal(namespaced)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal namespaced values: %w", err)
+	}
+
+	// Get or create the component temp directory
+	componentDir, err := getOrCreateComponentTempDir(tempDir, componentName)
+	if err != nil {
+		return "", err
+	}
+
+	// Write to temp directory, preserving the original filename
+	destPath := filepath.Join(componentDir, filepath.Base(valuesFilePath))
+	if err := os.WriteFile(destPath, namespacedContent, helpers.ReadWriteUser); err != nil {
+		return "", fmt.Errorf("failed to write namespaced values file: %w", err)
+	}
+
+	return destPath, nil
+}
+
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions, tempDir *string) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -60,7 +235,8 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"flavor", flavor,
 		"importStack", len(importStack),
 	)
-
+	var valuesFiles []string
+	var mergedSchema map[string]any
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -109,7 +285,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions, tempDir)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -175,6 +351,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
+		// namespace the values here before overriding other data from the parent
+		composed, err = namespaceTemplates(composed, pkgPath.BaseDir, tempDir)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
 		composed = overrideDeprecated(composed, component)
 		composed = overrideActions(composed, component)
 		composed = overrideResources(composed, component)
@@ -182,9 +363,58 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+
+		// values files will be merged with precedence on Assemble - we can namespace them here and order them accordingly
+		for _, v := range importedPkg.Values.Files {
+			// Namespace the values file under the component name and write to temp directory
+			relativePath := makePathRelativeTo(v, importPath)
+			namespacedPath, err := namespaceValuesFile(tempDir, component.Name, pkgPath.BaseDir, relativePath)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to namespace values file %s: %w", v, err)
+			}
+			valuesFiles = append(valuesFiles, namespacedPath)
+		}
+
+		// Namespace and merge the imported package's schema if it exists
+		if importedPkg.Values.Schema != "" {
+			schemaPath := makePathRelativeTo(importedPkg.Values.Schema, importPath)
+			namespacedSchema, err := namespaceSchema(pkgPath.BaseDir, schemaPath, component.Name)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to namespace schema from %s: %w", importedPkg.Values.Schema, err)
+			}
+			mergedSchema = mergeSchemas(mergedSchema, namespacedSchema)
+		}
 	}
 
+	valuesFiles = append(valuesFiles, pkg.Values.Files...)
+	valuesFiles = slices.Compact(valuesFiles)
+	pkg.Values.Files = valuesFiles
 	pkg.Components = components
+
+	// Merge imported schemas with parent schema and write to temp if needed
+	if pkg.Values.Schema != "" {
+		// Read the parent schema directly without namespacing
+		schemaFullPath := pkg.Values.Schema
+		if !filepath.IsAbs(schemaFullPath) {
+			schemaFullPath = filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
+		}
+		content, err := os.ReadFile(schemaFullPath)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to read parent schema %s: %w", schemaFullPath, err)
+		}
+		var parentSchema map[string]any
+		if err := json.Unmarshal(content, &parentSchema); err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to parse parent schema %s: %w", schemaFullPath, err)
+		}
+		mergedSchema = mergeSchemas(mergedSchema, parentSchema)
+	}
+	if mergedSchema != nil {
+		schemaPath, err := writeMergedSchema(tempDir, mergedSchema)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to write merged schema: %w", err)
+		}
+		pkg.Values.Schema = schemaPath
+	}
 
 	varMap := map[string]bool{}
 	pkg.Variables = nil
@@ -462,6 +692,107 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 	comp.ImageArchives = append(comp.ImageArchives, override.ImageArchives...)
 
 	return comp
+}
+
+// namespaceTemplates updates the paths of templates to be namespaced by the component name
+func namespaceTemplates(comp v1alpha1.ZarfComponent, packagePath string, tempDir *string) (v1alpha1.ZarfComponent, error) {
+	// namespace chart values should replace sourcePath strings directly
+	for chartIdx, chart := range comp.Charts {
+		if len(chart.Values) > 0 {
+			for valueIdx, value := range chart.Values {
+				// sourcePath in chart values does not have a protected root - IE ".Values"
+				comp.Charts[chartIdx].Values[valueIdx].SourcePath = fmt.Sprintf(".%s%s", comp.Name, value.SourcePath)
+			}
+		}
+	}
+	// namespace actions should evaluate replacing action contents
+	namespaceActionTemplates(comp.Actions.OnDeploy.Before, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.After, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.OnFailure, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnDeploy.OnSuccess, comp.Name)
+	// namespace on remove actions as well
+	namespaceActionTemplates(comp.Actions.OnRemove.Before, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.After, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.OnFailure, comp.Name)
+	namespaceActionTemplates(comp.Actions.OnRemove.OnSuccess, comp.Name)
+
+	// namespace manifests should replace all instances of contents by reading/transforming/writing the file
+	for manifestIdx, manifest := range comp.Manifests {
+		if manifest.IsTemplate() {
+			for fileIdx, file := range manifest.Files {
+				// skipping remote files explicitly
+				if helpers.IsURL(file) {
+					continue
+				}
+				srcPath := filepath.Join(packagePath, file)
+				tempPath, err := transformFileTemplates(tempDir, comp.Name, "manifests", file, srcPath, comp.Name)
+				if err != nil {
+					return comp, err
+				}
+				comp.Manifests[manifestIdx].Files[fileIdx] = tempPath
+			}
+		}
+	}
+
+	// namespace files should replace all instances of contents by reading/transforming/writing the file
+	for fileIdx, file := range comp.Files {
+		if file.IsTemplate() {
+			// skipping remote files explicitly
+			if helpers.IsURL(file.Source) {
+				continue
+			}
+			srcPath := filepath.Join(packagePath, file.Source)
+			tempPath, err := transformFileTemplates(tempDir, comp.Name, "files", file.Source, srcPath, comp.Name)
+			if err != nil {
+				return comp, err
+			}
+			comp.Files[fileIdx].Source = tempPath
+		}
+	}
+
+	return comp, nil
+}
+
+// transformFileTemplates reads a file from srcPath, transforms template paths to be namespaced by key,
+// and writes it to the temp directory. Returns the path to the transformed file.
+func transformFileTemplates(tempDir *string, componentName, subdir, relativePath, srcPath, key string) (string, error) {
+	info, err := os.Stat(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to stat file %s: %w", srcPath, err)
+	}
+
+	content, err := os.ReadFile(srcPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file %s: %w", srcPath, err)
+	}
+
+	transformed := template.InsertObjectKeyInContent(string(content), key)
+
+	// Get or create the component temp directory with subdir
+	componentDir, err := getOrCreateComponentTempDir(tempDir, componentName)
+	if err != nil {
+		return "", err
+	}
+	destDir := filepath.Join(componentDir, subdir)
+	if err := os.MkdirAll(destDir, helpers.ReadWriteExecuteUser); err != nil {
+		return "", fmt.Errorf("failed to create temp subdirectory: %w", err)
+	}
+
+	destPath := filepath.Join(destDir, filepath.Base(relativePath))
+	if err := os.WriteFile(destPath, []byte(transformed), info.Mode()); err != nil {
+		return "", fmt.Errorf("failed to write file %s: %w", destPath, err)
+	}
+
+	return destPath, nil
+}
+
+// namespaceActionTemplates transforms template paths in actions that have templating enabled.
+func namespaceActionTemplates(actions []v1alpha1.ZarfComponentAction, key string) {
+	for i, action := range actions {
+		if action.ShouldTemplate() {
+			actions[i].Cmd = template.InsertObjectKeyInContent(action.Cmd, key)
+		}
+	}
 }
 
 func makePathRelativeTo(path, relativeTo string) string {
