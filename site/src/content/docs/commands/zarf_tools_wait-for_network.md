@@ -22,11 +22,11 @@ zarf tools wait-for network PROTOCOL ADDRESS [CODE] [flags]
 
 ```
 
-$ zarf tools wait-for http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
-$ zarf tools wait-for tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
-$ zarf tools wait-for https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
-$ zarf tools wait-for http google.com                                   #  wait for any 2xx response from http://google.com
-$ zarf tools wait-for http google.com success                           #  wait for any 2xx response from http://google.com
+$ zarf tools wait-for network http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+$ zarf tools wait-for network tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+$ zarf tools wait-for network https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+$ zarf tools wait-for network http google.com                                   #  wait for any 2xx response from http://google.com
+$ zarf tools wait-for network http google.com success                           #  wait for any 2xx response from http://google.com
 
 ```
 

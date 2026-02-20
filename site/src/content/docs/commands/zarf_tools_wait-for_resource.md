@@ -24,15 +24,15 @@ zarf tools wait-for resource KIND [NAME | SELECTOR] [CONDITION] [flags]
 
 ```
 
-$ zarf tools wait-for deployment my-pod-name -n default                 #  wait for Deployment to be reconciled (default condition)
-$ zarf tools wait-for po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
-$ zarf tools wait-for pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
-$ zarf tools wait-for pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
-$ zarf tools wait-for deployment zarf-docker-registry exists -n zarf    #  wait for deployment zarf-docker-registry in namespace zarf to exist
-$ zarf tools wait-for svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
-$ zarf tools wait-for pvc -n zarf                                       #  wait for any pvc in namespace zarf to exist
-$ zarf tools wait-for crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
-$ zarf tools wait-for sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+$ zarf tools wait-for resource deployment my-pod-name -n default                 #  wait for deployment to be reconciled (default condition)
+$ zarf tools wait-for resource po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
+$ zarf tools wait-for resource pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
+$ zarf tools wait-for resource pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
+$ zarf tools wait-for resource deployment zarf-docker-registry exists -n zarf    #  wait for deployment zarf-docker-registry in namespace zarf to exist
+$ zarf tools wait-for resource svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
+$ zarf tools wait-for resource pvc -n zarf                                       #  wait for any pvc in namespace zarf to exist
+$ zarf tools wait-for resource crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+$ zarf tools wait-for resource sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
 
 ```
 
