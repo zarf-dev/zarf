@@ -61,9 +61,9 @@ require (
 	k8s.io/api v0.35.1
 	k8s.io/apimachinery v0.35.1
 	k8s.io/client-go v0.35.1
-	k8s.io/component-base v0.35.0
+	k8s.io/component-base v0.35.1
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubectl v0.35.0
+	k8s.io/kubectl v0.35.1
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.0
@@ -631,10 +631,10 @@ require (
 	gorm.io/gorm v1.31.1 // indirect
 	k8s.io/apiextensions-apiserver v0.35.0 // indirect
 	k8s.io/apiserver v0.35.0 // indirect
-	k8s.io/cli-runtime v0.35.0
-	k8s.io/component-helpers v0.35.0
+	k8s.io/cli-runtime v0.35.1
+	k8s.io/component-helpers v0.35.1
 	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
-	k8s.io/metrics v0.35.0 // indirect
+	k8s.io/metrics v0.35.1 // indirect
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
