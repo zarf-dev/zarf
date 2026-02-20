@@ -79,7 +79,6 @@ When `zarf init` deploys the `zarf-seed-registry` component in NodePort mode, th
 4. The `zarf-injector` binary reassembles the `registry:3` image and hosts a temporary registry that the cluster can pull from.
 5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
 6. Once the `docker-registry` chart is deployed, the `zarf-seed-registry` component is marked as complete and the `zarf-injector` pod is removed from the cluster.
-7. Deployment proceeds to the `zarf-registry` component.
 
 :::note
 
@@ -99,7 +98,7 @@ When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the f
   - Less than 1MiB in size
 3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
 4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector Daemonset.
-5. The registry Deployment and Proxy Daemonset point their images to the Zarf Injector Daemonset, which is also exposed through a host port or host network proxy. This allows the kubelet to pull these images.
+5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images locally.
 
 An advantage of proxy mode is that it's automatically secured behind mTLS. The proxy DaemonSet uses mTLS certificates stored in the cluster to secure its connection to the registry. Since the proxy runs on each node, the kubelet never transmits unencrypted data outside of each host. Additionally, Zarf uses the same mTLS certificates to encrypt its calls to the registry when in proxy mode.
 
