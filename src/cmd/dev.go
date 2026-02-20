@@ -768,6 +768,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to find images: %w", err)
 	}
 
+	archiveImageScans, imagesScans, err := packager.FilterImagesFoundInArchives(ctx, basePath, imagesScans)
+
 	if o.why != "" {
 		var foundWhyResource bool
 		for _, scan := range imagesScans {
@@ -805,15 +807,16 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 			}
 		}
-		if len(finding.ArchiveImages) > 0 {
-			componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
-			componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
-			componentDefinition += "    imageArchives:\n"
-			componentDefinition += fmt.Sprintf("      - path: %s\n", finding.Path)
-			componentDefinition += "        images:\n"
-			for _, image := range finding.ArchiveImages {
-				componentDefinition += fmt.Sprintf("          - %s\n", image)
-			}
+	}
+
+	for _, finding := range archiveImageScans {
+		componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
+		componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
+		componentDefinition += "    imageArchives:\n"
+		componentDefinition += fmt.Sprintf("      - path: %s\n", finding.Path)
+		componentDefinition += "        images:\n"
+		for _, image := range finding.Images {
+			componentDefinition += fmt.Sprintf("          - %s\n", image)
 		}
 	}
 	fmt.Println(componentDefinition)
