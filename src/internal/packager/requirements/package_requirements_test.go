@@ -35,7 +35,7 @@ func TestValidatePackageRequirements_InvalidYAML(t *testing.T) {
 
 	err := ValidatePackageRequirements(ctx, pkgLayout)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "failed to parse REQUIREMENTS")
+	require.Contains(t, err.Error(), "failed to parse requirements.yaml")
 }
 
 func TestValidatePackageRequirements_AgentToolMissing(t *testing.T) {

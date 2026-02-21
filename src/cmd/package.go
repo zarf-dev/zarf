@@ -292,7 +292,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
-	cmd.Flags().BoolVar(&o.SkipRequirementsCheck, "skip-requirements-check", false, "Ignore the package's REQUIREMENTS when deploying")
+	cmd.Flags().BoolVar(&o.SkipRequirementsCheck, "skip-requirements-check", false, "Ignore the package's requirements.yaml when deploying")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {

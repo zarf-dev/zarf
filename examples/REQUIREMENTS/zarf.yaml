@@ -1,7 +1,7 @@
 kind: ZarfPackageConfig
 metadata:
   name: requirements-test
-  description: Simple package to test REQUIREMENTS handling
+  description: Simple package to test requirements handling
   version: 0.0.1
   architecture: amd64
 

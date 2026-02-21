@@ -1,4 +1,4 @@
-# YAML file named REQUIREMENTS that specifies prereqs for package to have a clean deploy
+# YAML file that specifies prereqs for package to have a clean deploy
 # This is a very minimal & functional example
 # agent - specify utils & vars that must exist on the agent doing the zarf package deploy
 agent:
