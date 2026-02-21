@@ -17,19 +17,25 @@ import (
 
 // ValidatePackageRequirements reads <packageRoot>/REQUIREMENTS and validates agent + cluster prerequisites.
 func ValidatePackageRequirements(ctx context.Context, pkgLayout *layout.PackageLayout) error {
-	reqPath := filepath.Join(pkgLayout.DirPath(), layout.Requirements)
+	return ValidatePackageRequirementsFromDir(ctx, pkgLayout.DirPath())
+}
+
+// ValidatePackageRequirementsFromDir reads <dir>/REQUIREMENTS and validates agent + cluster prerequisites.
+// This is useful for unit tests and for commands that inspect package contents without requiring a full PackageLayout.
+func ValidatePackageRequirementsFromDir(ctx context.Context, dir string) error {
+	reqPath := filepath.Join(dir, layout.Requirements)
 
 	b, err := os.ReadFile(reqPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // no REQUIREMENTS file => no-op
 		}
-		return fmt.Errorf("failed to read REQUIREMENTS: %w", err)
+		return fmt.Errorf("failed to read requirements.yaml: %w", err)
 	}
 
 	var rf requirementsFile
 	if err := goyaml.Unmarshal(b, &rf); err != nil {
-		return fmt.Errorf("failed to parse REQUIREMENTS: %w", err)
+		return fmt.Errorf("failed to parse requirements.yaml: %w", err)
 	}
 
 	// Validate agent-side requirements first (fast, local).
