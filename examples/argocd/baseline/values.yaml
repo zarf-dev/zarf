@@ -19,7 +19,45 @@ configs:
       url: https://github.com/argoproj/argocd-example-apps.git
       username: ""
       password: ""
+    oci-helm:
+      name: podinfo-helm
+      url: oci://ghcr.io/stefanprodan/charts/podinfo
+      username: ""
+      password: ""
+      type: helm
+      enableOCI: "true"
+    oci-manifests:
+      name: oci-repo
+      url: oci://registry-1.docker.io/dhpup/oci-edge
+      username: ""
+      password: ""
+      type: oci
 
 redis:
   image:
     repository: docker.io/library/redis
+
+# Required for 'src/test/external' to validate external git server.
+# It uses 'curloptResolve' to force-map 'gitea.localhost' for test environments
+# where the system's libcurl/RFC 6761 implementation would otherwise ignore 
+# /etc/hosts entries.
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: git-config-localhost-resolve
+    data:
+      gitconfig: |
+        [http]
+            curloptResolve = gitea.localhost:3000:172.31.0.99
+
+repoServer:
+  volumes:
+    - name: gitconfig-volume
+      configMap:
+        name: git-config-localhost-resolve
+
+  volumeMounts:
+    - name: gitconfig-volume
+      mountPath: /etc/gitconfig
+      subPath: gitconfig
