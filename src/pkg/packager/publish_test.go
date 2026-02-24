@@ -235,6 +235,14 @@ func TestPublishPackage(t *testing.T) {
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 		},
+		{
+			name: "Sign and publish package with specified tag different from version",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+		},
 	}
 
 	for _, tc := range tt {

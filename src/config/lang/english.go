@@ -308,11 +308,15 @@ $ zarf package publish my-package.tar oci://my-registry.com/my-namespace
 
 # Publish a skeleton package to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+
+# Publish a package with a specific tag different from the package metadata.version
+$ zarf package publish my-package.tar oci://my-registry.com/my-namespace --tag v0.0.1
 `
 	CmdPackagePublishFlagSigningKey         = "Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider"
 	CmdPackagePublishFlagSigningKeyPassword = "Password to the private key used for publishing packages"
 	CmdPackagePublishFlagConfirm            = "Confirms package publish without prompting. Skips prompt for the signing key password"
 	CmdPackagePublishFlagFlavor             = "The flavor of components to include in the resulting package. The flavor will be appended to the package tag"
+	CmdPackagePublishFlagTag                = "The tag to be used in the OCI reference for the package in the registry"
 
 	CmdPackageSignShort   = "Signs an existing Zarf package"
 	CmdPackageSignLong    = "Signs an existing Zarf package with a private key. The package can be a local tarball or pulled from an OCI registry. The signature is created by signing the zarf.yaml file and does not modify the package checksums."

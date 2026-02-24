@@ -109,6 +109,8 @@ type PublishPackageOptions struct {
 	// Retries specifies the number of retries to use
 	Retries int
 	types.RemoteOptions
+	// Tag is an optional tag for the OCI reference separate from the package metadata.version
+	Tag string
 }
 
 // PublishPackage takes a package layout and pushes the package to the given registry.
@@ -145,8 +147,11 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 		return registry.Reference{}, fmt.Errorf("unable to sign package: %w", err)
 	}
 
+	referenceOptions := zoci.ReferenceFromMetadataOptions{
+		Tag: opts.Tag,
+	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadata(dst.String(), pkgLayout.Pkg)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(dst.String(), pkgLayout.Pkg, referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
@@ -177,6 +182,8 @@ type PublishSkeletonOptions struct {
 	// WithBuildMachineInfo controls whether to include build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
 	types.RemoteOptions
+	// Tag is an optional tag for the OCI reference separate from the package metadata.version
+	Tag string
 }
 
 // PublishSkeleton takes a Path to the package definition and uploads a skeleton package to the given a registry.
@@ -230,8 +237,11 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}
+	referenceOptions := zoci.ReferenceFromMetadataOptions{
+		Tag: opts.Tag,
+	}
 	// Build Reference for remote from registry location and pkg
-	pkgRef, err := zoci.ReferenceFromMetadata(ref.String(), pkgLayout.Pkg)
+	pkgRef, err := zoci.ReferenceFromMetadataWithOptions(ref.String(), pkgLayout.Pkg, referenceOptions)
 	if err != nil {
 		return registry.Reference{}, err
 	}
