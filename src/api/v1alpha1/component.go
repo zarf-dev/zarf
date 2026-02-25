@@ -290,6 +290,32 @@ type ZarfComponentActions struct {
 	OnRemove ZarfComponentActionSet `json:"onRemove,omitempty"`
 }
 
+// GetAll returns all actions from all action sets.
+func (a ZarfComponentActions) GetAll() []ZarfComponentAction {
+	var actions []ZarfComponentAction
+	actions = append(actions, a.OnCreate.Before...)
+	actions = append(actions, a.OnCreate.After...)
+	actions = append(actions, a.OnCreate.OnSuccess...)
+	actions = append(actions, a.OnCreate.OnFailure...)
+	actions = append(actions, a.OnDeploy.Before...)
+	actions = append(actions, a.OnDeploy.After...)
+	actions = append(actions, a.OnDeploy.OnSuccess...)
+	actions = append(actions, a.OnDeploy.OnFailure...)
+	actions = append(actions, a.OnRemove.Before...)
+	actions = append(actions, a.OnRemove.After...)
+	actions = append(actions, a.OnRemove.OnSuccess...)
+	actions = append(actions, a.OnRemove.OnFailure...)
+	return actions
+}
+
+// UpdateWaitNamespacesByName updates all wait action cluster namespaces to the provided namespace.
+func (a *ZarfComponentActions) UpdateWaitNamespacesByName(original, target string) {
+	// theoretically possible to run a wait command on create...
+	a.OnCreate.updateWaitNamespaces(original, target)
+	a.OnDeploy.updateWaitNamespaces(original, target)
+	a.OnRemove.updateWaitNamespaces(original, target)
+}
+
 // ZarfComponentActionSet is a set of actions to run during a zarf package operation.
 type ZarfComponentActionSet struct {
 	// Default configuration for all actions in this set.
@@ -302,6 +328,21 @@ type ZarfComponentActionSet struct {
 	OnSuccess []ZarfComponentAction `json:"onSuccess,omitempty"`
 	// Actions to run if all operations fail.
 	OnFailure []ZarfComponentAction `json:"onFailure,omitempty"`
+}
+
+func (s *ZarfComponentActionSet) updateWaitNamespaces(original, target string) {
+	updateActionsWaitNamespace(s.Before, original, target)
+	updateActionsWaitNamespace(s.After, original, target)
+	updateActionsWaitNamespace(s.OnSuccess, original, target)
+	updateActionsWaitNamespace(s.OnFailure, original, target)
+}
+
+func updateActionsWaitNamespace(actions []ZarfComponentAction, original, target string) {
+	for i := range actions {
+		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
+			actions[i].Wait.Cluster.Namespace = target
+		}
+	}
 }
 
 // ZarfComponentActionDefaults sets the default configs for child actions.

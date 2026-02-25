@@ -41,6 +41,38 @@ func TestOverridePackageNamespace(t *testing.T) {
 			namespace: "test-override",
 		},
 		{
+			name: "override namespace with wait action",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+		},
+		{
 			name: "multiple namespaces",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
@@ -61,6 +93,39 @@ func TestOverridePackageNamespace(t *testing.T) {
 			},
 			namespace:   "test-override",
 			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+		},
+		{
+			name: "wait action with different namespace is updated when matching chart namespace",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "different-namespace",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+			// wait action namespace "different-namespace" should NOT be updated since it doesn't match "test"
 		},
 		{
 			name: "init package namespace override",
@@ -117,15 +182,17 @@ func TestOverridePackageNamespace(t *testing.T) {
 	}
 }
 
-func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, namespace string) {
+func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, targetNamespace string) {
 	t.Helper()
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			require.Equal(t, chart.Namespace, namespace)
+			require.Equal(t, targetNamespace, chart.Namespace)
 		}
 		for _, manifest := range component.Manifests {
-			require.Equal(t, manifest.Namespace, namespace)
+			require.Equal(t, targetNamespace, manifest.Namespace)
 		}
+		// Wait action namespace validation is covered by TestUpdateAllComponentNamespacesByName
+		// in package_test.go which tests both matching and non-matching namespace scenarios
 	}
 }
 
