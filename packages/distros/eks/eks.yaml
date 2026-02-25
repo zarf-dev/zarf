@@ -2,22 +2,22 @@
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 metadata:
-  name: ###ZARF_VAR_EKS_CLUSTER_NAME###
-  region: ###ZARF_VAR_EKS_CLUSTER_REGION###
+  name: {{ .Values.cluster.name }}
+  region: {{ .Values.cluster.region }}
   tags:
-    PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+    PermissionsBoundary: {{ .Values.iam.permissionsBoundaryTag | quote }}
 
 iam:
   withOIDC: true
-  serviceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+  serviceRolePermissionsBoundary: {{ .Values.iam.permissionsBoundaryArn | quote }}
 
 addons:
   - name: aws-ebs-csi-driver
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy
-    permissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+    permissionsBoundary: {{ .Values.iam.permissionsBoundaryArn | quote }}
     tags:
-      PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+      PermissionsBoundary: {{ .Values.iam.permissionsBoundaryTag | quote }}
     configurationValues: |-
       defaultStorageClass:
         enabled: true
@@ -25,17 +25,17 @@ addons:
   - name: vpc-cni
     attachPolicyARNs:
       - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
-    permissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+    permissionsBoundary: {{ .Values.iam.permissionsBoundaryArn | quote }}
     tags:
-      PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+      PermissionsBoundary: {{ .Values.iam.permissionsBoundaryTag | quote }}
 
 managedNodeGroups:
-- instanceType: ###ZARF_VAR_EKS_INSTANCE_TYPE###
-  name: ###ZARF_VAR_EKS_CLUSTER_NAME###-ng
+- instanceType: {{ .Values.nodeGroups.instanceType }}
+  name: {{ .Values.cluster.name }}-ng
   minSize: 3
   maxSize: 6
   spot: true
   tags:
-    PermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_TAG###"
+    PermissionsBoundary: {{ .Values.iam.permissionsBoundaryTag | quote }}
   iam:
-    instanceRolePermissionsBoundary: "###ZARF_VAR_PERMISSIONS_BOUNDARY_ARN###"
+    instanceRolePermissionsBoundary: {{ .Values.iam.permissionsBoundaryArn | quote }}

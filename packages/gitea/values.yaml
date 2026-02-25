@@ -1,0 +1,72 @@
+persistence:
+  # FIXME(mkcp): How do we set a template object to a helm value without the template system
+  storageClass: "###ZARF_STORAGE_CLASS###"
+  # "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
+  claimName: "data-zarf-gitea-0"
+  # The size of the persistent volume claim for the git server
+  size: "10Gi"
+  # The access mode of the persistent volume claim for the git server
+  accessModes:
+    - "ReadWriteOnce"
+  create: ""
+
+# The number of git server replicas to deploy
+replicaCount: 1
+
+gitea:
+  admin:
+    # FIXME(mkcp): How do we set a template object to a helm value without the template system
+    username: "###ZARF_GIT_PUSH###"
+    password: "###ZARF_GIT_AUTH_PUSH###"
+    email: "zarf@localhost"
+  config:
+    APP_NAME: "Zarf Gitops Service"
+    server:
+      DISABLE_SSH: true
+      OFFLINE_MODE: true
+      ROOT_URL: http://zarf-gitea-http.zarf.svc.cluster.local:3000
+    database:
+      DB_TYPE: sqlite3
+      # Note that the init script checks to see if the IP & port of the database service is accessible, so make sure you set those to something that resolves as successful (since sqlite uses files on disk setting the port & ip won't affect the running of gitea).
+      HOST: zarf-docker-registry.zarf.svc.cluster.local:5000
+    security:
+      INSTALL_LOCK: true
+    service:
+      # Disables the ability to register new users
+      DISABLE_REGISTRATION: "true"
+    repository:
+      ENABLE_PUSH_CREATE_USER: true
+      FORCE_PRIVATE: true
+    session:
+      PROVIDER: memory
+    cache:
+      ADAPTER: memory
+    queue:
+      TYPE: level
+resources:
+  requests:
+    # The CPU request for git server
+    cpu: "200m"
+    # The memory request for git server
+    memory: "512m"
+  limits:
+    # The CPU limit for git server
+    cpu: 3
+    # The memory limit for git server
+    memory: "2Gi"
+
+image:
+  fullOverride: "###ZARF_CONST_GITEA_IMAGE###"
+  rootless: true
+
+postgresql-ha:
+  enabled: false
+
+redis-cluster:
+  enabled: false
+
+valkey-cluster:
+  enabled: false
+
+strategy:
+  type: "Recreate"
