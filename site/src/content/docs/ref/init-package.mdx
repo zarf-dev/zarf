@@ -9,7 +9,7 @@ import Details from "@components/Details.astro";
 
 In a traditional Kubernetes deployment, clusters pull resources (e.g. cluster images, OCI artifacts, Git repos) from external sources.
 
-However, in an air-gapped environment, these external providers are not available, or exist at different locations to their references within Kubernetes manifests.
+However, in an air-gapped environment, these external providers are not available, or exist at different locations from their references within Kubernetes manifests.
 
 Zarf solves this problem with its 'init' package, a special Zarf Package (traditionally deployed first) that provides the necessary mechanisms to enable air-gapped Kubernetes, and deliver DevSecOps across air-gaps.
 
@@ -32,12 +32,12 @@ View all init options w/ [`zarf init --help`](/commands/zarf_init/).
 
 An 'init' package requires a series of specially named, and configured components to ensure the cluster is correctly initialized. These components are:
 
-- [`zarf-injector`](#zarf-injector-and-zarf-seed-registry)
-- [`zarf-seed-registry`](#zarf-injector-and-zarf-seed-registry)
+- [`zarf-injector`](#zarf-injector)
+- [`zarf-seed-registry`](#zarf-seed-registry)
 - [`zarf-registry`](#zarf-registry)
 - [`zarf-agent`](#zarf-agent)
 
-### `zarf-injector` and `zarf-seed-registry`
+### Registry Components
 
 One of the most challenging aspects of deploying into an air-gapped environment is the initial bootstrapping of the cluster.
 
@@ -51,42 +51,70 @@ While there is no distro-agnostic method to inject images into a cluster, every 
 
 But then we have another problem of how to reassemble the image on the other side, as we don't have any consistent image that exists in the cluster that would have such utilities. This is where the `zarf-injector` Rust binary comes in.
 
-> The `zarf-injector` binary exists in it's own repository, https://github.com/zarf-dev/zarf-injector, see the [README.md](https://github.com/zarf-dev/zarf-injector/blob/main/README.md) instructions to built and test.
+> The `zarf-injector` binary exists in its own repository, https://github.com/zarf-dev/zarf-injector, see the [README.md](https://github.com/zarf-dev/zarf-injector/blob/main/README.md) instructions to build and test.
 
 The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:3` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:3` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:3` image.
 
-> While the `zarf-injector` component *must* be defined and deployed *before* the `zarf-seed-registry` component, the magic doesn't start until `zarf-seed-registry` is deployed. The `zarf-injector` component for the most part just copies the `zarf-injector` binary to `###ZARF_TEMP###/zarf-injector`.
+:::note
 
-When `zarf init` deploys the `zarf-seed-registry` component, the following happens:
+The `registry:3` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml). This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+
+:::
+
+#### Zarf Injector
+
+The `zarf-injector` component simply copies the injector Rust binary to `###ZARF_TEMP###/zarf-injector`.
+
+#### Zarf Seed Registry
+
+The behavior of the `zarf-seed-registry` component differs depending on the registry mode, decided by the init flag `--registry-mode=nodeport|proxy`. Alternatively, the registry components are skipped when [using an external registry](#using-external-registries) with `--registry-mode=external`.
+
+##### NodePort Mode (Default)
+
+When `zarf init` deploys the `zarf-seed-registry` component in NodePort mode, the following happens:
 
 1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
 2. Zarf connects to the cluster and grabs a pod that is running an image that is already present in the cluster.
 3. Zarf spins up a pod using the existing image, mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` image chunks and runs the `zarf-injector` binary.
-
-:::note
-
-Doing this keeps Zarf cluster agnostic, however does require that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling.
-
-:::
-
 4. The `zarf-injector` binary reassembles the `registry:3` image and hosts a temporary registry that the cluster can pull from.
 5. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed, with its `image.repository` set to the temporary registry that the `zarf-injector` binary is hosting (consumed as the `###ZARF_SEED_REGISTRY###` built-in variable set at runtime).
 6. Once the `docker-registry` chart is deployed, the `zarf-seed-registry` component is marked as complete and the `zarf-injector` pod is removed from the cluster.
-7. Deployment proceeds to the `zarf-registry` component.
 
 :::note
 
-The `registry:3` image and the Zarf Agent image can be configured with a custom init package using the `registry_image_*` and `agent_image_*` templates defined in the Zarf repo's [zarf-config.toml](https://github.com/zarf-dev/zarf/blob/main/zarf-config.toml).  This allows you to swap them for enterprise provided / hardened versions if desired such as those provided by [Iron Bank](https://repo1.dso.mil/dsop/opensource/defenseunicorns/zarf/zarf-agent).
+NodePort mode requires that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6 only clusters and NFTables block access to localhost NodePort services.
 
 :::
 
-### `zarf-registry`
 
-The `zarf-registry` component is a long-lived container registry service that is deployed into the cluster.
+##### Proxy Mode
+
+When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
+
+1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
+2. Zarf determines the [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause) to be used by the injector DaemonSet. Since Kubernetes does not expose the cluster's pause image, Zarf looks for an image with the following criteria:
+  - Includes pause in the name.
+  - Has a major semver version of 3 or 4.
+  - Less than 1MiB in size
+3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
+4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector Daemonset.
+5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images locally.
+
+An advantage of proxy mode is that it's automatically secured behind mTLS. The proxy DaemonSet uses mTLS certificates stored in the cluster to secure its connection to the registry. Since the proxy runs on each node, the kubelet never transmits unencrypted data outside of each host. Additionally, Zarf uses the same mTLS certificates to encrypt its calls to the registry when in proxy mode.
+
+:::note
+
+Host port connections do not work on IPv6 clusters, so Zarf will automatically configure the proxy and injector to use host network in these cases.
+
+:::
+
+#### Zarf Registry
+
+The `zarf-registry` component deploys the long-lived container registry to the cluster.
 
 It leverages the same `docker-registry` chart used in `zarf-seed-registry` but with a few key differences:
 
-1. The `image.repository` is set to the value of the built-in variable `###ZARF_REGISTRY###` which is set at runtime to the registry hosted by `zarf-seed-registry`.
+1. In NodePort mode, the `image.repository` points to the registry NodePort service deployed by `zarf-seed-registry`. Since this is the same chart, the new registry deployment pulls its image from itself. In proxy mode, the `image.repository` continues to point to the injector.
 {/* you know, why DO we do this? if we kept the repository the same, and kept running the injector, couldnt this handle cluster full-deaths??? (ofc would need to tweak the zarf-agent to not mutate the image.repository for the docker-registry chart under the zarf namespace, but i think it might be doable) */}
 2. A `connect` manifest for running [`zarf connect registry`](/commands/zarf_connect/) to tunnel to the Zarf Registry.
 3. A configmap to satisfy [KEP-1755](https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry)
@@ -153,7 +181,7 @@ The `zarf-agent` is a [Kubernetes Mutating Webhook](https://kubernetes.io/docs/r
 
 The `zarf-agent` is responsible for modifying [Kubernetes PodSpec](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#PodSpec) objects [Image](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#Container.Image) fields to point to the Zarf Registry. This allows the cluster to pull images from the Zarf Registry instead of the internet without having to modify the original image references.
 
-The `zarf-agent` modifies the following [flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`. During the mutation of OCIRepositories, a call is made to the zarf registry to determine the media type of the OCI artifact. If the artifact is a helm chart the mutation will __NOT__ include the crc32 hash as including the hash interferes with the Flux deployment of the chart.
+The `zarf-agent` modifies the following [Flux](https://fluxcd.io/flux/) resources: [GitRepository](https://fluxcd.io/docs/components/source/gitrepositories/), [OCIRepository](https://fluxcd.io/flux/components/source/ocirepositories/), & [HelmRepository](https://fluxcd.io/flux/components/source/helmrepositories/) to point to the local Git Server or Zarf Registry. HelmRepositories are only modified if the `type` key is set to `oci`. During the mutation of OCIRepositories, a call is made to the Zarf Registry to determine the media type of the OCI artifact. If the artifact is a helm chart the mutation will __NOT__ include the crc32 hash as including the hash interferes with the Flux deployment of the chart.
 
 The `zarf-agent` modifies [ArgoCD applications](https://argo-cd.readthedocs.io/en/stable/user-guide/application-specification/), [ArgoCD ApplicationSet](https://argo-cd.readthedocs.io/en/stable/user-guide/application-set/), & [ArgoCD Repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)  objects to point to the local Git Server.
 
@@ -169,7 +197,7 @@ If you would like to adopt pre-existing resources into a Zarf deployment you can
 
 When the agent mutates an image that is not pinned to a digest, it appends a [CRC32 hash](https://en.wikipedia.org/wiki/Cyclic_redundancy_check) to the tag. For example, if the original image is `ghcr.io/stefanprodan/podinfo:6.4.0` the mutated image tag will be `6.4.0-zarf-298505108`. The CRC32 hash `298505108` is generated using the original image name `ghcr.io/stefanprodan/podinfo`.
 
-Without this unique hash, images from different registries with the same path—such as `docker.io/stefanprodan/podinfo:6.4.0`-would overwrite each other when pushed to the Zarf registry. Zarf pushes both the regular tag and the unique tag for non pinned images. This ensures no images are lost during a push, and the agent can always mutate to the correct image. To see which image a pod used before mutation, check the `zarf.dev/original-image-<container-name>` annotation.
+Without this unique hash, images from different registries with the same path—such as `docker.io/stefanprodan/podinfo:6.4.0` would overwrite each other when pushed to the Zarf registry. Zarf pushes both the regular tag and the unique tag for non pinned images. This ensures no images are lost during a push, and the agent can always mutate to the correct image. To see which image a pod used before mutation, check the `zarf.dev/original-image-<container-name>` annotation.
 
 Additionally, when Git repositories are pushed to the Zarf Git server their name is appended with a CRC32 hash to prevent similar collisions.
 
