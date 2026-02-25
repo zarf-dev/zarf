@@ -1,0 +1,34 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+  description: Child package with templates that will be namespaced on import
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: imported-app
+    required: true
+    charts:
+      - name: test-chart
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        version: 6.4.0
+        namespace: test-ns
+        values:
+          - sourcePath: .app.replicas
+            targetPath: .replicaCount
+          - sourcePath: .config.setting
+            targetPath: .ui.message
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "APP_NAME={{ .Values.app.name }}"
+            template: true
+          - cmd: echo "ENV={{ .Values.app.environment }}"
+            template: true
+    manifests:
+      - name: app-configmap
+        template: true
+        files:
+          - manifests/configmap.yaml

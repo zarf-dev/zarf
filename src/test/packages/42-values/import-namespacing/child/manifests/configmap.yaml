@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-import-namespacing-configmap
+  namespace: default
+data:
+  # These templates use .Values.app.* which will be namespaced to .Values.imported-app.app.*
+  appName: {{ .Values.app.name }}
+  environment: {{ .Values.app.environment }}
+  replicas: "{{ .Values.app.replicas }}"
+  configSetting: {{ .Values.config.setting }}

@@ -28,7 +28,8 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	var tempDir string
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{}, &tempDir)
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -77,7 +78,8 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			var tempDir string
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{}, &tempDir)
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -205,6 +207,126 @@ func TestValidateComponentCompose(t *testing.T) {
 			require.Error(t, err)
 			errs := strings.Split(err.Error(), "\n")
 			require.ElementsMatch(t, tt.expectedErrs, errs)
+		})
+	}
+}
+
+func TestNamespaceTemplates(t *testing.T) {
+	t.Parallel()
+
+	boolTrue := true
+
+	tests := []struct {
+		name     string
+		input    v1alpha1.ZarfComponent
+		expected v1alpha1.ZarfComponent
+	}{
+		{
+			name: "chart values sourcePath is namespaced",
+			input: v1alpha1.ZarfComponent{
+				Name: "my-component",
+				Charts: []v1alpha1.ZarfChart{
+					{
+						Name: "test-chart",
+						Values: []v1alpha1.ZarfChartValue{
+							{SourcePath: ".app.replicas", TargetPath: ".replicaCount"},
+							{SourcePath: ".name", TargetPath: ".name"},
+						},
+					},
+				},
+			},
+			expected: v1alpha1.ZarfComponent{
+				Name: "my-component",
+				Charts: []v1alpha1.ZarfChart{
+					{
+						Name: "test-chart",
+						Values: []v1alpha1.ZarfChartValue{
+							{SourcePath: ".my-component.app.replicas", TargetPath: ".replicaCount"},
+							{SourcePath: ".my-component.name", TargetPath: ".name"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "action cmd is namespaced when template is true",
+			input: v1alpha1.ZarfComponent{
+				Name: "app",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.config.key }}", Template: &boolTrue},
+							{Cmd: "echo no-template"},
+						},
+						After: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Constants.MY_CONST }} and {{ .Variables.MY_VAR }}", Template: &boolTrue},
+						},
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Build.user }}", Template: &boolTrue},
+						},
+						OnFailure: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Metadata.name }}", Template: &boolTrue},
+						},
+					},
+				},
+			},
+			expected: v1alpha1.ZarfComponent{
+				Name: "app",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.app.config.key }}", Template: &boolTrue},
+							{Cmd: "echo no-template"},
+						},
+						After: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Constants.app.MY_CONST }} and {{ .Variables.app.MY_VAR }}", Template: &boolTrue},
+						},
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Build.app.user }}", Template: &boolTrue},
+						},
+						OnFailure: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Metadata.app.name }}", Template: &boolTrue},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "action without template flag is not modified",
+			input: v1alpha1.ZarfComponent{
+				Name: "no-template",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.app.key }}"},
+						},
+					},
+				},
+			},
+			expected: v1alpha1.ZarfComponent{
+				Name: "no-template",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.app.key }}"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Note: This test only validates component structure transformations.
+			// File content transformations (manifests, files) require integration tests
+			// with temp directories to avoid modifying testdata files.
+			var tempDir string
+			result, err := namespaceTemplates(tt.input, "", &tempDir)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
 		})
 	}
 }

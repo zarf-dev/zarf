@@ -57,10 +57,14 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		RemoteOptions:      opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return "", err
 	}
+	defer func() {
+		err = errors.Join(err, result.Cleanup())
+	}()
+	pkg := result.Pkg
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {

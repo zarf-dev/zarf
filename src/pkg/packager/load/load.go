@@ -6,6 +6,7 @@ package load
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,8 +43,31 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
+// DefinitionResult contains the loaded package definition and resources that must persist
+// until package assembly is complete.
+type DefinitionResult struct {
+	Pkg     v1alpha1.ZarfPackage
+	tempDir string
+}
+
+// TempDir returns the path to the temporary directory used during package definition loading.
+// This directory contains transformed files that must persist until package assembly is complete.
+func (r *DefinitionResult) TempDir() string {
+	return r.tempDir
+}
+
+// Cleanup removes any temporary resources created during package definition loading.
+// This should be called after package assembly is complete.
+func (r *DefinitionResult) Cleanup() error {
+	if r.tempDir != "" {
+		return os.RemoveAll(r.tempDir)
+	}
+	return nil
+}
+
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
+// The returned DefinitionResult must have its Cleanup method called after package assembly is complete.
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (*DefinitionResult, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -54,40 +78,56 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return nil, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return nil, err
 	}
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return nil, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+
+	var tempDir string
+	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions, &tempDir)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		// Clean up temp directory if it was created
+		if tempDir != "" {
+			err = errors.Join(err, os.RemoveAll(tempDir))
+		}
+		return nil, err
+	}
+
+	// Helper to clean up temp dir on subsequent errors
+	cleanupOnError := func() {
+		if tempDir != "" {
+			err = errors.Join(err, os.RemoveAll(tempDir))
+		}
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		cleanupOnError()
+		return nil, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			cleanupOnError()
+			return nil, err
 		}
 	}
 	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		cleanupOnError()
+		return nil, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
+	return &DefinitionResult{Pkg: pkg, tempDir: tempDir}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
@@ -148,10 +188,14 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 		return err
 	}
 
-	// Resolve values file paths relative to the package directory
+	// Resolve values file paths relative to the package directory (unless already absolute)
 	valueFilePaths := make([]string, len(pkg.Values.Files))
 	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
+		if filepath.IsAbs(vf) {
+			valueFilePaths[i] = vf
+		} else {
+			valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
+		}
 	}
 
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
@@ -159,8 +203,11 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 		return fmt.Errorf("failed to parse values files for validation: %w", err)
 	}
 
-	// Resolve declared schema path relative to package root
-	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
+	// Resolve declared schema path relative to package root (unless already absolute)
+	schemaPath := pkg.Values.Schema
+	if !filepath.IsAbs(schemaPath) {
+		schemaPath = filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
+	}
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}
