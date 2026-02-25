@@ -7,11 +7,17 @@ constants:
 variables:
   - name: PARENT_VAR
     default: "default from parent"
+values:
+  files:
+    - parent-values.yaml
+  schema: "parent-values.schema.json"
+
 components:
   - name: first-imported-component
     required: true
     import:
       path: import
+
   - name: same-package-imported-again
     required: true
     import:

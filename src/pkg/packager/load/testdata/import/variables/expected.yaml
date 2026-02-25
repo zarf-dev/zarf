@@ -13,6 +13,12 @@ variables:
     default: "default from child"
   - name: SECONDARY_CHILD_VAR
     default: "default from child in component imported later"
+values:
+  files:
+    - child-values.yaml
+    - secondary-child-values.yaml
+    - parent-values.yaml
+  schema: "parent-values.schema.json"
 components:
   - name: first-imported-component
     required: true
