@@ -39,6 +39,7 @@ type PublishFromOCIOptions struct {
 
 // PublishFromOCI takes a source and destination registry reference and a PublishFromOCIOpts and copies the package from the source to the destination.
 // src and dst are references to the full package ref, e.g. my-registry.com/my-namespace/my-package:0.0.1
+// therefore any tag manipulation happens from the calling logic
 func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Reference, opts PublishFromOCIOptions) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()

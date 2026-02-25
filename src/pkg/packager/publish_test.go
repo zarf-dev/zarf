@@ -172,6 +172,14 @@ func TestPublishSkeleton(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
+		{
+			name: "Publish skeleton package with tag",
+			path: "testdata/skeleton",
+			opts: PublishSkeletonOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+		},
 	}
 
 	for _, tc := range tt {
