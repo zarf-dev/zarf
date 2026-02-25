@@ -1564,6 +1564,7 @@ type packagePublishOptions struct {
 	publicKeyPath           string
 	skipVersionCheck        bool
 	withBuildMachineInfo    bool
+	tag                     string
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1587,6 +1588,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
@@ -1648,6 +1650,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			Flavor:               o.flavor,
 			SkipVersionCheck:     o.skipVersionCheck,
 			WithBuildMachineInfo: o.withBuildMachineInfo,
+			Tag:                  o.tag,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
@@ -1674,6 +1677,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
 		dstRef.Reference = srcRef.Reference
+		if o.tag != "" {
+			dstRef.Reference = o.tag
+		}
 
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
@@ -1728,6 +1734,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		SigningKeyPassword: o.signingKeyPassword,
 		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
+		Tag:                o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)

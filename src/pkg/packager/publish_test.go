@@ -172,6 +172,14 @@ func TestPublishSkeleton(t *testing.T) {
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
 		},
+		{
+			name: "Publish skeleton package with tag",
+			path: "testdata/skeleton",
+			opts: PublishSkeletonOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+		},
 	}
 
 	for _, tc := range tt {
@@ -234,6 +242,14 @@ func TestPublishPackage(t *testing.T) {
 				SigningKeyPassword: "password",
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+		},
+		{
+			name: "Sign and publish package with specified tag different from version",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
 		},
 	}
 
