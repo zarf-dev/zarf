@@ -34,7 +34,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2
 	github.com/gofrs/flock v0.13.0
 	github.com/golang-cz/devslog v0.0.15
-	github.com/google/go-containerregistry v0.21.0
+	github.com/google/go-containerregistry v0.21.1
 	github.com/gosuri/uitable v0.0.4
 	github.com/invopop/jsonschema v0.13.0
 	github.com/mholt/archives v0.1.5
