@@ -614,7 +614,11 @@ func (p *PackageLayout) FileName() (string, error) {
 	var name string
 	switch p.Pkg.Kind {
 	case v1alpha1.ZarfInitConfig:
-		name = fmt.Sprintf("zarf-init-%s", arch)
+		if p.Pkg.Metadata.Name == "" || p.Pkg.Metadata.Name == "init" {
+			name = fmt.Sprintf("zarf-init-%s", arch)
+		} else {
+			name = fmt.Sprintf("zarf-init-%s-%s", p.Pkg.Metadata.Name, arch)
+		}
 	case v1alpha1.ZarfPackageConfig:
 		name = fmt.Sprintf("zarf-package-%s-%s", p.Pkg.Metadata.Name, arch)
 	default:

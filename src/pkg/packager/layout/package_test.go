@@ -105,7 +105,7 @@ func TestPackageFileName(t *testing.T) {
 			expected: "zarf-init-amd64-v0.55.4.tar.zst",
 		},
 		{
-			name: "init package with a custom name",
+			name: "init package with a flavor",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,
 				Metadata: v1alpha1.ZarfMetadata{
@@ -117,6 +117,20 @@ func TestPackageFileName(t *testing.T) {
 				},
 			},
 			expected: "zarf-init-amd64-v0.55.4-upstream.tar.zst",
+		},
+		{
+			name: "init package with a custom name",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfInitConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Version: "v0.55.4",
+					Name:    "my-cool-start",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+				},
+			},
+			expected: "zarf-init-my-cool-start-amd64-v0.55.4.tar.zst",
 		},
 		{
 			name: "regular package with version",
