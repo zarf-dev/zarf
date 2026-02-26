@@ -39,7 +39,7 @@ else
 	endif
 endif
 
-CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
+CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"unset-development-only")
 BUILD_ARGS := -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion=$(CLI_VERSION)
 K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.io/client-go)))
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
@@ -229,7 +229,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
+	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:

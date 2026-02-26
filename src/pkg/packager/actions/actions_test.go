@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func Test_actionCmdMutation(t *testing.T) {
@@ -202,6 +203,75 @@ func Test_parseAndSetValue(t *testing.T) {
 			err := parseAndSetValue(tt.output, tt.setValue, vals)
 			require.NoError(t, err)
 			require.Equal(t, tt.expect, vals)
+		})
+	}
+}
+
+func Test_templateString(t *testing.T) {
+	t.Parallel()
+	templates := map[string]*variables.TextTemplate{
+		"###ZARF_VAR_NAME###":      {Value: "agent-hook"},
+		"###ZARF_VAR_NAMESPACE###": {Value: "zarf"},
+		"###ZARF_CONST_FOO###":     {Value: "bar"},
+	}
+
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "no variables",
+			input:    "app=podinfo",
+			expected: "app=podinfo",
+		},
+		{
+			name:     "shell-style var syntax",
+			input:    "app=${ZARF_VAR_NAME}",
+			expected: "app=agent-hook",
+		},
+		{
+			name:     "shell-style const syntax",
+			input:    "${ZARF_CONST_FOO}",
+			expected: "bar",
+		},
+		{
+			name:     "multiple variables",
+			input:    "${ZARF_VAR_NAME} in ${ZARF_VAR_NAMESPACE}",
+			expected: "agent-hook in zarf",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "no match",
+			input:    "${ZARF_VAR_UNKNOWN}",
+			expected: "${ZARF_VAR_UNKNOWN}",
+		},
+		{
+			name:     "bare dollar sign var syntax",
+			input:    "app=$ZARF_VAR_NAME",
+			expected: "app=agent-hook",
+		},
+		{
+			name:     "bare dollar sign multiple variables",
+			input:    "$ZARF_VAR_NAME in $ZARF_VAR_NAMESPACE",
+			expected: "agent-hook in zarf",
+		},
+		{
+			name:     "mixed syntax",
+			input:    "${ZARF_VAR_NAME} in $ZARF_VAR_NAMESPACE",
+			expected: "agent-hook in zarf",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := templateString(tt.input, templates)
+			require.Equal(t, tt.expected, got)
 		})
 	}
 }
