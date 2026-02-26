@@ -966,7 +966,6 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-// todo: handle accepting []value.Values and merging accordingly.
 func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues value.Values, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
@@ -994,13 +993,13 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues valu
 		return fmt.Errorf("failed to parse values files: %w", err)
 	}
 
-	// DeepMerge any additional values
+	// DeepMerge any additional values such that top-level package values take precedence over import values
 	addValues.DeepMerge(vals)
 
 	// Write merged values to YAML
 	dst := filepath.Join(buildPath, ValuesYAML)
 	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
-	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
+	if err := utils.WriteYaml(dst, addValues, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
 

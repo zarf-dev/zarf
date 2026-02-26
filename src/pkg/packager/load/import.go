@@ -38,7 +38,6 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-// TODO: this function will need to process import values and merge them with the parent package values accordingly
 func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, value.Values, error) {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -67,8 +66,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
 	var packageValues value.Values
-
-	// preload all import values here
 
 	for _, component := range pkg.Components {
 		if !compatibleComponent(component, arch, flavor) {
@@ -152,6 +149,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		if component.Import.ValuesKey != "" {
 			v, exists := importedValues[component.Import.ValuesKey]
 			if !exists {
+				// this is a create-time feedback loop - error is more explicit than a warning
 				return v1alpha1.ZarfPackage{}, value.Values{}, fmt.Errorf("values key %q not found in imported package", component.Import.ValuesKey)
 			}
 			importedValues = value.Values{component.Import.ValuesKey: v}

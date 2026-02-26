@@ -47,7 +47,7 @@ type DefinitionResult struct {
 	// The Zarf package definition
 	Package v1alpha1.ZarfPackage
 	// All values merged for precedence
-	value.Values
+	ImportValues value.Values
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -93,8 +93,8 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	}
 
 	result := DefinitionResult{
-		Package: pkg,
-		Values:  values,
+		Package:      pkg,
+		ImportValues: values,
 	}
 
 	err = validate(ctx, result.Package, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
