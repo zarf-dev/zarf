@@ -76,6 +76,8 @@ type DeployOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// SkipRequirementsCheck skips agent/cluster requirement validation from REQUIREMENTS file
+	SkipRequirementsCheck bool
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -101,6 +103,13 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if !opts.SkipVersionCheck {
 		if err := requirements.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
 			return DeployResult{}, fmt.Errorf("%w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", err)
+		}
+	}
+
+	// Validate zarf pkg REQUIREMENTS before proceeding
+	if !opts.SkipRequirementsCheck {
+		if err := requirements.ValidatePackageRequirements(ctx, pkgLayout); err != nil {
+			return DeployResult{}, fmt.Errorf("%w If you want to force this zarf package, you may skip this check with --skip-requirements-check. Unexpected behavior or errors may occur", err)
 		}
 	}
 

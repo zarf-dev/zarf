@@ -190,6 +190,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
 		return nil, err
 	}
+	// Include optional package root REQUIREMENTS file in the built package.
+	if err = copyRequirementsFile(packagePath, buildPath); err != nil {
+		return nil, err
+	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
 	if err != nil {
@@ -263,6 +267,9 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		if err != nil {
 			return nil, err
 		}
+	}
+	if err = copyRequirementsFile(packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	checksumContent, checksumSha, err := getChecksum(buildPath)
@@ -1072,6 +1079,31 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	tarPath := filepath.Join(buildPath, DocumentationTar)
 	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
+	}
+
+	return nil
+}
+
+func copyRequirementsFile(packagePath, buildPath string) error {
+	src := filepath.Join(packagePath, Requirements)
+	dst := filepath.Join(buildPath, Requirements)
+
+	_, err := os.Stat(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // optional file
+		}
+		return fmt.Errorf("unable to stat %s: %w", src, err)
+	}
+
+	// Copy into the package root so it ships inside the package artifact.
+	if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+		return fmt.Errorf("unable to copy %s to package: %w", Requirements, err)
+	}
+
+	// Ensure consistent perms (same as other root files).
+	if err := os.Chmod(dst, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("unable to chmod %s: %w", dst, err)
 	}
 
 	return nil
