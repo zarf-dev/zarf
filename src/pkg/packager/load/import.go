@@ -160,7 +160,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			l.Warn("values collision on component: %s root keys: %v", component.Name, collisions)
 		}
 		// Merge values
-		packageValues.DeepMerge(importedValues)
+		if packageValues == nil {
+			packageValues = importedValues
+		} else {
+			packageValues.DeepMerge(importedValues)
+		}
 
 		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
