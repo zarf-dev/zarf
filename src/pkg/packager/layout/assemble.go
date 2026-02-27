@@ -59,7 +59,7 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, importValues value.Values, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
@@ -176,7 +176,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, importValues, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 
@@ -965,37 +965,48 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, buildPath string) error {
+func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues value.Values, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	if len(files) == 0 {
+	if len(files) == 0 && len(addValues) == 0 {
 		return nil
 	}
 
-	// Build absolute paths for all values files
-	valueFilePaths := make([]string, len(files))
-	for i, file := range files {
-		src := file
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, file)
+	// Parse and merge package values files if any exist
+	var vals value.Values
+	if len(files) > 0 {
+		// Build absolute paths for all values files
+		valueFilePaths := make([]string, len(files))
+		for i, file := range files {
+			src := file
+			if !filepath.IsAbs(src) {
+				src = filepath.Join(packagePath, file)
+			}
+			// Validate src exists
+			if _, err := os.Stat(src); err != nil {
+				return fmt.Errorf("unable to access values file %s: %w", src, err)
+			}
+			valueFilePaths[i] = src
 		}
-		// Validate src exists
-		if _, err := os.Stat(src); err != nil {
-			return fmt.Errorf("unable to access values file %s: %w", src, err)
+
+		var err error
+		vals, err = value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to parse values files: %w", err)
 		}
-		valueFilePaths[i] = src
 	}
 
-	// Parse and merge all values files
-	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to parse values files: %w", err)
+	// DeepMerge any additional values such that top-level package values take precedence over import values
+	if addValues == nil {
+		addValues = vals
+	} else {
+		addValues.DeepMerge(vals)
 	}
 
 	// Write merged values to YAML
 	dst := filepath.Join(buildPath, ValuesYAML)
 	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
-	if err := utils.WriteYaml(dst, vals, helpers.ReadWriteUser); err != nil {
+	if err := utils.WriteYaml(dst, addValues, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
 

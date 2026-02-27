@@ -924,6 +924,10 @@
           "description": "[beta] The URL to a Zarf package to import via OCI.",
           "pattern": "^oci://.*$",
           "type": "string"
+        },
+        "valuesKey": {
+          "description": "Root key for component specific values",
+          "type": "string"
         }
       },
       "type": "object"
