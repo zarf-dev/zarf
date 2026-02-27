@@ -110,6 +110,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
 	}
+
 	if len(findings) != 0 {
 		return &lint.LintError{
 			PackageName: pkg.Metadata.Name,

@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf dev find-images
 
-Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
+Evaluates components in a Zarf file to identify images specified in their helm charts, manifests, and image archives
 
 ### Synopsis
 
-Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
+Evaluates components in a Zarf file to identify images specified in their helm charts, manifests, and image archives.
 
 Components that have repos that host helm charts can be processed by providing the --repo-chart-path.
 

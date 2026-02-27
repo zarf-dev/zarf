@@ -197,6 +197,30 @@ func TestFindImages(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:        "image archives",
+			packagePath: "./testdata/find-images/image-archives/",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "manifest-referencing-image-in-archive",
+				},
+				{
+					ComponentName: "manifest-referencing-image-not-in-archive",
+					Matches: []string{
+						"docker.io/library/alpine:latest",
+					},
+				},
+				{
+					ComponentName: "image-archive-component",
+					ArchiveImages: []string{
+						"docker.io/library/scratch:latest",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -209,6 +233,7 @@ func TestFindImages(t *testing.T) {
 			require.Len(t, tt.expectedImages, len(imagesScans))
 			for i, expected := range tt.expectedImages {
 				require.Equal(t, expected.ComponentName, imagesScans[i].ComponentName)
+				require.ElementsMatch(t, expected.ArchiveImages, imagesScans[i].ArchiveImages)
 				require.ElementsMatch(t, expected.Matches, imagesScans[i].Matches)
 				require.ElementsMatch(t, expected.PotentialMatches, imagesScans[i].PotentialMatches)
 				require.ElementsMatch(t, expected.CosignArtifacts, imagesScans[i].CosignArtifacts)
