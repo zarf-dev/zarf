@@ -56,11 +56,10 @@ type AssembleOptions struct {
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
 	types.RemoteOptions
-	AdditionalValues value.Values
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, importValues value.Values, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
@@ -177,7 +176,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, opts.AdditionalValues, packagePath, buildPath); err != nil {
+	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, importValues, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 

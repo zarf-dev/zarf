@@ -98,11 +98,9 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 		RemoteOptions:        opts.RemoteOptions,
-		// Should this be a required parameter?
-		AdditionalValues: result.ImportValues,
 	}
 
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, assembleOpt)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, result.ImportValues, pkgPath.BaseDir, assembleOpt)
 	if err != nil {
 		return "", err
 	}

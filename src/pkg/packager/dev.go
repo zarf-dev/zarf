@@ -100,7 +100,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, result.ImportValues, packagePath, createOpts)
 	if err != nil {
 		return err
 	}
