@@ -30,6 +30,7 @@ zarf tools monitor [flags]
       --headless                       Turn K9s header off
   -h, --help                           help for monitor
       --insecure-skip-tls-verify       If true, the server's caCertFile will not be checked for validity
+      --invert                         Invert skin (dark to light, light to dark), preserving colors
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests
       --logFile string                 Specify the log file
   -l, --logLevel string                Specify a log level (error, warn, info, debug)
