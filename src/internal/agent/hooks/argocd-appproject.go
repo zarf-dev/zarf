@@ -63,10 +63,15 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 		"name", proj.Name,
 		"git-server", s.GitServer.Address)
 
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
 	patches := make([]operations.PatchOperation, 0)
 
 	for idx, repo := range proj.Spec.SourceRepos {
-		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, repo, registryAddress, clusterIP, s.GitServer, r)
 		// The AppProject can also include source repositories like '*' (as in the default project),
 		// which results in an error because '*' cannot be found in Git
 		// For this reason, we will ignore these entries and only patch the Git repositories that are found
