@@ -134,18 +134,36 @@ func createUpdate(zarfPackage v1alpha1.ZarfPackage, imagesScans []ComponentImage
 	return astFile.String(), nil
 }
 
-func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan) bool {
+func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan, archiveImagesScans []ArchiveImageScan) bool {
 	scanMap := make(map[string]map[string]struct{}, len(imageScans))
+	archiveScanMap := make(map[string]map[string]struct{}, len(archiveImagesScans))
 
+	// Map components to all archive images found in archive scans
+	for _, scan := range archiveImagesScans {
+		imageSet := make(map[string]struct{}, len(scan.Images))
+		for _, img := range scan.Images {
+			imageSet[img] = struct{}{}
+		}
+		archiveScanMap[scan.ComponentName] = imageSet
+	}
+
+	// Map comonents to all images found in scan, discounting any images that are included in image archives
 	for _, scan := range imageScans {
 		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
 		imageSet := make(map[string]struct{}, len(combined))
 		for _, img := range combined {
+			if _, found := archiveScanMap[scan.ComponentName][img]; found {
+				continue
+			}
 			imageSet[img] = struct{}{}
 		}
 		scanMap[scan.ComponentName] = imageSet
 	}
 
+	// Update needed if:
+	// 1. A component is found in the package definition that is not included in the scan
+	// 2. An image is found in the component images is not included in the scan images
+	// 3. An image is found in the component imageArchives is not included in the archive scan images
 	for _, component := range zarfPackage.Components {
 		imageSet, found := scanMap[component.Name]
 		if !found {
@@ -157,8 +175,17 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 				return true
 			}
 		}
+
+		for _, archive := range component.ImageArchives {
+			for _, img := range archive.Images {
+				if _, found := archiveScanMap[component.Name][img]; !found {
+					return true
+				}
+			}
+		}
 	}
 
+	// Map component to component images
 	componentMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
 	for _, component := range zarfPackage.Components {
 		imageSet := make(map[string]struct{}, len(component.Images))
@@ -168,6 +195,9 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 		componentMap[component.Name] = imageSet
 	}
 
+	// Update needed if:
+	// 1. A component is found in the scan that is not included in the package definition
+	// 2. An image is found in the scan is not included in the component images
 	for _, scan := range imageScans {
 		componentImages, found := componentMap[scan.ComponentName]
 		if !found {
@@ -176,7 +206,38 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 
 		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
 		for _, img := range combined {
-			if _, found := componentImages[img]; !found {
+			_, foundInComponent := componentImages[img]
+			_, foundInArchive := archiveScanMap[scan.ComponentName][img]
+			if !foundInComponent && !foundInArchive {
+				return true
+			}
+		}
+	}
+
+	// Map image archive components to archvie component images
+	componentArchiveMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
+	for _, component := range zarfPackage.Components {
+		imageSet := make(map[string]struct{})
+		for _, archive := range component.ImageArchives {
+			for _, img := range archive.Images {
+				imageSet[img] = struct{}{}
+			}
+		}
+		componentArchiveMap[component.Name] = imageSet
+	}
+
+	// Update needed if:
+	// 1. A component is found in the archive scan that is not included in the package definition
+	// 2. An image is found in the archive scan that is not included in the component archive images
+	for _, scan := range archiveImagesScans {
+		componentArchiveImages, found := componentArchiveMap[scan.ComponentName]
+		if !found {
+			return true
+		}
+
+		for _, img := range scan.Images {
+			_, found := componentArchiveImages[img]
+			if !found {
 				return true
 			}
 		}
