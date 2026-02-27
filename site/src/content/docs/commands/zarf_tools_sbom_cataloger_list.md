@@ -19,8 +19,8 @@ zarf tools sbom cataloger list [OPTIONS] [flags]
 ```
   -h, --help                                      help for list
   -o, --output string                             format to output the cataloger list (available: table, json)
-      --override-default-catalogers stringArray   override the default catalogers with an expression (default [all])
-      --select-catalogers stringArray             select catalogers with an expression
+      --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source) (default [all])
+      --select-catalogers stringArray             add, remove, and filter the catalogers to be used
   -s, --show-hidden                               show catalogers that have been de-selected
 ```
 
