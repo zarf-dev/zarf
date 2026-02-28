@@ -51,13 +51,13 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 
 	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
 	if err != nil {
-		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
+		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err)
 	}
 
 	// Create the file
 	file, err := os.Create(dst)
 	if err != nil {
-		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
+		return fmt.Errorf(lang.ErrWritingFile, dst, err)
 	}
 	// Ensure our file closes and any error propagate out on error branches
 	defer func(file *os.File) {

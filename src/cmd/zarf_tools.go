@@ -608,7 +608,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 			Message: lang.CmdToolsGenKeyPrompt,
 		}
 		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// perform the second prompt
@@ -617,7 +617,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 			Message: lang.CmdToolsGenKeyPromptAgain,
 		}
 		if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// check if the passwords match

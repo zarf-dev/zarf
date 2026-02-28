@@ -18,13 +18,13 @@ import (
 // Include sprintf formatting directives in the string if needed.
 const (
 	ErrUnmarshal                    = "failed to unmarshal file: %w"
-	ErrWritingFile                  = "failed to write file %s: %s"
-	ErrDownloading                  = "failed to download %s: %s"
-	ErrCreatingDir                  = "failed to create directory %s: %s"
-	ErrRemoveFile                   = "failed to remove file %s: %s"
-	ErrUnarchive                    = "failed to unarchive %s: %s"
-	ErrFileExtract                  = "failed to extract filename %s from archive %s: %s"
-	ErrFileNameExtract              = "failed to extract filename from URL %s: %s"
+	ErrWritingFile                  = "failed to write file %s: %w"
+	ErrDownloading                  = "failed to download %s: %w"
+	ErrCreatingDir                  = "failed to create directory %s: %w"
+	ErrRemoveFile                   = "failed to remove file %s: %w"
+	ErrUnarchive                    = "failed to unarchive %s: %w"
+	ErrFileExtract                  = "failed to extract filename %s from archive %s: %w"
+	ErrFileNameExtract              = "failed to extract filename from URL %s: %w"
 	ErrUnableToGenerateRandomSecret = "unable to generate a random secret"
 )
 
@@ -597,7 +597,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPrompt               = "Private key password (empty for no password): "
 	CmdToolsGenKeyPromptAgain          = "Private key password again (empty for no password): "
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
-	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
+	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
