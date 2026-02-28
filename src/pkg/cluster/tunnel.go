@@ -519,7 +519,7 @@ func (tunnel *Tunnel) establish(ctx context.Context) ([]string, error) {
 
 	// Open the tunnel in a goroutine so that it is available in the background. Report errors to the main goroutine via
 	// a new channel.
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
 		errChan <- portforwarder.ForwardPorts()
 	}()
