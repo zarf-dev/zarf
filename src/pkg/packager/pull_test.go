@@ -29,6 +29,7 @@ func TestPull(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close()
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
@@ -62,6 +63,7 @@ func TestPullUncompressed(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close()
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
@@ -95,6 +97,7 @@ func TestPullUnsupported(t *testing.T) {
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer file.Close()
 		//nolint:errcheck // ignore
 		io.Copy(rw, file)
 	}))
