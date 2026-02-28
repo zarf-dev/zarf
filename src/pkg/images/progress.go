@@ -87,11 +87,13 @@ func (tt *Tracker) StartReporting(ctx context.Context) {
 	}()
 }
 
-// StopReporting stops the reporting goroutine
+// StopReporting stops the reporting goroutine. It is safe to call multiple times.
 func (tt *Tracker) StopReporting() {
-	if tt.stopReports != nil {
-		close(tt.stopReports)
-	}
+	tt.stopOnce.Do(func() {
+		if tt.stopReports != nil {
+			close(tt.stopReports)
+		}
+	})
 	tt.wg.Wait()
 }
 
@@ -103,6 +105,7 @@ type Tracker struct {
 	totalBytes     int64
 
 	stopReports chan struct{}
+	stopOnce    sync.Once
 	wg          sync.WaitGroup
 }
 
