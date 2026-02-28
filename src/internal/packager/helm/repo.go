@@ -310,7 +310,7 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, path, err)
 			}
 		} else {
 			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
