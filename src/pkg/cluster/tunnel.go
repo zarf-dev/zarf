@@ -225,6 +225,9 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 		zt.ResourceName = svc.Name
 		zt.Namespace = svc.Namespace
 		// Only support a service with a single port.
+		if len(svc.Spec.Ports) == 0 {
+			return TunnelInfo{}, fmt.Errorf("service %s/%s has no ports", svc.Namespace, svc.Name)
+		}
 		zt.RemotePort = svc.Spec.Ports[0].TargetPort.IntValue()
 		// if targetPort == 0, look for Port (which is required)
 		if zt.RemotePort == 0 {
@@ -251,6 +254,9 @@ func (c *Cluster) checkForZarfConnectLabel(ctx context.Context, name string) (Tu
 }
 
 func (c *Cluster) findPodContainerPort(ctx context.Context, svc corev1.Service) (int, error) {
+	if len(svc.Spec.Ports) == 0 {
+		return 0, fmt.Errorf("service %s/%s has no ports", svc.Namespace, svc.Name)
+	}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{MatchLabels: svc.Spec.Selector})
 	if err != nil {
 		return 0, err
