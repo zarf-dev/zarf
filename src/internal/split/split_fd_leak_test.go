@@ -27,7 +27,7 @@ func TestSplitFile_ClosesChunkFDsPerIteration(t *testing.T) {
 	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &original)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &original)
+		require.NoError(t, syscall.Setrlimit(syscall.RLIMIT_NOFILE, &original))
 	})
 
 	// Allow enough FDs for the Go runtime and test infrastructure (~15),
