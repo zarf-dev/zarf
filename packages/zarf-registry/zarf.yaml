@@ -2,6 +2,11 @@ kind: ZarfPackageConfig
 metadata:
   name: init-package-zarf-registry
 
+values:
+  files:
+    values.yaml
+  # TODO add schema
+
 variables:
   - name: REGISTRY_EXISTING_PVC
     description: "Optional: Use an existing PVC for the registry instead of creating a new one. If this is set, the REGISTRY_PVC_SIZE variable will be ignored."
@@ -197,6 +202,7 @@ components:
         namespace: zarf
         files:
           - configmap.yaml
+        template: true
     charts:
       - name: docker-registry
         releaseName: zarf-docker-registry
