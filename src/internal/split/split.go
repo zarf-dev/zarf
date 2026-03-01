@@ -63,47 +63,59 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (_ string, er
 
 	hash := sha256.New()
 	fileCount := 0
-	// TODO(mkcp): The inside of this loop should be wrapped in a closure so we can close the destination file each
-	//   iteration as soon as we're done writing.
 	for {
 		path := fmt.Sprintf("%s.part%03d", srcPath, fileCount+1)
-		dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
-		if err != nil {
-			return "", err
-		}
-		defer func(dstFile *os.File) {
-			err2 := dstFile.Close()
-			// Ignore if file is already closed
-			if !errors.Is(err2, os.ErrClosed) {
-				err = errors.Join(err, err2)
+
+		// Wrap the loop body in a closure so the deferred dstFile.Close runs
+		// at the end of each iteration, not when SplitFile returns. Without
+		// this, every chunk's file handle stays open until the function exits.
+		written, copyErr, loopErr := func() (written int64, copyErr error, err error) {
+			dstFile, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+			if err != nil {
+				return 0, nil, err
 			}
-		}(dstFile)
+			defer func() {
+				err2 := dstFile.Close()
+				// Ignore if file is already closed
+				if !errors.Is(err2, os.ErrClosed) {
+					err = errors.Join(err, err2)
+				}
+			}()
 
-		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
-		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
-			return "", err
+			written, copyErr = io.CopyN(dstFile, srcFile, int64(chunkSize))
+			if copyErr != nil && !errors.Is(copyErr, io.EOF) {
+				return 0, nil, copyErr
+			}
+
+			_, err = dstFile.Seek(0, io.SeekStart)
+			if err != nil {
+				return 0, nil, err
+			}
+			_, err = io.Copy(hash, dstFile)
+			if err != nil {
+				return 0, nil, err
+			}
+
+			// EOF error could be returned on 0 bytes written.
+			if written == 0 {
+				// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
+				err = dstFile.Close()
+				if err != nil {
+					return 0, nil, err
+				}
+				err = os.Remove(path)
+				if err != nil {
+					return 0, nil, err
+				}
+			}
+
+			return written, copyErr, nil
+		}()
+		if loopErr != nil {
+			return "", loopErr
 		}
 
-		_, err = dstFile.Seek(0, io.SeekStart)
-		if err != nil {
-			return "", err
-		}
-		_, err = io.Copy(hash, dstFile)
-		if err != nil {
-			return "", err
-		}
-
-		// EOF error could be returned on 0 bytes written.
 		if written == 0 {
-			// NOTE(mkcp): We have to close the file before removing it or windows will break with a file-in-use err.
-			err = dstFile.Close()
-			if err != nil {
-				return "", err
-			}
-			err = os.Remove(path)
-			if err != nil {
-				return "", err
-			}
 			break
 		}
 
