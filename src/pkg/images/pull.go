@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	retry "github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -471,10 +472,31 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 	pullSrc = orasCache.New(repo, localCache)
-	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-	trackedDst.StartReporting(ctx)
-	defer trackedDst.StopReporting()
-	desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+	var desc ocispec.Descriptor
+	err = retry.Do(
+		func() error {
+			trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+			trackedDst.StartReporting(ctx)
+			defer trackedDst.StopReporting()
+			var copyErr error
+			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+			return copyErr
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			l.Warn("retrying image pull",
+				"attempt", n+1,
+				"max_attempts", config.ZarfDefaultRetries,
+				"image", imageInfo.registryOverrideRef,
+				"error", err,
+			)
+		}),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}

@@ -13,10 +13,13 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -54,18 +57,33 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
 	}
 
-	// Create the file
-	file, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf(lang.ErrWritingFile, dst, err.Error())
-	}
-	// Ensure our file closes and any error propagate out on error branches
-	defer func(file *os.File) {
-		err2 := file.Close()
-		err = errors.Join(err, err2)
-	}(file)
-
-	err = httpGetFile(ctx, src, file)
+	l := logger.From(ctx)
+	err = retry.Do(
+		func() error {
+			// Create the file
+			file, createErr := os.Create(dst)
+			if createErr != nil {
+				return retry.Unrecoverable(fmt.Errorf(lang.ErrWritingFile, dst, createErr.Error()))
+			}
+			getErr := httpGetFile(ctx, src, file)
+			closeErr := file.Close()
+			return errors.Join(getErr, closeErr)
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			l.Warn("retrying download",
+				"attempt", n+1,
+				"max_attempts", config.ZarfDefaultRetries,
+				"url", src,
+				"error", err,
+			)
+		}),
+	)
 	if err != nil {
 		return err
 	}
@@ -91,7 +109,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("unable to create request for %s: %w", url, err)
+		return retry.Unrecoverable(fmt.Errorf("unable to create request for %s: %w", url, err))
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -104,7 +122,21 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad HTTP status: %s", resp.Status)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+				l.Info("rate limited, waiting before retry", "url", url, "retry_after", d)
+				select {
+				case <-time.After(d):
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+			return fmt.Errorf("rate limited (HTTP 429): %s", resp.Status)
+		}
+		if resp.StatusCode >= 500 {
+			return fmt.Errorf("server error: %s", resp.Status)
+		}
+		return retry.Unrecoverable(fmt.Errorf("bad HTTP status: %s", resp.Status))
 	}
 
 	// Copy response body to file
@@ -113,4 +145,21 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	}
 	l.Debug("download successful", "url", url, "size", resp.ContentLength, "duration", time.Since(start))
 	return nil
+}
+
+// parseRetryAfter parses the Retry-After header value into a duration.
+// It supports both delay-seconds (integer) and HTTP-date formats.
+func parseRetryAfter(value string) time.Duration {
+	if value == "" {
+		return 0
+	}
+	if seconds, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return time.Duration(seconds) * time.Second
+	}
+	if t, err := http.ParseTime(value); err == nil {
+		if d := time.Until(t); d > 0 {
+			return d
+		}
+	}
+	return 0
 }

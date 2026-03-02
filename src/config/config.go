@@ -60,8 +60,10 @@ var (
 	ZarfDefaultCachePath = filepath.Join("~", ".zarf-cache")
 
 	// Default Time Vars
-	ZarfDefaultTimeout = 15 * time.Minute
-	ZarfDefaultRetries = 3
+	ZarfDefaultTimeout       = 15 * time.Minute
+	ZarfDefaultRetries       = 3
+	ZarfDefaultRetryDelay    = 500 * time.Millisecond
+	ZarfDefaultRetryMaxDelay = 8 * time.Second
 )
 
 // GetArch returns the arch based on a priority list with options for overriding.
