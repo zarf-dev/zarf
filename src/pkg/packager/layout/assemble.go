@@ -388,7 +388,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				// get the compressedFileName from the source
 				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err)
 				}
 				tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 				if err != nil {
@@ -401,18 +401,18 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 				// If the file is an archive, download it to the componentPath.Temp
 				if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
 				}
 				decompressOpts := archive.DecompressOpts{
 					Files: []string{file.ExtractPath},
 				}
 				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 				}
 			} else {
 				if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
 				}
 			}
 		} else {
@@ -426,7 +426,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				}
 				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 				}
 			} else {
 				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
@@ -471,7 +471,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 		if helpers.IsURL(data.Source) {
 			if err := utils.DownloadToFile(ctx, data.Source, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, data.Source, err)
 			}
 		} else {
 			src := data.Source
@@ -479,7 +479,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				src = filepath.Join(packagePath, data.Source)
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 		}
 	}
@@ -540,7 +540,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, path, err)
 			}
 		} else {
 			src := path
@@ -656,7 +656,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 			err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 			}
 
 			// Make sure dst reflects the actual file or directory.
@@ -707,7 +707,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			src = filepath.Join(packagePath, src)
 		}
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-			return fmt.Errorf("unable to copy data injection %s: %s", src, err.Error())
+			return fmt.Errorf("unable to copy data injection %s: %w", src, err)
 		}
 
 		component.DataInjections[dataIdx].Source = rel
