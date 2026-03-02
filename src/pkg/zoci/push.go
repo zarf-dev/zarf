@@ -200,11 +200,11 @@ func buildBlobMediaTypes(pkgDir string) (map[string]string, error) {
 		}
 		manifestBytes, err := os.ReadFile(filepath.Join(pkgDir, layout.ImagesBlobsDir, hex))
 		if err != nil {
-			continue
+			return nil, err
 		}
 		var mf ocispec.Manifest
 		if err := json.Unmarshal(manifestBytes, &mf); err != nil {
-			continue
+			return nil, err
 		}
 		if mf.Config.MediaType != "" {
 			result[layout.ImagesBlobsDir+"/"+mf.Config.Digest.Encoded()] = mf.Config.MediaType

@@ -209,29 +209,6 @@ func TestBuildBlobMediaTypes(t *testing.T) {
 		require.Equal(t, ocispec.MediaTypeImageLayerGzip, result[blobPath(layer2)])
 	})
 
-	t.Run("missing manifest blob only records index media type", func(t *testing.T) {
-		t.Parallel()
-		dir := t.TempDir()
-
-		// Construct a digest that has no corresponding blob on disk.
-		fakeHex := fmt.Sprintf("%x", sha256.Sum256([]byte("nonexistent")))
-		fakeDgst := digest.Digest("sha256:" + fakeHex)
-		require.NoError(t, os.MkdirAll(filepath.Join(dir, layout.ImagesDir), 0o755))
-
-		writeIndexToDir(t, dir, ocispec.Index{
-			Manifests: []ocispec.Descriptor{
-				{MediaType: ocispec.MediaTypeImageManifest, Digest: fakeDgst},
-			},
-		})
-
-		result, err := buildBlobMediaTypes(dir)
-		require.NoError(t, err)
-		// The manifest digest is recorded from the index entry.
-		require.Equal(t, ocispec.MediaTypeImageManifest, result[blobPath(fakeDgst)])
-		// Only the two seeded entries plus the manifest entry (no config or layers since blob was missing).
-		require.Len(t, result, 3)
-	})
-
 	t.Run("index entry with empty media type not added to map", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
@@ -321,7 +298,7 @@ func TestBuildBlobMediaTypes(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("invalid manifest JSON is skipped gracefully", func(t *testing.T) {
+	t.Run("invalid manifest JSON returns error", func(t *testing.T) {
 		t.Parallel()
 		dir := t.TempDir()
 
@@ -334,12 +311,8 @@ func TestBuildBlobMediaTypes(t *testing.T) {
 			},
 		})
 
-		result, err := buildBlobMediaTypes(dir)
-		require.NoError(t, err)
-		// The manifest digest is still recorded from the index entry.
-		require.Equal(t, ocispec.MediaTypeImageManifest, result[blobPath(invalidDgst)])
-		// Only the two seeded entries plus the manifest entry (no config or layers since manifest was unparseable).
-		require.Len(t, result, 3)
+		_, err := buildBlobMediaTypes(dir)
+		require.Error(t, err)
 	})
 }
 
