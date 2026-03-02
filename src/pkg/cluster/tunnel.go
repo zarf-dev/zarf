@@ -107,7 +107,7 @@ func (c *Cluster) NewTargetTunnelInfo(ctx context.Context, target string) (Tunne
 		if target != "" {
 			ztNew, err := c.checkForZarfConnectLabel(ctx, target)
 			if err != nil {
-				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %s", err.Error())
+				return TunnelInfo{}, fmt.Errorf("problem looking for a zarf connect label in the cluster: %w", err)
 			}
 			zt = ztNew
 			zt.ListenAddresses = []string{helpers.IPV4Localhost}
