@@ -34,5 +34,7 @@ func main() {
 		}
 	}()
 
-	cmd.Execute(ctx)
+	if err := cmd.Execute(ctx); err != nil {
+		os.Exit(1)
+	}
 }

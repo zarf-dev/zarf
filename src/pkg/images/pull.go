@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +41,6 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -117,8 +117,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if err != nil {
 		return nil, fmt.Errorf("failed to get credentials: %w", err)
 	}
+	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
 	client := &auth.Client{
-		Client:     retry.DefaultClient,
+		Client: &http.Client{
+			Transport: transport,
+		},
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
 	}
@@ -139,11 +145,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// we can't error here because there may be a faked registry used for the docker fallback mechanism
 			_ = registry.Ping(ctx) //nolint: errcheck
 		}
-	}
-
-	client.Client.Transport, err = orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
-	if err != nil {
-		return nil, err
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
@@ -167,10 +168,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
-			repo.Reference, err = registry.ParseReference(image.overridden.Reference)
+			ref, err := registry.ParseReference(image.overridden.Reference)
 			if err != nil {
 				return err
 			}
+			repo.Reference = ref
 			repo.Client = client
 
 			repo.PlainHTTP = opts.PlainHTTP

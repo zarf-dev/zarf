@@ -15,6 +15,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -43,7 +44,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		return nil, fmt.Errorf("images must be defined")
 	}
 	// Create a temporary directory for extraction
-	tmpdir, err := utils.MakeTempDir("")
+	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}

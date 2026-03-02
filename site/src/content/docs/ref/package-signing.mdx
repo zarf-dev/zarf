@@ -28,9 +28,9 @@ The bundle format follows the [Sigstore Bundle Specification](https://github.com
 
 ### Legacy Signature Format
 
-:::caution[Deprecated]
+:::caution[Deprecation]
 
-The legacy signature format (`zarf.yaml.sig`) is deprecated in favor of the Sigstore bundle format. While Zarf currently supports both formats for backward compatibility, the legacy format will soon no longer be generated for new signatures. Zarf will retain the ability to verify legacy signatures as a fallback for when a package is signed but no bundle signature is present.
+The legacy signature format (`zarf.yaml.sig`) will be deprecated in favor of the Sigstore bundle format (`zarf.bundle.sig`). While Zarf currently supports both formats for backward compatibility, the legacy format will soon no longer be generated for new signatures. Zarf will retain the ability to verify legacy signatures as a fallback for when a package is signed but no bundle signature is present.
 
 **Reasons for deprecation:**
 
@@ -41,7 +41,7 @@ The legacy signature format (`zarf.yaml.sig`) is deprecated in favor of the Sigs
 
 **Migration:**
 
-Re-sign packages with legacy signatures using the `zarf package sign` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
+Re-sign packages with legacy signatures using the `zarf package sign --features="bundle-signature=true" --overwrite` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
 
 :::
 

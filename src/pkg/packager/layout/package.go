@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -216,11 +217,27 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
+	// Save original provenance files for rollback
+	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
+
+	// Append signature files to the provenance files list.
+	// These are created after checksum generation and cannot be in checksums.txt.
+	// Listing them here allows integrity validation to dynamically exclude them
+	// without hardcoded knowledge of every possible signature file.
+	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Signature) {
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
+	}
+
+	if feature.IsEnabled(feature.BundleSignature) && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
+	}
+
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -229,6 +246,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -238,15 +256,22 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	// Validate outputs before setting temporary paths
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
-	signOpts.BundlePath = actualBundlePath
 	signOpts.OutputSignature = actualSignaturePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = actualBundlePath
+	} else {
+		signOpts.NewBundleFormat = false
+		signOpts.BundlePath = ""
+	}
 	err = signOpts.CheckOverwrite(ctx)
 	if err != nil {
 		return err
 	}
 
 	signOpts.OutputSignature = tmpSignaturePath
-	signOpts.BundlePath = tmpBundlePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = tmpBundlePath
+	}
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
@@ -254,6 +279,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -273,9 +299,11 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	err = os.Rename(tmpBundlePath, actualBundlePath)
-	if err != nil {
-		return fmt.Errorf("failed to move bundle after signing: %w", err)
+	if feature.IsEnabled(feature.BundleSignature) {
+		err = os.Rename(tmpBundlePath, actualBundlePath)
+		if err != nil {
+			return fmt.Errorf("failed to move bundle after signing: %w", err)
+		}
 	}
 
 	l.Info("package signed successfully")
@@ -336,7 +364,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	}
 
 	// Legacy signature found
-	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package.")
+	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package with the --features='bundle-signature=true' flag.")
 	opts.SigRef = signaturePath
 
 	opts.NewBundleFormat = false
@@ -626,11 +654,22 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	// Remove files which are not in the checksums.
+	// zarf.yaml is the root of trust and is always excluded from checksums.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
+	// Hardcoded exclusions for backward compatibility with packages that predate
+	// the ProvenanceFiles field. These can be removed once all supported
+	// package versions include ProvenanceFiles.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Bundle))
+	// Remove provenance files declared in the signed zarf.yaml.
+	// This enables forward compatibility — new files added by future CLI versions
+	// are excluded from the strict check without requiring code changes.
+	if pkgLayout.IsSigned() {
+		for _, f := range pkgLayout.Pkg.Build.ProvenanceFiles {
+			delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+		}
+	}
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {
