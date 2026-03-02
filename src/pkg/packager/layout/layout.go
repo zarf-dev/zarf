@@ -16,6 +16,7 @@ const (
 	Checksums    = "checksums.txt"
 	ValuesYAML   = "values.yaml"
 	ValuesSchema = "values.schema.json"
+	Requirements = "requirements.yaml"
 
 	ImagesDir     = "images"
 	ComponentsDir = "components"
