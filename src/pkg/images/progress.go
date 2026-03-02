@@ -87,7 +87,7 @@ func (tt *Tracker) StartReporting(ctx context.Context) {
 	}()
 }
 
-// StopReporting stops the reporting goroutine. It is safe to call multiple times.
+// StopReporting stops the reporting goroutine.
 func (tt *Tracker) StopReporting() {
 	tt.stopOnce.Do(func() {
 		if tt.stopReports != nil {
