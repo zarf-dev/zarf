@@ -6,10 +6,12 @@ package zoci
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"sort"
 	"time"
 
@@ -72,8 +74,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	if err != nil {
 		return ocispec.Descriptor{}, err
 	}
+	blobMediaTypes, err := buildBlobMediaTypes(pkgLayout.DirPath())
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to build blob media types: %w", err)
+	}
 	for path, name := range files {
-		desc, err := src.Add(ctx, name, ZarfLayerMediaTypeBlob, path)
+		mt := blobMediaTypes[name]
+		if mt == "" {
+			mt = ZarfLayerMediaTypeBlob
+		}
+		desc, err := src.Add(ctx, name, mt, path)
 		if err != nil {
 			return ocispec.Descriptor{}, err
 		}
@@ -160,6 +170,52 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
 	return publishedDesc, nil
+}
+
+// buildBlobMediaTypes builds a map from package-relative file path to OCI media type.
+// It seeds entries for the well-known OCI layout files and then reads images/index.json
+// and each referenced manifest to assign types to image blobs.
+func buildBlobMediaTypes(pkgDir string) (map[string]string, error) {
+	result := map[string]string{
+		layout.OCILayoutPath: ocispec.MediaTypeLayoutHeader,
+		layout.IndexPath:     ocispec.MediaTypeImageIndex,
+	}
+
+	indexBytes, err := os.ReadFile(filepath.Join(pkgDir, layout.IndexPath))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return result, nil
+		}
+		return nil, err
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return nil, err
+	}
+
+	for _, manifestDesc := range idx.Manifests {
+		hex := manifestDesc.Digest.Encoded()
+		if manifestDesc.MediaType != "" {
+			result[layout.ImagesBlobsDir+"/"+hex] = manifestDesc.MediaType
+		}
+		manifestBytes, err := os.ReadFile(filepath.Join(pkgDir, layout.ImagesBlobsDir, hex))
+		if err != nil {
+			continue
+		}
+		var mf ocispec.Manifest
+		if err := json.Unmarshal(manifestBytes, &mf); err != nil {
+			continue
+		}
+		if mf.Config.MediaType != "" {
+			result[layout.ImagesBlobsDir+"/"+mf.Config.Digest.Encoded()] = mf.Config.MediaType
+		}
+		for _, layer := range mf.Layers {
+			if layer.MediaType != "" {
+				result[layout.ImagesBlobsDir+"/"+layer.Digest.Encoded()] = layer.MediaType
+			}
+		}
+	}
+	return result, nil
 }
 
 func annotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
