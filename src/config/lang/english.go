@@ -18,13 +18,13 @@ import (
 // Include sprintf formatting directives in the string if needed.
 const (
 	ErrUnmarshal                    = "failed to unmarshal file: %w"
-	ErrWritingFile                  = "failed to write file %s: %s"
-	ErrDownloading                  = "failed to download %s: %s"
-	ErrCreatingDir                  = "failed to create directory %s: %s"
-	ErrRemoveFile                   = "failed to remove file %s: %s"
-	ErrUnarchive                    = "failed to unarchive %s: %s"
-	ErrFileExtract                  = "failed to extract filename %s from archive %s: %s"
-	ErrFileNameExtract              = "failed to extract filename from URL %s: %s"
+	ErrWritingFile                  = "failed to write file %s: %w"
+	ErrDownloading                  = "failed to download %s: %w"
+	ErrCreatingDir                  = "failed to create directory %s: %w"
+	ErrRemoveFile                   = "failed to remove file %s: %w"
+	ErrUnarchive                    = "failed to unarchive %s: %w"
+	ErrFileExtract                  = "failed to extract filename %s from archive %s: %w"
+	ErrFileNameExtract              = "failed to extract filename from URL %s: %w"
 	ErrUnableToGenerateRandomSecret = "unable to generate a random secret"
 )
 
@@ -598,7 +598,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPrompt               = "Private key password (empty for no password): "
 	CmdToolsGenKeyPromptAgain          = "Private key password again (empty for no password): "
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
-	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %s"
+	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
@@ -628,6 +628,31 @@ $ zarf tools wait-for http google.com success                           #  wait 
 	CmdToolsWaitForFlagTimeout   = "Specify the timeout duration for the wait command."
 	CmdToolsWaitForFlagNamespace = "Specify the namespace of the resources to wait for."
 
+	CmdToolsWaitForResourceShort = "Waits for a given Kubernetes resource to be fully reconciled"
+	CmdToolsWaitForResourceLong  = "Waits for a given Kubernetes resource to be fully reconciled unless a condition is provided.\n" +
+		"Resource reconciliation is determined according to https://github.com/kubernetes-sigs/cli-utils/blob/master/pkg/kstatus/README.md#kstatus\n" +
+		"If a resource does not implement reconciliation statuses, then this command will wait for that resource to exist"
+	CmdToolsWaitForResourceExample = `
+$ zarf tools wait-for resource deployment my-deployment -n default               #  wait for deployment to be reconciled (default condition)
+$ zarf tools wait-for resource po cool-pod-name -n cool                          #  wait for pod (using po alias) cool-pod-name in namespace cool to be reconciled
+$ zarf tools wait-for resource pod my-pod-name ready -n default                  #  wait for pod my-pod-name in namespace default to have the ready condition
+$ zarf tools wait-for resource pod app=podinfo -n podinfo                        #  wait for pod(s) with label app=podinfo in namespace podinfo to be reconciled
+$ zarf tools wait-for resource deployment zarf-docker-registry exists -n zarf    #  wait for deployment zarf-docker-registry in namespace zarf to exist
+$ zarf tools wait-for resource svc zarf-docker-registry delete -n zarf           #  wait for service zarf-docker-registry in namespace zarf to not exist
+$ zarf tools wait-for resource pvc -n zarf                                       #  wait for any pvc in namespace zarf to exist
+$ zarf tools wait-for resource crd addons.k3s.cattle.io                          #  wait for crd addons.k3s.cattle.io to exist
+$ zarf tools wait-for resource sts test-sts '{.status.availableReplicas}'=23     #  wait for statefulset test-sts to have 23 available replicas
+`
+
+	CmdToolsWaitForNetworkShort   = "Waits for a network endpoint to meet the condition"
+	CmdToolsWaitForNetworkLong    = "Waits for a network endpoint using REST or TCP to respond with a status code (default 2xx)"
+	CmdToolsWaitForNetworkExample = `
+$ zarf tools wait-for network http localhost:8080 200                           #  wait for a 200 response from http://localhost:8080
+$ zarf tools wait-for network tcp localhost:8080                                #  wait for a connection to be established on localhost:8080
+$ zarf tools wait-for network https 1.1.1.1 200                                 #  wait for a 200 response from https://1.1.1.1
+$ zarf tools wait-for network http google.com                                   #  wait for any 2xx response from http://google.com
+$ zarf tools wait-for network http google.com success                           #  wait for any 2xx response from http://google.com
+`
 	CmdToolsKubectlDocs = "Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information."
 
 	CmdToolsGetCredsShort   = "Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential"

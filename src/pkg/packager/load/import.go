@@ -125,6 +125,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 			_, err = remote.ResolveRoot(ctx)
 			if err != nil {
+				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
+					return v1alpha1.ZarfPackage{}, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
+				}
 				return v1alpha1.ZarfPackage{}, err
 			}
 			importedPkg, err = remote.FetchZarfYAML(ctx)
@@ -264,6 +267,11 @@ func fetchOCISkeleton(ctx context.Context, component v1alpha1.ZarfComponent, pac
 	}
 	_, err = remote.ResolveRoot(ctx)
 	if err != nil {
+		// This error likely won't occur as the root has been resolved before this function is invoked.
+		// This serves as a secondary mechanism to highlight the potential for the package existing without a published skeleton.
+		if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
+			return "", fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
+		}
 		return "", fmt.Errorf("published skeleton package for %s does not exist: %w", component.Import.URL, err)
 	}
 	manifest, err := remote.FetchRoot(ctx)

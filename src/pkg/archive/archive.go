@@ -298,10 +298,10 @@ func nestedUnarchive(ctx context.Context, extractor archives.Extractor, dst stri
 				outDir = strings.TrimSuffix(path, extensionTar)
 			}
 			if err := unarchive(ctx, extractor, path, outDir); err != nil {
-				return fmt.Errorf(lang.ErrUnarchive, path, err.Error())
+				return fmt.Errorf(lang.ErrUnarchive, path, err)
 			}
 			if err := os.Remove(path); err != nil {
-				return fmt.Errorf(lang.ErrRemoveFile, path, err.Error())
+				return fmt.Errorf(lang.ErrRemoveFile, path, err)
 			}
 		}
 		return nil
