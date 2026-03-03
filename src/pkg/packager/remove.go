@@ -90,7 +90,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		var err error
 		depPkg, err = opts.Cluster.GetDeployedPackage(ctx, pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 		if err != nil {
-			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %s", err.Error())
+			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have

@@ -54,7 +54,7 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 
 	err = helpers.CreateDirectory(filepath.Dir(dst), helpers.ReadWriteExecuteUser)
 	if err != nil {
-		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err.Error())
+		return fmt.Errorf(lang.ErrCreatingDir, filepath.Dir(dst), err)
 	}
 
 	l := logger.From(ctx)
@@ -63,7 +63,7 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 			// Create the file
 			file, createErr := os.Create(dst)
 			if createErr != nil {
-				return retry.Unrecoverable(fmt.Errorf(lang.ErrWritingFile, dst, createErr.Error()))
+				return retry.Unrecoverable(fmt.Errorf(lang.ErrWritingFile, dst, createErr))
 			}
 			getErr := httpGetFile(ctx, src, file)
 			closeErr := file.Close()
@@ -124,6 +124,10 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusTooManyRequests {
 			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
+				const maxRetryAfter = 60 * time.Second
+				if d > maxRetryAfter {
+					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
+				}
 				l.Info("rate limited, waiting before retry", "url", url, "retry_after", d)
 				select {
 				case <-time.After(d):

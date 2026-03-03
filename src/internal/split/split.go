@@ -81,7 +81,7 @@ func SplitFile(ctx context.Context, srcPath string, chunkSize int) (_ string, er
 
 		written, copyErr := io.CopyN(dstFile, srcFile, int64(chunkSize))
 		if copyErr != nil && !errors.Is(copyErr, io.EOF) {
-			return "", err
+			return "", copyErr
 		}
 
 		_, err = dstFile.Seek(0, io.SeekStart)
