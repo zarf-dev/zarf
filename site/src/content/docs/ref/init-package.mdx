@@ -183,6 +183,38 @@ Additionally, when adopting resources, ensure that the namespaces specified are 
 
 The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created in a [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
 
+#### Conditional Image Mutation with `mutate-if-exists`
+
+By default, the `zarf-agent` rewrites all container image references to point to the Zarf registry. However, in some scenarios you may want to conditionally mutate images—only rewriting images that already exist in the Zarf registry while leaving others pointing to their original locations.
+
+To enable this behavior, label a namespace with `zarf.dev/agent: mutate-if-exists`:
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-namespace
+  labels:
+    zarf.dev/agent: mutate-if-exists
+```
+
+When this label is applied:
+
+- **Images found in the Zarf registry**: Image references are rewritten to point to the Zarf registry (e.g., `docker.io/nginx:latest` → `127.0.0.1:31999/library/nginx:latest-zarf-...`)
+- **Images not found in the Zarf registry**: Image references remain unchanged, pointing to their original registry
+
+This is useful for:
+
+- **Hybrid deployments**: Running workloads that use a mix of air-gapped images (in Zarf registry) and external images (from internet-accessible registries)
+- **Gradual migration**: Testing incremental migration to fully air-gapped deployments
+- **Development environments**: Allowing developers to pull some images from external registries while using Zarf-managed images for core components
+
+:::note
+
+The registry existence check is performed via HTTP HEAD request to the Zarf registry when pods are created. If the registry is temporarily unavailable, pod creation will fail. Ensure your Zarf registry is healthy before deploying workloads to namespaces using `mutate-if-exists`.
+
+:::
+
 ## Optional Components
 
 The Zarf team maintains some optional components in the default 'init' package.
