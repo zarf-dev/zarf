@@ -6,6 +6,7 @@ package zoci_test
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"slices"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -125,4 +127,58 @@ func TestAssembleLayers(t *testing.T) {
 			require.Len(t, docLayers, 3)
 		})
 	}
+}
+
+func TestManifestConfigIsPackageConfig(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(t, ctx)
+	tmpdir := t.TempDir()
+
+	opt := packager.CreateOptions{
+		OCIConcurrency: 3,
+		CachePath:      tmpdir,
+	}
+	packagePath, err := packager.Create(ctx, "testdata/basic", tmpdir, opt)
+	require.NoError(t, err)
+
+	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+
+	publishOpts := packager.PublishPackageOptions{
+		RemoteOptions: types.RemoteOptions{
+			PlainHTTP: true,
+		},
+		OCIConcurrency: 3,
+	}
+	packageRef, err := packager.PublishPackage(ctx, pkgLayout, registryRef, publishOpts)
+	require.NoError(t, err)
+
+	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
+	require.NoError(t, err)
+
+	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true), cacheModifier)
+	require.NoError(t, err)
+
+	// Fetch the OCI manifest root
+	root, err := remote.FetchRoot(ctx)
+	require.NoError(t, err)
+
+	// Verify the manifest config has the correct media type
+	require.Equal(t, zoci.ZarfConfigMediaType, root.Config.MediaType)
+
+	// Fetch and unmarshal the manifest config blob
+	configBytes, err := remote.FetchLayer(ctx, root.Config)
+	require.NoError(t, err)
+
+	var configPkg v1alpha1.ZarfPackage
+	err = json.Unmarshal(configBytes, &configPkg)
+	require.NoError(t, err)
+
+	// Verify the config contains the original package data
+	require.Equal(t, pkgLayout.Pkg.Kind, configPkg.Kind)
+	require.Equal(t, pkgLayout.Pkg.Metadata.Name, configPkg.Metadata.Name)
+	require.Equal(t, pkgLayout.Pkg.Metadata.Version, configPkg.Metadata.Version)
+	require.Equal(t, pkgLayout.Pkg.Build.Architecture, configPkg.Build.Architecture)
+	require.Equal(t, pkgLayout.Pkg.Components[0].Name, configPkg.Components[0].Name)
 }
