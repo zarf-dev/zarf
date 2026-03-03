@@ -173,7 +173,8 @@ func waitForSingleResourceMatchingCriteria(ctx context.Context, dynamicClient dy
 	err := wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(ctx context.Context) (bool, error) {
 		list, err := resourceClient.List(ctx, metav1.ListOptions{Limit: 1})
 		if err != nil {
-			return true, fmt.Errorf("failed to list resources: %w", err)
+			l.Debug("error listing resources, retrying", "error", err)
+			return false, nil
 		}
 		if len(list.Items) > 0 {
 			return true, nil

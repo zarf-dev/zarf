@@ -5,13 +5,20 @@
 package wait
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestIsJSONPathWaitType(t *testing.T) {
@@ -148,4 +155,91 @@ func TestForNetwork(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestWaitForSingleResourceMatchingCriteria(t *testing.T) {
+	t.Parallel()
+
+	gvr := schema.GroupVersionResource{Group: "metallb.io", Version: "v1beta1", Resource: "ipaddresspools"}
+	gvrToListKind := map[schema.GroupVersionResource]string{
+		gvr: "IPAddressPoolList",
+	}
+
+	t.Run("retries on transient list errors then succeeds", func(t *testing.T) {
+		t.Parallel()
+
+		scheme := runtime.NewScheme()
+		fakeClient := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
+
+		var callCount atomic.Int32
+		errCount := int32(3)
+
+		fakeClient.PrependReactor("list", "ipaddresspools", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			n := callCount.Add(1)
+			if n <= errCount {
+				return true, nil, fmt.Errorf("the server could not find the requested resource")
+			}
+			list := &unstructured.UnstructuredList{
+				Items: []unstructured.Unstructured{
+					{Object: map[string]interface{}{
+						"apiVersion": "metallb.io/v1beta1",
+						"kind":       "IPAddressPool",
+						"metadata": map[string]interface{}{
+							"name":      "default-pool",
+							"namespace": "metallb-system",
+						},
+					}},
+				},
+			}
+			return true, list, nil
+		})
+
+		deadline := time.Now().Add(10 * time.Second)
+		err := waitForSingleResourceMatchingCriteria(t.Context(), fakeClient, gvr, "metallb-system", deadline)
+		require.NoError(t, err)
+		require.Greater(t, callCount.Load(), errCount, "should have retried past the error calls")
+	})
+
+	t.Run("times out when list errors persist", func(t *testing.T) {
+		t.Parallel()
+
+		scheme := runtime.NewScheme()
+		fakeClient := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
+
+		fakeClient.PrependReactor("list", "ipaddresspools", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, fmt.Errorf("the server could not find the requested resource")
+		})
+
+		deadline := time.Now().Add(2 * time.Second)
+		err := waitForSingleResourceMatchingCriteria(t.Context(), fakeClient, gvr, "metallb-system", deadline)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "timed out waiting for resource")
+	})
+
+	t.Run("succeeds immediately when resource exists", func(t *testing.T) {
+		t.Parallel()
+
+		scheme := runtime.NewScheme()
+		fakeClient := dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind)
+
+		fakeClient.PrependReactor("list", "ipaddresspools", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			list := &unstructured.UnstructuredList{
+				Items: []unstructured.Unstructured{
+					{Object: map[string]interface{}{
+						"apiVersion": "metallb.io/v1beta1",
+						"kind":       "IPAddressPool",
+						"metadata": map[string]interface{}{
+							"name":      "default-pool",
+							"namespace": "metallb-system",
+						},
+					}},
+				},
+			}
+			return true, list, nil
+		})
+
+		deadline := time.Now().Add(5 * time.Second)
+		err := waitForSingleResourceMatchingCriteria(t.Context(), fakeClient, gvr, "metallb-system", deadline)
+		require.NoError(t, err)
+	})
 }
