@@ -24,6 +24,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// retryAfterDuration is returned on a 429 so the custom DelayType can use it
+// instead of stacking on top of the normal backoff.
+type retryAfterDuration time.Duration
+
+func (d retryAfterDuration) Error() string {
+	return fmt.Sprintf("rate limited (HTTP 429), retry after %s", time.Duration(d))
+}
+
 func parseChecksum(src string) (string, string, error) {
 	atSymbolCount := strings.Count(src, "@")
 	var checksum string
@@ -72,16 +80,24 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 		retry.Attempts(uint(config.ZarfDefaultRetries)),
 		retry.Delay(config.ZarfDefaultRetryDelay),
 		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-		retry.DelayType(retry.BackOffDelay),
+		retry.DelayType(func(n uint, err error, rc *retry.Config) time.Duration {
+			var rlErr retryAfterDuration
+			if errors.As(err, &rlErr) {
+				return time.Duration(rlErr)
+			}
+			return retry.BackOffDelay(n, err, rc)
+		}),
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			l.Warn("retrying download",
-				"attempt", n+1,
-				"max_attempts", config.ZarfDefaultRetries,
-				"url", src,
-				"error", err,
-			)
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying download",
+					"attempt", n+1,
+					"max_attempts", config.ZarfDefaultRetries,
+					"url", src,
+					"error", err,
+				)
+			}
 		}),
 	)
 	if err != nil {
@@ -128,12 +144,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 				if d > maxRetryAfter {
 					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
 				}
-				l.Info("rate limited, waiting before retry", "url", url, "retry_after", d)
-				select {
-				case <-time.After(d):
-				case <-ctx.Done():
-					return ctx.Err()
-				}
+				return retryAfterDuration(d)
 			}
 			return fmt.Errorf("rate limited (HTTP 429): %s", resp.Status)
 		}

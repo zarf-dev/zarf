@@ -275,12 +275,14 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			l.Warn("retrying chart download",
-				"attempt", n+1,
-				"max_attempts", config.ZarfDefaultRetries,
-				"chart", chart.Name,
-				"error", err,
-			)
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying chart download",
+					"attempt", n+1,
+					"max_attempts", config.ZarfDefaultRetries,
+					"chart", chart.Name,
+					"error", err,
+				)
+			}
 		}),
 	)
 	if err != nil {

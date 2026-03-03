@@ -489,12 +489,14 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 		retry.OnRetry(func(n uint, err error) {
-			l.Warn("retrying image pull",
-				"attempt", n+1,
-				"max_attempts", config.ZarfDefaultRetries,
-				"image", imageInfo.registryOverrideRef,
-				"error", err,
-			)
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying image pull",
+					"attempt", n+1,
+					"max_attempts", config.ZarfDefaultRetries,
+					"image", imageInfo.registryOverrideRef,
+					"error", err,
+				)
+			}
 		}),
 	)
 	if err != nil {
