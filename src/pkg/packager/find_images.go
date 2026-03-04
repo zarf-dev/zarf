@@ -29,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
@@ -249,7 +250,16 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 
-		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
+		fullyQualifiedMatchedImages := make(map[string]bool, len(matchedImages))
+		for image, _ := range matchedImages {
+			imageReference, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse image reference for matched image %s", image)
+			}
+			fullyQualifiedMatchedImages[imageReference.Reference] = true
+		}
+
+		sortedMatchedImages, sortedExpectedImages := getSortedImages(fullyQualifiedMatchedImages, maybeImages)
 
 		scan.Matches = sortedMatchedImages
 
