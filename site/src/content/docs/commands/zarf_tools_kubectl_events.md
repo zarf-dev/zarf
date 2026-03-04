@@ -24,19 +24,19 @@ zarf tools kubectl events [(-o|--output=)json|yaml|kyaml|name|go-template|go-tem
 
 ```
   # List recent events in the default namespace
-  kubectl events
+  zarf tools kubectl events
   
   # List recent events in all namespaces
-  kubectl events --all-namespaces
+  zarf tools kubectl events --all-namespaces
   
   # List recent events for the specified pod, then wait for more events and list them as they arrive
-  kubectl events --for pod/web-pod-13je7 --watch
+  zarf tools kubectl events --for pod/web-pod-13je7 --watch
   
   # List recent events in YAML format
-  kubectl events -oyaml
+  zarf tools kubectl events -oyaml
   
   # List recent only events of type 'Warning' or 'Normal'
-  kubectl events --types=Warning,Normal
+  zarf tools kubectl events --types=Warning,Normal
 ```
 
 ### Options

@@ -30,10 +30,10 @@ zarf tools kubectl apply edit-last-applied (RESOURCE/NAME | -f FILENAME)
 
 ```
   # Edit the last-applied-configuration annotations by type/name in YAML
-  kubectl apply edit-last-applied deployment/nginx
+  zarf tools kubectl apply edit-last-applied deployment/nginx
   
   # Edit the last-applied-configuration annotations by file in JSON
-  kubectl apply edit-last-applied -f deploy.yaml -o json
+  zarf tools kubectl apply edit-last-applied -f deploy.yaml -o json
 ```
 
 ### Options

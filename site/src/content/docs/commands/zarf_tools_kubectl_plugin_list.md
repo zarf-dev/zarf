@@ -24,10 +24,10 @@ zarf tools kubectl plugin list [flags]
 
 ```
   # List all available plugins
-  kubectl plugin list
+  zarf tools kubectl plugin list
   
   # List only binary names of available plugins without paths
-  kubectl plugin list --name-only
+  zarf tools kubectl plugin list --name-only
 ```
 
 ### Options

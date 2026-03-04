@@ -34,19 +34,19 @@ zarf tools kubectl edit (RESOURCE/NAME | -f FILENAME)
 
 ```
   # Edit the service named 'registry'
-  kubectl edit svc/registry
+  zarf tools kubectl edit svc/registry
   
   # Use an alternative editor
-  KUBE_EDITOR="nano" kubectl edit svc/registry
+  KUBE_EDITOR="nano" zarf tools kubectl edit svc/registry
   
   # Edit the job 'myjob' in JSON using the v1 API format
-  kubectl edit job.v1.batch/myjob -o json
+  zarf tools kubectl edit job.v1.batch/myjob -o json
   
   # Edit the deployment 'mydeployment' in YAML and save the modified config in its annotation
-  kubectl edit deployment/mydeployment -o yaml --save-config
+  zarf tools kubectl edit deployment/mydeployment -o yaml --save-config
   
   # Edit the 'status' subresource for the 'mydeployment' deployment
-  kubectl edit deployment mydeployment --subresource='status'
+  zarf tools kubectl edit deployment mydeployment --subresource='status'
 ```
 
 ### Options

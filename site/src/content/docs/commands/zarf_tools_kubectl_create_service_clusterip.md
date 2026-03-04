@@ -22,10 +22,10 @@ zarf tools kubectl create service clusterip NAME [--tcp=<port>:<targetPort>] [--
 
 ```
   # Create a new ClusterIP service named my-cs
-  kubectl create service clusterip my-cs --tcp=5678:8080
+  zarf tools kubectl create service clusterip my-cs --tcp=5678:8080
   
   # Create a new ClusterIP service named my-cs (in headless mode)
-  kubectl create service clusterip my-cs --clusterip="None"
+  zarf tools kubectl create service clusterip my-cs --clusterip="None"
 ```
 
 ### Options

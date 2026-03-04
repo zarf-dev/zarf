@@ -22,7 +22,7 @@ zarf tools kubectl config delete-context NAME
 
 ```
   # Delete the context for the minikube cluster
-  kubectl config delete-context minikube
+  zarf tools kubectl config delete-context minikube
 ```
 
 ### Options

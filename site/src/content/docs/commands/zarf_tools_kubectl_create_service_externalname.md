@@ -24,7 +24,7 @@ zarf tools kubectl create service externalname NAME --external-name external.nam
 
 ```
   # Create a new ExternalName service named my-ns
-  kubectl create service externalname my-ns --external-name bar.com
+  zarf tools kubectl create service externalname my-ns --external-name bar.com
 ```
 
 ### Options

@@ -22,16 +22,16 @@ zarf tools kubectl create role NAME --verb=verb --resource=resource.group/subres
 
 ```
   # Create a role named "pod-reader" that allows user to perform "get", "watch" and "list" on pods
-  kubectl create role pod-reader --verb=get --verb=list --verb=watch --resource=pods
+  zarf tools kubectl create role pod-reader --verb=get --verb=list --verb=watch --resource=pods
   
   # Create a role named "pod-reader" with ResourceName specified
-  kubectl create role pod-reader --verb=get --resource=pods --resource-name=readablepod --resource-name=anotherpod
+  zarf tools kubectl create role pod-reader --verb=get --resource=pods --resource-name=readablepod --resource-name=anotherpod
   
   # Create a role named "foo" with API Group specified
-  kubectl create role foo --verb=get,list,watch --resource=rs.apps
+  zarf tools kubectl create role foo --verb=get,list,watch --resource=rs.apps
   
   # Create a role named "foo" with SubResource specified
-  kubectl create role foo --verb=get,list,watch --resource=pods,pods/status
+  zarf tools kubectl create role foo --verb=get,list,watch --resource=pods,pods/status
 ```
 
 ### Options

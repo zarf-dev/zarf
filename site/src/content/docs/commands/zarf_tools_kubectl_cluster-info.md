@@ -22,7 +22,7 @@ zarf tools kubectl cluster-info [flags]
 
 ```
   # Print the address of the control plane and cluster services
-  kubectl cluster-info
+  zarf tools kubectl cluster-info
 ```
 
 ### Options

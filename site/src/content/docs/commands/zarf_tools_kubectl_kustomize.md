@@ -22,13 +22,13 @@ zarf tools kubectl kustomize DIR [flags]
 
 ```
   # Build the current working directory
-  kubectl kustomize
+  zarf tools kubectl kustomize
   
   # Build some shared configuration directory
-  kubectl kustomize /home/config/production
+  zarf tools kubectl kustomize /home/config/production
   
   # Build from github
-  kubectl kustomize https://github.com/kubernetes-sigs/kustomize.git/examples/helloWorld?ref=v1.0.6
+  zarf tools kubectl kustomize https://github.com/kubernetes-sigs/kustomize.git/examples/helloWorld?ref=v1.0.6
 ```
 
 ### Options

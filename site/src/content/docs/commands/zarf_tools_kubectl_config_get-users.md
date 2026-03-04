@@ -21,8 +21,8 @@ zarf tools kubectl config get-users [flags]
 ### Examples
 
 ```
-  # List the users that kubectl knows about
-  kubectl config get-users
+  # List the users that zarf tools kubectl knows about
+  zarf tools kubectl config get-users
 ```
 
 ### Options

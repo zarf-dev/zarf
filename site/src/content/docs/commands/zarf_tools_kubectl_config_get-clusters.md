@@ -21,8 +21,8 @@ zarf tools kubectl config get-clusters [flags]
 ### Examples
 
 ```
-  # List the clusters that kubectl knows about
-  kubectl config get-clusters
+  # List the clusters that zarf tools kubectl knows about
+  zarf tools kubectl config get-clusters
 ```
 
 ### Options

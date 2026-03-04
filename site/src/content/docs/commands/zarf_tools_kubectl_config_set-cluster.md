@@ -24,19 +24,19 @@ zarf tools kubectl config set-cluster NAME [--server=server] [--certificate-auth
 
 ```
   # Set only the server field on the e2e cluster entry without touching other values
-  kubectl config set-cluster e2e --server=https://1.2.3.4
+  zarf tools kubectl config set-cluster e2e --server=https://1.2.3.4
   
   # Embed certificate authority data for the e2e cluster entry
-  kubectl config set-cluster e2e --embed-certs --certificate-authority=~/.kube/e2e/kubernetes.ca.crt
+  zarf tools kubectl config set-cluster e2e --embed-certs --certificate-authority=~/.kube/e2e/kubernetes.ca.crt
   
   # Disable cert checking for the e2e cluster entry
-  kubectl config set-cluster e2e --insecure-skip-tls-verify=true
+  zarf tools kubectl config set-cluster e2e --insecure-skip-tls-verify=true
   
   # Set the custom TLS server name to use for validation for the e2e cluster entry
-  kubectl config set-cluster e2e --tls-server-name=my-cluster-name
+  zarf tools kubectl config set-cluster e2e --tls-server-name=my-cluster-name
   
   # Set the proxy URL for the e2e cluster entry
-  kubectl config set-cluster e2e --proxy-url=https://1.2.3.4
+  zarf tools kubectl config set-cluster e2e --proxy-url=https://1.2.3.4
 ```
 
 ### Options

@@ -22,7 +22,7 @@ zarf tools kubectl config delete-cluster NAME
 
 ```
   # Delete the minikube cluster
-  kubectl config delete-cluster minikube
+  zarf tools kubectl config delete-cluster minikube
 ```
 
 ### Options

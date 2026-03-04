@@ -22,13 +22,13 @@ zarf tools kubectl create priorityclass NAME --value=VALUE --global-default=BOOL
 
 ```
   # Create a priority class named high-priority
-  kubectl create priorityclass high-priority --value=1000 --description="high priority"
+  zarf tools kubectl create priorityclass high-priority --value=1000 --description="high priority"
   
   # Create a priority class named default-priority that is considered as the global default priority
-  kubectl create priorityclass default-priority --value=1000 --global-default=true --description="default priority"
+  zarf tools kubectl create priorityclass default-priority --value=1000 --global-default=true --description="default priority"
   
   # Create a priority class named high-priority that cannot preempt pods with lower priority
-  kubectl create priorityclass high-priority --value=1000 --description="high priority" --preemption-policy="Never"
+  zarf tools kubectl create priorityclass high-priority --value=1000 --description="high priority" --preemption-policy="Never"
 ```
 
 ### Options

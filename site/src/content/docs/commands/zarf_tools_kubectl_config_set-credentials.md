@@ -36,37 +36,37 @@ zarf tools kubectl config set-credentials NAME [--client-certificate=path/to/cer
 ```
   # Set only the "client-key" field on the "cluster-admin"
   # entry, without touching other values
-  kubectl config set-credentials cluster-admin --client-key=~/.kube/admin.key
+  zarf tools kubectl config set-credentials cluster-admin --client-key=~/.kube/admin.key
   
   # Set basic auth for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --username=admin --password=uXFGweU9l35qcif
+  zarf tools kubectl config set-credentials cluster-admin --username=admin --password=uXFGweU9l35qcif
   
   # Embed client certificate data in the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --client-certificate=~/.kube/admin.crt --embed-certs=true
+  zarf tools kubectl config set-credentials cluster-admin --client-certificate=~/.kube/admin.crt --embed-certs=true
   
   # Enable the Google Compute Platform auth provider for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --auth-provider=gcp
+  zarf tools kubectl config set-credentials cluster-admin --auth-provider=gcp
   
   # Enable the OpenID Connect auth provider for the "cluster-admin" entry with additional arguments
-  kubectl config set-credentials cluster-admin --auth-provider=oidc --auth-provider-arg=client-id=foo --auth-provider-arg=client-secret=bar
+  zarf tools kubectl config set-credentials cluster-admin --auth-provider=oidc --auth-provider-arg=client-id=foo --auth-provider-arg=client-secret=bar
   
   # Remove the "client-secret" config value for the OpenID Connect auth provider for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --auth-provider=oidc --auth-provider-arg=client-secret-
+  zarf tools kubectl config set-credentials cluster-admin --auth-provider=oidc --auth-provider-arg=client-secret-
   
   # Enable new exec auth plugin for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --exec-command=/path/to/the/executable --exec-api-version=client.authentication.k8s.io/v1beta1
+  zarf tools kubectl config set-credentials cluster-admin --exec-command=/path/to/the/executable --exec-api-version=client.authentication.k8s.io/v1beta1
   
   # Enable new exec auth plugin for the "cluster-admin" entry with interactive mode
-  kubectl config set-credentials cluster-admin --exec-command=/path/to/the/executable --exec-api-version=client.authentication.k8s.io/v1beta1 --exec-interactive-mode=Never
+  zarf tools kubectl config set-credentials cluster-admin --exec-command=/path/to/the/executable --exec-api-version=client.authentication.k8s.io/v1beta1 --exec-interactive-mode=Never
   
   # Define new exec auth plugin arguments for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --exec-arg=arg1 --exec-arg=arg2
+  zarf tools kubectl config set-credentials cluster-admin --exec-arg=arg1 --exec-arg=arg2
   
   # Create or update exec auth plugin environment variables for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --exec-env=key1=val1 --exec-env=key2=val2
+  zarf tools kubectl config set-credentials cluster-admin --exec-env=key1=val1 --exec-env=key2=val2
   
   # Remove exec auth plugin environment variables for the "cluster-admin" entry
-  kubectl config set-credentials cluster-admin --exec-env=var-to-remove-
+  zarf tools kubectl config set-credentials cluster-admin --exec-env=var-to-remove-
 ```
 
 ### Options

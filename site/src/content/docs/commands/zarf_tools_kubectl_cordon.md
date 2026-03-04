@@ -22,7 +22,7 @@ zarf tools kubectl cordon NODE
 
 ```
   # Mark node "foo" as unschedulable
-  kubectl cordon foo
+  zarf tools kubectl cordon foo
 ```
 
 ### Options

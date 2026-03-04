@@ -24,10 +24,10 @@ zarf tools kubectl config unset PROPERTY_NAME
 
 ```
   # Unset the current-context
-  kubectl config unset current-context
+  zarf tools kubectl config unset current-context
   
   # Unset namespace in foo context
-  kubectl config unset contexts.foo.namespace
+  zarf tools kubectl config unset contexts.foo.namespace
 ```
 
 ### Options

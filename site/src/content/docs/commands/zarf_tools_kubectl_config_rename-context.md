@@ -28,7 +28,7 @@ zarf tools kubectl config rename-context CONTEXT_NAME NEW_NAME
 
 ```
   # Rename the context 'old-name' to 'new-name' in your kubeconfig file
-  kubectl config rename-context old-name new-name
+  zarf tools kubectl config rename-context old-name new-name
 ```
 
 ### Options

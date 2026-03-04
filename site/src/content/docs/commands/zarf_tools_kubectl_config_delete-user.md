@@ -22,7 +22,7 @@ zarf tools kubectl config delete-user NAME
 
 ```
   # Delete the minikube user
-  kubectl config delete-user minikube
+  zarf tools kubectl config delete-user minikube
 ```
 
 ### Options

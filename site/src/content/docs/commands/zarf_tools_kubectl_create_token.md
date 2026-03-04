@@ -22,22 +22,22 @@ zarf tools kubectl create token SERVICE_ACCOUNT_NAME
 
 ```
   # Request a token to authenticate to the kube-apiserver as the service account "myapp" in the current namespace
-  kubectl create token myapp
+  zarf tools kubectl create token myapp
   
   # Request a token for a service account in a custom namespace
-  kubectl create token myapp --namespace myns
+  zarf tools kubectl create token myapp --namespace myns
   
   # Request a token with a custom expiration
-  kubectl create token myapp --duration 10m
+  zarf tools kubectl create token myapp --duration 10m
   
   # Request a token with a custom audience
-  kubectl create token myapp --audience https://example.com
+  zarf tools kubectl create token myapp --audience https://example.com
   
   # Request a token bound to an instance of a Secret object
-  kubectl create token myapp --bound-object-kind Secret --bound-object-name mysecret
+  zarf tools kubectl create token myapp --bound-object-kind Secret --bound-object-name mysecret
   
   # Request a token bound to an instance of a Secret object with a specific UID
-  kubectl create token myapp --bound-object-kind Secret --bound-object-name mysecret --bound-object-uid 0d4691ed-659b-4935-a832-355f77ee47cc
+  zarf tools kubectl create token myapp --bound-object-kind Secret --bound-object-name mysecret --bound-object-uid 0d4691ed-659b-4935-a832-355f77ee47cc
 ```
 
 ### Options

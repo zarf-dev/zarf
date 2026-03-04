@@ -30,19 +30,19 @@ zarf tools kubectl taint NODE NAME KEY_1=VAL_1:TAINT_EFFECT_1 ... KEY_N=VAL_N:TA
 ```
   # Update node 'foo' with a taint with key 'dedicated' and value 'special-user' and effect 'NoSchedule'
   # If a taint with that key and effect already exists, its value is replaced as specified
-  kubectl taint nodes foo dedicated=special-user:NoSchedule
+  zarf tools kubectl taint nodes foo dedicated=special-user:NoSchedule
   
   # Remove from node 'foo' the taint with key 'dedicated' and effect 'NoSchedule' if one exists
-  kubectl taint nodes foo dedicated:NoSchedule-
+  zarf tools kubectl taint nodes foo dedicated:NoSchedule-
   
   # Remove from node 'foo' all the taints with key 'dedicated'
-  kubectl taint nodes foo dedicated-
+  zarf tools kubectl taint nodes foo dedicated-
   
   # Add a taint with key 'dedicated' on nodes having label myLabel=X
-  kubectl taint node -l myLabel=X  dedicated=foo:PreferNoSchedule
+  zarf tools kubectl taint node -l myLabel=X  dedicated=foo:PreferNoSchedule
   
   # Add to node 'foo' a taint with key 'bar' and no value
-  kubectl taint nodes foo bar:NoSchedule
+  zarf tools kubectl taint nodes foo bar:NoSchedule
 ```
 
 ### Options

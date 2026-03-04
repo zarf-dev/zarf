@@ -28,19 +28,19 @@ zarf tools kubectl alpha kuberc set --section (defaults|aliases) --command COMMA
 
 ```
   # Set default output format for 'get' command
-  kubectl alpha kuberc set --section defaults --command get --option output=wide
+  zarf tools kubectl alpha kuberc set --section defaults --command get --option output=wide
   
   # Set default output format for a subcommand
-  kubectl alpha kuberc set --section defaults --command "set env" --option output=yaml
+  zarf tools kubectl alpha kuberc set --section defaults --command "set env" --option output=yaml
   
   # Create an alias 'getn' for 'get' command with prepended 'nodes' resource
-  kubectl alpha kuberc set --section aliases --name getn --command get --prependarg nodes --option output=wide
+  zarf tools kubectl alpha kuberc set --section aliases --name getn --command get --prependarg nodes --option output=wide
   
   # Create an alias 'runx' for 'run' command with appended arguments
-  kubectl alpha kuberc set --section aliases --name runx --command run --option image=nginx --appendarg "--" --appendarg custom-arg1
+  zarf tools kubectl alpha kuberc set --section aliases --name runx --command run --option image=nginx --appendarg "--" --appendarg custom-arg1
   
   # Overwrite an existing default
-  kubectl alpha kuberc set --section defaults --command get --option output=json --overwrite
+  zarf tools kubectl alpha kuberc set --section defaults --command get --option output=json --overwrite
 ```
 
 ### Options

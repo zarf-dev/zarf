@@ -22,7 +22,7 @@ zarf tools kubectl api-versions
 
 ```
   # Print the supported API versions
-  kubectl api-versions
+  zarf tools kubectl api-versions
 ```
 
 ### Options

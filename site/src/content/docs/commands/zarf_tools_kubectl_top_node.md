@@ -24,10 +24,10 @@ zarf tools kubectl top node [NAME | -l label]
 
 ```
   # Show metrics for all nodes
-  kubectl top node
+  zarf tools kubectl top node
   
   # Show metrics for a given node
-  kubectl top node NODE_NAME
+  zarf tools kubectl top node NODE_NAME
 ```
 
 ### Options

@@ -24,7 +24,7 @@ zarf tools kubectl rollout resume RESOURCE
 
 ```
   # Resume an already paused deployment
-  kubectl rollout resume deployment/nginx
+  zarf tools kubectl rollout resume deployment/nginx
 ```
 
 ### Options

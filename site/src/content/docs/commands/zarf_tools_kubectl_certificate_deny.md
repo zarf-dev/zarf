@@ -24,7 +24,7 @@ zarf tools kubectl certificate deny (-f FILENAME | NAME)
 
 ```
   # Deny CSR 'csr-sqgzp'
-  kubectl certificate deny csr-sqgzp
+  zarf tools kubectl certificate deny csr-sqgzp
 ```
 
 ### Options

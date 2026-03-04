@@ -28,16 +28,16 @@ zarf tools kubectl config set PROPERTY_NAME PROPERTY_VALUE
 
 ```
   # Set the server field on the my-cluster cluster to https://1.2.3.4
-  kubectl config set clusters.my-cluster.server https://1.2.3.4
+  zarf tools kubectl config set clusters.my-cluster.server https://1.2.3.4
   
   # Set the certificate-authority-data field on the my-cluster cluster
-  kubectl config set clusters.my-cluster.certificate-authority-data $(echo "cert_data_here" | base64 -i -)
+  zarf tools kubectl config set clusters.my-cluster.certificate-authority-data $(echo "cert_data_here" | base64 -i -)
   
   # Set the cluster field in the my-context context to my-cluster
-  kubectl config set contexts.my-context.cluster my-cluster
+  zarf tools kubectl config set contexts.my-context.cluster my-cluster
   
   # Set the client-key-data field in the cluster-admin user using --set-raw-bytes option
-  kubectl config set users.cluster-admin.client-key-data cert_data_here --set-raw-bytes=true
+  zarf tools kubectl config set users.cluster-admin.client-key-data cert_data_here --set-raw-bytes=true
 ```
 
 ### Options

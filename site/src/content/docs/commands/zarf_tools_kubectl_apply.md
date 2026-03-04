@@ -26,23 +26,23 @@ zarf tools kubectl apply (-f FILENAME | -k DIRECTORY)
 
 ```
   # Apply the configuration in pod.json to a pod
-  kubectl apply -f ./pod.json
+  zarf tools kubectl apply -f ./pod.json
   
   # Apply resources from a directory containing kustomization.yaml - e.g. dir/kustomization.yaml
-  kubectl apply -k dir/
+  zarf tools kubectl apply -k dir/
   
   # Apply the JSON passed into stdin to a pod
-  cat pod.json | kubectl apply -f -
+  cat pod.json | zarf tools kubectl apply -f -
   
   # Apply the configuration from all files that end with '.json'
-  kubectl apply -f '*.json'
+  zarf tools kubectl apply -f '*.json'
   
   # Note: --prune is still in Alpha
   # Apply the configuration in manifest.yaml that matches label app=nginx and delete all other resources that are not in the file and match label app=nginx
-  kubectl apply --prune -f manifest.yaml -l app=nginx
+  zarf tools kubectl apply --prune -f manifest.yaml -l app=nginx
   
   # Apply the configuration in manifest.yaml and delete all the other config maps that are not in the file
-  kubectl apply --prune -f manifest.yaml --all --prune-allowlist=core/v1/ConfigMap
+  zarf tools kubectl apply --prune -f manifest.yaml --all --prune-allowlist=core/v1/ConfigMap
 ```
 
 ### Options

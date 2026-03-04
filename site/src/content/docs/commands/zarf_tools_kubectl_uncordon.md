@@ -22,7 +22,7 @@ zarf tools kubectl uncordon NODE
 
 ```
   # Mark node "foo" as schedulable
-  kubectl uncordon foo
+  zarf tools kubectl uncordon foo
 ```
 
 ### Options

@@ -22,7 +22,7 @@ zarf tools kubectl config current-context [flags]
 
 ```
   # Display the current-context
-  kubectl config current-context
+  zarf tools kubectl config current-context
 ```
 
 ### Options

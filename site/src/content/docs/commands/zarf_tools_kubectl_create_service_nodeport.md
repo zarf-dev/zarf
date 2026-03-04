@@ -22,7 +22,7 @@ zarf tools kubectl create service nodeport NAME [--tcp=port:targetPort] [--dry-r
 
 ```
   # Create a new NodePort service named my-ns
-  kubectl create service nodeport my-ns --tcp=5678:8080
+  zarf tools kubectl create service nodeport my-ns --tcp=5678:8080
 ```
 
 ### Options

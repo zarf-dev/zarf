@@ -22,7 +22,7 @@ zarf tools kubectl version [flags]
 
 ```
   # Print the client and server versions for the current context
-  kubectl version
+  zarf tools kubectl version
 ```
 
 ### Options

@@ -24,10 +24,10 @@ zarf tools kubectl apply view-last-applied (TYPE [NAME | -l label] | TYPE/NAME |
 
 ```
   # View the last-applied-configuration annotations by type/name in YAML
-  kubectl apply view-last-applied deployment/nginx
+  zarf tools kubectl apply view-last-applied deployment/nginx
   
   # View the last-applied-configuration annotations by file in JSON
-  kubectl apply view-last-applied -f deploy.yaml -o json
+  zarf tools kubectl apply view-last-applied -f deploy.yaml -o json
 ```
 
 ### Options

@@ -26,10 +26,10 @@ zarf tools kubectl set serviceaccount (-f FILENAME | TYPE NAME) SERVICE_ACCOUNT
 
 ```
   # Set deployment nginx-deployment's service account to serviceaccount1
-  kubectl set serviceaccount deployment nginx-deployment serviceaccount1
+  zarf tools kubectl set serviceaccount deployment nginx-deployment serviceaccount1
   
   # Print the result (in YAML format) of updated nginx deployment with the service account from local file, without hitting the API server
-  kubectl set sa -f nginx-deployment.yaml serviceaccount1 --local --dry-run=client -o yaml
+  zarf tools kubectl set sa -f nginx-deployment.yaml serviceaccount1 --local --dry-run=client -o yaml
 ```
 
 ### Options

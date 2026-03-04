@@ -22,7 +22,7 @@ zarf tools kubectl create serviceaccount NAME [--dry-run=server|client|none]
 
 ```
   # Create a new service account named my-service-account
-  kubectl create serviceaccount my-service-account
+  zarf tools kubectl create serviceaccount my-service-account
 ```
 
 ### Options

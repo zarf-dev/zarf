@@ -21,19 +21,19 @@ zarf tools kubectl attach (POD | TYPE/NAME) -c CONTAINER
 ### Examples
 
 ```
-  # Get output from running pod mypod; use the 'kubectl.kubernetes.io/default-container' annotation
+  # Get output from running pod mypod; use the 'zarf tools kubectl.kubernetes.io/default-container' annotation
   # for selecting the container to be attached or the first container in the pod will be chosen
-  kubectl attach mypod
+  zarf tools kubectl attach mypod
   
   # Get output from ruby-container from pod mypod
-  kubectl attach mypod -c ruby-container
+  zarf tools kubectl attach mypod -c ruby-container
   
   # Switch to raw terminal mode; sends stdin to 'bash' in ruby-container from pod mypod
   # and sends stdout/stderr from 'bash' back to the client
-  kubectl attach mypod -c ruby-container -i -t
+  zarf tools kubectl attach mypod -c ruby-container -i -t
   
   # Get output from the first pod of a replica set named nginx
-  kubectl attach rs/nginx
+  zarf tools kubectl attach rs/nginx
 ```
 
 ### Options

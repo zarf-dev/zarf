@@ -30,38 +30,38 @@ zarf tools kubectl set env RESOURCE/NAME KEY_1=VAL_1 ... KEY_N=VAL_N
 
 ```
   # Update deployment 'registry' with a new environment variable
-  kubectl set env deployment/registry STORAGE_DIR=/local
+  zarf tools kubectl set env deployment/registry STORAGE_DIR=/local
   
   # List the environment variables defined on a deployments 'sample-build'
-  kubectl set env deployment/sample-build --list
+  zarf tools kubectl set env deployment/sample-build --list
   
   # List the environment variables defined on all pods
-  kubectl set env pods --all --list
+  zarf tools kubectl set env pods --all --list
   
   # Output modified deployment in YAML, and does not alter the object on the server
-  kubectl set env deployment/sample-build STORAGE_DIR=/data -o yaml
+  zarf tools kubectl set env deployment/sample-build STORAGE_DIR=/data -o yaml
   
   # Update all containers in all replication controllers in the project to have ENV=prod
-  kubectl set env rc --all ENV=prod
+  zarf tools kubectl set env rc --all ENV=prod
   
   # Import environment from a secret
-  kubectl set env --from=secret/mysecret deployment/myapp
+  zarf tools kubectl set env --from=secret/mysecret deployment/myapp
   
   # Import environment from a config map with a prefix
-  kubectl set env --from=configmap/myconfigmap --prefix=MYSQL_ deployment/myapp
+  zarf tools kubectl set env --from=configmap/myconfigmap --prefix=MYSQL_ deployment/myapp
   
   # Import specific keys from a config map
-  kubectl set env --keys=my-example-key --from=configmap/myconfigmap deployment/myapp
+  zarf tools kubectl set env --keys=my-example-key --from=configmap/myconfigmap deployment/myapp
   
   # Remove the environment variable ENV from container 'c1' in all deployment configs
-  kubectl set env deployments --all --containers="c1" ENV-
+  zarf tools kubectl set env deployments --all --containers="c1" ENV-
   
   # Remove the environment variable ENV from a deployment definition on disk and
   # update the deployment config on the server
-  kubectl set env -f deploy.json ENV-
+  zarf tools kubectl set env -f deploy.json ENV-
   
   # Set some of the local shell environment into a deployment config on the server
-  env | grep RAILS_ | kubectl set env -e - deployment/registry
+  env | grep RAILS_ | zarf tools kubectl set env -e - deployment/registry
 ```
 
 ### Options

@@ -24,16 +24,16 @@ zarf tools kubectl autoscale (-f FILENAME | TYPE NAME | TYPE/NAME) [--min=MINPOD
 
 ```
   # Auto scale a deployment "foo", with the number of pods between 2 and 10, no target CPU utilization specified so a default autoscaling policy will be used
-  kubectl autoscale deployment foo --min=2 --max=10
+  zarf tools kubectl autoscale deployment foo --min=2 --max=10
   
   # Auto scale a replication controller "foo", with the number of pods between 1 and 5, target CPU utilization at 80%
-  kubectl autoscale rc foo --max=5 --cpu=80%
+  zarf tools kubectl autoscale rc foo --max=5 --cpu=80%
   
   # Auto scale a deployment "bar", with the number of pods between 3 and 6, target average CPU of 500m and memory of 200Mi
-  kubectl autoscale deployment bar --min=3 --max=6 --cpu=500m --memory=200Mi
+  zarf tools kubectl autoscale deployment bar --min=3 --max=6 --cpu=500m --memory=200Mi
   
   # Auto scale a deployment "bar", with the number of pods between 2 and 8, target CPU utilization 60% and memory utilization 70%
-  kubectl autoscale deployment bar --min=3 --max=6 --cpu=60% --memory=70%
+  zarf tools kubectl autoscale deployment bar --min=3 --max=6 --cpu=60% --memory=70%
 ```
 
 ### Options

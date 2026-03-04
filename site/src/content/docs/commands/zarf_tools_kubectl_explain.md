@@ -30,19 +30,19 @@ zarf tools kubectl explain TYPE [--recursive=FALSE|TRUE] [--api-version=api-vers
 
 ```
   # Get the documentation of the resource and its fields
-  kubectl explain pods
+  zarf tools kubectl explain pods
   
   # Get all the fields in the resource
-  kubectl explain pods --recursive
+  zarf tools kubectl explain pods --recursive
   
   # Get the explanation for deployment in supported api versions
-  kubectl explain deployments --api-version=apps/v1
+  zarf tools kubectl explain deployments --api-version=apps/v1
   
   # Get the documentation of a specific field of a resource
-  kubectl explain pods.spec.containers
+  zarf tools kubectl explain pods.spec.containers
   
   # Get the documentation of resources in different format
-  kubectl explain deployment --output=plaintext-openapiv2
+  zarf tools kubectl explain deployment --output=plaintext-openapiv2
 ```
 
 ### Options

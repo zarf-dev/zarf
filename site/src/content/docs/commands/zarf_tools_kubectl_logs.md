@@ -22,58 +22,58 @@ zarf tools kubectl logs [-f] [-p] (POD | TYPE/NAME) [-c CONTAINER]
 
 ```
   # Return snapshot logs from pod nginx with only one container
-  kubectl logs nginx
+  zarf tools kubectl logs nginx
   
   # Return snapshot logs from pod nginx, prefixing each line with the source pod and container name
-  kubectl logs nginx --prefix
+  zarf tools kubectl logs nginx --prefix
   
   # Return snapshot logs from pod nginx, limiting output to 500 bytes
-  kubectl logs nginx --limit-bytes=500
+  zarf tools kubectl logs nginx --limit-bytes=500
   
   # Return snapshot logs from pod nginx, waiting up to 20 seconds for it to start running.
-  kubectl logs nginx --pod-running-timeout=20s
+  zarf tools kubectl logs nginx --pod-running-timeout=20s
   
   # Return snapshot logs from pod nginx with multi containers
-  kubectl logs nginx --all-containers=true
+  zarf tools kubectl logs nginx --all-containers=true
   
   # Return snapshot logs from all pods in the deployment nginx
-  kubectl logs deployment/nginx --all-pods=true
+  zarf tools kubectl logs deployment/nginx --all-pods=true
   
   # Return snapshot logs from all containers in pods defined by label app=nginx
-  kubectl logs -l app=nginx --all-containers=true
+  zarf tools kubectl logs -l app=nginx --all-containers=true
   
   # Return snapshot logs from all pods defined by label app=nginx, limiting concurrent log requests to 10 pods
-  kubectl logs -l app=nginx --max-log-requests=10
+  zarf tools kubectl logs -l app=nginx --max-log-requests=10
   
   # Return snapshot of previous terminated ruby container logs from pod web-1
-  kubectl logs -p -c ruby web-1
+  zarf tools kubectl logs -p -c ruby web-1
   
   # Begin streaming the logs from pod nginx, continuing even if errors occur
-  kubectl logs nginx -f --ignore-errors=true
+  zarf tools kubectl logs nginx -f --ignore-errors=true
   
   # Begin streaming the logs of the ruby container in pod web-1
-  kubectl logs -f -c ruby web-1
+  zarf tools kubectl logs -f -c ruby web-1
   
   # Begin streaming the logs from all containers in pods defined by label app=nginx
-  kubectl logs -f -l app=nginx --all-containers=true
+  zarf tools kubectl logs -f -l app=nginx --all-containers=true
   
   # Display only the most recent 20 lines of output in pod nginx
-  kubectl logs --tail=20 nginx
+  zarf tools kubectl logs --tail=20 nginx
   
   # Show all logs from pod nginx written in the last hour
-  kubectl logs --since=1h nginx
+  zarf tools kubectl logs --since=1h nginx
   
   # Show all logs with timestamps from pod nginx starting from August 30, 2024, at 06:00:00 UTC
-  kubectl logs nginx --since-time=2024-08-30T06:00:00Z --timestamps=true
+  zarf tools kubectl logs nginx --since-time=2024-08-30T06:00:00Z --timestamps=true
   
   # Show logs from a kubelet with an expired serving certificate
-  kubectl logs --insecure-skip-tls-verify-backend nginx
+  zarf tools kubectl logs --insecure-skip-tls-verify-backend nginx
   
   # Return snapshot logs from first container of a job named hello
-  kubectl logs job/hello
+  zarf tools kubectl logs job/hello
   
   # Return snapshot logs from container nginx-1 of a deployment named nginx
-  kubectl logs deployment/nginx -c nginx-1
+  zarf tools kubectl logs deployment/nginx -c nginx-1
 ```
 
 ### Options

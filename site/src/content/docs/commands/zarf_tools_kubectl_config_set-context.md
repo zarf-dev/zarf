@@ -24,7 +24,7 @@ zarf tools kubectl config set-context [NAME | --current] [--cluster=cluster_nick
 
 ```
   # Set the user field on the gce context entry without touching other values
-  kubectl config set-context gce --user=cluster-admin
+  zarf tools kubectl config set-context gce --user=cluster-admin
 ```
 
 ### Options

@@ -24,7 +24,7 @@ zarf tools kubectl rollout status (TYPE NAME | TYPE/NAME) [flags]
 
 ```
   # Watch the rollout status of a deployment
-  kubectl rollout status deployment/nginx
+  zarf tools kubectl rollout status deployment/nginx
 ```
 
 ### Options

@@ -22,22 +22,22 @@ zarf tools kubectl api-resources [flags]
 
 ```
   # Print the supported API resources
-  kubectl api-resources
+  zarf tools kubectl api-resources
   
   # Print the supported API resources with more information
-  kubectl api-resources -o wide
+  zarf tools kubectl api-resources -o wide
   
   # Print the supported API resources sorted by a column
-  kubectl api-resources --sort-by=name
+  zarf tools kubectl api-resources --sort-by=name
   
   # Print the supported namespaced resources
-  kubectl api-resources --namespaced=true
+  zarf tools kubectl api-resources --namespaced=true
   
   # Print the supported non-namespaced resources
-  kubectl api-resources --namespaced=false
+  zarf tools kubectl api-resources --namespaced=false
   
   # Print the supported API resources with a specific APIGroup
-  kubectl api-resources --api-group=rbac.authorization.k8s.io
+  zarf tools kubectl api-resources --api-group=rbac.authorization.k8s.io
 ```
 
 ### Options

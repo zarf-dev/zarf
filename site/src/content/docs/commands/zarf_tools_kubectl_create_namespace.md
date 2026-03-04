@@ -22,7 +22,7 @@ zarf tools kubectl create namespace NAME [--dry-run=server|client|none]
 
 ```
   # Create a new namespace named my-namespace
-  kubectl create namespace my-namespace
+  zarf tools kubectl create namespace my-namespace
 ```
 
 ### Options

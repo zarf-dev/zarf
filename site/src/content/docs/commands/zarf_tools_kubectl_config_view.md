@@ -24,13 +24,13 @@ zarf tools kubectl config view [flags]
 
 ```
   # Show merged kubeconfig settings
-  kubectl config view
+  zarf tools kubectl config view
   
   # Show merged kubeconfig settings, raw certificate data, and exposed secrets
-  kubectl config view --raw
+  zarf tools kubectl config view --raw
   
   # Get the password for the e2e user
-  kubectl config view -o jsonpath='{.users[?(@.name == "e2e")].user.password}'
+  zarf tools kubectl config view -o jsonpath='{.users[?(@.name == "e2e")].user.password}'
 ```
 
 ### Options

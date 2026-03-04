@@ -24,13 +24,13 @@ zarf tools kubectl alpha kuberc SUBCOMMAND
 
 ```
   # View the current kuberc configuration
-  kubectl alpha kuberc view
+  zarf tools kubectl alpha kuberc view
   
   # Set a default value for a command flag
-  kubectl alpha kuberc set --section defaults --command get --option output=wide
+  zarf tools kubectl alpha kuberc set --section defaults --command get --option output=wide
   
   # Create an alias for a command
-  kubectl alpha kuberc set --section aliases --name getn --command get --prependarg nodes --option output=wide
+  zarf tools kubectl alpha kuberc set --section aliases --name getn --command get --prependarg nodes --option output=wide
 ```
 
 ### Options

@@ -30,7 +30,7 @@ zarf tools kubectl auth reconcile -f FILENAME
 
 ```
   # Reconcile RBAC resources from a file
-  kubectl auth reconcile -f my-rbac-rules.yaml
+  zarf tools kubectl auth reconcile -f my-rbac-rules.yaml
 ```
 
 ### Options

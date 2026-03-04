@@ -23,28 +23,28 @@ zarf tools kubectl cp <file-spec-src> <file-spec-dest>
 ```
   # !!!Important Note!!!
   # Requires that the 'tar' binary is present in your container
-  # image.  If 'tar' is not present, 'kubectl cp' will fail.
+  # image.  If 'tar' is not present, 'zarf tools kubectl cp' will fail.
   #
   # For advanced use cases, such as symlinks, wildcard expansion or
-  # file mode preservation, consider using 'kubectl exec'.
+  # file mode preservation, consider using 'zarf tools kubectl exec'.
   
   # Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace <some-namespace>
-  tar cf - /tmp/foo | kubectl exec -i -n <some-namespace> <some-pod> -- tar xf - -C /tmp/bar
+  tar cf - /tmp/foo | zarf tools kubectl exec -i -n <some-namespace> <some-pod> -- tar xf - -C /tmp/bar
   
   # Copy /tmp/foo from a remote pod to /tmp/bar locally
-  kubectl exec -n <some-namespace> <some-pod> -- tar cf - /tmp/foo | tar xf - -C /tmp/bar
+  zarf tools kubectl exec -n <some-namespace> <some-pod> -- tar cf - /tmp/foo | tar xf - -C /tmp/bar
   
   # Copy /tmp/foo_dir local directory to /tmp/bar_dir in a remote pod in the default namespace
-  kubectl cp /tmp/foo_dir <some-pod>:/tmp/bar_dir
+  zarf tools kubectl cp /tmp/foo_dir <some-pod>:/tmp/bar_dir
   
   # Copy /tmp/foo local file to /tmp/bar in a remote pod in a specific container
-  kubectl cp /tmp/foo <some-pod>:/tmp/bar -c <specific-container>
+  zarf tools kubectl cp /tmp/foo <some-pod>:/tmp/bar -c <specific-container>
   
   # Copy /tmp/foo local file to /tmp/bar in a remote pod in namespace <some-namespace>
-  kubectl cp /tmp/foo <some-namespace>/<some-pod>:/tmp/bar
+  zarf tools kubectl cp /tmp/foo <some-namespace>/<some-pod>:/tmp/bar
   
   # Copy /tmp/foo from a remote pod to /tmp/bar locally
-  kubectl cp <some-namespace>/<some-pod>:/tmp/foo /tmp/bar
+  zarf tools kubectl cp <some-namespace>/<some-pod>:/tmp/foo /tmp/bar
 ```
 
 ### Options

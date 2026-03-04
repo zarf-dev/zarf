@@ -30,10 +30,10 @@ zarf tools kubectl drain NODE
 
 ```
   # Drain node "foo", even if there are pods not managed by a replication controller, replica set, job, daemon set, or stateful set on it
-  kubectl drain foo --force
+  zarf tools kubectl drain foo --force
   
   # As above, but abort if there are pods not managed by a replication controller, replica set, job, daemon set, or stateful set, and use a grace period of 15 minutes
-  kubectl drain foo --grace-period=900
+  zarf tools kubectl drain foo --grace-period=900
 ```
 
 ### Options

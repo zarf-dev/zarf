@@ -26,7 +26,7 @@ zarf tools kubectl certificate approve (-f FILENAME | NAME)
 
 ```
   # Approve CSR 'csr-sqgzp'
-  kubectl certificate approve csr-sqgzp
+  zarf tools kubectl certificate approve csr-sqgzp
 ```
 
 ### Options

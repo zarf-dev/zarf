@@ -22,22 +22,22 @@ zarf tools kubectl create clusterrole NAME --verb=verb --resource=resource.group
 
 ```
   # Create a cluster role named "pod-reader" that allows user to perform "get", "watch" and "list" on pods
-  kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods
+  zarf tools kubectl create clusterrole pod-reader --verb=get,list,watch --resource=pods
   
   # Create a cluster role named "pod-reader" with ResourceName specified
-  kubectl create clusterrole pod-reader --verb=get --resource=pods --resource-name=readablepod --resource-name=anotherpod
+  zarf tools kubectl create clusterrole pod-reader --verb=get --resource=pods --resource-name=readablepod --resource-name=anotherpod
   
   # Create a cluster role named "foo" with API Group specified
-  kubectl create clusterrole foo --verb=get,list,watch --resource=rs.apps
+  zarf tools kubectl create clusterrole foo --verb=get,list,watch --resource=rs.apps
   
   # Create a cluster role named "foo" with SubResource specified
-  kubectl create clusterrole foo --verb=get,list,watch --resource=pods,pods/status
+  zarf tools kubectl create clusterrole foo --verb=get,list,watch --resource=pods,pods/status
   
   # Create a cluster role name "foo" with NonResourceURL specified
-  kubectl create clusterrole "foo" --verb=get --non-resource-url=/logs/*
+  zarf tools kubectl create clusterrole "foo" --verb=get --non-resource-url=/logs/*
   
   # Create a cluster role name "monitoring" with AggregationRule specified
-  kubectl create clusterrole monitoring --aggregation-rule="rbac.example.com/aggregate-to-monitoring=true"
+  zarf tools kubectl create clusterrole monitoring --aggregation-rule="rbac.example.com/aggregate-to-monitoring=true"
 ```
 
 ### Options

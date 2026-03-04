@@ -26,16 +26,16 @@ zarf tools kubectl replace -f FILENAME
 
 ```
   # Replace a pod using the data in pod.json
-  kubectl replace -f ./pod.json
+  zarf tools kubectl replace -f ./pod.json
   
   # Replace a pod based on the JSON passed into stdin
-  cat pod.json | kubectl replace -f -
+  cat pod.json | zarf tools kubectl replace -f -
   
   # Update a single-container pod's image version (tag) to v4
-  kubectl get pod mypod -o yaml | sed 's/\(image: myimage\):.*$/\1:v4/' | kubectl replace -f -
+  zarf tools kubectl get pod mypod -o yaml | sed 's/\(image: myimage\):.*$/\1:v4/' | zarf tools kubectl replace -f -
   
   # Force replace, delete and then re-create the resource
-  kubectl replace --force -f ./pod.json
+  zarf tools kubectl replace --force -f ./pod.json
 ```
 
 ### Options

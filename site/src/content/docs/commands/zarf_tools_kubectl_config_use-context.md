@@ -22,7 +22,7 @@ zarf tools kubectl config use-context CONTEXT_NAME
 
 ```
   # Use the context for the minikube cluster
-  kubectl config use-context minikube
+  zarf tools kubectl config use-context minikube
 ```
 
 ### Options

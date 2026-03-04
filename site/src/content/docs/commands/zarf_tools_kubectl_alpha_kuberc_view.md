@@ -22,13 +22,13 @@ zarf tools kubectl alpha kuberc view
 
 ```
   # View kuberc configuration in YAML format (default)
-  kubectl alpha kuberc view
+  zarf tools kubectl alpha kuberc view
   
   # View kuberc configuration in JSON format
-  kubectl alpha kuberc view --output json
+  zarf tools kubectl alpha kuberc view --output json
   
   # View a specific kuberc file
-  kubectl alpha kuberc view --kuberc /path/to/kuberc
+  zarf tools kubectl alpha kuberc view --kuberc /path/to/kuberc
 ```
 
 ### Options

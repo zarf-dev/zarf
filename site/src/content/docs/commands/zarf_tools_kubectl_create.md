@@ -24,13 +24,13 @@ zarf tools kubectl create -f FILENAME
 
 ```
   # Create a pod using the data in pod.json
-  kubectl create -f ./pod.json
+  zarf tools kubectl create -f ./pod.json
   
   # Create a pod based on the JSON passed into stdin
-  cat pod.json | kubectl create -f -
+  cat pod.json | zarf tools kubectl create -f -
   
   # Edit the data in registry.yaml in JSON then create the resource using the edited data
-  kubectl create -f registry.yaml --edit -o json
+  zarf tools kubectl create -f registry.yaml --edit -o json
 ```
 
 ### Options

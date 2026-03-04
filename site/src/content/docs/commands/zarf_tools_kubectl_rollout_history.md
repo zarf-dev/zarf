@@ -22,10 +22,10 @@ zarf tools kubectl rollout history (TYPE NAME | TYPE/NAME) [flags]
 
 ```
   # View the rollout history of a deployment
-  kubectl rollout history deployment/abc
+  zarf tools kubectl rollout history deployment/abc
   
   # View the details of daemonset revision 3
-  kubectl rollout history daemonset/abc --revision=3
+  zarf tools kubectl rollout history daemonset/abc --revision=3
 ```
 
 ### Options

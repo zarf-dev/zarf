@@ -24,8 +24,8 @@ zarf tools kubectl set selector (-f FILENAME | TYPE NAME) EXPRESSIONS [--resourc
 
 ```
   # Set the labels and selector before creating a deployment/service pair
-  kubectl create service clusterip my-svc --clusterip="None" -o yaml --dry-run=client | kubectl set selector --local -f - 'environment=qa' -o yaml | kubectl create -f -
-  kubectl create deployment my-dep --image=nginx -o yaml --dry-run=client | kubectl label --local -f - environment=qa -o yaml | kubectl create -f -
+  zarf tools kubectl create service clusterip my-svc --clusterip="None" -o yaml --dry-run=client | zarf tools kubectl set selector --local -f - 'environment=qa' -o yaml | zarf tools kubectl create -f -
+  zarf tools kubectl create deployment my-dep --image=nginx -o yaml --dry-run=client | zarf tools kubectl label --local -f - environment=qa -o yaml | zarf tools kubectl create -f -
 ```
 
 ### Options

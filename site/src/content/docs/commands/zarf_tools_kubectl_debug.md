@@ -32,30 +32,30 @@ zarf tools kubectl debug (POD | TYPE[[.VERSION].GROUP]/NAME) [ -- COMMAND [args.
 
 ```
   # Create an interactive debugging session in pod mypod and immediately attach to it.
-  kubectl debug mypod -it --image=busybox
+  zarf tools kubectl debug mypod -it --image=busybox
   
   # Create an interactive debugging session for the pod in the file pod.yaml and immediately attach to it.
   # (requires the EphemeralContainers feature to be enabled in the cluster)
-  kubectl debug -f pod.yaml -it --image=busybox
+  zarf tools kubectl debug -f pod.yaml -it --image=busybox
   
   # Create a debug container named debugger using a custom automated debugging image.
-  kubectl debug --image=myproj/debug-tools -c debugger mypod
+  zarf tools kubectl debug --image=myproj/debug-tools -c debugger mypod
   
   # Create a copy of mypod adding a debug container and attach to it
-  kubectl debug mypod -it --image=busybox --copy-to=my-debugger
+  zarf tools kubectl debug mypod -it --image=busybox --copy-to=my-debugger
   
   # Create a copy of mypod changing the command of mycontainer
-  kubectl debug mypod -it --copy-to=my-debugger --container=mycontainer -- sh
+  zarf tools kubectl debug mypod -it --copy-to=my-debugger --container=mycontainer -- sh
   
   # Create a copy of mypod changing all container images to busybox
-  kubectl debug mypod --copy-to=my-debugger --set-image=*=busybox
+  zarf tools kubectl debug mypod --copy-to=my-debugger --set-image=*=busybox
   
   # Create a copy of mypod adding a debug container and changing container images
-  kubectl debug mypod -it --copy-to=my-debugger --image=debian --set-image=app=app:debug,sidecar=sidecar:debug
+  zarf tools kubectl debug mypod -it --copy-to=my-debugger --image=debian --set-image=app=app:debug,sidecar=sidecar:debug
   
   # Create an interactive debugging session on a node and immediately attach to it.
   # The container will run in the host namespaces and the host's filesystem will be mounted at /host
-  kubectl debug node/mynode -it --image=busybox
+  zarf tools kubectl debug node/mynode -it --image=busybox
 ```
 
 ### Options

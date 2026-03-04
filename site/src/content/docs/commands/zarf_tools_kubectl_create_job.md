@@ -22,13 +22,13 @@ zarf tools kubectl create job NAME --image=image [--from=cronjob/name] -- [COMMA
 
 ```
   # Create a job
-  kubectl create job my-job --image=busybox
+  zarf tools kubectl create job my-job --image=busybox
   
   # Create a job with a command
-  kubectl create job my-job --image=busybox -- date
+  zarf tools kubectl create job my-job --image=busybox -- date
   
   # Create a job from a cron job named "a-cronjob"
-  kubectl create job test-job --from=cronjob/a-cronjob
+  zarf tools kubectl create job test-job --from=cronjob/a-cronjob
 ```
 
 ### Options

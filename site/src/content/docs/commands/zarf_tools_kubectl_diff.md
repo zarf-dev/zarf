@@ -32,10 +32,10 @@ zarf tools kubectl diff -f FILENAME
 
 ```
   # Diff resources included in pod.json
-  kubectl diff -f pod.json
+  zarf tools kubectl diff -f pod.json
   
   # Diff file read from stdin
-  cat service.yaml | kubectl diff -f -
+  cat service.yaml | zarf tools kubectl diff -f -
 ```
 
 ### Options

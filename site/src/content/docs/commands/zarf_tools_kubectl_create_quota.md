@@ -22,10 +22,10 @@ zarf tools kubectl create quota NAME [--hard=key1=value1,key2=value2] [--scopes=
 
 ```
   # Create a new resource quota named my-quota
-  kubectl create quota my-quota --hard=cpu=1,memory=1G,pods=2,services=3,replicationcontrollers=2,resourcequotas=1,secrets=5,persistentvolumeclaims=10
+  zarf tools kubectl create quota my-quota --hard=cpu=1,memory=1G,pods=2,services=3,replicationcontrollers=2,resourcequotas=1,secrets=5,persistentvolumeclaims=10
   
   # Create a new resource quota named best-effort
-  kubectl create quota best-effort --hard=pods=100 --scopes=BestEffort
+  zarf tools kubectl create quota best-effort --hard=pods=100 --scopes=BestEffort
 ```
 
 ### Options

@@ -33,10 +33,10 @@ zarf tools kubectl create secret docker-registry NAME --docker-username=user --d
 
 ```
   # If you do not already have a .dockercfg file, create a dockercfg secret directly
-  kubectl create secret docker-registry my-secret --docker-server=DOCKER_REGISTRY_SERVER --docker-username=DOCKER_USER --docker-password=DOCKER_PASSWORD --docker-email=DOCKER_EMAIL
+  zarf tools kubectl create secret docker-registry my-secret --docker-server=DOCKER_REGISTRY_SERVER --docker-username=DOCKER_USER --docker-password=DOCKER_PASSWORD --docker-email=DOCKER_EMAIL
   
   # Create a new secret named my-secret from ~/.docker/config.json
-  kubectl create secret docker-registry my-secret --from-file=path/to/.docker/config.json
+  zarf tools kubectl create secret docker-registry my-secret --from-file=path/to/.docker/config.json
 ```
 
 ### Options

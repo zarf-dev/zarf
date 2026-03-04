@@ -22,10 +22,10 @@ zarf tools kubectl config get-contexts [(-o|--output=)name)]
 
 ```
   # List all the contexts in your kubeconfig file
-  kubectl config get-contexts
+  zarf tools kubectl config get-contexts
   
   # Describe one context in your kubeconfig file
-  kubectl config get-contexts my-context
+  zarf tools kubectl config get-contexts my-context
 ```
 
 ### Options

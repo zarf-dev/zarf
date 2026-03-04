@@ -22,26 +22,26 @@ zarf tools kubectl proxy [--port=PORT] [--www=static-dir] [--www-prefix=prefix] 
 
 ```
   # To proxy all of the Kubernetes API and nothing else
-  kubectl proxy --api-prefix=/
+  zarf tools kubectl proxy --api-prefix=/
   
   # To proxy only part of the Kubernetes API and also some static files
   # You can get pods info with 'curl localhost:8001/api/v1/pods'
-  kubectl proxy --www=/my/files --www-prefix=/static/ --api-prefix=/api/
+  zarf tools kubectl proxy --www=/my/files --www-prefix=/static/ --api-prefix=/api/
   
   # To proxy the entire Kubernetes API at a different root
   # You can get pods info with 'curl localhost:8001/custom/api/v1/pods'
-  kubectl proxy --api-prefix=/custom/
+  zarf tools kubectl proxy --api-prefix=/custom/
   
   # Run a proxy to the Kubernetes API server on port 8011, serving static content from ./local/www/
-  kubectl proxy --port=8011 --www=./local/www/
+  zarf tools kubectl proxy --port=8011 --www=./local/www/
   
   # Run a proxy to the Kubernetes API server on an arbitrary local port
   # The chosen port for the server will be output to stdout
-  kubectl proxy --port=0
+  zarf tools kubectl proxy --port=0
   
   # Run a proxy to the Kubernetes API server, changing the API prefix to k8s-api
   # This makes e.g. the pods API available at localhost:8001/k8s-api/v1/pods/
-  kubectl proxy --api-prefix=/k8s-api
+  zarf tools kubectl proxy --api-prefix=/k8s-api
 ```
 
 ### Options

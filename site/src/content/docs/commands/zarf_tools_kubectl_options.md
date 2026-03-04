@@ -22,7 +22,7 @@ zarf tools kubectl options [flags]
 
 ```
   # Print flags inherited by all commands
-  kubectl options
+  zarf tools kubectl options
 ```
 
 ### Options

@@ -32,34 +32,34 @@ zarf tools kubectl delete ([-f FILENAME] | [-k DIRECTORY] | TYPE [(NAME | -l lab
 
 ```
   # Delete a pod using the type and name specified in pod.json
-  kubectl delete -f ./pod.json
+  zarf tools kubectl delete -f ./pod.json
   
   # Delete resources from a directory containing kustomization.yaml - e.g. dir/kustomization.yaml
-  kubectl delete -k dir
+  zarf tools kubectl delete -k dir
   
   # Delete resources from all files that end with '.json'
-  kubectl delete -f '*.json'
+  zarf tools kubectl delete -f '*.json'
   
   # Delete a pod based on the type and name in the JSON passed into stdin
-  cat pod.json | kubectl delete -f -
+  cat pod.json | zarf tools kubectl delete -f -
   
   # Delete pods and services with same names "baz" and "foo"
-  kubectl delete pod,service baz foo
+  zarf tools kubectl delete pod,service baz foo
   
   # Delete pods and services with label name=myLabel
-  kubectl delete pods,services -l name=myLabel
+  zarf tools kubectl delete pods,services -l name=myLabel
   
   # Delete a pod with minimal delay
-  kubectl delete pod foo --now
+  zarf tools kubectl delete pod foo --now
   
   # Force delete a pod on a dead node
-  kubectl delete pod foo --force
+  zarf tools kubectl delete pod foo --force
   
   # Delete all pods
-  kubectl delete pods --all
+  zarf tools kubectl delete pods --all
   
   # Delete all pods only if the user confirms the deletion
-  kubectl delete pods --all --interactive
+  zarf tools kubectl delete pods --all --interactive
 ```
 
 ### Options

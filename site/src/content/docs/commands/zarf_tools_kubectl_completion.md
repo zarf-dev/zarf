@@ -39,47 +39,47 @@ zarf tools kubectl completion SHELL
   brew install bash-completion
   ## or, if running Bash 4.1+
   brew install bash-completion@2
-  ## If kubectl is installed via homebrew, this should start working immediately
+  ## If zarf tools kubectl is installed via homebrew, this should start working immediately
   ## If you've installed via other means, you may need add the completion to your completion directory
-  kubectl completion bash > $(brew --prefix)/etc/bash_completion.d/kubectl
+  zarf tools kubectl completion bash > $(brew --prefix)/etc/bash_completion.d/zarf tools kubectl
   
   
   # Installing bash completion on Linux
   ## If bash-completion is not installed on Linux, install the 'bash-completion' package
   ## via your distribution's package manager.
-  ## Load the kubectl completion code for bash into the current shell
-  source <(kubectl completion bash)
+  ## Load the zarf tools kubectl completion code for bash into the current shell
+  source <(zarf tools kubectl completion bash)
   ## Write bash completion code to a file and source it from .bash_profile
-  kubectl completion bash > ~/.kube/completion.bash.inc
+  zarf tools kubectl completion bash > ~/.kube/completion.bash.inc
   printf "
-  # kubectl shell completion
+  # zarf tools kubectl shell completion
   source '$HOME/.kube/completion.bash.inc'
   " >> $HOME/.bash_profile
   source $HOME/.bash_profile
   
-  # Load the kubectl completion code for zsh[1] into the current shell
-  source <(kubectl completion zsh)
-  # Set the kubectl completion code for zsh[1] to autoload on startup
-  kubectl completion zsh > "${fpath[1]}/_kubectl"
+  # Load the zarf tools kubectl completion code for zsh[1] into the current shell
+  source <(zarf tools kubectl completion zsh)
+  # Set the zarf tools kubectl completion code for zsh[1] to autoload on startup
+  zarf tools kubectl completion zsh > "${fpath[1]}/_zarf tools kubectl"
   
   
-  # Load the kubectl completion code for fish[2] into the current shell
-  kubectl completion fish | source
+  # Load the zarf tools kubectl completion code for fish[2] into the current shell
+  zarf tools kubectl completion fish | source
   # To load completions for each session, execute once:
-  kubectl completion fish > ~/.config/fish/completions/kubectl.fish
+  zarf tools kubectl completion fish > ~/.config/fish/completions/zarf tools kubectl.fish
   
-  # Load the kubectl completion code for powershell into the current shell
-  kubectl completion powershell | Out-String | Invoke-Expression
-  # Set kubectl completion code for powershell to run on startup
+  # Load the zarf tools kubectl completion code for powershell into the current shell
+  zarf tools kubectl completion powershell | Out-String | Invoke-Expression
+  # Set zarf tools kubectl completion code for powershell to run on startup
   ## Save completion code to a script and execute in the profile
-  kubectl completion powershell > "$HOME\.kube\completion.ps1"
+  zarf tools kubectl completion powershell > "$HOME\.kube\completion.ps1"
   Add-Content $PROFILE ". '$HOME\.kube\completion.ps1'"
   ## Execute completion code in the profile
-  Add-Content $PROFILE "if (Get-Command kubectl -ErrorAction SilentlyContinue) {
-  kubectl completion powershell | Out-String | Invoke-Expression
+  Add-Content $PROFILE "if (Get-Command zarf tools kubectl -ErrorAction SilentlyContinue) {
+  zarf tools kubectl completion powershell | Out-String | Invoke-Expression
   }"
   ## Add completion code directly to the $PROFILE script
-  kubectl completion powershell >> $PROFILE
+  zarf tools kubectl completion powershell >> $PROFILE
 ```
 
 ### Options

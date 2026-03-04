@@ -26,16 +26,16 @@ zarf tools kubectl top pod [NAME | -l label]
 
 ```
   # Show metrics for all pods in the default namespace
-  kubectl top pod
+  zarf tools kubectl top pod
   
   # Show metrics for all pods in the given namespace
-  kubectl top pod --namespace=NAMESPACE
+  zarf tools kubectl top pod --namespace=NAMESPACE
   
   # Show metrics for a given pod and its containers
-  kubectl top pod POD_NAME --containers
+  zarf tools kubectl top pod POD_NAME --containers
   
   # Show metrics for the pods defined by label name=myLabel
-  kubectl top pod -l name=myLabel
+  zarf tools kubectl top pod -l name=myLabel
 ```
 
 ### Options

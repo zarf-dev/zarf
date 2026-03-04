@@ -22,13 +22,13 @@ zarf tools kubectl rollout undo (TYPE NAME | TYPE/NAME) [flags]
 
 ```
   # Roll back to the previous deployment
-  kubectl rollout undo deployment/abc
+  zarf tools kubectl rollout undo deployment/abc
   
   # Roll back to daemonset revision 3
-  kubectl rollout undo daemonset/abc --to-revision=3
+  zarf tools kubectl rollout undo daemonset/abc --to-revision=3
   
   # Roll back to the previous deployment with dry-run
-  kubectl rollout undo --dry-run=server deployment/abc
+  zarf tools kubectl rollout undo --dry-run=server deployment/abc
 ```
 
 ### Options

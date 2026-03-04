@@ -28,16 +28,16 @@ zarf tools kubectl rollout SUBCOMMAND
 
 ```
   # Rollback to the previous deployment
-  kubectl rollout undo deployment/abc
+  zarf tools kubectl rollout undo deployment/abc
   
   # Check the rollout status of a daemonset
-  kubectl rollout status daemonset/foo
+  zarf tools kubectl rollout status daemonset/foo
   
   # Restart a deployment
-  kubectl rollout restart deployment/abc
+  zarf tools kubectl rollout restart deployment/abc
   
   # Restart deployments with the 'app=nginx' label
-  kubectl rollout restart deployment --selector=app=nginx
+  zarf tools kubectl rollout restart deployment --selector=app=nginx
 ```
 
 ### Options

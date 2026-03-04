@@ -24,16 +24,16 @@ zarf tools kubectl rollout restart RESOURCE
 
 ```
   # Restart all deployments in the test-namespace namespace
-  kubectl rollout restart deployment -n test-namespace
+  zarf tools kubectl rollout restart deployment -n test-namespace
   
   # Restart a deployment
-  kubectl rollout restart deployment/nginx
+  zarf tools kubectl rollout restart deployment/nginx
   
   # Restart a daemon set
-  kubectl rollout restart daemonset/abc
+  zarf tools kubectl rollout restart daemonset/abc
   
   # Restart deployments with the app=nginx label
-  kubectl rollout restart deployment --selector=app=nginx
+  zarf tools kubectl rollout restart deployment --selector=app=nginx
 ```
 
 ### Options
