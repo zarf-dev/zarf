@@ -8,9 +8,6 @@ replace github.com/xeipuuv/gojsonschema => github.com/defenseunicorns/gojsonsche
 // Once https://github.com/glebarez/go-sqlite updates to handle breaking changes in modernc.org/sqlite v1.33.0 this can be removed
 replace modernc.org/sqlite => modernc.org/sqlite v1.32.0
 
-// // TODO: awaiting release of derailed/k9s to include grype version bump
-replace github.com/anchore/grype => github.com/anchore/grype v0.104.1
-
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -21,7 +18,7 @@ require (
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/defenseunicorns/pkg/helpers/v2 v2.0.4
 	github.com/defenseunicorns/pkg/oci v1.3.0
-	github.com/derailed/k9s v0.50.16
+	github.com/derailed/k9s v0.50.18
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.5.2+incompatible
@@ -146,7 +143,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.25.4 // indirect
 	github.com/go-piv/piv-go/v2 v2.4.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
-	github.com/gocsaf/csaf/v3 v3.3.0 // indirect
+	github.com/gocsaf/csaf/v3 v3.5.0 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/gohugoio/hashstructure v0.6.0 // indirect
 	github.com/google/go-github/v73 v73.0.0 // indirect
@@ -159,9 +156,10 @@ require (
 	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
 	github.com/henvic/httpretty v0.1.4 // indirect
 	github.com/in-toto/attestation v1.1.2 // indirect
-	github.com/itchyny/gojq v0.12.17 // indirect
-	github.com/itchyny/timefmt-go v0.1.6 // indirect
+	github.com/itchyny/gojq v0.12.18 // indirect
+	github.com/itchyny/timefmt-go v0.1.7 // indirect
 	github.com/jedib0t/go-pretty/v6 v6.7.8 // indirect
+	github.com/karrick/godirwalk v1.17.0 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/dsig v1.0.0 // indirect
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
@@ -313,7 +311,7 @@ require (
 	github.com/anchore/go-macholibre v0.0.0-20250320151634-807da7ad2331 // indirect
 	github.com/anchore/go-struct-converter v0.1.0 // indirect
 	github.com/anchore/go-version v1.2.2-0.20210903204242-51efa5b487c4 // indirect
-	github.com/anchore/grype v0.101.1 // indirect
+	github.com/anchore/grype v0.104.2 // indirect
 	github.com/anchore/packageurl-go v0.1.1-0.20250220190351-d62adb6e1115 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
