@@ -244,6 +244,7 @@ type packageDeployOptions struct {
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
+	connected               bool
 	timeout                 time.Duration
 	retries                 int
 	setVariables            map[string]string
@@ -277,6 +278,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.connected, "connected", false, "Deploy without mirroring images/repos; label resources to bypass the Zarf agent")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
@@ -361,6 +363,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
+		Connected:            o.connected,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -373,6 +376,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	deployOpts := packager.DeployOptions{
 		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
+		Connected:              o.connected,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,

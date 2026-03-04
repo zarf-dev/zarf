@@ -35,6 +35,7 @@ type renderer struct {
 
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
+	connectedDeploy        bool
 	skipSecretUpdates      bool
 	state                  *state.State
 	actionConfig           *action.Configuration
@@ -46,7 +47,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -56,11 +57,13 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if pkgName == "" {
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
-	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
+	// FIXME: have to consider the distro here I think, may want to make a "connected distro"
+	skipSecretUpdates := connectedDeploy
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
+		connectedDeploy:        connectedDeploy,
 		skipSecretUpdates:      skipSecretUpdates,
 		state:                  s,
 		actionConfig:           actionConfig,
@@ -200,6 +203,12 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
+			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
+			if r.connectedDeploy {
+				if err := r.addAgentIgnoreLabels(obj); err != nil {
+					return err
+				}
+			}
 			return nil
 		})
 		if err != nil {
@@ -321,6 +330,62 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 	templateLabels = r.setPackageLabels(templateLabels)
 	// Set the updated labels back
 	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
+}
+
+// FIXME: I'd prefer to do this in a dynamic way
+// agentMutatedKinds are the resource kinds that the Zarf agent webhook mutates.
+// These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
+var agentMutatedKinds = map[string]bool{
+	"Pod":            true,
+	"Deployment":     true,
+	"StatefulSet":    true,
+	"DaemonSet":      true,
+	"ReplicaSet":     true,
+	"Job":            true,
+	"CronJob":        true,
+	"GitRepository":  true,
+	"OCIRepository":  true,
+	"HelmRepository": true,
+	"Application":    true,
+	"ApplicationSet": true,
+	"AppProject":     true,
+	"Secret":         true,
+}
+
+// addAgentIgnoreLabels adds the zarf.dev/agent: ignore label to resources that the Zarf agent
+// would mutate. This is used in connected and YOLO deploys so the agent webhook doesn't rewrite
+// image references or git URLs. It also labels pod templates so spawned pods bypass the pod webhook.
+func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
+	kind := obj.GetKind()
+	if !agentMutatedKinds[kind] {
+		return nil
+	}
+
+	// Set agent ignore label on the resource itself
+	labels := obj.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels[cluster.AgentLabel] = "ignore"
+	obj.SetLabels(labels)
+
+	// If the resource has a pod template, also label the pod template so spawned pods bypass the webhook
+	// FIXME: need to test what's actually needed here
+	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
+	if err != nil {
+		return err
+	}
+	if found {
+		if templateLabels == nil {
+			templateLabels = map[string]string{}
+		}
+		templateLabels[cluster.AgentLabel] = "ignore"
+		err := unstructured.SetNestedStringMap(obj.Object, templateLabels, "spec", "template", "metadata", "labels")
+		if err != nil {
+			return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
+		}
+	}
+	return nil
 }
 
 // setPackageLabels will add the package labels to an existing labels map

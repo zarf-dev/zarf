@@ -223,6 +223,11 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 	case ImageLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[ImageLayers]...)
+	case ConnectedLayers:
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[ComponentLayers]...)
+		layers = append(layers, layerMap[SbomLayers]...)
+		layers = append(layers, layerMap[DocLayers]...)
 	case DocLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[DocLayers]...)
