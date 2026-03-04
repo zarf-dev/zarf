@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -43,15 +44,22 @@ func newConnectCommand() *cobra.Command {
 	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectFlagRemotePort)
 	cmd.Flags().BoolVar(&o.open, "open", false, lang.CmdConnectFlagOpen)
 
+	// Deprecate flags that conflict with positional target argument.
+	// These flags are ignored when a connect-name target is supplied.
+	_ = cmd.Flags().MarkDeprecated("name", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
+	_ = cmd.Flags().MarkDeprecated("namespace", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
+	_ = cmd.Flags().MarkDeprecated("remote-port", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
+	_ = cmd.Flags().MarkDeprecated("type", "Use 'zarf connect resource' instead. This flag will be removed in a future version of Zarf.")
+
 	// TODO(soltysh): consider splitting sub-commands into separate files
 	cmd.AddCommand(newConnectListCommand())
+	cmd.AddCommand(newConnectResourceCommand())
 
 	return cmd
 }
 
 func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	l := logger.From(ctx)
 	target := ""
 	// TODO: this leaves room for ignoring potential misuse
 	if len(args) > 0 {
@@ -85,32 +93,80 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	defer tunnel.Close()
+	return waitForTunnel(ctx, tunnel, o.open)
+}
 
-	if o.open {
-		urls := tunnel.FullURLs()
-		if len(urls) == 0 {
-			return fmt.Errorf("no tunnel URLs found")
-		}
-		// Open the first URL (arbitrary)
+// waitForTunnel handles the shared logic of logging the tunnel URLs, optionally opening a browser,
+// and waiting for user interrupt or tunnel error.
+func waitForTunnel(ctx context.Context, tunnel *cluster.Tunnel, openBrowser bool) error {
+	l := logger.From(ctx)
+	urls := tunnel.FullURLs()
+	if len(urls) == 0 {
+		return fmt.Errorf("no tunnel URLs found")
+	}
+
+	if openBrowser {
 		l.Info("Tunnel established, opening your default web browser (ctrl-c to end)", "urls", strings.Join(urls, ", "))
 		if err := exec.LaunchURL(urls[0]); err != nil {
 			return err
 		}
 	} else {
-		urls := tunnel.FullURLs()
-		if len(urls) == 0 {
-			return fmt.Errorf("no tunnel URLs found")
-		}
 		l.Info("Tunnel established, waiting for user to interrupt (ctrl-c to end)", "urls", strings.Join(urls, ", "))
 	}
 
-	// Wait for the interrupt signal or an error.
 	select {
 	case <-ctx.Done():
 		return nil
-	case err = <-tunnel.ErrChan():
+	case err := <-tunnel.ErrChan():
 		return fmt.Errorf("lost connection to the service: %w", err)
 	}
+}
+
+// connectResourceOptions holds the command-line options for 'connect resource' sub-command.
+type connectResourceOptions struct {
+	open bool
+	zt   cluster.TunnelInfo
+}
+
+// newConnectResourceCommand creates the `connect resource` sub-command.
+func newConnectResourceCommand() *cobra.Command {
+	o := &connectResourceOptions{}
+	cmd := &cobra.Command{
+		Use:   "resource",
+		Short: lang.CmdConnectResourceShort,
+		RunE:  o.run,
+	}
+
+	cmd.Flags().StringVar(&o.zt.ResourceName, "name", "", lang.CmdConnectResourceFlagName)
+	cmd.Flags().StringVar(&o.zt.Namespace, "namespace", "", lang.CmdConnectResourceFlagNamespace)
+	cmd.Flags().IntVar(&o.zt.RemotePort, "remote-port", 0, lang.CmdConnectResourceFlagRemotePort)
+	cmd.Flags().StringVar(&o.zt.ResourceType, "type", cluster.SvcResource, lang.CmdConnectResourceFlagType)
+	cmd.Flags().IntVar(&o.zt.LocalPort, "local-port", 0, lang.CmdConnectResourceFlagLocalPort)
+	cmd.Flags().StringSliceVar(&o.zt.ListenAddresses, "address", []string{helpers.IPV4Localhost}, lang.CmdConnectFlagAddress)
+	cmd.Flags().BoolVar(&o.open, "open", false, lang.CmdConnectFlagOpen)
+
+	_ = cmd.MarkFlagRequired("name")
+	_ = cmd.MarkFlagRequired("namespace")
+	_ = cmd.MarkFlagRequired("remote-port")
+
+	return cmd
+}
+
+func (o *connectResourceOptions) run(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+
+	c, err := cluster.New(ctx)
+	if err != nil {
+		return err
+	}
+
+	tunnel, err := c.ConnectTunnelInfo(ctx, o.zt)
+	if err != nil {
+		return fmt.Errorf("unable to connect to the service: %w", err)
+	}
+
+	defer tunnel.Close()
+	return waitForTunnel(ctx, tunnel, o.open)
 }
 
 // connectListOptions holds the command-line options for 'connect list' sub-command.
