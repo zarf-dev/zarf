@@ -206,10 +206,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
+	pkg := result.Package
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
