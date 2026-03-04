@@ -132,7 +132,7 @@ type ZarfChart struct {
 	Values []ZarfChartValue `json:"values,omitempty"`
 }
 
-// SetDeprecatedVersion gets the version of the chart, used as a backwards compatibility shim with v1alpha1.
+// GetDeprecatedVersion gets the version of the chart, used as a backwards compatibility shim with v1alpha1.
 func (c ZarfChart) GetDeprecatedVersion() string {
 	return c.version
 }
