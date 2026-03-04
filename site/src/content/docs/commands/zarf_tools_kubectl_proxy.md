@@ -47,20 +47,20 @@ zarf tools kubectl proxy [--port=PORT] [--www=static-dir] [--www-prefix=prefix] 
 ### Options
 
 ```
-      --accept-hosts string     Regular expression for hosts that the proxy should accept. (default "^localhost$,^127\\.0\\.0\\.1$,^\\[::1\\]$")
-      --accept-paths string     Regular expression for paths that the proxy should accept. (default "^.*")
-      --address string          The IP address on which to serve on. (default "127.0.0.1")
-      --api-prefix string       Prefix to serve the proxied API under. (default "/")
+      --accept-hosts string     Regular expression for hosts that the proxy should accept.
+      --accept-paths string     Regular expression for paths that the proxy should accept.
+      --address string          The IP address on which to serve on.
+      --api-prefix string       Prefix to serve the proxied API under.
       --append-server-path      If true, enables automatic path appending of the kube context server path to each request.
       --disable-filter          If true, disable request filtering in the proxy. This is dangerous, and can leave you vulnerable to XSRF attacks, when used with an accessible port.
   -h, --help                    help for proxy
       --keepalive duration      keepalive specifies the keep-alive period for an active network connection. Set to 0 to disable keepalive.
   -p, --port int                The port on which to run the proxy. Set to 0 to pick a random port. (default 8001)
-      --reject-methods string   Regular expression for HTTP methods that the proxy should reject (example --reject-methods='POST,PUT,PATCH').  (default "^$")
-      --reject-paths string     Regular expression for paths that the proxy should reject. Paths specified here will be rejected even accepted by --accept-paths. (default "^/api/.*/pods/.*/exec,^/api/.*/pods/.*/attach")
+      --reject-methods string   Regular expression for HTTP methods that the proxy should reject (example --reject-methods='POST,PUT,PATCH'). 
+      --reject-paths string     Regular expression for paths that the proxy should reject. Paths specified here will be rejected even accepted by --accept-paths.
   -u, --unix-socket string      Unix socket on which to run the proxy.
   -w, --www string              Also serve static files from the given directory under the specified prefix.
-  -P, --www-prefix string       Prefix to serve static files under, if static file directory is specified. (default "/static/")
+  -P, --www-prefix string       Prefix to serve static files under, if static file directory is specified.
 ```
 
 ### Options inherited from parent commands
@@ -70,7 +70,7 @@ zarf tools kubectl proxy [--port=PORT] [--www=static-dir] [--www-prefix=prefix] 
       --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --as-uid string                  UID to impersonate for the operation.
       --as-user-extra stringArray      User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.
-      --cache-dir string               Default cache directory (default "/home/aconlon/.kube/cache")
+      --cache-dir string               Default cache directory
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
@@ -85,9 +85,9 @@ zarf tools kubectl proxy [--port=PORT] [--www=static-dir] [--www-prefix=prefix] 
   -n, --namespace string               If present, the namespace scope for this CLI request
       --password string                Password for basic authentication to the API server
       --plain-http                     Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace) (default "none")
-      --profile-output string          Name of the file to write the profile to (default "profile.pprof")
-      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)
+      --profile-output string          Name of the file to write the profile to
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server

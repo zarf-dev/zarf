@@ -54,9 +54,9 @@ zarf tools kubectl expose (-f FILENAME | TYPE NAME) [--port=port] [--protocol=TC
 ```
       --allow-missing-template-keys    If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats. (default true)
       --cluster-ip string              ClusterIP to be assigned to the service. Leave empty to auto-allocate, or set to 'None' to create a headless service.
-      --dry-run string[="unchanged"]   Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource. (default "none")
+      --dry-run string[="unchanged"]   Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource.
       --external-ip string             Additional external IP address (not managed by Kubernetes) to accept for the service. If this IP is routed to a node, the service can be accessed by this IP in addition to its generated service IP.
-      --field-manager string           Name of the manager used to track field ownership. (default "kubectl-expose")
+      --field-manager string           Name of the manager used to track field ownership.
   -f, --filename strings               Filename, directory, or URL to files identifying the resource to expose a service
   -h, --help                           help for expose
   -k, --kustomize string               Process the kustomization directory. This flag can't be used together with -f or -R.
@@ -64,7 +64,7 @@ zarf tools kubectl expose (-f FILENAME | TYPE NAME) [--port=port] [--protocol=TC
       --load-balancer-ip string        IP to assign to the LoadBalancer. If empty, an ephemeral IP will be created and used (cloud-provider specific).
       --name string                    The name for the newly created object.
   -o, --output string                  Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
-      --override-type string           The method used to override the generated object: json, merge, or strategic. (default "merge")
+      --override-type string           The method used to override the generated object: json, merge, or strategic.
       --overrides string               An inline JSON override for the generated object. If this is non-empty, it is used to override the generated object. Requires that the object supply a valid apiVersion field.
       --port string                    The port that the service should serve on. Copied from the resource being exposed, if unspecified
       --protocol string                The network protocol for the service to be created. Default is 'TCP'.
@@ -85,7 +85,7 @@ zarf tools kubectl expose (-f FILENAME | TYPE NAME) [--port=port] [--protocol=TC
       --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --as-uid string                  UID to impersonate for the operation.
       --as-user-extra stringArray      User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.
-      --cache-dir string               Default cache directory (default "/home/aconlon/.kube/cache")
+      --cache-dir string               Default cache directory
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
@@ -100,9 +100,9 @@ zarf tools kubectl expose (-f FILENAME | TYPE NAME) [--port=port] [--protocol=TC
   -n, --namespace string               If present, the namespace scope for this CLI request
       --password string                Password for basic authentication to the API server
       --plain-http                     Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace) (default "none")
-      --profile-output string          Name of the file to write the profile to (default "profile.pprof")
-      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)
+      --profile-output string          Name of the file to write the profile to
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server

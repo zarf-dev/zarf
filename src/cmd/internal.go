@@ -138,7 +138,7 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 				}
 
 				// Remove the default values from all of the helm commands during the CLI command doc generation
-				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
+				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" || toolCmd.Use == "kubectl" {
 					toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 						if flag.Value.Type() == "string" {
 							flag.DefValue = ""

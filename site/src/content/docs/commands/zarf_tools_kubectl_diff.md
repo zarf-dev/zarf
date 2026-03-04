@@ -42,7 +42,7 @@ zarf tools kubectl diff -f FILENAME
 
 ```
       --concurrency int               Number of objects to process in parallel when diffing against the live version. Larger number = faster, but more memory, I/O and CPU over that shorter period of time. (default 1)
-      --field-manager string          Name of the manager used to track field ownership. (default "kubectl-client-side-apply")
+      --field-manager string          Name of the manager used to track field ownership.
   -f, --filename strings              Filename, directory, or URL to files contains the configuration to diff
       --force-conflicts               If true, server-side apply will force the changes against conflicts.
   -h, --help                          help for diff
@@ -62,7 +62,7 @@ zarf tools kubectl diff -f FILENAME
       --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --as-uid string                  UID to impersonate for the operation.
       --as-user-extra stringArray      User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.
-      --cache-dir string               Default cache directory (default "/home/aconlon/.kube/cache")
+      --cache-dir string               Default cache directory
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
@@ -77,9 +77,9 @@ zarf tools kubectl diff -f FILENAME
   -n, --namespace string               If present, the namespace scope for this CLI request
       --password string                Password for basic authentication to the API server
       --plain-http                     Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace) (default "none")
-      --profile-output string          Name of the file to write the profile to (default "profile.pprof")
-      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)
+      --profile-output string          Name of the file to write the profile to
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server

@@ -55,12 +55,12 @@ zarf tools kubectl run NAME --image=image [--env="key=value"] [--port=port] [--d
       --allow-missing-template-keys     If true, ignore any errors in templates when a field or map key is missing in the template. Only applies to golang and jsonpath output formats. (default true)
       --annotations stringArray         Annotations to apply to the pod.
       --attach                          If true, wait for the Pod to start running, and then attach to the Pod as if 'kubectl attach ...' were called.  Default false, unless '-i/--stdin' is set, in which case the default is true. With '--restart=Never' the exit code of the container process is returned.
-      --cascade string[="background"]   Must be "background", "orphan", or "foreground". Selects the deletion cascading strategy for the dependents (e.g. Pods created by a ReplicationController). Defaults to background. (default "background")
+      --cascade string[="background"]   Must be "background", "orphan", or "foreground". Selects the deletion cascading strategy for the dependents (e.g. Pods created by a ReplicationController). Defaults to background.
       --command                         If true and extra arguments are present, use them as the 'command' field in the container, rather than the 'args' field which is the default.
-      --dry-run string[="unchanged"]    Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource. (default "none")
+      --dry-run string[="unchanged"]    Must be "none", "server", or "client". If client strategy, only print the object that would be sent, without sending it. If server strategy, submit server-side request without persisting the resource.
       --env stringArray                 Environment variables to set in the container.
       --expose --port                   If true, create a ClusterIP service associated with the pod.  Requires --port.
-      --field-manager string            Name of the manager used to track field ownership. (default "kubectl-run")
+      --field-manager string            Name of the manager used to track field ownership.
   -f, --filename strings                to use to replace the resource.
       --force                           If true, immediately remove resources from API and bypass graceful deletion. Note that immediate deletion of some resources may result in inconsistency or data loss and requires confirmation.
       --grace-period int                Period of time in seconds given to the resource to terminate gracefully. Ignored if negative. Set to 1 for immediate shutdown. Can only be set to 0 when --force is true (force deletion). (default -1)
@@ -71,14 +71,14 @@ zarf tools kubectl run NAME --image=image [--env="key=value"] [--port=port] [--d
   -l, --labels string                   Comma separated labels to apply to the pod. Will override previous values.
       --leave-stdin-open                If the pod is started in interactive mode or with stdin, leave stdin open after the first attach completes. By default, stdin will be closed after the first attach completes.
   -o, --output string                   Output format. One of: (json, yaml, kyaml, name, go-template, go-template-file, template, templatefile, jsonpath, jsonpath-as-json, jsonpath-file).
-      --override-type string            The method used to override the generated object: json, merge, or strategic. (default "merge")
+      --override-type string            The method used to override the generated object: json, merge, or strategic.
       --overrides string                An inline JSON override for the generated object. If this is non-empty, it is used to override the generated object. Requires that the object supply a valid apiVersion field.
       --pod-running-timeout duration    The length of time (like 5s, 2m, or 3h, higher than zero) to wait until at least one pod is running (default 1m0s)
       --port string                     The port that this container exposes.
       --privileged                      If true, run the container in privileged mode.
   -q, --quiet                           If true, suppress prompt messages.
   -R, --recursive                       Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
-      --restart string                  The restart policy for this Pod.  Legal values [Always, OnFailure, Never]. (default "Always")
+      --restart string                  The restart policy for this Pod.  Legal values [Always, OnFailure, Never].
       --rm                              If true, delete the pod after it exits.  Only valid when attaching to the container, e.g. with '--attach' or with '-i/--stdin'.
       --save-config                     If true, the configuration of current object will be saved in its annotation. Otherwise, the annotation will be unchanged. This flag is useful when you want to perform kubectl apply on this object in the future.
       --show-managed-fields             If true, keep the managedFields when printing objects in JSON or YAML format.
@@ -96,7 +96,7 @@ zarf tools kubectl run NAME --image=image [--env="key=value"] [--port=port] [--d
       --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --as-uid string                  UID to impersonate for the operation.
       --as-user-extra stringArray      User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.
-      --cache-dir string               Default cache directory (default "/home/aconlon/.kube/cache")
+      --cache-dir string               Default cache directory
       --certificate-authority string   Path to a cert file for the certificate authority
       --client-certificate string      Path to a client certificate file for TLS
       --client-key string              Path to a client key file for TLS
@@ -111,9 +111,9 @@ zarf tools kubectl run NAME --image=image [--env="key=value"] [--port=port] [--d
   -n, --namespace string               If present, the namespace scope for this CLI request
       --password string                Password for basic authentication to the API server
       --plain-http                     Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace) (default "none")
-      --profile-output string          Name of the file to write the profile to (default "profile.pprof")
-      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace)
+      --profile-output string          Name of the file to write the profile to
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.
   -s, --server string                  The address and port of the Kubernetes API server
       --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
       --token string                   Bearer token for authentication to the API server
