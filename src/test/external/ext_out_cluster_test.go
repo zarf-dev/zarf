@@ -28,8 +28,6 @@ import (
 // Docker/k3d networking constants
 const (
 	network        = "k3d-k3s-external-test"
-	subnet         = "172.31.0.0/16"
-	gateway        = "172.31.0.1"
 	giteaIP        = "172.31.0.99"
 	giteaHost      = "gitea.localhost"
 	registryHost   = "registry.localhost"
@@ -64,26 +62,15 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	_ = exec.CmdWithPrint("docker", "compose", "down")             //nolint:errcheck
 	_ = exec.CmdWithPrint("docker", "network", "remove", network)  //nolint:errcheck
 
-	// Setup a network for everything to live inside
-	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
-	suite.NoError(err, "unable to create the k3d registry")
+	// Start the registry and gitea via docker compose. The network is created by compose.
+	// The registry service depends on
+	// registry-init completing (htpasswd generation) before it starts.
+	err := exec.CmdWithPrint("docker", "compose", "up", "-d")
+	suite.NoError(err, "unable to start external services")
 
-	// Install a registry:3 server configured to listen on port 5001 (avoids macOS port 5000 conflict)
-	// Using registry:3 directly allows us to configure the listen port, ensuring consistent
-	// port usage for both external push operations and internal cluster pull operations
-	err = exec.CmdWithPrint("docker", "run", "-d",
-		"--name", registryHost,
-		"--network", network,
-		"-p", registryPort+":"+registryPort,
-		"-e", "REGISTRY_HTTP_ADDR=0.0.0.0:"+registryPort,
-		"-e", "REGISTRY_HTTP_DEBUG_ADDR=", // Disable debug server to avoid port conflict
-		"-e", "REGISTRY_STORAGE_DELETE_ENABLED=true",
-		"-e", "REGISTRY_HTTP_SECRET="+commonPassword, // Consistent secret
-		"registry:3")
-	suite.NoError(err, "unable to create the registry")
-
-	// Wait for registry to be ready
-	registryArgs := []string{"exec", registryHost, "wget", "-q", "-O-", "http://localhost:" + registryPort + "/v2/_catalog"}
+	// Wait for registry to be ready (uses credentials since auth is enabled)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@localhost:%s/v2/_catalog", registryUser, commonPassword, registryPort)
+	registryArgs := []string{"exec", registryHost, "wget", "-q", "-O-", regCatalogURL}
 	err = waitForCondition(suite.T(), 1, "docker", registryArgs, `{"repositories"`)
 	suite.NoError(err, "registry failed to start")
 
@@ -104,18 +91,10 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 		"--registry-config", registryConfigPath)
 	suite.NoError(err, "unable to create the k3d cluster")
 
-	// Install a gitea server via docker compose to act as the 'remote' git server
-	err = exec.CmdWithPrint("docker", "compose", "up", "-d")
-	suite.NoError(err, "unable to install the gitea-server")
-
 	// Wait for gitea to deploy properly
 	giteaArgs := []string{"inspect", "-f", "{{.State.Health.Status}}", "gitea.localhost"}
 	err = waitForCondition(suite.T(), 2, "docker", giteaArgs, "healthy")
 	suite.NoError(err)
-
-	// Connect gitea to the k3d network
-	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
-	suite.NoError(err, "unable to connect the gitea-server to k3d")
 }
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
@@ -124,13 +103,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	suite.NoError(err, "unable to teardown cluster")
 
 	err = exec.CmdWithPrint("docker", "compose", "down")
-	suite.NoError(err, "unable to teardown the gitea-server")
-
-	err = exec.CmdWithPrint("docker", "rm", "-f", registryHost)
-	suite.NoError(err, "unable to teardown the registry")
-
-	err = exec.CmdWithPrint("docker", "network", "remove", network)
-	suite.NoError(err, "unable to teardown the docker test network")
+	suite.NoError(err, "unable to teardown external services")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
