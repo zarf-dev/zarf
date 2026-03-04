@@ -135,8 +135,7 @@ func TestManifestConfigIsPackageConfig(t *testing.T) {
 	tmpdir := t.TempDir()
 
 	opt := packager.CreateOptions{
-		OCIConcurrency: 3,
-		CachePath:      tmpdir,
+		CachePath: tmpdir,
 	}
 	packagePath, err := packager.Create(ctx, "testdata/basic", tmpdir, opt)
 	require.NoError(t, err)
