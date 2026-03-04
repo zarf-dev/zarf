@@ -18,15 +18,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
-// type ImageArchives struct {
-// 	Images []string `yaml:"images"`
-// 	Path   string   `yaml:"path"`
-// }
-//
-// type ImageArchivesPatch struct {
-// 	ImageArchives []ImageArchives `yaml:"imageArchives"`
-// }
-
 // UpdateImages updates the images field for components in a zarf.yaml
 func UpdateImages(ctx context.Context, packagePath string, imagesScans []ComponentImageScan, archiveImageScans []ImageArchivesScan) error {
 	l := logger.From(ctx)

@@ -93,7 +93,7 @@ type ImageArchivesScan struct {
 	ImageArchives []ImageArchive
 }
 
-// FindImages iterates over the manifests, charts and imageArchives within each component to find any container images
+// FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
@@ -132,7 +132,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
-			// Skip if there are no manifests, charts, imageArchives, or repos
+			// Skip if there are no manifests, charts or repos
 			continue
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
