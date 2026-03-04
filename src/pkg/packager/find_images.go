@@ -90,7 +90,7 @@ type ImageArchive struct {
 
 type ImageArchivesScan struct {
 	ComponentName string
-	ImageArchives []ImageArchive
+	ImageArchives []v1alpha1.ImageArchive
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -351,7 +351,7 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
 			}
-			imageArchive := ImageArchive{
+			imageArchive := v1alpha1.ImageArchive{
 				Images: archiveImages,
 				Path:   archivePath,
 			}
