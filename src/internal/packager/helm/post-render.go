@@ -369,20 +369,26 @@ func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	labels[cluster.AgentLabel] = "ignore"
 	obj.SetLabels(labels)
 
-	// If the resource has a pod template, also label the pod template so spawned pods bypass the webhook
-	// FIXME: need to test what's actually needed here
-	templateLabels, found, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
-	if err != nil {
-		return err
+	// Label pod templates so spawned pods bypass the webhook.
+	// Deployments, StatefulSets, DaemonSets, ReplicaSets, Jobs use spec.template.
+	// CronJobs use spec.jobTemplate.spec.template.
+	templatePaths := [][]string{
+		{"spec", "template", "metadata", "labels"},
+		{"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
 	}
-	if found {
-		if templateLabels == nil {
-			templateLabels = map[string]string{}
-		}
-		templateLabels[cluster.AgentLabel] = "ignore"
-		err := unstructured.SetNestedStringMap(obj.Object, templateLabels, "spec", "template", "metadata", "labels")
+	for _, path := range templatePaths {
+		templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
 		if err != nil {
-			return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
+			return err
+		}
+		if found {
+			if templateLabels == nil {
+				templateLabels = map[string]string{}
+			}
+			templateLabels[cluster.AgentLabel] = "ignore"
+			if err := unstructured.SetNestedStringMap(obj.Object, templateLabels, path...); err != nil {
+				return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
+			}
 		}
 	}
 	return nil
