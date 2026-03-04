@@ -237,9 +237,9 @@ func (r *Repository) Push(ctx context.Context, address, username, password strin
 	if errors.Is(err, git.NoErrAlreadyUpToDate) {
 		l.Debug("repo already up-to-date")
 	} else if errors.Is(err, plumbing.ErrObjectNotFound) {
-		return fmt.Errorf("unable to push repo due to likely shallow clone: %s", err.Error())
+		return fmt.Errorf("unable to push repo due to likely shallow clone: %w", err)
 	} else if err != nil {
-		return fmt.Errorf("unable to push repo to the gitops service: %s", err.Error())
+		return fmt.Errorf("unable to push repo to the gitops service: %w", err)
 	}
 
 	return nil
