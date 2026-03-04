@@ -8,7 +8,13 @@ tableOfContents: false
 
 ## zarf tools kubectl
 
-Kubectl command. See https://kubernetes.io/docs/reference/kubectl/overview/ for more information.
+kubectl controls the Kubernetes cluster manager
+
+### Synopsis
+
+kubectl controls the Kubernetes cluster manager.
+
+ Find more information at: https://kubernetes.io/docs/reference/kubectl/
 
 ```
 zarf tools kubectl [flags]
@@ -17,18 +23,87 @@ zarf tools kubectl [flags]
 ### Options
 
 ```
-  -h, --help   help for kubectl
+      --as string                      Username to impersonate for the operation. User could be a regular user or a service account in a namespace.
+      --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
+      --as-uid string                  UID to impersonate for the operation.
+      --as-user-extra stringArray      User extras to impersonate for the operation, this flag can be repeated to specify multiple values for the same key.
+      --cache-dir string               Default cache directory (default "/home/aconlon/.kube/cache")
+      --certificate-authority string   Path to a cert file for the certificate authority
+      --client-certificate string      Path to a client certificate file for TLS
+      --client-key string              Path to a client key file for TLS
+      --cluster string                 The name of the kubeconfig cluster to use
+      --context string                 The name of the kubeconfig context to use
+      --disable-compression            If true, opt-out of response compression for all requests to the server
+  -h, --help                           help for kubectl
+      --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+      --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
+      --kuberc string                  Path to the kuberc file to use for preferences. This can be disabled by exporting KUBECTL_KUBERC=false feature gate or turning off the feature KUBERC=off.
+      --match-server-version           Require server version to match client version
+  -n, --namespace string               If present, the namespace scope for this CLI request
+      --password string                Password for basic authentication to the API server
+      --profile string                 Name of profile to capture. One of (none|cpu|heap|goroutine|threadcreate|block|mutex|trace) (default "none")
+      --profile-output string          Name of the file to write the profile to (default "profile.pprof")
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+  -s, --server string                  The address and port of the Kubernetes API server
+      --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
+      --token string                   Bearer token for authentication to the API server
+      --user string                    The name of the kubeconfig user to use
+      --username string                Username for basic authentication to the API server
+      --warnings-as-errors             Treat warnings received from the server as errors and exit with a non-zero exit code
 ```
 
 ### Options inherited from parent commands
 
 ```
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
-      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
-      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --features stringToString   [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --plain-http                Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
 ```
 
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools kubectl alpha](/commands/zarf_tools_kubectl_alpha/)	 - Commands for features in alpha
+* [zarf tools kubectl annotate](/commands/zarf_tools_kubectl_annotate/)	 - Update the annotations on a resource
+* [zarf tools kubectl api-resources](/commands/zarf_tools_kubectl_api-resources/)	 - Print the supported API resources on the server
+* [zarf tools kubectl api-versions](/commands/zarf_tools_kubectl_api-versions/)	 - Print the supported API versions on the server, in the form of "group/version"
+* [zarf tools kubectl apply](/commands/zarf_tools_kubectl_apply/)	 - Apply a configuration to a resource by file name or stdin
+* [zarf tools kubectl attach](/commands/zarf_tools_kubectl_attach/)	 - Attach to a running container
+* [zarf tools kubectl auth](/commands/zarf_tools_kubectl_auth/)	 - Inspect authorization
+* [zarf tools kubectl autoscale](/commands/zarf_tools_kubectl_autoscale/)	 - Auto-scale a deployment, replica set, stateful set, or replication controller
+* [zarf tools kubectl certificate](/commands/zarf_tools_kubectl_certificate/)	 - Modify certificate resources
+* [zarf tools kubectl cluster-info](/commands/zarf_tools_kubectl_cluster-info/)	 - Display cluster information
+* [zarf tools kubectl completion](/commands/zarf_tools_kubectl_completion/)	 - Output shell completion code for the specified shell (bash, zsh, fish, or powershell)
+* [zarf tools kubectl config](/commands/zarf_tools_kubectl_config/)	 - Modify kubeconfig files
+* [zarf tools kubectl cordon](/commands/zarf_tools_kubectl_cordon/)	 - Mark node as unschedulable
+* [zarf tools kubectl cp](/commands/zarf_tools_kubectl_cp/)	 - Copy files and directories to and from containers
+* [zarf tools kubectl create](/commands/zarf_tools_kubectl_create/)	 - Create a resource from a file or from stdin
+* [zarf tools kubectl debug](/commands/zarf_tools_kubectl_debug/)	 - Create debugging sessions for troubleshooting workloads and nodes
+* [zarf tools kubectl delete](/commands/zarf_tools_kubectl_delete/)	 - Delete resources by file names, stdin, resources and names, or by resources and label selector
+* [zarf tools kubectl describe](/commands/zarf_tools_kubectl_describe/)	 - Show details of a specific resource or group of resources
+* [zarf tools kubectl diff](/commands/zarf_tools_kubectl_diff/)	 - Diff the live version against a would-be applied version
+* [zarf tools kubectl drain](/commands/zarf_tools_kubectl_drain/)	 - Drain node in preparation for maintenance
+* [zarf tools kubectl edit](/commands/zarf_tools_kubectl_edit/)	 - Edit a resource on the server
+* [zarf tools kubectl events](/commands/zarf_tools_kubectl_events/)	 - List events
+* [zarf tools kubectl exec](/commands/zarf_tools_kubectl_exec/)	 - Execute a command in a container
+* [zarf tools kubectl explain](/commands/zarf_tools_kubectl_explain/)	 - Get documentation for a resource
+* [zarf tools kubectl expose](/commands/zarf_tools_kubectl_expose/)	 - Take a replication controller, service, deployment or pod and expose it as a new Kubernetes service
+* [zarf tools kubectl get](/commands/zarf_tools_kubectl_get/)	 - Display one or many resources
+* [zarf tools kubectl kustomize](/commands/zarf_tools_kubectl_kustomize/)	 - Build a kustomization target from a directory or URL
+* [zarf tools kubectl label](/commands/zarf_tools_kubectl_label/)	 - Update the labels on a resource
+* [zarf tools kubectl logs](/commands/zarf_tools_kubectl_logs/)	 - Print the logs for a container in a pod
+* [zarf tools kubectl options](/commands/zarf_tools_kubectl_options/)	 - Print the list of flags inherited by all commands
+* [zarf tools kubectl patch](/commands/zarf_tools_kubectl_patch/)	 - Update fields of a resource
+* [zarf tools kubectl plugin](/commands/zarf_tools_kubectl_plugin/)	 - Provides utilities for interacting with plugins
+* [zarf tools kubectl port-forward](/commands/zarf_tools_kubectl_port-forward/)	 - Forward one or more local ports to a pod
+* [zarf tools kubectl proxy](/commands/zarf_tools_kubectl_proxy/)	 - Run a proxy to the Kubernetes API server
+* [zarf tools kubectl replace](/commands/zarf_tools_kubectl_replace/)	 - Replace a resource by file name or stdin
+* [zarf tools kubectl rollout](/commands/zarf_tools_kubectl_rollout/)	 - Manage the rollout of a resource
+* [zarf tools kubectl run](/commands/zarf_tools_kubectl_run/)	 - Run a particular image on the cluster
+* [zarf tools kubectl scale](/commands/zarf_tools_kubectl_scale/)	 - Set a new size for a deployment, replica set, or replication controller
+* [zarf tools kubectl set](/commands/zarf_tools_kubectl_set/)	 - Set specific features on objects
+* [zarf tools kubectl taint](/commands/zarf_tools_kubectl_taint/)	 - Update the taints on one or more nodes
+* [zarf tools kubectl top](/commands/zarf_tools_kubectl_top/)	 - Display resource (CPU/memory) usage
+* [zarf tools kubectl uncordon](/commands/zarf_tools_kubectl_uncordon/)	 - Mark node as schedulable
+* [zarf tools kubectl version](/commands/zarf_tools_kubectl_version/)	 - Print the client and server version information
+* [zarf tools kubectl wait](/commands/zarf_tools_kubectl_wait/)	 - Wait for a specific condition on one or many resources
 

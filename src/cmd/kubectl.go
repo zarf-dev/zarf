@@ -8,35 +8,26 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/config/lang"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
-	kubeCLI "k8s.io/component-base/cli"
-	kubeCmd "k8s.io/kubectl/pkg/cmd"
+	kubectl "k8s.io/kubectl/pkg/cmd"
 
 	// Import to initialize client auth plugins.
+	"k8s.io/cli-runtime/pkg/genericiooptions"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
+// Updated command thanks to k0s
+// https://github.com/k0sproject/k0s/blob/df88db5f317bb84dcda797ff6a68956bc2e49683/cmd/kubectl/kubectl.go#L59
 func newKubectlCommand() *cobra.Command {
-	// Kubectl stub command.
-	cmd := &cobra.Command{
-		Short: lang.CmdToolsKubectlDocs,
-		Run:   func(_ *cobra.Command, _ []string) {},
-	}
+	kubectlCmd := kubectl.NewKubectlCommand(kubectl.KubectlOptions{
+		IOStreams: genericiooptions.IOStreams{
+			In:     os.Stdin,
+			Out:    os.Stdout,
+			ErrOut: os.Stderr,
+		},
+	})
 
-	// Only load this command if it is being called directly.
-	if IsVendorCmd(os.Args, []string{"kubectl", "k"}) {
-		// Add the kubectl command to the tools command.
-		cmd = kubeCmd.NewDefaultKubectlCommand()
+	kubectlCmd.Use = "kubectl"
+	kubectlCmd.Aliases = []string{"k"}
 
-		if err := kubeCLI.RunNoErrOutput(cmd); err != nil {
-			// @todo(jeff-mccoy) - Kubectl gets mad about being a subcommand.
-			logger.Default().Debug(err.Error())
-		}
-	}
-
-	cmd.Use = "kubectl"
-	cmd.Aliases = []string{"k"}
-
-	return cmd
+	return kubectlCmd
 }
