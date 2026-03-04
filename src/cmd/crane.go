@@ -35,6 +35,10 @@ type registryOptions struct {
 	platform string
 }
 
+func useInsecureRegistryTransport(commandFlagInsecure bool, globalFlagInsecureSkipTLSVerify bool) bool {
+	return commandFlagInsecure || globalFlagInsecureSkipTLSVerify
+}
+
 func newRegistryCommand() *cobra.Command {
 	o := &registryOptions{
 		verbose:  false,
@@ -62,7 +66,7 @@ func newRegistryCommand() *cobra.Command {
 			if o.verbose {
 				logs.Debug.SetOutput(os.Stderr)
 			}
-			if o.insecure {
+			if useInsecureRegistryTransport(o.insecure, insecureSkipTLSVerify) {
 				craneOptions = append(craneOptions, crane.Insecure)
 			}
 			if o.ndlayers {
@@ -329,7 +333,7 @@ func (o *registryPruneOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	options := []crane.Option{}
-	if o.insecure {
+	if useInsecureRegistryTransport(o.insecure, insecureSkipTLSVerify) {
 		options = append(options, crane.Insecure)
 	}
 
