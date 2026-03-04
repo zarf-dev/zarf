@@ -20,8 +20,8 @@ func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (r
 }
 
 // ReferenceFromMetadataOptions provides extensible options
-// There may be a need for other OCI reference overwrite behaviors
 type ReferenceFromMetadataOptions struct {
+	// Tag specifies the OCI reference to use instead of package.metadata.version
 	Tag string
 }
 
@@ -36,14 +36,13 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg v1alpha1.Zarf
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	// tag overwrite optionality
+	// Use the explicit tag if provided, otherwise fall back to the package version.
 	tag := pkg.Metadata.Version
 	if opts.Tag != "" {
 		tag = opts.Tag
 	}
 
 	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, tag)
-	// this could be an option as well
 	if pkg.Build.Flavor != "" {
 		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
 	}
