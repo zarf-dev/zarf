@@ -10,6 +10,13 @@ components:
         namespace: default
         files:
           - deployment.yaml
+  - name: manifest-referencing-scratch-other-image-in-archive
+    required: true
+    manifests:
+      - name: scratch-other-manifest
+        namespace: default
+        files:
+          - ./deployment-scratch-other.yaml
   - name: manifest-referencing-image-not-in-archive
     required: true
     manifests:
@@ -19,5 +26,7 @@ components:
           - deployment-alpine.yaml
   - name: image-archive-component
     imageArchives:
-      - path: scratch.tar
-        images: []
+      - images: []
+        path: sub/scratch.tar
+      - images: []
+        path: scratch-other.tar

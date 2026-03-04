@@ -138,10 +138,8 @@ func patchComponent(patch map[string]any, component string, componentIndex int, 
 }
 
 func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan, archiveImagesScans []ImageArchivesScan) bool {
-	scanMap := make(map[string]map[string]struct{}, len(imageScans))
-	archiveScanMap := make(map[string]map[string]struct{}, len(archiveImagesScans))
-
 	// Map components to all archive images found in archive scans
+	archiveScanMap := make(map[string]map[string]struct{}, len(archiveImagesScans))
 	for _, scan := range archiveImagesScans {
 		var combined []string
 		for _, imageArchive := range scan.ImageArchives {
@@ -154,7 +152,20 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 		archiveScanMap[scan.ComponentName] = imageSet
 	}
 
+	// Map image archive components to archive images
+	componentArchiveMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
+	for _, component := range zarfPackage.Components {
+		imageSet := make(map[string]struct{})
+		for _, archive := range component.ImageArchives {
+			for _, img := range archive.Images {
+				imageSet[img] = struct{}{}
+			}
+		}
+		componentArchiveMap[component.Name] = imageSet
+	}
+
 	// Map comonents to all images found in scan, discounting any images that are included in image archives
+	scanMap := make(map[string]map[string]struct{}, len(imageScans))
 	for _, scan := range imageScans {
 		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
 		imageSet := make(map[string]struct{}, len(combined))
@@ -167,13 +178,24 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 		scanMap[scan.ComponentName] = imageSet
 	}
 
+	// Map component to component images
+	componentMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
+	for _, component := range zarfPackage.Components {
+		imageSet := make(map[string]struct{}, len(component.Images))
+		for _, img := range component.Images {
+			imageSet[img] = struct{}{}
+		}
+		componentMap[component.Name] = imageSet
+	}
+
 	// Update needed if:
 	// 1. A component is found in the package definition that is not included in the scan
 	// 2. An image is found in the component images is not included in the scan images
 	// 3. An image is found in the component imageArchives is not included in the archive scan images
 	for _, component := range zarfPackage.Components {
 		imageSet, found := scanMap[component.Name]
-		if !found {
+		_, foundInArchive := archiveScanMap[component.Name]
+		if !found && !foundInArchive {
 			return true
 		}
 
@@ -190,16 +212,6 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 				}
 			}
 		}
-	}
-
-	// Map component to component images
-	componentMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
-	for _, component := range zarfPackage.Components {
-		imageSet := make(map[string]struct{}, len(component.Images))
-		for _, img := range component.Images {
-			imageSet[img] = struct{}{}
-		}
-		componentMap[component.Name] = imageSet
 	}
 
 	// Update needed if:
@@ -221,25 +233,13 @@ func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageS
 		}
 	}
 
-	// Map image archive components to archive images
-	componentArchiveMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
-	for _, component := range zarfPackage.Components {
-		imageSet := make(map[string]struct{})
-		for _, archive := range component.ImageArchives {
-			for _, img := range archive.Images {
-				imageSet[img] = struct{}{}
-			}
-		}
-		componentArchiveMap[component.Name] = imageSet
-	}
-
 	// Update needed if:
 	// 1. A component is found in the archive scan that is not included in the package definition
 	// 2. An image is found in the archive scan that is not included in the component archive images
 	for _, scan := range archiveImagesScans {
 		componentArchiveImages, found := componentArchiveMap[scan.ComponentName]
 		if !found {
-			return true
+			continue
 		}
 
 		var combined []string

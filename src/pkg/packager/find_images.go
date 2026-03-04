@@ -362,14 +362,22 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 		imageArchiveScans = append(imageArchiveScans, scan)
 	}
 
-	var allScanMatches []string
+	var allScanArtifacts []string
 	for _, scan := range imageScans {
-		allScanMatches = append(allScanMatches, scan.Matches...)
+		allScanArtifacts = append(allScanArtifacts, scan.Matches...)
+		allScanArtifacts = append(allScanArtifacts, scan.PotentialMatches...)
+		allScanArtifacts = append(allScanArtifacts, scan.CosignArtifacts...)
 	}
 
-	// Remove images matches if those images are present in any image imageArchives
+	// Remove scan artifacts if those artifacts are present in any imageArchives
 	for i := range imageScans {
 		imageScans[i].Matches = slices.DeleteFunc(imageScans[i].Matches, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
+		imageScans[i].PotentialMatches = slices.DeleteFunc(imageScans[i].PotentialMatches, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
+		imageScans[i].CosignArtifacts = slices.DeleteFunc(imageScans[i].CosignArtifacts, func(s string) bool {
 			return slices.Contains(allArchiveImages, s)
 		})
 	}
@@ -378,7 +386,7 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 	for i, scan := range imageArchiveScans {
 		for j := range scan.ImageArchives {
 			imageArchiveScans[i].ImageArchives[j].Images = slices.DeleteFunc(imageArchiveScans[i].ImageArchives[j].Images, func(s string) bool {
-				return !slices.Contains(allScanMatches, s)
+				return !slices.Contains(allScanArtifacts, s)
 			})
 		}
 	}
