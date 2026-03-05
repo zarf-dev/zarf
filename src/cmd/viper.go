@@ -126,7 +126,8 @@ const (
 
 	// Dev deploy config keys
 
-	VDevDeployNoYolo = "dev.deploy.no_yolo"
+	VDevDeployNoYolo    = "dev.deploy.no_yolo"
+	VDevDeployConnected = "dev.deploy.connected"
 )
 
 var (
@@ -241,6 +242,9 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Dev deploy defaults
+	v.SetDefault(VDevDeployConnected, true)
 }
 
 // GetStringSlice returns a string slice from viper
