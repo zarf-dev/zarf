@@ -99,6 +99,16 @@ var ZarfRegistryMTLSServerHosts = []string{
 	"[::1]",
 }
 
+// ZarfMode defines how Zarf interacts with the cluster
+type ZarfMode string
+
+const (
+	// ZarfModeAirgap mode is always used on a cluster with Zarf initialized.
+	ZarfModeAirgap ZarfMode = "airgap"
+	// ZarfModeConnected mode is set when only connected or YOLO deployments have been used on a non Zarf initialized cluster.
+	ZarfModeConnected ZarfMode = "connected"
+)
+
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
 
@@ -108,6 +118,8 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
+	// ZarfMode is the mode Zarf is in, either connected or airgap. Assumed airgap by default
+	Mode ZarfMode `json:"mode"`
 	// Machine architecture of the k8s node(s)
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
@@ -124,6 +136,15 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// GetZarfMode returns the Zarf cluster mode.
+// Assumes airgap mode if this is not set.
+func (s State) GetZarfMode() ZarfMode {
+	if s.Mode == "" {
+		return ZarfModeAirgap
+	}
+	return s.Mode
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector

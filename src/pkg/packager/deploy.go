@@ -99,7 +99,6 @@ type DeployResult struct {
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
-	// FIXME: I think this might not be technically true especially with external registries
 	if opts.Connected && pkgLayout.Pkg.IsInitConfig() {
 		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
 	}
@@ -745,8 +744,8 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	}
 	if s == nil && isConnectedOrYOLO {
 		s = &state.State{}
-		// YOLO/connected mode, so minimal state needed
-		s.Distro = "YOLO"
+		// In connected mode, minimal state is needed
+		s.Mode = state.ZarfModeConnected
 
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
@@ -758,10 +757,10 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 	if s == nil {
 		return nil, errors.New("cluster state should not be nil")
 	}
-	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
-		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
-			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
-			"the pod or namespace label `zarf.dev/agent: ignore'.")
+	if isConnectedOrYOLO && s.GetZarfMode() != state.ZarfModeConnected {
+		l.Warn("This is a connected or YOLO deploy, but the cluster was already initialized with 'zarf init'. " +
+			"Zarf will automatically add the label `zarf.dev/agent: ignore' to resources, but any resources deployed in-directly " +
+			"such as through Flux or Helm, may need to have this label set")
 	}
 
 	return s, nil

@@ -57,8 +57,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if pkgName == "" {
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
-	// FIXME: have to consider the distro here I think, may want to make a "connected distro"
-	skipSecretUpdates := connectedDeploy
+	skipSecretUpdates := s.GetZarfMode() == state.ZarfModeConnected
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
@@ -332,7 +331,6 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
 }
 
-// FIXME: I'd prefer to do this in a dynamic way
 // agentMutatedKinds are the resource kinds that the Zarf agent webhook mutates.
 // These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
 var agentMutatedKinds = map[string]bool{
