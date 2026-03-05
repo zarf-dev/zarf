@@ -205,7 +205,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
 			if r.connectedDeploy {
-				if err := r.addAgentIgnoreLabels(obj); err != nil {
+				if err := addAgentIgnoreLabels(obj); err != nil {
 					return err
 				}
 			}
@@ -352,7 +352,7 @@ var agentMutatedKinds = map[schema.GroupKind][][]string{
 	{Group: "", Kind: "Secret"}:                                 {{"metadata", "labels"}},
 }
 
-func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
+func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	labelPaths, ok := agentMutatedKinds[obj.GroupVersionKind().GroupKind()]
 	if !ok {
 		return nil

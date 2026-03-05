@@ -318,12 +318,10 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := &renderer{connectedDeploy: true}
-
 			// Capture pre-existing top-level labels for preservation check
 			preLabels := tt.obj.GetLabels()
 
-			err := r.addAgentIgnoreLabels(tt.obj)
+			err := addAgentIgnoreLabels(tt.obj)
 			require.NoError(t, err)
 
 			// Verify existing top-level labels are preserved
