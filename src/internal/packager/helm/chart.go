@@ -47,9 +47,6 @@ type InstallUpgradeOptions struct {
 	// State is used to update the registry / git server secrets
 	State   *state.State
 	Cluster *cluster.Cluster
-	// FIXME only use one of these
-	// AirgapMode is true if the package being installed is not a YOLO package and it helps determine if Zarf state secrets should be updated
-	AirgapMode bool
 	// ConnectedDeploy is true when deploying with --connected or YOLO mode, causing resources to be labeled with zarf.dev/agent: ignore
 	ConnectedDeploy bool
 	// Timeout for the helm install/upgrade

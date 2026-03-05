@@ -350,9 +350,6 @@ var agentMutatedKinds = map[string]bool{
 	"Secret":         true,
 }
 
-// addAgentIgnoreLabels adds the zarf.dev/agent: ignore label to resources that the Zarf agent
-// would mutate. This is used in connected and YOLO deploys so the agent webhook doesn't rewrite
-// image references or git URLs. It also labels pod templates so spawned pods bypass the pod webhook.
 func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	kind := obj.GetKind()
 	if !agentMutatedKinds[kind] {

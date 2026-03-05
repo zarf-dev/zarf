@@ -502,6 +502,7 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
+// FIXME: add connected or airgap deploy to this
 type DeployedPackage struct {
 	Name               string               `json:"name"`
 	Data               v1alpha1.ZarfPackage `json:"data"`
