@@ -57,7 +57,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if pkgName == "" {
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
-	skipSecretUpdates := s.GetZarfMode() == state.ZarfModeConnected
+	skipSecretUpdates := s.GetClusterMode() == state.ClusterModeConnected
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,

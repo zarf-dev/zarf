@@ -319,7 +319,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	s.Mode = state.ZarfModeAirgap
+	s.ClusterMode = state.ClusterModeAirgap
 
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
