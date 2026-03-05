@@ -333,7 +333,7 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			}
 
 			// Verify the label was set at the paths defined in agentMutatedKinds
-			for _, path := range agentMutatedKinds[tt.obj.GetKind()] {
+			for _, path := range agentMutatedKinds[tt.obj.GroupVersionKind().GroupKind()] {
 				pathLabels, found, err := unstructured.NestedStringMap(tt.obj.Object, path...)
 				require.NoError(t, err)
 				if !found {

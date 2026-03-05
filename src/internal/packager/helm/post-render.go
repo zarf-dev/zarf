@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type renderer struct {
@@ -331,28 +332,28 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
 }
 
-// agentMutatedKinds maps resource kinds mutated by the Zarf agent webhook to the
-// nested label paths that also need the ignore label (e.g. pod template labels).
+// agentMutatedKinds maps resources mutated by the Zarf agent webhook to the
+// label paths where the ignore label should be applied.
 // These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
-var agentMutatedKinds = map[string][][]string{
-	"Pod":            {{"metadata", "labels"}},
-	"Deployment":     {{"spec", "template", "metadata", "labels"}},
-	"StatefulSet":    {{"spec", "template", "metadata", "labels"}},
-	"DaemonSet":      {{"spec", "template", "metadata", "labels"}},
-	"ReplicaSet":     {{"spec", "template", "metadata", "labels"}},
-	"Job":            {{"spec", "template", "metadata", "labels"}},
-	"CronJob":        {{"spec", "jobTemplate", "spec", "template", "metadata", "labels"}},
-	"GitRepository":  {{"metadata", "labels"}},
-	"OCIRepository":  {{"metadata", "labels"}},
-	"HelmRepository": {{"metadata", "labels"}},
-	"Application":    {{"metadata", "labels"}},
-	"ApplicationSet": {{"metadata", "labels"}},
-	"AppProject":     {{"metadata", "labels"}},
-	"Secret":         {{"metadata", "labels"}},
+var agentMutatedKinds = map[schema.GroupKind][][]string{
+	{Group: "", Kind: "Pod"}:                                    {{"metadata", "labels"}},
+	{Group: "apps", Kind: "Deployment"}:                         {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "StatefulSet"}:                        {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "DaemonSet"}:                          {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "ReplicaSet"}:                         {{"spec", "template", "metadata", "labels"}},
+	{Group: "batch", Kind: "Job"}:                               {{"spec", "template", "metadata", "labels"}},
+	{Group: "batch", Kind: "CronJob"}:                           {{"spec", "jobTemplate", "spec", "template", "metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "GitRepository"}:  {{"metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "OCIRepository"}:  {{"metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "HelmRepository"}: {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "Application"}:                 {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "ApplicationSet"}:              {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "AppProject"}:                  {{"metadata", "labels"}},
+	{Group: "", Kind: "Secret"}:                                 {{"metadata", "labels"}},
 }
 
 func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
-	labelPaths, ok := agentMutatedKinds[obj.GetKind()]
+	labelPaths, ok := agentMutatedKinds[obj.GroupVersionKind().GroupKind()]
 	if !ok {
 		return nil
 	}
