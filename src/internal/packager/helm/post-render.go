@@ -331,59 +331,46 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
 }
 
-// agentMutatedKinds are the resource kinds that the Zarf agent webhook mutates.
+// agentMutatedKinds maps resource kinds mutated by the Zarf agent webhook to the
+// nested label paths that also need the ignore label (e.g. pod template labels).
 // These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
-var agentMutatedKinds = map[string]bool{
-	"Pod":            true,
-	"Deployment":     true,
-	"StatefulSet":    true,
-	"DaemonSet":      true,
-	"ReplicaSet":     true,
-	"Job":            true,
-	"CronJob":        true,
-	"GitRepository":  true,
-	"OCIRepository":  true,
-	"HelmRepository": true,
-	"Application":    true,
-	"ApplicationSet": true,
-	"AppProject":     true,
-	"Secret":         true,
+var agentMutatedKinds = map[string][][]string{
+	"Pod":            {{"metadata", "labels"}},
+	"Deployment":     {{"spec", "template", "metadata", "labels"}},
+	"StatefulSet":    {{"spec", "template", "metadata", "labels"}},
+	"DaemonSet":      {{"spec", "template", "metadata", "labels"}},
+	"ReplicaSet":     {{"spec", "template", "metadata", "labels"}},
+	"Job":            {{"spec", "template", "metadata", "labels"}},
+	"CronJob":        {{"spec", "jobTemplate", "spec", "template", "metadata", "labels"}},
+	"GitRepository":  {{"metadata", "labels"}},
+	"OCIRepository":  {{"metadata", "labels"}},
+	"HelmRepository": {{"metadata", "labels"}},
+	"Application":    {{"metadata", "labels"}},
+	"ApplicationSet": {{"metadata", "labels"}},
+	"AppProject":     {{"metadata", "labels"}},
+	"Secret":         {{"metadata", "labels"}},
 }
 
 func (r *renderer) addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
-	kind := obj.GetKind()
-	if !agentMutatedKinds[kind] {
+	labelPaths, ok := agentMutatedKinds[obj.GetKind()]
+	if !ok {
 		return nil
 	}
 
-	// Set agent ignore label on the resource itself
-	labels := obj.GetLabels()
-	if labels == nil {
-		labels = map[string]string{}
-	}
-	labels[cluster.AgentLabel] = "ignore"
-	obj.SetLabels(labels)
-
-	// Label pod templates so spawned pods bypass the webhook.
-	// Deployments, StatefulSets, DaemonSets, ReplicaSets, Jobs use spec.template.
-	// CronJobs use spec.jobTemplate.spec.template.
-	templatePaths := [][]string{
-		{"spec", "template", "metadata", "labels"},
-		{"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
-	}
-	for _, path := range templatePaths {
-		templateLabels, found, err := unstructured.NestedStringMap(obj.Object, path...)
+	for _, path := range labelPaths {
+		labels, found, err := unstructured.NestedStringMap(obj.Object, path...)
 		if err != nil {
 			return err
 		}
-		if found {
-			if templateLabels == nil {
-				templateLabels = map[string]string{}
-			}
-			templateLabels[cluster.AgentLabel] = "ignore"
-			if err := unstructured.SetNestedStringMap(obj.Object, templateLabels, path...); err != nil {
-				return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
-			}
+		if !found {
+			continue
+		}
+		if labels == nil {
+			labels = map[string]string{}
+		}
+		labels[cluster.AgentLabel] = "ignore"
+		if err := unstructured.SetNestedStringMap(obj.Object, labels, path...); err != nil {
+			return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
 		}
 	}
 	return nil

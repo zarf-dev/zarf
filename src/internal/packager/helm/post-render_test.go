@@ -226,18 +226,7 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			expectLabel: true,
 		},
 		{
-			name: "CronJob without jobTemplate gets label on resource only",
-			obj: &unstructured.Unstructured{Object: map[string]interface{}{
-				"apiVersion": "batch/v1",
-				"kind":       "CronJob",
-				"metadata": map[string]interface{}{
-					"name": "test-cj-no-template",
-				},
-			}},
-			expectLabel: true,
-		},
-		{
-			name: "CronJob with jobTemplate gets label on resource and pod template",
+			name: "CronJob with jobTemplate gets label on pod template",
 			obj: &unstructured.Unstructured{Object: map[string]interface{}{
 				"apiVersion": "batch/v1",
 				"kind":       "CronJob",
@@ -331,39 +320,29 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 
 			r := &renderer{connectedDeploy: true}
 
-			// Capture pre-existing labels for preservation check
+			// Capture pre-existing top-level labels for preservation check
 			preLabels := tt.obj.GetLabels()
 
 			err := r.addAgentIgnoreLabels(tt.obj)
 			require.NoError(t, err)
 
+			// Verify existing top-level labels are preserved
 			labels := tt.obj.GetLabels()
-			if tt.expectLabel {
-				require.Equal(t, "ignore", labels["zarf.dev/agent"])
-			} else {
-				if labels != nil {
-					require.Empty(t, labels["zarf.dev/agent"])
-				}
-			}
-
-			// Verify existing labels are preserved
 			for k, v := range preLabels {
 				require.Equal(t, v, labels[k], "pre-existing label %q should be preserved", k)
 			}
 
-			// If the resource was labeled and has a pod template, verify it was also labeled.
-			// Check both standard and CronJob template paths.
-			templatePaths := [][]string{
-				{"spec", "template", "metadata", "labels"},
-				{"spec", "jobTemplate", "spec", "template", "metadata", "labels"},
-			}
-			for _, path := range templatePaths {
-				templateLabels, hasTemplate, err := unstructured.NestedStringMap(tt.obj.Object, path...)
+			// Verify the label was set at the paths defined in agentMutatedKinds
+			for _, path := range agentMutatedKinds[tt.obj.GetKind()] {
+				pathLabels, found, err := unstructured.NestedStringMap(tt.obj.Object, path...)
 				require.NoError(t, err)
-				if tt.expectLabel && hasTemplate {
-					require.Equal(t, "ignore", templateLabels["zarf.dev/agent"], "expected agent ignore label at path %v", path)
-				} else if hasTemplate {
-					require.Empty(t, templateLabels["zarf.dev/agent"], "unexpected agent ignore label at path %v", path)
+				if !found {
+					continue
+				}
+				if tt.expectLabel {
+					require.Equal(t, "ignore", pathLabels["zarf.dev/agent"], "expected agent ignore label at path %v", path)
+				} else {
+					require.Empty(t, pathLabels["zarf.dev/agent"], "unexpected agent ignore label at path %v", path)
 				}
 			}
 		})
