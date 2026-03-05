@@ -14,24 +14,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// FIXME: This test can be run in appliance mode, and in fact should be run in appliance mode.
 func TestConnectedDeploy(t *testing.T) {
 	t.Log("E2E: Connected Deploy")
 
-	// Don't run this test in appliance mode
-	if e2e.ApplianceMode {
-		return
-	}
-
 	tmpdir := t.TempDir()
 
-	// Create the package (with images baked in)
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", filepath.Join("src", "test", "packages", "99-connected-deploy"), "-o", tmpdir, "--confirm", "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", filepath.Join("src", "test", "packages", "47-connected-deploy"), "-o", tmpdir, "--confirm", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
 	pkgPath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-connected-deploy-%s.tar.zst", e2e.Arch))
 
-	// Deploy with --connected flag (images should NOT be pushed to the internal registry)
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--connected", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
@@ -52,7 +44,6 @@ func TestConnectedDeploy(t *testing.T) {
 	require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	require.Equal(t, "ghcr.io/zarf-dev/doom-game:0.0.1", deployment.Spec.Template.Spec.Containers[0].Image, "image should not be rewritten in connected mode")
 
-	// Remove the package
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }

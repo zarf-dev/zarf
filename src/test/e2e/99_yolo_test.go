@@ -63,7 +63,6 @@ func TestDevDeploy(t *testing.T) {
 	}
 
 	// Generic test of dev deploy
-	// FIXME: check on impacts of dev deploy
 	stdOut, stdErr, err := e2e.Zarf(t, "dev", "deploy", "examples/dos-games")
 	require.NoError(t, err, stdOut, stdErr)
 
