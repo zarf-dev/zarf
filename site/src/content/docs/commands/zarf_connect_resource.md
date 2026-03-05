@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf connect resource
 
-Connect to a specific resource in the cluster
+Connect to a service or pod in the cluster
 
 ```
 zarf connect resource [flags]
