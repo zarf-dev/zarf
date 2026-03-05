@@ -1,0 +1,22 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-import-namespacing
+  description: Test package for values import namespacing
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: imported-app
+    required: true
+    import:
+      path: child
+    charts:
+      - name: test-chart
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        version: 6.4.0
+        namespace: test-ns
+        values:
+          - sourcePath: .parent.app.replicas
+            targetPath: .replicaCount

@@ -1,0 +1,7 @@
+# Child package values - these will be namespaced under the component name on import
+app:
+  name: child-default-name
+  environment: child-default-env
+  replicas: 1
+config:
+  setting: child-default-setting
