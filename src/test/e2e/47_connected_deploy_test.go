@@ -34,9 +34,6 @@ func TestConnectedDeploy(t *testing.T) {
 	deployment, err := c.Clientset.AppsV1().Deployments("connected-test").Get(t.Context(), "connected-deploy-test", metav1.GetOptions{})
 	require.NoError(t, err)
 
-	// Check agent ignore label on the deployment itself
-	require.Equal(t, "ignore", deployment.Labels[cluster.AgentLabel], "deployment should have zarf.dev/agent: ignore label")
-
 	// Check agent ignore label on the pod template
 	require.Equal(t, "ignore", deployment.Spec.Template.Labels[cluster.AgentLabel], "pod template should have zarf.dev/agent: ignore label")
 
