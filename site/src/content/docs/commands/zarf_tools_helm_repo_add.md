@@ -24,10 +24,10 @@ zarf tools helm repo add [NAME] [URL] [flags]
   -h, --help                       help for add
       --insecure-skip-tls-verify   skip tls certificate checks for the repository
       --key-file string            identify HTTPS client using this SSL key file
-      --no-update                  Ignored. Formerly, it would disabled forced updates. It is deprecated by force-update.
       --pass-credentials           pass credentials to all domains
       --password string            chart repository password
       --password-stdin             read chart repository password from stdin
+      --timeout duration           time to wait for the index file download to complete (default 2m0s)
       --username string            chart repository username
 ```
 
@@ -35,6 +35,9 @@ zarf tools helm repo add [NAME] [URL] [flags]
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --kube-apiserver string           the address and the port for the Kubernetes API server

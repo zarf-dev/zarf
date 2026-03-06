@@ -34,19 +34,28 @@ zarf tools helm dependency update CHART [flags]
 ### Options
 
 ```
-  -h, --help             help for update
-      --keyring string   keyring containing public keys
-      --skip-refresh     do not refresh the local repository cache
-      --verify           verify the packages against signatures
+      --ca-file string             verify certificates of HTTPS-enabled servers using this CA bundle
+      --cert-file string           identify HTTPS client using this SSL certificate file
+  -h, --help                       help for update
+      --insecure-skip-tls-verify   skip tls certificate checks for the chart download
+      --key-file string            identify HTTPS client using this SSL key file
+      --keyring string             keyring containing public keys
+      --password string            chart repository password where to locate the requested chart
+      --plain-http                 use insecure HTTP connections for the chart download
+      --skip-refresh               do not refresh the local repository cache
+      --username string            chart repository username where to locate the requested chart
+      --verify                     verify the packages against signatures
 ```
 
 ### Options inherited from parent commands
 
 ```
       --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
       --debug                           enable verbose output
       --features stringToString         [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
-      --insecure-skip-tls-verify        Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --kube-apiserver string           the address and the port for the Kubernetes API server
       --kube-as-group stringArray       group to impersonate for the operation, this flag can be repeated to specify multiple groups.
       --kube-as-user string             username to impersonate for the operation
@@ -57,7 +66,6 @@ zarf tools helm dependency update CHART [flags]
       --kube-token string               bearer token used for authentication
       --kubeconfig string               path to the kubeconfig file
   -n, --namespace string                namespace scope for this request
-      --plain-http                      Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
       --registry-config string          path to the registry config file
       --repository-cache string         path to the directory containing cached repository indexes
