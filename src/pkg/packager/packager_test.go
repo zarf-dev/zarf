@@ -18,10 +18,11 @@ func TestOverridePackageNamespace(t *testing.T) {
 	allow := false
 
 	tt := []struct {
-		name        string
-		pkg         v1alpha1.ZarfPackage
-		namespace   string
-		expectedErr string
+		name                   string
+		pkg                    v1alpha1.ZarfPackage
+		namespace              string
+		expectedWaitNamespaces []string
+		expectedErr            string
 	}{
 		{
 			name: "override namespace",
@@ -39,6 +40,39 @@ func TestOverridePackageNamespace(t *testing.T) {
 				},
 			},
 			namespace: "test-override",
+		},
+		{
+			name: "override namespace with wait action",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			namespace:              "test-override",
+			expectedWaitNamespaces: []string{"test-override"},
 		},
 		{
 			name: "multiple namespaces",
@@ -61,6 +95,40 @@ func TestOverridePackageNamespace(t *testing.T) {
 			},
 			namespace:   "test-override",
 			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+		},
+		{
+			name: "wait action with different namespace is not updated when not matching override namespace",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{
+								Name:      "test",
+								Namespace: "test",
+							},
+						},
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{
+										Wait: &v1alpha1.ZarfComponentActionWait{
+											Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test-pod",
+												Namespace: "different-namespace",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+			// wait action namespace "different-namespace" should NOT be updated since it doesn't match "test"
+			expectedWaitNamespaces: []string{"different-namespace"},
 		},
 		{
 			name: "init package namespace override",
@@ -109,7 +177,7 @@ func TestOverridePackageNamespace(t *testing.T) {
 			err := OverridePackageNamespace(tc.pkg, tc.namespace)
 			if tc.expectedErr == "" {
 				require.NoError(t, err)
-				validateNamespaceUpdates(t, tc.pkg, tc.namespace)
+				validateNamespaceUpdates(t, tc.pkg, tc.namespace, tc.expectedWaitNamespaces)
 			} else {
 				require.ErrorContains(t, err, tc.expectedErr)
 			}
@@ -117,16 +185,36 @@ func TestOverridePackageNamespace(t *testing.T) {
 	}
 }
 
-func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, namespace string) {
+func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, targetNamespace string, expectedWaitNamespaces []string) {
 	t.Helper()
+	actualWaitNamespaces := make([]string, 0)
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			require.Equal(t, chart.Namespace, namespace)
+			require.Equal(t, targetNamespace, chart.Namespace)
 		}
 		for _, manifest := range component.Manifests {
-			require.Equal(t, manifest.Namespace, namespace)
+			require.Equal(t, targetNamespace, manifest.Namespace)
+		}
+		actualWaitNamespaces = append(actualWaitNamespaces, collectWaitNamespaces(component.Actions)...)
+	}
+	require.ElementsMatch(t, expectedWaitNamespaces, actualWaitNamespaces)
+}
+
+func collectWaitNamespaces(actions v1alpha1.ZarfComponentActions) []string {
+	var ns []string
+	allSets := [][]v1alpha1.ZarfComponentAction{
+		actions.OnCreate.Before, actions.OnCreate.After, actions.OnCreate.OnSuccess, actions.OnCreate.OnFailure,
+		actions.OnDeploy.Before, actions.OnDeploy.After, actions.OnDeploy.OnSuccess, actions.OnDeploy.OnFailure,
+		actions.OnRemove.Before, actions.OnRemove.After, actions.OnRemove.OnSuccess, actions.OnRemove.OnFailure,
+	}
+	for _, set := range allSets {
+		for _, action := range set {
+			if action.Wait != nil && action.Wait.Cluster != nil {
+				ns = append(ns, action.Wait.Cluster.Namespace)
+			}
 		}
 	}
+	return ns
 }
 
 func Test_generateValuesOverrides(t *testing.T) {
