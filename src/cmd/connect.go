@@ -134,6 +134,7 @@ func newConnectResourceCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "resource",
 		Short: lang.CmdConnectResourceShort,
+		Long:  lang.CmdConnectResourceLong,
 		RunE:  o.run,
 	}
 

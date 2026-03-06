@@ -68,7 +68,13 @@ const (
 	CmdConnectListShort = "Lists all available connection shortcuts"
 
 	// zarf connect resource
-	CmdConnectResourceShort          = "Connect to a specific resource in the cluster"
+	CmdConnectResourceShort = "Connect to a specific resource in the cluster"
+	CmdConnectResourceLong  = "Sets up a local k8s port-forward to a resource in the cluster.\n" +
+		"Examples:\n" +
+		"  # Connect to a service on a random local port:\n" +
+		"  zarf connect resource --name my-svc --namespace my-namespace --remote-port 8080\n\n" +
+		"  # Connect to a pod on a specified local port:\n" +
+		"  zarf connect resource --name my-pod --type=pod --namespace my-namespace --remote-port 8080 --local-port 9090"
 	CmdConnectResourceFlagName       = "The name of the resource to connect to"
 	CmdConnectResourceFlagNamespace  = "The namespace of the resource"
 	CmdConnectResourceFlagRemotePort = "The remote port of the resource to connect to"
