@@ -162,7 +162,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagRegPushPass = "Password for the push-user to connect to the registry"
 	CmdInitFlagRegPullUser = "Username for pull-only access to the registry"
 	CmdInitFlagRegPullPass = "Password for the pull-only user to access the registry"
-	CmdInitFlagRegSecret   = "Internal registry secret value. Only used when --registry-url is not set"
+	CmdInitFlagRegSecret   = "Internal registry secret value. Only used when --registry-url is not set."
 
 	CmdInitFlagArtifactURL       = "[alpha] External artifact registry url to use for this Zarf cluster"
 	CmdInitFlagArtifactPushUser  = "[alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts."
