@@ -53,6 +53,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
+		"operation", r.Operation,
 		"git-server", s.GitServer.Address)
 
 	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
@@ -64,7 +65,11 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	patchedURL := repo.Spec.URL
 
-	if !isPatched {
+	if isPatched {
+		l.Debug("skipping mutation, Flux GitRepository URL already points to Zarf git server",
+			"url", repo.Spec.URL,
+			"operation", r.Operation)
+	} else {
 		transformedURL, err := transform.GitURL(s.GitServer.Address, patchedURL, s.GitServer.PushUsername)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)

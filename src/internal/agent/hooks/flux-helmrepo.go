@@ -62,6 +62,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	l.Info("using the Zarf registry URL to mutate the Flux HelmRepository",
 		"name", src.Name,
+		"operation", r.Operation,
 		"registry", registryAddress)
 
 	patchedURL := src.Spec.URL
@@ -82,7 +83,11 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		}
 	}
 
-	if !isPatched {
+	if isPatched {
+		l.Debug("skipping mutation, Flux HelmRepository URL already points to Zarf registry",
+			"url", src.Spec.URL,
+			"operation", r.Operation)
+	} else {
 		var patchedSrc string
 		if isPatchedClusterIP {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, src.Spec.URL)
@@ -101,9 +106,8 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 			return nil, fmt.Errorf("unable to parse the HelmRepo URL: %w", err)
 		}
 		patchedURL = helpers.OCIURLPrefix + patchedRefInfo.Name
+		l.Debug("mutating the Flux HelmRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
 	}
-
-	l.Debug("mutating the Flux HelmRepository URL to the Zarf URL", "original", src.Spec.URL, "mutated", patchedURL)
 
 	var patches []operations.PatchOperation
 

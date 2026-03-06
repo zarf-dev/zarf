@@ -73,6 +73,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
 		"name", app.Name,
+		"operation", r.Operation,
 		"git-server", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
@@ -112,16 +113,17 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
 	}
 
-	patchedURL := repoURL
-	if !isPatched {
-		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
-		if err != nil {
-			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
-		}
-		patchedURL = transformedURL.String()
-		l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
+	if isPatched {
+		l.Debug("skipping mutation, ArgoCD Application repoURL already points to Zarf git server", "url", repoURL)
+		return repoURL, nil
 	}
 
+	transformedURL, err := transform.GitURL(gs.Address, repoURL, gs.PushUsername)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
+	}
+	patchedURL := transformedURL.String()
+	l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	return patchedURL, nil
 }
 
