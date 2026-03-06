@@ -96,8 +96,6 @@ func (o *connectOptions) run(cmd *cobra.Command, args []string) error {
 	return waitForTunnel(ctx, tunnel, o.open)
 }
 
-// waitForTunnel handles the shared logic of logging the tunnel URLs, optionally opening a browser,
-// and waiting for user interrupt or tunnel error.
 func waitForTunnel(ctx context.Context, tunnel *cluster.Tunnel, openBrowser bool) error {
 	l := logger.From(ctx)
 	urls := tunnel.FullURLs()
@@ -122,13 +120,11 @@ func waitForTunnel(ctx context.Context, tunnel *cluster.Tunnel, openBrowser bool
 	}
 }
 
-// connectResourceOptions holds the command-line options for 'connect resource' sub-command.
 type connectResourceOptions struct {
 	open bool
 	zt   cluster.TunnelInfo
 }
 
-// newConnectResourceCommand creates the `connect resource` sub-command.
 func newConnectResourceCommand() *cobra.Command {
 	o := &connectResourceOptions{}
 	cmd := &cobra.Command{

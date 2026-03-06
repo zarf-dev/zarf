@@ -53,23 +53,20 @@ const (
 
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
-	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster referenced by your kube-context.\n" +
+	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster.\n" +
 		"Two default options for this command are <REGISTRY|GIT>. These will connect to the Zarf created resources " +
 		"(assuming they were selected when performing the `zarf init` command).\n\n" +
 		"Packages can provide service manifests that define their own shortcut connection options. These options will be " +
-		"printed to the terminal when the package finishes deploying.\n If you don't remember what connection shortcuts your deployed " +
+		"printed to the terminal when the package finishes deploying.\nIf you don't remember what connection shortcuts your deployed " +
 		"package offers, you can search your cluster for services that have the 'zarf.dev/connect-name' label. The value of that label is " +
-		"the name you will pass into the 'zarf connect' command.\n\n" +
-		"Even if the packages you deploy don't define their own shortcut connection options, you can use the command flags " +
-		"to connect into specific resources. You can read the command flag descriptions below to get a better idea how to connect " +
-		"to whatever resource you are trying to connect to."
+		"the name you will pass into the 'zarf connect' command."
 
 	// zarf connect list
 	CmdConnectListShort = "Lists all available connection shortcuts"
 
 	// zarf connect resource
-	CmdConnectResourceShort = "Connect to a specific resource in the cluster"
-	CmdConnectResourceLong  = "Sets up a local k8s port-forward to a resource in the cluster.\n" +
+	CmdConnectResourceShort = "Connect to a service or pod in the cluster"
+	CmdConnectResourceLong  = "Sets up a local k8s port-forward to a service or pod in the cluster.\n" +
 		"Examples:\n" +
 		"  # Connect to a service on a random local port:\n" +
 		"  zarf connect resource --name my-svc --namespace my-namespace --remote-port 8080\n\n" +

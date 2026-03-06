@@ -8,11 +8,11 @@ tableOfContents: false
 
 ## zarf connect resource
 
-Connect to a specific resource in the cluster
+Connect to a service or pod in the cluster
 
 ### Synopsis
 
-Sets up a local k8s port-forward to a resource in the cluster.
+Sets up a local k8s port-forward to a service or pod in the cluster.
 Examples:
   # Connect to a service on a random local port:
   zarf connect resource --name my-svc --namespace my-namespace --remote-port 8080
