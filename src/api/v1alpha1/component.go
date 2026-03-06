@@ -290,8 +290,8 @@ type ZarfComponentActions struct {
 	OnRemove ZarfComponentActionSet `json:"onRemove,omitempty"`
 }
 
-// GetAll returns all actions from all action sets.
-func (a ZarfComponentActions) GetAll() []ZarfComponentAction {
+// inherently read-only as getAll() returns slice of value-copied actions
+func (a ZarfComponentActions) getAll() []ZarfComponentAction {
 	var actions []ZarfComponentAction
 	actions = append(actions, a.OnCreate.Before...)
 	actions = append(actions, a.OnCreate.After...)

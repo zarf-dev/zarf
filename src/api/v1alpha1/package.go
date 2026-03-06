@@ -102,6 +102,8 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 }
 
 // UniqueNamespaceCount returns the number of unique namespaces in the package.
+//
+// Deprecated: Use UniqueNamespaces instead.
 func (pkg ZarfPackage) UniqueNamespaceCount() int {
 	uniqueNamespaces := make(map[string]struct{})
 	for _, component := range pkg.Components {
@@ -129,7 +131,9 @@ func (pkg ZarfPackage) UniqueNamespaces() []string {
 	return slices.Collect(maps.Keys(uniqueNamespaces))
 }
 
-// UpdateAllComponentNamespaces updates all existing chart/manifest namespaces to the provided one
+// UpdateAllComponentNamespaces updates all existing chart/manifest namespaces to the provided one.
+//
+// Deprecated: Use UpdateAllComponentNamespacesByName instead.
 func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
 	for i := range pkg.Components {
 		comp := pkg.Components[i]
@@ -144,7 +148,6 @@ func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
 
 // UpdateAllComponentNamespacesByName updates all matching namespaces to the provided one
 func (pkg ZarfPackage) UpdateAllComponentNamespacesByName(original, target string) {
-	// In order to only update matching existing namespaces we need to identify
 	for i := range pkg.Components {
 		comp := pkg.Components[i]
 		for j := range comp.Charts {

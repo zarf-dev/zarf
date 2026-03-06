@@ -282,7 +282,7 @@ func TestUpdateAllComponentNamespacesByName(t *testing.T) {
 				for _, manifest := range comp.Manifests {
 					chartNamespaces = append(chartNamespaces, manifest.Namespace)
 				}
-				for _, action := range comp.Actions.GetAll() {
+				for _, action := range comp.Actions.getAll() {
 					if action.Wait != nil && action.Wait.Cluster != nil && action.Wait.Cluster.Namespace != "" {
 						waitNamespaces = append(waitNamespaces, action.Wait.Cluster.Namespace)
 					}
