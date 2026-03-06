@@ -146,6 +146,207 @@ data:
 	require.Equal(t, "key: value\n", data["config.yaml"])
 }
 
+func TestAddAgentIgnoreLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		obj         *unstructured.Unstructured
+		expectLabel bool
+	}{
+		{
+			name: "Deployment gets label on resource and pod template",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deploy",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app": "test",
+							},
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Pod gets label but has no template",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Pod",
+				"metadata": map[string]interface{}{
+					"name": "test-pod",
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Secret gets label",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Secret",
+				"metadata": map[string]interface{}{
+					"name": "test-secret",
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "ConfigMap is not an agent-mutated kind, no label",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "ConfigMap",
+				"metadata": map[string]interface{}{
+					"name": "test-cm",
+				},
+			}},
+			expectLabel: false,
+		},
+		{
+			name: "StatefulSet with pod template",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "StatefulSet",
+				"metadata": map[string]interface{}{
+					"name": "test-sts",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{},
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "CronJob with jobTemplate gets label on pod template",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "batch/v1",
+				"kind":       "CronJob",
+				"metadata": map[string]interface{}{
+					"name": "test-cj",
+				},
+				"spec": map[string]interface{}{
+					"jobTemplate": map[string]interface{}{
+						"spec": map[string]interface{}{
+							"template": map[string]interface{}{
+								"metadata": map[string]interface{}{
+									"labels": map[string]interface{}{
+										"app": "cron",
+									},
+								},
+							},
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "GitRepository (Flux) gets label",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "source.toolkit.fluxcd.io/v1",
+				"kind":       "GitRepository",
+				"metadata": map[string]interface{}{
+					"name": "test-git-repo",
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Deployment with no existing labels gets label added",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deploy-no-labels",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{},
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Deployment preserves existing labels",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deploy-existing",
+					"labels": map[string]interface{}{
+						"existing": "label",
+					},
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app": "myapp",
+							},
+						},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Service is not agent-mutated",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Service",
+				"metadata": map[string]interface{}{
+					"name": "test-svc",
+				},
+			}},
+			expectLabel: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Capture pre-existing top-level labels for preservation check
+			preLabels := tt.obj.GetLabels()
+
+			err := addAgentIgnoreLabels(tt.obj)
+			require.NoError(t, err)
+
+			// Verify existing top-level labels are preserved
+			labels := tt.obj.GetLabels()
+			for k, v := range preLabels {
+				require.Equal(t, v, labels[k], "pre-existing label %q should be preserved", k)
+			}
+
+			// Verify the label was set at the paths defined in agentMutatedKinds
+			for _, path := range agentMutatedKinds[tt.obj.GroupVersionKind().GroupKind()] {
+				pathLabels, found, err := unstructured.NestedStringMap(tt.obj.Object, path...)
+				require.NoError(t, err)
+				if !found {
+					continue
+				}
+				if tt.expectLabel {
+					require.Equal(t, "ignore", pathLabels["zarf.dev/agent"], "expected agent ignore label at path %v", path)
+				} else {
+					require.Empty(t, pathLabels["zarf.dev/agent"], "unexpected agent ignore label at path %v", path)
+				}
+			}
+		})
+	}
+}
+
 func TestProcessManifestContentEmptyObject(t *testing.T) {
 	t.Parallel()
 

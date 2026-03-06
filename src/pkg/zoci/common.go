@@ -43,6 +43,8 @@ const (
 	ImageLayers LayersSelector = "images"
 	// ComponentLayers is the selector for component layers including metadata
 	ComponentLayers LayersSelector = "components"
+	// ConnectedLayers is the selector for all layers except images, used for connected deploys
+	ConnectedLayers LayersSelector = "connected"
 )
 
 const (

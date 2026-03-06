@@ -99,6 +99,16 @@ var ZarfRegistryMTLSServerHosts = []string{
 	"[::1]",
 }
 
+// ClusterMode defines how Zarf interacts with the cluster
+type ClusterMode string
+
+const (
+	// ClusterModeAirgap mode is always used on a cluster with Zarf initialized.
+	ClusterModeAirgap ClusterMode = "airgap"
+	// ClusterModeConnected mode is set when only connected or YOLO deployments have been used on a non Zarf initialized cluster.
+	ClusterModeConnected ClusterMode = "connected"
+)
+
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
 
@@ -108,6 +118,9 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
+	// ClusterMode is the mode Zarf is in, either connected or airgap.
+	// Decides if secrets are propagated to new namespaces
+	ClusterMode ClusterMode `json:"clusterMode"`
 	// Machine architecture of the k8s node(s)
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
@@ -124,6 +137,15 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
+}
+
+// GetClusterMode returns the Zarf cluster mode.
+// Assumes airgap mode if this is not set.
+func (s State) GetClusterMode() ClusterMode {
+	if s.ClusterMode == "" {
+		return ClusterModeAirgap
+	}
+	return s.ClusterMode
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -479,6 +501,16 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// DeployMode defines mode Zarf Packages were deployed using
+type DeployMode string
+
+const (
+	// DeployModeAirgap is the default deploy mode
+	DeployModeAirgap DeployMode = "airgap"
+	// DeployModeConnected is used when a package is deployed with YOLO or in connected mode.
+	DeployModeConnected DeployMode = "connected"
+)
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
@@ -488,6 +520,7 @@ type DeployedPackage struct {
 	Generation         int                  `json:"generation"`
 	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	DeployMode         DeployMode           `json:"deployMode"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }

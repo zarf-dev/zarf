@@ -375,7 +375,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
 		State:          newState,
 		Cluster:        c,
-		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
 	}

@@ -40,6 +40,8 @@ type LoadOptions struct {
 	LayersSelector zoci.LayersSelector
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
+	// Connected skips pulling image layers from OCI sources
+	Connected bool
 	// Only applicable to OCI + HTTP
 	types.RemoteOptions
 	// VerificationStrategy for explicit definition
@@ -56,7 +58,11 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	if opts.LayersSelector == "" {
-		opts.LayersSelector = zoci.AllLayers
+		if opts.Connected {
+			opts.LayersSelector = zoci.ConnectedLayers
+		} else {
+			opts.LayersSelector = zoci.AllLayers
+		}
 	}
 
 	srcType, err := identifySource(source)
