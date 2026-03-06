@@ -36,16 +36,18 @@ func ReferenceFromMetadataWithOptions(registryLocation string, pkg v1alpha1.Zarf
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	// Use the explicit tag if provided, otherwise fall back to the package version.
+	// Use the explicit tag if provided
+	// do not include flavor if provided
 	tag := pkg.Metadata.Version
 	if opts.Tag != "" {
 		tag = opts.Tag
+	} else {
+		if pkg.Build.Flavor != "" {
+			tag = fmt.Sprintf("%s-%s", tag, pkg.Build.Flavor)
+		}
 	}
 
 	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, tag)
-	if pkg.Build.Flavor != "" {
-		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
-	}
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {

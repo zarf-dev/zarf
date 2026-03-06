@@ -89,6 +89,10 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		Retries:        opts.Retries,
 	}
 
+	if src.Reference != dst.Reference {
+		publishOptions.Tag = dst.Reference
+	}
+
 	// Execute copy
 	err = zoci.CopyPackage(ctx, srcRemote, dstRemote, publishOptions)
 	if err != nil {

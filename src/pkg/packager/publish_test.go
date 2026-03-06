@@ -471,6 +471,7 @@ func TestPublishCopyTag(t *testing.T) {
 		name             string
 		packageToPublish string
 		opts             PublishPackageOptions
+		dstTag           string
 	}{
 		{
 			name:             "Publish package",
@@ -479,6 +480,16 @@ func TestPublishCopyTag(t *testing.T) {
 				RemoteOptions:  defaultTestRemoteOptions(),
 				OCIConcurrency: 3,
 			},
+			dstTag: "0.0.1",
+		},
+		{
+			name:             "Publish package with tag override",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:  defaultTestRemoteOptions(),
+				OCIConcurrency: 3,
+			},
+			dstTag: "latest",
 		},
 	}
 
@@ -497,7 +508,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			dstRegistryRef := createRegistry(ctx, t)
 
-			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
+			dst := fmt.Sprintf("%s/%s:%s", dstRegistryRef.String(), "test", tc.dstTag)
 			dstRegistry, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
@@ -513,6 +524,8 @@ func TestPublishCopyTag(t *testing.T) {
 
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
+
+			require.Equal(t, tc.dstTag, dstRegistry.Reference)
 
 			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 
