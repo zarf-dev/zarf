@@ -77,7 +77,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use
-      --registry-secret string          Registry secret value
+      --registry-secret string          Internal registry secret value. Only used when --registry-url is not set.
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set-variables stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
