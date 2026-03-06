@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -36,6 +37,10 @@ func TestConnectedDeploy(t *testing.T) {
 
 	require.Equal(t, "ignore", deployment.Spec.Template.Labels[cluster.AgentLabel], "pod template should have zarf.dev/agent: ignore label")
 	require.Equal(t, "ghcr.io/zarf-dev/doom-game:0.0.1", deployment.Spec.Template.Spec.Containers[0].Image, "image should not be rewritten in connected mode")
+
+	deployedPkg, err := c.GetDeployedPackage(t.Context(), "connected-deploy")
+	require.NoError(t, err)
+	require.Equal(t, state.DeployModeConnected, deployedPkg.DeployMode, "package secret should record connected deploy mode")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
