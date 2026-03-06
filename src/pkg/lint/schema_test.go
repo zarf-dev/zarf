@@ -6,7 +6,6 @@ package lint
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -190,14 +189,7 @@ func TestValidatePackageSchema(t *testing.T) {
 		"PACKAGE_NAME": "test-package",
 		"MY_COMP_NAME": "test-comp",
 	}
-	cwd, err := os.Getwd()
-	require.NoError(t, err)
-	err = os.Chdir(filepath.Join("testdata", "package-with-templates"))
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, os.Chdir(cwd))
-	}()
-	findings, err := ValidatePackageSchema(setVariables)
+	findings, err := ValidatePackageSchemaAtPath(filepath.Join("testdata", "package-with-templates"), setVariables)
 	require.Empty(t, findings)
 	require.NoError(t, err)
 }

@@ -178,7 +178,7 @@ func NewZarfCommand() *cobra.Command {
 		Long:         lang.RootCmdLong,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
-		// TODO(mkcp): Do we actually want to silence errors here?
+		// We use silence errors so we can print out errors in the Zarf log format
 		SilenceErrors:     true,
 		PersistentPreRunE: preRun,
 		Run:               run,
@@ -231,15 +231,15 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
+	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
 }
 
 // Execute is the entrypoint for the CLI.
-func Execute(ctx context.Context) {
+func Execute(ctx context.Context) error {
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
-		return
+		return nil
 	}
 
 	// Check if we need to use the default err printer
@@ -252,7 +252,7 @@ func Execute(ctx context.Context) {
 
 	// Use default logger in case there was an error prior to the logger being setup
 	logger.Default().Error(err.Error())
-	os.Exit(1)
+	return err
 }
 
 // setupLogger handles creating a logger and setting it as the global default.

@@ -36,6 +36,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // AssembleOptions are the options for creating a package from a package object
@@ -54,6 +55,7 @@ type AssembleOptions struct {
 	CachePath string
 	// WithBuildMachineInfo includes build machine information (hostname and username) in the package metadata
 	WithBuildMachineInfo bool
+	types.RemoteOptions
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
@@ -102,7 +104,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 	for _, component := range pkg.Components {
-		err := assemblePackageComponent(ctx, component, packagePath, buildPath)
+		err := assemblePackageComponent(ctx, component, packagePath, buildPath, opts.RemoteOptions)
 		if err != nil {
 			return nil, err
 		}
@@ -140,8 +142,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			Arch:                  pkg.Metadata.Architecture,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
+			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 		}
 		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
@@ -347,7 +349,7 @@ func validateImageArchivesNoDuplicates(components []v1alpha1.ZarfComponent) erro
 	return nil
 }
 
-func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string) (err error) {
+func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfComponent, packagePath, buildPath string, remoteOpts types.RemoteOptions) (err error) {
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return err
@@ -370,7 +372,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	for _, chart := range component.Charts {
 		chartPath := filepath.Join(compBuildPath, string(ChartsComponentDir))
 		valuesFilePath := filepath.Join(compBuildPath, string(ValuesComponentDir))
-		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath)
+		err := PackageChart(ctx, chart, packagePath, chartPath, valuesFilePath, remoteOpts)
 		if err != nil {
 			return err
 		}
@@ -386,7 +388,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				// get the compressedFileName from the source
 				compressedFileName, err := helpers.ExtractBasePathFromURL(file.Source)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrFileNameExtract, file.Source, err)
 				}
 				tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 				if err != nil {
@@ -399,18 +401,18 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 				// If the file is an archive, download it to the componentPath.Temp
 				if err := utils.DownloadToFile(ctx, file.Source, compressedFile); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
 				}
 				decompressOpts := archive.DecompressOpts{
 					Files: []string{file.ExtractPath},
 				}
 				err = archive.Decompress(ctx, compressedFile, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, compressedFileName, err)
 				}
 			} else {
 				if err := utils.DownloadToFile(ctx, file.Source, dst); err != nil {
-					return fmt.Errorf(lang.ErrDownloading, file.Source, err.Error())
+					return fmt.Errorf(lang.ErrDownloading, file.Source, err)
 				}
 			}
 		} else {
@@ -424,7 +426,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				}
 				err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 				if err != nil {
-					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
+					return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 				}
 			} else {
 				if err := helpers.CreatePathAndCopy(src, dst); err != nil {
@@ -469,7 +471,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 
 		if helpers.IsURL(data.Source) {
 			if err := utils.DownloadToFile(ctx, data.Source, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, data.Source, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, data.Source, err)
 			}
 		} else {
 			src := data.Source
@@ -477,7 +479,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 				src = filepath.Join(packagePath, data.Source)
 			}
 			if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-				return fmt.Errorf("unable to copy data injection %s: %s", data.Source, err.Error())
+				return fmt.Errorf("unable to copy data injection %s: %w", data.Source, err)
 			}
 		}
 	}
@@ -538,7 +540,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 		// Copy manifests without any processing.
 		if helpers.IsURL(path) {
 			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err.Error())
+				return fmt.Errorf(lang.ErrDownloading, path, err)
 			}
 		} else {
 			src := path
@@ -568,7 +570,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 }
 
 // PackageChart takes a Zarf Chart definition and packs it into a package layout
-func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string) error {
+func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath string, chartPath string, valuesFilePath string, remoteOpts types.RemoteOptions) error {
 	if chart.LocalPath != "" && !filepath.IsAbs(chart.LocalPath) {
 		chart.LocalPath = filepath.Join(packagePath, chart.LocalPath)
 	}
@@ -581,7 +583,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath str
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
-	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath); err != nil {
+	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles
@@ -654,7 +656,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 			err = archive.Decompress(ctx, src, destinationDir, decompressOpts)
 			if err != nil {
-				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err.Error())
+				return fmt.Errorf(lang.ErrFileExtract, file.ExtractPath, src, err)
 			}
 
 			// Make sure dst reflects the actual file or directory.
@@ -705,7 +707,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			src = filepath.Join(packagePath, src)
 		}
 		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-			return fmt.Errorf("unable to copy data injection %s: %s", src, err.Error())
+			return fmt.Errorf("unable to copy data injection %s: %w", src, err)
 		}
 
 		component.DataInjections[dataIdx].Source = rel
@@ -834,6 +836,10 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// set signed to false by default - this is updated if signing occurs.
 	signed := false
 	pkg.Build.Signed = &signed
+
+	// Record checksums.txt as a supplemental file — it cannot checksum itself.
+	// Signature files are appended by SignPackage() if signing occurs.
+	pkg.Build.ProvenanceFiles = []string{Checksums}
 
 	return pkg
 }

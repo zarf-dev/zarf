@@ -36,19 +36,6 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	return getSchemaFindings(jsonSchema, untypedZarfPackage)
 }
 
-// ValidatePackageSchema checks the Zarf package in the current directory against the Zarf schema
-func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, error) {
-	var untypedZarfPackage interface{}
-	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
-		return nil, err
-	}
-	jsonSchema := schema.GetV1Alpha1Schema()
-	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
-		return nil, err
-	}
-	return getSchemaFindings(jsonSchema, untypedZarfPackage)
-}
-
 func makeFieldPathYqCompat(field string) string {
 	if field == "(root)" {
 		return field

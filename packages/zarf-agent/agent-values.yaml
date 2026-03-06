@@ -1,0 +1,8 @@
+affinity:
+  ###ZARF_VAR_AGENT_AFFINITY###
+
+tolerations:
+  ###ZARF_VAR_AGENT_TOLERATIONS###
+
+nodeSelector:
+  ###ZARF_VAR_AGENT_NODE_SELECTOR###

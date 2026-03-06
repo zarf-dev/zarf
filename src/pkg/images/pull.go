@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/context/docker"
 	"github.com/docker/cli/cli/flags"
@@ -40,7 +42,6 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -117,8 +118,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if err != nil {
 		return nil, fmt.Errorf("failed to get credentials: %w", err)
 	}
+	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
 	client := &auth.Client{
-		Client:     retry.DefaultClient,
+		Client: &http.Client{
+			Transport: transport,
+		},
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
 	}
@@ -139,11 +146,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// we can't error here because there may be a faked registry used for the docker fallback mechanism
 			_ = registry.Ping(ctx) //nolint: errcheck
 		}
-	}
-
-	client.Client.Transport, err = orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
-	if err != nil {
-		return nil, err
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
@@ -167,10 +169,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
-			repo.Reference, err = registry.ParseReference(image.overridden.Reference)
+			ref, err := registry.ParseReference(image.overridden.Reference)
 			if err != nil {
 				return err
 			}
+			repo.Reference = ref
 			repo.Client = client
 
 			repo.PlainHTTP = opts.PlainHTTP
@@ -469,10 +472,33 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 	pullSrc = orasCache.New(repo, localCache)
-	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-	trackedDst.StartReporting(ctx)
-	defer trackedDst.StopReporting()
-	desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+	var desc ocispec.Descriptor
+	err = retry.Do(
+		func() error {
+			trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+			trackedDst.StartReporting(ctx)
+			defer trackedDst.StopReporting()
+			var copyErr error
+			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+			return copyErr
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying image pull",
+					"attempt", n+1,
+					"max_attempts", config.ZarfDefaultRetries,
+					"image", imageInfo.registryOverrideRef,
+					"error", err,
+				)
+			}
+		}),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}

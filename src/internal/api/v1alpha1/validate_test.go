@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package lint contains functions for verifying zarf yaml files are valid
-package lint
+// Package v1alpha1 contains functions for validating and converting v1alpha1 structs
+package v1alpha1
 
 import (
 	"fmt"

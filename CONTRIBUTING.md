@@ -86,6 +86,10 @@ The Technical Steering Committee (the "TSC") will be responsible for all technic
 Affiliation: Defense Unicorns
 GitHub: @AustinAbro321
 
+#### Brandt Keller
+Affiliation: Defense Unicorns
+GitHub: @brandtkeller
+
 #### Danny Gershman
 Affiliation: Radius Method
 GitHub: @dgershman
@@ -93,10 +97,6 @@ GitHub: @dgershman
 #### Jeff McCoy (TSC Chair)
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
-
-#### Kit Patella
-Affiliation: Defense Unicorns
-GitHub: @mkcp
 
 #### Wayne Starr
 Affiliation: Defense Unicorns

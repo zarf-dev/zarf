@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -46,6 +47,171 @@ func TestListConnections(t *testing.T) {
 		},
 	}
 	require.Equal(t, expectedConnections, connections)
+}
+
+func TestCheckForZarfConnectLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		svc         corev1.Service
+		connectName string
+		expectedErr string
+		expected    TunnelInfo
+	}{
+		{
+			// A service with no ports (e.g. ExternalName)
+			name: "service with no ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "no-ports",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "my-connect",
+					},
+				},
+				Spec: corev1.ServiceSpec{},
+			},
+			connectName: "my-connect",
+			expectedErr: "service default/no-ports has no ports",
+		},
+		{
+			name: "service with ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+					Labels: map[string]string{
+						ZarfConnectLabelName: "web-ui",
+					},
+					Annotations: map[string]string{
+						ZarfConnectAnnotationURL: "/dashboard",
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Port:       8080,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+				},
+			},
+			connectName: "web-ui",
+			expected: TunnelInfo{
+				ResourceType: SvcResource,
+				ResourceName: "web",
+				Namespace:    "app-ns",
+				RemotePort:   8080,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Cluster{
+				Clientset: fake.NewClientset(),
+			}
+			_, err := c.Clientset.CoreV1().Services(tt.svc.Namespace).Create(context.Background(), &tt.svc, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			ti, err := c.checkForZarfConnectLabel(context.Background(), tt.connectName)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected.ResourceType, ti.ResourceType)
+			require.Equal(t, tt.expected.ResourceName, ti.ResourceName)
+			require.Equal(t, tt.expected.Namespace, ti.Namespace)
+			require.Equal(t, tt.expected.RemotePort, ti.RemotePort)
+		})
+	}
+}
+
+func TestFindPodContainerPort(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		svc          corev1.Service
+		pods         []corev1.Pod
+		expectedErr  string
+		expectedPort int
+	}{
+		{
+			name: "service with no ports",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "no-ports",
+				},
+				Spec: corev1.ServiceSpec{},
+			},
+			expectedErr: "service default/no-ports has no ports",
+		},
+		{
+			name: "matching named port on pod",
+			svc: corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "app-ns",
+					Name:      "web",
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{"app": "web"},
+					Ports: []corev1.ServicePort{
+						{
+							Port:       80,
+							TargetPort: intstr.FromString("http"),
+						},
+					},
+				},
+			},
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "app-ns",
+						Name:      "web-ui",
+						Labels:    map[string]string{"app": "web"},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: "server",
+								Ports: []corev1.ContainerPort{
+									{
+										Name:          "http",
+										ContainerPort: 8080,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedPort: 8080,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Cluster{
+				Clientset: fake.NewClientset(),
+			}
+			for i := range tt.pods {
+				_, err := c.Clientset.CoreV1().Pods(tt.pods[i].Namespace).Create(context.Background(), &tt.pods[i], metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+
+			port, err := c.findPodContainerPort(context.Background(), tt.svc)
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedPort, port)
+		})
+	}
 }
 
 func TestServiceInfoFromNodePortURL(t *testing.T) {

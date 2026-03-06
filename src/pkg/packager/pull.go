@@ -17,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -41,7 +42,7 @@ type PullOptions struct {
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
-	RemoteOptions
+	types.RemoteOptions
 	// VerificationStrategy for explicit definition
 	layout.VerificationStrategy
 }
@@ -102,7 +103,7 @@ type pullOCIOptions struct {
 	OCIConcurrency int
 	CachePath      string
 	PublicKeyPath  string
-	RemoteOptions
+	types.RemoteOptions
 	layout.VerificationStrategy
 }
 

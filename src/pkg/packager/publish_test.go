@@ -20,14 +20,15 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-func defaultTestRemoteOptions() RemoteOptions {
-	return RemoteOptions{
+func defaultTestRemoteOptions() types.RemoteOptions {
+	return types.RemoteOptions{
 		PlainHTTP: true,
 	}
 }

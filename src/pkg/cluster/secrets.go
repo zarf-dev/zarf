@@ -18,6 +18,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
@@ -181,30 +182,81 @@ func (c *Cluster) UpdateZarfManagedGitSecrets(ctx context.Context, s *state.Stat
 	return nil
 }
 
-// GetServiceInfoFromRegistryAddress gets the service info for a registry address if it is a NodePort
-func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registryInfo state.RegistryInfo) (string, error) {
+// ApplyZarfManagedMTLSSecrets regenerates and updates all Zarf-managed mTLS secrets.
+// It generates fresh certificates, applies them to the zarf namespace, and copies
+// the client certificate to all namespaces that have the mTLS client secret.
+func (c *Cluster) ApplyZarfManagedMTLSSecrets(ctx context.Context) error {
+	l := logger.From(ctx)
+
+	serverPKI, clientPKI, err := pki.GenerateMTLSCerts(
+		state.ZarfRegistryMTLSCASubject,
+		state.ZarfRegistryMTLSServerHosts,
+		state.ZarfRegistryMTLSServerCommonName,
+		state.ZarfRegistryMTLSClientCommonName,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to generate mTLS certificates: %w", err)
+	}
+
+	if err := c.ApplyZarfRegistryCertSecrets(ctx, serverPKI, clientPKI); err != nil {
+		return fmt.Errorf("failed to apply registry certs to zarf namespace: %w", err)
+	}
+
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
+		LabelSelector: state.ZarfManagedByLabel + "=zarf",
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list Zarf-managed namespaces: %w", err)
+	}
+
+	for _, namespace := range namespaceList.Items {
+		// Skip the zarf namespace since we already updated it
+		if namespace.Name == state.ZarfNamespaceName {
+			continue
+		}
+		// Skip if namespace is skipped/ignored and secret is not managed by Zarf
+		if namespace.Labels[AgentLabel] == "skip" || namespace.Labels[AgentLabel] == "ignore" {
+			continue
+		}
+		l.Info("applying Zarf managed mTLS client secret for namespace", "name", namespace.Name)
+		if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, namespace.Name); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// GetServiceInfoFromRegistryAddress gets the service info for a registry address
+// If the address is not a service then it is returned
+// If the address is a service then the service DNS name and clusterIP is returned
+func (c *Cluster) GetServiceInfoFromRegistryAddress(ctx context.Context, registryInfo state.RegistryInfo) (string, string, error) {
 	if registryInfo.RegistryMode == state.RegistryModeProxy {
-		svc, err := c.Clientset.CoreV1().Services("zarf").Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
+		svc, err := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Get(ctx, ZarfRegistryName, metav1.GetOptions{})
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		if len(svc.Spec.Ports) == 0 {
-			return "", fmt.Errorf("registry service has no ports")
+			return "", "", fmt.Errorf("registry service has no ports")
 		}
-		return net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", svc.Spec.Ports[0].Port)), nil
+		serviceDNS := fmt.Sprintf("%s.%s.svc.cluster.local:%d", ZarfRegistryName, state.ZarfNamespaceName, svc.Spec.Ports[0].Port)
+		clusterIP := net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", svc.Spec.Ports[0].Port))
+		return serviceDNS, clusterIP, nil
 	}
 
 	serviceList, err := c.Clientset.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// If this is an internal service then we need to look it up and
 	svc, port, err := serviceInfoFromNodePortURL(serviceList.Items, registryInfo.Address)
 	if err != nil {
 		logger.From(ctx).Debug("registry appears to not be a nodeport service, using original address", "address", registryInfo.Address)
-		return registryInfo.Address, nil
+		return registryInfo.Address, "", nil
 	}
 
-	return net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", port)), nil
+	serviceDNS := fmt.Sprintf("%s.%s.svc.cluster.local:%d", svc.Name, svc.Namespace, port)
+	clusterIP := net.JoinHostPort(svc.Spec.ClusterIP, fmt.Sprintf("%d", port))
+	return serviceDNS, clusterIP, nil
 }

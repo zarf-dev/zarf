@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeployOptions are the optionalParameters to DevDeploy
@@ -45,7 +46,7 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -66,6 +67,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		CachePath:        opts.CachePath,
 		IsInteractive:    false,
 		SkipVersionCheck: opts.SkipVersionCheck,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -137,10 +139,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
 		OCIConcurrency: opts.OCIConcurrency,
-		RemoteOptions: RemoteOptions{
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
-		},
+		RemoteOptions:  opts.RemoteOptions,
 	})
 	if err != nil {
 		return err

@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,13 +18,13 @@ import (
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
@@ -104,22 +105,36 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}
 		}
 
+		var transport http.RoundTripper
+		var certs pki.GeneratedPKI
+		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
+			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if err != nil {
+				return err
+			}
+			transport, err = pki.TransportWithKey(certs)
+			if err != nil {
+				return err
+			}
+		} else {
+			transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if err != nil {
+				return err
+			}
+		}
+
 		client := &auth.Client{
-			Client: orasRetry.DefaultClient,
-			Cache:  auth.NewCache(),
+			Client: &http.Client{
+				Transport: transport,
+			},
+			Cache: auth.NewCache(),
 			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
 				Username: registryInfo.PushUsername,
 				Password: registryInfo.PushPassword,
 			}),
 		}
 
-		client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
-		if err != nil {
-			return err
-		}
-
 		plainHTTP := cfg.PlainHTTP
-
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
 			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)

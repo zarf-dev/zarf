@@ -19,7 +19,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/registry/remote/auth"
@@ -38,7 +37,7 @@ type RegistryOverride struct {
 }
 
 const (
-	//DockerMediaTypeManifest is the Legacy Docker manifest format, replaced by OCI manifest
+	// DockerMediaTypeManifest is the Legacy Docker manifest format, replaced by OCI manifest
 	DockerMediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
 	// DockerMediaTypeManifestList is the legacy Docker manifest list, replaced by OCI index
 	DockerMediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
@@ -61,7 +60,7 @@ func isLayer(mediaType string) bool {
 	return false
 }
 
-// OnlyHasImageLayers returns true when an OCI manifest only containers container image layers.
+// OnlyHasImageLayers returns true when an OCI manifest only contains container image layers.
 func OnlyHasImageLayers(manifest ocispec.Manifest) bool {
 	for _, layer := range manifest.Layers {
 		if !isLayer(string(layer.MediaType)) {
@@ -127,6 +126,7 @@ func isManifest(mediaType string) bool {
 	}
 	return false
 }
+
 func isIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
@@ -188,8 +188,8 @@ func NoopOpt(*crane.Options) {}
 
 // WithGlobalInsecureFlag returns an option for crane that configures insecure
 // based upon Zarf's global --insecure-skip-tls-verify flag.
-func WithGlobalInsecureFlag() []crane.Option {
-	if config.CommonOptions.InsecureSkipTLSVerify {
+func WithGlobalInsecureFlag(insecure bool) []crane.Option {
+	if insecure {
 		return []crane.Option{crane.Insecure}
 	}
 	// passing a nil option will cause panic

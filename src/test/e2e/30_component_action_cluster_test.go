@@ -35,11 +35,11 @@ func TestComponentActionEdgeCases(t *testing.T) {
 	t.Log("E2E: Component action edge cases")
 
 	tmpdir := t.TempDir()
-	sourcePath := filepath.Join("src", "test", "packages", "31-component-actions-edgecases")
+	sourcePath := filepath.Join("src", "test", "packages", "30-component-actions-edgecases")
 	packageName := fmt.Sprintf("zarf-package-component-actions-edgecases-%s.tar.zst", e2e.Arch)
 	packagePath := filepath.Join(tmpdir, packageName)
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", sourcePath, "--confirm", "-o", tmpdir)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", sourcePath, "--confirm", "-o", tmpdir, "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm")

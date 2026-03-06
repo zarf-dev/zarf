@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // CreateOptions are the optional parameters to create
@@ -34,7 +35,7 @@ type CreateOptions struct {
 	CachePath               string
 	WithBuildMachineInfo    bool
 	// applicable when output is an OCI registry
-	RemoteOptions
+	types.RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
@@ -54,6 +55,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		IsInteractive:      opts.IsInteractive,
 		SkipRequiredValues: true,
 		SkipVersionCheck:   opts.SkipVersionCheck,
+		RemoteOptions:      opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -93,6 +95,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		SigningKeyPassword:   opts.SigningKeyPassword,
 		CachePath:            opts.CachePath,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
+		RemoteOptions:        opts.RemoteOptions,
 	}
 	pkgLayout, err := layout.AssemblePackage(ctx, pkg, pkgPath.BaseDir, assembleOpt)
 	if err != nil {

@@ -28,6 +28,7 @@ spec:
           type: "RuntimeDefault"
       affinity: {{- toYaml .Values.affinity | nindent 8 }}
       tolerations: {{- toYaml .Values.tolerations | nindent 8 }}
+      nodeSelector: {{- toYaml .Values.nodeSelector | nindent 8 }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"

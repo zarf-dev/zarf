@@ -17,9 +17,10 @@ zarf tools registry prune [flags]
 ### Options
 
 ```
-  -c, --confirm    Confirm the image prune action to prevent accidental deletions
-  -h, --help       help for prune
-      --insecure   Allow image references to be fetched without TLS
+  -c, --confirm          Confirm the image prune action to prevent accidental deletions
+  -h, --help             help for prune
+      --ignore-missing   Ignore missing image manifests and continue pruning
+      --insecure         Allow image references to be fetched without TLS
 ```
 
 ### Options inherited from parent commands
