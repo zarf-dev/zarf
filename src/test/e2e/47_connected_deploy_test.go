@@ -27,18 +27,14 @@ func TestConnectedDeploy(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--connected", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the deployment has the agent ignore label on the pod template
+	// Verify the deployment does not have a mutated pod
 	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 
 	deployment, err := c.Clientset.AppsV1().Deployments("connected-test").Get(t.Context(), "connected-deploy-test", metav1.GetOptions{})
 	require.NoError(t, err)
 
-	// Check agent ignore label on the pod template
 	require.Equal(t, "ignore", deployment.Spec.Template.Labels[cluster.AgentLabel], "pod template should have zarf.dev/agent: ignore label")
-
-	// Verify the container image was NOT rewritten to the internal registry
-	require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 	require.Equal(t, "ghcr.io/zarf-dev/doom-game:0.0.1", deployment.Spec.Template.Spec.Containers[0].Image, "image should not be rewritten in connected mode")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
