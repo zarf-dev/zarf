@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.73.2](https://github.com/zarf-dev/zarf/compare/v0.73.1...v0.73.2) (2026-03-06)
+
+
+### Features
+
+* add retries on create operations ([#4664](https://github.com/zarf-dev/zarf/issues/4664)) ([23afb84](https://github.com/zarf-dev/zarf/commit/23afb84546c9c51a8a6ee7186f693f6be79fe5e8))
+
+
+### Bug Fixes
+
+* close chunk file descriptors per iteration in `SplitFile` ([#4656](https://github.com/zarf-dev/zarf/issues/4656)) ([a9d1700](https://github.com/zarf-dev/zarf/commit/a9d1700c89f06cfd8669484d8d083014bdf16069))
+* close leaked file handles in `pull_test.go` HTTP handlers ([#4657](https://github.com/zarf-dev/zarf/issues/4657)) ([0ef41d7](https://github.com/zarf-dev/zarf/commit/0ef41d7ac9f81c0b495a0e35c8a82155d43f7fca))
+
 ## [0.73.1](https://github.com/zarf-dev/zarf/compare/v0.73.0...v0.73.1) (2026-03-03)
 
 
