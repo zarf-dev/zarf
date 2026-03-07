@@ -218,6 +218,165 @@ func TestFindImages(t *testing.T) {
 	}
 }
 
+func TestFilterImagesFoundInArchives(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	tests := []struct {
+		name                       string
+		packagePath                string
+		expectedErr                string
+		expectedImageArchivesScan  []ImageArchivesScan
+		expectedComponentImageScan []ComponentImageScan
+		imageScans                 []ComponentImageScan
+	}{
+		{
+			name:                      "no image archives",
+			packagePath:               "./testdata/find-images/helm-chart/",
+			expectedImageArchivesScan: []ImageArchivesScan{},
+			expectedComponentImageScan: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"nginx:1.16.0",
+						"busybox",
+					},
+				},
+			},
+			imageScans: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"nginx:1.16.0",
+						"busybox",
+					},
+				},
+			},
+		},
+		{
+			name:        "images found in archives",
+			packagePath: "./testdata/find-images/image-archives/",
+			expectedImageArchivesScan: []ImageArchivesScan{
+				{
+					ComponentName: "image-archive-component",
+					ImageArchives: []ImageArchive{
+						{
+							Images: []string{
+								"docker.io/library/scratch:latest",
+							},
+						},
+					},
+				},
+			},
+			expectedComponentImageScan: []ComponentImageScan{
+				{
+					ComponentName: "manifest-referencing-image-in-archive",
+				},
+				{
+					ComponentName: "manifest-referencing-image-not-in-archive",
+					Matches: []string{
+						"docker.io/library/alpine:latest",
+					},
+				},
+			},
+			imageScans: []ComponentImageScan{
+				{
+					ComponentName: "manifest-referencing-image-in-archive",
+					Matches: []string{
+						"docker.io/library/scratch:latest",
+					},
+				},
+				{
+					ComponentName: "manifest-referencing-image-not-in-archive",
+					Matches: []string{
+						"docker.io/library/alpine:latest",
+					},
+				},
+			},
+		},
+		{
+			name:        "images found in different archives",
+			packagePath: "./testdata/find-images/multiple-image-archives/",
+			expectedImageArchivesScan: []ImageArchivesScan{
+				{
+					ComponentName: "image-archive-component",
+					ImageArchives: []ImageArchive{
+						{
+							Images: []string{
+								"docker.io/library/scratch:latest",
+							},
+						},
+						{
+							Images: []string{
+								"docker.io/library/scratch:other",
+							},
+						},
+					},
+				},
+			},
+			expectedComponentImageScan: []ComponentImageScan{
+				{
+					ComponentName: "manifest-referencing-image-in-archive",
+				},
+				{
+					ComponentName: "manifest-referencing-scratch-other-image-in-archive",
+				},
+				{
+					ComponentName: "manifest-referencing-image-not-in-archive",
+					Matches: []string{
+						"docker.io/library/alpine:latest",
+					},
+				},
+			},
+			imageScans: []ComponentImageScan{
+				{
+					ComponentName: "manifest-referencing-image-in-archive",
+					Matches: []string{
+						"docker.io/library/scratch:latest",
+					},
+				},
+				{
+					ComponentName: "manifest-referencing-scratch-other-image-in-archive",
+					Matches: []string{
+						"docker.io/library/scratch:other",
+					},
+				},
+				{
+					ComponentName: "manifest-referencing-image-not-in-archive",
+					Matches: []string{
+						"docker.io/library/alpine:latest",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			imageArchivesScans, imagesScans, err := FilterImagesFoundInArchives(ctx, tt.packagePath, tt.imageScans)
+
+			if tt.expectedErr != "" {
+				require.EqualError(t, err, tt.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, tt.expectedComponentImageScan, len(imagesScans))
+			require.Len(t, tt.expectedImageArchivesScan, len(imageArchivesScans))
+
+			for i, expected := range tt.expectedComponentImageScan {
+				require.Equal(t, expected.ComponentName, imagesScans[i].ComponentName)
+				require.ElementsMatch(t, expected.Matches, imagesScans[i].Matches)
+			}
+
+			for i, expected := range tt.expectedImageArchivesScan {
+				require.Equal(t, expected.ComponentName, imageArchivesScans[i].ComponentName)
+				for j, expectedArchive := range expected.ImageArchives {
+					require.ElementsMatch(t, expectedArchive.Images, imageArchivesScans[i].ImageArchives[j].Images)
+				}
+			}
+		})
+	}
+}
+
 func TestBuildImageMap(t *testing.T) {
 	t.Parallel()
 
