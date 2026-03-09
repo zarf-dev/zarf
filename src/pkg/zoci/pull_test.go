@@ -67,11 +67,10 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
 	bothComponents := pkgLayout.Pkg.Components
 
-	// No layer types specified = all layer types
-	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly)
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
 
-	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents)
+	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
 
 	// Requesting one component should pull fewer layers than requesting both
@@ -127,8 +126,7 @@ func TestAssembleLayers(t *testing.T) {
 			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
-			// no layer types = all layers
-			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components)
+			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, zoci.GetAllLayerTypes()...)
 			require.NoError(t, err)
 			require.Len(t, layers, 10)
 
