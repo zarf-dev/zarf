@@ -76,8 +76,10 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 
-	includeAll := len(include) == 0
-	includeSet := make(map[LayerType]bool, len(include))
+	includeSet := make(map[LayerType]bool)
+	if len(include) == 0 {
+		include = GetAllLayerTypes()
+	}
 	for _, lt := range include {
 		includeSet[lt] = true
 	}
@@ -96,15 +98,15 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 
-	if includeAll || includeSet[ComponentLayers] || includeSet[ImageLayers] {
+	if includeSet[ComponentLayers] || includeSet[ImageLayers] {
 		componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-		if includeAll || includeSet[ComponentLayers] {
+		if includeSet[ComponentLayers] {
 			layers = append(layers, componentLayers...)
 		}
-		if (includeAll || includeSet[ImageLayers]) && len(images) > 0 {
+		if (includeSet[ImageLayers]) && len(images) > 0 {
 			imageLayers, err := r.LayersFromImages(ctx, images)
 			if err != nil {
 				return nil, err
@@ -113,14 +115,14 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		}
 	}
 
-	if includeAll || includeSet[SbomLayers] {
+	if includeSet[SbomLayers] {
 		desc := root.Locate(layout.SBOMTar)
 		if !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
 	}
 
-	if includeAll || includeSet[DocLayers] {
+	if includeSet[DocLayers] {
 		if len(pkg.Documentation) > 0 {
 			desc := root.Locate(layout.DocumentationTar)
 			if !oci.IsEmptyDescriptor(desc) {

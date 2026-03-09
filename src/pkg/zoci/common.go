@@ -44,13 +44,15 @@ const (
 	DocLayers LayerType = "documentation"
 )
 
-// AllLayerTypes is the complete set of layer types in a Zarf OCI package.
-var AllLayerTypes = []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
+// GetAllLayerTypes returns the complete set of layer types in a Zarf OCI package.
+func GetAllLayerTypes() []LayerType {
+	return []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
+}
 
 // ExcludeLayerTypes returns all layer types except the specified ones.
 func ExcludeLayerTypes(exclude ...LayerType) []LayerType {
 	var result []LayerType
-	for _, lt := range AllLayerTypes {
+	for _, lt := range GetAllLayerTypes() {
 		if !slices.Contains(exclude, lt) {
 			result = append(result, lt)
 		}
