@@ -204,5 +204,6 @@ func (r *Remote) LayersFromImages(ctx context.Context, images map[string]bool) (
 			layers = append(layers, root.Locate(layerPath))
 		}
 	}
-	return layers, nil
+	// Remove duplicate descriptors in case of shared base layers
+	return oci.RemoveDuplicateDescriptors(layers), nil
 }
