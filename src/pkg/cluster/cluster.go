@@ -190,7 +190,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	// If state is nil, this is a new cluster.
 	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
-	// FIXME: also do this in connected mode
 	if s == nil {
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
