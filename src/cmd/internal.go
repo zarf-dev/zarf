@@ -137,8 +137,13 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "no-color")
 				}
 
+				// Remove the docs for the various sub-commands for `kubectl`
+				if toolCmd.Use == "kubectl" {
+					toolCmd.RemoveCommand(toolCmd.Commands()...)
+				}
+
 				// Remove the default values from all of the helm commands during the CLI command doc generation
-				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
+				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" || toolCmd.Use == "kubectl" {
 					toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 						if flag.Value.Type() == "string" {
 							flag.DefValue = ""
