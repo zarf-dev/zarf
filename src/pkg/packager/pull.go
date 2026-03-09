@@ -139,9 +139,9 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	layerTypes := opts.LayerTypes
 	if len(layerTypes) == 0 {
 		layerTypes = zoci.GetAllLayerTypes()
-		if isSkeleton(desc.Platform) {
-			layerTypes = zoci.ExcludeLayerTypes(layerTypes, zoci.ImageLayers)
-		}
+	}
+	if isSkeleton(desc.Platform) {
+		layerTypes = zoci.ExcludeLayerTypes(layerTypes, zoci.ImageLayers)
 	}
 	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
 	if err != nil {
