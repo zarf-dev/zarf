@@ -331,7 +331,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
-	if state.CheckIfCredsChanged(s.RegistryInfo, registryInfo) {
+	if state.CheckIfRegistryCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {

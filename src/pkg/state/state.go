@@ -284,8 +284,8 @@ func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
-// CheckIfCredsChanged compares two RegistryInfo structs and returns true if any non-empty fields have changed
-func CheckIfCredsChanged(existing, given RegistryInfo) bool {
+// CheckIfRegistryCredsChanged compares two RegistryInfo structs and returns true if any non-empty fields have changed
+func CheckIfRegistryCredsChanged(existing, given RegistryInfo) bool {
 	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
 		return true
 	}
