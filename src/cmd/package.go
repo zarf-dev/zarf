@@ -352,11 +352,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, !o.confirm),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
