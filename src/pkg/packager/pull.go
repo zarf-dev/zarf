@@ -98,7 +98,7 @@ type pullOCIOptions struct {
 	Source         string
 	Shasum         string
 	Architecture   string
-	LayersSelector zoci.LayersSelector
+	LayerTypes     []zoci.LayerType
 	Filter         filters.ComponentFilterStrategy
 	OCIConcurrency int
 	CachePath      string
@@ -138,7 +138,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 
 	// zarf creates layers around the contents of component primarily
 	// this assembles the layers for the components - whether filtered above or not
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayerTypes...)
 	if err != nil {
 		return nil, err
 	}

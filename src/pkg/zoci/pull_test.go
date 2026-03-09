@@ -67,10 +67,11 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
 	bothComponents := pkgLayout.Pkg.Components
 
-	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, false, zoci.AllLayers)
+	// No layer types specified = all layer types
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, false)
 	require.NoError(t, err)
 
-	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, false, zoci.AllLayers)
+	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, false)
 	require.NoError(t, err)
 
 	// Requesting one component should pull fewer layers than requesting both
@@ -126,14 +127,14 @@ func TestAssembleLayers(t *testing.T) {
 			remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(tc.opts.PlainHTTP), cacheModifier)
 			require.NoError(t, err)
 
-			// get all layers
-			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.AllLayers)
+			// no layer types = all layers
+			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false)
 			require.NoError(t, err)
 			require.Len(t, layers, 10)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
-			// get sbom layers - it appears as though the sbom layers are not deterministic
+			// get sbom layers
 			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
 			require.NoError(t, err)
 			require.Len(t, sbomInspectLayers, 3)

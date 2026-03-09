@@ -67,63 +67,69 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 	return layersToPull, nil
 }
 
-// AssembleLayers returns all layers for the given zarf package to pull from OCI.
-func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool, layersSelector LayersSelector) ([]ocispec.Descriptor, error) {
-	layerMap := make(map[LayersSelector][]ocispec.Descriptor, 0)
-
-	// fetching the root manifest is the common denominator for all layers
+// AssembleLayers returns the OCI layer descriptors for the requested components.
+// The include parameter specifies which layer types to return. When no layer types
+// are specified, all layer types are included. Metadata layers are always included.
+func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, isSkeleton bool, include ...LayerType) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// We always pull the metadata layers provided we can locate them
-	alwaysPull := make([]ocispec.Descriptor, 0)
+	includeAll := len(include) == 0
+	includeSet := make(map[LayerType]bool, len(include))
+	for _, lt := range include {
+		includeSet[lt] = true
+	}
+
+	// Metadata layers are always included
+	layers := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
 		desc := root.Locate(path)
 		if !oci.IsEmptyDescriptor(desc) {
-			alwaysPull = append(alwaysPull, desc)
+			layers = append(layers, desc)
 		}
 	}
-	layerMap[MetadataLayers] = alwaysPull
-	// component layers are required for standard pulls and manifest inspects
+
 	pkg, err := r.FetchZarfYAML(ctx)
 	if err != nil {
 		return nil, err
 	}
-	componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
-	if err != nil {
-		return nil, err
-	}
-	layerMap[ComponentLayers] = componentLayers
-	// there may not be any image layers - let's create the slice such that map key is present
-	imageLayers := make([]ocispec.Descriptor, 0)
-	if len(images) > 0 && !isSkeleton {
-		// images layers are required for standard pulls
-		imageLayers, err = r.LayersFromImages(ctx, images)
+
+	if includeAll || includeSet[ComponentLayers] || includeSet[ImageLayers] {
+		componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-	}
-	layerMap[ImageLayers] = imageLayers
-	// there may not be any sbom layers - let's create the slice such that map key is present
-	sbomLayers := make([]ocispec.Descriptor, 0)
-	sbomsDescriptor := root.Locate(layout.SBOMTar)
-	if !oci.IsEmptyDescriptor(sbomsDescriptor) {
-		sbomLayers = append(sbomLayers, sbomsDescriptor)
-	}
-	layerMap[SbomLayers] = sbomLayers
-
-	docLayers := make([]ocispec.Descriptor, 0)
-	if len(pkg.Documentation) > 0 {
-		docDescriptor := root.Locate(layout.DocumentationTar)
-		if !oci.IsEmptyDescriptor(docDescriptor) {
-			docLayers = append(docLayers, docDescriptor)
+		if includeAll || includeSet[ComponentLayers] {
+			layers = append(layers, componentLayers...)
+		}
+		if (includeAll || includeSet[ImageLayers]) && len(images) > 0 && !isSkeleton {
+			imageLayers, err := r.LayersFromImages(ctx, images)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, imageLayers...)
 		}
 	}
-	layerMap[DocLayers] = docLayers
 
-	return filterLayers(layerMap, layersSelector)
+	if includeAll || includeSet[SbomLayers] {
+		desc := root.Locate(layout.SBOMTar)
+		if !oci.IsEmptyDescriptor(desc) {
+			layers = append(layers, desc)
+		}
+	}
+
+	if includeAll || includeSet[DocLayers] {
+		if len(pkg.Documentation) > 0 {
+			desc := root.Locate(layout.DocumentationTar)
+			if !oci.IsEmptyDescriptor(desc) {
+				layers = append(layers, desc)
+			}
+		}
+	}
+
+	return layers, nil
 }
 
 // LayersFromComponents returns the layers for the given components to pull from OCI.
@@ -198,37 +204,6 @@ func (r *Remote) LayersFromImages(ctx context.Context, images map[string]bool) (
 			layerPath := filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())
 			layers = append(layers, root.Locate(layerPath))
 		}
-	}
-	return layers, nil
-}
-
-// FilterLayers filters the layers based on the LayersSelector.
-func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelector LayersSelector) ([]ocispec.Descriptor, error) {
-	layers := make([]ocispec.Descriptor, 0)
-
-	switch layersSelector {
-	case AllLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[ComponentLayers]...)
-		layers = append(layers, layerMap[ImageLayers]...)
-		layers = append(layers, layerMap[SbomLayers]...)
-		layers = append(layers, layerMap[DocLayers]...)
-	case SbomLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[SbomLayers]...)
-	case MetadataLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-	case ComponentLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[ComponentLayers]...)
-	case ImageLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[ImageLayers]...)
-	case DocLayers:
-		layers = append(layers, layerMap[MetadataLayers]...)
-		layers = append(layers, layerMap[DocLayers]...)
-	default:
-		return nil, fmt.Errorf("unknown inspect target %s", layersSelector)
 	}
 	return layers, nil
 }

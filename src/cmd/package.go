@@ -802,7 +802,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -917,7 +917,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1028,7 +1028,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.SbomLayers,
+		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1216,7 +1216,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.DocLayers,
+		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -2028,7 +2028,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.MetadataLayers,
+		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
