@@ -69,7 +69,7 @@ func (r *Remote) PullPackage(ctx context.Context, destinationDir string, concurr
 
 // AssembleLayers returns the OCI layer descriptors for the requested components.
 // The include parameter specifies which layer types to return.
-// Only Metadata layers are included if include is empty, and Metadata layers are always included
+// All layers are included if include is empty and Metadata layers are always included
 func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alpha1.ZarfComponent, include ...LayerType) ([]ocispec.Descriptor, error) {
 	root, err := r.FetchRoot(ctx)
 	if err != nil {

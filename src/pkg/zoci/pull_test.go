@@ -58,23 +58,21 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(pkgLayout.Pkg.Metadata.Name) //nolint:errcheck
 
-	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
-	require.NoError(t, err)
 	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
-	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true), cacheModifier)
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
 	require.NoError(t, err)
 
 	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
 	bothComponents := pkgLayout.Pkg.Components
 
-	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, zoci.GetAllLayerTypes()...)
-	require.NoError(t, err)
-
+	// Requesting one component should pull fewer layers than requesting both
 	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, zoci.GetAllLayerTypes()...)
 	require.NoError(t, err)
+	require.Len(t, allLayersFull, 4)
 
-	// Requesting one component should pull fewer layers than requesting both
-	require.Less(t, len(allLayersSubset), len(allLayersFull))
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, zoci.GetAllLayerTypes()...)
+	require.NoError(t, err)
+	require.Len(t, allLayersSubset, 3)
 }
 
 func TestAssembleLayers(t *testing.T) {
