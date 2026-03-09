@@ -99,14 +99,15 @@ var ZarfRegistryMTLSServerHosts = []string{
 	"[::1]",
 }
 
-// ClusterMode defines how Zarf interacts with the cluster
-type ClusterMode string
+// Connectivity defines how Zarf interacts with the cluster
+type Connectivity string
 
 const (
-	// ClusterModeAirgap mode is always used on a cluster with Zarf initialized.
-	ClusterModeAirgap ClusterMode = "airgap"
-	// ClusterModeConnected mode is set when only connected or YOLO deployments have been used on a non Zarf initialized cluster.
-	ClusterModeConnected ClusterMode = "connected"
+	// ConnectivityModeAirgap mode is always used on a cluster with Zarf initialized.
+	ConnectivityModeAirgap Connectivity = "airgap"
+	// ConnectivityModeConnected mode is when there is no Zarf infrastructure data
+	// set when there are only connected or YOLO deployments on a non Zarf initialized cluster.
+	ConnectivityModeConnected Connectivity = "connected"
 )
 
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
@@ -118,9 +119,8 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// ClusterMode is the mode Zarf is in, either connected or airgap.
-	// Decides if secrets are propagated to new namespaces
-	ClusterMode ClusterMode `json:"clusterMode"`
+	// Connectivity describes how Zarf sets up resources
+	Connectivity Connectivity `json:"connectivityMode"`
 	// Machine architecture of the k8s node(s)
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
@@ -141,11 +141,11 @@ type State struct {
 
 // GetClusterMode returns the Zarf cluster mode.
 // Assumes airgap mode if this is not set.
-func (s State) GetClusterMode() ClusterMode {
-	if s.ClusterMode == "" {
-		return ClusterModeAirgap
+func (s State) GetClusterMode() Connectivity {
+	if s.Connectivity == "" {
+		return ConnectivityModeAirgap
 	}
-	return s.ClusterMode
+	return s.Connectivity
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -501,14 +501,14 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
-// DeployMode defines mode Zarf Packages were deployed using
-type DeployMode string
+// PackageConnectivity defines the connectivity mode of package deployments
+type PackageConnectivity string
 
 const (
-	// DeployModeAirgap is the default deploy mode
-	DeployModeAirgap DeployMode = "airgap"
-	// DeployModeConnected is used when a package is deployed with YOLO or in connected mode.
-	DeployModeConnected DeployMode = "connected"
+	// PackageConnectivityAirGap is the default deploy mode
+	PackageConnectivityAirGap PackageConnectivity = "airgap"
+	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
+	PackageConnectivityConnected PackageConnectivity = "connected"
 )
 
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
@@ -520,7 +520,7 @@ type DeployedPackage struct {
 	Generation         int                  `json:"generation"`
 	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
 	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
-	DeployMode         DeployMode           `json:"deployMode"`
+	Connectivity       PackageConnectivity  `json:"connectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }

@@ -167,11 +167,11 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		}
 	}
 
-	var deployMode state.DeployMode
+	var deployMode state.PackageConnectivity
 	if connected {
-		deployMode = state.DeployModeConnected
+		deployMode = state.PackageConnectivityConnected
 	} else {
-		deployMode = state.DeployModeAirgap
+		deployMode = state.PackageConnectivityAirGap
 	}
 
 	deployedPackage := &state.DeployedPackage{
@@ -181,7 +181,7 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		DeployedComponents: components,
 		ConnectStrings:     connectStrings,
 		Generation:         generation,
-		DeployMode:         deployMode,
+		Connectivity:       deployMode,
 	}
 
 	for _, opt := range opts {

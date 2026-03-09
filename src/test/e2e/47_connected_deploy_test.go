@@ -42,7 +42,7 @@ func TestConnectedDeploy(t *testing.T) {
 
 	deployedPkg, err := c.GetDeployedPackage(t.Context(), "connected-deploy")
 	require.NoError(t, err)
-	require.Equal(t, state.DeployModeConnected, deployedPkg.DeployMode, "package secret should record connected deploy mode")
+	require.Equal(t, state.PackageConnectivityConnected, deployedPkg.Connectivity, "package secret should record connected deploy mode")
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "connected-deploy", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
