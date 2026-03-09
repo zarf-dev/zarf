@@ -103,7 +103,7 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		if includeSet[ComponentLayers] {
 			layers = append(layers, componentLayers...)
 		}
-		if (includeSet[ImageLayers]) && len(images) > 0 {
+		if includeSet[ImageLayers] && len(images) > 0 {
 			imageLayers, err := r.LayersFromImages(ctx, images)
 			if err != nil {
 				return nil, err

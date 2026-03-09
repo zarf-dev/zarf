@@ -357,7 +357,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	if o.confirm {
 		filter = filters.Combine(
 			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(o.optionalComponents, !o.confirm),
+			filters.ForDeploy(o.optionalComponents, false),
 		)
 	}
 

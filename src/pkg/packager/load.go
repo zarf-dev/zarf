@@ -36,7 +36,7 @@ type LoadOptions struct {
 	Output        string
 	// number of layers to pull in parallel
 	OCIConcurrency int
-	// LayerTypes specifies which layer types to pull from OCI. Empty means all.
+	// LayerTypes specifies which layer types to pull from OCI
 	LayerTypes []zoci.LayerType
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
