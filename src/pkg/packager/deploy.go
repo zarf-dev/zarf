@@ -743,7 +743,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	}
 	if s == nil && connected {
 		s = &state.State{}
-		// In connected mode, minimal state is needed
+		// In connected mode minimal state is needed
 		s.ClusterMode = state.ClusterModeConnected
 
 		l.Info("creating the Zarf namespace")

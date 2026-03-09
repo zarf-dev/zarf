@@ -363,10 +363,7 @@ func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 		if err != nil {
 			return err
 		}
-		if !found {
-			continue
-		}
-		if labels == nil {
+		if !found || labels == nil {
 			labels = map[string]string{}
 		}
 		labels[cluster.AgentLabel] = "ignore"

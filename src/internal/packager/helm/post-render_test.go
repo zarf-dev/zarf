@@ -334,13 +334,13 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			for _, path := range agentMutatedKinds[tt.obj.GroupVersionKind().GroupKind()] {
 				pathLabels, found, err := unstructured.NestedStringMap(tt.obj.Object, path...)
 				require.NoError(t, err)
-				if !found {
-					continue
-				}
 				if tt.expectLabel {
+					require.True(t, found, "expected labels to exist at path %v", path)
 					require.Equal(t, "ignore", pathLabels["zarf.dev/agent"], "expected agent ignore label at path %v", path)
 				} else {
-					require.Empty(t, pathLabels["zarf.dev/agent"], "unexpected agent ignore label at path %v", path)
+					if found {
+						require.Empty(t, pathLabels["zarf.dev/agent"], "unexpected agent ignore label at path %v", path)
+					}
 				}
 			}
 		})
