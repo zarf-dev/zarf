@@ -50,9 +50,9 @@ func GetAllLayerTypes() []LayerType {
 }
 
 // ExcludeLayerTypes returns all layer types except the specified ones.
-func ExcludeLayerTypes(exclude ...LayerType) []LayerType {
+func ExcludeLayerTypes(layerTypes []LayerType, exclude ...LayerType) []LayerType {
 	var result []LayerType
-	for _, lt := range GetAllLayerTypes() {
+	for _, lt := range layerTypes {
 		if !slices.Contains(exclude, lt) {
 			result = append(result, lt)
 		}
