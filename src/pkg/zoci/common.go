@@ -7,6 +7,7 @@ package zoci
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/defenseunicorns/pkg/oci"
@@ -42,6 +43,20 @@ const (
 	// DocLayers includes the documentation tarball.
 	DocLayers LayerType = "documentation"
 )
+
+// AllLayerTypes is the complete set of layer types in a Zarf OCI package.
+var AllLayerTypes = []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
+
+// ExcludeLayerTypes returns all layer types except the specified ones.
+func ExcludeLayerTypes(exclude ...LayerType) []LayerType {
+	var result []LayerType
+	for _, lt := range AllLayerTypes {
+		if !slices.Contains(exclude, lt) {
+			result = append(result, lt)
+		}
+	}
+	return result
+}
 
 const (
 	defaultDelayTime    = 500 * time.Millisecond

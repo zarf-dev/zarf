@@ -136,9 +136,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// zarf creates layers around the contents of component primarily
-	// this assembles the layers for the components - whether filtered above or not
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayerTypes...)
+	// Skeletons don't contain images, so exclude ImageLayers.
+	layerTypes := opts.LayerTypes
+	if isSkeleton(desc.Platform) && len(layerTypes) == 0 {
+		layerTypes = zoci.ExcludeLayerTypes(zoci.ImageLayers)
+	}
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
 	if err != nil {
 		return nil, err
 	}

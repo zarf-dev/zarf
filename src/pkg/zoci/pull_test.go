@@ -68,10 +68,10 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	bothComponents := pkgLayout.Pkg.Components
 
 	// No layer types specified = all layer types
-	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, false)
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly)
 	require.NoError(t, err)
 
-	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, false)
+	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents)
 	require.NoError(t, err)
 
 	// Requesting one component should pull fewer layers than requesting both
@@ -128,14 +128,14 @@ func TestAssembleLayers(t *testing.T) {
 			require.NoError(t, err)
 
 			// no layer types = all layers
-			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false)
+			layers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components)
 			require.NoError(t, err)
 			require.Len(t, layers, 10)
 
 			nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
 
 			// get sbom layers
-			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.SbomLayers)
+			sbomInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, zoci.SbomLayers)
 			require.NoError(t, err)
 			require.Len(t, sbomInspectLayers, 3)
 
@@ -145,7 +145,7 @@ func TestAssembleLayers(t *testing.T) {
 				"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
 				"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
 				"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870"}
-			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ImageLayers)
+			imageInspectLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, zoci.ImageLayers)
 			require.NoError(t, err)
 			require.Len(t, imageInspectLayers, 7)
 			for _, layer := range imageInspectLayers {
@@ -156,12 +156,12 @@ func TestAssembleLayers(t *testing.T) {
 			}
 
 			// get component layers
-			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.ComponentLayers)
+			componentLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, zoci.ComponentLayers)
 			require.NoError(t, err)
 			require.Len(t, componentLayers, 3)
 
 			// get documentation layers
-			docLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, false, zoci.DocLayers)
+			docLayers, err := remote.AssembleLayers(ctx, layoutExpected.Pkg.Components, zoci.DocLayers)
 			require.NoError(t, err)
 			// 2 metadata layers (zarf.yaml, checksums.txt) + 1 documentation.tar
 			require.Len(t, docLayers, 3)
