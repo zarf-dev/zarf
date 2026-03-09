@@ -77,9 +77,6 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 
-	// Store all layers
-	layerMap[AllLayers] = root.Layers
-
 	// We always pull the metadata layers provided we can locate them
 	alwaysPull := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
@@ -211,7 +208,11 @@ func filterLayers(layerMap map[LayersSelector][]ocispec.Descriptor, layersSelect
 
 	switch layersSelector {
 	case AllLayers:
-		layers = append(layers, layerMap[AllLayers]...)
+		layers = append(layers, layerMap[MetadataLayers]...)
+		layers = append(layers, layerMap[ComponentLayers]...)
+		layers = append(layers, layerMap[ImageLayers]...)
+		layers = append(layers, layerMap[SbomLayers]...)
+		layers = append(layers, layerMap[DocLayers]...)
 	case SbomLayers:
 		layers = append(layers, layerMap[MetadataLayers]...)
 		layers = append(layers, layerMap[SbomLayers]...)

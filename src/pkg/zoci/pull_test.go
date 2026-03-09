@@ -13,6 +13,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -34,6 +35,46 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 	}
 
 	return dstRegistryRef
+}
+
+func TestAllLayersRespectsRequestedComponents(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(t, ctx)
+	tmpdir := t.TempDir()
+
+	packagePath, err := packager.Create(ctx, "testdata/multi-component", tmpdir, packager.CreateOptions{
+		OCIConcurrency: 3,
+		CachePath:      tmpdir,
+	})
+	require.NoError(t, err)
+
+	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+
+	packageRef, err := packager.PublishPackage(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
+		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
+		OCIConcurrency: 3,
+	})
+	require.NoError(t, err)
+	defer os.Remove(pkgLayout.Pkg.Metadata.Name) //nolint:errcheck
+
+	cacheModifier, err := zoci.GetOCICacheModifier(ctx, tmpdir)
+	require.NoError(t, err)
+	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true), cacheModifier)
+	require.NoError(t, err)
+
+	alpineOnly := []v1alpha1.ZarfComponent{{Name: "alpine"}}
+	bothComponents := pkgLayout.Pkg.Components
+
+	allLayersSubset, err := remote.AssembleLayers(ctx, alpineOnly, false, zoci.AllLayers)
+	require.NoError(t, err)
+
+	allLayersFull, err := remote.AssembleLayers(ctx, bothComponents, false, zoci.AllLayers)
+	require.NoError(t, err)
+
+	// Requesting one component should pull fewer layers than requesting both
+	require.Less(t, len(allLayersSubset), len(allLayersFull))
 }
 
 func TestAssembleLayers(t *testing.T) {

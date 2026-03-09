@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    run: nginx-pod
+  name: nginx-pod
+spec:
+  containers:
+  - image: ghcr.io/zarf-dev/images/nginx:1.26.2
+    name: nginx
+  restartPolicy: Always
