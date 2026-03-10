@@ -424,15 +424,16 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	// filter after confirmation to allow users to view the entire package interactively
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return nil, err
+	// In the interactive case we wait until after the component prompt to filter
+	if opts.IsInteractive {
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents, true),
+		)
+		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
