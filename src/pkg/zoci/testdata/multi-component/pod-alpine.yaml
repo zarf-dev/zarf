@@ -1,12 +1,7 @@
 apiVersion: v1
-kind: Pod
+kind: ConfigMap
 metadata:
-  labels:
-    run: alpine-pod
-  name: alpine-pod
-spec:
-  containers:
-  - image: ghcr.io/zarf-dev/images/alpine:3.21.3
-    name: alpine
-    command: ["sleep", "3600"]
-  restartPolicy: Always
+  name: alpine-configmap
+data:
+  app: alpine
+  version: "3.21.3"

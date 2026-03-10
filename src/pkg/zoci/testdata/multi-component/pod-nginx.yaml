@@ -1,11 +1,7 @@
 apiVersion: v1
-kind: Pod
+kind: ConfigMap
 metadata:
-  labels:
-    run: nginx-pod
-  name: nginx-pod
-spec:
-  containers:
-  - image: ghcr.io/zarf-dev/images/nginx:1.26.2
-    name: nginx
-  restartPolicy: Always
+  name: nginx-configmap
+data:
+  app: nginx
+  version: "1.26.2"
