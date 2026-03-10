@@ -88,18 +88,7 @@ func TestAssembleLayers(t *testing.T) {
 	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/basic")
 	components := pkgLayout.Pkg.Components
 
-	layers, err := remote.AssembleLayers(ctx, components)
-	require.NoError(t, err)
-	require.Len(t, layers, 10)
-
 	nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
-
-	// get sbom layers
-	sbomInspectLayers, err := remote.AssembleLayers(ctx, components, zoci.SbomLayers)
-	require.NoError(t, err)
-	require.Len(t, sbomInspectLayers, 3)
-
-	// get image layers
 	expectedImageLayers := []string{
 		"sha256:da324ac903c3287a9ab7f12d10fea0177251ca5d1aae156b293f042a722c414d",
 		"sha256:18f0797eab35a4597c1e9624aa4f15fd91f6254e5538c1e0d193b2a95dd4acc6",
@@ -107,24 +96,57 @@ func TestAssembleLayers(t *testing.T) {
 		"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
 		"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870",
 	}
-	imageInspectLayers, err := remote.AssembleLayers(ctx, components, zoci.ImageLayers)
-	require.NoError(t, err)
-	require.Len(t, imageInspectLayers, 7)
-	for _, layer := range imageInspectLayers {
-		if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
-			t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
-			require.Contains(t, expectedImageLayers, layer.Digest.String())
-		}
+
+	tests := []struct {
+		name           string
+		include        []zoci.LayerType
+		expectedLen    int
+		verifyDigests  bool
+		expectedDigest []string
+	}{
+		{
+			name:        "all layers (default)",
+			include:     nil,
+			expectedLen: 10,
+		},
+		{
+			name:        "sbom layers",
+			include:     []zoci.LayerType{zoci.SbomLayers},
+			expectedLen: 3,
+		},
+		{
+			name:           "image layers",
+			include:        []zoci.LayerType{zoci.ImageLayers},
+			expectedLen:    7,
+			verifyDigests:  true,
+			expectedDigest: expectedImageLayers,
+		},
+		{
+			name:        "component layers",
+			include:     []zoci.LayerType{zoci.ComponentLayers},
+			expectedLen: 3,
+		},
+		{
+			name:        "documentation layers",
+			include:     []zoci.LayerType{zoci.DocLayers},
+			expectedLen: 3,
+		},
 	}
 
-	// get component layers
-	componentLayers, err := remote.AssembleLayers(ctx, components, zoci.ComponentLayers)
-	require.NoError(t, err)
-	require.Len(t, componentLayers, 3)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			layers, err := remote.AssembleLayers(ctx, components, tt.include...)
+			require.NoError(t, err)
+			require.Len(t, layers, tt.expectedLen)
 
-	// get documentation layers
-	docLayers, err := remote.AssembleLayers(ctx, components, zoci.DocLayers)
-	require.NoError(t, err)
-	// 2 metadata layers (zarf.yaml, checksums.txt) + 1 documentation.tar
-	require.Len(t, docLayers, 3)
+			if tt.verifyDigests {
+				for _, layer := range layers {
+					if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
+						t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
+						require.Contains(t, tt.expectedDigest, layer.Digest.String())
+					}
+				}
+			}
+		})
+	}
 }
