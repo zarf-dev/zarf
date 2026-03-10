@@ -29,6 +29,7 @@ import (
 	"helm.sh/helm/v4/pkg/registry"
 	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -238,7 +239,30 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		},
 	}
 
-	saved, _, err := chartDownloader.DownloadToCache(chartURL, pull.Version)
+	var saved string
+	err = retry.Do(
+		func() error {
+			var downloadErr error
+			saved, _, downloadErr = chartDownloader.DownloadToCache(chartURL, pull.Version)
+			return downloadErr
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying chart download",
+					"attempt", n+1,
+					"max_attempts", config.ZarfDefaultRetries,
+					"chart", chart.Name,
+					"error", err,
+				)
+			}
+		}),
+	)
 	if err != nil {
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
