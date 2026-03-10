@@ -56,6 +56,8 @@ type PublishOptions struct {
 	Retries int
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
+	// Tag allows for overriding the destination reference
+	Tag string
 }
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
