@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -57,10 +56,6 @@ func hookKubectlPluginHandler(kubectlCmd *cobra.Command) {
 	kubectlCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		handleKubectlPlugins(kubectlCmd)
 
-		if cmd.Name() == cobra.ShellCompRequestCmd {
-			plugin.SetupPluginCompletion(cmd, args)
-		}
-
 		if cmd == kubectlCmd {
 			if err := cobra.NoArgs(cmd, args); err != nil {
 				return err
@@ -77,23 +72,17 @@ func hookKubectlPluginHandler(kubectlCmd *cobra.Command) {
 // code credit, k0sproject/k0s
 // https://github.com/k0sproject/k0s/blob/df88db5f317bb84dcda797ff6a68956bc2e49683/cmd/kubectl/kubectl.go#L134
 func handleKubectlPlugins(kubectlCmd *cobra.Command) {
-
+	// Check how the kubectl command has been called on the command line.
 	calledAs := kubectlCmd.CalledAs()
 	if calledAs == "" {
 		return
 	}
 
+	// Find the first occurrence of the kubectl command on the command line.
 	argOffset := slices.Index(os.Args, calledAs)
 	if argOffset < 0 {
 		return
 	}
-
-	// var pluginCmd bool
-
-	// pluginCmd = kubectlCmd ==
-
-	fmt.Println("this is a test")
-	fmt.Println(argOffset)
 
 	_ = kubecmd.NewDefaultKubectlCommandWithArgs(kubecmd.KubectlOptions{
 		IOStreams: genericclioptions.IOStreams{
