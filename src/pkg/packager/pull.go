@@ -138,10 +138,10 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 
 	// Get all the layers for relevant components, optionally include images if it's a skeleton package
 	layerTypes := opts.LayerTypes
-	if len(layerTypes) == 0 {
-		layerTypes = zoci.GetAllLayerTypes()
-	}
 	if isSkeleton(desc.Platform) {
+		if len(layerTypes) == 0 {
+			layerTypes = zoci.GetAllLayerTypes()
+		}
 		layerTypes = helpers.RemoveMatches(layerTypes, func(lt zoci.LayerType) bool {
 			return lt == zoci.ImageLayers
 		})
