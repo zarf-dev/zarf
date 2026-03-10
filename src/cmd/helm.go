@@ -21,11 +21,17 @@ func newHelmCommand() *cobra.Command {
 		helmArgs = os.Args[3:]
 	}
 
-	kube.ManagedFieldsManager = "helm"
-
 	cmd, err := helmcmd.NewRootCmd(os.Stdout, helmArgs, helmcmd.SetupLogging)
 	if err != nil {
 		logger.Default().Error("Helm command initialization", slog.Any("error", err))
+	}
+
+	original := cmd.PersistentPreRun
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		kube.ManagedFieldsManager = "helm"
+		if original != nil {
+			original(cmd, args)
+		}
 	}
 
 	return cmd
