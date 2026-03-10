@@ -161,9 +161,10 @@ func TestPublishFromOCIValidation(t *testing.T) {
 
 func TestPublishSkeleton(t *testing.T) {
 	tt := []struct {
-		name string
-		path string
-		opts PublishSkeletonOptions
+		name        string
+		path        string
+		opts        PublishSkeletonOptions
+		expectedTag string
 	}{
 		{
 			name: "Publish skeleton package",
@@ -171,6 +172,16 @@ func TestPublishSkeleton(t *testing.T) {
 			opts: PublishSkeletonOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
+			expectedTag: "0.0.1",
+		},
+		{
+			name: "Publish skeleton package with tag",
+			path: "testdata/skeleton",
+			opts: PublishSkeletonOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+			expectedTag: "latest",
 		},
 	}
 
@@ -182,6 +193,7 @@ func TestPublishSkeleton(t *testing.T) {
 			// Publish test package
 			ref, err := PublishSkeleton(ctx, tc.path, registryRef, tc.opts)
 			require.NoError(t, err)
+			require.Equal(t, tc.expectedTag, ref.Reference)
 
 			// Read and unmarshall expected
 			data, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
@@ -217,6 +229,7 @@ func TestPublishPackage(t *testing.T) {
 		path          string
 		opts          PublishPackageOptions
 		publicKeyPath string
+		expectedTag   string
 	}{
 		{
 			name: "Publish package",
@@ -224,6 +237,7 @@ func TestPublishPackage(t *testing.T) {
 			opts: PublishPackageOptions{
 				RemoteOptions: defaultTestRemoteOptions(),
 			},
+			expectedTag: "0.0.1",
 		},
 		{
 			name: "Sign and publish package",
@@ -234,6 +248,16 @@ func TestPublishPackage(t *testing.T) {
 				SigningKeyPassword: "password",
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
+			expectedTag:   "0.0.1",
+		},
+		{
+			name: "Publish package with specified tag different from version",
+			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions: defaultTestRemoteOptions(),
+				Tag:           "latest",
+			},
+			expectedTag: "latest",
 		},
 	}
 
@@ -249,6 +273,7 @@ func TestPublishPackage(t *testing.T) {
 			// Publish test package
 			packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, tc.opts)
 			require.NoError(t, err)
+			require.Equal(t, tc.expectedTag, packageRef.Reference)
 
 			// set build data to empty
 			layoutExpected.Pkg.Build = v1alpha1.ZarfBuildData{}
@@ -446,6 +471,7 @@ func TestPublishCopyTag(t *testing.T) {
 		name             string
 		packageToPublish string
 		opts             PublishPackageOptions
+		dstTag           string
 	}{
 		{
 			name:             "Publish package",
@@ -454,6 +480,16 @@ func TestPublishCopyTag(t *testing.T) {
 				RemoteOptions:  defaultTestRemoteOptions(),
 				OCIConcurrency: 3,
 			},
+			dstTag: "0.0.1",
+		},
+		{
+			name:             "Publish package with tag override",
+			packageToPublish: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
+			opts: PublishPackageOptions{
+				RemoteOptions:  defaultTestRemoteOptions(),
+				OCIConcurrency: 3,
+			},
+			dstTag: "latest",
 		},
 	}
 
@@ -472,7 +508,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			dstRegistryRef := createRegistry(ctx, t)
 
-			dst := fmt.Sprintf("%s/%s", dstRegistryRef.String(), "test:0.0.1")
+			dst := fmt.Sprintf("%s/%s:%s", dstRegistryRef.String(), "test", tc.dstTag)
 			dstRegistry, err := registry.ParseReference(dst)
 			require.NoError(t, err)
 
@@ -488,6 +524,8 @@ func TestPublishCopyTag(t *testing.T) {
 
 			// This verifies that publish deletes the manifest that is auto created by oras
 			require.NoFileExists(t, layoutExpected.Pkg.Metadata.Name)
+
+			require.Equal(t, tc.dstTag, dstRegistry.Reference)
 
 			layoutActual := pullFromRemote(ctx, t, dstRegistry.String(), layoutExpected.Pkg.Build.Architecture, "", t.TempDir())
 

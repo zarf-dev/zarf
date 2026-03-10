@@ -18,6 +18,15 @@ Convert between SBOM formats
 zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
 ```
 
+### Examples
+
+```
+  zarf tools sbom convert img.zarf tools sbom.json -o spdx-json                      convert a zarf tools sbom SBOM to spdx-json, output goes to stdout
+  zarf tools sbom convert img.zarf tools sbom.json -o cyclonedx-json=img.cdx.json    convert a zarf tools sbom SBOM to CycloneDX, output is written to the file "img.cdx.json"
+  zarf tools sbom convert - -o spdx-json                                  convert an SBOM from STDIN to spdx-json
+
+```
+
 ### Options
 
 ```

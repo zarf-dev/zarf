@@ -354,11 +354,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -419,15 +428,16 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	// filter after confirmation to allow users to view the entire package interactively
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return nil, err
+	// In the interactive case we wait until after the component prompt to filter
+	if opts.IsInteractive {
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents, true),
+		)
+		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -806,7 +816,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -921,7 +931,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1032,7 +1042,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.SbomLayers,
+		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1220,7 +1230,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.DocLayers,
+		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1568,6 +1578,7 @@ type packagePublishOptions struct {
 	publicKeyPath           string
 	skipVersionCheck        bool
 	withBuildMachineInfo    bool
+	tag                     string
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1591,6 +1602,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
@@ -1652,6 +1664,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			Flavor:               o.flavor,
 			SkipVersionCheck:     o.skipVersionCheck,
 			WithBuildMachineInfo: o.withBuildMachineInfo,
+			Tag:                  o.tag,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
@@ -1678,6 +1691,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
 		dstRef.Reference = srcRef.Reference
+		if o.tag != "" {
+			dstRef.Reference = o.tag
+		}
 
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
@@ -1732,6 +1748,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		SigningKeyPassword: o.signingKeyPassword,
 		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
+		Tag:                o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
@@ -2025,7 +2042,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.MetadataLayers,
+		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
