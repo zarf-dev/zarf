@@ -102,19 +102,8 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 }
 
 // UniqueNamespaceCount returns the number of unique namespaces in the package.
-//
-// Deprecated: Use UniqueNamespaces instead.
 func (pkg ZarfPackage) UniqueNamespaceCount() int {
-	uniqueNamespaces := make(map[string]struct{})
-	for _, component := range pkg.Components {
-		for _, chart := range component.Charts {
-			uniqueNamespaces[chart.Namespace] = struct{}{}
-		}
-		for _, manifest := range component.Manifests {
-			uniqueNamespaces[manifest.Namespace] = struct{}{}
-		}
-	}
-	return len(uniqueNamespaces)
+	return len(pkg.UniqueNamespaces())
 }
 
 // UniqueNamespaces returns a slice of all unique namespaces in the package
@@ -122,46 +111,17 @@ func (pkg ZarfPackage) UniqueNamespaces() []string {
 	uniqueNamespaces := make(map[string]struct{})
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			uniqueNamespaces[chart.Namespace] = struct{}{}
+			if chart.Namespace != "" {
+				uniqueNamespaces[chart.Namespace] = struct{}{}
+			}
 		}
 		for _, manifest := range component.Manifests {
-			uniqueNamespaces[manifest.Namespace] = struct{}{}
+			if manifest.Namespace != "" {
+				uniqueNamespaces[manifest.Namespace] = struct{}{}
+			}
 		}
 	}
 	return slices.Collect(maps.Keys(uniqueNamespaces))
-}
-
-// UpdateAllComponentNamespaces updates all existing chart/manifest namespaces to the provided one.
-//
-// Deprecated: Use UpdateAllComponentNamespacesByName instead.
-func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
-	for i := range pkg.Components {
-		comp := pkg.Components[i]
-		for j := range comp.Charts {
-			comp.Charts[j].Namespace = namespace
-		}
-		for k := range comp.Manifests {
-			comp.Manifests[k].Namespace = namespace
-		}
-	}
-}
-
-// UpdateAllComponentNamespacesByName updates all matching namespaces to the provided one
-func (pkg ZarfPackage) UpdateAllComponentNamespacesByName(original, target string) {
-	for i := range pkg.Components {
-		comp := pkg.Components[i]
-		for j := range comp.Charts {
-			if comp.Charts[j].Namespace == original {
-				comp.Charts[j].Namespace = target
-			}
-		}
-		for k := range comp.Manifests {
-			if comp.Manifests[k].Namespace == original {
-				comp.Manifests[k].Namespace = target
-			}
-		}
-		pkg.Components[i].Actions.UpdateWaitNamespacesByName(original, target)
-	}
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden

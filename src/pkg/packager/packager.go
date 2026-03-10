@@ -86,7 +86,7 @@ func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, compon
 }
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace
-func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error {
+func OverridePackageNamespace(pkg *v1alpha1.ZarfPackage, namespace string) error {
 	if !pkg.AllowsNamespaceOverride() {
 		return fmt.Errorf("cannot override package namespace, metadata.allowNamespaceOverride is false")
 	}
@@ -103,6 +103,40 @@ func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error 
 	if len(namespaces) == 1 {
 		originalNamespace = namespaces[0]
 	}
-	pkg.UpdateAllComponentNamespacesByName(originalNamespace, namespace)
+	overrideComponentNamespaces(pkg, originalNamespace, namespace)
 	return nil
+}
+
+// overrideComponentNamespaces overrides the chart/manifest/wait-action namespaces from an original to a target
+func overrideComponentNamespaces(pkg *v1alpha1.ZarfPackage, original, target string) {
+	for i := range pkg.Components {
+		for j := range pkg.Components[i].Charts {
+			if pkg.Components[i].Charts[j].Namespace == original {
+				pkg.Components[i].Charts[j].Namespace = target
+			}
+		}
+		for k := range pkg.Components[i].Manifests {
+			if pkg.Components[i].Manifests[k].Namespace == original {
+				pkg.Components[i].Manifests[k].Namespace = target
+			}
+		}
+		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnCreate, original, target)
+		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnDeploy, original, target)
+		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnRemove, original, target)
+	}
+}
+
+func overrideActionSetWaitNamespaces(set v1alpha1.ZarfComponentActionSet, original, target string) {
+	overrideActionWaitNamespaces(set.Before, original, target)
+	overrideActionWaitNamespaces(set.After, original, target)
+	overrideActionWaitNamespaces(set.OnSuccess, original, target)
+	overrideActionWaitNamespaces(set.OnFailure, original, target)
+}
+
+func overrideActionWaitNamespaces(actions []v1alpha1.ZarfComponentAction, original, target string) {
+	for i := range actions {
+		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
+			actions[i].Wait.Cluster.Namespace = target
+		}
+	}
 }

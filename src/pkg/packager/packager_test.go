@@ -131,6 +131,70 @@ func TestOverridePackageNamespace(t *testing.T) {
 			expectedWaitNamespaces: []string{"different-namespace"},
 		},
 		{
+			name: "override manifest namespace",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Manifests: []v1alpha1.ZarfManifest{
+							{Name: "test", Namespace: "test"},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+		},
+		{
+			name: "override namespace across multiple components",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{Name: "chart1", Namespace: "test"},
+						},
+					},
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{Name: "chart2", Namespace: "test"},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+		},
+		{
+			name: "override empty chart namespace",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{Name: "test", Namespace: ""},
+						},
+					},
+				},
+			},
+			namespace: "test-override",
+		},
+		{
+			// TODO: determine if empty namespace should be excluded from uniqueness check
+			name: "mixed empty and non-empty namespaces blocks override",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Charts: []v1alpha1.ZarfChart{
+							{Name: "chart1", Namespace: ""},
+							{Name: "chart2", Namespace: "real-ns"},
+						},
+					},
+				},
+			},
+			namespace:   "test-override",
+			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+		},
+		{
 			name: "init package namespace override",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,
@@ -174,7 +238,7 @@ func TestOverridePackageNamespace(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := OverridePackageNamespace(tc.pkg, tc.namespace)
+			err := OverridePackageNamespace(&tc.pkg, tc.namespace)
 			if tc.expectedErr == "" {
 				require.NoError(t, err)
 				validateNamespaceUpdates(t, tc.pkg, tc.namespace, tc.expectedWaitNamespaces)
@@ -215,6 +279,128 @@ func collectWaitNamespaces(actions v1alpha1.ZarfComponentActions) []string {
 		}
 	}
 	return ns
+}
+
+func TestOverrideComponentNamespacesActions(t *testing.T) {
+	t.Parallel()
+
+	makeWaitAction := func(ns string) v1alpha1.ZarfComponentAction {
+		return v1alpha1.ZarfComponentAction{
+			Wait: &v1alpha1.ZarfComponentActionWait{
+				Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+					Kind:      "Pod",
+					Name:      "test",
+					Namespace: ns,
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		original string
+		target   string
+		expected []string
+	}{
+		{
+			name: "all lifecycle sets and timing slots updated",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Actions: v1alpha1.ZarfComponentActions{
+							OnCreate: v1alpha1.ZarfComponentActionSet{
+								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+							},
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+							},
+							OnRemove: v1alpha1.ZarfComponentActionSet{
+								Before:    []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								After:     []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnSuccess: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+								OnFailure: []v1alpha1.ZarfComponentAction{makeWaitAction("original")},
+							},
+						},
+					},
+				},
+			},
+			original: "original",
+			target:   "new",
+			expected: []string{"new", "new", "new", "new", "new", "new", "new", "new", "new", "new", "new", "new"},
+		},
+		{
+			name: "non-matching wait actions not updated",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{makeWaitAction("other")},
+							},
+						},
+					},
+				},
+			},
+			original: "original",
+			target:   "new",
+			expected: []string{"other"},
+		},
+		{
+			name: "nil Wait does not panic",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{{Wait: nil}},
+							},
+						},
+					},
+				},
+			},
+			original: "original",
+			target:   "new",
+			expected: []string{},
+		},
+		{
+			name: "nil Wait.Cluster does not panic",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Actions: v1alpha1.ZarfComponentActions{
+							OnDeploy: v1alpha1.ZarfComponentActionSet{
+								After: []v1alpha1.ZarfComponentAction{
+									{Wait: &v1alpha1.ZarfComponentActionWait{Cluster: nil}},
+								},
+							},
+						},
+					},
+				},
+			},
+			original: "original",
+			target:   "new",
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			overrideComponentNamespaces(&tt.pkg, tt.original, tt.target)
+			var actual []string
+			for _, comp := range tt.pkg.Components {
+				actual = append(actual, collectWaitNamespaces(comp.Actions)...)
+			}
+			require.ElementsMatch(t, tt.expected, actual)
+		})
+	}
 }
 
 func Test_generateValuesOverrides(t *testing.T) {
