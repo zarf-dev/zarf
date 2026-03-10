@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -76,11 +77,9 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 
-	includeSet := make(map[LayerType]bool, len(include))
-	for _, lt := range include {
-		includeSet[lt] = true
+	if len(include) == 0 {
+		include = GetAllLayerTypes()
 	}
-
 	// Metadata layers are always included
 	layers := make([]ocispec.Descriptor, 0)
 	for _, path := range PackageAlwaysPull {
@@ -95,15 +94,15 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		return nil, err
 	}
 
-	if includeSet[ComponentLayers] || includeSet[ImageLayers] {
+	if slices.Contains(include, ComponentLayers) || slices.Contains(include, ImageLayers) {
 		componentLayers, images, err := r.LayersFromComponents(ctx, pkg, requestedComponents)
 		if err != nil {
 			return nil, err
 		}
-		if includeSet[ComponentLayers] {
+		if slices.Contains(include, ComponentLayers) {
 			layers = append(layers, componentLayers...)
 		}
-		if includeSet[ImageLayers] && len(images) > 0 {
+		if slices.Contains(include, ImageLayers) && len(images) > 0 {
 			imageLayers, err := r.LayersFromImages(ctx, images)
 			if err != nil {
 				return nil, err
@@ -112,14 +111,14 @@ func (r *Remote) AssembleLayers(ctx context.Context, requestedComponents []v1alp
 		}
 	}
 
-	if includeSet[SbomLayers] {
+	if slices.Contains(include, SbomLayers) {
 		desc := root.Locate(layout.SBOMTar)
 		if !oci.IsEmptyDescriptor(desc) {
 			layers = append(layers, desc)
 		}
 	}
 
-	if includeSet[DocLayers] {
+	if slices.Contains(include, DocLayers) {
 		if len(pkg.Documentation) > 0 {
 			desc := root.Locate(layout.DocumentationTar)
 			if !oci.IsEmptyDescriptor(desc) {

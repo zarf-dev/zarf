@@ -88,7 +88,7 @@ func TestAssembleLayers(t *testing.T) {
 	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/basic")
 	components := pkgLayout.Pkg.Components
 
-	layers, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	layers, err := remote.AssembleLayers(ctx, components)
 	require.NoError(t, err)
 	require.Len(t, layers, 10)
 

@@ -7,7 +7,6 @@ package zoci
 import (
 	"context"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/defenseunicorns/pkg/oci"
@@ -47,17 +46,6 @@ const (
 // GetAllLayerTypes returns the complete set of layer types in a Zarf OCI package.
 func GetAllLayerTypes() []LayerType {
 	return []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
-}
-
-// ExcludeLayerTypes returns all layer types except the specified ones.
-func ExcludeLayerTypes(layerTypes []LayerType, exclude ...LayerType) []LayerType {
-	var result []LayerType
-	for _, lt := range layerTypes {
-		if !slices.Contains(exclude, lt) {
-			result = append(result, lt)
-		}
-	}
-	return result
 }
 
 const (
