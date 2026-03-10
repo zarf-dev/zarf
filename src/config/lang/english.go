@@ -596,9 +596,6 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 `
 	CmdToolsMonitorShort = "Launches a terminal UI to monitor the connected cluster using K9s."
 
-	CmdToolsHelmShort = "Subset of the Helm CLI included with Zarf to help manage helm charts."
-	CmdToolsHelmLong  = "Subset of the Helm CLI that includes the repo and dependency commands for managing helm charts destined for the airgap."
-
 	CmdToolsClearCacheShort         = "Clears the configured git and image cache directory"
 	CmdToolsClearCacheFlagCachePath = "Specify the location of the Zarf artifact cache (images and git repositories)"
 
