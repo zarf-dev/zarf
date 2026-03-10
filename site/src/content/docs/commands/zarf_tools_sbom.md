@@ -18,6 +18,38 @@ Generate a packaged-based Software Bill Of Materials (SBOM) from container image
 zarf tools sbom [flags]
 ```
 
+### Examples
+
+```
+  zarf tools sbom scan alpine:latest                                a summary of discovered packages
+  zarf tools sbom scan alpine:latest -o json                        show all possible cataloging details
+  zarf tools sbom scan alpine:latest -o cyclonedx                   show a CycloneDX formatted SBOM
+  zarf tools sbom scan alpine:latest -o cyclonedx-json              show a CycloneDX JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx                        show a SPDX 2.3 Tag-Value formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx@2.2                    show a SPDX 2.2 Tag-Value formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx-json                   show a SPDX 2.3 JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx-json@2.2               show a SPDX 2.2 JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -vv                            show verbose debug information
+  zarf tools sbom scan alpine:latest -o template -t my_format.tmpl  show a SBOM formatted according to given template file
+
+  Supports the following image sources:
+    zarf tools sbom scan yourrepo/yourimage:tag     defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry.
+    zarf tools sbom scan path/to/a/file/or/dir      a Docker tar, OCI tar, OCI directory, SIF container, or generic filesystem directory
+
+  You can also explicitly specify the scheme to use:
+    zarf tools sbom scan docker:yourrepo/yourimage:tag            explicitly use the Docker daemon
+    zarf tools sbom scan podman:yourrepo/yourimage:tag            explicitly use the Podman daemon
+    zarf tools sbom scan registry:yourrepo/yourimage:tag          pull image directly from a registry (no container runtime required)
+    zarf tools sbom scan docker-archive:path/to/yourimage.tar     use a tarball from disk for archives created from "docker save"
+    zarf tools sbom scan oci-archive:path/to/yourimage.tar        use a tarball from disk for OCI archives (from Skopeo or otherwise)
+    zarf tools sbom scan oci-dir:path/to/yourimage                read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
+    zarf tools sbom scan singularity:path/to/yourimage.sif        read directly from a Singularity Image Format (SIF) container on disk
+    zarf tools sbom scan oci-model-registry:ai/llama3.2           scan an OCI model artifact from a registry (e.g. Docker Hub AI models)
+    zarf tools sbom scan dir:path/to/yourproject                  read directly from a path on disk (any directory)
+    zarf tools sbom scan file:path/to/yourproject/file            read directly from a path on disk (any single file)
+
+```
+
 ### Options
 
 ```
