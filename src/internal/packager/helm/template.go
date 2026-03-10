@@ -7,12 +7,14 @@ package helm
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -131,12 +133,15 @@ func (tr *templateRenderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer,
 	return finalManifestsOutput, nil
 }
 
-func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) ([]*releasev1.Hook, []releaseutil.Manifest, error) {
-	tempDir, err := utils.MakeTempDir("")
+func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *variables.VariableConfig, actionConfig *action.Configuration) (_ []*releasev1.Hook, _ []releaseutil.Manifest, err error) {
+	tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to create tmpdir:  %w", err)
 	}
-	path := filepath.Join(tempDir, "chart.yaml")
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpdir))
+	}()
+	path := filepath.Join(tmpdir, "chart.yaml")
 
 	if err := os.WriteFile(path, renderedManifests.Bytes(), helpers.ReadWriteUser); err != nil {
 		return nil, nil, fmt.Errorf("unable to write the post-render file for the helm chart")
