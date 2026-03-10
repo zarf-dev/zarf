@@ -4,4 +4,4 @@ metadata:
   name: main-config
   namespace: {{ .Release.Namespace }}
 data:
-  message: "This is the main config deployed after hooks"
+  message: "This is the main config, not a hook"
