@@ -23,7 +23,7 @@ import (
 	"oras.land/oras-go/v2/registry"
 )
 
-func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //nolint:revive
+func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	dstPort, err := helpers.GetAvailablePort()
 	require.NoError(t, err)
 	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
@@ -37,7 +37,7 @@ func createRegistry(t *testing.T, ctx context.Context) registry.Reference { //no
 // and returns a connected Remote along with the loaded PackageLayout.
 func publishAndConnect(ctx context.Context, t *testing.T, srcPath string) (*zoci.Remote, *layout.PackageLayout) {
 	t.Helper()
-	registryRef := createRegistry(t, ctx)
+	registryRef := createRegistry(ctx, t)
 	tmpdir := t.TempDir()
 
 	packagePath, err := packager.Create(ctx, srcPath, tmpdir, packager.CreateOptions{
