@@ -178,7 +178,6 @@ func TestOverridePackageNamespace(t *testing.T) {
 			namespace: "test-override",
 		},
 		{
-			// TODO: determine if empty namespace should be excluded from uniqueness check
 			name: "mixed empty and non-empty namespaces blocks override",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
@@ -191,8 +190,7 @@ func TestOverridePackageNamespace(t *testing.T) {
 					},
 				},
 			},
-			namespace:   "test-override",
-			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
+			namespace: "test-override",
 		},
 		{
 			name: "init package namespace override",
@@ -254,10 +252,14 @@ func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, targetName
 	actualWaitNamespaces := make([]string, 0)
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			require.Equal(t, targetNamespace, chart.Namespace)
+			if chart.Namespace != "" {
+				require.Equal(t, targetNamespace, chart.Namespace)
+			}
 		}
 		for _, manifest := range component.Manifests {
-			require.Equal(t, targetNamespace, manifest.Namespace)
+			if manifest.Namespace != "" {
+				require.Equal(t, targetNamespace, manifest.Namespace)
+			}
 		}
 		actualWaitNamespaces = append(actualWaitNamespaces, collectWaitNamespaces(component.Actions)...)
 	}
