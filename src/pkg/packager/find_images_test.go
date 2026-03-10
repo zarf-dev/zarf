@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -259,7 +260,7 @@ func TestFilterImagesFoundInArchives(t *testing.T) {
 			expectedImageArchivesScan: []ImageArchivesScan{
 				{
 					ComponentName: "image-archive-component",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/scratch:latest",
@@ -300,7 +301,7 @@ func TestFilterImagesFoundInArchives(t *testing.T) {
 			expectedImageArchivesScan: []ImageArchivesScan{
 				{
 					ComponentName: "image-archive-component",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/scratch:latest",

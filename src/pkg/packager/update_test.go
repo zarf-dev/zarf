@@ -159,7 +159,7 @@ func TestUpdateNeeded(t *testing.T) {
 			imageArchivesScans: []ImageArchivesScan{
 				{
 					ComponentName: "argocd-archive",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.15-alpine",
@@ -192,7 +192,7 @@ func TestUpdateNeeded(t *testing.T) {
 			imageArchivesScans: []ImageArchivesScan{
 				{
 					ComponentName: "argocd-archive",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.15-alpine",
@@ -223,7 +223,7 @@ func TestUpdateNeeded(t *testing.T) {
 			imageArchivesScans: []ImageArchivesScan{
 				{
 					ComponentName: "argocd-archive",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.14-alpine",
@@ -253,7 +253,7 @@ func TestUpdateNeeded(t *testing.T) {
 			imageArchivesScans: []ImageArchivesScan{
 				{
 					ComponentName: "argocd-archive",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
 								"docker.io/library/redis:7.0.14-alpine",
@@ -318,7 +318,7 @@ func TestCreateUpdate(t *testing.T) {
 			imageArchivesScans: []ImageArchivesScan{
 				{
 					ComponentName: "flux-automation-controller-archive",
-					ImageArchives: []ImageArchive{
+					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Path: "automation-controller.tar",
 							Images: []string{
