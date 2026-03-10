@@ -137,8 +137,8 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "no-color")
 				}
 
-				// Remove the docs for the various sub-commands for `kubectl`
-				if toolCmd.Use == "kubectl" {
+				// Remove the docs for the various sub-commands for `kubectl` and `helm`
+				if toolCmd.Use == "kubectl" || toolCmd.Use == "helm" {
 					toolCmd.RemoveCommand(toolCmd.Commands()...)
 				}
 

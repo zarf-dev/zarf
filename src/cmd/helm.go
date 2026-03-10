@@ -34,5 +34,10 @@ func newHelmCommand() *cobra.Command {
 		}
 	}
 
-	return cmd
+	// Explicitly set cmd.Help() here so cobra still generates the docs page correctly
+	cmd.RunE = func(cmd *cobra.Command, _ []string) error {
+		return cmd.Help()
+	}
+
+	return ReplaceCommandName("helm", "zarf tools helm", cmd)
 }

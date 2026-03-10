@@ -67,6 +67,10 @@ By default, the default directories depend on the Operating System. The defaults
 | Windows          | %TEMP%\helm               | %APPDATA%\helm                 | %APPDATA%\helm          |
 
 
+```
+zarf tools helm [flags]
+```
+
 ### Options
 
 ```
@@ -103,29 +107,4 @@ By default, the default directories depend on the Operating System. The defaults
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf tools helm completion](/commands/zarf_tools_helm_completion/)	 - generate autocompletion scripts for the specified shell
-* [zarf tools helm create](/commands/zarf_tools_helm_create/)	 - create a new chart with the given name
-* [zarf tools helm dependency](/commands/zarf_tools_helm_dependency/)	 - manage a chart's dependencies
-* [zarf tools helm env](/commands/zarf_tools_helm_env/)	 - helm client environment information
-* [zarf tools helm get](/commands/zarf_tools_helm_get/)	 - download extended information of a named release
-* [zarf tools helm history](/commands/zarf_tools_helm_history/)	 - fetch release history
-* [zarf tools helm install](/commands/zarf_tools_helm_install/)	 - install a chart
-* [zarf tools helm lint](/commands/zarf_tools_helm_lint/)	 - examine a chart for possible issues
-* [zarf tools helm list](/commands/zarf_tools_helm_list/)	 - list releases
-* [zarf tools helm package](/commands/zarf_tools_helm_package/)	 - package a chart directory into a chart archive
-* [zarf tools helm plugin](/commands/zarf_tools_helm_plugin/)	 - install, list, or uninstall Helm plugins
-* [zarf tools helm pull](/commands/zarf_tools_helm_pull/)	 - download a chart from a repository and (optionally) unpack it in local directory
-* [zarf tools helm push](/commands/zarf_tools_helm_push/)	 - push a chart to remote
-* [zarf tools helm registry](/commands/zarf_tools_helm_registry/)	 - login to or logout from a registry
-* [zarf tools helm repo](/commands/zarf_tools_helm_repo/)	 - add, list, remove, update, and index chart repositories
-* [zarf tools helm rollback](/commands/zarf_tools_helm_rollback/)	 - roll back a release to a previous revision
-* [zarf tools helm search](/commands/zarf_tools_helm_search/)	 - search for a keyword in charts
-* [zarf tools helm show](/commands/zarf_tools_helm_show/)	 - show information of a chart
-* [zarf tools helm status](/commands/zarf_tools_helm_status/)	 - display the status of the named release
-* [zarf tools helm template](/commands/zarf_tools_helm_template/)	 - locally render templates
-* [zarf tools helm test](/commands/zarf_tools_helm_test/)	 - run tests for a release
-* [zarf tools helm uninstall](/commands/zarf_tools_helm_uninstall/)	 - uninstall a release
-* [zarf tools helm upgrade](/commands/zarf_tools_helm_upgrade/)	 - upgrade a release
-* [zarf tools helm verify](/commands/zarf_tools_helm_verify/)	 - verify that a chart at the given path has been signed and is valid
-* [zarf tools helm version](/commands/zarf_tools_helm_version/)	 - print the helm version information
 
