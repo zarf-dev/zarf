@@ -84,6 +84,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
+			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
 

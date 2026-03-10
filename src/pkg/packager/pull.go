@@ -103,6 +103,7 @@ type pullOCIOptions struct {
 	OCIConcurrency int
 	CachePath      string
 	PublicKeyPath  string
+	Connected      bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -138,7 +139,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 
 	// Get all the layers for relevant components, optionally include images if it's a skeleton package
 	layerTypes := opts.LayerTypes
-	if isSkeleton(desc.Platform) {
+	if shouldExcludeImages(opts.Connected, desc.Platform) {
 		if len(layerTypes) == 0 {
 			layerTypes = zoci.GetAllLayerTypes()
 		}
@@ -273,6 +274,10 @@ func supportsFiltering(platform *ocispec.Platform) bool {
 		return false
 	}
 	return true
+}
+
+func shouldExcludeImages(connected bool, platform *ocispec.Platform) bool {
+	return connected || isSkeleton(platform)
 }
 
 // isSkeleton checks if the package is explicitly a skeleton package.
