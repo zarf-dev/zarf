@@ -438,7 +438,7 @@
           "type": "boolean"
         },
         "serverSideApply": {
-          "description": "whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.\nAuto uses whichever strategy that chart was previously installed with.",
+          "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
           "enum": [
             "true",
             "false",
@@ -1141,7 +1141,7 @@
           "type": "boolean"
         },
         "serverSideApply": {
-          "description": "whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.\nAuto uses whichever strategy that chart was previously installed with.",
+          "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
           "enum": [
             "true",
             "false",
