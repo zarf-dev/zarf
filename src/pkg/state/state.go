@@ -514,13 +514,13 @@ const (
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string               `json:"name"`
-	Data               v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion         string               `json:"cliVersion"`
-	Generation         int                  `json:"generation"`
-	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
-	Connectivity       PackageConnectivity  `json:"connectivity"`
+	Name                string               `json:"name"`
+	Data                v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion          string               `json:"cliVersion"`
+	Generation          int                  `json:"generation"`
+	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -536,6 +536,15 @@ func (d *DeployedPackage) GetSecretName() string {
 		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
 	}
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// GetPackageConnectivity returns the connectivity mode the package is using
+// Defaults to airgap for packages that were deployed before connectivity was introduced
+func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.PackageConnectivity == "" {
+		return PackageConnectivityAirGap
+	}
+	return d.PackageConnectivity
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

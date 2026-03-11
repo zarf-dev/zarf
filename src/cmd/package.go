@@ -1377,10 +1377,11 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
-	Package           string   `json:"package"`
-	NamespaceOverride string   `json:"namespaceOverride"`
-	Version           string   `json:"version"`
-	Components        []string `json:"components"`
+	Package           string                    `json:"package"`
+	NamespaceOverride string                    `json:"namespaceOverride"`
+	Version           string                    `json:"version"`
+	Connectivity      state.PackageConnectivity `json:"connectivity"`
+	Components        []string                  `json:"components"`
 }
 
 func (o *packageListOptions) run(ctx context.Context) error {
@@ -1399,6 +1400,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			Package:           pkg.Name,
 			NamespaceOverride: pkg.NamespaceOverride,
 			Version:           pkg.Data.Metadata.Version,
+			Connectivity:      pkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}
@@ -1417,11 +1419,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Namespace Override", "Version", "Components"}
+		header := []string{"Package", "Namespace Override", "Version", "Connectivity", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.NamespaceOverride, info.Version, fmt.Sprintf("%v", info.Components),
+				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)

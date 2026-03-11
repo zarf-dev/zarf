@@ -175,13 +175,13 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 	}
 
 	deployedPackage := &state.DeployedPackage{
-		Name:               packageName,
-		CLIVersion:         config.CLIVersion,
-		Data:               pkg,
-		DeployedComponents: components,
-		ConnectStrings:     connectStrings,
-		Generation:         generation,
-		Connectivity:       deployMode,
+		Name:                packageName,
+		CLIVersion:          config.CLIVersion,
+		Data:                pkg,
+		DeployedComponents:  components,
+		ConnectStrings:      connectStrings,
+		Generation:          generation,
+		PackageConnectivity: deployMode,
 	}
 
 	for _, opt := range opts {
