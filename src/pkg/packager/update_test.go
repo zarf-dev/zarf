@@ -365,9 +365,9 @@ components:
       - ghcr.io/stefanprodan/podinfo:6.4.0
   - name: flux-automation-controller-archive
     imageArchives:
-      - images:
+      - path: automation-controller.tar
+        images:
           - ghcr.io/fluxcd/image-automation-controller:v0.39.0
-        path: automation-controller.tar
 `,
 			wantErr: false,
 		},

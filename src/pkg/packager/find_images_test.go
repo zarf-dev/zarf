@@ -50,8 +50,8 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"nginx:1.16.0",
-						"busybox",
+						"docker.io/library/nginx:1.16.0",
+						"docker.io/library/busybox:latest",
 					},
 				},
 			},
@@ -81,13 +81,13 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
 						"10.0.0.1:443/zarf-dev/zarf/agent:v0.38.1",
-						"alpine",
-						"xn--7o8h.com/myimage:9.8.7",
-						"registry.io/foo/project--id.module--name.ver---sion--name",
-						"foo_bar:latest",
+						"docker.io/library/alpine:latest",
+						"docker.io/library/foo_bar:latest",
 						"foo.com:8080/bar:1.2.3",
+						"ghcr.io/zarf-dev/zarf/agent:v0.38.1",
+						"registry.io/foo/project--id.module--name.ver---sion--name:latest",
+						"xn--7o8h.com/myimage:9.8.7",
 					},
 				},
 			},
@@ -120,9 +120,9 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"curlimages/curl:7.69.0",
-						"giantswarm/tiny-tools",
-						"stefanprodan/grpc_health_probe:v0.3.0",
+						"docker.io/curlimages/curl:7.69.0",
+						"docker.io/giantswarm/tiny-tools:latest",
+						"docker.io/stefanprodan/grpc_health_probe:v0.3.0",
 						"ghcr.io/stefanprodan/podinfo:6.4.0",
 					},
 				},

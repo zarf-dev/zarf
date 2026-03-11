@@ -250,18 +250,15 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 
-		fullyQualifiedMatchedImages := make(map[string]bool, len(matchedImages))
-		for image, _ := range matchedImages {
+		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
+
+		for _, image := range sortedMatchedImages {
 			imageReference, err := transform.ParseImageRef(image)
 			if err != nil {
 				return nil, fmt.Errorf("could not parse image reference for matched image %s", image)
 			}
-			fullyQualifiedMatchedImages[imageReference.Reference] = true
+			scan.Matches = append(scan.Matches, imageReference.Reference)
 		}
-
-		sortedMatchedImages, sortedExpectedImages := getSortedImages(fullyQualifiedMatchedImages, maybeImages)
-
-		scan.Matches = sortedMatchedImages
 
 		// Handle the "maybes"
 		var validMaybeImages []string
