@@ -24,6 +24,9 @@ $ zarf package publish my-package.tar oci://my-registry.com/my-namespace
 # Publish a skeleton package to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
+# Publish a package with a specific tag different from the package metadata.version
+$ zarf package publish my-package.tar oci://my-registry.com/my-namespace --tag v0.0.1
+
 ```
 
 ### Options
@@ -37,6 +40,7 @@ $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
       --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 1)
       --signing-key string        Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
       --signing-key-pass string   Password to the private key used for publishing packages
+  -t, --tag string                The tag to be used in the OCI reference for the package in the registry
       --verify                    Verify the Zarf package signature
       --with-build-machine-info   Include build machine information (hostname and username) in the package metadata
 ```

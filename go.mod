@@ -27,7 +27,7 @@ require (
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.25.0
 	github.com/fluxcd/source-controller/api v1.8.0
-	github.com/go-git/go-git/v5 v5.16.5
+	github.com/go-git/go-git/v5 v5.17.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/gofrs/flock v0.13.0
 	github.com/golang-cz/devslog v0.0.15
@@ -58,7 +58,6 @@ require (
 	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
-	k8s.io/component-base v0.35.2
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubectl v0.35.2
 	oras.land/oras-go/v2 v2.6.0
@@ -239,6 +238,7 @@ require (
 	golang.org/x/tools v0.42.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
+	k8s.io/component-base v0.35.2 // indirect
 	modernc.org/gc/v3 v3.1.1 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
