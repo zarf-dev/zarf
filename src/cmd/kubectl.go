@@ -58,7 +58,7 @@ func patchPluginListSubcommand(kubectlCmd *cobra.Command) {
 	cmdutil.CheckErr(err)
 
 	originalRun := cmd.Run
-	cmd.Run = func(cmd *cobra.Command, args []string) {
+	cmd.Run = func(_ *cobra.Command, args []string) {
 		root := kubecmd.NewKubectlCommand(kubecmd.KubectlOptions{})
 		root.Use = strings.ReplaceAll(kubectlCmd.CommandPath(), " ", "-")
 		originalRun(root, args)
