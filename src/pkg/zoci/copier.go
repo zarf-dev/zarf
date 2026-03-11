@@ -40,6 +40,9 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 	copyOpts.Concurrency = opts.OCIConcurrency
 
 	tag := src.Repo().Reference.Reference // keep the source tag on the destination
+	if opts.Tag != "" {
+		tag = opts.Tag
+	}
 
 	err = retry.Do(
 		func() error {
