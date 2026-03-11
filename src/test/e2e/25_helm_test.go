@@ -282,6 +282,7 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 }
 
 func testHelmHooks(t *testing.T) {
+	t.Parallel()
 	tmpdir := t.TempDir()
 	packagePath := filepath.Join("src", "test", "packages", "25-helm-hooks")
 

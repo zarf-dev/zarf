@@ -206,8 +206,12 @@ type ZarfChart struct {
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
-	// whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.
-	// Auto uses whichever strategy that chart was previously installed with.
+	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
 	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 }
 
@@ -259,8 +263,12 @@ type ZarfManifest struct {
 	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
-	// whether server side apply should be used during upgrades or installs. Defaults to true during installs and auto during upgrades.
-	// Auto uses whichever strategy that chart was previously installed with.
+	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
 	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 	// [alpha]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
