@@ -99,15 +99,15 @@ var ZarfRegistryMTLSServerHosts = []string{
 	"[::1]",
 }
 
-// Connectivity defines how Zarf interacts with the cluster
-type Connectivity string
+// ClusterConnectivity defines how Zarf interacts with the cluster
+type ClusterConnectivity string
 
 const (
-	// ConnectivityModeAirgap mode is always used on a cluster with Zarf initialized.
-	ConnectivityModeAirgap Connectivity = "airgap"
-	// ConnectivityModeConnected mode is when there is no Zarf infrastructure data
+	// ClusterConnectivityAirgap mode is always used on a cluster with Zarf initialized.
+	ClusterConnectivityAirgap ClusterConnectivity = "airgap"
+	// ClusterConnectivityConnected mode is when there is no Zarf infrastructure data
 	// set when there are only connected or YOLO deployments on a non Zarf initialized cluster.
-	ConnectivityModeConnected Connectivity = "connected"
+	ClusterConnectivityConnected ClusterConnectivity = "connected"
 )
 
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
@@ -119,8 +119,8 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Connectivity describes how Zarf sets up resources
-	Connectivity Connectivity `json:"connectivityMode"`
+	// The connectivity mode of the cluster
+	ClusterConnectivity ClusterConnectivity `json:"clusterConnectivity"`
 	// Machine architecture of the k8s node(s)
 	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
@@ -141,11 +141,11 @@ type State struct {
 
 // GetClusterMode returns the Zarf cluster mode.
 // Assumes airgap mode if this is not set.
-func (s State) GetClusterMode() Connectivity {
-	if s.Connectivity == "" {
-		return ConnectivityModeAirgap
+func (s State) GetClusterMode() ClusterConnectivity {
+	if s.ClusterConnectivity == "" {
+		return ClusterConnectivityAirgap
 	}
-	return s.Connectivity
+	return s.ClusterConnectivity
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector

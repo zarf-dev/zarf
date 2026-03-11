@@ -58,7 +58,8 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if pkgName == "" {
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
-	skipSecretUpdates := s.GetClusterMode() == state.ConnectivityModeConnected
+	// If not in connected mode, mirror secrets in case connected mode pods rely on ###ZARF_REGISTRY### in their images
+	skipSecretUpdates := s.GetClusterMode() == state.ClusterConnectivityConnected
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,

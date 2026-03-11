@@ -743,8 +743,8 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	}
 	if s == nil && connected {
 		s = &state.State{}
-		// temporary, minimal state in connected mode
-		s.Connectivity = state.ConnectivityModeConnected
+		// temporary, ephemeral state in connected mode
+		s.ClusterConnectivity = state.ClusterConnectivityConnected
 
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
@@ -756,7 +756,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	if s == nil {
 		return nil, errors.New("cluster state should not be nil")
 	}
-	if connected && s.GetClusterMode() != state.ConnectivityModeConnected {
+	if connected && s.GetClusterMode() != state.ClusterConnectivityConnected {
 		l.Info("This is a connected or YOLO deploy, but the cluster was already initialized with 'zarf init'. " +
 			"Zarf will automatically add the label `zarf.dev/agent: ignore' to relevant resources, but resources deployed indirectly, " +
 			"for instance through gitops, should set this label")
