@@ -4,6 +4,7 @@
 package v1beta1
 
 import (
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -47,6 +48,21 @@ type ZarfComponent struct {
 
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
+
+	// Datasets to inject into a container in the target cluster.
+	// This field is not part of the v1beta1 schema but is kept as a backwards compatibility shim so v1alpha1 packages can be losslessly
+	// converted to v1beta1 for packager logic.
+	dataInjections []v1alpha1.ZarfDataInjection
+}
+
+// SetDataInjections allows setting data injections for lossless v1alpha1 conversions
+func (c *ZarfComponent) SetDataInjections(dataInjections []v1alpha1.ZarfDataInjection) {
+	c.dataInjections = dataInjections
+}
+
+// GetDataInjections is a shim to retrieving data injections when set for lossless v1alpha1 conversions
+func (c ZarfComponent) GetDataInjections() []v1alpha1.ZarfDataInjection {
+	return c.dataInjections
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
