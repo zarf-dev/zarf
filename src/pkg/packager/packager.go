@@ -120,13 +120,13 @@ func overrideComponentNamespaces(pkg *v1alpha1.ZarfPackage, original, target str
 				pkg.Components[i].Manifests[k].Namespace = target
 			}
 		}
-		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnCreate, original, target)
-		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnDeploy, original, target)
-		overrideActionSetWaitNamespaces(pkg.Components[i].Actions.OnRemove, original, target)
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnCreate, original, target)
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnDeploy, original, target)
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnRemove, original, target)
 	}
 }
 
-func overrideActionSetWaitNamespaces(set v1alpha1.ZarfComponentActionSet, original, target string) {
+func overrideActionSetWaitNamespaces(set *v1alpha1.ZarfComponentActionSet, original, target string) {
 	overrideActionWaitNamespaces(set.Before, original, target)
 	overrideActionWaitNamespaces(set.After, original, target)
 	overrideActionWaitNamespaces(set.OnSuccess, original, target)

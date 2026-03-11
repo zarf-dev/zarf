@@ -190,7 +190,8 @@ func TestOverridePackageNamespace(t *testing.T) {
 					},
 				},
 			},
-			namespace: "test-override",
+			namespace:   "test-override",
+			expectedErr: "package contains 2 unique namespaces, cannot override namespace",
 		},
 		{
 			name: "init package namespace override",
@@ -252,14 +253,10 @@ func validateNamespaceUpdates(t *testing.T, pkg v1alpha1.ZarfPackage, targetName
 	actualWaitNamespaces := make([]string, 0)
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			if chart.Namespace != "" {
-				require.Equal(t, targetNamespace, chart.Namespace)
-			}
+			require.Equal(t, targetNamespace, chart.Namespace)
 		}
 		for _, manifest := range component.Manifests {
-			if manifest.Namespace != "" {
-				require.Equal(t, targetNamespace, manifest.Namespace)
-			}
+			require.Equal(t, targetNamespace, manifest.Namespace)
 		}
 		actualWaitNamespaces = append(actualWaitNamespaces, collectWaitNamespaces(component.Actions)...)
 	}

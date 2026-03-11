@@ -111,14 +111,10 @@ func (pkg ZarfPackage) UniqueNamespaces() []string {
 	uniqueNamespaces := make(map[string]struct{})
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
-			if chart.Namespace != "" {
-				uniqueNamespaces[chart.Namespace] = struct{}{}
-			}
+			uniqueNamespaces[chart.Namespace] = struct{}{}
 		}
 		for _, manifest := range component.Manifests {
-			if manifest.Namespace != "" {
-				uniqueNamespaces[manifest.Namespace] = struct{}{}
-			}
+			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
 	}
 	return slices.Collect(maps.Keys(uniqueNamespaces))
