@@ -18,21 +18,26 @@ import (
 )
 
 func main() {
+	if err := writeSchema("v1alpha1"); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+}
+
+func writeSchema(apiVersion string) error {
 	schema, err := generateV1Alpha1Schema()
 	if err != nil {
-		fmt.Println("Error generating schema: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error generating schema: %w", err)
 	}
 
 	// Add trailing newline to match linter expectations
 	schema = append(schema, '\n')
 
 	if err := os.WriteFile("zarf-v1alpha1-schema.json", schema, 0644); err != nil {
-		fmt.Println("Error writing schema file: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("error writing schema file: %w", err)
 	}
-
 	fmt.Println("Successfully generated zarf-schema.json")
+	return nil
 }
 
 func generateV1Alpha1Schema() ([]byte, error) {
