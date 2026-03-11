@@ -733,18 +733,12 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
 	s, err := c.LoadState(ctx)
-	// We ignore the error if in connected mode because Zarf may not be initiated.
-	if err != nil && !connected {
-		return nil, err
-	}
-	// Only ignore state load error in connected mode when secret could not be found.
-	if err != nil && !kerrors.IsNotFound(err) && connected {
-		return nil, err
-	}
-	if s == nil && connected {
-		s = &state.State{}
-		// temporary, ephemeral state in connected mode
-		s.ClusterConnectivity = state.ClusterConnectivityConnected
+	if err != nil {
+		// We ignore the error in connected mode and initialize a temporary, ephemeral state
+		if !connected || !kerrors.IsNotFound(err) {
+			return nil, err
+		}
+		s = &state.State{ClusterConnectivity: state.ClusterConnectivityConnected}
 
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
@@ -752,9 +746,6 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
-	}
-	if s == nil {
-		return nil, errors.New("cluster state should not be nil")
 	}
 	if connected && s.GetClusterMode() != state.ClusterConnectivityConnected {
 		l.Info("This is a connected or YOLO deploy, but the cluster was already initialized with 'zarf init'. " +
