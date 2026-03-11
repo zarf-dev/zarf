@@ -119,6 +119,16 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
+	// Template enables go-template processing on this file during deploy.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether go-template processing is enabled for this file.
+func (f ZarfFile) ShouldTemplate() bool {
+	if f.Template != nil {
+		return *f.Template
+	}
+	return false
 }
 
 // ZarfChart defines a helm chart to be deployed.
@@ -146,17 +156,27 @@ type ZarfChart struct {
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
 	// List of values sources to their Helm override target.
 	Values []ZarfChartValue `json:"values,omitempty"`
+	// Whether to validate the chart's values against its JSON schema. Defaults to true.
+	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+}
+
+// ShouldRunSchemaValidation returns whether Helm schema validation should run.
+func (zc ZarfChart) ShouldRunSchemaValidation() bool {
+	if zc.SchemaValidation != nil {
+		return *zc.SchemaValidation
+	}
+	return true
 }
 
 // GetDeprecatedVersion gets the version of the chart, used as a backwards compatibility shim with v1alpha1.
-func (c ZarfChart) GetDeprecatedVersion() string {
-	return c.version
+func (zc ZarfChart) GetDeprecatedVersion() string {
+	return zc.version
 }
 
 // SetDeprecatedVersion sets the version of the chart, used as a backwards compatibility shim with v1alpha1.
 // This function will be deleted when v1alpha1 packages are no longer deployable
-func (c *ZarfChart) SetDeprecatedVersion(version string) {
-	c.version = version
+func (zc *ZarfChart) SetDeprecatedVersion(version string) {
+	zc.version = version
 }
 
 // ZarfChartValue maps a values source path to a Helm chart target path.
@@ -213,6 +233,16 @@ type ZarfManifest struct {
 	Kustomizations []string `json:"kustomizations,omitempty"`
 	// Whether to wait for manifest resources to be ready before continuing. Defaults to true.
 	Wait *bool `json:"wait,omitempty"`
+	// Template enables go-template processing on these manifests during deploy.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether go-template processing is enabled for this manifest.
+func (m ZarfManifest) ShouldTemplate() bool {
+	if m.Template != nil {
+		return *m.Template
+	}
+	return false
 }
 
 // ZarfImage defines an OCI image to include in the package.
@@ -317,6 +347,16 @@ type ZarfComponentAction struct {
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 	Wait *ZarfComponentActionWait `json:"wait,omitempty"`
+	// Disable go-template processing on the cmd field.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether the action should have go-template processing.
+func (a ZarfComponentAction) ShouldTemplate() bool {
+	if a.Template != nil {
+		return *a.Template
+	}
+	return false
 }
 
 // SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.

@@ -31,11 +31,6 @@ const (
 	APIVersion string = "zarf.dev/v1beta1"
 )
 
-// ZarfPackageTemplatePrefix is the prefix for package templates.
-const (
-	ZarfPackageTemplatePrefix = "###ZARF_PKG_TMPL_"
-)
-
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
@@ -173,12 +168,19 @@ type ZarfBuildData struct {
 	RegistryOverrides map[string]string `json:"registryOverrides,omitempty"`
 	// Whether this package was created with differential components.
 	Differential bool `json:"differential,omitempty"`
+	// Version of a previously built package used as the basis for creating this differential package.
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
 	// The flavor of Zarf used to build this package.
 	Flavor string `json:"flavor,omitempty"`
+	// Whether this package was signed.
+	Signed *bool `json:"signed,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 	// Requirements for specific Zarf versions needed to deploy this package.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.
