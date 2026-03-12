@@ -6,7 +6,9 @@ package v1alpha1
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"time"
 )
 
@@ -101,6 +103,11 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 
 // UniqueNamespaceCount returns the number of unique namespaces in the package.
 func (pkg ZarfPackage) UniqueNamespaceCount() int {
+	return len(pkg.UniqueNamespaces())
+}
+
+// UniqueNamespaces returns a slice of all unique namespaces in the package
+func (pkg ZarfPackage) UniqueNamespaces() []string {
 	uniqueNamespaces := make(map[string]struct{})
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
@@ -110,20 +117,7 @@ func (pkg ZarfPackage) UniqueNamespaceCount() int {
 			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
 	}
-	return len(uniqueNamespaces)
-}
-
-// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
-func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
-	for i := range pkg.Components {
-		comp := pkg.Components[i]
-		for j := range comp.Charts {
-			comp.Charts[j].Namespace = namespace
-		}
-		for k := range comp.Manifests {
-			comp.Manifests[k].Namespace = namespace
-		}
-	}
+	return slices.Collect(maps.Keys(uniqueNamespaces))
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
