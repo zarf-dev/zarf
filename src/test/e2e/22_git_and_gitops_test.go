@@ -210,7 +210,7 @@ func waitArgoDeployment(t *testing.T) {
 	require.Equal(t, expectedMutatedRepoURL, string(expectedMutatedPrivateRepoURLSecret))
 
 	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
-	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "podinfo", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 

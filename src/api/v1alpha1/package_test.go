@@ -45,6 +45,118 @@ func TestZarfPackageHasImages(t *testing.T) {
 	require.True(t, pkg.HasImages())
 }
 
+func TestUniqueNamespaces(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pkg      ZarfPackage
+		expected []string
+	}{
+		{
+			name:     "empty package",
+			pkg:      ZarfPackage{},
+			expected: []string{},
+		},
+		{
+			name: "single chart namespace",
+			pkg: ZarfPackage{
+				Components: []ZarfComponent{
+					{
+						Charts: []ZarfChart{
+							{Name: "test", Namespace: "test-ns"},
+						},
+					},
+				},
+			},
+			expected: []string{"test-ns"},
+		},
+		{
+			name: "single manifest namespace",
+			pkg: ZarfPackage{
+				Components: []ZarfComponent{
+					{
+						Manifests: []ZarfManifest{
+							{Name: "test", Namespace: "manifest-ns"},
+						},
+					},
+				},
+			},
+			expected: []string{"manifest-ns"},
+		},
+		{
+			name: "multiple unique namespaces",
+			pkg: ZarfPackage{
+				Components: []ZarfComponent{
+					{
+						Charts: []ZarfChart{
+							{Name: "chart1", Namespace: "ns-a"},
+							{Name: "chart2", Namespace: "ns-b"},
+						},
+						Manifests: []ZarfManifest{
+							{Name: "manifest1", Namespace: "ns-c"},
+						},
+					},
+				},
+			},
+			expected: []string{"ns-a", "ns-b", "ns-c"},
+		},
+		{
+			name: "duplicate namespaces are deduplicated",
+			pkg: ZarfPackage{
+				Components: []ZarfComponent{
+					{
+						Charts: []ZarfChart{
+							{Name: "chart1", Namespace: "same-ns"},
+							{Name: "chart2", Namespace: "same-ns"},
+						},
+						Manifests: []ZarfManifest{
+							{Name: "manifest1", Namespace: "same-ns"},
+						},
+					},
+				},
+			},
+			expected: []string{"same-ns"},
+		},
+		{
+			name: "wait action namespaces are not included",
+			pkg: ZarfPackage{
+				Components: []ZarfComponent{
+					{
+						Charts: []ZarfChart{
+							{Name: "chart1", Namespace: "chart-ns"},
+						},
+						Actions: ZarfComponentActions{
+							OnDeploy: ZarfComponentActionSet{
+								After: []ZarfComponentAction{
+									{
+										Wait: &ZarfComponentActionWait{
+											Cluster: &ZarfComponentActionWaitCluster{
+												Kind:      "Pod",
+												Name:      "test",
+												Namespace: "wait-ns",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: []string{"chart-ns"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.pkg.UniqueNamespaces()
+			require.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
 func TestZarfPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 

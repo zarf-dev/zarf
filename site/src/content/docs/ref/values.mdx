@@ -30,12 +30,6 @@ To preview the effects of value templates on your manifests and charts without b
 
 :::
 
-:::note
-
-Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated by Zarf
-
-:::
-
 ### Helm Chart Mapping
 
 [Zarf Variables](#variables-zarf_var_) can also be mapped directly to Helm values within a given `charts` definition.  This is done with the `variables` key within a chart that allows you to take a Zarf Variable `name` and map it to a YAML path within that chart's Helm values.  This chart's Helm value will then be set to the current value of the Zarf Variable at the time of it's installation.
