@@ -833,7 +833,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				}
 			}
 		}
-
 	}
 
 	for _, finding := range imageArchivesScans {

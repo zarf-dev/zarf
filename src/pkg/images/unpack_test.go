@@ -181,7 +181,6 @@ func TestGetManifestsFromArchive(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestUnpackMultipleImages(t *testing.T) {

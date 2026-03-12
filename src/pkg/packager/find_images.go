@@ -84,11 +84,7 @@ type ComponentImageScan struct {
 	WhyResources []Resource
 }
 
-type ImageArchive struct {
-	Images []string `yaml:"images"`
-	Path   string   `yaml:"path"`
-}
-
+// ImageArchivesScan contains the ImageArchives contained for each component
 type ImageArchivesScan struct {
 	ComponentName string
 	ImageArchives []v1alpha1.ImageArchive
