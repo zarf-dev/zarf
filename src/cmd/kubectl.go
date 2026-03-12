@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -23,21 +24,22 @@ const (
 	kubeLong  = "kubectl"
 )
 
-// code credit, k0sproject/k0s
-// https://github.com/k0sproject/k0s/blob/df88db5f317bb84dcda797ff6a68956bc2e49683/cmd/kubectl/kubectl.go#L59
 func newKubectlCommand() *cobra.Command {
 	var kubectlCmd *cobra.Command
-	// because of some weirdness around how the kubectl command works we only want to pass it the args when it is being called via `zarf tools kubectl` and not, as an example, `zarf tools sbom`
-	if (len(os.Args) > 1 && (os.Args[2] == kubeLong || os.Args[2] == kubeShort)) || len(os.Args) > 2 && (os.Args[2] == cobra.ShellCompRequestCmd) && (os.Args[3] == kubeLong || os.Args[3] == kubeShort) {
+
+	argOffset := slices.Index(os.Args, kubeLong)
+	if argOffset < 0 {
+		argOffset = slices.Index(os.Args, kubeShort)
+	}
+
+	if argOffset > -1 {
 		kubectlCmd = kubecmd.NewDefaultKubectlCommandWithArgs(kubecmd.KubectlOptions{
 			IOStreams: genericiooptions.IOStreams{
 				In:     os.Stdin,
 				Out:    os.Stdout,
 				ErrOut: os.Stderr,
 			},
-			// 2 is a magic number, but instead of sending `zarf tools kubectl get nodes` to kubectl
-			// it sends just `kubectl get nodes` or `k get nodes`
-			Arguments: os.Args[2:],
+			Arguments: os.Args[argOffset:],
 			PluginHandler: &kubecmd.DefaultPluginHandler{
 				ValidPrefixes: plugin.ValidPluginFilenamePrefixes,
 			},
