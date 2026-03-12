@@ -12,9 +12,13 @@ import (
 
 	"github.com/zarf-dev/zarf/src/cmd"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"helm.sh/helm/v4/pkg/kube"
 )
 
 func main() {
+	// This ensures the field manager is set to Zarf during any Helm SDK actions
+	kube.ManagedFieldsManager = cluster.FieldManagerName
 	// This ensures `./zarf` actions call the current Zarf binary over the system Zarf binary
 	config.ActionsUseSystemZarf = false
 	ctx, cancel := context.WithCancel(context.Background())
