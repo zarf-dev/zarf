@@ -965,10 +965,10 @@ func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, ov
 	})
 }
 
-func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues value.Values, packagePath, buildPath string) error {
+func mergeAndWriteValuesFile(ctx context.Context, files []string, importValues value.Values, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
-	if len(files) == 0 && len(addValues) == 0 {
+	if len(files) == 0 && len(importValues) == 0 {
 		return nil
 	}
 
@@ -997,16 +997,16 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, addValues valu
 	}
 
 	// DeepMerge any additional values such that top-level package values take precedence over import values
-	if addValues == nil {
-		addValues = vals
+	if importValues == nil {
+		importValues = vals
 	} else {
-		addValues.DeepMerge(vals)
+		importValues.DeepMerge(vals)
 	}
 
 	// Write merged values to YAML
 	dst := filepath.Join(buildPath, ValuesYAML)
 	l.Debug("writing merged values file", "dst", dst, "fileCount", len(files))
-	if err := utils.WriteYaml(dst, addValues, helpers.ReadWriteUser); err != nil {
+	if err := utils.WriteYaml(dst, importValues, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values file: %w", err)
 	}
 

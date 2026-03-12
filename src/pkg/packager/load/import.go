@@ -65,7 +65,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
-	var packageValues value.Values
+	packageValues := value.Values{}
 
 	for _, component := range pkg.Components {
 		if !compatibleComponent(component, arch, flavor) {
@@ -157,7 +157,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		// Check for collisions in the values and warn
 		if collisions := packageValues.Collisions(importedValues); len(collisions) > 0 {
-			l.Warn("values collision on component: %s root keys: %v", component.Name, collisions)
+			l.Warn("values collision on component", "component", component.Name, "rootKeys", collisions)
 		}
 		// Merge values
 		if packageValues == nil {
@@ -208,13 +208,6 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 	}
-
-	// // load and merge values from top-level package
-	// parentValues, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
-	// if err != nil {
-	// 	return v1alpha1.ZarfPackage{}, value.Values{}, err
-	// }
-	// packageValues.DeepMerge(parentValues)
 
 	pkg.Components = components
 
