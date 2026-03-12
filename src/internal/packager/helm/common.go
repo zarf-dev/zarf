@@ -32,6 +32,10 @@ import (
 
 var contentCachePath = filepath.Join("helm", "content")
 
+func init() {
+	kube.ManagedFieldsManager = cluster.FieldManagerName
+}
+
 // ChartFromZarfManifest generates a helm chart and config from a given Zarf manifest.
 func ChartFromZarfManifest(manifest v1alpha1.ZarfManifest, manifestPath, packageName, componentName string) (v1alpha1.ZarfChart, *chartv2.Chart, error) {
 	// Generate a new chart.
@@ -135,9 +139,6 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	// This sets the field manager to Zarf. Every Helm operation requires an action config
-	// so this ensures the field is properly set prior to each operation.
-	kube.ManagedFieldsManager = cluster.FieldManagerName
 	l := logger.From(ctx)
 	actionConfig := action.NewConfiguration()
 	actionConfig.SetLogger(l.Handler())
