@@ -159,6 +159,13 @@ type ZarfChart struct {
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether to validate the chart's values against its JSON schema. Defaults to true.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 }
 
 // ShouldRunSchemaValidation returns whether Helm schema validation should run.
@@ -167,6 +174,14 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 		return *zc.SchemaValidation
 	}
 	return true
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (zc ZarfChart) GetServerSideApply() string {
+	if zc.ServerSideApply == "" {
+		return "auto"
+	}
+	return zc.ServerSideApply
 }
 
 // GetDeprecatedVersion gets the version of the chart, used as a backwards compatibility shim with v1alpha1.
@@ -232,6 +247,13 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
+	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 	// Whether to wait for manifest resources to be ready before continuing. Defaults to true.
 	Wait *bool `json:"wait,omitempty"`
 	// Template enables go-template processing on these manifests during deploy.
@@ -244,6 +266,14 @@ func (m ZarfManifest) ShouldTemplate() bool {
 		return *m.Template
 	}
 	return false
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (m ZarfManifest) GetServerSideApply() string {
+	if m.ServerSideApply == "" {
+		return "auto"
+	}
+	return m.ServerSideApply
 }
 
 // ZarfImage defines an OCI image to include in the package.

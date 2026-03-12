@@ -493,6 +493,15 @@
           "description": "Whether to validate the chart's values against its JSON schema. Defaults to true.",
           "type": "boolean"
         },
+        "serverSideApply": {
+          "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
+        },
         "values": {
           "description": "List of values sources to their Helm override target.",
           "items": {
@@ -1080,6 +1089,15 @@
         },
         "namespace": {
           "description": "The namespace to deploy the manifests to.",
+          "type": "string"
+        },
+        "serverSideApply": {
+          "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
           "type": "string"
         },
         "template": {
