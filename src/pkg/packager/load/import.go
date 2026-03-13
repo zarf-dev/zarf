@@ -209,6 +209,18 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		constants = append(constants, importedPkg.Constants...)
 	}
 
+	// load and merge values from top-level package
+	// We need to fix the path given this is an import
+	for i, filepath := range pkg.Values.Files {
+		pkg.Values.Files[i] = makePathRelativeTo(filepath, pkgPath.BaseDir)
+	}
+
+	parentValues, err := value.ParseFiles(ctx, pkg.Values.Files, value.ParseFilesOptions{})
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, value.Values{}, err
+	}
+	packageValues.DeepMerge(parentValues)
+
 	pkg.Components = components
 
 	varMap := map[string]bool{}

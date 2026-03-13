@@ -175,9 +175,15 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, importValues
 		}
 	}
 
-	l.Debug("merging values files to package", "files", pkg.Values.Files)
-	if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, importValues, packagePath, buildPath); err != nil {
-		return nil, err
+	// l.Debug("merging values files to package", "files", pkg.Values.Files)
+	// if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, importValues, packagePath, buildPath); err != nil {
+	// 	return nil, err
+	// }
+
+	// Write merged values to YAML
+	dst := filepath.Join(buildPath, ValuesYAML)
+	if err := utils.WriteYaml(dst, importValues, helpers.ReadWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to write merged values file: %w", err)
 	}
 
 	// Copy schema file if specified
