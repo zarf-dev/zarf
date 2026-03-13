@@ -251,7 +251,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		for _, image := range sortedMatchedImages {
 			imageReference, err := transform.ParseImageRef(image)
 			if err != nil {
-				return nil, fmt.Errorf("could not parse image reference for matched image %s", image)
+				return nil, fmt.Errorf("could not parse image reference for matched image %s: %w", image, err)
 			}
 			scan.Matches = append(scan.Matches, imageReference.Reference)
 		}
@@ -332,6 +332,11 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 		return nil, nil, err
 	}
 
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var imageArchiveScans []ImageArchivesScan
 	var allArchiveImages []string
 	for _, component := range pkg.Components {
@@ -341,10 +346,6 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 		}
 		scan := ImageArchivesScan{ComponentName: component.Name}
 		for _, archive := range component.ImageArchives {
-			pkgPath, err := layout.ResolvePackagePath(packagePath)
-			if err != nil {
-				return nil, nil, err
-			}
 			archivePath := path.Join(pkgPath.BaseDir, archive.Path)
 			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
 			if err != nil {
@@ -356,7 +357,7 @@ func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageS
 			}
 			imageArchive := v1alpha1.ImageArchive{
 				Images: archiveImages,
-				Path:   archivePath,
+				Path:   archive.Path,
 			}
 			scan.ImageArchives = append(scan.ImageArchives, imageArchive)
 			allArchiveImages = append(allArchiveImages, archiveImages...)

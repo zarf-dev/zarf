@@ -6,6 +6,7 @@ package packager
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 
@@ -129,120 +130,53 @@ func patchComponent(patch map[string]any, component string, componentIndex int, 
 }
 
 func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan, archiveImagesScans []ImageArchivesScan) bool {
-	// Map components to all archive images found in archive scans
-	archiveScanMap := make(map[string]map[string]struct{}, len(archiveImagesScans))
-	for _, scan := range archiveImagesScans {
-		var combined []string
-		for _, imageArchive := range scan.ImageArchives {
-			combined = append(combined, imageArchive.Images...)
-		}
-		imageSet := make(map[string]struct{}, len(combined))
-		for _, img := range combined {
-			imageSet[img] = struct{}{}
-		}
-		archiveScanMap[scan.ComponentName] = imageSet
+
+	imageScansByComponent := make(map[string]ComponentImageScan, len(imageScans))
+	for _, s := range imageScans {
+		imageScansByComponent[s.ComponentName] = s
+	}
+	archiveScansByComponent := make(map[string]ImageArchivesScan, len(archiveImagesScans))
+	for _, s := range archiveImagesScans {
+		archiveScansByComponent[s.ComponentName] = s
 	}
 
-	// Map image archive components to archive images
-	componentArchiveMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
 	for _, component := range zarfPackage.Components {
-		imageSet := make(map[string]struct{})
+		scan := imageScansByComponent[component.Name]
+		archiveScan := archiveScansByComponent[component.Name]
+
+		// Collect archive-scanned images for this component
+		archiveScannedImages := make(map[string]struct{})
+		for _, ia := range archiveScan.ImageArchives {
+			for _, img := range ia.Images {
+				archiveScannedImages[img] = struct{}{}
+			}
+		}
+
+		// Check archive images: package definition vs archive scan
+		componentArchiveImages := make(map[string]struct{})
 		for _, archive := range component.ImageArchives {
 			for _, img := range archive.Images {
-				imageSet[img] = struct{}{}
+				componentArchiveImages[img] = struct{}{}
 			}
 		}
-		componentArchiveMap[component.Name] = imageSet
-	}
-
-	// Map comonents to all images found in scan, discounting any images that are included in image archives
-	scanMap := make(map[string]map[string]struct{}, len(imageScans))
-	for _, scan := range imageScans {
-		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
-		imageSet := make(map[string]struct{}, len(combined))
-		for _, img := range combined {
-			if _, found := archiveScanMap[scan.ComponentName][img]; found {
-				continue
-			}
-			imageSet[img] = struct{}{}
-		}
-		scanMap[scan.ComponentName] = imageSet
-	}
-
-	// Map component to component images
-	componentMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
-	for _, component := range zarfPackage.Components {
-		imageSet := make(map[string]struct{}, len(component.Images))
-		for _, img := range component.Images {
-			imageSet[img] = struct{}{}
-		}
-		componentMap[component.Name] = imageSet
-	}
-
-	// Update needed if:
-	// 1. A component is found in the package definition that is not included in the scan
-	// 2. An image is found in the component images is not included in the scan images
-	// 3. An image is found in the component imageArchives is not included in the archive scan images
-	for _, component := range zarfPackage.Components {
-		imageSet, found := scanMap[component.Name]
-		_, foundInArchive := archiveScanMap[component.Name]
-		if !found && !foundInArchive {
+		if !maps.Equal(componentArchiveImages, archiveScannedImages) {
 			return true
 		}
 
+		// Check regular images: package definition vs image scan
+		// Scanned images that also appear in archives are excluded (they're accounted for above)
+		scannedImages := make(map[string]struct{})
+		for _, img := range slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts) {
+			if _, inArchive := archiveScannedImages[img]; !inArchive {
+				scannedImages[img] = struct{}{}
+			}
+		}
+		componentImages := make(map[string]struct{}, len(component.Images))
 		for _, img := range component.Images {
-			if _, found := imageSet[img]; !found {
-				return true
-			}
+			componentImages[img] = struct{}{}
 		}
-
-		for _, archive := range component.ImageArchives {
-			for _, img := range archive.Images {
-				if _, found := archiveScanMap[component.Name][img]; !found {
-					return true
-				}
-			}
-		}
-	}
-
-	// Update needed if:
-	// 1. A component is found in the scan that is not included in the package definition
-	// 2. An image is found in the scan is not included in the component images
-	for _, scan := range imageScans {
-		componentImages, found := componentMap[scan.ComponentName]
-		if !found {
+		if !maps.Equal(componentImages, scannedImages) {
 			return true
-		}
-
-		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
-		for _, img := range combined {
-			_, foundInComponent := componentImages[img]
-			_, foundInArchive := archiveScanMap[scan.ComponentName][img]
-			if !foundInComponent && !foundInArchive {
-				return true
-			}
-		}
-	}
-
-	// Update needed if:
-	// 1. A component is found in the archive scan that is not included in the package definition
-	// 2. An image is found in the archive scan that is not included in the component archive images
-	for _, scan := range archiveImagesScans {
-		componentArchiveImages, found := componentArchiveMap[scan.ComponentName]
-		if !found {
-			continue
-		}
-
-		var combined []string
-		for _, imageArchive := range scan.ImageArchives {
-			combined = append(combined, imageArchive.Images...)
-		}
-
-		for _, img := range combined {
-			_, found := componentArchiveImages[img]
-			if !found {
-				return true
-			}
 		}
 	}
 

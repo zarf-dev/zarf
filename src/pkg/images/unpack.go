@@ -37,9 +37,9 @@ const (
 )
 
 // GetManifestsFromArchive take an image archive and returns a list of image descriptiors
-func GetManifestsFromArchive(ctx context.Context, imageArchive string) ([]ocispec.Descriptor, error) {
+func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocispec.Descriptor, err error) {
 	// Create a temporary directory for extraction
-	extractionDir, err := utils.MakeTempDir("")
+	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
@@ -55,9 +55,7 @@ func GetManifestsFromArchive(ctx context.Context, imageArchive string) ([]ocispe
 		return nil, fmt.Errorf("failed to determine image directory: %w", err)
 	}
 
-	manifests, err := getManifestsFromOCILayout(imageDir)
-
-	return manifests, err
+	return getManifestsFromOCILayout(imageDir)
 }
 
 // FindImagesInOCIManifests takes a list of OCI Descriptors and returns image References

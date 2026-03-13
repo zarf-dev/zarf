@@ -819,8 +819,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		for _, archiveFinding := range imageArchivesScans {
 			if archiveFinding.ComponentName == finding.ComponentName {
 				componentDefinition += fmt.Sprintf("  # Archive images - %s\n", archiveFinding.ComponentName)
+				componentDefinition += "    imageArchives:\n"
 				for _, imageArchive := range archiveFinding.ImageArchives {
-					componentDefinition += "    imageArchives:\n"
 					componentDefinition += fmt.Sprintf("      - path: %s\n", imageArchive.Path)
 					if len(imageArchive.Images) > 0 {
 						componentDefinition += "        images:\n"
@@ -841,8 +841,8 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		}
 		componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
 		componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
+		componentDefinition += "    imageArchives:\n"
 		for _, imageArchive := range finding.ImageArchives {
-			componentDefinition += "    imageArchives:\n"
 			componentDefinition += fmt.Sprintf("      - path: %s\n", imageArchive.Path)
 			if len(imageArchive.Images) > 0 {
 				componentDefinition += "        images:\n"
