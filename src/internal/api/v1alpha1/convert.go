@@ -5,6 +5,7 @@ package v1alpha1
 
 import (
 	"math"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
@@ -578,7 +579,14 @@ func convertGenericToV1Alpha1Chart(ch types.ZarfChart) v1alpha1.ZarfChart {
 				ac.Version = ch.OCI.Version
 			}
 		case ch.Git.URL != "":
-			ac.URL = ch.Git.URL
+			gitURL := ch.Git.URL
+			if idx := strings.LastIndex(gitURL, "@"); idx > 0 {
+				if ac.Version == "" {
+					ac.Version = gitURL[idx+1:]
+				}
+				gitURL = gitURL[:idx]
+			}
+			ac.URL = gitURL
 			ac.GitPath = ch.Git.Path
 		case ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path

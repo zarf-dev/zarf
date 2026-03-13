@@ -153,7 +153,7 @@ func convertV1Beta1Component(c v1beta1.ZarfComponent) types.ZarfComponent {
 	for _, img := range c.Images {
 		gc.Images = append(gc.Images, types.ZarfImage{
 			Name:   img.Name,
-			Source: img.Source,
+			Source: types.ImageSource(img.Source),
 		})
 	}
 
@@ -476,7 +476,7 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 	for _, img := range c.Images {
 		gc.Images = append(gc.Images, v1beta1.ZarfImage{
 			Name:   img.Name,
-			Source: img.Source,
+			Source: string(img.Source),
 		})
 	}
 
@@ -604,8 +604,14 @@ func convertChart(ch types.ZarfChart) v1beta1.ZarfChart {
 				Version: ch.Version,
 			}
 		case ch.GitPath != "" || isGitURL(ch.URL):
+			gitURL := ch.URL
+			// Only append @version if the URL doesn't already contain a ref,
+			// mirroring the runtime behavior in packager/helm/repo.go.
+			if ch.Version != "" && !strings.Contains(ch.URL, "@") {
+				gitURL += "@" + ch.Version
+			}
 			bc.Git = v1beta1.GitRepoSource{
-				URL:  ch.URL,
+				URL:  gitURL,
 				Path: ch.GitPath,
 			}
 		default:
@@ -784,6 +790,11 @@ func convertWait(w *types.ZarfComponentActionWait) *v1beta1.ZarfComponentActionW
 }
 
 func isGitURL(url string) bool {
+	// Strip any @ref suffix before checking, matching the runtime behavior
+	// in packager/helm/repo.go which uses transform.GitURLSplitRef.
+	if idx := strings.LastIndex(url, "@"); idx > 0 {
+		url = url[:idx]
+	}
 	return strings.HasSuffix(url, ".git")
 }
 

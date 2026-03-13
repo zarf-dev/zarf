@@ -174,10 +174,28 @@ type ZarfFile struct {
 	Template    *bool
 }
 
+// ImageSource represents where an image is pulled from.
+type ImageSource string
+
+const (
+	// ImageSourceRegistry pulls from an OCI registry.
+	ImageSourceRegistry ImageSource = "registry"
+	// ImageSourceDaemon pulls from the local Docker daemon.
+	ImageSourceDaemon ImageSource = "daemon"
+)
+
 // ZarfImage represents an OCI image.
 type ZarfImage struct {
 	Name   string
-	Source string
+	Source ImageSource
+}
+
+// GetSource returns the image source, defaulting to ImageSourceRegistry.
+func (img ZarfImage) GetSource() ImageSource {
+	if img.Source == "" {
+		return ImageSourceRegistry
+	}
+	return img.Source
 }
 
 // ImageArchive defines a tar archive of images.

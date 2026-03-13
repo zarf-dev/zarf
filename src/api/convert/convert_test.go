@@ -300,7 +300,20 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			},
 		},
 		{
-			name: "git repo",
+			name: "git repo with version",
+			chart: v1alpha1.ZarfChart{
+				Name:    "my-chart",
+				URL:     "https://github.com/example/repo",
+				GitPath: "charts/my-chart",
+				Version: "6.4.0",
+			},
+			validate: func(t *testing.T, c v1beta1.ZarfChart) {
+				assert.Equal(t, "https://github.com/example/repo@6.4.0", c.Git.URL)
+				assert.Equal(t, "charts/my-chart", c.Git.Path)
+			},
+		},
+		{
+			name: "git repo without version",
 			chart: v1alpha1.ZarfChart{
 				Name:    "my-chart",
 				URL:     "https://github.com/example/repo",
@@ -308,6 +321,20 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
 				assert.Equal(t, "https://github.com/example/repo", c.Git.URL)
+				assert.Equal(t, "charts/my-chart", c.Git.Path)
+			},
+		},
+		{
+			name: "git repo with ref already in url",
+			chart: v1alpha1.ZarfChart{
+				Name:    "my-chart",
+				URL:     "https://github.com/example/repo.git@v2.0.0",
+				GitPath: "charts/my-chart",
+				Version: "6.4.0",
+			},
+			validate: func(t *testing.T, c v1beta1.ZarfChart) {
+				// URL already has @ref, should not double-append version.
+				assert.Equal(t, "https://github.com/example/repo.git@v2.0.0", c.Git.URL)
 				assert.Equal(t, "charts/my-chart", c.Git.Path)
 			},
 		},
@@ -745,7 +772,22 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 			},
 		},
 		{
-			name: "git repo",
+			name: "git repo with version in url",
+			chart: v1beta1.ZarfChart{
+				Name: "my-chart",
+				Git: v1beta1.GitRepoSource{
+					URL:  "https://github.com/example/repo@6.4.0",
+					Path: "charts/my-chart",
+				},
+			},
+			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
+				assert.Equal(t, "https://github.com/example/repo", c.URL)
+				assert.Equal(t, "charts/my-chart", c.GitPath)
+				assert.Equal(t, "6.4.0", c.Version)
+			},
+		},
+		{
+			name: "git repo without version",
 			chart: v1beta1.ZarfChart{
 				Name: "my-chart",
 				Git: v1beta1.GitRepoSource{
