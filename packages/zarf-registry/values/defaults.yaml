@@ -1,0 +1,38 @@
+registry:
+  pvc:
+    enabled: true
+    size: 20Gi
+    accessMode: ReadWriteOnce
+    existingClaim: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "3"
+      memory: 2Gi
+  hpa:
+    enabled: true
+    min: 1
+    max: 5
+    targetCPU: 80
+    autoSize: false
+  affinity:
+    enabled: true
+    custom: {}
+  tolerations: []
+  nodeSelector: {}
+  proxy:
+    tolerations: []
+    hostNetwork: false
+  caBundle: ""
+  extraEnvs: []
+  otelExporter: none
+  serviceAccount:
+    create: false
+    name: ""
+    annotations: {}
+  security:
+    runAsUser: 1000
+    fsGroup: 2000
+    runAsGroup: 2000

@@ -1,9 +1,9 @@
 persistence:
-  enabled: ###ZARF_VAR_REGISTRY_PVC_ENABLED###
+  enabled: true
   storageClass: "###ZARF_STORAGE_CLASS###"
-  size: "###ZARF_VAR_REGISTRY_PVC_SIZE###"
-  existingClaim: "###ZARF_VAR_REGISTRY_EXISTING_PVC###"
-  accessMode: "###ZARF_VAR_REGISTRY_PVC_ACCESS_MODE###"
+  size: "20Gi"
+  existingClaim: ""
+  accessMode: "ReadWriteOnce"
 
 image:
   repository: "###ZARF_REGISTRY###/###ZARF_CONST_REGISTRY_IMAGE###"
@@ -14,9 +14,8 @@ imagePullSecrets:
 
 proxy:
   enabled: ###ZARF_REGISTRY_PROXY###
-  hostNetwork: ###ZARF_VAR_HOST_NETWORK_PROXY###
-  tolerations:
-    ###ZARF_VAR_PROXY_TOLERATIONS###
+  hostNetwork: false
+  tolerations: []
   image:
     repository: "###ZARF_SEED_REGISTRY###/###ZARF_CONST_PROXY_IMAGE###"
     tag: "###ZARF_CONST_PROXY_IMAGE_TAG###"
@@ -45,11 +44,11 @@ service:
 
 resources:
   requests:
-    cpu: "###ZARF_VAR_REGISTRY_CPU_REQ###"
-    memory: "###ZARF_VAR_REGISTRY_MEM_REQ###"
+    cpu: "100m"
+    memory: "256Mi"
   limits:
-    cpu: "###ZARF_VAR_REGISTRY_CPU_LIMIT###"
-    memory: "###ZARF_VAR_REGISTRY_MEM_LIMIT###"
+    cpu: "3"
+    memory: "2Gi"
 
 fullnameOverride: "zarf-docker-registry"
 
@@ -57,41 +56,33 @@ podLabels:
   zarf.dev/agent: "ignore"
 
 affinity:
-  enabled: ###ZARF_VAR_REGISTRY_AFFINITY_ENABLE###
-  custom:
-    ###ZARF_VAR_REGISTRY_AFFINITY_CUSTOM###
+  enabled: true
+  custom: {}
 
-tolerations:
-  ###ZARF_VAR_REGISTRY_TOLERATIONS###
+tolerations: []
 
-nodeSelector:
-  ###ZARF_VAR_REGISTRY_NODE_SELECTOR###
+nodeSelector: {}
 
 autoscaling:
-  enabled: ###ZARF_VAR_REGISTRY_HPA_ENABLE###
-  mapReplicasToNodes: ###ZARF_VAR_REGISTRY_HPA_AUTO_SIZE###
-  minReplicas: "###ZARF_VAR_REGISTRY_HPA_MIN###"
-  maxReplicas: "###ZARF_VAR_REGISTRY_HPA_MAX###"
-  targetCPUUtilizationPercentage: ###ZARF_VAR_REGISTRY_HPA_TARGET_CPU###
+  enabled: true
+  mapReplicasToNodes: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
 
-caBundle: |
-  ###ZARF_VAR_REGISTRY_CA_BUNDLE###
+caBundle: ""
 
-extraEnvVars:
-  ###ZARF_VAR_REGISTRY_EXTRA_ENVS###
+extraEnvVars: []
 
 serviceAccount:
-  # Specifies whether a service account should be created
-  create: ###ZARF_VAR_REGISTRY_CREATE_SERVICE_ACCOUNT###
-  # The name of the service account to use. If name not set and create is true, a name is generated using fullname template
-  name: "###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_NAME###"
-  annotations:
-    ###ZARF_VAR_REGISTRY_SERVICE_ACCOUNT_ANNOTATIONS###
+  create: false
+  name: ""
+  annotations: {}
 
 opentelemetry:
-  exporter: ###ZARF_VAR_REGISTRY_OTEL_EXPORTER###
+  exporter: none
 
 securityContext:
-  runAsUser: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_USER###
-  fsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_FS_GROUP###
-  runAsGroup: ###ZARF_VAR_REGISTRY_SECURITY_CONTEXT_RUN_AS_GROUP###
+  runAsUser: 1000
+  fsGroup: 2000
+  runAsGroup: 2000
