@@ -157,10 +157,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		o.registryInfo.RegistryMode = state.RegistryModeExternal
 	}
 
-	if o.registryInfo.NodePort == 0 && o.registryInfo.RegistryMode == state.RegistryModeNodePort {
-		o.registryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
-	}
-
 	packageSource := ""
 
 	if len(args) > 0 {
