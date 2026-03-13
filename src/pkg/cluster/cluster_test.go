@@ -355,7 +355,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			expected: state.State{
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
-					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					MTLSStrategy: state.MTLSStrategyNone,
 					NodePort:     state.ZarfInClusterContainerRegistryNodePort,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
@@ -379,7 +379,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			expected: state.State{
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
-					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					MTLSStrategy: state.MTLSStrategyNone,
 					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
