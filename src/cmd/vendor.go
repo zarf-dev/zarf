@@ -64,9 +64,11 @@ func IsVendorCmd(args []string, vendoredCmds []string) bool {
 	// because of that we need to check to see if the the second and third subcommands are "tools"/"t" and
 	// the vendored commands.
 	if len(args) > 3 {
-		if args[1] == "__complete" && (args[2] == "tools" || args[2] == "t") {
-			if slices.Contains(vendoredCmds, args[3]) {
-				return true
+		if os.Args[1] == cobra.ShellCompRequestCmd || os.Args[1] == cobra.ShellCompNoDescRequestCmd {
+			if args[2] == "tools" || args[2] == "t" {
+				if slices.Contains(vendoredCmds, args[3]) {
+					return true
+				}
 			}
 		}
 	}
