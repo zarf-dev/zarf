@@ -16,9 +16,11 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"helm.sh/helm/v4/pkg/kube"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -69,6 +71,8 @@ func (o *outputFormat) Type() string {
 var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	// This ensures the field manager is set to Zarf during any Helm SDK actions
+	kube.ManagedFieldsManager = cluster.FieldManagerName
 	// Configure user defined Features
 	err := setupFeatures(features)
 	if err != nil {

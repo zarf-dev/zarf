@@ -206,6 +206,13 @@ type ZarfChart struct {
 	Values []ZarfChartValue `json:"values,omitempty"`
 	// Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.
 	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 }
 
 // ShouldRunSchemaValidation returns if Helm schema validation should be run or not
@@ -214,6 +221,14 @@ func (zc ZarfChart) ShouldRunSchemaValidation() bool {
 		return *zc.SchemaValidation
 	}
 	return true
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (zc ZarfChart) GetServerSideApply() string {
+	if zc.ServerSideApply == "" {
+		return "auto"
+	}
+	return zc.ServerSideApply
 }
 
 // ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
@@ -248,10 +263,25 @@ type ZarfManifest struct {
 	EnableKustomizePlugins bool `json:"enableKustomizePlugins,omitempty"`
 	// Whether to not wait for manifest resources to be ready before continuing.
 	NoWait bool `json:"noWait,omitempty"`
+	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
 	// [alpha]
 	// Template enables go-templates inside manifests. This is useful for parameterizing fields that the value will be
 	// known at deploy-time. See documentation for Zarf Values for how to set these values.
 	Template *bool `json:"template,omitempty"`
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (m ZarfManifest) GetServerSideApply() string {
+	if m.ServerSideApply == "" {
+		return "auto"
+	}
+	return m.ServerSideApply
 }
 
 // IsTemplate returns if the ZarfFile should be templated.
