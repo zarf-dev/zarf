@@ -227,6 +227,45 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	assert.Equal(t, "/data", comp.GetDataInjections()[0].Source)
 }
 
+func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		compName   string
+		isRegistry bool
+		isAgent    bool
+		injector   bool
+	}{
+		{"zarf-registry", "zarf-registry", true, false, false},
+		{"zarf-injector", "zarf-injector", true, false, false},
+		{"zarf-seed-registry", "zarf-seed-registry", true, false, true},
+		{"zarf-agent", "zarf-agent", false, true, false},
+		{"regular component", "my-app", false, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Components: []v1alpha1.ZarfComponent{
+					{Name: tt.compName},
+				},
+			}
+			result := V1Alpha1PkgToV1Beta1(pkg)
+			require.Len(t, result.Components, 1)
+			comp := result.Components[0]
+			assert.Equal(t, tt.isRegistry, comp.Features.IsRegistry, "IsRegistry")
+			assert.Equal(t, tt.isAgent, comp.Features.IsAgent, "IsAgent")
+			if tt.injector {
+				require.NotNil(t, comp.Features.Injector)
+				assert.True(t, comp.Features.Injector.Enabled)
+			} else {
+				assert.Nil(t, comp.Features.Injector)
+			}
+		})
+	}
+}
+
 func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -448,23 +448,9 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 			Path: c.Import.Path,
 			URL:  c.Import.URL,
 		},
-		Features: v1beta1.ZarfComponentFeatures{
-			IsRegistry: c.Features.IsRegistry,
-			IsAgent:    c.Features.IsAgent,
-		},
-		Repos:   c.Repos,
-		Actions: convertActions(c.Actions),
-	}
-
-	if c.Features.Injector != nil {
-		gc.Features.Injector = &v1beta1.Injector{
-			Enabled: c.Features.Injector.Enabled,
-		}
-		if c.Features.Injector.Values != nil {
-			gc.Features.Injector.Values = &v1beta1.InjectorValues{
-				Tolerations: c.Features.Injector.Values.Tolerations,
-			}
-		}
+		Features: convertFeatures(c.Features),
+		Repos:    c.Repos,
+		Actions:  convertActions(c.Actions),
 	}
 
 	for _, m := range c.Manifests {
@@ -505,6 +491,24 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 	gc.SetDataInjections(c.DataInjections)
 
 	return gc
+}
+
+func convertFeatures(f types.ZarfComponentFeatures) v1beta1.ZarfComponentFeatures {
+	out := v1beta1.ZarfComponentFeatures{
+		IsRegistry: f.IsRegistry,
+		IsAgent:    f.IsAgent,
+	}
+	if f.Injector != nil {
+		out.Injector = &v1beta1.Injector{
+			Enabled: f.Injector.Enabled,
+		}
+		if f.Injector.Values != nil {
+			out.Injector.Values = &v1beta1.InjectorValues{
+				Tolerations: f.Injector.Values.Tolerations,
+			}
+		}
+	}
+	return out
 }
 
 // convertRequiredToOptional inverts the v1alpha1 Required *bool into v1beta1 Optional *bool.

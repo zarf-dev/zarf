@@ -104,6 +104,7 @@ func convertV1Alpha1Component(c v1alpha1.ZarfComponent) types.ZarfComponent {
 		DataInjections: c.DataInjections,
 		HealthChecks:   c.HealthChecks,
 		Repos:          c.Repos,
+		Features:       inferFeaturesFromName(c.Name),
 		Only: types.ZarfComponentOnlyTarget{
 			LocalOS: c.Only.LocalOS,
 			Cluster: types.ZarfComponentOnlyCluster{
@@ -293,6 +294,24 @@ func convertV1Alpha1Wait(w *v1alpha1.ZarfComponentActionWait) *types.ZarfCompone
 		}
 	}
 	return gw
+}
+
+// inferFeaturesFromName infers v1beta1-style Features from v1alpha1 component names.
+// v1alpha1 has no Features field; these well-known component names encode the same semantics.
+func inferFeaturesFromName(name string) types.ZarfComponentFeatures {
+	switch name {
+	case "zarf-registry", "zarf-injector":
+		return types.ZarfComponentFeatures{IsRegistry: true}
+	case "zarf-seed-registry":
+		return types.ZarfComponentFeatures{
+			IsRegistry: true,
+			Injector:   &types.Injector{Enabled: true},
+		}
+	case "zarf-agent":
+		return types.ZarfComponentFeatures{IsAgent: true}
+	default:
+		return types.ZarfComponentFeatures{}
+	}
 }
 
 func derefIntOr(p *int, def int) int {
