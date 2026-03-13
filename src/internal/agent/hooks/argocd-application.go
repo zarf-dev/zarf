@@ -73,11 +73,12 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
 		"name", app.Name,
+		"operation", r.Operation,
 		"git-server", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +87,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer)
 			if err != nil {
 				return nil, err
 			}
@@ -102,35 +103,27 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo, r *v1.AdmissionRequest) (string, error) {
+func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
 	l := logger.From(ctx)
-	isCreate := r.Operation == v1.Create
-	isUpdate := r.Operation == v1.Update
-	patchedURL := repoURL
-	var isPatched bool
-	var err error
 
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different from the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
-		if err != nil {
-			return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
+	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).
+	isPatched, err := helpers.DoHostnamesMatch(gs.Address, repoURL)
+	if err != nil {
+		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
 	}
 
-	// Mutate the repoURL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
-		transformedURL, err := transform.GitURL(gs.Address, patchedURL, gs.PushUsername)
-		if err != nil {
-			return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
-		}
-		patchedURL = transformedURL.String()
-		l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
+	if isPatched {
+		l.Debug("skipping mutation, ArgoCD Application repoURL already points to Zarf git server", "url", repoURL)
+		return repoURL, nil
 	}
 
+	transformedURL, err := transform.GitURL(gs.Address, repoURL, gs.PushUsername)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
+	}
+	patchedURL := transformedURL.String()
+	l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	return patchedURL, nil
 }
 

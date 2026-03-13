@@ -22,11 +22,6 @@ func newSbomCommand() *cobra.Command {
 	cmd.Use = "sbom"
 	cmd.Short = lang.CmdToolsSbomShort
 	cmd.Aliases = []string{"s", "syft"}
-	cmd.Example = ""
 
-	for _, subCmd := range cmd.Commands() {
-		subCmd.Example = ""
-	}
-
-	return cmd
+	return ReplaceCommandName("syft", "zarf tools sbom", cmd)
 }

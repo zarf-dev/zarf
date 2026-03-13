@@ -146,6 +146,35 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
+			name: "should not re-mutate on create if url already points to zarf registry",
+			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Create, &flux.HelmRepository{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "already-mutated",
+				},
+				Spec: flux.HelmRepositorySpec{
+					URL:  "oci://127.0.0.1:31999/stefanprodan/charts",
+					Type: "oci",
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/url",
+					"oci://127.0.0.1:31999/stefanprodan/charts",
+				),
+				operations.AddPatchOperation(
+					"/spec/secretRef",
+					fluxmeta.LocalObjectReference{Name: config.ZarfImagePullSecretName},
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should not mutate URL if it has the same hostname as State",
 			admissionReq: createFluxHelmRepoAdmissionRequest(t, v1.Update, &flux.HelmRepository{
 				ObjectMeta: metav1.ObjectMeta{

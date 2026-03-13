@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.73.1](https://github.com/zarf-dev/zarf/compare/v0.73.0...v0.73.1) (2026-03-03)
+
+
+### Bug Fixes
+
+* **archive:** update to use os.root API ([#4674](https://github.com/zarf-dev/zarf/issues/4674)) ([93f9c33](https://github.com/zarf-dev/zarf/commit/93f9c33a9d4724ea3fa51d09a69e8b7f8525dc57))
+* buffer `errChan` in `Tunnel.establish` to prevent goroutine leak ([#4653](https://github.com/zarf-dev/zarf/issues/4653)) ([f087c17](https://github.com/zarf-dev/zarf/commit/f087c17897816b5e86f560cdc0b31de44f8eb1ae))
+* check `svc.Spec.Ports` bounds before indexing in tunnel code ([#4654](https://github.com/zarf-dev/zarf/issues/4654)) ([1d017f4](https://github.com/zarf-dev/zarf/commit/1d017f4ddc2324f768d42c86c6eb047d8294071e))
+* preserve error chains by using `%w` instead of `%s` ([#4658](https://github.com/zarf-dev/zarf/issues/4658)) ([3a4875e](https://github.com/zarf-dev/zarf/commit/3a4875e8187a510ecb3fbc27455732b2a9b64c95))
+* prevent panic on double call to `Tracker.StopReporting` ([#4655](https://github.com/zarf-dev/zarf/issues/4655)) ([2d19e74](https://github.com/zarf-dev/zarf/commit/2d19e7452c6aaceeeec3b901169f753e47f11078))
+* return the correct error on io.CopyN failure ([#4652](https://github.com/zarf-dev/zarf/issues/4652)) ([c69273c](https://github.com/zarf-dev/zarf/commit/c69273c5ed0afea1793b03127c5ac15c07d932e9))
+
 ## [0.73.0](https://github.com/zarf-dev/zarf/compare/v0.72.0...v0.73.0) (2026-02-20)
 
 

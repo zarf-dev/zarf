@@ -108,8 +108,6 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual

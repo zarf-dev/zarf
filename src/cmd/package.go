@@ -244,6 +244,7 @@ type packageDeployOptions struct {
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	setVariables            map[string]string
@@ -277,6 +278,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
@@ -373,6 +375,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	deployOpts := packager.DeployOptions{
 		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,
@@ -406,7 +409,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := packager.OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -1564,6 +1567,7 @@ type packagePublishOptions struct {
 	publicKeyPath           string
 	skipVersionCheck        bool
 	withBuildMachineInfo    bool
+	tag                     string
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1587,6 +1591,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
@@ -1648,6 +1653,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			Flavor:               o.flavor,
 			SkipVersionCheck:     o.skipVersionCheck,
 			WithBuildMachineInfo: o.withBuildMachineInfo,
+			Tag:                  o.tag,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
@@ -1674,6 +1680,9 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
 		dstRef.Reference = srcRef.Reference
+		if o.tag != "" {
+			dstRef.Reference = o.tag
+		}
 
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
@@ -1728,6 +1737,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		SigningKeyPassword: o.signingKeyPassword,
 		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
+		Tag:                o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
