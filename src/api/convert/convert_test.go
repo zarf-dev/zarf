@@ -236,11 +236,11 @@ func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {
 		isAgent    bool
 		injector   bool
 	}{
-		{"zarf-registry", "zarf-registry", true, false, false},
-		{"zarf-injector", "zarf-injector", true, false, false},
-		{"zarf-seed-registry", "zarf-seed-registry", true, false, true},
-		{"zarf-agent", "zarf-agent", false, true, false},
-		{"regular component", "my-app", false, false, false},
+		{name: "zarf-registry", compName: "zarf-registry", isRegistry: true, isAgent: false, injector: false},
+		{name: "zarf-injector", compName: "zarf-injector", isRegistry: true, isAgent: false, injector: false},
+		{name: "zarf-seed-registry", compName: "zarf-seed-registry", isRegistry: true, isAgent: false, injector: true},
+		{name: "zarf-agent", compName: "zarf-agent", isRegistry: false, isAgent: true, injector: false},
+		{name: "regular component", compName: "my-app", isRegistry: false, isAgent: false, injector: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
