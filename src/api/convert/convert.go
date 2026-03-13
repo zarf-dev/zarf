@@ -16,3 +16,9 @@ func V1Alpha1PkgToV1Beta1(pkg v1alpha1.ZarfPackage) v1beta1.ZarfPackage {
 	generic := internalv1alpha1.ConvertToGeneric(pkg)
 	return internalv1beta1.ConvertFromGeneric(generic)
 }
+
+// V1Beta1PkgToV1Alpha1 converts a v1beta1 ZarfPackage to a v1alpha1 ZarfPackage.
+func V1Beta1PkgToV1Alpha1(pkg v1beta1.ZarfPackage) v1alpha1.ZarfPackage {
+	generic := internalv1beta1.ConvertToGeneric(pkg)
+	return internalv1alpha1.ConvertFromGeneric(generic)
+}
