@@ -18,7 +18,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"helm.sh/helm/v4/pkg/action"
 	"helm.sh/helm/v4/pkg/chart/common"
@@ -27,7 +26,6 @@ import (
 	"helm.sh/helm/v4/pkg/cli"
 	"helm.sh/helm/v4/pkg/cli/values"
 	"helm.sh/helm/v4/pkg/getter"
-	"helm.sh/helm/v4/pkg/kube"
 )
 
 var contentCachePath = filepath.Join("helm", "content")
@@ -135,9 +133,6 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 }
 
 func createActionConfig(ctx context.Context, namespace string) (*action.Configuration, error) {
-	// This sets the field manager to Zarf. Every Helm operation requires an action config
-	// so this ensures the field is properly set prior to each operation.
-	kube.ManagedFieldsManager = cluster.FieldManagerName
 	l := logger.From(ctx)
 	actionConfig := action.NewConfiguration()
 	actionConfig.SetLogger(l.Handler())

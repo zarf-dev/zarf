@@ -146,6 +146,11 @@ func testHelmServerSideApply(t *testing.T) {
 	require.NoError(t, err, "unable to get helm metadata for configmap-without-ssa")
 	require.Contains(t, stdOut, "APPLY_METHOD: client-side apply")
 
+	// Verify the field manager is "zarf" for SSA-deployed resources
+	kubectlOut, _, err := e2e.Kubectl(t, "get", "configmap", "configmap-with-ssa-config", "-n", "configmap-with-ssa", "-o", "jsonpath={.metadata.managedFields[*].manager}")
+	require.NoError(t, err, "unable to get managedFields for configmap-with-ssa-config")
+	require.Contains(t, kubectlOut, "zarf")
+
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "helm-charts-ssa", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
