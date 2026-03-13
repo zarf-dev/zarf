@@ -291,18 +291,28 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	s.IPFamily = ipFamily
 
-	// If the injector mode is changing from nodeport to proxy or vice versa, reset the injector port
-	if (s.RegistryInfo.RegistryMode == state.RegistryModeProxy && opts.RegistryInfo.RegistryMode == state.RegistryModeNodePort) ||
-		(s.RegistryInfo.RegistryMode == state.RegistryModeNodePort && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy) {
-		s.InjectorInfo.Port = 0
-	}
-
+	previousMode := s.RegistryInfo.RegistryMode
 	if opts.RegistryInfo.RegistryMode != "" {
 		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
 	}
-	if opts.RegistryInfo.NodePort != 0 && s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
-		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, opts.RegistryInfo.NodePort)
-		s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
+	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
+
+	// If the registry mode is changing the injector will be re-made so the port should be reset
+	if modeChanged {
+		s.InjectorInfo.Port = 0
+	}
+
+	if s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
+		switch {
+		case opts.RegistryInfo.NodePort != 0:
+			// User explicitly provided a port, always use it.
+			s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
+		case modeChanged:
+			// Switching to nodeport from another mode with no explicit port.
+			// The inherited port (e.g. 5000 from proxy) is likely wrong, reset to default.
+			s.RegistryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
+		}
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
 	}
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {

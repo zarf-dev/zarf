@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -339,7 +340,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			},
 		},
 		{
-			name: "proxy to nodeport resets injector port",
+			name: "proxy to nodeport resets injector port and corrects out-of-range port",
 			current: state.State{
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeProxy,
@@ -354,16 +355,42 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					NodePort:     state.ZarfInClusterContainerRegistryNodePort,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
 		},
 		{
-			name: "nodeport to nodeport preserves injector port",
+			name: "proxy to nodeport with explicit valid port uses provided port",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 5000},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					NodePort:     30500,
+				},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					NodePort:     30500,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 0},
+			},
+		},
+		{
+			name: "nodeport to nodeport preserves existing port and injector port",
 			current: state.State{
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
+					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 31999},
 			},
@@ -374,6 +401,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyNone,
+					NodePort:     30500,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 31999},
 			},
@@ -413,9 +441,11 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			tt.current.Distro = DistroIsK3d
 			tt.current.RegistryInfo.PushUsername = "push-user"
 			tt.current.RegistryInfo.PullUsername = "pull-user"
-			tt.current.RegistryInfo.Address = "127.0.0.1:31999"
-			tt.current.RegistryInfo.NodePort = 31999
 			tt.current.RegistryInfo.Secret = "secret"
+			if tt.current.RegistryInfo.NodePort == 0 {
+				tt.current.RegistryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
+			}
+			tt.current.RegistryInfo.Address = fmt.Sprintf("127.0.0.1:%d", tt.current.RegistryInfo.NodePort)
 			currentData, err := json.Marshal(tt.current)
 			require.NoError(t, err)
 
@@ -444,6 +474,9 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			require.Equal(t, tt.expected.RegistryInfo.RegistryMode, result.RegistryInfo.RegistryMode)
 			require.Equal(t, tt.expected.InjectorInfo.Port, result.InjectorInfo.Port)
 			require.Equal(t, tt.expected.RegistryInfo.MTLSStrategy, result.RegistryInfo.MTLSStrategy)
+			if tt.expected.RegistryInfo.NodePort != 0 {
+				require.Equal(t, tt.expected.RegistryInfo.NodePort, result.RegistryInfo.NodePort)
+			}
 		})
 	}
 }
