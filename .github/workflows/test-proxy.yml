@@ -99,6 +99,8 @@ jobs:
       - name: Run proxy tests
         run: |
           make test-proxy
+        env:
+          NODEPORT_INCOMPATIBLE: "true"
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
@@ -132,8 +134,6 @@ jobs:
       - name: Run proxy tests
         run: |
           make test-proxy
-        env:
-          NODEPORT_COMPATIBLE: "true"
 
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
