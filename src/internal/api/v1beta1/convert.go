@@ -780,9 +780,7 @@ func convertWait(w *types.ZarfComponentActionWait) *v1beta1.ZarfComponentActionW
 }
 
 func isGitURL(url string) bool {
-	return strings.HasSuffix(url, ".git") ||
-		strings.Contains(url, "github.com") ||
-		strings.Contains(url, "gitlab.com")
+	return strings.HasSuffix(url, ".git")
 }
 
 func derefBoolOr(p *bool, def bool) bool {
