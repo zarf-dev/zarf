@@ -39,6 +39,7 @@ func newInternalCommand(rootCmd *cobra.Command) *cobra.Command {
 	cmd.AddCommand(newInternalUpdateGiteaPVCCommand())
 	cmd.AddCommand(newInternalIsValidHostnameCommand())
 	cmd.AddCommand(newInternalCrc32Command())
+	cmd.AddCommand(newInternalConvertCommand())
 
 	return cmd
 }
