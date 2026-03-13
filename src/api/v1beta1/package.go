@@ -58,6 +58,15 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
 }
 
+// AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
+func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
+	if pkg.Metadata.AllowNamespaceOverride != nil {
+		return *pkg.Metadata.AllowNamespaceOverride
+	}
+	// defaulting to allowing package namespace to be overridden
+	return true
+}
+
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
@@ -147,7 +156,7 @@ type ZarfMetadata struct {
 	// Annotations are key-value pairs that can be used to store metadata about the package.
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Whether to allow namespace overrides for this package.
-	AllowNamespaceOverride bool `json:"allowNamespaceOverride,omitempty"`
+	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
 }
 
 // ZarfBuildData is written during the packager.Create() operation to track details of the created package.
