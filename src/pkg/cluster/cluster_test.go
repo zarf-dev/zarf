@@ -320,7 +320,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 		expected state.State
 	}{
 		{
-			name: "nodeport to proxy resets injector port and enables mTLS",
+			name: "nodeport to proxy resets injector port, port defaults to 5000, and enables mTLS",
 			current: state.State{
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeNodePort,
@@ -335,6 +335,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 				RegistryInfo: state.RegistryInfo{
 					RegistryMode: state.RegistryModeProxy,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					NodePort:     state.ZarfRegistryHostPort,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},
@@ -380,6 +381,30 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 					RegistryMode: state.RegistryModeNodePort,
 					MTLSStrategy: state.MTLSStrategyZarfManaged,
 					NodePort:     30500,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 0},
+			},
+		},
+		{
+			name: "nodeport to proxy with explicit port uses provided port",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyNone,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 31999},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					NodePort:     8080,
+				},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+					NodePort:     8080,
 				},
 				InjectorInfo: state.InjectorInfo{Port: 0},
 			},

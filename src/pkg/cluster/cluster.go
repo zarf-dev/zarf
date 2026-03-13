@@ -302,15 +302,21 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = 0
 	}
 
-	if s.RegistryInfo.RegistryMode == state.RegistryModeNodePort {
+	switch s.RegistryInfo.RegistryMode {
+	case state.RegistryModeNodePort:
 		switch {
 		case opts.RegistryInfo.NodePort != 0:
-			// User explicitly provided a port, always use it.
 			s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
 		case modeChanged:
-			// Switching to nodeport from another mode with no explicit port.
-			// The inherited port (e.g. 5000 from proxy) is likely wrong, reset to default.
 			s.RegistryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
+		}
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
+	case state.RegistryModeProxy:
+		switch {
+		case opts.RegistryInfo.NodePort != 0:
+			s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
+		case modeChanged:
+			s.RegistryInfo.NodePort = state.ZarfRegistryHostPort
 		}
 		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
 	}
