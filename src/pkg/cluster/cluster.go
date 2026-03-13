@@ -310,6 +310,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		case modeChanged:
 			s.RegistryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
 		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
 		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
 	case state.RegistryModeProxy:
 		switch {
