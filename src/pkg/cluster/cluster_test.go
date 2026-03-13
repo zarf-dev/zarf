@@ -310,3 +310,140 @@ func TestInit(t *testing.T) {
 		})
 	}
 }
+
+func TestInitStateRegistryModeSwitch(t *testing.T) {
+	tests := []struct {
+		name     string
+		current  state.State
+		opts     InitStateOptions
+		expected state.State
+	}{
+		{
+			name: "nodeport to proxy resets injector port and enables mTLS",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyNone,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 31999},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 0},
+			},
+		},
+		{
+			name: "proxy to nodeport resets injector port",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 5000},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 0},
+			},
+		},
+		{
+			name: "nodeport to nodeport preserves injector port",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyNone,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 31999},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeNodePort},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeNodePort,
+					MTLSStrategy: state.MTLSStrategyNone,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 31999},
+			},
+		},
+		{
+			name: "proxy to proxy preserves injector port and refreshes mTLS",
+			current: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 5000},
+			},
+			opts: InitStateOptions{
+				RegistryInfo: state.RegistryInfo{RegistryMode: state.RegistryModeProxy},
+			},
+			expected: state.State{
+				RegistryInfo: state.RegistryInfo{
+					RegistryMode: state.RegistryModeProxy,
+					MTLSStrategy: state.MTLSStrategyZarfManaged,
+				},
+				InjectorInfo: state.InjectorInfo{Port: 5000},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			cs := fake.NewClientset()
+			c := &Cluster{
+				Clientset: cs,
+				Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+			}
+
+			// Seed the fake cluster with the minimum objects InitState expects:
+			// a node, the zarf namespace, the state secret, and the IP family service.
+			tt.current.Distro = DistroIsK3d
+			tt.current.RegistryInfo.PushUsername = "push-user"
+			tt.current.RegistryInfo.PullUsername = "pull-user"
+			tt.current.RegistryInfo.Address = "127.0.0.1:31999"
+			tt.current.RegistryInfo.NodePort = 31999
+			tt.current.RegistryInfo.Secret = "secret"
+			currentData, err := json.Marshal(tt.current)
+			require.NoError(t, err)
+
+			_, err = cs.CoreV1().Nodes().Create(ctx, &corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: "node"},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+			_, err = cs.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+			_, err = cs.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+				Data:       map[string][]byte{state.ZarfStateDataKey: currentData},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+			_, err = cs.CoreV1().Services(state.ZarfNamespaceName).Create(ctx, &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
+				Spec:       corev1.ServiceSpec{IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol}},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+
+			result, err := c.InitState(ctx, tt.opts)
+			require.NoError(t, err)
+
+			require.Equal(t, tt.expected.RegistryInfo.RegistryMode, result.RegistryInfo.RegistryMode)
+			require.Equal(t, tt.expected.InjectorInfo.Port, result.InjectorInfo.Port)
+			require.Equal(t, tt.expected.RegistryInfo.MTLSStrategy, result.RegistryInfo.MTLSStrategy)
+		})
+	}
+}
