@@ -38,6 +38,7 @@ func ConvertToGeneric(pkg v1beta1.ZarfPackage) types.ZarfPackage {
 			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
 			Flavor:                     pkg.Build.Flavor,
 			Signed:                     pkg.Build.Signed,
+			APIVersion:                 pkg.Build.APIVersion,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 		},
@@ -408,6 +409,7 @@ func convertBuild(b types.ZarfBuildData, m types.ZarfMetadata) v1beta1.ZarfBuild
 		DifferentialPackageVersion: b.DifferentialPackageVersion,
 		Flavor:                     b.Flavor,
 		Signed:                     b.Signed,
+		APIVersion:                 b.APIVersion,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
 

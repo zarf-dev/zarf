@@ -185,6 +185,8 @@ type ZarfBuildData struct {
 	Signed *bool `json:"signed,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	// The API version defined in the package definition used to build the package.
+	APIVersion string `json:"apiVersion,omitempty"`
 	// Requirements for specific Zarf versions needed to deploy this package.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.

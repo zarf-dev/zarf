@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
@@ -42,28 +41,28 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	assert.Equal(t, v1beta1.APIVersion, result.APIVersion)
-	assert.Equal(t, v1beta1.ZarfPackageConfig, result.Kind)
-	assert.Equal(t, "test-pkg", result.Metadata.Name)
-	assert.Equal(t, "A test package", result.Metadata.Description)
-	assert.Equal(t, "1.0.0", result.Metadata.Version)
-	assert.Equal(t, "amd64", result.Metadata.Architecture)
-	assert.True(t, result.Metadata.Uncompressed)
+	require.Equal(t, v1beta1.APIVersion, result.APIVersion)
+	require.Equal(t, v1beta1.ZarfPackageConfig, result.Kind)
+	require.Equal(t, "test-pkg", result.Metadata.Name)
+	require.Equal(t, "A test package", result.Metadata.Description)
+	require.Equal(t, "1.0.0", result.Metadata.Version)
+	require.Equal(t, "amd64", result.Metadata.Architecture)
+	require.True(t, result.Metadata.Uncompressed)
 	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
-	assert.True(t, *result.Metadata.AllowNamespaceOverride)
+	require.True(t, *result.Metadata.AllowNamespaceOverride)
 
 	// v1alpha1-only metadata fields should be migrated to annotations.
-	assert.Equal(t, "https://example.com", result.Metadata.Annotations["metadata.url"])
-	assert.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["metadata.image"])
-	assert.Equal(t, "Test Author", result.Metadata.Annotations["metadata.authors"])
-	assert.Equal(t, "https://docs.example.com", result.Metadata.Annotations["metadata.documentation"])
-	assert.Equal(t, "https://github.com/example", result.Metadata.Annotations["metadata.source"])
-	assert.Equal(t, "Example Corp", result.Metadata.Annotations["metadata.vendor"])
+	require.Equal(t, "https://example.com", result.Metadata.Annotations["metadata.url"])
+	require.Equal(t, "https://example.com/image.png", result.Metadata.Annotations["metadata.image"])
+	require.Equal(t, "Test Author", result.Metadata.Annotations["metadata.authors"])
+	require.Equal(t, "https://docs.example.com", result.Metadata.Annotations["metadata.documentation"])
+	require.Equal(t, "https://github.com/example", result.Metadata.Annotations["metadata.source"])
+	require.Equal(t, "Example Corp", result.Metadata.Annotations["metadata.vendor"])
 	// Existing annotation should be preserved.
-	assert.Equal(t, "annotation", result.Metadata.Annotations["existing"])
+	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
 
 	// AggregateChecksum should move from metadata to build.
-	assert.Equal(t, "abc123", result.Build.AggregateChecksum)
+	require.Equal(t, "abc123", result.Build.AggregateChecksum)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
@@ -84,6 +83,7 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 			DifferentialMissing:        []string{"comp-a"},
 			Flavor:                     "vanilla",
 			Signed:                     &signed,
+			APIVersion:                 v1alpha1.APIVersion,
 			VersionRequirements: []v1alpha1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},
@@ -93,20 +93,21 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	assert.Equal(t, v1beta1.ZarfInitConfig, result.Kind)
-	assert.Equal(t, "my-machine", result.Build.Terminal)
-	assert.Equal(t, "test-user", result.Build.User)
-	assert.Equal(t, "arm64", result.Build.Architecture)
-	assert.Equal(t, "v0.30.0", result.Build.Version)
-	assert.True(t, result.Build.Differential)
-	assert.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
-	assert.Equal(t, "vanilla", result.Build.Flavor)
+	require.Equal(t, v1beta1.ZarfInitConfig, result.Kind)
+	require.Equal(t, "my-machine", result.Build.Terminal)
+	require.Equal(t, "test-user", result.Build.User)
+	require.Equal(t, "arm64", result.Build.Architecture)
+	require.Equal(t, "v0.30.0", result.Build.Version)
+	require.True(t, result.Build.Differential)
+	require.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
+	require.Equal(t, "vanilla", result.Build.Flavor)
 	require.NotNil(t, result.Build.Signed)
-	assert.True(t, *result.Build.Signed)
+	require.True(t, *result.Build.Signed)
 	require.Len(t, result.Build.VersionRequirements, 1)
-	assert.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
-	assert.Equal(t, "needs feature X", result.Build.VersionRequirements[0].Reason)
-	assert.Equal(t, []string{"sig.json"}, result.Build.ProvenanceFiles)
+	require.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
+	require.Equal(t, "needs feature X", result.Build.VersionRequirements[0].Reason)
+	require.Equal(t, []string{"sig.json"}, result.Build.ProvenanceFiles)
+	require.Equal(t, v1alpha1.APIVersion, result.Build.APIVersion)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Variables(t *testing.T) {
@@ -142,21 +143,21 @@ func TestV1Alpha1PkgToV1Beta1_Variables(t *testing.T) {
 
 	require.Len(t, result.Variables, 1)
 	v := result.Variables[0]
-	assert.Equal(t, "MY_VAR", v.Name)
-	assert.True(t, v.Sensitive)
-	assert.True(t, v.AutoIndent)
-	assert.Equal(t, "^[a-z]+$", v.Pattern)
-	assert.Equal(t, v1beta1.FileVariableType, v.Type)
-	assert.Equal(t, "A variable", v.Description)
-	assert.Equal(t, "default-val", v.Default)
-	assert.True(t, v.Prompt)
+	require.Equal(t, "MY_VAR", v.Name)
+	require.True(t, v.Sensitive)
+	require.True(t, v.AutoIndent)
+	require.Equal(t, "^[a-z]+$", v.Pattern)
+	require.Equal(t, v1beta1.FileVariableType, v.Type)
+	require.Equal(t, "A variable", v.Description)
+	require.Equal(t, "default-val", v.Default)
+	require.True(t, v.Prompt)
 
 	require.Len(t, result.Constants, 1)
 	c := result.Constants[0]
-	assert.Equal(t, "MY_CONST", c.Name)
-	assert.Equal(t, "const-val", c.Value)
-	assert.Equal(t, "A constant", c.Description)
-	assert.True(t, c.AutoIndent)
+	require.Equal(t, "MY_CONST", c.Name)
+	require.Equal(t, "const-val", c.Value)
+	require.Equal(t, "A constant", c.Description)
+	require.True(t, c.AutoIndent)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
@@ -201,48 +202,48 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
-	assert.Equal(t, "my-component", comp.Name)
-	assert.Equal(t, "test component", comp.Description)
-	assert.True(t, comp.Default)
+	require.Equal(t, "my-component", comp.Name)
+	require.Equal(t, "test component", comp.Description)
+	require.True(t, comp.Default)
 
 	// Required=true → Optional=false
 	require.NotNil(t, comp.Optional)
-	assert.False(t, *comp.Optional)
+	require.False(t, *comp.Optional)
 
-	assert.Equal(t, "linux", comp.Only.LocalOS)
-	assert.Equal(t, "amd64", comp.Only.Cluster.Architecture)
-	assert.Equal(t, []string{"k3s"}, comp.Only.Cluster.Distros)
-	assert.Equal(t, "vanilla", comp.Only.Flavor)
+	require.Equal(t, "linux", comp.Only.LocalOS)
+	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)
+	require.Equal(t, []string{"k3s"}, comp.Only.Cluster.Distros)
+	require.Equal(t, "vanilla", comp.Only.Flavor)
 
 	// Import.Name is v1alpha1-only, should be dropped in v1beta1.
-	assert.Equal(t, "./path", comp.Import.Path)
-	assert.Equal(t, "oci://example.com/pkg", comp.Import.URL)
+	require.Equal(t, "./path", comp.Import.Path)
+	require.Equal(t, "oci://example.com/pkg", comp.Import.URL)
 
 	// Images are converted from []string to []ZarfImage.
 	require.Len(t, comp.Images, 2)
-	assert.Equal(t, "nginx:latest", comp.Images[0].Name)
-	assert.Equal(t, "redis:7", comp.Images[1].Name)
+	require.Equal(t, "nginx:latest", comp.Images[0].Name)
+	require.Equal(t, "redis:7", comp.Images[1].Name)
 
-	assert.Equal(t, []string{"https://github.com/example/repo"}, comp.Repos)
+	require.Equal(t, []string{"https://github.com/example/repo"}, comp.Repos)
 
 	// DataInjections should be preserved via the private shim.
 	require.Len(t, comp.GetDataInjections(), 1)
-	assert.Equal(t, "/data", comp.GetDataInjections()[0].Source)
+	require.Equal(t, "/data", comp.GetDataInjections()[0].Source)
 
 	// HealthChecks should become onDeploy after wait actions with kind in <kind>.<version>.<group> format.
 	require.Len(t, comp.Actions.OnDeploy.After, 2)
 	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait)
 	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait.Cluster)
-	assert.Equal(t, "Deployment.v1.apps", comp.Actions.OnDeploy.After[0].Wait.Cluster.Kind)
-	assert.Equal(t, "my-deploy", comp.Actions.OnDeploy.After[0].Wait.Cluster.Name)
-	assert.Equal(t, "default", comp.Actions.OnDeploy.After[0].Wait.Cluster.Namespace)
+	require.Equal(t, "Deployment.v1.apps", comp.Actions.OnDeploy.After[0].Wait.Cluster.Kind)
+	require.Equal(t, "my-deploy", comp.Actions.OnDeploy.After[0].Wait.Cluster.Name)
+	require.Equal(t, "default", comp.Actions.OnDeploy.After[0].Wait.Cluster.Namespace)
 
 	// Core API resources (no group) keep kind as-is.
 	require.NotNil(t, comp.Actions.OnDeploy.After[1].Wait)
 	require.NotNil(t, comp.Actions.OnDeploy.After[1].Wait.Cluster)
-	assert.Equal(t, "Pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Kind)
-	assert.Equal(t, "my-pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Name)
-	assert.Equal(t, "default", comp.Actions.OnDeploy.After[1].Wait.Cluster.Namespace)
+	require.Equal(t, "Pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Kind)
+	require.Equal(t, "my-pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Name)
+	require.Equal(t, "default", comp.Actions.OnDeploy.After[1].Wait.Cluster.Namespace)
 }
 
 func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {
@@ -272,13 +273,13 @@ func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {
 			result := V1Alpha1PkgToV1Beta1(pkg)
 			require.Len(t, result.Components, 1)
 			comp := result.Components[0]
-			assert.Equal(t, tt.isRegistry, comp.Features.IsRegistry, "IsRegistry")
-			assert.Equal(t, tt.isAgent, comp.Features.IsAgent, "IsAgent")
+			require.Equal(t, tt.isRegistry, comp.Features.IsRegistry, "IsRegistry")
+			require.Equal(t, tt.isAgent, comp.Features.IsAgent, "IsAgent")
 			if tt.injector {
 				require.NotNil(t, comp.Features.Injector)
-				assert.True(t, comp.Features.Injector.Enabled)
+				require.True(t, comp.Features.Injector.Enabled)
 			} else {
-				assert.Nil(t, comp.Features.Injector)
+				require.Nil(t, comp.Features.Injector)
 			}
 		})
 	}
@@ -300,9 +301,9 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				Version:  "6.4.0",
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
-				assert.Equal(t, "https://stefanprodan.github.io/podinfo", c.HelmRepo.URL)
-				assert.Equal(t, "podinfo", c.HelmRepo.Name)
-				assert.Equal(t, "6.4.0", c.HelmRepo.Version)
+				require.Equal(t, "https://stefanprodan.github.io/podinfo", c.HelmRepo.URL)
+				require.Equal(t, "podinfo", c.HelmRepo.Name)
+				require.Equal(t, "6.4.0", c.HelmRepo.Version)
 			},
 		},
 		{
@@ -313,8 +314,8 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				Version: "6.4.0",
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
-				assert.Equal(t, "oci://ghcr.io/stefanprodan/charts/podinfo", c.OCI.URL)
-				assert.Equal(t, "6.4.0", c.OCI.Version)
+				require.Equal(t, "oci://ghcr.io/stefanprodan/charts/podinfo", c.OCI.URL)
+				require.Equal(t, "6.4.0", c.OCI.Version)
 			},
 		},
 		{
@@ -326,8 +327,8 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				Version: "6.4.0",
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
-				assert.Equal(t, "https://github.com/example/repo@6.4.0", c.Git.URL)
-				assert.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, "https://github.com/example/repo@6.4.0", c.Git.URL)
+				require.Equal(t, "charts/my-chart", c.Git.Path)
 			},
 		},
 		{
@@ -338,8 +339,8 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				GitPath: "charts/my-chart",
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
-				assert.Equal(t, "https://github.com/example/repo", c.Git.URL)
-				assert.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, "https://github.com/example/repo", c.Git.URL)
+				require.Equal(t, "charts/my-chart", c.Git.Path)
 			},
 		},
 		{
@@ -352,8 +353,8 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
 				// URL already has @ref, should not double-append version.
-				assert.Equal(t, "https://github.com/example/repo.git@v2.0.0", c.Git.URL)
-				assert.Equal(t, "charts/my-chart", c.Git.Path)
+				require.Equal(t, "https://github.com/example/repo.git@v2.0.0", c.Git.URL)
+				require.Equal(t, "charts/my-chart", c.Git.Path)
 			},
 		},
 		{
@@ -363,7 +364,7 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 				LocalPath: "./charts/my-chart",
 			},
 			validate: func(t *testing.T, c v1beta1.ZarfChart) {
-				assert.Equal(t, "./charts/my-chart", c.Local.Path)
+				require.Equal(t, "./charts/my-chart", c.Local.Path)
 			},
 		},
 	}
@@ -415,11 +416,11 @@ func TestV1Alpha1PkgToV1Beta1_ManifestNoWaitInversion(t *testing.T) {
 	// NoWait=true → Wait=false
 	m0 := result.Components[0].Manifests[0]
 	require.NotNil(t, m0.Wait)
-	assert.False(t, *m0.Wait)
+	require.False(t, *m0.Wait)
 
 	// NoWait=false (default) → Wait=nil (v1beta1 defaults to true)
 	m1 := result.Components[0].Manifests[1]
-	assert.Nil(t, m1.Wait)
+	require.Nil(t, m1.Wait)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
@@ -481,38 +482,38 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	actions := result.Components[0].Actions
 
 	// Defaults
-	assert.True(t, actions.OnDeploy.Defaults.Mute)
+	require.True(t, actions.OnDeploy.Defaults.Mute)
 	require.NotNil(t, actions.OnDeploy.Defaults.Timeout)
-	assert.Equal(t, 60*time.Second, actions.OnDeploy.Defaults.Timeout.Duration)
-	assert.Equal(t, 2, actions.OnDeploy.Defaults.Retries)
-	assert.Equal(t, "/work", actions.OnDeploy.Defaults.Dir)
-	assert.Equal(t, []string{"FOO=bar"}, actions.OnDeploy.Defaults.Env)
-	assert.Equal(t, "bash", actions.OnDeploy.Defaults.Shell.Linux)
+	require.Equal(t, 60*time.Second, actions.OnDeploy.Defaults.Timeout.Duration)
+	require.Equal(t, 2, actions.OnDeploy.Defaults.Retries)
+	require.Equal(t, "/work", actions.OnDeploy.Defaults.Dir)
+	require.Equal(t, []string{"FOO=bar"}, actions.OnDeploy.Defaults.Env)
+	require.Equal(t, "bash", actions.OnDeploy.Defaults.Shell.Linux)
 
 	// Before action
 	require.Len(t, actions.OnDeploy.Before, 1)
 	before := actions.OnDeploy.Before[0]
-	assert.Equal(t, "echo before", before.Cmd)
+	require.Equal(t, "echo before", before.Cmd)
 	require.NotNil(t, before.Mute)
-	assert.True(t, *before.Mute)
+	require.True(t, *before.Mute)
 	require.NotNil(t, before.Timeout)
-	assert.Equal(t, 30*time.Second, before.Timeout.Duration)
-	assert.Equal(t, 3, before.Retries)
-	assert.Equal(t, "run before", before.Description)
+	require.Equal(t, 30*time.Second, before.Timeout.Duration)
+	require.Equal(t, 3, before.Retries)
+	require.Equal(t, "run before", before.Description)
 	// SetVariables should include both the explicit one and the deprecated one.
 	require.Len(t, before.SetVariables, 2)
-	assert.Equal(t, "OUT_VAR", before.SetVariables[0].Name)
-	assert.True(t, before.SetVariables[0].Sensitive)
-	assert.Equal(t, "OLD_VAR", before.SetVariables[1].Name)
+	require.Equal(t, "OUT_VAR", before.SetVariables[0].Name)
+	require.True(t, before.SetVariables[0].Sensitive)
+	require.Equal(t, "OLD_VAR", before.SetVariables[1].Name)
 
 	// After should include original After + OnSuccess (merged).
 	require.Len(t, actions.OnDeploy.After, 2)
-	assert.Equal(t, "echo after", actions.OnDeploy.After[0].Cmd)
-	assert.Equal(t, "echo success", actions.OnDeploy.After[1].Cmd)
+	require.Equal(t, "echo after", actions.OnDeploy.After[0].Cmd)
+	require.Equal(t, "echo success", actions.OnDeploy.After[1].Cmd)
 
 	// OnFailure
 	require.Len(t, actions.OnDeploy.OnFailure, 1)
-	assert.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
+	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
@@ -542,14 +543,14 @@ func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 
 	require.Len(t, result.Components[0].Files, 1)
 	f := result.Components[0].Files[0]
-	assert.Equal(t, "https://example.com/file.tar.gz", f.Source)
-	assert.Equal(t, "deadbeef", f.Shasum)
-	assert.Equal(t, "/opt/file.tar.gz", f.Target)
-	assert.True(t, f.Executable)
-	assert.Equal(t, []string{"/usr/local/bin/file"}, f.Symlinks)
-	assert.Equal(t, "bin/file", f.ExtractPath)
+	require.Equal(t, "https://example.com/file.tar.gz", f.Source)
+	require.Equal(t, "deadbeef", f.Shasum)
+	require.Equal(t, "/opt/file.tar.gz", f.Target)
+	require.True(t, f.Executable)
+	require.Equal(t, []string{"/usr/local/bin/file"}, f.Symlinks)
+	require.Equal(t, "bin/file", f.ExtractPath)
 	require.NotNil(t, f.Template)
-	assert.True(t, *f.Template)
+	require.True(t, *f.Template)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
@@ -567,9 +568,9 @@ func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	assert.Equal(t, []string{"values.yaml"}, result.Values.Files)
-	assert.Equal(t, "values.schema.json", result.Values.Schema)
-	assert.Equal(t, "# Hello", result.Documentation["readme"])
+	require.Equal(t, []string{"values.yaml"}, result.Values.Files)
+	require.Equal(t, "values.schema.json", result.Values.Schema)
+	require.Equal(t, "# Hello", result.Documentation["readme"])
 }
 
 func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
@@ -594,7 +595,7 @@ func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
 
 	require.Len(t, result.Components[0].Charts, 1)
 	chart := result.Components[0].Charts[0]
-	assert.Equal(t, "1.2.3", chart.GetDeprecatedVersion())
+	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion())
 }
 
 // --- v1beta1 → v1alpha1 tests ---
@@ -629,30 +630,30 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 
 	result := V1Beta1PkgToV1Alpha1(pkg)
 
-	assert.Equal(t, v1alpha1.APIVersion, result.APIVersion)
-	assert.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
-	assert.Equal(t, "test-pkg", result.Metadata.Name)
-	assert.Equal(t, "A test package", result.Metadata.Description)
-	assert.Equal(t, "1.0.0", result.Metadata.Version)
-	assert.Equal(t, "amd64", result.Metadata.Architecture)
-	assert.True(t, result.Metadata.Uncompressed)
+	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
+	require.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
+	require.Equal(t, "test-pkg", result.Metadata.Name)
+	require.Equal(t, "A test package", result.Metadata.Description)
+	require.Equal(t, "1.0.0", result.Metadata.Version)
+	require.Equal(t, "amd64", result.Metadata.Architecture)
+	require.True(t, result.Metadata.Uncompressed)
 	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
-	assert.True(t, *result.Metadata.AllowNamespaceOverride)
+	require.True(t, *result.Metadata.AllowNamespaceOverride)
 
 	// v1alpha1-only metadata fields should be restored from annotations.
-	assert.Equal(t, "https://example.com", result.Metadata.URL)
-	assert.Equal(t, "https://example.com/image.png", result.Metadata.Image)
-	assert.Equal(t, "Test Author", result.Metadata.Authors)
-	assert.Equal(t, "https://docs.example.com", result.Metadata.Documentation)
-	assert.Equal(t, "https://github.com/example", result.Metadata.Source)
-	assert.Equal(t, "Example Corp", result.Metadata.Vendor)
+	require.Equal(t, "https://example.com", result.Metadata.URL)
+	require.Equal(t, "https://example.com/image.png", result.Metadata.Image)
+	require.Equal(t, "Test Author", result.Metadata.Authors)
+	require.Equal(t, "https://docs.example.com", result.Metadata.Documentation)
+	require.Equal(t, "https://github.com/example", result.Metadata.Source)
+	require.Equal(t, "Example Corp", result.Metadata.Vendor)
 
 	// Metadata-specific annotations should be consumed, regular annotations preserved.
-	assert.Equal(t, "annotation", result.Metadata.Annotations["existing"])
-	assert.Empty(t, result.Metadata.Annotations["metadata.url"])
+	require.Equal(t, "annotation", result.Metadata.Annotations["existing"])
+	require.Empty(t, result.Metadata.Annotations["metadata.url"])
 
 	// AggregateChecksum should move from build to metadata.
-	assert.Equal(t, "abc123", result.Metadata.AggregateChecksum)
+	require.Equal(t, "abc123", result.Metadata.AggregateChecksum)
 }
 
 func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
@@ -672,6 +673,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 			DifferentialPackageVersion: "0.29.0",
 			Flavor:                     "vanilla",
 			Signed:                     &signed,
+			APIVersion:                 v1beta1.APIVersion,
 			VersionRequirements: []v1beta1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},
@@ -681,18 +683,19 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 
 	result := V1Beta1PkgToV1Alpha1(pkg)
 
-	assert.Equal(t, v1alpha1.ZarfInitConfig, result.Kind)
-	assert.Equal(t, "my-machine", result.Build.Terminal)
-	assert.Equal(t, "test-user", result.Build.User)
-	assert.Equal(t, "arm64", result.Build.Architecture)
-	assert.Equal(t, "v0.30.0", result.Build.Version)
-	assert.True(t, result.Build.Differential)
-	assert.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
-	assert.Equal(t, "vanilla", result.Build.Flavor)
+	require.Equal(t, v1alpha1.ZarfInitConfig, result.Kind)
+	require.Equal(t, "my-machine", result.Build.Terminal)
+	require.Equal(t, "test-user", result.Build.User)
+	require.Equal(t, "arm64", result.Build.Architecture)
+	require.Equal(t, "v0.30.0", result.Build.Version)
+	require.True(t, result.Build.Differential)
+	require.Equal(t, "0.29.0", result.Build.DifferentialPackageVersion)
+	require.Equal(t, "vanilla", result.Build.Flavor)
 	require.NotNil(t, result.Build.Signed)
-	assert.True(t, *result.Build.Signed)
+	require.True(t, *result.Build.Signed)
 	require.Len(t, result.Build.VersionRequirements, 1)
-	assert.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
+	require.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
+	require.Equal(t, v1beta1.APIVersion, result.Build.APIVersion)
 }
 
 func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
@@ -731,28 +734,28 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
-	assert.Equal(t, "my-component", comp.Name)
-	assert.Equal(t, "test component", comp.Description)
-	assert.True(t, comp.Default)
+	require.Equal(t, "my-component", comp.Name)
+	require.Equal(t, "test component", comp.Description)
+	require.True(t, comp.Default)
 
 	// Optional=true → Required=false
 	require.NotNil(t, comp.Required)
-	assert.False(t, *comp.Required)
+	require.False(t, *comp.Required)
 
-	assert.Equal(t, "linux", comp.Only.LocalOS)
-	assert.Equal(t, "amd64", comp.Only.Cluster.Architecture)
-	assert.Equal(t, []string{"k3s"}, comp.Only.Cluster.Distros)
-	assert.Equal(t, "vanilla", comp.Only.Flavor)
+	require.Equal(t, "linux", comp.Only.LocalOS)
+	require.Equal(t, "amd64", comp.Only.Cluster.Architecture)
+	require.Equal(t, []string{"k3s"}, comp.Only.Cluster.Distros)
+	require.Equal(t, "vanilla", comp.Only.Flavor)
 
-	assert.Equal(t, "./path", comp.Import.Path)
-	assert.Equal(t, "oci://example.com/pkg", comp.Import.URL)
+	require.Equal(t, "./path", comp.Import.Path)
+	require.Equal(t, "oci://example.com/pkg", comp.Import.URL)
 
 	// Images are converted from []ZarfImage to []string.
 	require.Len(t, comp.Images, 2)
-	assert.Equal(t, "nginx:latest", comp.Images[0])
-	assert.Equal(t, "redis:7", comp.Images[1])
+	require.Equal(t, "nginx:latest", comp.Images[0])
+	require.Equal(t, "redis:7", comp.Images[1])
 
-	assert.Equal(t, []string{"https://github.com/example/repo"}, comp.Repos)
+	require.Equal(t, []string{"https://github.com/example/repo"}, comp.Repos)
 }
 
 func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
@@ -773,9 +776,9 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				assert.Equal(t, "https://stefanprodan.github.io/podinfo", c.URL)
-				assert.Equal(t, "podinfo", c.RepoName)
-				assert.Equal(t, "6.4.0", c.Version)
+				require.Equal(t, "https://stefanprodan.github.io/podinfo", c.URL)
+				require.Equal(t, "podinfo", c.RepoName)
+				require.Equal(t, "6.4.0", c.Version)
 			},
 		},
 		{
@@ -788,8 +791,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				assert.Equal(t, "oci://ghcr.io/stefanprodan/charts/podinfo", c.URL)
-				assert.Equal(t, "6.4.0", c.Version)
+				require.Equal(t, "oci://ghcr.io/stefanprodan/charts/podinfo", c.URL)
+				require.Equal(t, "6.4.0", c.Version)
 			},
 		},
 		{
@@ -802,9 +805,9 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				assert.Equal(t, "https://github.com/example/repo", c.URL)
-				assert.Equal(t, "charts/my-chart", c.GitPath)
-				assert.Equal(t, "6.4.0", c.Version)
+				require.Equal(t, "https://github.com/example/repo", c.URL)
+				require.Equal(t, "charts/my-chart", c.GitPath)
+				require.Equal(t, "6.4.0", c.Version)
 			},
 		},
 		{
@@ -817,8 +820,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				assert.Equal(t, "https://github.com/example/repo", c.URL)
-				assert.Equal(t, "charts/my-chart", c.GitPath)
+				require.Equal(t, "https://github.com/example/repo", c.URL)
+				require.Equal(t, "charts/my-chart", c.GitPath)
 			},
 		},
 		{
@@ -830,7 +833,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, c v1alpha1.ZarfChart) {
-				assert.Equal(t, "./charts/my-chart", c.LocalPath)
+				require.Equal(t, "./charts/my-chart", c.LocalPath)
 			},
 		},
 	}
@@ -881,10 +884,10 @@ func TestV1Beta1PkgToV1Alpha1_ManifestWaitInversion(t *testing.T) {
 	require.Len(t, result.Components[0].Manifests, 2)
 
 	// Wait=false → NoWait=true
-	assert.True(t, result.Components[0].Manifests[0].NoWait)
+	require.True(t, result.Components[0].Manifests[0].NoWait)
 
 	// Wait=nil → NoWait=false (default)
-	assert.False(t, result.Components[0].Manifests[1].NoWait)
+	require.False(t, result.Components[0].Manifests[1].NoWait)
 }
 
 func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
@@ -939,34 +942,34 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 	actions := result.Components[0].Actions
 
 	// Defaults
-	assert.True(t, actions.OnDeploy.Defaults.Mute)
-	assert.Equal(t, 60, actions.OnDeploy.Defaults.MaxTotalSeconds)
-	assert.Equal(t, 2, actions.OnDeploy.Defaults.MaxRetries)
-	assert.Equal(t, "/work", actions.OnDeploy.Defaults.Dir)
-	assert.Equal(t, []string{"FOO=bar"}, actions.OnDeploy.Defaults.Env)
-	assert.Equal(t, "bash", actions.OnDeploy.Defaults.Shell.Linux)
+	require.True(t, actions.OnDeploy.Defaults.Mute)
+	require.Equal(t, 60, actions.OnDeploy.Defaults.MaxTotalSeconds)
+	require.Equal(t, 2, actions.OnDeploy.Defaults.MaxRetries)
+	require.Equal(t, "/work", actions.OnDeploy.Defaults.Dir)
+	require.Equal(t, []string{"FOO=bar"}, actions.OnDeploy.Defaults.Env)
+	require.Equal(t, "bash", actions.OnDeploy.Defaults.Shell.Linux)
 
 	// Before action
 	require.Len(t, actions.OnDeploy.Before, 1)
 	before := actions.OnDeploy.Before[0]
-	assert.Equal(t, "echo before", before.Cmd)
+	require.Equal(t, "echo before", before.Cmd)
 	require.NotNil(t, before.Mute)
-	assert.True(t, *before.Mute)
+	require.True(t, *before.Mute)
 	require.NotNil(t, before.MaxTotalSeconds)
-	assert.Equal(t, 30, *before.MaxTotalSeconds)
+	require.Equal(t, 30, *before.MaxTotalSeconds)
 	require.NotNil(t, before.MaxRetries)
-	assert.Equal(t, 3, *before.MaxRetries)
+	require.Equal(t, 3, *before.MaxRetries)
 	require.Len(t, before.SetVariables, 1)
-	assert.Equal(t, "OUT_VAR", before.SetVariables[0].Name)
-	assert.True(t, before.SetVariables[0].Sensitive)
+	require.Equal(t, "OUT_VAR", before.SetVariables[0].Name)
+	require.True(t, before.SetVariables[0].Sensitive)
 
 	// After
 	require.Len(t, actions.OnDeploy.After, 1)
-	assert.Equal(t, "echo after", actions.OnDeploy.After[0].Cmd)
+	require.Equal(t, "echo after", actions.OnDeploy.After[0].Cmd)
 
 	// OnFailure
 	require.Len(t, actions.OnDeploy.OnFailure, 1)
-	assert.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
+	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
 }
 
 func TestV1Beta1PkgToV1Alpha1_Variables(t *testing.T) {
@@ -1002,19 +1005,19 @@ func TestV1Beta1PkgToV1Alpha1_Variables(t *testing.T) {
 
 	require.Len(t, result.Variables, 1)
 	v := result.Variables[0]
-	assert.Equal(t, "MY_VAR", v.Name)
-	assert.True(t, v.Sensitive)
-	assert.True(t, v.AutoIndent)
-	assert.Equal(t, "^[a-z]+$", v.Pattern)
-	assert.Equal(t, v1alpha1.FileVariableType, v.Type)
-	assert.Equal(t, "A variable", v.Description)
-	assert.Equal(t, "default-val", v.Default)
-	assert.True(t, v.Prompt)
+	require.Equal(t, "MY_VAR", v.Name)
+	require.True(t, v.Sensitive)
+	require.True(t, v.AutoIndent)
+	require.Equal(t, "^[a-z]+$", v.Pattern)
+	require.Equal(t, v1alpha1.FileVariableType, v.Type)
+	require.Equal(t, "A variable", v.Description)
+	require.Equal(t, "default-val", v.Default)
+	require.True(t, v.Prompt)
 
 	require.Len(t, result.Constants, 1)
 	c := result.Constants[0]
-	assert.Equal(t, "MY_CONST", c.Name)
-	assert.Equal(t, "const-val", c.Value)
+	require.Equal(t, "MY_CONST", c.Name)
+	require.Equal(t, "const-val", c.Value)
 }
 
 func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
@@ -1105,46 +1108,46 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	beta := V1Alpha1PkgToV1Beta1(original)
 	result := V1Beta1PkgToV1Alpha1(beta)
 
-	assert.Equal(t, v1alpha1.APIVersion, result.APIVersion)
-	assert.Equal(t, original.Kind, result.Kind)
-	assert.Equal(t, original.Metadata.Name, result.Metadata.Name)
-	assert.Equal(t, original.Metadata.Description, result.Metadata.Description)
-	assert.Equal(t, original.Metadata.Version, result.Metadata.Version)
-	assert.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
-	assert.Equal(t, original.Metadata.URL, result.Metadata.URL)
-	assert.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
+	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
+	require.Equal(t, original.Kind, result.Kind)
+	require.Equal(t, original.Metadata.Name, result.Metadata.Name)
+	require.Equal(t, original.Metadata.Description, result.Metadata.Description)
+	require.Equal(t, original.Metadata.Version, result.Metadata.Version)
+	require.Equal(t, original.Metadata.Architecture, result.Metadata.Architecture)
+	require.Equal(t, original.Metadata.URL, result.Metadata.URL)
+	require.Equal(t, original.Metadata.Authors, result.Metadata.Authors)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
-	assert.Equal(t, "test-comp", comp.Name)
+	require.Equal(t, "test-comp", comp.Name)
 	require.NotNil(t, comp.Required)
-	assert.True(t, *comp.Required)
-	assert.Equal(t, []string{"nginx:latest"}, comp.Images)
+	require.True(t, *comp.Required)
+	require.Equal(t, []string{"nginx:latest"}, comp.Images)
 
 	// Chart should round-trip via structured source → flat fields.
 	require.Len(t, comp.Charts, 1)
-	assert.Equal(t, "https://charts.example.com", comp.Charts[0].URL)
-	assert.Equal(t, "my-chart", comp.Charts[0].RepoName)
-	assert.Equal(t, "1.2.3", comp.Charts[0].Version)
+	require.Equal(t, "https://charts.example.com", comp.Charts[0].URL)
+	require.Equal(t, "my-chart", comp.Charts[0].RepoName)
+	require.Equal(t, "1.2.3", comp.Charts[0].Version)
 
 	// Manifest NoWait should survive round-trip.
 	require.Len(t, comp.Manifests, 1)
-	assert.True(t, comp.Manifests[0].NoWait)
+	require.True(t, comp.Manifests[0].NoWait)
 
 	// Action timeouts should round-trip through Duration conversion.
-	assert.Equal(t, 60, comp.Actions.OnDeploy.Defaults.MaxTotalSeconds)
-	assert.Equal(t, 2, comp.Actions.OnDeploy.Defaults.MaxRetries)
+	require.Equal(t, 60, comp.Actions.OnDeploy.Defaults.MaxTotalSeconds)
+	require.Equal(t, 2, comp.Actions.OnDeploy.Defaults.MaxRetries)
 	require.Len(t, comp.Actions.OnDeploy.Before, 1)
 	require.NotNil(t, comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
-	assert.Equal(t, 30, *comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
+	require.Equal(t, 30, *comp.Actions.OnDeploy.Before[0].MaxTotalSeconds)
 
 	// DataInjections should survive round-trip via private shim.
 	require.Len(t, comp.DataInjections, 1)
-	assert.Equal(t, "/data", comp.DataInjections[0].Source)
+	require.Equal(t, "/data", comp.DataInjections[0].Source)
 
 	// Constants and variables.
 	require.Len(t, result.Constants, 1)
-	assert.Equal(t, "MY_CONST", result.Constants[0].Name)
+	require.Equal(t, "MY_CONST", result.Constants[0].Name)
 	require.Len(t, result.Variables, 1)
-	assert.Equal(t, "MY_VAR", result.Variables[0].Name)
+	require.Equal(t, "MY_VAR", result.Variables[0].Name)
 }

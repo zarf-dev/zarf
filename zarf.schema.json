@@ -316,6 +316,10 @@
         "^x-": {}
       },
       "properties": {
+        "apiVersion": {
+          "description": "The API version defined in the package definition used to build the package.",
+          "type": "string"
+        },
         "architecture": {
           "description": "The architecture this package was created on.",
           "type": "string"
