@@ -12,26 +12,32 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 type internalConvertOptions struct{}
 
-// FIXME: temporary internal convert command
+// This command will be unhidden and moved to dev once v1beta1 is ready for use
 func newInternalConvertCommand() *cobra.Command {
 	o := &internalConvertOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "convert [directory]",
-		Short: "Convert a v1alpha1 zarf.yaml to v1beta1",
-		Args:  cobra.ExactArgs(1),
-		RunE:  o.run,
+		Use:    "convert [directory]",
+		Short:  "Convert zarf.yaml to the latest API version (V1beta1)",
+		Hidden: true,
+		Args:   cobra.MaximumNArgs(1),
+		RunE:   o.run,
 	}
 
 	return cmd
 }
 
-func (o *internalConvertOptions) run(_ *cobra.Command, args []string) error {
-	dir := args[0]
+func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
+	l := logger.From(cmd.Context())
+	dir := "."
+	if len(args) > 0 {
+		dir = args[0]
+	}
 
 	inputPath := filepath.Join(dir, "zarf.yaml")
 	b, err := os.ReadFile(inputPath)
@@ -56,6 +62,6 @@ func (o *internalConvertOptions) run(_ *cobra.Command, args []string) error {
 		return fmt.Errorf("writing %s: %w", outputPath, err)
 	}
 
-	fmt.Printf("Converted %s -> %s\n", inputPath, outputPath)
+	l.Info("converted", "input", inputPath, "output", outputPath)
 	return nil
 }
