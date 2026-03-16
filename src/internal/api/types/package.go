@@ -61,6 +61,7 @@ type ZarfBuildData struct {
 	VersionRequirements        []VersionRequirement
 	ProvenanceFiles            []string
 	AggregateChecksum          string
+	APIVersion                 string
 
 	// v1alpha1-only
 	DifferentialMissing []string

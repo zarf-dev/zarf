@@ -84,6 +84,7 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 			DifferentialMissing:        []string{"comp-a"},
 			Flavor:                     "vanilla",
 			Signed:                     &signed,
+			APIVersion:                 v1alpha1.APIVersion,
 			VersionRequirements: []v1alpha1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},
@@ -107,6 +108,7 @@ func TestV1Alpha1PkgToV1Beta1_Build(t *testing.T) {
 	assert.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
 	assert.Equal(t, "needs feature X", result.Build.VersionRequirements[0].Reason)
 	assert.Equal(t, []string{"sig.json"}, result.Build.ProvenanceFiles)
+	require.Equal(t, v1alpha1.APIVersion, result.Build.APIVersion)
 }
 
 func TestV1Alpha1PkgToV1Beta1_Variables(t *testing.T) {
@@ -672,6 +674,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 			DifferentialPackageVersion: "0.29.0",
 			Flavor:                     "vanilla",
 			Signed:                     &signed,
+			APIVersion:                 v1beta1.APIVersion,
 			VersionRequirements: []v1beta1.VersionRequirement{
 				{Version: "v0.28.0", Reason: "needs feature X"},
 			},
@@ -693,6 +696,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 	assert.True(t, *result.Build.Signed)
 	require.Len(t, result.Build.VersionRequirements, 1)
 	assert.Equal(t, "v0.28.0", result.Build.VersionRequirements[0].Version)
+	assert.Equal(t, v1beta1.APIVersion, result.Build.APIVersion)
 }
 
 func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
