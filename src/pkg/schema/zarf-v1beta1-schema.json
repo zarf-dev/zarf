@@ -382,6 +382,10 @@
           "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
           "type": "string"
         },
+        "apiVersion": {
+          "description": "The API version defined in the package definition used to build the package.",
+          "type": "string"
+        },
         "architecture": {
           "description": "The architecture this package was created on.",
           "type": "string"
