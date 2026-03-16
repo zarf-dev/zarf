@@ -17,6 +17,9 @@ type ZarfComponent struct {
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 
+	// Whether this component is default. Defaults to false.
+	Default bool `json:"default,omitempty"`
+
 	// Do not prompt user to install this component. Defaults to false, meaning the component is required.
 	Optional *bool `json:"optional,omitempty"`
 

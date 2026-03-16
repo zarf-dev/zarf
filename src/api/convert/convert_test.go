@@ -203,6 +203,7 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	comp := result.Components[0]
 	assert.Equal(t, "my-component", comp.Name)
 	assert.Equal(t, "test component", comp.Description)
+	assert.True(t, comp.Default)
 
 	// Required=true → Optional=false
 	require.NotNil(t, comp.Optional)
@@ -703,6 +704,7 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 			{
 				Name:        "my-component",
 				Description: "test component",
+				Default:     true,
 				Optional:    &optional,
 				Only: v1beta1.ZarfComponentOnlyTarget{
 					LocalOS: "linux",
@@ -731,6 +733,7 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	comp := result.Components[0]
 	assert.Equal(t, "my-component", comp.Name)
 	assert.Equal(t, "test component", comp.Description)
+	assert.True(t, comp.Default)
 
 	// Optional=true → Required=false
 	require.NotNil(t, comp.Required)

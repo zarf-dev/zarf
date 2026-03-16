@@ -93,6 +93,7 @@ func convertV1Beta1Component(c v1beta1.ZarfComponent) types.ZarfComponent {
 	gc := types.ZarfComponent{
 		Name:           c.Name,
 		Description:    c.Description,
+		Default:        c.Default,
 		Optional:       c.Optional,
 		DataInjections: c.GetDataInjections(),
 		Repos:          c.Repos,
@@ -431,6 +432,7 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 	gc := v1beta1.ZarfComponent{
 		Name:        c.Name,
 		Description: c.Description,
+		Default:     c.Default,
 		Optional:    convertRequiredToOptional(c.Required),
 		Only: v1beta1.ZarfComponentOnlyTarget{
 			LocalOS: c.Only.LocalOS,
