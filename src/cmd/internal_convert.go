@@ -4,6 +4,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -50,6 +51,10 @@ func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("parsing %s: %w", inputPath, err)
 	}
 
+	if err := checkRemovedFields(pkg); err != nil {
+		return err
+	}
+
 	result := convert.V1Alpha1PkgToV1Beta1(pkg)
 
 	out, err := goyaml.Marshal(result)
@@ -64,4 +69,31 @@ func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
 
 	l.Info("converted", "input", inputPath, "output", outputPath)
 	return nil
+}
+
+func checkRemovedFields(pkg v1alpha1.ZarfPackage) error {
+	var errs []error
+	if pkg.Metadata.YOLO {
+		// TODO, add link to connected docs when available
+		errs = append(errs, fmt.Errorf(".metadata.yolo is removed without replacement in v1beta1 — replace it with connected deployments"))
+	}
+	for _, c := range pkg.Components {
+		if c.DeprecatedGroup != "" {
+			errs = append(errs, fmt.Errorf("can't convert component %s, .components.group is removed without replacement in v1beta1 — consider using .components[x].only.flavor instead", c.Name))
+		}
+		if len(c.DataInjections) > 0 {
+			errs = append(errs, fmt.Errorf("can't convert component %s, .components.dataInjections is removed without replacement in v1beta1 — see https://docs.zarf.dev/best-practices/data-injections-migration/ for alternatives", c.Name))
+		}
+		// TODO add link to example of newer import system
+		if c.Import.Name != "" {
+			errs = append(errs, fmt.Errorf("can't convert component %s, .components.import.name is removed without replacement in v1beta1", c.Name))
+		}
+		for _, ch := range c.Charts {
+			// TODO link to values docs
+			if len(ch.Variables) > 0 {
+				errs = append(errs, fmt.Errorf("can't convert chart %s in component %s, .components.charts.variables is removed without replacement in v1beta1 — consider using Zarf values instead", ch.Name, c.Name))
+			}
+		}
+	}
+	return errors.Join(errs...)
 }
