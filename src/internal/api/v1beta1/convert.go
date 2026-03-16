@@ -590,10 +590,6 @@ func convertChart(ch types.ZarfChart) v1beta1.ZarfChart {
 	} else if ch.URL != "" {
 		// Infer source type from v1alpha1 flat fields.
 		switch {
-		case ch.LocalPath != "":
-			bc.Local = v1beta1.LocalRepoSource{
-				Path: ch.LocalPath,
-			}
 		case strings.HasPrefix(ch.URL, "oci://"):
 			bc.OCI = v1beta1.OCISource{
 				URL:     ch.URL,
