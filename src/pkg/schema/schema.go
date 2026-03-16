@@ -13,7 +13,15 @@ import (
 //go:embed zarf-v1alpha1-schema.json
 var v1Alpha1Schema []byte
 
+//go:embed zarf-v1beta1-schema.json
+var v1Beta1Schema []byte
+
 // GetV1Alpha1Schema returns the embedded JSON schema for the v1alpha1 Zarf package config
 func GetV1Alpha1Schema() []byte {
 	return v1Alpha1Schema
+}
+
+// GetV1Beta1Schema returns the embedded JSON schema for the v1beta1 Zarf package config
+func GetV1Beta1Schema() []byte {
+	return v1Beta1Schema
 }

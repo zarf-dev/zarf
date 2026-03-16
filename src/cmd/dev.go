@@ -22,9 +22,12 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -99,6 +102,23 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	v := getViper()
 	o.setPkgTmpl = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
+
+	basePath := setBaseDirectory(args)
+
+	// Detect the original apiVersion before loading.
+	pkgPath, err := layout.ResolvePackagePath(basePath)
+	if err != nil {
+		return err
+	}
+	rawYAML, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return err
+	}
+	originalVersion, err := pkgcfg.DetectAPIVersion(rawYAML)
+	if err != nil {
+		return err
+	}
+
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -111,16 +131,18 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		SkipVersionCheck: true,
 		RemoteOptions:    defaultRemoteOptions(),
 	}
-	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
+	pkg, err := load.PackageDefinition(ctx, basePath, loadOpts)
 	if err != nil {
 		return err
+	}
+
+	if originalVersion == "zarf.dev/v1beta1" {
+		betaPkg := convert.V1Alpha1PkgToV1Beta1(pkg)
+		betaPkg.Build = v1beta1.ZarfBuildData{}
+		return utils.ColorPrintYAML(betaPkg, nil, false)
 	}
 	pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(pkg, nil, false)
-	if err != nil {
-		return err
-	}
-	return nil
+	return utils.ColorPrintYAML(pkg, nil, false)
 }
 
 type devInspectManifestsOptions struct {
