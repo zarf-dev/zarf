@@ -191,6 +191,7 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 				},
 				HealthChecks: []v1alpha1.NamespacedObjectKindReference{
 					{APIVersion: "apps/v1", Kind: "Deployment", Namespace: "default", Name: "my-deploy"},
+					{APIVersion: "v1", Kind: "Pod", Namespace: "default", Name: "my-pod"},
 				},
 			},
 		},
@@ -227,13 +228,20 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	require.Len(t, comp.GetDataInjections(), 1)
 	assert.Equal(t, "/data", comp.GetDataInjections()[0].Source)
 
-	// HealthChecks should become onDeploy after wait actions.
-	require.Len(t, comp.Actions.OnDeploy.After, 1)
+	// HealthChecks should become onDeploy after wait actions with kind in <kind>.<version>.<group> format.
+	require.Len(t, comp.Actions.OnDeploy.After, 2)
 	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait)
 	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait.Cluster)
-	assert.Equal(t, "Deployment", comp.Actions.OnDeploy.After[0].Wait.Cluster.Kind)
+	assert.Equal(t, "Deployment.v1.apps", comp.Actions.OnDeploy.After[0].Wait.Cluster.Kind)
 	assert.Equal(t, "my-deploy", comp.Actions.OnDeploy.After[0].Wait.Cluster.Name)
 	assert.Equal(t, "default", comp.Actions.OnDeploy.After[0].Wait.Cluster.Namespace)
+
+	// Core API resources (no group) keep kind as-is.
+	require.NotNil(t, comp.Actions.OnDeploy.After[1].Wait)
+	require.NotNil(t, comp.Actions.OnDeploy.After[1].Wait.Cluster)
+	assert.Equal(t, "Pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Kind)
+	assert.Equal(t, "my-pod", comp.Actions.OnDeploy.After[1].Wait.Cluster.Name)
+	assert.Equal(t, "default", comp.Actions.OnDeploy.After[1].Wait.Cluster.Namespace)
 }
 
 func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {

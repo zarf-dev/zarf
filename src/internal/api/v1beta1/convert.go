@@ -488,7 +488,7 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 		gc.Actions.OnDeploy.After = append(gc.Actions.OnDeploy.After, v1beta1.ZarfComponentAction{
 			Wait: &v1beta1.ZarfComponentActionWait{
 				Cluster: &v1beta1.ZarfComponentActionWaitCluster{
-					Kind:      hc.Kind,
+					Kind:      healthCheckKind(hc.Kind, hc.APIVersion),
 					Name:      hc.Name,
 					Namespace: hc.Namespace,
 				},
@@ -792,6 +792,17 @@ func convertWait(w *types.ZarfComponentActionWait) *v1beta1.ZarfComponentActionW
 		}
 	}
 	return bw
+}
+
+// healthCheckKind returns the wait-for kind string for a v1alpha1 health check.
+// For resources with a group (e.g. APIVersion "apps/v1"), the format is <kind>.<version>.<group>.
+// For core resources with no group (e.g. APIVersion "v1"), the kind is returned as-is.
+func healthCheckKind(kind, apiVersion string) string {
+	group, version, found := strings.Cut(apiVersion, "/")
+	if !found {
+		return kind
+	}
+	return kind + "." + version + "." + group
 }
 
 func isGitURL(url string) bool {
