@@ -48,11 +48,7 @@ func ConvertToGeneric(pkg v1beta1.ZarfPackage) types.ZarfPackage {
 		Documentation: pkg.Documentation,
 	}
 
-	// v1beta1 AllowNamespaceOverride is a plain bool; store as *bool on generic.
-	if pkg.Metadata.AllowNamespaceOverride {
-		t := true
-		g.Metadata.AllowNamespaceOverride = &t
-	}
+	g.Metadata.AllowNamespaceOverride = pkg.Metadata.AllowNamespaceOverride
 
 	for _, vr := range pkg.Build.VersionRequirements {
 		g.Build.VersionRequirements = append(g.Build.VersionRequirements, types.VersionRequirement{
@@ -373,7 +369,7 @@ func convertMetadata(m types.ZarfMetadata) v1beta1.ZarfMetadata {
 		Uncompressed:           m.Uncompressed,
 		Architecture:           m.Architecture,
 		Annotations:            m.Annotations,
-		AllowNamespaceOverride: derefBoolOr(m.AllowNamespaceOverride, true),
+		AllowNamespaceOverride: m.AllowNamespaceOverride,
 	}
 
 	// Migrate v1alpha1-only metadata fields into annotations.
@@ -796,11 +792,4 @@ func isGitURL(url string) bool {
 		url = url[:idx]
 	}
 	return strings.HasSuffix(url, ".git")
-}
-
-func derefBoolOr(p *bool, def bool) bool {
-	if p != nil {
-		return *p
-	}
-	return def
 }

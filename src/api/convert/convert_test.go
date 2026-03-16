@@ -49,7 +49,8 @@ func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
 	assert.Equal(t, "1.0.0", result.Metadata.Version)
 	assert.Equal(t, "amd64", result.Metadata.Architecture)
 	assert.True(t, result.Metadata.Uncompressed)
-	assert.True(t, result.Metadata.AllowNamespaceOverride)
+	require.NotNil(t, result.Metadata.AllowNamespaceOverride)
+	assert.True(t, *result.Metadata.AllowNamespaceOverride)
 
 	// v1alpha1-only metadata fields should be migrated to annotations.
 	assert.Equal(t, "https://example.com", result.Metadata.Annotations["metadata.url"])
@@ -583,6 +584,7 @@ func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
 
 func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 	t.Parallel()
+	allowOverride := true
 	pkg := v1beta1.ZarfPackage{
 		APIVersion: v1beta1.APIVersion,
 		Kind:       v1beta1.ZarfPackageConfig,
@@ -592,7 +594,7 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 			Version:                "1.0.0",
 			Architecture:           "amd64",
 			Uncompressed:           true,
-			AllowNamespaceOverride: true,
+			AllowNamespaceOverride: &allowOverride,
 			Annotations: map[string]string{
 				"existing":               "annotation",
 				"metadata.url":           "https://example.com",
