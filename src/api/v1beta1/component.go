@@ -17,7 +17,7 @@ type ZarfComponent struct {
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 
-	// Whether this component is default. Defaults to false.
+	// Determines the default Y/N state for installing this component on package deploy.
 	Default bool `json:"default,omitempty"`
 
 	// Do not prompt user to install this component. Defaults to false, meaning the component is required.
@@ -67,6 +67,18 @@ func (c *ZarfComponent) SetDataInjections(dataInjections []v1alpha1.ZarfDataInje
 // GetDataInjections is a shim to retrieving data injections when set for lossless v1alpha1 conversions
 func (c ZarfComponent) GetDataInjections() []v1alpha1.ZarfDataInjection {
 	return c.dataInjections
+}
+
+// GetImages returns all image names specified in the component, including those from ImageArchives.
+func (c ZarfComponent) GetImages() []string {
+	images := []string{}
+	for _, img := range c.Images {
+		images = append(images, img.Name)
+	}
+	for _, ia := range c.ImageArchives {
+		images = append(images, ia.Images...)
+	}
+	return images
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
