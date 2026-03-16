@@ -69,6 +69,18 @@ func (c ZarfComponent) GetDataInjections() []v1alpha1.ZarfDataInjection {
 	return c.dataInjections
 }
 
+// GetImages returns all image names specified in the component, including those from ImageArchives.
+func (c ZarfComponent) GetImages() []string {
+	images := []string{}
+	for _, img := range c.Images {
+		images = append(images, img.Name)
+	}
+	for _, ia := range c.ImageArchives {
+		images = append(images, ia.Images...)
+	}
+	return images
+}
+
 // RequiresCluster returns if the component requires a cluster connection to deploy.
 func (c ZarfComponent) RequiresCluster() bool {
 	hasImages := len(c.Images) > 0
