@@ -58,6 +58,7 @@ jobs:
       - name: get crds
         run: kubectl get crds kustomizations.kustomize.toolkit.fluxcd.io -o yaml
 
+
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: failure()
