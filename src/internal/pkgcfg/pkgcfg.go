@@ -37,24 +37,40 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	}
 	switch version {
 	case "zarf.dev/v1beta1":
-		var beta v1beta1.ZarfPackage
-		if err := goyaml.Unmarshal(b, &beta); err != nil {
+		beta, err := ParseV1Beta1(b)
+		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
 		return convert.V1Beta1PkgToV1Alpha1(beta), nil
 	case "", "zarf.dev/v1alpha1":
-		var pkg v1alpha1.ZarfPackage
-		if err := goyaml.Unmarshal(b, &pkg); err != nil {
-			return v1alpha1.ZarfPackage{}, err
-		}
-		pkg, warnings := migrateDeprecated(pkg)
-		for _, warning := range warnings {
-			logger.From(ctx).Warn(warning)
-		}
-		return pkg, nil
+		return ParseV1Alpha1(ctx, b)
 	default:
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unknown apiVersion %q", version)
 	}
+}
+
+// ParseV1Alpha1 unmarshals bytes as a v1alpha1 package and applies deprecated migrations.
+func ParseV1Alpha1(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	if err := goyaml.Unmarshal(b, &pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg.Build.APIVersion = v1alpha1.APIVersion
+	pkg, warnings := migrateDeprecated(pkg)
+	for _, warning := range warnings {
+		logger.From(ctx).Warn(warning)
+	}
+	return pkg, nil
+}
+
+// ParseV1Beta1 unmarshals bytes directly as a v1beta1 package.
+func ParseV1Beta1(b []byte) (v1beta1.ZarfPackage, error) {
+	var pkg v1beta1.ZarfPackage
+	if err := goyaml.Unmarshal(b, &pkg); err != nil {
+		return v1beta1.ZarfPackage{}, err
+	}
+	pkg.Build.APIVersion = v1beta1.APIVersion
+	return pkg, nil
 }
 
 // List of migrations tracked in the zarf.yaml build data.

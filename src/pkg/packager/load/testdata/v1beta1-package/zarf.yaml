@@ -1,0 +1,8 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: test-v1beta1
+components:
+  - name: hello
+    images:
+      - name: ghcr.io/stefanprodan/podinfo:6.4.0

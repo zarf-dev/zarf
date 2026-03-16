@@ -31,7 +31,7 @@ func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([
 	}
 	jsonSchema := schema.GetV1Alpha1Schema()
 	if m, ok := untypedZarfPackage.(map[string]interface{}); ok {
-		if apiVersion, _ := m["apiVersion"].(string); apiVersion == "zarf.dev/v1beta1" {
+		if apiVersion, ok := m["apiVersion"].(string); ok && apiVersion == "zarf.dev/v1beta1" {
 			jsonSchema = schema.GetV1Beta1Schema()
 		}
 	}
