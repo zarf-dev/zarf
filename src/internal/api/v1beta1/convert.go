@@ -483,6 +483,19 @@ func convertComponent(c types.ZarfComponent) v1beta1.ZarfComponent {
 		})
 	}
 
+	// Convert v1alpha1 HealthChecks into onDeploy after wait actions.
+	for _, hc := range c.HealthChecks {
+		gc.Actions.OnDeploy.After = append(gc.Actions.OnDeploy.After, v1beta1.ZarfComponentAction{
+			Wait: &v1beta1.ZarfComponentActionWait{
+				Cluster: &v1beta1.ZarfComponentActionWaitCluster{
+					Kind:      hc.Kind,
+					Name:      hc.Name,
+					Namespace: hc.Namespace,
+				},
+			},
+		})
+	}
+
 	// Preserve v1alpha1-only fields via private shims for lossless round-tripping.
 	gc.SetDataInjections(c.DataInjections)
 

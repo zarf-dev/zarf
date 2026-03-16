@@ -226,6 +226,14 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	// DataInjections should be preserved via the private shim.
 	require.Len(t, comp.GetDataInjections(), 1)
 	assert.Equal(t, "/data", comp.GetDataInjections()[0].Source)
+
+	// HealthChecks should become onDeploy after wait actions.
+	require.Len(t, comp.Actions.OnDeploy.After, 1)
+	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait)
+	require.NotNil(t, comp.Actions.OnDeploy.After[0].Wait.Cluster)
+	assert.Equal(t, "Deployment", comp.Actions.OnDeploy.After[0].Wait.Cluster.Kind)
+	assert.Equal(t, "my-deploy", comp.Actions.OnDeploy.After[0].Wait.Cluster.Name)
+	assert.Equal(t, "default", comp.Actions.OnDeploy.After[0].Wait.Cluster.Namespace)
 }
 
 func TestV1Alpha1PkgToV1Beta1_FeatureInference(t *testing.T) {
