@@ -150,18 +150,18 @@ func (f ZarfFile) ShouldTemplate() bool {
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"maxLength=40"`
 	// The version of the chart. This field is not part of the v1beta1 schema but is kept
 	// as a backwards compatibility shim so v1alpha1 packages can be converted to v1beta1.
 	version string
 	// The Helm repo where the chart is stored.
-	HelmRepo HelmRepoSource `json:"helmRepo,omitempty"`
+	HelmRepo HelmRepoSource `json:"helmRepo,omitempty" jsonschema:"oneof_required=helm"`
 	// The Git repo where the chart is stored.
-	Git GitRepoSource `json:"git,omitempty"`
+	Git GitRepoSource `json:"git,omitempty" jsonschema:"oneof_required=git"`
 	// The local path where the chart is stored.
-	Local LocalRepoSource `json:"local,omitempty"`
+	Local LocalRepoSource `json:"local,omitempty" jsonschema:"oneof_required=local"`
 	// The OCI registry where the chart is stored.
-	OCI OCISource `json:"oci,omitempty"`
+	OCI OCISource `json:"oci,omitempty" jsonschema:"oneof_required=oci"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).
@@ -253,7 +253,7 @@ type OCISource struct {
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
 type ZarfManifest struct {
 	// A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.
-	Name string `json:"name"`
+	Name string `json:"name" jsonschema:"maxLength=40"`
 	// The namespace to deploy the manifests to.
 	Namespace string `json:"namespace,omitempty"`
 	// List of local K8s YAML files or remote URLs to deploy (in order).
