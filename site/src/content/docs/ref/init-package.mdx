@@ -67,7 +67,7 @@ The `zarf-injector` component simply copies the injector Rust binary to `###ZARF
 
 #### Zarf Seed Registry
 
-The behavior of the `zarf-seed-registry` component differs depending on the registry mode, declared by the flag `--registry-mode=nodeport|proxy`. By default, nodeport is the registry mode in the cluster's first init. Secondary `zarf init` executions continue using the registry mode that was used on initial init, unless explicitly set. Alternatively, all registry components are skipped when [using an external registry](#using-external-registries).
+The behavior of the `zarf-seed-registry` component differs depending on the registry mode, declared by the flag `--registry-mode=nodeport|proxy`. By default, nodeport is the registry mode in the cluster's first init. Subsequent `zarf init` executions continue using the registry mode that was used on initial init, unless explicitly set. Alternatively, all registry components are skipped when [using an external registry](#using-external-registries).
 
 ##### NodePort Mode (Default)
 
