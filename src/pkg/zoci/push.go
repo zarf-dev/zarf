@@ -102,15 +102,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	// this is a conservative total using layer sizes; progress still works fine.)
 	totalSize := oci.SumDescsSize(descs)
 
-	var publishedDesc ocispec.Descriptor
+	if annotations[ocispec.AnnotationTitle] == "" {
+		return ocispec.Descriptor{}, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
+	}
 
+	var publishedDesc ocispec.Descriptor
 	err = retry.Do(
 		func() error {
 			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
-			if annotations[ocispec.AnnotationTitle] == "" {
-				return fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
-			}
+
 			manifestConfigBytes, err := json.Marshal(pkgLayout.Pkg)
 			if err != nil {
 				return err
@@ -136,9 +137,9 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			trackedRemote.StartReporting(ctx)
 			defer trackedRemote.StopReporting()
 
-			publishedDesc, copyErr := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
-			if copyErr != nil {
-				return copyErr
+			publishedDesc, err = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			if err != nil {
+				return err
 			}
 
 			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
