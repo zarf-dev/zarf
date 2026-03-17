@@ -137,9 +137,10 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			trackedRemote.StartReporting(ctx)
 			defer trackedRemote.StopReporting()
 
-			publishedDesc, err = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
-			if err != nil {
-				return err
+			var copyErr error
+			publishedDesc, copyErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			if copyErr != nil {
+				return copyErr
 			}
 
 			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
