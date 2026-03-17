@@ -87,24 +87,24 @@ NodePort mode requires that the kubelet be able to reach out to a cluster NodePo
 :::
 
 
-##### Proxy Mode
+##### Proxy Mode (Alpha)
+
+Proxy mode is a newer alternative to nodeport mode to circumvent limitations with NFTables and IPv6 clusters. It has the distinct advantage of securing registry connections over mTLS using automatically generated certificates stored in the cluster. A DaemonSet proxy runs socat on each node so the kubelet won't make unencrypted cross-node registry calls. Additionally, Zarf uses the same mTLS certificates to encrypt its calls to the registry.
 
 When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
 
 1. Zarf injects the `zarf-injector` binary and the `registry:3` image chunks into the cluster.
-2. Zarf finds the most likely [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause) so that it can spin up an injector DaemonSet. Since Kubernetes does not expose the cluster's pause image, Zarf looks for an image with the following criteria:
+2. Zarf finds the most likely [pause image](https://github.com/kubernetes/kubernetes/tree/master/build/pause) to use as the container image in the injector DaemonSet. Since Kubernetes does not expose the cluster's pause image, Zarf looks for an image with the following criteria:
   - Includes pause in the name.
   - Has a major semver version of 3 or 4.
   - Less than 1MiB in size
 3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
-4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector Daemonset.
+4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector DaemonSet.
 5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images locally.
-
-An advantage of proxy mode is that it's automatically secured behind mTLS. The proxy DaemonSet uses automatically generated mTLS certificates stored in the cluster to secure its connection to the registry. Since the proxy runs on each node, the kubelet never transmits unencrypted traffic across nodes. Additionally, Zarf will use the same mTLS certificates to encrypt its calls to the registry.
 
 :::note
 
-Host port connections do not work on IPv6 clusters, so Zarf will automatically configure the proxy and injector to use host network in these cases.
+Host port connections do not work on IPv6-only clusters, so Zarf will automatically configure the proxy and injector to use host network on these clusters. A pod with host network uses the network namespace of its node. Operators should ensure this is within their acceptable risk tolerance.
 
 :::
 
@@ -135,7 +135,7 @@ This option skips the injector and seed process, and will not deploy a registry 
 
 :::note
 
-Given the registry is a core part of any Kubernetes deployment you MUST either specify an external registry with the `--registry-*` flags or use the injected registry.
+Given the registry is a core part of any Kubernetes deployment, you MUST either specify an external registry with the `--registry-*` flags or use the injected registry.
 
 :::
 
