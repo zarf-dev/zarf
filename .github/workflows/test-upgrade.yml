@@ -99,6 +99,9 @@ jobs:
       - name: "Describe nodes, pods and deployments"
         # NOTE: We describe nodes, pods and deployments here to help understand failures
         run: |
+          echo "****** Getting Flux CRDS  *****""
+          kubectl get crds kustomizations.kustomize.toolkit.fluxcd.io -o yaml
+
           echo "***** Getting pods *****"
           sudo env "PATH=$PATH" CI=true kubectl get pods -A
 
