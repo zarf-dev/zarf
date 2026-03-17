@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"testing"
 	"time"
 
@@ -31,5 +32,14 @@ func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {
 	require.NoError(t, err)
 	//nolint:errcheck // ignore
 	go ref.ListenAndServe()
-	return fmt.Sprintf("localhost:%d", port)
+	addr := fmt.Sprintf("localhost:%d", port)
+	require.Eventually(t, func() bool {
+		conn, err := net.DialTimeout("tcp", addr, 50*time.Millisecond)
+		if err != nil {
+			return false
+		}
+		require.NoError(t, conn.Close())
+		return true
+	}, 5*time.Second, 10*time.Millisecond, "registry did not start in time")
+	return addr
 }

@@ -5,8 +5,6 @@
 package test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -27,10 +25,22 @@ func TestWaitFor(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	// Apply the shared CRD (services.test.zarf.dev) used by the conflict and version subtests.
+	svcCRDFile := "src/test/packages/46-manifests/zarf-svc-crd.yaml"
+	svcCRDName := "services.test.zarf.dev"
+	_, _, err = e2e.Kubectl(t, "apply", "-f", svcCRDFile)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "-f", svcCRDFile)
+		require.NoError(t, err)
+	})
+	_, _, err = e2e.Zarf(t, "tools", "wait-for", "crds", svcCRDName, "established", "--timeout=10s")
+	require.NoError(t, err)
+
 	t.Run("wait for non-existent resource times out", func(t *testing.T) {
 		t.Parallel()
-		_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
-		require.Error(t, err)
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "does-not-exist-pod", "ready", "-n", namespace, "--timeout", "3s")
+		require.Error(t, err, stdout, stderr)
 	})
 
 	t.Run("wait for resource without specifying the namespace only looks in default namespace", func(t *testing.T) {
@@ -44,6 +54,8 @@ func TestWaitFor(t *testing.T) {
 		t.Parallel()
 		// There's always a kubernetes svc in the default namespace
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "svc", "--timeout", "3s")
+		require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "svc", "--timeout", "3s")
 		require.NoError(t, err, stdOut, stdErr)
 	})
 
@@ -103,6 +115,8 @@ func TestWaitFor(t *testing.T) {
 		// Wait using label selector
 		stdOut, stdErr, err := e2e.Zarf(t, "tools", "wait-for", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
 		require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "pod", "test-label=wait-test", "ready", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdOut, stdErr)
 	})
 
 	t.Run("wait with jsonpath condition", func(t *testing.T) {
@@ -138,7 +152,6 @@ func TestWaitFor(t *testing.T) {
 		})
 
 		// Wait for any deployment in the empty namespace - should timeout
-		// Using deployment instead of configmap because configmaps have default kube-root-ca.crt
 		_, _, err = e2e.Zarf(t, "tools", "wait-for", "deployment", "-n", emptyNamespace, "--timeout", "3s")
 		require.Error(t, err)
 	})
@@ -169,44 +182,8 @@ func TestWaitFor(t *testing.T) {
 		crdName := "zarfwaittests.test.zarf.dev"
 		resourceName := "my-wait-test"
 
-		crdYAML := `apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: zarfwaittests.test.zarf.dev
-spec:
-  group: test.zarf.dev
-  names:
-    kind: ZarfWaitTest
-    plural: zarfwaittests
-    singular: zarfwaittest
-  scope: Namespaced
-  versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
-          type: object
-          properties:
-            spec:
-              type: object
-              properties:
-                name:
-                  type: string
-`
-		crdFile := filepath.Join(t.TempDir(), "crd.yaml")
-		require.NoError(t, os.WriteFile(crdFile, []byte(crdYAML), 0644))
-
-		resourceYAML := `apiVersion: test.zarf.dev/v1
-kind: ZarfWaitTest
-metadata:
-  name: ` + resourceName + `
-  namespace: ` + namespace + `
-spec:
-  name: test
-`
-		resourceFile := filepath.Join(t.TempDir(), "resource.yaml")
-		require.NoError(t, os.WriteFile(resourceFile, []byte(resourceYAML), 0644))
+		crdFile := "src/test/packages/46-manifests/zarf-crd.yaml"
+		resourceFile := "src/test/packages/46-manifests/zarf-cr.yaml"
 
 		// Start waiting before the CRD exists
 		errCh := make(chan error, 1)
@@ -227,8 +204,7 @@ spec:
 		})
 
 		// Wait for the CRD to be established before creating an instance
-		// FIXME: shorthand crd should work here
-		_, _, err = e2e.Zarf(t, "tools", "wait-for", "customresourcedefinitions", crdName, "established", "--timeout=10s")
+		_, _, err = e2e.Zarf(t, "tools", "wait-for", "crds", crdName, "established", "--timeout=10s")
 		require.NoError(t, err)
 
 		_, _, err = e2e.Kubectl(t, "apply", "-f", resourceFile)
@@ -244,6 +220,51 @@ spec:
 		require.NoError(t, err)
 	})
 
+	t.Run("wait for CRD with kind name that conflicts with a built-in resource", func(t *testing.T) {
+		t.Parallel()
+		resourceName := "my-svc-test"
+		resourceFile := "src/test/packages/46-manifests/zarf-svc-cr.yaml"
+
+		// The CRD (services.test.zarf.dev) is applied by the parent test.
+		_, _, err := e2e.Kubectl(t, "apply", "-f", resourceFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", resourceFile)
+			require.NoError(t, err)
+		})
+
+		// "services.v1beta1.test.zarf.dev" exercises the group kind instead of falling back to the GroupResource path (which could resolve to the built-in v1/Service instead).
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "service.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "resource", "services.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+	})
+
+	t.Run("wait for resource created at non-storage version is found via storage version specifier", func(t *testing.T) {
+		t.Parallel()
+		resourceName := "my-svc-v2-test"
+		resourceFile := "src/test/packages/46-manifests/zarf-svc-v2-cr.yaml"
+
+		// The CRD (services.test.zarf.dev) is applied by the parent test. It serves both v1beta1
+		// (storage) and v1beta2 (non-storage). The CR is created at v1beta2.
+		_, _, err := e2e.Kubectl(t, "apply", "-f", resourceFile)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "-f", resourceFile)
+			require.NoError(t, err)
+		})
+
+		// Even though the CR was created at v1beta2, waiting with "services.v1beta1.test.zarf.dev"
+		// succeeds: Kubernetes serves all CRs under every served version, so the resource is
+		// reachable via v1beta1 (the storage version) as well.
+		stdout, stderr, err := e2e.Zarf(t, "tools", "wait-for", "resource", "services.v1beta1.test.zarf.dev", resourceName, "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+		stdout, stderr, err = e2e.Zarf(t, "tools", "wait-for", "services.v1beta1.test.zarf.dev", resourceName, "exists", "-n", namespace, "--timeout", "20s")
+		require.NoError(t, err, stdout, stderr)
+	})
+
 	t.Run("wait for pod created after wait starts", func(t *testing.T) {
 		t.Parallel()
 		podName := "delayed-pod"
@@ -252,6 +273,34 @@ spec:
 		errCh := make(chan error, 1)
 		go func() {
 			_, _, err := e2e.Zarf(t, "tools", "wait-for", "pod", podName, "ready", "-n", namespace, "--timeout", "20s")
+			errCh <- err
+		}()
+
+		// Let the wait attempt to pull the pod
+		time.Sleep(3 * time.Second)
+
+		// Create the pod after the wait has started
+		_, _, err := e2e.Kubectl(t, "run", podName, "-n", namespace, "--image=busybox:latest", "--restart=Never", "--", "sleep", "300")
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_, _, err := e2e.Kubectl(t, "delete", "pod", podName, "-n", namespace, "--force=true", "--grace-period=0")
+			require.NoError(t, err)
+		})
+
+		// Wait should succeed after the pod is created and becomes ready
+		err = <-errCh
+		require.NoError(t, err)
+	})
+
+	t.Run("wait for resource readiness automatically", func(t *testing.T) {
+		t.Parallel()
+		podName := "pod-readiness"
+
+		// Start waiting for the pod in a goroutine before it exists
+		errCh := make(chan error, 1)
+		go func() {
+			_, _, err := e2e.Zarf(t, "tools", "wait-for", "resource", "pod", podName, "-n", namespace, "--timeout", "20s")
 			errCh <- err
 		}()
 

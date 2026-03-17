@@ -78,7 +78,7 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 
 	for genIdx, generator := range appSet.Spec.Generators {
 		if generator.Git != nil && generator.Git.RepoURL != "" {
-			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, s.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, s.GitServer)
 			if err != nil {
 				return nil, err
 			}

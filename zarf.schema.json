@@ -346,6 +346,13 @@
           },
           "type": "array"
         },
+        "provenanceFiles": {
+          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
@@ -429,6 +436,15 @@
         "schemaValidation": {
           "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.",
           "type": "boolean"
+        },
+        "serverSideApply": {
+          "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
         },
         "url": {
           "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
@@ -1123,6 +1139,15 @@
         "noWait": {
           "description": "Whether to not wait for manifest resources to be ready before continuing.",
           "type": "boolean"
+        },
+        "serverSideApply": {
+          "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
         },
         "template": {
           "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",

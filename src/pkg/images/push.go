@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -105,30 +105,33 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}
 		}
 
-		client := &auth.Client{
-			Client: orasRetry.DefaultClient,
-			Cache:  auth.NewCache(),
-			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
-				Username: registryInfo.PushUsername,
-				Password: registryInfo.PushPassword,
-			}),
-		}
-
+		var transport http.RoundTripper
 		var certs pki.GeneratedPKI
 		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
 			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return err
 			}
-			client.Client.Transport, err = pki.TransportWithKey(certs)
+			transport, err = pki.TransportWithKey(certs)
 			if err != nil {
 				return err
 			}
 		} else {
-			client.Client.Transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
 			if err != nil {
 				return err
 			}
+		}
+
+		client := &auth.Client{
+			Client: &http.Client{
+				Transport: transport,
+			},
+			Cache: auth.NewCache(),
+			Credential: auth.StaticCredential(registryRef.Host(), auth.Credential{
+				Username: registryInfo.PushUsername,
+				Password: registryInfo.PushPassword,
+			}),
 		}
 
 		plainHTTP := cfg.PlainHTTP

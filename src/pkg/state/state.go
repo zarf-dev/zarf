@@ -108,8 +108,6 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
@@ -282,6 +280,29 @@ func (ri RegistryInfo) IsInternal() bool {
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
 func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
+func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
+	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
+		return true
+	}
+	if given.PullUsername != "" && existing.PullUsername != given.PullUsername {
+		return true
+	}
+	if given.PushPassword != "" && existing.PushPassword != given.PushPassword {
+		return true
+	}
+	if given.PullPassword != "" && existing.PullPassword != given.PullPassword {
+		return true
+	}
+	if given.Address != "" && existing.Address != given.Address {
+		return true
+	}
+	if given.Secret != "" && existing.Secret != given.Secret {
+		return true
+	}
+	return false
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
