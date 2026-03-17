@@ -76,7 +76,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
-		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
+		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
 		"the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 
@@ -151,6 +151,10 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer)
 	if err != nil {
 		return err
+	}
+
+	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {
+		return fmt.Errorf("must set registry address when registry mode is external")
 	}
 
 	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {

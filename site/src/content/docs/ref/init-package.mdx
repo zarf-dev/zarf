@@ -67,7 +67,7 @@ The `zarf-injector` component simply copies the injector Rust binary to `###ZARF
 
 #### Zarf Seed Registry
 
-The behavior of the `zarf-seed-registry` component differs depending on the registry mode, declared by the flag `--registry-mode=nodeport|proxy`. By default, nodeport is the registry mode in the cluster's first init. Subsequent `zarf init` executions continue using the registry mode that was used on initial init, unless explicitly set. Alternatively, all registry components are skipped when [using an external registry](#using-external-registries).
+The behavior of the `zarf-seed-registry` component differs depending on the registry mode, declared by the flag `--registry-mode=nodeport|proxy`. By default, nodeport mode is used for the cluster's first init. Subsequent `zarf init` executions continue using the registry mode that was used on initial init, unless explicitly set. Alternatively, all registry components are skipped when [using an external registry](#using-external-registries).
 
 ##### NodePort Mode (Default)
 
@@ -82,14 +82,14 @@ When `zarf init` deploys the `zarf-seed-registry` component in NodePort mode, th
 
 :::note
 
-NodePort mode requires that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6 only clusters and NFTables block access to localhost NodePort services.
+NodePort mode requires that the kubelet be able to reach out to a cluster NodePort service, which may require changes to firewall configurations like allowing UDP traffic between nodes if using something like VXLAN tunneling. In addition, IPv6-only clusters and NFTables block access to localhost NodePort services.
 
 :::
 
 
 ##### Proxy Mode (Alpha)
 
-Proxy mode is a newer alternative to nodeport mode to circumvent limitations with NFTables and IPv6 clusters. It has the distinct advantage of securing registry connections over mTLS using automatically generated certificates stored in the cluster. A DaemonSet proxy runs socat on each node so the kubelet won't make unencrypted cross-node registry calls. Additionally, Zarf uses the same mTLS certificates to encrypt its calls to the registry.
+Proxy mode is a newer alternative to nodeport mode to circumvent limitations with NFTables and IPv6 clusters. It has the distinct advantage of securing registry connections over mTLS using automatically generated certificates stored in cluster. A DaemonSet proxy runs [socat](https://pkgs.alpinelinux.org/package/edge/main/x86/socat), this allows the on each node which avoid unencrypted cross-node registry calls. Additionally, Zarf uses the same mTLS certificates to encrypt its calls to the registry.
 
 When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
 
