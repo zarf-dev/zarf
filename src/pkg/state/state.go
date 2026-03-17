@@ -282,6 +282,29 @@ func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
 }
 
+// CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
+func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
+	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
+		return true
+	}
+	if given.PullUsername != "" && existing.PullUsername != given.PullUsername {
+		return true
+	}
+	if given.PushPassword != "" && existing.PushPassword != given.PushPassword {
+		return true
+	}
+	if given.PullPassword != "" && existing.PullPassword != given.PullPassword {
+		return true
+	}
+	if given.Address != "" && existing.Address != given.Address {
+		return true
+	}
+	if given.Secret != "" && existing.Secret != given.Secret {
+		return true
+	}
+	return false
+}
+
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
