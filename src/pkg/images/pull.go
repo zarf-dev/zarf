@@ -327,6 +327,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	cli, err := client.New(
 		client.WithHost(dockerEndPointHost),
 		client.WithTLSClientConfigFromEnv(),
+		client.WithAPIVersionFromEnv(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
