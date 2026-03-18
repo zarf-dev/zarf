@@ -1,0 +1,148 @@
+header:
+  schema-version: 2.2.0
+  last-updated: '2026-03-18'
+  last-reviewed: '2026-03-18'
+  url: https://raw.githubusercontent.com/zarf-dev/zarf/main/SECURITY-INSIGHTS.yml
+
+repository:
+  url: https://github.com/zarf-dev/zarf
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  bug-fixes-only: false
+  no-third-party-packages: false
+
+  core-team:
+    - name: Austin Abro
+      affiliation: Defense Unicorns
+      social: https://github.com/AustinAbro321
+      primary: true
+    - name: Brandt Keller
+      affiliation: Defense Unicorns
+      social: https://github.com/brandtkeller
+      primary: true
+    - name: Maciej Szulik
+      affiliation: Defense Unicorns
+      social: https://github.com/soltysh
+      primary: false
+
+  license:
+    url: https://github.com/zarf-dev/zarf/blob/main/LICENSE
+    expression: Apache-2.0
+
+  documentation:
+    contributing-guide: https://github.com/zarf-dev/zarf/blob/main/CONTRIBUTING.md
+    security-policy: https://github.com/zarf-dev/zarf/blob/main/.github/SECURITY.md
+    governance: https://github.com/zarf-dev/zarf/blob/main/CONTRIBUTING.md#governance
+
+  release:
+    automated-pipeline: true
+    changelog: https://github.com/zarf-dev/zarf/releases/tag/{version}
+    distribution-points:
+      - uri: https://github.com/zarf-dev/zarf/releases
+        comment: GitHub Releases — binaries, init packages, SBOMs, and checksums.
+      - uri: https://github.com/orgs/defenseunicorns/packages?repo_name=homebrew-tap
+        comment: Homebrew tap for macOS and Linux.
+      - uri: https://ghcr.io/zarf-dev/packages
+        comment: OCI registry for init packages and the Zarf agent image.
+    attestations:
+      - name: Release SBOMs
+        predicate-uri: https://spdx.dev/Document
+        location: https://github.com/zarf-dev/zarf/releases/download/{version}/sbom_zarf_{version}_Linux_amd64.sbom
+        comment: >
+          Syft-generated SBOMs are produced for each binary artifact during
+          the GoReleaser pipeline. Replace {version} with the release tag.
+      - name: Release Checksums
+        predicate-uri: https://slsa.dev/verification_summary/v1
+        location: https://github.com/zarf-dev/zarf/releases/download/{version}/checksums.txt
+        comment: SHA-256 checksums for all release artifacts.
+      - name: Container Image Signature
+        predicate-uri: https://cosign.sigstore.dev
+        location: https://ghcr.io/zarf-dev/zarf/agent:{version}
+        comment: >
+          The Zarf agent image is signed with cosign backed by AWS KMS.
+          Verify with the public key at cosign.pub in the repository root.
+    license:
+      url: https://github.com/zarf-dev/zarf/blob/main/LICENSE
+      expression: Apache-2.0
+
+  security:
+    assessments:
+      self:
+        comment: |
+          A formal self-assessment has not yet been completed.
+    tools:
+      - name: CodeQL
+        type: SAST
+        version: v4.32.6
+        rulesets: default
+        integration:
+          adhoc: true
+          ci: true
+          release: false
+        results:
+          ci:
+            name: CodeQL PR Analysis
+            predicate-uri: https://codeql.github.com
+            location: https://github.com/zarf-dev/zarf/security/code-scanning
+          adhoc:
+            name: CodeQL Scheduled Scan
+            predicate-uri: https://codeql.github.com
+            location: https://github.com/zarf-dev/zarf/security/code-scanning
+            comment: Runs weekly on Fridays.
+      - name: golangci-lint
+        type: SAST
+        version: v9.2.0
+        rulesets: default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results:
+          ci:
+            name: Lint Results
+            predicate-uri: https://golangci-lint.run
+            location: https://github.com/zarf-dev/zarf/actions/workflows/scan-lint.yml
+      - name: Dependency Review
+        type: SCA
+        version: v4.9.0
+        rulesets: default
+        integration:
+          adhoc: false
+          ci: true
+          release: false
+        results:
+          ci:
+            name: Dependency Review Results
+            predicate-uri: https://github.com/actions/dependency-review-action
+            location: https://github.com/zarf-dev/zarf/actions/workflows/dependency-review.yml
+      - name: Dependabot
+        type: SCA
+        rulesets: default
+        integration:
+          adhoc: true
+          ci: false
+          release: false
+        results:
+          adhoc:
+            name: Dependabot Alerts
+            predicate-uri: https://docs.github.com/en/code-security/dependabot
+            location: https://github.com/zarf-dev/zarf/security/dependabot
+            comment: >
+              Monitors Go modules daily, GitHub Actions weekly, and npm daily.
+      - name: Syft
+        type: SCA
+        version: v1.42.1
+        rulesets: default
+        integration:
+          adhoc: false
+          ci: false
+          release: true
+        results:
+          release:
+            name: Release SBOMs
+            predicate-uri: https://spdx.dev/Document
+            location: https://github.com/zarf-dev/zarf/releases/download/{version}/sbom_zarf_{version}_Linux_amd64.sbom
+            comment: >
+              SBOMs are generated for each binary during release and embedded
+              in Zarf packages during package creation.
