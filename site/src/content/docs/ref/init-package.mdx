@@ -53,7 +53,7 @@ But then we have another problem of how to reassemble the image on the other sid
 
 > The `zarf-injector` binary exists in its own repository, https://github.com/zarf-dev/zarf-injector, see the [README.md](https://github.com/zarf-dev/zarf-injector/blob/main/README.md) instructions to build and test.
 
-The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:3` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:3` image. It then hosts a temporary, pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:3` image.
+The `zarf-injector` binary is statically compiled and injected into the cluster as a `configmap` along with the chunks of the `registry:3` image. During the `zarf-seed-registry`'s deployment, the `zarf-injector` binary is run in a pod that mounts the `configmaps` and reassembles the `registry:3` image. It then hosts a pull-only Docker registry implemented in Rust so that a real registry can be deployed into the cluster from the hosted `registry:3` image.
 
 :::note
 
@@ -89,7 +89,7 @@ NodePort mode requires that the kubelet be able to reach out to a cluster NodePo
 
 ##### Proxy Mode (Alpha)
 
-Proxy mode is a newer alternative to nodeport mode to circumvent limitations with NFTables and IPv6 clusters. It secures registry connections over mTLS using automatically generated certificates stored in cluster. The kubelet calls a DaemonSet proxy running [socat](https://pkgs.alpinelinux.org/package/edge/main/x86/socat) with host port to avoid unencrypted cross-node traffic; Zarf uses the same mTLS client certificates to encrypt its calls to the registry.
+Proxy mode is a newer alternative to nodeport mode to circumvent limitations with NFTables and IPv6-only clusters. It secures registry connections over mTLS using automatically generated certificates stored in cluster. The kubelet calls a DaemonSet proxy, which is running [socat](https://pkgs.alpinelinux.org/package/edge/main/x86/socat), via host port to avoid unencrypted cross-node traffic; Zarf uses the same mTLS client certificates to encrypt its calls to the registry.
 
 When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the following happens:
 
@@ -100,7 +100,7 @@ When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the f
   - Less than 1MiB in size
 3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
 4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector DaemonSet.
-5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images locally.
+5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images.
 
 :::note
 
