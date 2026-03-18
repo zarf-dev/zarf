@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -67,85 +66,6 @@ func TestGetDeployedPackage(t *testing.T) {
 	actualList, err := c.GetDeployedZarfPackages(ctx)
 	require.NoError(t, err)
 	require.ElementsMatch(t, packages, actualList)
-}
-
-func TestRegistryHPA(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-
-	t.Run("sets selectPolicy when behavior and scaleDown exist", func(t *testing.T) {
-		t.Parallel()
-		cs := fake.NewClientset()
-		hpa := autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "zarf-docker-registry",
-				Namespace: state.ZarfNamespaceName,
-			},
-			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
-					ScaleDown: &autoscalingv2.HPAScalingRules{},
-				},
-			},
-		}
-		_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
-		require.NoError(t, err)
-		c := &Cluster{Clientset: cs}
-
-		err = c.DisableRegHPAScaleDown(ctx)
-		require.NoError(t, err)
-		got, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Equal(t, autoscalingv2.DisabledPolicySelect, *got.Spec.Behavior.ScaleDown.SelectPolicy)
-
-		err = c.EnableRegHPAScaleDown(ctx)
-		require.NoError(t, err)
-		got, err = cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Equal(t, autoscalingv2.MinChangePolicySelect, *got.Spec.Behavior.ScaleDown.SelectPolicy)
-	})
-
-	t.Run("no-op when behavior is nil", func(t *testing.T) {
-		t.Parallel()
-		cs := fake.NewClientset()
-		hpa := autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "zarf-docker-registry",
-				Namespace: state.ZarfNamespaceName,
-			},
-		}
-		_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
-		require.NoError(t, err)
-		c := &Cluster{Clientset: cs}
-
-		err = c.DisableRegHPAScaleDown(ctx)
-		require.NoError(t, err)
-		got, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Nil(t, got.Spec.Behavior)
-	})
-
-	t.Run("no-op when scaleDown is nil", func(t *testing.T) {
-		t.Parallel()
-		cs := fake.NewClientset()
-		hpa := autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "zarf-docker-registry",
-				Namespace: state.ZarfNamespaceName,
-			},
-			Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{},
-			},
-		}
-		_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
-		require.NoError(t, err)
-		c := &Cluster{Clientset: cs}
-
-		err = c.DisableRegHPAScaleDown(ctx)
-		require.NoError(t, err)
-		got, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Nil(t, got.Spec.Behavior.ScaleDown)
-	})
 }
 
 func TestInternalGitServerExists(t *testing.T) {

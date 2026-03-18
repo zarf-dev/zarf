@@ -83,11 +83,10 @@ type DeployOptions struct {
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
-	s           *state.State
-	c           *cluster.Cluster
-	vc          *variables.VariableConfig
-	vals        value.Values
-	hpaModified bool
+	s    *state.State
+	c    *cluster.Cluster
+	vc   *variables.VariableConfig
+	vals value.Values
 }
 
 // DeployResult is the result of a successful deploy
@@ -169,8 +168,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		vals: vals,
 	}
 
-	// During deploy we disable
-	defer d.resetRegistryHPA(ctx)
 	l.Debug("variables populated", "time", time.Since(start))
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
@@ -189,15 +186,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		Values:             d.vals,
 	}
 	return deployResult, nil
-}
-
-func (d *deployer) resetRegistryHPA(ctx context.Context) {
-	l := logger.From(ctx)
-	if d.c != nil && d.hpaModified {
-		if err := d.c.EnableRegHPAScaleDown(ctx); err != nil {
-			l.Error("unable to set registry HPA scale down to min", "error", err.Error())
-		}
-	}
 }
 
 func (d *deployer) isConnectedToCluster() bool {
@@ -354,11 +342,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
-		d.hpaModified = true
-	}
-
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
@@ -433,15 +416,6 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			d.s, err = setupState(ctx, d.c, pkgLayout.Pkg)
 			if err != nil {
 				return nil, err
-			}
-		}
-
-		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !d.hpaModified && d.s.RegistryInfo.IsInternal() {
-			if err := d.c.DisableRegHPAScaleDown(ctx); err != nil {
-				l.Error("unable to disable the registry HPA scale down", "error", err.Error())
-			} else {
-				d.hpaModified = true
 			}
 		}
 	}

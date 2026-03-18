@@ -12,11 +12,9 @@ import (
 	"strings"
 	"time"
 
-	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -202,39 +200,6 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return nil, err
 	}
 	return deployedPackage, nil
-}
-
-// setRegHPAScaleDownPolicy sets the scaleDown selectPolicy on the registry HPA.
-func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if hpa.Spec.Behavior == nil || hpa.Spec.Behavior.ScaleDown == nil {
-		return nil
-	}
-	hpaAc := autoscalingv2ac.HorizontalPodAutoscaler("zarf-docker-registry", state.ZarfNamespaceName).
-		WithSpec(autoscalingv2ac.HorizontalPodAutoscalerSpec().
-			WithBehavior(autoscalingv2ac.HorizontalPodAutoscalerBehavior().
-				WithScaleDown(autoscalingv2ac.HPAScalingRules().
-					WithSelectPolicy(policy))))
-	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Apply(
-		ctx, hpaAc, metav1.ApplyOptions{FieldManager: FieldManagerName},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to apply hpa scale down policy: %w", err)
-	}
-	return nil
-}
-
-// EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
-func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	return c.setRegHPAScaleDownPolicy(ctx, autoscalingV2.MinChangePolicySelect)
-}
-
-// DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
-func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	return c.setRegHPAScaleDownPolicy(ctx, autoscalingV2.DisabledPolicySelect)
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.

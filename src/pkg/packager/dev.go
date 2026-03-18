@@ -127,10 +127,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			defaultState.RegistryInfo.Address = opts.RegistryURL
 		}
 		d.s = defaultState
-	} else {
-		d.hpaModified = false
-		// Reset registry HPA scale down whether an error occurs or not
-		defer d.resetRegistryHPA(ctx)
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
