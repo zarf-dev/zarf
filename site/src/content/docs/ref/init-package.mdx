@@ -99,8 +99,8 @@ When `zarf init` deploys the `zarf-seed-registry` component in proxy mode, the f
   - Has a major semver version of 3 or 4.
   - Less than 1MiB in size
 3. Zarf mounts the `configmaps` that contain the `zarf-injector` binary and the `registry:3` & `alpine/socat` image chunks.
-4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network socat proxy DaemonSet alongside a Zarf Injector DaemonSet.
-5. The docker-registry Deployment and Proxy DaemonSet use the Zarf Injector DaemonSet as their image source. The injector is exposed on each node via host port or host network, allowing the kubelet to pull the required images.
+4. The `docker-registry` chart in the `zarf-seed-registry` component is then deployed with values `.proxy.enabled: true`. This creates a long-lived host port or host network Zarf Injector DaemonSet alongside the socat proxy DaemonSet.
+5. The docker-registry Deployment and proxy DaemonSet spin up using the injector as their image source.
 
 :::note
 
