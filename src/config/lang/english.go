@@ -168,6 +168,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdInitFlagGitPullPass = "Password for the pull-only user to access the git server"
 
 	CmdInitFlagRegURL      = "External registry url address to use for this Zarf cluster"
+	CmdInitFlagRegPort     = "Port to access the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port"
 	CmdInitFlagRegNodePort = "Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]"
 	CmdInitFlagRegPushUser = "Username to access to the registry Zarf is configured to use"
 	CmdInitFlagRegPushPass = "Password for the push-user to connect to the registry"

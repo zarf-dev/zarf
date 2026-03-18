@@ -302,25 +302,28 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = 0
 	}
 
+	opts.RegistryInfo.ReconcilePort()
+
 	switch s.RegistryInfo.RegistryMode {
 	case state.RegistryModeNodePort:
 		switch {
-		case opts.RegistryInfo.NodePort != 0:
-			s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
 		case modeChanged:
-			s.RegistryInfo.NodePort = state.ZarfInClusterContainerRegistryNodePort
+			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
 		}
 		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
-		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
 	case state.RegistryModeProxy:
 		switch {
-		case opts.RegistryInfo.NodePort != 0:
-			s.RegistryInfo.NodePort = opts.RegistryInfo.NodePort
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
 		case modeChanged:
-			s.RegistryInfo.NodePort = state.ZarfRegistryHostPort
+			s.RegistryInfo.Port = state.ZarfRegistryHostPort
 		}
-		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.NodePort)
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
 	}
+	s.RegistryInfo.ReconcilePort()
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		err = c.InitRegistryCerts(ctx)
@@ -486,6 +489,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+	// Reconcile Port/NodePort for backwards compatibility with older state
+	s.RegistryInfo.ReconcilePort()
 	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
 	if s.RegistryInfo.RegistryMode == "" {
 		if s.RegistryInfo.IsInternal() {
