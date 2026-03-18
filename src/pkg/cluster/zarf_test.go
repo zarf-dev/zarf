@@ -70,36 +70,61 @@ func TestGetDeployedPackage(t *testing.T) {
 }
 
 func TestRegistryHPA(t *testing.T) {
-	ctx := context.Background()
-	cs := fake.NewClientset()
-	hpa := autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zarf-docker-registry",
-			Namespace: state.ZarfNamespaceName,
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		spec autoscalingv2.HorizontalPodAutoscalerSpec
+	}{
+		{
+			name: "behavior and scaleDown already set",
+			spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
+					ScaleDown: &autoscalingv2.HPAScalingRules{},
+				},
+			},
 		},
-		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
-			Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{
-				ScaleDown: &autoscalingv2.HPAScalingRules{},
+		{
+			name: "nil behavior",
+			spec: autoscalingv2.HorizontalPodAutoscalerSpec{},
+		},
+		{
+			name: "nil scaleDown",
+			spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+				Behavior: &autoscalingv2.HorizontalPodAutoscalerBehavior{},
 			},
 		},
 	}
-	_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
-	require.NoError(t, err)
-	c := &Cluster{
-		Clientset: cs,
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := context.Background()
+			cs := fake.NewClientset()
+			hpa := autoscalingv2.HorizontalPodAutoscaler{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: state.ZarfNamespaceName,
+				},
+				Spec: tt.spec,
+			}
+			_, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Create(ctx, &hpa, metav1.CreateOptions{})
+			require.NoError(t, err)
+			c := &Cluster{Clientset: cs}
+
+			err = c.EnableRegHPAScaleDown(ctx)
+			require.NoError(t, err)
+			enableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
+			require.NoError(t, err)
+			require.Equal(t, autoscalingv2.MinChangePolicySelect, *enableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
+
+			err = c.DisableRegHPAScaleDown(ctx)
+			require.NoError(t, err)
+			disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
+			require.NoError(t, err)
+			require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
+		})
 	}
-
-	err = c.EnableRegHPAScaleDown(ctx)
-	require.NoError(t, err)
-	enableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, autoscalingv2.MinChangePolicySelect, *enableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
-
-	err = c.DisableRegHPAScaleDown(ctx)
-	require.NoError(t, err)
-	disableHpa, err := cs.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Get(ctx, hpa.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, autoscalingv2.DisabledPolicySelect, *disableHpa.Spec.Behavior.ScaleDown.SelectPolicy)
 }
 
 func TestInternalGitServerExists(t *testing.T) {
