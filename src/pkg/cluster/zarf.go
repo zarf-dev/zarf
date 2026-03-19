@@ -12,14 +12,10 @@ import (
 	"strings"
 	"time"
 
-	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
-	autoscalingv2ac "k8s.io/client-go/applyconfigurations/autoscaling/v2"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
-	"k8s.io/client-go/util/csaupgrade"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -204,54 +200,6 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return nil, err
 	}
 	return deployedPackage, nil
-}
-
-// setRegHPAScaleDownPolicy sets the HPA scale down policy for the Zarf Registry using Server-Side Apply.
-func (c *Cluster) setRegHPAScaleDownPolicy(ctx context.Context, policy autoscalingV2.ScalingPolicySelect) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	// If the hpa was deployed with client side apply then we need to update the fields to be managed by Zarf
-	// so the fields can be properly extracted
-	csaManagers := sets.New[string]()
-	for _, mf := range hpa.ManagedFields {
-		if mf.Operation == metav1.ManagedFieldsOperationUpdate {
-			csaManagers.Insert(mf.Manager)
-		}
-	}
-	err = csaupgrade.UpgradeManagedFields(hpa, csaManagers, FieldManagerName)
-	if err != nil {
-		return fmt.Errorf("failed to upgrade managed fields: %w", err)
-	}
-
-	hpaAc, err := autoscalingv2ac.ExtractHorizontalPodAutoscaler(hpa, FieldManagerName)
-	if err != nil {
-		return err
-	}
-
-	hpaAc.Spec.Behavior.ScaleDown.WithSelectPolicy(policy)
-
-	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Apply(
-		ctx,
-		hpaAc,
-		metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to apply hpa: %w", err)
-	}
-	return nil
-}
-
-// EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
-func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	return c.setRegHPAScaleDownPolicy(ctx, autoscalingV2.MinChangePolicySelect)
-}
-
-// DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
-func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	return c.setRegHPAScaleDownPolicy(ctx, autoscalingV2.DisabledPolicySelect)
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.
