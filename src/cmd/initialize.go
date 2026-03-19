@@ -76,9 +76,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
-		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
+		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
-		"the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
+		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -372,6 +372,13 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
 				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
+	}
+
+	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {
+		return fmt.Errorf("--registry-url is required when --registry-mode=external")
+	}
+	if o.registryInfo.RegistryMode != "" && o.registryInfo.RegistryMode != state.RegistryModeExternal && o.registryInfo.Address != "" {
+		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
 	}
 
 	return nil
