@@ -474,7 +474,6 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			if tt.current.RegistryInfo.Port == 0 {
 				tt.current.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
 			}
-			tt.current.RegistryInfo.ReconcilePort()
 			tt.current.RegistryInfo.Address = fmt.Sprintf("127.0.0.1:%d", tt.current.RegistryInfo.Port)
 			currentData, err := json.Marshal(tt.current)
 			require.NoError(t, err)

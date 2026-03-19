@@ -269,9 +269,9 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
-// ReconcilePort ensures Port and NodePort are in sync after deserialization.
-// When reading state written by older Zarf versions, only NodePort will be set.
-// When writing state, both fields are set so older Zarf versions can still read it.
+// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
+// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
+// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
 func (ri *RegistryInfo) ReconcilePort() {
 	if ri.Port == 0 && ri.NodePort != 0 {
 		ri.Port = ri.NodePort
@@ -320,8 +320,6 @@ func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
 func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	var err error
-
-	ri.ReconcilePort()
 
 	// If registry mode is empty, then default to nodeport if internal, or set as external if address is set
 	if ri.RegistryMode == "" {
@@ -388,9 +386,6 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	if ri.MTLSStrategy == "" {
 		ri.MTLSStrategy = MTLSStrategyNone
 	}
-
-	// Keep NodePort in sync for backwards compatibility with older Zarf versions
-	ri.ReconcilePort()
 
 	return nil
 }

@@ -302,8 +302,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = 0
 	}
 
-	opts.RegistryInfo.ReconcilePort()
-
 	switch s.RegistryInfo.RegistryMode {
 	case state.RegistryModeNodePort:
 		switch {
@@ -323,7 +321,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
 	}
-	s.RegistryInfo.ReconcilePort()
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		err = c.InitRegistryCerts(ctx)
@@ -505,6 +502,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
+	// Sync NodePort from Port so older Zarf versions can read the state.
+	s.RegistryInfo.ReconcilePort()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)
