@@ -231,7 +231,7 @@ func init() {
 		{
 			Name:        RegistryProxy,
 			Description: "Enables the registry proxy feature during Zarf init",
-			Enabled:     false,
+			Enabled:     true,
 			Since:       "v0.65.0",
 			Stage:       Alpha,
 		},
