@@ -131,8 +131,11 @@ $ zarf init --components=git-server
 # Initializing w/ Zarfs with a custom init package:
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
+# Initializing w/ an internal registry in proxy mode for built-in cross-node mTLS:
+$ zarf init --registry-mode=proxy
+
 # Initializing w/ an internal registry but with a different nodeport:
-$ zarf init --nodeport=30333
+$ zarf init --registry-port=30333
 
 # Initializing w/ an external registry:
 $ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}

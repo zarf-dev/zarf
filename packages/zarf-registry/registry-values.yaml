@@ -42,6 +42,7 @@ ipv6Only: ###ZARF_IPV6_ONLY###
 
 service:
   registryPort: "###ZARF_REGISTRY_PORT###"
+  nodePort: "###ZARF_NODEPORT###"
 
 resources:
   requests:

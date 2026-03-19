@@ -260,7 +260,7 @@ type RegistryInfo struct {
 	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	NodePort int `json:"nodePort"`
 	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
-	Port int `json:"port,omitempty"`
+	Port int `json:"port"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
@@ -390,7 +390,7 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 	}
 
 	// Keep NodePort in sync for backwards compatibility with older Zarf versions
-	ri.NodePort = ri.Port
+	ri.ReconcilePort()
 
 	return nil
 }
