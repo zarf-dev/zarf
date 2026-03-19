@@ -96,6 +96,11 @@ func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
+	// Verify registry commands are configured with mTLS
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "catalog")
+	suite.NoError(err, stdOut, stdErr)
+	// verify that an image name is in the prune output
+	suite.Contains(stdErr, "stefanprodan/podinfo")
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "prune", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 	// verify that an image name is in the prune output

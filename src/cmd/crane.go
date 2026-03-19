@@ -278,6 +278,14 @@ func (o *registryCatalogOptions) run(cmd *cobra.Command, args []string) error {
 	authOption := images.WithPullAuth(zarfState.RegistryInfo)
 	*o.craneOptions = append(*o.craneOptions, authOption)
 
+	if zarfState.RegistryInfo.ShouldUseMTLS() {
+		t, err := getZarfRegistryMTLSTransport(ctx, c)
+		if err != nil {
+			return err
+		}
+		*o.craneOptions = append(*o.craneOptions, crane.WithTransport(t))
+	}
+
 	if tunnel != nil {
 		defer tunnel.Close()
 		return tunnel.Wrap(func() error { return o.originalRunFn(cmd, []string{registryEndpoint}) })
