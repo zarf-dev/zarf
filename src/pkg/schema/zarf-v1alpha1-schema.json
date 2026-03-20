@@ -1200,7 +1200,7 @@
         "authors": {
           "description": "Comma-separated list of package authors (including contact info).",
           "examples": [
-            "Zarf \u003czarf@zarf-dev.com\u003e\\"
+            "Zarf \u003czarf@zarf-dev.com\u003e"
           ],
           "type": "string"
         },
