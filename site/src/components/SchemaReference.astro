@@ -56,7 +56,12 @@ for (const name of Object.keys(defs)) {
 }
 
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function sortedFields(schema: any): { keys: string[]; required: Set<string> } {
@@ -90,7 +95,7 @@ function typeDisplay(prop: any): string {
       const name = refName(ap["$ref"]);
       return `<span class="field-type">map[string]<a href="#${esc(name)}">${esc(name)}</a></span>`;
     }
-    const valType = typeof ap === "object" ? (ap.type || "object") : "any";
+    const valType = typeof ap === "object" ? ap.type || "object" : "any";
     return `<span class="field-type">map[string]${esc(valType)}</span>`;
   }
   return `<span class="field-type">${esc(prop.type || "object")}</span>`;
@@ -130,26 +135,23 @@ function renderField(key: string, prop: any, required: boolean): string {
   const reqBadge = required ? `<span class="required-badge">, required</span>` : "";
   const depBadge = dep ? ` <span class="deprecated-badge">deprecated</span>` : "";
   const extras = renderExtras(prop);
-  const desc = prop.description
-    ? `<p class="field-description">${esc(prop.description)}</p>`
-    : "";
+  const desc = prop.description ? `<p class="field-description">${esc(prop.description)}</p>` : "";
   return `<li><span class="field-name">${esc(key)}</span> (${typeDisplay(prop)})${reqBadge}${depBadge}${extras}${desc}</li>`;
 }
 
 function renderSection(name: string, schema: any): string {
   const dep = isDeprecated(name, schema.description);
   const depBadge = dep ? ` <span class="deprecated-badge">deprecated</span>` : "";
-  const desc = schema.description
-    ? `<p class="type-description">${esc(schema.description)}</p>`
-    : "";
+  const desc = schema.description ? `<p class="type-description">${esc(schema.description)}</p>` : "";
   const { keys, required } = sortedFields(schema);
-  const fieldHtml = keys.length > 0
-    ? `<ul class="field-list">${keys.map((k) => renderField(k, schema.properties[k], required.has(k))).join("\n")}</ul>`
-    : `<p><em>No fields.</em></p>`;
+  const fieldHtml =
+    keys.length > 0
+      ? `<ul class="field-list">${keys.map((k) => renderField(k, schema.properties[k], required.has(k))).join("\n")}</ul>`
+      : `<p><em>No fields.</em></p>`;
   return `<h2 id="${esc(name)}"><a class="heading-link" href="#${esc(name)}">${esc(name)}${depBadge}</a></h2>\n${desc}\n<hr />\n${fieldHtml}`;
 }
 
-const rootRequired = new Set<string>(json.required as string[] || []);
+const rootRequired = new Set<string>((json.required as string[]) || []);
 const rootSection = renderSection("ZarfPackage", {
   description: json.description,
   properties: rootProps,
