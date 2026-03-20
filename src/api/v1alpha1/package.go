@@ -225,7 +225,7 @@ type ZarfMetadata struct {
 	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 	YOLO bool `json:"yolo,omitempty"`
 	// Comma-separated list of package authors (including contact info).
-	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	Authors string `json:"authors,omitempty" jsonschema:"example=Zarf <zarf@zarf-dev.com>\\"`
 	// Link to package documentation when online.
 	Documentation string `json:"documentation,omitempty"`
 	// Link to package source code when online.
