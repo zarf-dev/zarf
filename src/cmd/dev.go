@@ -39,6 +39,24 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
+// parseValues parses values from file paths and applies set-values overrides on top.
+func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
+	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse values files: %w", err)
+	}
+	for key, val := range setValues {
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+	return values, nil
+}
+
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
@@ -176,23 +194,9 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		return err
 	}
 
-	// Parse values from files
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		// Update values entry
-		if err := values.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
@@ -284,23 +288,9 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		return err
 	}
 
-	// Parse values from files
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		// Update values entry
-		if err := values.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
@@ -752,21 +742,9 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Parse values from files
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := values.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	findImagesOptions := packager.FindImagesOptions{

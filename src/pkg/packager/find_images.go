@@ -117,22 +117,10 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
 	}
-
-	// Load package-level default values and merge with CLI-provided values
-	packageValues := value.Values{}
-	if len(pkg.Values.Files) > 0 {
-		valuesPaths := make([]string, len(pkg.Values.Files))
-		for i, file := range pkg.Values.Files {
-			valuesPaths[i] = filepath.Join(pkgPath.BaseDir, file)
-		}
-		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse package values files: %w", err)
-		}
+	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
+	if err != nil {
+		return nil, err
 	}
-	// Merge CLI values on top of package values (CLI takes precedence)
-	packageValues.DeepMerge(opts.Values)
-	vals := packageValues
 
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
