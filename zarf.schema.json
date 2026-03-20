@@ -495,11 +495,17 @@
       "properties": {
         "sourcePath": {
           "description": "Path to Zarf values key. A single dot (.) represents the root.",
+          "examples": [
+            ".registry.port"
+          ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         },
         "targetPath": {
           "description": "Path to chart values key",
+          "examples": [
+            ".service.port"
+          ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         }

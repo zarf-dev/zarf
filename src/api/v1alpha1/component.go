@@ -246,7 +246,7 @@ type ZarfChartValue struct {
 	// Path to Zarf values key. A single dot (.) represents the root.
 	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry.port"`
 	// Path to chart values key
-	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry.svc.port"`
+	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.service.port"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
