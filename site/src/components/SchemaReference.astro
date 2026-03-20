@@ -118,6 +118,10 @@ function renderExtras(prop: any): string {
   if (prop.minItems !== undefined) {
     parts.push(`Min items: ${prop.minItems}`);
   }
+  if (prop.examples) {
+    const vals = prop.examples.map((v: any) => `<code>${esc(String(v))}</code>`).join(", ");
+    parts.push(`Examples: ${vals}`);
+  }
   if (parts.length === 0) return "";
   return ` <span class="field-extras">\u2014 ${parts.join("; ")}</span>`;
 }

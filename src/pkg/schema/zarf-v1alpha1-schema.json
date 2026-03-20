@@ -494,10 +494,12 @@
       },
       "properties": {
         "sourcePath": {
+          "description": "Path to Zarf values key. A single dot (.) represents the root.",
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         },
         "targetPath": {
+          "description": "Path to chart values key",
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         }
