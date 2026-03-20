@@ -245,7 +245,7 @@ type ZarfChartVariable struct {
 type ZarfChartValue struct {
 	// Path to Zarf values key. A single dot (.) represents the root.
 	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry.port"`
-	// Path to chart values key
+	// Path to chart values key. A single dot (.) represents the root.
 	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.service.port"`
 }
 

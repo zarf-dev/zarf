@@ -502,7 +502,7 @@
           "type": "string"
         },
         "targetPath": {
-          "description": "Path to chart values key",
+          "description": "Path to chart values key. A single dot (.) represents the root.",
           "examples": [
             ".service.port"
           ],

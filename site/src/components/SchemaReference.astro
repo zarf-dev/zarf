@@ -55,22 +55,18 @@ for (const name of Object.keys(defs)) {
   }
 }
 
-// --- HTML generation helpers ---
-
 function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function sortedFields(schema: any): string[] {
+function sortedFields(schema: any): { keys: string[]; required: Set<string> } {
   const props = Object.keys(schema.properties || {});
   const required = new Set<string>(schema.required || []);
-  return props
-    .sort((a, b) => a.localeCompare(b))
-    .sort((a, b) => {
-      const aReq = required.has(a) ? 0 : 1;
-      const bReq = required.has(b) ? 0 : 1;
-      return aReq - bReq;
-    });
+  const keys = props.sort((a, b) => {
+    const reqDiff = (required.has(a) ? 0 : 1) - (required.has(b) ? 0 : 1);
+    return reqDiff !== 0 ? reqDiff : a.localeCompare(b);
+  });
+  return { keys, required };
 }
 
 function typeDisplay(prop: any): string {
@@ -89,9 +85,12 @@ function typeDisplay(prop: any): string {
     return `<span class="field-type">${esc(prop.type || "string")}</span>`;
   }
   if (prop.type === "object" && prop.additionalProperties) {
-    const valType = typeof prop.additionalProperties === "object"
-      ? (prop.additionalProperties.type || "object")
-      : "any";
+    const ap = prop.additionalProperties;
+    if (typeof ap === "object" && ap["$ref"]) {
+      const name = refName(ap["$ref"]);
+      return `<span class="field-type">map[string]<a href="#${esc(name)}">${esc(name)}</a></span>`;
+    }
+    const valType = typeof ap === "object" ? (ap.type || "object") : "any";
     return `<span class="field-type">map[string]${esc(valType)}</span>`;
   }
   return `<span class="field-type">${esc(prop.type || "object")}</span>`;
@@ -116,14 +115,14 @@ function renderExtras(prop: any): string {
     parts.push(`Pattern: <code>${esc(prop.pattern)}</code>`);
   }
   if (prop.minItems !== undefined) {
-    parts.push(`Min items: ${prop.minItems}`);
+    parts.push(`Min items: ${esc(String(prop.minItems))}`);
   }
   if (prop.examples) {
     const vals = prop.examples.map((v: any) => `<code>${esc(String(v))}</code>`).join(", ");
     parts.push(`Examples: ${vals}`);
   }
   if (parts.length === 0) return "";
-  return ` <span class="field-extras">\u2014 ${parts.join("; ")}</span>`;
+  return ` <span class="field-extras">— ${parts.join("; ")}</span>`;
 }
 
 function renderField(key: string, prop: any, required: boolean): string {
@@ -143,10 +142,9 @@ function renderSection(name: string, schema: any): string {
   const desc = schema.description
     ? `<p class="type-description">${esc(schema.description)}</p>`
     : "";
-  const fields = sortedFields(schema);
-  const required = new Set<string>(schema.required || []);
-  const fieldHtml = fields.length > 0
-    ? `<ul class="field-list">${fields.map((k) => renderField(k, schema.properties[k], required.has(k))).join("\n")}</ul>`
+  const { keys, required } = sortedFields(schema);
+  const fieldHtml = keys.length > 0
+    ? `<ul class="field-list">${keys.map((k) => renderField(k, schema.properties[k], required.has(k))).join("\n")}</ul>`
     : `<p><em>No fields.</em></p>`;
   return `<h2 id="${esc(name)}"><a class="heading-link" href="#${esc(name)}">${esc(name)}${depBadge}</a></h2>\n${desc}\n<hr />\n${fieldHtml}`;
 }
@@ -187,12 +185,6 @@ const html = rootSection + "\n\n" + defSections;
     font-weight: 600;
     font-family: var(--sl-font-mono, monospace);
     color: var(--sl-color-white);
-  }
-
-  .schema-reference :global(.field-type) {
-  }
-
-  .schema-reference :global(.required-badge) {
   }
 
   .schema-reference :global(.deprecated-badge) {
