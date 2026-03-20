@@ -164,7 +164,6 @@ const html = rootSection + "\n\n" + defSections;
   }
 
   .schema-reference :global(.type-description) {
-    color: var(--sl-color-gray-2);
     margin-bottom: 0.5rem;
   }
 
@@ -181,6 +180,7 @@ const html = rootSection + "\n\n" + defSections;
   .schema-reference :global(.field-name) {
     font-weight: 600;
     font-family: var(--sl-font-mono, monospace);
+    color: var(--sl-color-white);
   }
 
   .schema-reference :global(.field-type) {
@@ -188,7 +188,6 @@ const html = rootSection + "\n\n" + defSections;
   }
 
   .schema-reference :global(.required-badge) {
-    color: var(--sl-color-green-high);
     font-weight: 600;
   }
 
@@ -211,8 +210,6 @@ const html = rootSection + "\n\n" + defSections;
 
   .schema-reference :global(.field-description) {
     margin: 0.15rem 0 0 1rem;
-    color: var(--sl-color-gray-2);
-    font-size: 0.95em;
     white-space: pre-line;
   }
 
