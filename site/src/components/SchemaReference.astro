@@ -86,9 +86,7 @@ function typeDisplay(prop: any): string {
     return `<span class="field-type">[]${esc(prop.items.type || "object")}</span>`;
   }
   if (prop.enum) {
-    const base = prop.type || "string";
-    const vals = prop.enum.map((v: any) => `"${esc(String(v))}"`).join(", ");
-    return `<span class="field-type">${esc(base)}, one of: ${vals}</span>`;
+    return `<span class="field-type">${esc(prop.type || "string")}</span>`;
   }
   if (prop.type === "object" && prop.additionalProperties) {
     const valType = typeof prop.additionalProperties === "object"
@@ -107,6 +105,10 @@ function isDeprecated(name: string, description?: string): boolean {
 
 function renderExtras(prop: any): string {
   const parts: string[] = [];
+  if (prop.enum) {
+    const vals = prop.enum.map((v: any) => `"${esc(String(v))}"`).join(", ");
+    parts.push(`One of: ${vals}`);
+  }
   if (prop.default !== undefined) {
     parts.push(`Default: ${esc(JSON.stringify(prop.default))}`);
   }
@@ -184,11 +186,9 @@ const html = rootSection + "\n\n" + defSections;
   }
 
   .schema-reference :global(.field-type) {
-    color: var(--sl-color-gray-3);
   }
 
   .schema-reference :global(.required-badge) {
-    font-weight: 600;
   }
 
   .schema-reference :global(.deprecated-badge) {
@@ -204,8 +204,7 @@ const html = rootSection + "\n\n" + defSections;
   }
 
   .schema-reference :global(.field-extras) {
-    color: var(--sl-color-gray-3);
-    font-size: 0.9em;
+    color: var(--sl-color-gray-2);
   }
 
   .schema-reference :global(.field-description) {
