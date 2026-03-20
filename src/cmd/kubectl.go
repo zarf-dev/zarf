@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -27,33 +26,30 @@ const (
 func newKubectlCommand() *cobra.Command {
 	var kubectlCmd *cobra.Command
 
-	argOffset := slices.Index(os.Args, kubeLong)
-	if argOffset < 0 {
-		argOffset = slices.Index(os.Args, kubeShort)
+	argOffset := -1
+	for i, arg := range os.Args {
+		if arg == "tools" || arg == "t" {
+			if i+1 < len(os.Args) && (os.Args[i+1] == kubeLong || os.Args[i+1] == kubeShort) {
+				argOffset = i + 1
+				break
+			}
+		}
+	}
+
+	opts := kubecmd.KubectlOptions{
+		IOStreams: genericiooptions.IOStreams{
+			In:     os.Stdin,
+			Out:    os.Stdout,
+			ErrOut: os.Stderr,
+		},
 	}
 
 	if argOffset > -1 {
-		kubectlCmd = kubecmd.NewDefaultKubectlCommandWithArgs(kubecmd.KubectlOptions{
-			IOStreams: genericiooptions.IOStreams{
-				In:     os.Stdin,
-				Out:    os.Stdout,
-				ErrOut: os.Stderr,
-			},
-			Arguments: os.Args[argOffset:],
-			PluginHandler: &kubecmd.DefaultPluginHandler{
-				ValidPrefixes: plugin.ValidPluginFilenamePrefixes,
-			},
-		})
-	} else {
-		kubectlCmd = kubecmd.NewKubectlCommand(kubecmd.KubectlOptions{
-			IOStreams: genericiooptions.IOStreams{
-				In:     os.Stdin,
-				Out:    os.Stdout,
-				ErrOut: os.Stderr,
-			},
-		})
+		opts.Arguments = os.Args[argOffset:]
+		opts.PluginHandler = kubecmd.NewDefaultPluginHandler(plugin.ValidPluginFilenamePrefixes)
 	}
 
+	kubectlCmd = kubecmd.NewDefaultKubectlCommandWithArgs(opts)
 	kubectlCmd.Use = kubeLong
 	kubectlCmd.Aliases = []string{kubeShort}
 	kubectlCmd.SilenceErrors = true
