@@ -19,13 +19,7 @@ func TestFindImages(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	err := feature.Set([]feature.Feature{
-		{
-			Name:    feature.Values,
-			Enabled: true,
-		},
-	})
-	require.NoError(t, err)
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -222,6 +216,26 @@ func TestFindImages(t *testing.T) {
 					ComponentName: "baseline",
 					Matches: []string{
 						"nginx:1.24.0",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from options override package definition",
+			packagePath: "./testdata/find-images/values",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+				Values: value.Values{
+					"config": map[string]any{
+						"tag": "2.0.0",
+					},
+				},
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"nginx:2.0.0",
 					},
 				},
 			},

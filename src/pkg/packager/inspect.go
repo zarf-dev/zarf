@@ -182,7 +182,7 @@ type InspectDefinitionResourcesOptions struct {
 	DeploySetVariables map[string]string
 	// Values are values passed in at inspect time. They can come from the CLI, user configuration, or set directly by
 	// API callers.
-	value.Values
+	Values      value.Values
 	Flavor      string
 	KubeVersion string
 	// CachePath is used to cache layers from skeleton package pulls
