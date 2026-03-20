@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/zarf-dev/zarf/src/pkg/feature"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -16,6 +18,14 @@ func TestFindImages(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
+
+	err := feature.Set([]feature.Feature{
+		{
+			Name:    feature.Values,
+			Enabled: true,
+		},
+	})
+	require.NoError(t, err)
 
 	tests := []struct {
 		name           string
@@ -177,6 +187,41 @@ func TestFindImages(t *testing.T) {
 					Matches:       []string{},
 					PotentialMatches: []string{
 						"docker.io/percona/mongodb_exporter:0.47.1",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from package definition",
+			packagePath: "./testdata/find-images/values",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"nginx:1.25.0",
+					},
+				},
+			},
+		},
+		{
+			name:        "values from options",
+			packagePath: "./testdata/find-images/values-options",
+			opts: FindImagesOptions{
+				SkipCosign: true,
+				Values: value.Values{
+					"config": map[string]any{
+						"tag": "1.24.0",
+					},
+				},
+			},
+			expectedImages: []ComponentImageScan{
+				{
+					ComponentName: "baseline",
+					Matches: []string{
+						"nginx:1.24.0",
 					},
 				},
 			},

@@ -54,6 +54,9 @@ type FindImagesOptions struct {
 	CreateSetVariables map[string]string
 	// DeploySetVariables specifies the package deploy variables
 	DeploySetVariables map[string]string
+	// Values are values passed in at find-images time. They can come from the CLI, user configuration, or set directly
+	// by API callers.
+	value.Values
 	// Flavor specifies the flavor to use
 	Flavor string
 	// Why specifies the image to look for so we can print the containing manifest
@@ -109,6 +112,28 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
+
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+
+	// Load package-level default values and merge with CLI-provided values
+	packageValues := value.Values{}
+	if len(pkg.Values.Files) > 0 {
+		valuesPaths := make([]string, len(pkg.Values.Files))
+		for i, file := range pkg.Values.Files {
+			valuesPaths[i] = filepath.Join(pkgPath.BaseDir, file)
+		}
+		packageValues, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse package values files: %w", err)
+		}
+	}
+	// Merge CLI values on top of package values (CLI takes precedence)
+	packageValues.DeepMerge(opts.Values)
+	vals := packageValues
+
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -159,7 +184,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, value.Values{}, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, vals, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -202,7 +227,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, value.Values{}, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}
