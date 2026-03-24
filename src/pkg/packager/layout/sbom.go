@@ -119,7 +119,6 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
 	}
-	// syftImage := image.NewImage(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
 	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
 	err = syftImage.Read()
 	if err != nil {
