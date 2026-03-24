@@ -335,7 +335,6 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	defer func() {
 		err = errors.Join(err, cli.Close())
 	}()
-	cli.NegotiateAPIVersion(ctx)
 	for _, daemonImage := range daemonImages {
 		err := func() error {
 			// Pull the image into a Crane directory as the logic for extracting the earlier Docker formats is quite complex

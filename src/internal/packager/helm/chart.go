@@ -115,14 +115,14 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
 
-		err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
+		_, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
 		lastReleaser := releases[len(releases)-1]
 
-		err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastReleaser)
+		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastReleaser)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -244,7 +244,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 }
 
 func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) error {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer) (release.Releaser, error) {
 	// Bind the helm action.
 	client := action.NewInstall(actionConfig)
 
@@ -276,16 +276,15 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
 	// Perform the loadedChart installation.
-	_, err := client.RunWithContext(ctx, chart, chartValues)
-	return err
+	return client.RunWithContext(ctx, chart, chartValues)
 }
 
 func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *chartv2.Chart, chartValues common.Values,
-	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease release.Releaser) error {
+	opts InstallUpgradeOptions, actionConfig *action.Configuration, postRender *renderer, lastRelease release.Releaser) (release.Releaser, error) {
 	// Migrate any deprecated APIs (if applicable)
 	err := migrateDeprecatedAPIs(ctx, opts.Cluster, actionConfig, lastRelease)
 	if err != nil {
-		return fmt.Errorf("unable to check for API deprecations: %w", err)
+		return nil, fmt.Errorf("unable to check for API deprecations: %w", err)
 	}
 
 	// Setup a new upgrade action
@@ -304,7 +303,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ServerSideApply = zarfChart.GetServerSideApply()
 	rel, err := release.NewAccessor(lastRelease)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, opts.ForceConflicts)
 
@@ -321,8 +320,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.MaxHistory = maxHelmHistory
 
 	// Perform the loadedChart upgrade.
-	_, err = client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
-	return err
+	return client.RunWithContext(ctx, zarfChart.ReleaseName, chart, chartValues)
 }
 
 func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionConfig *action.Configuration, timeout time.Duration, forceConflicts bool) error {
