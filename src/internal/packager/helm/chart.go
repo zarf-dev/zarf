@@ -228,7 +228,6 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		// Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
-
 		client.ServerSideApply = zarfChart.GetServerSideApply()
 		client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
 
