@@ -56,7 +56,7 @@ jobs:
         run: make test-external
 
       - name: get crds
-        run: kubectl get crds kustomizations.kustomize.toolkit.fluxcd.io -o yaml
+        run: kubectl get crds -o yaml
         if: failure()
 
       - name: get cluster info
