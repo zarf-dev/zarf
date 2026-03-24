@@ -114,7 +114,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 	if errors.Is(histErr, driver.ErrReleaseNotFound) {
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
-
 		_, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
