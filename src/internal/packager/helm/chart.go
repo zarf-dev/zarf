@@ -225,7 +225,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		// Set reuse values to only override the values we are explicitly given
 		client.ReuseValues = true
 
-		// Wait for the update operation to successfully complete
+		//Wait for the update operation to successfully complete
 		client.WaitStrategy = kube.StatusWatcherStrategy
 
 		client.ServerSideApply = zarfChart.GetServerSideApply()
