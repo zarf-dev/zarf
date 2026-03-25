@@ -17,7 +17,10 @@ zarf tools gen-key [flags]
 ### Options
 
 ```
-  -h, --help   help for gen-key
+  -h, --help              help for gen-key
+      --interactive       Interactively prompt for registry server, username, and password if not provided
+      --password string   Password
+  -p, --password-stdin    Take the password from stdin
 ```
 
 ### Options inherited from parent commands
