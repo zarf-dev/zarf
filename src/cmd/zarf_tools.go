@@ -587,7 +587,11 @@ func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type genKeyOptions struct{}
+type genKeyOptions struct {
+	interactive   bool
+	password      string
+	passwordStdin bool
+}
 
 func newGenKeyCommand() *cobra.Command {
 	o := &genKeyOptions{}
@@ -599,36 +603,55 @@ func newGenKeyCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
+	cmd.Flags().BoolVar(&o.interactive, "interactive", true, lang.CmdToolsGenKeyShortFlagInteractive)
+	cmd.Flags().StringVar(&o.password, "password", "", lang.CmdToolsGenKeyShortFlagPassword)
+	cmd.Flags().BoolVarP(&o.passwordStdin, "password-stdin", "", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
+
 	return cmd
 }
 
 func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
+	var passwordFunc func(bool) ([]byte, error)
 	// Utility function to prompt the user for the password to the private key
-	passwordFunc := func(bool) ([]byte, error) {
-		// perform the first prompt
-		var password string
-		prompt := &survey.Password{
-			Message: lang.CmdToolsGenKeyPrompt,
-		}
-		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
-		}
+	if o.interactive {
+		passwordFunc = func(bool) ([]byte, error) {
+			// perform the first prompt
+			var password string
+			prompt := &survey.Password{
+				Message: lang.CmdToolsGenKeyPrompt,
+			}
+			if err := survey.AskOne(prompt, &password); err != nil {
+				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+			}
 
-		// perform the second prompt
-		var doubleCheck string
-		rePrompt := &survey.Password{
-			Message: lang.CmdToolsGenKeyPromptAgain,
-		}
-		if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
-		}
+			// perform the second prompt
+			var doubleCheck string
+			rePrompt := &survey.Password{
+				Message: lang.CmdToolsGenKeyPromptAgain,
+			}
+			if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
+				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+			}
 
-		// check if the passwords match
-		if password != doubleCheck {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
-		}
+			// check if the passwords match
+			if password != doubleCheck {
+				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
+			}
 
-		return []byte(password), nil
+			return []byte(password), nil
+		}
+	} else if o.passwordStdin {
+		password, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		passwordFunc = func(bool) ([]byte, error) {
+			return []byte(password), nil
+		}
+	} else {
+		passwordFunc = func(bool) ([]byte, error) {
+			return []byte(o.password), nil
+		}
 	}
 
 	// Use cosign to generate the keypair
@@ -643,7 +666,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	// Check if we are about to overwrite existing key files
 	_, prvKeyExistsErr := os.Stat(prvKeyFileName)
 	_, pubKeyExistsErr := os.Stat(pubKeyFileName)
-	if prvKeyExistsErr == nil || pubKeyExistsErr == nil {
+	if (prvKeyExistsErr == nil || pubKeyExistsErr == nil) && o.interactive {
 		var confirm bool
 		confirmOverwritePrompt := &survey.Confirm{
 			Message: fmt.Sprintf(lang.CmdToolsGenKeyPromptExists, prvKeyFileName),
