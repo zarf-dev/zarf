@@ -103,3 +103,72 @@ func TestGetCreds(t *testing.T) {
 		})
 	}
 }
+
+func TestGenKey(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		options    genKeyOptions
+		keysExist  bool
+		shouldFail bool
+	}{
+		{
+			name:    "gen key",
+			options: genKeyOptions{},
+		},
+		{
+			name: "gen key password",
+			options: genKeyOptions{
+				password: "test-password",
+			},
+		},
+		{
+			name: "gen key password-stdin",
+			options: genKeyOptions{
+				passwordStdin: true,
+			},
+		},
+		{
+			name:       "gen key (key exists)",
+			options:    genKeyOptions{},
+			keysExist:  true,
+			shouldFail: true,
+		},
+		{
+			name: "gen key force (key exists)",
+			options: genKeyOptions{
+				force: true,
+			},
+			keysExist: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+
+			prvKeyName := filepath.Join(tempDir, "test.key")
+			pubKeyName := filepath.Join(tempDir, "test.pub")
+
+			if tt.keysExist {
+				_, err := os.Create(prvKeyName)
+				require.NoError(t, err, "Could not test existing keys or force because a file could not be created in the private key's place")
+				_, err = os.Create(pubKeyName)
+				require.NoError(t, err, "Could not test existing keys or force because a file could not be created in the public key's place")
+			}
+
+			err := tt.options.genKey(prvKeyName, pubKeyName)
+
+			if tt.shouldFail {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+
+			require.FileExists(t, prvKeyName, "private key did not generate")
+			require.FileExists(t, pubKeyName, "public key did not generate")
+		})
+	}
+}

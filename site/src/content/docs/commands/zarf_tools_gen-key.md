@@ -17,10 +17,11 @@ zarf tools gen-key [flags]
 ### Options
 
 ```
-  -h, --help              help for gen-key
-      --interactive       Interactively prompt for registry server, username, and password if not provided
-      --password string   Password
-  -p, --password-stdin    Take the password from stdin
+      --force                       Force overwrite of keyfiles -- undefined behavior when running interactive
+  -h, --help                        help for gen-key
+      --interactive                 Interactively prompt for password
+      --password string             Private key password -- undefined behavior when running interactive
+      --password-stdin --password   Take the password from stdin -- undefined behavior with --password
 ```
 
 ### Options inherited from parent commands
