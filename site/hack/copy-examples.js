@@ -18,19 +18,22 @@ async function copyExamples() {
   const dirs = await fs.readdir(examplesDir);
   const examples = [];
   for (const dir of dirs) {
-    const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
-    const parsed = yaml.parseDocument(content);
-    if (!parsed.has("x-mdx")) {
+    const readmePath = path.join(examplesDir, dir, "readme.md");
+    try {
+      await fs.access(readmePath);
+    } catch {
       continue;
     }
-    const mdx = parsed.get("x-mdx").trim();
+    const readme = (await fs.readFile(readmePath, "utf-8")).trim();
+    const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
+    const parsed = yaml.parse(content);
     examples.push(dir);
     const repo = "https://github.com/zarf-dev/zarf";
-    const link = new URL(`${repo}/edit/main/examples/${dir}/zarf.yaml`).toString();
+    const link = new URL(`${repo}/edit/main/examples/${dir}/readme.md`).toString();
     const fm = `---
 title: "${dir}"
 editURL: "${link}"
-description: "${parsed.get("description") || ""}"
+description: "${parsed.description || ""}"
 tableOfContents: false
 ---
 
@@ -41,12 +44,10 @@ To view the full example, as well as its dependencies, please visit [examples/${
 :::
 `;
 
-    parsed.delete("x-mdx");
-
-    const pkg = parsed.toString().trim();
+    const pkg = content.trim();
 
     const final = `${fm}
-${mdx}
+${readme}
 
 ## zarf.yaml
 
