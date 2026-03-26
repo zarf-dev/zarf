@@ -605,7 +605,7 @@ func newGenKeyCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.interactive, "interactive", true, lang.CmdToolsGenKeyShortFlagInteractive)
 	cmd.Flags().StringVar(&o.password, "password", "", lang.CmdToolsGenKeyShortFlagPassword)
-	cmd.Flags().BoolVarP(&o.passwordStdin, "password-stdin", "", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
+	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
 
 	return cmd
 }
