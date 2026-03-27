@@ -78,4 +78,5 @@ components:
           - cmd: |
               echo "This {{ .wontBeProcessed }} stays as-is"
 
-documentation: readme.md
+documentation:
+  readme: readme.md

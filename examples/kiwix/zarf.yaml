@@ -34,4 +34,5 @@ components:
           # Export the container image to a tar archive for use as an image archive
           - cmd: docker save kiwix-data:local -o kiwix-data.tar
 
-documentation: readme.md
+documentation:
+  readme: readme.md

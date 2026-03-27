@@ -220,4 +220,5 @@ components:
               bad_cmd
               echo "this text shouldn't be printed"
 
-documentation: readme.md
+documentation:
+  readme: readme.md

@@ -13,5 +13,6 @@ components:
         files:
           - ../dos-games/manifests/deployment.yaml
           - ../dos-games/manifests/service.yaml
-
-documentation: readme.md
+          
+documentation:
+  readme: readme.md

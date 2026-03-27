@@ -82,4 +82,5 @@ components:
           - nginx-deployment.yaml
           - nginx-service.yaml
 
-documentation: readme.md
+documentation:
+  readme: readme.md

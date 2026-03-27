@@ -40,4 +40,5 @@ components:
         before:
           - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
 
-documentation: readme.md
+documentation:
+  readme: readme.md

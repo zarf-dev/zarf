@@ -70,4 +70,5 @@ components:
                 namespace: guestbook
                 condition: ready
 
-documentation: readme.md
+documentation:
+  readme: readme.md

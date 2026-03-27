@@ -47,4 +47,5 @@ components:
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       
-documentation: readme.md
+documentation:
+  readme: readme.md

@@ -83,4 +83,5 @@ components:
         onFailure:
           - cmd: ./zarf internal update-gitea-pvc --rollback
 
-documentation: readme.md
+documentation:
+  readme: readme.md

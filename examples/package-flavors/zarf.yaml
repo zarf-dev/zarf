@@ -70,4 +70,5 @@ components:
         files:
           - pod.yaml
 
-documentation: readme.md
+documentation:
+  readme: readme.md
