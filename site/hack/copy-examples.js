@@ -18,18 +18,22 @@ async function copyExamples() {
   const dirs = await fs.readdir(examplesDir);
   const examples = [];
   for (const dir of dirs) {
-    const readmePath = path.join(examplesDir, dir, "readme.md");
+    const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
+    const parsed = yaml.parse(content);
+    const readmeFile = parsed.documentation?.readme;
+    if (!readmeFile) {
+      continue;
+    }
+    const readmePath = path.join(examplesDir, dir, readmeFile);
     try {
       await fs.access(readmePath);
     } catch {
       continue;
     }
     const readme = (await fs.readFile(readmePath, "utf-8")).trim();
-    const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
-    const parsed = yaml.parse(content);
     examples.push(dir);
     const repo = "https://github.com/zarf-dev/zarf";
-    const link = new URL(`${repo}/edit/main/examples/${dir}/readme.md`).toString();
+    const link = new URL(`${repo}/edit/main/examples/${dir}/${readmeFile}`).toString();
     const fm = `---
 title: "${dir}"
 editURL: "${link}"

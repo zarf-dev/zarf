@@ -62,4 +62,5 @@ components:
       - longhornio/longhorn-ui:v1.4.0
       - longhornio/support-bundle-kit:v0.0.17
 
-documentation: readme.md
+documentation:
+  readme: readme.md
