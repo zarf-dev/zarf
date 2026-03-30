@@ -59,6 +59,11 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		opts.LayersSelector = zoci.AllLayers
 	}
 
+	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
 	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err

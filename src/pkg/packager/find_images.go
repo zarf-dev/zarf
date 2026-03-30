@@ -85,6 +85,12 @@ type ComponentImageScan struct {
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
+
+	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,

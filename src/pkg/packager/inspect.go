@@ -194,6 +194,11 @@ type InspectDefinitionResourcesOptions struct {
 
 // InspectDefinitionResources templates and returns the manifests and Helm chart manifests found in the definition at the given path
 func InspectDefinitionResources(ctx context.Context, packagePath string, opts InspectDefinitionResourcesOptions) (_ []Resource, err error) {
+	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
 	s, err := state.Default()
 	if err != nil {
 		return nil, err
