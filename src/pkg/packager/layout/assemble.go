@@ -63,6 +63,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
+	if err := helpers.CreateDirectory(opts.CachePath, helpers.ReadExecuteAllWriteUser); err != nil {
+		return nil, fmt.Errorf("failed to create cache directory %s: %w", opts.CachePath, err)
+	}
+
 	if err := validateImageArchivesNoDuplicates(pkg.Components); err != nil {
 		return nil, err
 	}
