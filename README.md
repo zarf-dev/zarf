@@ -94,7 +94,7 @@ To dive deeper into the tech, you can read the [Nerd Notes](https://docs.zarf.de
 
 ## ⭐️ Special Thanks
 
-> Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/handle/10945/68688).
+> Early Zarf research and prototypes were developed jointly with [United States Naval Postgraduate School](https://nps.edu/) research you can read [here](https://calhoun.nps.edu/entities/publication/d92c5122-6793-41df-b603-9c4faed1911f).
 
 We would also like to thank the following awesome libraries and projects without which Zarf would not be possible!
 
