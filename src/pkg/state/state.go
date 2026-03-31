@@ -113,8 +113,10 @@ type State struct {
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
-	InjectorInfo InjectorInfo     `json:"injectorInfo"`
+	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
+	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
+	InjectorInfo         InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -412,6 +414,8 @@ type MergeOptions struct {
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
 	Services       []string
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -460,11 +464,17 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		}
 	}
 	if slices.Contains(opts.Services, AgentKey) {
-		agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
-		if err != nil {
-			return nil, err
+		if opts.AgentTLS != nil {
+			newState.AgentTLS = *opts.AgentTLS
+			newState.AgentTLSUserProvided = true
+		} else {
+			agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
+			if err != nil {
+				return nil, err
+			}
+			newState.AgentTLS = agentTLS
+			newState.AgentTLSUserProvided = false
 		}
-		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil

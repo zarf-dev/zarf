@@ -48,6 +48,12 @@ func GeneratePKI(host string, dnsNames ...string) (GeneratedPKI, error) {
 	return generatePKI(host, notAfter, dnsNames...)
 }
 
+// GeneratePKIWithDuration creates a CA and signed server keypair with a configurable certificate lifetime.
+func GeneratePKIWithDuration(host string, duration time.Duration, dnsNames ...string) (GeneratedPKI, error) {
+	notAfter := now().Add(duration)
+	return generatePKI(host, notAfter, dnsNames...)
+}
+
 func generatePKI(host string, notAfter time.Time, dnsNames ...string) (GeneratedPKI, error) {
 	results := GeneratedPKI{}
 	ca, caKey, err := generateCA(notAfter)
@@ -368,6 +374,25 @@ func GenerateMTLSCerts(caSubject string, serverDNSNames []string, serverCommonNa
 	}
 
 	return serverPKI, clientPKI, nil
+}
+
+// ValidateCertSAN checks that the given PEM-encoded certificate contains the required SAN.
+func ValidateCertSAN(certPEM []byte, requiredSAN string) error {
+	cert, err := parseCertFromPEM(certPEM)
+	if err != nil {
+		return fmt.Errorf("failed to parse certificate for SAN validation: %w", err)
+	}
+	for _, dns := range cert.DNSNames {
+		if dns == requiredSAN {
+			return nil
+		}
+	}
+	for _, ip := range cert.IPAddresses {
+		if ip.String() == requiredSAN {
+			return nil
+		}
+	}
+	return fmt.Errorf("certificate does not contain required SAN %q; found DNS SANs: %v, IP SANs: %v", requiredSAN, cert.DNSNames, cert.IPAddresses)
 }
 
 // TransportWithKey creates an HTTP transport configured with mTLS certificates.

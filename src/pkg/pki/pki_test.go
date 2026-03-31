@@ -78,6 +78,80 @@ func TestCheckForExpiredCert1(t *testing.T) {
 	}
 }
 
+func TestGeneratePKIWithDuration(t *testing.T) {
+	originalNow := now
+	defer func() { now = originalNow }()
+
+	creationTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	now = func() time.Time { return creationTime }
+
+	duration := 10 * 365 * 24 * time.Hour // ~10 years
+	pki, err := GeneratePKIWithDuration("test.example.com", duration)
+	require.NoError(t, err)
+	require.NotEmpty(t, pki.CA)
+	require.NotEmpty(t, pki.Cert)
+	require.NotEmpty(t, pki.Key)
+
+	cert, err := parseCertFromPEM(pki.Cert)
+	require.NoError(t, err)
+	expectedExpiry := creationTime.Add(duration)
+	require.Equal(t, expectedExpiry, cert.NotAfter)
+}
+
+func TestValidateCertSAN(t *testing.T) {
+	originalNow := now
+	defer func() { now = originalNow }()
+
+	creationTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	now = func() time.Time { return creationTime }
+
+	tests := []struct {
+		name        string
+		host        string
+		requiredSAN string
+		expectErr   bool
+	}{
+		{
+			name:        "matching DNS SAN",
+			host:        "agent-hook.zarf.svc",
+			requiredSAN: "agent-hook.zarf.svc",
+			expectErr:   false,
+		},
+		{
+			name:        "non-matching SAN",
+			host:        "other-host.example.com",
+			requiredSAN: "agent-hook.zarf.svc",
+			expectErr:   true,
+		},
+		{
+			name:        "IP SAN match",
+			host:        "127.0.0.1",
+			requiredSAN: "127.0.0.1",
+			expectErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pki, err := GeneratePKI(tt.host)
+			require.NoError(t, err)
+			err = ValidateCertSAN(pki.Cert, tt.requiredSAN)
+			if tt.expectErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "does not contain required SAN")
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateCertSAN_InvalidPEM(t *testing.T) {
+	err := ValidateCertSAN([]byte("not a cert"), "anything")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to parse certificate")
+}
+
 func TestGetRemainingCertLifePercentage(t *testing.T) {
 	// Reset time function after tests
 	originalNow := now
