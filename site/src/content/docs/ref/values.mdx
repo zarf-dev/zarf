@@ -141,7 +141,7 @@ In addition to user supplied Variables, and Constants, Zarf maintains a list of 
 
 - `STORAGE_CLASS`: Storage class specified for persistent storage within the Kubernetes cluster (maps to `--storage-class` on `zarf init`)
 - `REGISTRY`: Address of the registry server used during `zarf init` (maps to `--registry-url` on `zarf init`)
-- `NODEPORT`: Nodeport used for a registry internal to the cluster (maps to `--nodeport` on `zarf init`)
+- `REGISTRY_PORT`: Port of the internal registry (maps to `--registry-port` on `zarf init`)
 - `REGISTRY_AUTH_PUSH`: Password for pushing images to the registry (maps to `--registry-push-password` on `zarf init`)
 - `REGISTRY_AUTH_PULL`: Password for pulling images from the registry (maps to `--registry-pull-password` on `zarf init`)
 - `GIT_PUSH`: Username utilized for pushing changes to the Git server (maps to `--git-push-username` on `zarf init`)
