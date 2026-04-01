@@ -609,6 +609,9 @@ func newGenKeyCommand() *cobra.Command {
 					return errors.New(lang.CmdToolsGenKeyErrNoPasswordProvided)
 				}
 			}
+			if o.passwordStdin {
+				o.reader = os.Stdin
+			}
 			return nil
 		},
 	}
@@ -620,10 +623,6 @@ func newGenKeyCommand() *cobra.Command {
 	cmd.MarkFlagsMutuallyExclusive("password", "password-stdin", "interactive")
 	cmd.MarkFlagsMutuallyExclusive("interactive", "force")
 
-	if o.passwordStdin {
-		o.reader = os.Stdin
-	}
-
 	return cmd
 }
 
@@ -634,7 +633,6 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	err := o.genKey(prvKeyFileName, pubKeyFileName)
 
 	if err != nil {
-		logger.From(cmd.Context()).Error("Failed to generate key pair")
 		return err
 	}
 
