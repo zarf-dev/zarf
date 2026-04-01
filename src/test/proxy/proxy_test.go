@@ -36,7 +36,7 @@ func (suite *RegistryProxyTestSuite) SetupSuite() {
 func (suite *RegistryProxyTestSuite) Test_0_RegistryProxyInit() {
 	ctx := suite.T().Context()
 
-	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--components=git-server", "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--components=git-server", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Verify the registry proxy TLS secrets were created
@@ -96,6 +96,11 @@ func (suite *RegistryProxyTestSuite) Test_3_OCIOpsPackage() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "remove", deployPath, "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
+	// Verify registry commands are configured with mTLS
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "catalog")
+	suite.NoError(err, stdOut, stdErr)
+	// verify that an image name is in the prune output
+	suite.Contains(stdOut, "stefanprodan/podinfo")
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "tools", "registry", "prune", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 	// verify that an image name is in the prune output
@@ -119,7 +124,7 @@ func (suite *RegistryProxyTestSuite) Test_4_SwitchBetweenNodePort() {
 	_, err = suite.cluster.Clientset.AppsV1().DaemonSets("zarf").Get(ctx, "zarf-registry-proxy", metav1.GetOptions{})
 	suite.True(kerrors.IsNotFound(err))
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "init", "--features=registry-proxy=true", "--registry-mode=proxy", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "init", "--registry-mode=proxy", "--confirm")
 	suite.NoError(err, stdOut, stdErr)
 
 	// Verify that the svc zarf-docker-registry is not a nodeport svc
