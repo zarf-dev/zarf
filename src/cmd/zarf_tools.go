@@ -617,6 +617,8 @@ func newGenKeyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.force, "force", false, lang.CmdToolsGenKeyShortFlagForce)
 	cmd.Flags().StringVar(&o.password, "password", "", lang.CmdToolsGenKeyShortFlagPassword)
 	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
+	cmd.MarkFlagsMutuallyExclusive("password", "password-stdin", "interactive")
+	cmd.MarkFlagsMutuallyExclusive("interactive", "force")
 
 	if o.passwordStdin {
 		o.reader = os.Stdin
@@ -647,17 +649,7 @@ func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) err
 	var passwordFunc func(bool) ([]byte, error)
 	// Utility function to prompt the user for the password to the private key
 
-	if len(o.password) > 0 && o.passwordStdin {
-		return fmt.Errorf("cannot use --password with --password-stdin")
-	}
-
 	if o.interactive {
-		if len(o.password) > 0 || o.passwordStdin {
-			return fmt.Errorf("cannot use --password or --password-stdin with --interactive")
-		}
-		if o.force {
-			return fmt.Errorf("cannot use --force with --interactive")
-		}
 		passwordFunc = func(bool) ([]byte, error) {
 			// perform the first prompt
 			var password string

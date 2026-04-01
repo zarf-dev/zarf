@@ -142,30 +142,6 @@ func TestGenKey(t *testing.T) {
 			},
 			keysExist: true,
 		},
-		{
-			name: "gen key interactive with password",
-			options: genKeyOptions{
-				interactive: true,
-				password:    "test-password",
-			},
-			shouldFail: true,
-		},
-		{
-			name: "gen key interactive with password-stdin",
-			options: genKeyOptions{
-				interactive:   true,
-				passwordStdin: true,
-			},
-			shouldFail: true,
-		},
-		{
-			name: "gen key password with password-stdin",
-			options: genKeyOptions{
-				password:      "test-password",
-				passwordStdin: true,
-			},
-			shouldFail: true,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

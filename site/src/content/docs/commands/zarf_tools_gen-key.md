@@ -17,11 +17,11 @@ zarf tools gen-key [flags]
 ### Options
 
 ```
-      --force             Force overwrite of keyfiles -- cannot be used with --interactive
+      --force             Force overwrite of keyfiles
   -h, --help              help for gen-key
       --interactive       Interactively prompt for password
-      --password string   Private key password -- cannot be used with --password-stdin or --interactive
-      --password-stdin    Take the password from stdin -- cannot be used with --password or --interactive
+      --password string   Private key password
+      --password-stdin    Take the password from stdin
 ```
 
 ### Options inherited from parent commands
