@@ -30,8 +30,10 @@ zarf dev find-images [ DIRECTORY ] [flags]
       --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
       --registry-url string                   Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
   -p, --repo-chart-path string                If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
+      --set-values stringToString             Specify deployment package values to set on the command line (key.path=value). (default [])
       --skip-cosign                           Skip searching for cosign artifacts related to discovered images
   -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
+      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --why string                            Prints the source manifest for the specified image
 ```
 
