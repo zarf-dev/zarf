@@ -592,6 +592,7 @@ type genKeyOptions struct {
 	force         bool
 	password      string
 	passwordStdin bool
+	reader        io.Reader
 }
 
 func newGenKeyCommand() *cobra.Command {
@@ -616,6 +617,10 @@ func newGenKeyCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&o.force, "force", false, lang.CmdToolsGenKeyShortFlagForce)
 	cmd.Flags().StringVar(&o.password, "password", "", lang.CmdToolsGenKeyShortFlagPassword)
 	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
+
+	if o.passwordStdin {
+		o.reader = os.Stdin
+	}
 
 	return cmd
 }
@@ -680,7 +685,10 @@ func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) err
 			return []byte(password), nil
 		}
 	} else if o.passwordStdin {
-		password, err := io.ReadAll(os.Stdin)
+		if o.reader == nil {
+			return fmt.Errorf("reader not set for genKeyOptions")
+		}
+		password, err := io.ReadAll(o.reader)
 		if err != nil {
 			return err
 		}

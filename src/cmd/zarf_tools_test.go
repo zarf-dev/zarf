@@ -126,6 +126,7 @@ func TestGenKey(t *testing.T) {
 			name: "gen key password-stdin",
 			options: genKeyOptions{
 				passwordStdin: true,
+				reader:        bytes.NewBufferString("test-password"),
 			},
 		},
 		{
