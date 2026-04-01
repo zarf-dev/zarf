@@ -626,6 +626,15 @@ func newGenKeyCommand() *cobra.Command {
 	return cmd
 }
 
+func (o *genKeyOptions) validatePassword(s string) error {
+	for _, c := range s {
+		if c < 32 || c > 126 {
+			return fmt.Errorf("invalid character (ascii code 0x%02X) in password", c)
+		}
+	}
+	return nil
+}
+
 func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	prvKeyFileName := "cosign.key"
 	pubKeyFileName := "cosign.pub"
@@ -644,54 +653,54 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 }
 
 func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) error {
+	var password string
+	var err error
 	var passwordFunc func(bool) ([]byte, error)
 	// Utility function to prompt the user for the password to the private key
 
 	if o.interactive {
-		passwordFunc = func(bool) ([]byte, error) {
-			// perform the first prompt
-			var password string
-			prompt := &survey.Password{
-				Message: lang.CmdToolsGenKeyPrompt,
-			}
-			if err := survey.AskOne(prompt, &password); err != nil {
-				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
-			}
+		prompt := &survey.Password{
+			Message: lang.CmdToolsGenKeyPrompt,
+		}
+		if err := survey.AskOne(prompt, &password); err != nil {
+			return fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+		}
 
-			// perform the second prompt
-			var doubleCheck string
-			rePrompt := &survey.Password{
-				Message: lang.CmdToolsGenKeyPromptAgain,
-			}
-			if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
-			}
+		// perform the second prompt
+		var doubleCheck string
+		rePrompt := &survey.Password{
+			Message: lang.CmdToolsGenKeyPromptAgain,
+		}
+		if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
+			return fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+		}
 
-			// check if the passwords match
-			if password != doubleCheck {
-				return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
-			}
-
-			return []byte(password), nil
+		// check if the passwords match
+		if password != doubleCheck {
+			return fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
 		}
 	} else if o.passwordStdin {
 		if o.reader == nil {
 			return fmt.Errorf("reader not set for genKeyOptions")
 		}
-		password, err := io.ReadAll(o.reader)
+		passwordBytes, err := io.ReadAll(o.reader)
 		if err != nil {
 			return err
 		}
-		if string(password) == "" {
+		password = string(passwordBytes)
+		if password == "" {
 			return fmt.Errorf("empty password disallowed when using --password-stdin")
 		}
-		passwordFunc = func(bool) ([]byte, error) {
-			return []byte(password), nil
-		}
 	} else {
-		passwordFunc = func(bool) ([]byte, error) {
-			return []byte(o.password), nil
+		password = o.password
+	}
+
+	passwordFunc = func(bool) ([]byte, error) {
+		err = o.validatePassword(password)
+		if err != nil {
+			return nil, err
 		}
+		return []byte(password), nil
 	}
 
 	// Use cosign to generate the keypair
