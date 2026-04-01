@@ -684,6 +684,9 @@ func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) err
 		if err != nil {
 			return err
 		}
+		if string(password) == "" {
+			return fmt.Errorf("empty password disallowed when using --password-stdin")
+		}
 		passwordFunc = func(bool) ([]byte, error) {
 			return []byte(password), nil
 		}

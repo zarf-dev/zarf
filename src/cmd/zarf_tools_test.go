@@ -130,6 +130,14 @@ func TestGenKey(t *testing.T) {
 			},
 		},
 		{
+			name: "gen key password-stdin empty-string",
+			options: genKeyOptions{
+				passwordStdin: true,
+				reader:        bytes.NewBufferString(""),
+			},
+			shouldFail: true,
+		},
+		{
 			name:       "gen key (key exists)",
 			options:    genKeyOptions{},
 			keysExist:  true,
