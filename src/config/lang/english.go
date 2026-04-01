@@ -612,9 +612,9 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 
 	CmdToolsGenKeyShort                  = "Generates a cosign public/private keypair that can be used to sign packages"
 	CmdToolsGenKeyShortFlagInteractive   = "Interactively prompt for password"
-	CmdToolsGenKeyShortFlagForce         = "Force overwrite of keyfiles -- undefined behavior when running interactive"
-	CmdToolsGenKeyShortFlagPassword      = "Private key password -- undefined behavior when running interactive"
-	CmdToolsGenKeyShortFlagPasswordStdin = "Take the password from stdin -- undefined behavior with `--password`"
+	CmdToolsGenKeyShortFlagForce         = "Force overwrite of keyfiles -- cannot be used with --interactive"
+	CmdToolsGenKeyShortFlagPassword      = "Private key password -- cannot be used with --password-stdin or --interactive"
+	CmdToolsGenKeyShortFlagPasswordStdin = "Take the password from stdin -- cannot be used with --password or --interactive"
 	CmdToolsGenKeyPrompt                 = "Private key password (empty for no password): "
 	CmdToolsGenKeyPromptAgain            = "Private key password again (empty for no password): "
 	CmdToolsGenKeyPromptExists           = "File %s already exists. Overwrite? "
