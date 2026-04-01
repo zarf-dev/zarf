@@ -602,6 +602,14 @@ func newGenKeyCommand() *cobra.Command {
 		Aliases: []string{"key"},
 		Short:   lang.CmdToolsGenKeyShort,
 		RunE:    o.run,
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			if !o.interactive {
+				if !cmd.Flags().Changed("password") && !o.passwordStdin {
+					return errors.New(lang.CmdToolsGenKeyErrNoPasswordProvided)
+				}
+			}
+			return nil
+		},
 	}
 
 	cmd.Flags().BoolVar(&o.interactive, "interactive", false, lang.CmdToolsGenKeyShortFlagInteractive)

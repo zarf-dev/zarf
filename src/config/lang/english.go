@@ -618,6 +618,7 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPrompt                 = "Private key password (empty for no password): "
 	CmdToolsGenKeyPromptAgain            = "Private key password again (empty for no password): "
 	CmdToolsGenKeyPromptExists           = "File %s already exists. Overwrite? "
+	CmdToolsGenKeyErrNoPasswordProvided  = "must explicitly pass --password=\"\" for empty password"
 	CmdToolsGenKeyErrUnableGetPassword   = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch   = "passwords do not match"
 
