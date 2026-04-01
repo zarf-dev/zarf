@@ -39,10 +39,12 @@ func TestMergeStateRegistry(t *testing.T) {
 			oldRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
+				Port:     1,
 			},
 			expectedRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
+				Port:     1,
 			},
 		},
 		{
@@ -50,6 +52,7 @@ func TestMergeStateRegistry(t *testing.T) {
 			oldRegistry: RegistryInfo{
 				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort:     1,
+				Port:         1,
 				PushPassword: "same-password",
 				PullPassword: "same-password",
 			},
@@ -60,6 +63,7 @@ func TestMergeStateRegistry(t *testing.T) {
 			expectedRegistry: RegistryInfo{
 				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort:     1,
+				Port:         1,
 				PushPassword: "same-password",
 				PullPassword: "same-password",
 			},
@@ -78,6 +82,7 @@ func TestMergeStateRegistry(t *testing.T) {
 				PullUsername: "pull-user",
 				Address:      "address",
 				NodePort:     1,
+				Port:         1,
 				Secret:       "secret",
 			},
 			expectedRegistry: RegistryInfo{
@@ -85,6 +90,7 @@ func TestMergeStateRegistry(t *testing.T) {
 				PullUsername: "pull-user",
 				Address:      "address",
 				NodePort:     1,
+				Port:         1,
 				Secret:       "secret",
 			},
 		},
@@ -115,6 +121,7 @@ func TestMergeStateRegistry(t *testing.T) {
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
 			require.Equal(t, tt.expectedRegistry.Address, newState.RegistryInfo.Address)
 			require.Equal(t, tt.expectedRegistry.NodePort, newState.RegistryInfo.NodePort)
+			require.Equal(t, tt.expectedRegistry.Port, newState.RegistryInfo.Port)
 			require.Equal(t, tt.expectedRegistry.Secret, newState.RegistryInfo.Secret)
 			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
 			if tt.expectedRegistry.PushPassword != "" {

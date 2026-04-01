@@ -66,7 +66,7 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 	patches := make([]operations.PatchOperation, 0)
 
 	for idx, repo := range proj.Spec.SourceRepos {
-		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer)
 		// The AppProject can also include source repositories like '*' (as in the default project),
 		// which results in an error because '*' cannot be found in Git
 		// For this reason, we will ignore these entries and only patch the Git repositories that are found

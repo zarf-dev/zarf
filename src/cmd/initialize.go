@@ -40,6 +40,7 @@ type initOptions struct {
 	artifactServer          state.ArtifactServerInfo
 	injectorPort            int
 	adoptExistingResources  bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	publicKeyPath           string
@@ -76,11 +77,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
-		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
+		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
-		"the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
-	// While this feature is in early alpha we will hide the flags
-	cmd.Flags().MarkHidden("registry-mode")
+		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -91,7 +90,9 @@ func newInitCommand() *cobra.Command {
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().IntVar(&o.registryInfo.NodePort, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", v.GetInt(VInitRegistryPort), lang.CmdInitFlagRegPort)
+	cmd.Flags().IntVar(&o.registryInfo.Port, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	_ = cmd.Flags().MarkDeprecated("nodeport", "Use --registry-port instead")
 	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
@@ -106,6 +107,7 @@ func newInitCommand() *cobra.Command {
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
@@ -120,7 +122,10 @@ func newInitCommand() *cobra.Command {
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
+	cmd.MarkFlagsMutuallyExclusive("registry-port", "nodeport")
 
 	cmd.Flags().SortFlags = true
 
@@ -153,12 +158,8 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if o.registryInfo.RegistryMode == "" {
-		if o.registryInfo.Address == "" {
-			o.registryInfo.RegistryMode = state.RegistryModeNodePort
-		} else {
-			o.registryInfo.RegistryMode = state.RegistryModeExternal
-		}
+	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
+		o.registryInfo.RegistryMode = state.RegistryModeExternal
 	}
 
 	packageSource := ""
@@ -215,6 +216,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RegistryInfo:           o.registryInfo,
 		ArtifactServer:         o.artifactServer,
 		AdoptExistingResources: o.adoptExistingResources,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,
@@ -342,7 +344,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
-	if helpers.IsNotZeroAndNotEqual(registryInfo, s.RegistryInfo) {
+	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
@@ -379,6 +381,13 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
 				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
+	}
+
+	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {
+		return fmt.Errorf("--registry-url is required when --registry-mode=external")
+	}
+	if o.registryInfo.RegistryMode != "" && o.registryInfo.RegistryMode != state.RegistryModeExternal && o.registryInfo.Address != "" {
+		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
 	}
 
 	return nil

@@ -108,8 +108,6 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
@@ -259,8 +257,10 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the internal Zarf registry is used and connected with over a nodeport service.
+	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	NodePort int `json:"nodePort"`
+	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
+	Port int `json:"port"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
@@ -269,19 +269,52 @@ type RegistryInfo struct {
 	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
 }
 
+// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
+// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
+// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
+func (ri *RegistryInfo) ReconcilePort() {
+	if ri.Port == 0 && ri.NodePort != 0 {
+		ri.Port = ri.NodePort
+	}
+	ri.NodePort = ri.Port
+}
+
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
 func (ri RegistryInfo) IsInternal() bool {
 	if ri.RegistryMode != "" {
 		return ri.RegistryMode != RegistryModeExternal
 	}
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
-		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
 }
 
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
 func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
+func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
+	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
+		return true
+	}
+	if given.PullUsername != "" && existing.PullUsername != given.PullUsername {
+		return true
+	}
+	if given.PushPassword != "" && existing.PushPassword != given.PushPassword {
+		return true
+	}
+	if given.PullPassword != "" && existing.PullPassword != given.PullPassword {
+		return true
+	}
+	if given.Address != "" && existing.Address != given.Address {
+		return true
+	}
+	if given.Secret != "" && existing.Secret != given.Secret {
+		return true
+	}
+	return false
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -297,20 +330,20 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		}
 	}
 
-	if ri.NodePort == 0 && ri.Address == "" {
+	if ri.Port == 0 && ri.Address == "" {
 		switch ri.RegistryMode {
-		// Set default NodePort if none was provided and the registry is internal
+		// Set default port if none was provided and the registry is internal
 		case RegistryModeNodePort:
-			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+			ri.Port = ZarfInClusterContainerRegistryNodePort
 		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
 		case RegistryModeProxy:
-			ri.NodePort = ZarfRegistryHostPort
+			ri.Port = ZarfRegistryHostPort
 		}
 	}
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = LocalhostRegistryAddress(ipFamily, ri.NodePort)
+		ri.Address = LocalhostRegistryAddress(ipFamily, ri.Port)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -581,9 +614,9 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 }
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
-func LocalhostRegistryAddress(ipFamily IPFamily, nodePort int) string {
+func LocalhostRegistryAddress(ipFamily IPFamily, port int) string {
 	if ipFamily == IPFamilyIPv6 {
-		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, port)
 	}
-	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, port)
 }
