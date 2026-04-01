@@ -626,10 +626,10 @@ func newGenKeyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *genKeyOptions) validatePassword(s string) error {
-	for _, c := range s {
-		if c < 32 || c > 126 {
-			return fmt.Errorf("invalid character (ascii code 0x%02X) in password", c)
+func (o *genKeyOptions) validatePassword(bs []byte) error {
+	for _, b := range bs {
+		if b < 32 || b > 126 {
+			return fmt.Errorf("invalid character (ascii code 0x%02X) in password", b)
 		}
 	}
 	return nil
@@ -653,16 +653,17 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 }
 
 func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) error {
-	var password string
+	var password []byte
 	var err error
 	var passwordFunc func(bool) ([]byte, error)
 	// Utility function to prompt the user for the password to the private key
 
 	if o.interactive {
+		var tmpPassword string
 		prompt := &survey.Password{
 			Message: lang.CmdToolsGenKeyPrompt,
 		}
-		if err := survey.AskOne(prompt, &password); err != nil {
+		if err := survey.AskOne(prompt, &tmpPassword); err != nil {
 			return fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
@@ -676,23 +677,23 @@ func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) err
 		}
 
 		// check if the passwords match
-		if password != doubleCheck {
+		if tmpPassword != doubleCheck {
 			return fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
 		}
+		password = []byte(tmpPassword)
 	} else if o.passwordStdin {
 		if o.reader == nil {
 			return fmt.Errorf("reader not set for genKeyOptions")
 		}
-		passwordBytes, err := io.ReadAll(o.reader)
+		password, err = io.ReadAll(o.reader)
 		if err != nil {
 			return err
 		}
-		password = string(passwordBytes)
-		if password == "" {
+		if len(password) == 0 {
 			return fmt.Errorf("empty password disallowed when using --password-stdin")
 		}
 	} else {
-		password = o.password
+		password = []byte(o.password)
 	}
 
 	passwordFunc = func(bool) ([]byte, error) {
@@ -700,7 +701,7 @@ func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) err
 		if err != nil {
 			return nil, err
 		}
-		return []byte(password), nil
+		return password, nil
 	}
 
 	// Use cosign to generate the keypair
