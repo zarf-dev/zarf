@@ -36,6 +36,7 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
 	// VerificationStrategy specifies whether verification is enforced
 	VerificationStrategy VerificationStrategy
@@ -109,9 +110,14 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	// Note: VerifyBlobOptions should replace PublicKeyPath in the future
-	verifyOptions := utils.DefaultVerifyBlobOptions()
-	verifyOptions.KeyRef = opts.PublicKeyPath
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	verifyOptions := opts.VerifyBlobOptions
+	if opts.PublicKeyPath != "" && verifyOptions.KeyRef == "" {
+		verifyOptions = utils.DefaultVerifyBlobOptions()
+		verifyOptions.KeyRef = opts.PublicKeyPath
+	}
 
 	if opts.VerificationStrategy < VerifyNever {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)

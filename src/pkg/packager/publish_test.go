@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -42,7 +43,11 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Architecture:  architecture,
 		Filter:        filters.Empty(),
 		RemoteOptions: defaultTestRemoteOptions(),
-		PublicKeyPath: publicKeyPath,
+		VerifyBlobOptions: func() utils.VerifyBlobOptions {
+			o := utils.DefaultVerifyBlobOptions()
+			o.KeyRef = publicKeyPath
+			return o
+		}(),
 		CachePath:     cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)

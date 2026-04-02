@@ -185,7 +185,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),

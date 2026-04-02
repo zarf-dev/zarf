@@ -36,8 +36,10 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// PublicKeyPath validates the create-time signage of a package.
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
+	// VerifyBlobOptions configures package signature verification.
+	VerifyBlobOptions utils.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -69,10 +71,19 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		return "", errors.New("host cannot be empty")
 	}
 
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	verifyOpts := opts.VerifyBlobOptions
+	if opts.PublicKeyPath != "" && verifyOpts.KeyRef == "" {
+		verifyOpts = utils.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = opts.PublicKeyPath
+	}
+
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    verifyOpts,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -101,8 +112,8 @@ type pullOCIOptions struct {
 	LayersSelector zoci.LayersSelector
 	Filter         filters.ComponentFilterStrategy
 	OCIConcurrency int
-	CachePath      string
-	PublicKeyPath  string
+	CachePath         string
+	VerifyBlobOptions utils.VerifyBlobOptions
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -160,7 +171,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,

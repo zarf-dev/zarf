@@ -29,11 +29,13 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum        string
-	Architecture  string
-	PublicKeyPath string
-	Filter        filters.ComponentFilterStrategy
-	Output        string
+	Shasum       string
+	Architecture string
+	// Deprecated: Use VerifyBlobOptions instead.
+	PublicKeyPath     string
+	VerifyBlobOptions utils.VerifyBlobOptions
+	Filter            filters.ComponentFilterStrategy
+	Output            string
 	// number of layers to pull in parallel
 	OCIConcurrency int
 	// Layers to pull during OCI pull
@@ -59,6 +61,14 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		opts.LayersSelector = zoci.AllLayers
 	}
 
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.PublicKeyPath != "" && opts.VerifyBlobOptions.KeyRef == "" {
+		opts.VerifyBlobOptions = utils.DefaultVerifyBlobOptions()
+		opts.VerifyBlobOptions.KeyRef = opts.PublicKeyPath
+	}
+
 	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err
@@ -78,7 +88,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	case "oci":
 		ociOpts := pullOCIOptions{
 			Source:               source,
-			PublicKeyPath:        opts.PublicKeyPath,
+			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
@@ -130,7 +140,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}
