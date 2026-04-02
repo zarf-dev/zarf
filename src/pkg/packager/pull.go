@@ -106,12 +106,12 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source         string
-	Shasum         string
-	Architecture   string
-	LayersSelector zoci.LayersSelector
-	Filter         filters.ComponentFilterStrategy
-	OCIConcurrency int
+	Source            string
+	Shasum            string
+	Architecture      string
+	LayersSelector    zoci.LayersSelector
+	Filter            filters.ComponentFilterStrategy
+	OCIConcurrency    int
 	CachePath         string
 	VerifyBlobOptions utils.VerifyBlobOptions
 	types.RemoteOptions

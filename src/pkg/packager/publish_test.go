@@ -48,7 +48,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 			o.KeyRef = publicKeyPath
 			return o
 		}(),
-		CachePath:     cachePath,
+		CachePath: cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
