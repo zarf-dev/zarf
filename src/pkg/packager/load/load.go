@@ -28,7 +28,9 @@ import (
 
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
-	Flavor       string
+	Flavor string
+	// All variants will ignore Flavor and will return all components, regardless of flavor
+	AllVariants  bool
 	SetVariables map[string]string
 	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
 	// value should be supplied at deploy-time and doesn't have a default set in the package values.
@@ -49,6 +51,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	l.Debug("start layout.LoadPackage",
 		"path", packagePath,
 		"flavor", opts.Flavor,
+		"allVariants", opts.AllVariants,
 		"setVariables", opts.SetVariables,
 	)
 
@@ -66,7 +69,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.AllVariants, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -82,7 +85,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.AllVariants, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -90,19 +93,30 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return pkg, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, allVariants, skipRequiredValues bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
 		"pkg", pkg.Metadata.Name,
 		"packagePath", packagePath,
 		"flavor", flavor,
+		"allVariants", allVariants,
 		"setVariables", setVariables,
 	)
 
-	if !hasFlavoredComponent(pkg, flavor) {
+	if !hasFlavoredComponent(pkg, flavor) && !allVariants {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
+
+	// When we validate all variants, change component names to include flavors.
+	// This allows us to pass component name unqieness checks between flavors while catching duplicate names within
+	// flavors
+	if allVariants {
+		for i, component := range pkg.Components {
+			pkg.Components[i].Name = component.Name + component.Only.Flavor
+		}
+	}
+
 	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}

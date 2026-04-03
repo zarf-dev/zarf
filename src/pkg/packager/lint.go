@@ -16,6 +16,7 @@ import (
 type LintOptions struct {
 	SetVariables map[string]string
 	Flavor       string
+	AllVariants  bool
 	CachePath    string
 	types.RemoteOptions
 }
@@ -27,6 +28,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	}
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
+		AllVariants:      opts.AllVariants,
 		SetVariables:     opts.SetVariables,
 		CachePath:        opts.CachePath,
 		IsInteractive:    false,
