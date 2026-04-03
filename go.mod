@@ -22,7 +22,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.1-0.20250417064513-e016d9595f53
 	github.com/distribution/reference v0.6.0
 	github.com/fairwindsops/pluto/v5 v5.22.7
-	github.com/fatih/color v1.18.0
+	github.com/fatih/color v1.19.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.26.0
 	github.com/fluxcd/source-controller/api v1.8.0
