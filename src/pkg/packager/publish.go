@@ -205,7 +205,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		opts.Retries = defaultPublishRetries
 	}
 
-	cachePath, err := utils.GetCachePath(opts.CachePath)
+	cachePath, err := utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return registry.Reference{}, err
 	}

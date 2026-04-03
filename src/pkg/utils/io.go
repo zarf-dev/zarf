@@ -17,9 +17,9 @@ const (
 	tmpPathPrefix = "zarf-"
 )
 
-// GetCachePath returns cachePath if non-empty, otherwise falls back to
+// ResolveCachePath returns cachePath if non-empty, otherwise falls back to
 // filepath.Join(os.UserCacheDir(), "zarf") which respects XDG_CACHE_HOME on Linux.
-func GetCachePath(cachePath string) (string, error) {
+func ResolveCachePath(cachePath string) (string, error) {
 	if cachePath != "" {
 		return cachePath, nil
 	}

@@ -28,7 +28,7 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	}
 
 	var err error
-	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return err
 	}

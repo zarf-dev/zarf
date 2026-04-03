@@ -49,7 +49,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
-	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return "", err
 	}

@@ -14,19 +14,19 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 )
 
-func TestGetCachePath(t *testing.T) {
+func TestResolveCachePath(t *testing.T) {
 	t.Parallel()
 
 	t.Run("non-empty input returns input unchanged", func(t *testing.T) {
 		t.Parallel()
-		result, err := GetCachePath("/custom/cache/path")
+		result, err := ResolveCachePath("/custom/cache/path")
 		require.NoError(t, err)
 		require.Equal(t, "/custom/cache/path", result)
 	})
 
 	t.Run("empty input returns UserCacheDir/zarf", func(t *testing.T) {
 		t.Parallel()
-		result, err := GetCachePath("")
+		result, err := ResolveCachePath("")
 		require.NoError(t, err)
 		expected, err := os.UserCacheDir()
 		require.NoError(t, err)

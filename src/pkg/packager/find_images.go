@@ -86,7 +86,7 @@ type ComponentImageScan struct {
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
 
-	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return nil, err
 	}

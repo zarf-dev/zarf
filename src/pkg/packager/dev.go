@@ -62,7 +62,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
-	opts.CachePath, err = utils.GetCachePath(opts.CachePath)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return err
 	}
