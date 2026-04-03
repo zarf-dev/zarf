@@ -25,7 +25,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.26.0
-	github.com/fluxcd/source-controller/api v1.8.0
+	github.com/fluxcd/source-controller/api v1.8.1
 	github.com/go-git/go-git/v5 v5.17.2
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-cz/devslog v0.0.15
