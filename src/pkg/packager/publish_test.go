@@ -37,18 +37,17 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
+	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts.KeyRef = publicKeyPath
+
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
-		Source:        packageRef,
-		Architecture:  architecture,
-		Filter:        filters.Empty(),
-		RemoteOptions: defaultTestRemoteOptions(),
-		VerifyBlobOptions: func() utils.VerifyBlobOptions {
-			o := utils.DefaultVerifyBlobOptions()
-			o.KeyRef = publicKeyPath
-			return o
-		}(),
-		CachePath: cachePath,
+		Source:            packageRef,
+		Architecture:      architecture,
+		Filter:            filters.Empty(),
+		RemoteOptions:     defaultTestRemoteOptions(),
+		VerifyBlobOptions: verifyOpts,
+		CachePath:         cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)
