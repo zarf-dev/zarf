@@ -57,6 +57,7 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
+	VInitRegistryPort     = "init.registry.port"
 	InjectorPort          = "init.registry.injector_port"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"

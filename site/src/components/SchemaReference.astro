@@ -1,0 +1,217 @@
+---
+const json = await import("../assets/zarf.schema.json");
+const defs = json["$defs"] as Record<string, any>;
+
+// BFS walk from root properties to produce natural reading order.
+interface TypeEntry {
+  name: string;
+  schema: any;
+}
+
+const visited = new Set<string>();
+const typeOrder: TypeEntry[] = [];
+const queue: string[] = [];
+
+function refName(ref: string): string {
+  return ref.replace("#/$defs/", "");
+}
+
+function collectRefs(schema: any) {
+  if (!schema) return;
+  if (schema["$ref"]) {
+    const name = refName(schema["$ref"]);
+    if (!visited.has(name) && defs[name]) {
+      visited.add(name);
+      queue.push(name);
+    }
+  }
+  if (schema.items) {
+    collectRefs(schema.items);
+  }
+  if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
+    collectRefs(schema.additionalProperties);
+  }
+}
+
+const rootProps = json.properties as Record<string, any>;
+for (const key of Object.keys(rootProps)) {
+  collectRefs(rootProps[key]);
+}
+
+while (queue.length > 0) {
+  const name = queue.shift()!;
+  const def = defs[name];
+  typeOrder.push({ name, schema: def });
+  if (def.properties) {
+    for (const key of Object.keys(def.properties)) {
+      collectRefs(def.properties[key]);
+    }
+  }
+}
+
+for (const name of Object.keys(defs)) {
+  if (!visited.has(name)) {
+    typeOrder.push({ name, schema: defs[name] });
+  }
+}
+
+function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sortedFields(schema: any): { keys: string[]; required: Set<string> } {
+  const props = Object.keys(schema.properties || {});
+  const required = new Set<string>(schema.required || []);
+  const keys = props.sort((a, b) => {
+    const reqDiff = (required.has(a) ? 0 : 1) - (required.has(b) ? 0 : 1);
+    return reqDiff !== 0 ? reqDiff : a.localeCompare(b);
+  });
+  return { keys, required };
+}
+
+function typeDisplay(prop: any): string {
+  if (prop["$ref"]) {
+    const name = refName(prop["$ref"]);
+    return `<a href="#${esc(name)}">${esc(name)}</a>`;
+  }
+  if (prop.type === "array" && prop.items) {
+    if (prop.items["$ref"]) {
+      const name = refName(prop.items["$ref"]);
+      return `<a href="#${esc(name)}">[]${esc(name)}</a>`;
+    }
+    return `<span class="field-type">[]${esc(prop.items.type || "object")}</span>`;
+  }
+  if (prop.enum) {
+    return `<span class="field-type">${esc(prop.type || "string")}</span>`;
+  }
+  if (prop.type === "object" && prop.additionalProperties) {
+    const ap = prop.additionalProperties;
+    if (typeof ap === "object" && ap["$ref"]) {
+      const name = refName(ap["$ref"]);
+      return `<span class="field-type">map[string]<a href="#${esc(name)}">${esc(name)}</a></span>`;
+    }
+    const valType = typeof ap === "object" ? ap.type || "object" : "any";
+    return `<span class="field-type">map[string]${esc(valType)}</span>`;
+  }
+  return `<span class="field-type">${esc(prop.type || "object")}</span>`;
+}
+
+function isDeprecated(name: string, description?: string): boolean {
+  if (name.startsWith("Deprecated")) return true;
+  if (description && /^\[?deprecated\]?/i.test(description)) return true;
+  return false;
+}
+
+function renderExtras(prop: any): string {
+  const parts: string[] = [];
+  if (prop.enum) {
+    const vals = prop.enum.map((v: any) => `"${esc(String(v))}"`).join(", ");
+    parts.push(`One of: ${vals}`);
+  }
+  if (prop.default !== undefined) {
+    parts.push(`Default: ${esc(JSON.stringify(prop.default))}`);
+  }
+  if (prop.pattern) {
+    parts.push(`Pattern: <code>${esc(prop.pattern)}</code>`);
+  }
+  if (prop.minItems !== undefined) {
+    parts.push(`Min items: ${esc(String(prop.minItems))}`);
+  }
+  if (prop.examples) {
+    const vals = prop.examples.map((v: any) => `<code>${esc(String(v))}</code>`).join(", ");
+    parts.push(`Examples: ${vals}`);
+  }
+  if (parts.length === 0) return "";
+  return ` <span class="field-extras">— ${parts.join("; ")}</span>`;
+}
+
+function renderField(key: string, prop: any, required: boolean): string {
+  const dep = isDeprecated(key, prop.description);
+  const reqBadge = required ? `<span class="required-badge">, required</span>` : "";
+  const depBadge = dep ? ` <span class="deprecated-badge">deprecated</span>` : "";
+  const extras = renderExtras(prop);
+  const desc = prop.description ? `<p class="field-description">${esc(prop.description)}</p>` : "";
+  return `<li><span class="field-name">${esc(key)}</span> (${typeDisplay(prop)})${reqBadge}${depBadge}${extras}${desc}</li>`;
+}
+
+function renderSection(name: string, schema: any): string {
+  const dep = isDeprecated(name, schema.description);
+  const depBadge = dep ? ` <span class="deprecated-badge">deprecated</span>` : "";
+  const desc = schema.description ? `<p class="type-description">${esc(schema.description)}</p>` : "";
+  const { keys, required } = sortedFields(schema);
+  const fieldHtml =
+    keys.length > 0
+      ? `<ul class="field-list">${keys.map((k) => renderField(k, schema.properties[k], required.has(k))).join("\n")}</ul>`
+      : `<p><em>No fields.</em></p>`;
+  return `<h2 id="${esc(name)}"><a class="heading-link" href="#${esc(name)}">${esc(name)}${depBadge}</a></h2>\n${desc}\n<hr />\n${fieldHtml}`;
+}
+
+const rootRequired = new Set<string>((json.required as string[]) || []);
+const rootSection = renderSection("ZarfPackage", {
+  description: json.description,
+  properties: rootProps,
+  required: [...rootRequired],
+});
+const defSections = typeOrder.map(({ name, schema }) => renderSection(name, schema)).join("\n\n");
+const html = rootSection + "\n\n" + defSections;
+---
+
+<div class="schema-reference" set:html={html} />
+
+<style>
+  .schema-reference :global(h2) {
+    margin-top: 2rem;
+    scroll-margin-top: 4rem;
+  }
+
+  .schema-reference :global(.type-description) {
+    margin-bottom: 0.5rem;
+  }
+
+  .schema-reference :global(.field-list) {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .schema-reference :global(.field-list li) {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+  }
+
+  .schema-reference :global(.field-name) {
+    font-weight: 600;
+    font-family: var(--sl-font-mono, monospace);
+    color: var(--sl-color-white);
+  }
+
+  .schema-reference :global(.deprecated-badge) {
+    display: inline-block;
+    background: var(--sl-color-orange-low);
+    color: var(--sl-color-orange-high);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .schema-reference :global(.field-extras) {
+    color: var(--sl-color-gray-2);
+  }
+
+  .schema-reference :global(.field-description) {
+    margin: 0.15rem 0 0 1rem;
+    white-space: pre-line;
+  }
+
+  .schema-reference :global(a) {
+    color: var(--sl-color-text-accent);
+    text-decoration: underline;
+  }
+</style>

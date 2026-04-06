@@ -107,8 +107,8 @@ func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			state := state.State{
 				RegistryInfo: state.RegistryInfo{
-					Address:  test.expectedRegistryAddress,
-					NodePort: 31997,
+					Address: test.expectedRegistryAddress,
+					Port:    31997,
 				},
 				InjectorInfo: state.InjectorInfo{
 					Port: 31997,

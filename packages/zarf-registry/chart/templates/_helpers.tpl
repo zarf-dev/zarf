@@ -78,6 +78,19 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+Resolve the registry port. Prefers .Values.service.registryPort when it has been
+substituted to a numeric value. Falls back to .Values.service.nodePort for
+backwards compatibility with older Zarf versions that only template ZARF_NODEPORT.
+*/}}
+{{- define "registry.port" -}}
+{{- if gt (atoi (toString .Values.service.registryPort)) 0 -}}
+{{- .Values.service.registryPort -}}
+{{- else -}}
+{{- .Values.service.nodePort -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Determine if host network proxy should be enabled
 */}}
 {{- define "proxy.hostNetwork" -}}
