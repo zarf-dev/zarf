@@ -7,7 +7,9 @@ package transform
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"regexp"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 )
@@ -103,5 +105,13 @@ func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, 
 	}
 
 	output := fmt.Sprintf("%s/%s/%s%s%s", targetBaseURL, pushUser, repoName, matches[idx("git")], matches[idx("gitPath")])
-	return url.Parse(output)
+	parsed, err := url.Parse(output)
+	if err != nil {
+		return nil, err
+	}
+	expectedPrefix := fmt.Sprintf("/%s/%s", pushUser, repoName)
+	if path.Clean(parsed.Path) != parsed.Path || !strings.HasPrefix(parsed.Path, expectedPrefix) {
+		return nil, fmt.Errorf("git URL %q produces path traversal outside expected prefix %q", sourceURL, expectedPrefix)
+	}
+	return parsed, nil
 }

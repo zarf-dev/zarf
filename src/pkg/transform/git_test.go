@@ -5,6 +5,7 @@
 package transform
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -235,5 +236,23 @@ func TestGitURL(t *testing.T) {
 	for _, url := range badGitURLs {
 		_, err := GitURL("https://gitlab.com", url, "repo-owner")
 		require.Error(t, err)
+	}
+}
+
+func TestGitURLPathTraversal(t *testing.T) {
+	t.Parallel()
+	traversalURLs := []string{
+		"https://evil.com/repo.git/info/../../admin/secret-repo/info/refs",
+		"https://evil.com/repo.git/info/../../../target-org/secret-repo/info/refs",
+		"https://attacker.com/decoy.git/info/refs/../../other-repo/info/refs",
+	}
+	for _, u := range traversalURLs {
+		result, err := GitURL("https://internal-git.local", u, "zarf-push")
+		require.NoError(t, err)
+		// If the URL parses, ensure the output path stays under the expected prefix.
+		require.True(t, strings.HasPrefix(result.Path, "/zarf-push/"),
+			"output path %q should stay under /zarf-push/ for input %s", result.Path, u)
+		require.NotContains(t, result.Path, "..",
+			"output path %q should not contain traversal for input %s", result.Path, u)
 	}
 }
