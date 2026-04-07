@@ -73,11 +73,11 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
 		l.Info("creating image SBOM", "reference", refInfo.Reference)
-		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
+		b, err := CreateImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
+		err = CreateSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
 		if err != nil {
 			return err
 		}
@@ -92,19 +92,19 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return err
 		}
-		err = createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
+		err = CreateSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	err = createSBOMCompareAsset(outputPath)
+	err = CreateSBOMCompareAsset(outputPath)
 	if err != nil {
 		return err
 	}
 
-	err = createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
+	err = CreateReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	return nil
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
+func CreateImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, ImagesDir)
 
 	// This is a write cache
@@ -270,12 +270,12 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	return jsonData, nil
 }
 
-func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
+func CreateSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
 	filename := fmt.Sprintf("sbom-viewer-%s.html", getNormalizedFileName(identifier))
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
 }
 
-func createSBOMCompareAsset(outputDir string) error {
+func CreateSBOMCompareAsset(outputDir string) error {
 	return createSBOMHTML(outputDir, "compare.html", "viewer/compare.gohtml", nil, nil)
 }
 
