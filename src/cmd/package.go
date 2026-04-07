@@ -40,7 +40,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -332,21 +331,9 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	// Merge values
 	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
 
-	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
-	}
-
-	// Apply CLI --set-values overrides last
-	for key, val := range o.setValues {
-		p := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			p = value.Path("." + key)
-		}
-		if err := values.Set(p, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
 	}
 
 	cachePath, err := getCachePath(ctx)
@@ -1485,22 +1472,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Parse values from files
-	vals, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := vals.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	filter := filters.Combine(

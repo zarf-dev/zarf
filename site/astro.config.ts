@@ -87,6 +87,11 @@ export default defineConfig({
           collapsed: true,
         },
         {
+          label: "Schema",
+          autogenerate: { directory: "schema" },
+          collapsed: true,
+        },
+        {
           label: "FAQ",
           link: "/faq",
         },
