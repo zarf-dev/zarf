@@ -7,7 +7,6 @@ package transform
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"regexp"
 	"strings"
 
@@ -16,6 +15,19 @@ import (
 
 // For further explanation: https://regex101.com/r/YxpfhC/5
 var gitURLRegex = regexp.MustCompile(`^(?P<proto>[a-z]+:\/\/)(?P<hostPath>.+?)\/(?P<repo>[\w\-\.]+?)?(?P<git>\.git)?(\/)?(?P<atRef>@(?P<force>\+)?(?P<ref>[\/\+\w\-\.]+))?(?P<gitPath>\/(?P<gitPathId>info\/.*|git-upload-pack|git-receive-pack))?$`)
+
+func parseGitURL(rawURL string) (*url.URL, error) {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return nil, err
+	}
+	for _, segment := range strings.Split(parsed.Path, "/") {
+		if segment == ".." {
+			return nil, fmt.Errorf("git URL %q contains path traversal", rawURL)
+		}
+	}
+	return parsed, nil
+}
 
 // MutateGitURLsInText changes the gitURL hostname to use the repository Zarf is configured to use.
 func MutateGitURLsInText(logger Log, targetBaseURL string, text string, pushUser string) string {
@@ -90,6 +102,9 @@ func GitURLtoRepoName(sourceURL string) (string, error) {
 
 // GitURL takes a base URL, a source url and a username and returns a Zarf-compatible url.
 func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, error) {
+	if _, err := parseGitURL(sourceURL); err != nil {
+		return nil, err
+	}
 	repoName, err := GitURLtoRepoName(sourceURL)
 	if err != nil {
 		return nil, err
@@ -105,13 +120,5 @@ func GitURL(targetBaseURL string, sourceURL string, pushUser string) (*url.URL, 
 	}
 
 	output := fmt.Sprintf("%s/%s/%s%s%s", targetBaseURL, pushUser, repoName, matches[idx("git")], matches[idx("gitPath")])
-	parsed, err := url.Parse(output)
-	if err != nil {
-		return nil, err
-	}
-	expectedPrefix := fmt.Sprintf("/%s/%s", pushUser, repoName)
-	if path.Clean(parsed.Path) != parsed.Path || !strings.HasPrefix(parsed.Path, expectedPrefix) {
-		return nil, fmt.Errorf("git URL %q produces path traversal outside expected prefix %q", sourceURL, expectedPrefix)
-	}
-	return parsed, nil
+	return url.Parse(output)
 }
