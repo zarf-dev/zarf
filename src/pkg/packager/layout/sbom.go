@@ -112,6 +112,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	return nil
 }
 
+// CreateImageSBOM is used to generate a syft SBOM for a provided image reference.
 func CreateImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, ImagesDir)
 
@@ -270,11 +271,15 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	return jsonData, nil
 }
 
+// CreateSBOMViewerAsset creates an offline software bill of material html webpage that
+// that can be used to viewed before installing any packages into a cluster.
 func CreateSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
 	filename := fmt.Sprintf("sbom-viewer-%s.html", getNormalizedFileName(identifier))
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
 }
 
+// CreateSBOMCompareAsset creates an offline html webpage used to to compare the all the
+// images and files associated with a package.
 func CreateSBOMCompareAsset(outputDir string) error {
 	return createSBOMHTML(outputDir, "compare.html", "viewer/compare.gohtml", nil, nil)
 }

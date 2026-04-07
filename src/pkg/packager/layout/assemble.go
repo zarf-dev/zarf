@@ -844,6 +844,8 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	return pkg
 }
 
+// GetChecksum takes a directory then creates a sha256 check sum for each files in the
+// directory recursively, then creates a global checksum for all the files together.
 func GetChecksum(dirPath string) (string, string, error) {
 	checksumData := []string{}
 	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
@@ -877,7 +879,10 @@ func GetChecksum(dirPath string) (string, string, error) {
 	return checksumContent, hex.EncodeToString(sha[:]), nil
 }
 
-func CreateReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
+// CreateReproducibleTarballFromDir takes a directory then walks thru every file in that directory and adds it
+// to a tar ball; the reproducible part comes from changing all the file user and group to 0, and settings the
+// file creation, access, and mod time to midnight on January 1st 1970, UTC.
+func CreateReproducibleTarballFromDir(dirPath string, dirPrefix string, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
