@@ -75,7 +75,7 @@ func TestLoadPackage(t *testing.T) {
 		// VerifyNever should skip verification entirely and succeed
 		opt := LoadOptions{
 			VerificationStrategy: layout.VerifyNever,
-			VerifyBlobOptions:    verifyOpts,
+			VerifyBlobOptions:    &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		pkgLayout, err := LoadPackage(ctx, tarPath, opt)
@@ -85,7 +85,7 @@ func TestLoadPackage(t *testing.T) {
 		// VerifyIfPossible should warn but continue on unsigned package
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyIfPossible,
-			VerifyBlobOptions:    verifyOpts,
+			VerifyBlobOptions:    &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		pkgLayout, err = LoadPackage(ctx, tarPath, opt)
@@ -95,7 +95,7 @@ func TestLoadPackage(t *testing.T) {
 		// VerifyAlways should fail on unsigned package
 		opt = LoadOptions{
 			VerificationStrategy: layout.VerifyAlways,
-			VerifyBlobOptions:    verifyOpts,
+			VerifyBlobOptions:    &verifyOpts,
 			Filter:               filters.Empty(),
 		}
 		_, err = LoadPackage(ctx, tarPath, opt)

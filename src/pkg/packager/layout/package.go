@@ -42,7 +42,7 @@ type PackageLayoutOptions struct {
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
-	VerifyBlobOptions    utils.VerifyBlobOptions
+	VerifyBlobOptions    *utils.VerifyBlobOptions
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -111,15 +111,19 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	}
 
 	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
-	verifyOptions := opts.VerifyBlobOptions
-	if opts.PublicKeyPath != "" && verifyOptions.KeyRef == "" {
-		verifyOptions = utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
 	}
 
 	if opts.VerificationStrategy < VerifyNever {
+		verifyOptions := utils.DefaultVerifyBlobOptions()
+		if opts.VerifyBlobOptions != nil {
+			verifyOptions = *opts.VerifyBlobOptions
+		}
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
 			if opts.VerificationStrategy == VerifyIfPossible {

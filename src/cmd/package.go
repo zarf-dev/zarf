@@ -2105,8 +2105,8 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 	return layout.VerifyIfPossible
 }
 
-func verifyBlobOptionsFromKeyPath(keyPath string) utils.VerifyBlobOptions {
+func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
 	opts := utils.DefaultVerifyBlobOptions()
 	opts.KeyRef = keyPath
-	return opts
+	return &opts
 }

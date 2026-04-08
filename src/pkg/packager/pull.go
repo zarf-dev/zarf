@@ -39,7 +39,7 @@ type PullOptions struct {
 	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
 	// VerifyBlobOptions configures package signature verification.
-	VerifyBlobOptions utils.VerifyBlobOptions
+	VerifyBlobOptions *utils.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -72,18 +72,18 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	}
 
 	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
-	verifyOpts := opts.VerifyBlobOptions
-	if opts.PublicKeyPath != "" && verifyOpts.KeyRef == "" {
-		verifyOpts = utils.DefaultVerifyBlobOptions()
-		verifyOpts.KeyRef = opts.PublicKeyPath
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
 	}
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
-		VerifyBlobOptions:    verifyOpts,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -113,7 +113,7 @@ type pullOCIOptions struct {
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
-	VerifyBlobOptions utils.VerifyBlobOptions
+	VerifyBlobOptions *utils.VerifyBlobOptions
 	types.RemoteOptions
 	layout.VerificationStrategy
 }

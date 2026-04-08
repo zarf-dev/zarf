@@ -20,10 +20,10 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func verifyOptsFromKey(keyPath string) utils.VerifyBlobOptions {
+func verifyOptsFromKey(keyPath string) *utils.VerifyBlobOptions {
 	opts := utils.DefaultVerifyBlobOptions()
 	opts.KeyRef = keyPath
-	return opts
+	return &opts
 }
 
 func TestPackageLayout(t *testing.T) {
@@ -1531,6 +1531,34 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		// Empty options - should default to VerifyNever (zero value)
 		opts := PackageLayoutOptions{}
 
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("deprecated PublicKeyPath bridges to VerifyBlobOptions", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        pubKeyPath,
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyBlobOptions takes precedence over deprecated PublicKeyPath", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "./testdata/nonexistent.pub",
+			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+		}
+
+		// Should use VerifyBlobOptions (correct key), not PublicKeyPath (wrong key)
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)

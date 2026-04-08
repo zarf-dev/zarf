@@ -46,7 +46,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 		Architecture:      architecture,
 		Filter:            filters.Empty(),
 		RemoteOptions:     defaultTestRemoteOptions(),
-		VerifyBlobOptions: verifyOpts,
+		VerifyBlobOptions: &verifyOpts,
 		CachePath:         cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)

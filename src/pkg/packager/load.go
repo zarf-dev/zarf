@@ -33,7 +33,7 @@ type LoadOptions struct {
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
-	VerifyBlobOptions utils.VerifyBlobOptions
+	VerifyBlobOptions *utils.VerifyBlobOptions
 	Filter            filters.ComponentFilterStrategy
 	Output            string
 	// number of layers to pull in parallel
@@ -62,11 +62,12 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
-	// Only applies when VerifyBlobOptions.KeyRef is not already set,
+	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
-	if opts.PublicKeyPath != "" && opts.VerifyBlobOptions.KeyRef == "" {
-		opts.VerifyBlobOptions = utils.DefaultVerifyBlobOptions()
-		opts.VerifyBlobOptions.KeyRef = opts.PublicKeyPath
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
 	}
 
 	srcType, err := identifySource(source)
