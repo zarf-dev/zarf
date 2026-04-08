@@ -322,14 +322,15 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if slices.Contains(args, state.AgentKey) {
+		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or remove 'agent' from the service list to skip")
+		}
 		if o.agentTLSCAPath != "" {
 			loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
 			if err != nil {
 				return fmt.Errorf("invalid agent TLS certificates: %w", err)
 			}
 			opts.AgentTLS = &loadedTLS
-		} else if oldState.AgentTLSUserProvided {
-			l.Warn("the current agent TLS certificates were user-provided; running update-creds agent without --agent-tls-* flags will replace them with auto-generated certificates")
 		}
 	}
 
@@ -467,7 +468,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent TLS provenance", "user-provided", newState.AgentTLSUserProvided)
+			l.Info("agent TLS source", "user-provided", newState.AgentTLSUserProvided)
 			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
 			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
@@ -600,7 +601,10 @@ func newGenPKICommand() *cobra.Command {
 }
 
 func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
-	pki, err := pki.GeneratePKIWithDuration(args[0], o.duration, o.subAltNames...)
+	pki, err := pki.GeneratePKIWithOptions(args[0], pki.GenerateOptions{
+		Duration: o.duration,
+		DNSNames: o.subAltNames,
+	})
 	if err != nil {
 		return err
 	}

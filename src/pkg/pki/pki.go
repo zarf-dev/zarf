@@ -48,10 +48,22 @@ func GeneratePKI(host string, dnsNames ...string) (GeneratedPKI, error) {
 	return generatePKI(host, notAfter, dnsNames...)
 }
 
-// GeneratePKIWithDuration creates a CA and signed server keypair with a configurable certificate lifetime.
-func GeneratePKIWithDuration(host string, duration time.Duration, dnsNames ...string) (GeneratedPKI, error) {
+// GenerateOptions configures optional parameters for PKI generation.
+type GenerateOptions struct {
+	// Duration sets the certificate lifetime. Defaults to validFor (375 days) when zero.
+	Duration time.Duration
+	// DNSNames specifies additional Subject Alternative Names for the certificate.
+	DNSNames []string
+}
+
+// GeneratePKIWithOptions creates a CA and signed server keypair with configurable options.
+func GeneratePKIWithOptions(host string, opts GenerateOptions) (GeneratedPKI, error) {
+	duration := opts.Duration
+	if duration == 0 {
+		duration = validFor
+	}
 	notAfter := now().Add(duration)
-	return generatePKI(host, notAfter, dnsNames...)
+	return generatePKI(host, notAfter, opts.DNSNames...)
 }
 
 func generatePKI(host string, notAfter time.Time, dnsNames ...string) (GeneratedPKI, error) {
@@ -286,8 +298,8 @@ func generateClientCert(commonName string, ca *x509.Certificate, caKey *rsa.Priv
 	return generateTypedCert(CertTypeClient, commonName, ca, caKey, notAfter)
 }
 
-// parseCertFromPEM parses a certificate from PEM data
-func parseCertFromPEM(certData []byte) (*x509.Certificate, error) {
+// ParseCertFromPEM parses a certificate from PEM data.
+func ParseCertFromPEM(certData []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(certData)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode pem data")
@@ -303,7 +315,7 @@ func parseCertFromPEM(certData []byte) (*x509.Certificate, error) {
 
 // GetRemainingCertLifePercentage gives back the percentage of the given certificates total lifespan that it has left before it's expired
 func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
-	cert, err := parseCertFromPEM(certData)
+	cert, err := ParseCertFromPEM(certData)
 	if err != nil {
 		return 0, err
 	}
@@ -323,7 +335,7 @@ func GetRemainingCertLifePercentage(certData []byte) (float64, error) {
 
 // CheckForExpiredCert checks if the certificate is expired
 func CheckForExpiredCert(ctx context.Context, pk GeneratedPKI) error {
-	cert, err := parseCertFromPEM(pk.Cert)
+	cert, err := ParseCertFromPEM(pk.Cert)
 	if err != nil {
 		return err
 	}
@@ -374,25 +386,6 @@ func GenerateMTLSCerts(caSubject string, serverDNSNames []string, serverCommonNa
 	}
 
 	return serverPKI, clientPKI, nil
-}
-
-// ValidateCertSAN checks that the given PEM-encoded certificate contains the required SAN.
-func ValidateCertSAN(certPEM []byte, requiredSAN string) error {
-	cert, err := parseCertFromPEM(certPEM)
-	if err != nil {
-		return fmt.Errorf("failed to parse certificate for SAN validation: %w", err)
-	}
-	for _, dns := range cert.DNSNames {
-		if dns == requiredSAN {
-			return nil
-		}
-	}
-	for _, ip := range cert.IPAddresses {
-		if ip.String() == requiredSAN {
-			return nil
-		}
-	}
-	return fmt.Errorf("certificate does not contain required SAN %q; found DNS SANs: %v, IP SANs: %v", requiredSAN, cert.DNSNames, cert.IPAddresses)
 }
 
 // TransportWithKey creates an HTTP transport configured with mTLS certificates.

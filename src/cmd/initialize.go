@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"os"
@@ -385,8 +386,19 @@ func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI
 	if _, err := tls.X509KeyPair(cert, key); err != nil {
 		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS cert and key do not match: %w", err)
 	}
-	if err := pki.ValidateCertSAN(cert, state.ZarfAgentHost); err != nil {
-		return pki.GeneratedPKI{}, err
+	parsed, err := pki.ParseCertFromPEM(cert)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse agent TLS certificate: %w", err)
+	}
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(ca) {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
+	}
+	if _, err := parsed.Verify(x509.VerifyOptions{
+		Roots:   caPool,
+		DNSName: state.ZarfAgentHost,
+	}); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS certificate failed validation: %w", err)
 	}
 	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
