@@ -196,7 +196,7 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"nginx:1.25.0",
+						"docker.io/library/nginx:1.25.0",
 					},
 				},
 			},
@@ -216,7 +216,7 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"nginx:1.24.0",
+						"docker.io/library/nginx:1.24.0",
 					},
 				},
 			},
@@ -236,7 +236,7 @@ func TestFindImages(t *testing.T) {
 				{
 					ComponentName: "baseline",
 					Matches: []string{
-						"nginx:2.0.0",
+						"docker.io/library/nginx:2.0.0",
 					},
 				},
 			},
