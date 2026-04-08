@@ -134,7 +134,8 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 	}
 
 	if opts.SBOMOut != "" {
-		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, pkgLayout.Pkg.Metadata.Name))
+		// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+		err := pkgLayout.GetSBOM(ctx, filepath.Join(opts.SBOMOut, filepath.Base(pkgLayout.Pkg.Metadata.Name)))
 		// Don't fail package create if the package doesn't have an sbom
 		var noSBOMErr *layout.NoSBOMAvailableError
 		if errors.As(err, &noSBOMErr) {

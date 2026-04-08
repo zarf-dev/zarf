@@ -1032,7 +1032,8 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath := filepath.Join(o.outputDir, pkgLayout.Pkg.Metadata.Name)
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Pkg.Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
@@ -1215,8 +1216,8 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-
-	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Pkg.Metadata.Name)))
 	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
