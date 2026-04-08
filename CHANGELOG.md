@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.74.2](https://github.com/zarf-dev/zarf/compare/v0.74.1...v0.74.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* git host matching ([#4801](https://github.com/zarf-dev/zarf/issues/4801)) ([20bead2](https://github.com/zarf-dev/zarf/commit/20bead2738e98835767020e5f94dc6c78b46b082))
+* sanitize inspect output path ([#4793](https://github.com/zarf-dev/zarf/issues/4793)) ([abd00af](https://github.com/zarf-dev/zarf/commit/abd00afc217eeb2b99af8aa69dbde592f9b21621))
+
 ## [0.74.1](https://github.com/zarf-dev/zarf/compare/v0.74.0...v0.74.1) (2026-04-02)
 
 
