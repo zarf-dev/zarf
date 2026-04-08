@@ -640,6 +640,8 @@ func (p *PackageLayout) FileName() (string, error) {
 		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
 	}
 
+	name = filepath.Base(name)
+
 	if p.Pkg.Metadata.Uncompressed {
 		return name + ".tar", nil
 	}
