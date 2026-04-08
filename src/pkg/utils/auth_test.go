@@ -104,6 +104,30 @@ func TestMatchCredential(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name: "host with port matches credential with same port",
+			url:  "https://registry.example.com:5000/repo",
+			creds: []Credential{
+				{Path: "registry.example.com:5000", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: &Credential{Path: "registry.example.com:5000", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+		},
+		{
+			name: "host with port does not match credential without port",
+			url:  "https://registry.example.com:5000/repo",
+			creds: []Credential{
+				{Path: "registry.example.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "host without port does not match credential with port",
+			url:  "https://registry.example.com/repo",
+			creds: []Credential{
+				{Path: "registry.example.com:5000", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {
