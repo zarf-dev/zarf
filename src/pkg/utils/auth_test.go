@@ -54,6 +54,74 @@ http://google.com`
 	require.Equal(t, expectedCreds, gitCredentials)
 }
 
+func TestMatchCredential(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		url      string
+		creds    []Credential
+		expected *Credential
+	}{
+		{
+			name: "exact host match",
+			url:  "https://github.com/repo.git",
+			creds: []Credential{
+				{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: &Credential{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+		},
+		{
+			name: "host in path does not match",
+			url:  "https://evil.com/github.com/repo.git",
+			creds: []Credential{
+				{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "host as subdomain prefix does not match",
+			url:  "https://github.com.evil.com/repo.git",
+			creds: []Credential{
+				{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: nil,
+		},
+		{
+			name: "unrelated host falls through to default",
+			url:  "https://example.com/repo.git",
+			creds: []Credential{
+				{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+				{Path: "", Auth: http.BasicAuth{Username: "anonymous", Password: "pass"}},
+			},
+			expected: &Credential{Path: "", Auth: http.BasicAuth{Username: "anonymous", Password: "pass"}},
+		},
+		{
+			name: "no match and no default",
+			url:  "https://example.com/repo.git",
+			creds: []Credential{
+				{Path: "github.com", Auth: http.BasicAuth{Username: "user", Password: "token"}},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := matchCredential(tt.url, tt.creds)
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMatchCredentialInvalidURL(t *testing.T) {
+	t.Parallel()
+	_, err := matchCredential("://invalid", nil)
+	require.Error(t, err)
+}
+
 func TestNetRCParser(t *testing.T) {
 	t.Parallel()
 
