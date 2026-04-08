@@ -1922,9 +1922,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// To prevent a warning for package not being signed - we'll only run verification when enforced
 	if signed {
 		if o.verify {
-			verifyOpts := utils.VerifyBlobOptions{}
-			verifyOpts.KeyRef = o.publicKeyPath
-			err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+			verifyOpts := verifyBlobOptionsFromKeyPath(o.publicKeyPath)
+			err = pkgLayout.VerifyPackageSignature(ctx, *verifyOpts)
 			if err != nil {
 				return err
 			}
