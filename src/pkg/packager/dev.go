@@ -69,10 +69,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SkipVersionCheck: opts.SkipVersionCheck,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	result, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
+	pkg := result.Package
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
@@ -99,7 +100,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		OCIConcurrency:    opts.OCIConcurrency,
 		CachePath:         opts.CachePath,
 	}
-	pkgLayout, err := layout.AssemblePackage(ctx, pkg, packagePath, createOpts)
+	pkgLayout, err := layout.AssemblePackage(ctx, pkg, result.ImportValues, packagePath, createOpts)
 	if err != nil {
 		return err
 	}
