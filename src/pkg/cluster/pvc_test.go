@@ -34,19 +34,19 @@ func TestUpdateGiteaPVC(t *testing.T) {
 
 	v, err := c.UpdateGiteaPVC(ctx, "foobar", false)
 	require.NoError(t, err)
-	require.Equal(t, "false", v)
+	require.True(t, v)
 
 	v, err = c.UpdateGiteaPVC(ctx, "foobar", true)
-	require.EqualError(t, err, "persistentvolumeclaims \"foobar\" not found")
-	require.Equal(t, "false", v)
+	require.EqualError(t, err, "cannot rollback Gitea PVC \"foobar\": resource does not exist")
+	require.False(t, v)
 
 	v, err = c.UpdateGiteaPVC(ctx, "data-zarf-gitea-0", true)
 	require.NoError(t, err)
-	require.Equal(t, "false", v)
+	require.False(t, v)
 
 	v, err = c.UpdateGiteaPVC(ctx, "data-zarf-gitea-0", false)
 	require.NoError(t, err)
-	require.Equal(t, "true", v)
+	require.False(t, v)
 	pvc, err = c.Clientset.CoreV1().PersistentVolumeClaims(state.ZarfNamespaceName).Get(ctx, "data-zarf-gitea-0", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Equal(t, "Helm", pvc.Labels["app.kubernetes.io/managed-by"])
@@ -55,7 +55,7 @@ func TestUpdateGiteaPVC(t *testing.T) {
 
 	v, err = c.UpdateGiteaPVC(ctx, "data-zarf-gitea-0", true)
 	require.NoError(t, err)
-	require.Equal(t, "false", v)
+	require.False(t, v)
 	pvc, err = c.Clientset.CoreV1().PersistentVolumeClaims(state.ZarfNamespaceName).Get(ctx, "data-zarf-gitea-0", metav1.GetOptions{})
 	require.NoError(t, err)
 	require.Empty(t, pvc.Labels["app.kubernetes.io/managed-by"])
