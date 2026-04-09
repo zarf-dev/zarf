@@ -175,18 +175,7 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			expectLabel: true,
 		},
 		{
-			name: "Pod gets label but has no template",
-			obj: &unstructured.Unstructured{Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"name": "test-pod",
-				},
-			}},
-			expectLabel: true,
-		},
-		{
-			name: "Secret gets label",
+			name: "Secret gets label even with no existing labels",
 			obj: &unstructured.Unstructured{Object: map[string]interface{}{
 				"apiVersion": "v1",
 				"kind":       "Secret",
@@ -250,7 +239,7 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			expectLabel: true,
 		},
 		{
-			name: "GitRepository (Flux) gets label",
+			name: "GitRepository (Flux) gets label even with no existing labels",
 			obj: &unstructured.Unstructured{Object: map[string]interface{}{
 				"apiVersion": "source.toolkit.fluxcd.io/v1",
 				"kind":       "GitRepository",
@@ -297,6 +286,36 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 							},
 						},
 					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Deployment with spec.template.metadata but no labels key creates labels",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deploy-no-labels-key",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{},
+					},
+				},
+			}},
+			expectLabel: true,
+		},
+		{
+			name: "Deployment with spec.template but no metadata key creates labels",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "apps/v1",
+				"kind":       "Deployment",
+				"metadata": map[string]interface{}{
+					"name": "test-deploy-no-metadata",
+				},
+				"spec": map[string]interface{}{
+					"template": map[string]interface{}{},
 				},
 			}},
 			expectLabel: true,
