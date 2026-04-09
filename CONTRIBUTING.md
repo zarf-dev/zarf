@@ -2,7 +2,7 @@
 
 First off, thanks so much for wanting to help out! :tada:
 
-This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA). The doc also details a bit about the governance structure of the project.
+This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf! If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3). The doc also details a bit about the governance structure of the project.
 
 ## Developer Experience
 
@@ -38,13 +38,12 @@ Zarf is a tool used within the United States Government and as such security is 
 :key: == Required by automation
 
 1. Look at the next due [release milestone](https://github.com/zarf-dev/zarf/milestones) and pick an issue that you want to work on. If you don't see anything that interests you, create an issue and assign it to yourself.
-1. Drop a comment in the issue to let everyone know you're working on it and submit a Draft PR (step 4) as soon as you are able. If you have any questions as you work through the code, reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+1. Drop a comment in the issue to let everyone know you're working on it and submit a Draft PR (step 4) as soon as you are able. If you have any questions as you work through the code, reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
    - Example: `git commit -s -m "fix: add missing newline"`
 1. Create a Draft Pull Request as soon as you can, even if it is just 5 minutes after you started working on it. We lean towards working in the open as much as we can. If you're not sure what to put in the PR description, just put a link to the issue you're working on.
-
    - :key: We follow the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/) with the [commitlint conventional config](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional) as extended types for PR titles.
 
 1. :key: Automated tests will begin based on the paths you have edited in your Pull Request.
@@ -68,6 +67,7 @@ The CLI docs (located at `site/src/content/docs/commands`), and [`zarf.schema.js
 We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 
 ## Examples
+
 Zarf maintains a gallery of different examples to give users living documentation on real-life Zarf use cases.
 Contributions are highly welcome. When adding an example, be sure to also add it to the [make target](https://github.com/zarf-dev/zarf/blob/main/Makefile#L152) `build-examples`.
 
@@ -80,24 +80,30 @@ ZEPs replace Architecture Decision Records (ADRs) which are kept at the base of 
 ## Governance
 
 ### Technical Steering Committee
+
 The Technical Steering Committee (the "TSC") will be responsible for all technical oversight of the project. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and will serve until their resignation or replacement by the TSC. Current members of the TSC include:
 
 #### Austin Abro
+
 Affiliation: Defense Unicorns
 GitHub: @AustinAbro321
 
 #### Brandt Keller
+
 Affiliation: Defense Unicorns
 GitHub: @brandtkeller
 
 #### Danny Gershman
+
 Affiliation: Radius Method
 GitHub: @dgershman
 
 #### Jeff McCoy (TSC Chair)
+
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
 #### Wayne Starr
+
 Affiliation: Defense Unicorns
 GitHub: @Racer159
