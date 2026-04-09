@@ -534,6 +534,17 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// WithPackageConnectivity sets the connectivity mode for the deployed package
+func WithPackageConnectivity(connected bool) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		if connected {
+			o.PackageConnectivity = PackageConnectivityConnected
+		} else {
+			o.PackageConnectivity = PackageConnectivityAirGap
+		}
+	}
+}
+
 // PackageConnectivity defines the connectivity mode of package deployments
 type PackageConnectivity string
 
