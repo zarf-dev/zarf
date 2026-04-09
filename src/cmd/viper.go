@@ -125,6 +125,10 @@ const (
 
 	VPkgRemoveSetValues = "package.remove.set_values"
 
+	// Package deploy config keys
+
+	VPkgDeployConnected = "package.deploy.connected"
+
 	// Dev deploy config keys
 
 	VDevDeployNoYolo    = "dev.deploy.no_yolo"

@@ -278,7 +278,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
-	cmd.Flags().BoolVar(&o.connected, "connected", false, lang.CmdPackageDeployFlagConnected)
+	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
