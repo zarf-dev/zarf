@@ -1,0 +1,15 @@
+kind: ZarfPackageConfig
+metadata:
+  name: values-options-test
+  version: 1.0.0
+components:
+  - name: baseline
+    required: true
+    charts:
+      - name: values-chart
+        version: 0.1.0
+        namespace: default
+        localPath: chart
+        values:
+          - sourcePath: ".config.tag"
+            targetPath: ".image.tag"

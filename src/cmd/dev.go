@@ -39,6 +39,24 @@ import (
 
 var defaultRegistry = fmt.Sprintf("%s:%d", helpers.IPV4Localhost, state.ZarfInClusterContainerRegistryNodePort)
 
+// parseValues parses values from file paths and applies set-values overrides on top.
+func parseValues(ctx context.Context, valuesFiles []string, setValues map[string]string) (value.Values, error) {
+	values, err := value.ParseFiles(ctx, valuesFiles, value.ParseFilesOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse values files: %w", err)
+	}
+	for key, val := range setValues {
+		path := value.Path(key)
+		if !strings.HasPrefix(key, ".") {
+			path = value.Path("." + key)
+		}
+		if err := values.Set(path, val); err != nil {
+			return nil, fmt.Errorf("unable to set value at path %s: %w", key, err)
+		}
+	}
+	return values, nil
+}
+
 func newDevCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "dev",
@@ -176,23 +194,9 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		return err
 	}
 
-	// Parse values from files
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		// Update values entry
-		if err := values.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
@@ -284,23 +288,9 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		return err
 	}
 
-	// Parse values from files
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		// Update values entry
-		if err := values.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	opts := packager.InspectDefinitionResourcesOptions{
@@ -680,6 +670,8 @@ type devFindImagesOptions struct {
 	createSetPkgTmpl    map[string]string
 	flavor              string
 	deploySetVariables  map[string]string
+	valuesFiles         []string
+	setValues           map[string]string
 	kubeVersionOverride string
 	why                 string
 	skipCosign          bool
@@ -716,6 +708,8 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set", v.GetStringMapString(VPkgDeploySet), "Alias for --deploy-set-variables")
 	_ = cmd.Flags().MarkDeprecated("deploy-set", "Use --deploy-set-variables instead")
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVar(&o.valuesFiles, "values", []string{}, lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	// allow for the override of the default helm KubeVersion
 	cmd.Flags().StringVar(&o.kubeVersionOverride, "kube-version", "", lang.CmdDevFlagKubeVersion)
 	// check which manifests are using this particular image
@@ -740,8 +734,15 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
 
 	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
 	}
@@ -752,6 +753,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		KubeVersionOverride: o.kubeVersionOverride,
 		CreateSetVariables:  o.createSetPkgTmpl,
 		DeploySetVariables:  o.deploySetVariables,
+		Values:              values,
 		Flavor:              o.flavor,
 		Why:                 o.why,
 		SkipCosign:          o.skipCosign,

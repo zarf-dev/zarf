@@ -20,12 +20,12 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/context/docker"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/moby/moby/client"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -324,10 +324,10 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	if err != nil {
 		return nil, err
 	}
-	cli, err := client.NewClientWithOpts(
+	cli, err := client.New(
 		client.WithHost(dockerEndPointHost),
 		client.WithTLSClientConfigFromEnv(),
-		client.WithVersionFromEnv(),
+		client.WithAPIVersionFromEnv(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)

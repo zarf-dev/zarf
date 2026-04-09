@@ -23,10 +23,10 @@ spec:
       containers:
         - args:
           {{ if .Values.ipv6Only }}
-            - TCP6-LISTEN:{{ .Values.service.nodePort }},bind=[::1],reuseaddr,fork
+            - TCP6-LISTEN:{{ include "registry.port" . }},bind=[::1],reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- else }}
-            - TCP4-LISTEN:{{ .Values.service.nodePort }},reuseaddr,fork
+            - TCP4-LISTEN:{{ include "registry.port" . }},reuseaddr,fork
             - OPENSSL:{{ template "docker-registry.fullname" . }}:5000,cert=/certs/client/tls.crt,key=/certs/client/tls.key,cafile=/certs/client/ca.crt,verify=1
           {{- end }}
           image: "{{ .Values.proxy.image.repository }}:{{ .Values.proxy.image.tag }}"
@@ -37,9 +37,9 @@ spec:
             mountPath: /certs/client
             readOnly: true
           ports:
-            - containerPort: {{ .Values.service.nodePort }}
+            - containerPort: {{ include "registry.port" . }}
             {{- if eq (include "proxy.hostNetwork" .) "false" }}
-              hostPort: {{ .Values.service.nodePort }}
+              hostPort: {{ include "registry.port" . }}
               hostIP: "127.0.0.1"
             {{- end }}
           resources:

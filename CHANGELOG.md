@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.74.2](https://github.com/zarf-dev/zarf/compare/v0.74.1...v0.74.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* git host matching ([#4801](https://github.com/zarf-dev/zarf/issues/4801)) ([20bead2](https://github.com/zarf-dev/zarf/commit/20bead2738e98835767020e5f94dc6c78b46b082))
+* sanitize inspect output path ([#4793](https://github.com/zarf-dev/zarf/issues/4793)) ([abd00af](https://github.com/zarf-dev/zarf/commit/abd00afc217eeb2b99af8aa69dbde592f9b21621))
+
+## [0.74.1](https://github.com/zarf-dev/zarf/compare/v0.74.0...v0.74.1) (2026-04-02)
+
+
+### Features
+
+* enable plugin support for vender-ed kubectl ([#4705](https://github.com/zarf-dev/zarf/issues/4705)) ([d812a6b](https://github.com/zarf-dev/zarf/commit/d812a6b5d28645cc5f9ac509dd38c96c8848c7d1))
+* introduce page for schema on docs site ([#4732](https://github.com/zarf-dev/zarf/issues/4732)) ([1d193d0](https://github.com/zarf-dev/zarf/commit/1d193d00cab99c2f752ca54627692acc695550f6))
+* **state:** deprecate "nodeport" in registry info in favor of "node" ([#4729](https://github.com/zarf-dev/zarf/issues/4729)) ([c8dd855](https://github.com/zarf-dev/zarf/commit/c8dd855cb3e3a80bdf24fac8f345ffc72c62be80))
+
+
+### Bug Fixes
+
+* **cache:** sbom cachepath existence ([#4762](https://github.com/zarf-dev/zarf/issues/4762)) ([8785473](https://github.com/zarf-dev/zarf/commit/8785473580b269a242955eb435973588d07ba6e1))
+* set transport in `zarf tools registry catalog` when mtls is enabled ([#4728](https://github.com/zarf-dev/zarf/issues/4728)) ([b8e38ec](https://github.com/zarf-dev/zarf/commit/b8e38ecfc4f6beb5af90da448610709e75c1b62c))
+* values with zarf dev find-images ([#4734](https://github.com/zarf-dev/zarf/issues/4734)) ([78b7202](https://github.com/zarf-dev/zarf/commit/78b7202b41d909b520d606973708aaf033c6006b))
+
 ## [0.74.0](https://github.com/zarf-dev/zarf/compare/v0.73.1...v0.74.0) (2026-03-19)
 
 

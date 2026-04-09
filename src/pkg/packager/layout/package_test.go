@@ -177,6 +177,19 @@ func TestPackageFileName(t *testing.T) {
 			expected: "zarf-package-my-package-amd64-v0.55.4-upstream.tar.zst",
 		},
 		{
+			name: "path traversal in name is sanitized",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "../../evil",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+				},
+			},
+			expected: "evil-amd64.tar.zst",
+		},
+		{
 			name: "uncompressed",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
