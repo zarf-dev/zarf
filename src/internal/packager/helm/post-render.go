@@ -363,6 +363,13 @@ func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
 	if !ok {
 		return nil
 	}
+	// The webhook only mutates Secrets with the ArgoCD repository label, skip all others
+	if obj.GetKind() == "Secret" {
+		labels := obj.GetLabels()
+		if labels["argocd.argoproj.io/secret-type"] != "repository" {
+			return nil
+		}
+	}
 
 	for _, path := range labelPaths {
 		labels, found, err := unstructured.NestedStringMap(obj.Object, path...)

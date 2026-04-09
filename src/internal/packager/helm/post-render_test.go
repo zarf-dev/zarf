@@ -175,15 +175,29 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 			expectLabel: true,
 		},
 		{
-			name: "Secret gets label even with no existing labels",
+			name: "ArgoCD repository secret gets label",
 			obj: &unstructured.Unstructured{Object: map[string]interface{}{
 				"apiVersion": "v1",
 				"kind":       "Secret",
 				"metadata": map[string]interface{}{
-					"name": "test-secret",
+					"name": "test-argocd-repo",
+					"labels": map[string]interface{}{
+						"argocd.argoproj.io/secret-type": "repository",
+					},
 				},
 			}},
 			expectLabel: true,
+		},
+		{
+			name: "Non-ArgoCD secret is not labeled",
+			obj: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Secret",
+				"metadata": map[string]interface{}{
+					"name": "test-tls-secret",
+				},
+			}},
+			expectLabel: false,
 		},
 		{
 			name: "ConfigMap is not an agent-mutated kind, no label",
