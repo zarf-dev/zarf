@@ -21,7 +21,7 @@ import (
 func TestPushPackage(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	registryRef := createRegistry(t, ctx)
+	registryRef := createRegistry(ctx, t)
 
 	tmpdir := t.TempDir()
 	packagePath, err := packager.Create(ctx, "testdata/basic", tmpdir, packager.CreateOptions{CachePath: tmpdir, SkipSBOM: true})
