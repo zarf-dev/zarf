@@ -72,7 +72,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
-			LayersSelector: zoci.MetadataLayers,
+			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
 			OCIConcurrency: opts.OCIConcurrency,
 			CachePath:      opts.CachePath,
 		})

@@ -341,11 +341,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -405,15 +414,16 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	// filter after confirmation to allow users to view the entire package interactively
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return nil, err
+	// In the interactive case we wait until after the component prompt to filter
+	if opts.IsInteractive {
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents, true),
+		)
+		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -792,7 +802,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -907,7 +917,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1018,7 +1028,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 		Architecture:         config.GetArch(),
 		PublicKeyPath:        o.publicKeyPath,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.SbomLayers,
+		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1207,7 +1217,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.DocLayers,
+		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -2006,7 +2016,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.MetadataLayers,
+		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
