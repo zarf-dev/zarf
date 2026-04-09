@@ -323,7 +323,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 
 	if slices.Contains(args, state.AgentKey) {
 		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
-			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or remove 'agent' from the service list to skip")
+			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or explicitly define service list without `agent`")
 		}
 		if o.agentTLSCAPath != "" {
 			loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
