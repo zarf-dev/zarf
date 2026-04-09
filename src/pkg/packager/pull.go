@@ -139,7 +139,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 
 	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
 	layerTypes := opts.LayerTypes
-	if shouldExcludeImages(opts.Connected, desc.Platform) {
+	if opts.Connected || isSkeleton(desc.Platform) {
 		if len(layerTypes) == 0 {
 			layerTypes = zoci.GetAllLayerTypes()
 		}
@@ -274,10 +274,6 @@ func supportsFiltering(platform *ocispec.Platform) bool {
 		return false
 	}
 	return true
-}
-
-func shouldExcludeImages(connected bool, platform *ocispec.Platform) bool {
-	return connected || isSkeleton(platform)
 }
 
 // isSkeleton checks if the package is explicitly a skeleton package.
