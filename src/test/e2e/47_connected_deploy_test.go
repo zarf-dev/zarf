@@ -101,6 +101,10 @@ func TestYOLOMode(t *testing.T) {
 	require.NoError(t, err, resp)
 	require.Equal(t, 200, resp.StatusCode)
 
+	deployedPkg, err := c.GetDeployedPackage(t.Context(), "yolo")
+	require.NoError(t, err)
+	require.Equal(t, state.PackageConnectivityConnected, deployedPkg.GetPackageConnectivity(), "YOLO package should be recorded as connected")
+
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "yolo", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
