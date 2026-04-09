@@ -725,7 +725,7 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
 	}
-	if connected && s.GetClusterMode() != state.ClusterConnectivityConnected {
+	if connected && s.GetClusterConnectivity() != state.ClusterConnectivityConnected {
 		l.Info("This is a connected or YOLO deploy, but the cluster was already initialized with 'zarf init'. " +
 			"Zarf will automatically add the label `zarf.dev/agent: ignore' to relevant resources, but resources deployed indirectly, " +
 			"for instance through gitops, should set this label")

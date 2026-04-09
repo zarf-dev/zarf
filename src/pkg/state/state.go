@@ -137,9 +137,9 @@ type State struct {
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
-// GetClusterMode returns the Zarf cluster mode.
+// GetClusterConnectivity returns the Zarf cluster mode.
 // Assumes airgap mode if this is not set.
-func (s State) GetClusterMode() ClusterConnectivity {
+func (s State) GetClusterConnectivity() ClusterConnectivity {
 	if s.ClusterConnectivity == "" {
 		return ClusterConnectivityAirgap
 	}
