@@ -38,8 +38,11 @@ $ zarf init --components=git-server
 # Initializing w/ Zarfs with a custom init package:
 $ zarf init oci://ghcr.io/zarf-dev/packages/init:v0.69.0
 
+# Initializing w/ an internal registry in proxy mode for built-in cross-node mTLS:
+$ zarf init --registry-mode=proxy
+
 # Initializing w/ an internal registry but with a different nodeport:
-$ zarf init --nodeport=30333
+$ zarf init --registry-port=30333
 
 # Initializing w/ an external registry:
 $ zarf init --registry-push-password={PASSWORD} --registry-push-username={USERNAME} --registry-url={URL}
@@ -63,21 +66,23 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
       --components string               Specify which optional components to install.  E.g. --components=git-server
   -c, --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --force-conflicts                 Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
-      --injector-port int               the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
+      --injector-port int               The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
   -k, --key string                      Path to public key file for validating signed packages
-      --nodeport int                    Nodeport to access a registry internal to the k8s cluster. Between [30000-32767]
       --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --registry-mode string            How to access the registry (valid values: nodeport, proxy, external). Proxy mode is an alpha feature
+      --registry-port int               Port to access the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port
       --registry-pull-password string   Password for the pull-only user to access the registry
       --registry-pull-username string   Username for pull-only access to the registry
       --registry-push-password string   Password for the push-user to connect to the registry
       --registry-push-username string   Username to access to the registry Zarf is configured to use
-      --registry-secret string          Registry secret value
+      --registry-secret string          Internal registry secret value. Only used when --registry-url is not set.
       --registry-url string             External registry url address to use for this Zarf cluster
       --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set-variables stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])

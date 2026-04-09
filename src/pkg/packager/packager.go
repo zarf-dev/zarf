@@ -7,6 +7,7 @@ package packager
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -24,6 +25,24 @@ func getPopulatedVariableConfig(ctx context.Context, pkg v1alpha1.ZarfPackage, s
 		return nil, err
 	}
 	return variableConfig, nil
+}
+
+// loadPackageValues loads values from the package definition's value files and merges CLI-provided overrides on top.
+func loadPackageValues(ctx context.Context, pkg v1alpha1.ZarfPackage, baseDir string, overrides value.Values) (value.Values, error) {
+	vals := value.Values{}
+	if len(pkg.Values.Files) > 0 {
+		valuesPaths := make([]string, len(pkg.Values.Files))
+		for i, file := range pkg.Values.Files {
+			valuesPaths[i] = filepath.Join(baseDir, file)
+		}
+		var err error
+		vals, err = value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse package values files: %w", err)
+		}
+	}
+	vals.DeepMerge(overrides)
+	return vals, nil
 }
 
 type overrideOpts struct {
@@ -86,7 +105,7 @@ func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, compon
 }
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace
-func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error {
+func OverridePackageNamespace(pkg *v1alpha1.ZarfPackage, namespace string) error {
 	if !pkg.AllowsNamespaceOverride() {
 		return fmt.Errorf("cannot override package namespace, metadata.allowNamespaceOverride is false")
 	}
@@ -94,9 +113,49 @@ func OverridePackageNamespace(pkg v1alpha1.ZarfPackage, namespace string) error 
 	if pkg.Kind != v1alpha1.ZarfPackageConfig {
 		return fmt.Errorf("package kind is not a ZarfPackageConfig, cannot override namespace")
 	}
-	if count := pkg.UniqueNamespaceCount(); count > 1 {
-		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", count)
+	namespaces := pkg.UniqueNamespaces()
+	if len(namespaces) > 1 {
+		return fmt.Errorf("package contains %d unique namespaces, cannot override namespace", len(namespaces))
 	}
-	pkg.UpdateAllComponentNamespaces(namespace)
+	// set a default empty namespace (which is valid in the manifest)
+	originalNamespace := ""
+	if len(namespaces) == 1 {
+		originalNamespace = namespaces[0]
+	}
+	overrideComponentNamespaces(pkg, originalNamespace, namespace)
 	return nil
+}
+
+// overrideComponentNamespaces overrides the chart/manifest/wait-action namespaces from an original to a target
+func overrideComponentNamespaces(pkg *v1alpha1.ZarfPackage, original, target string) {
+	for i := range pkg.Components {
+		for j := range pkg.Components[i].Charts {
+			if pkg.Components[i].Charts[j].Namespace == original {
+				pkg.Components[i].Charts[j].Namespace = target
+			}
+		}
+		for k := range pkg.Components[i].Manifests {
+			if pkg.Components[i].Manifests[k].Namespace == original {
+				pkg.Components[i].Manifests[k].Namespace = target
+			}
+		}
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnCreate, original, target)
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnDeploy, original, target)
+		overrideActionSetWaitNamespaces(&pkg.Components[i].Actions.OnRemove, original, target)
+	}
+}
+
+func overrideActionSetWaitNamespaces(set *v1alpha1.ZarfComponentActionSet, original, target string) {
+	overrideActionWaitNamespaces(set.Before, original, target)
+	overrideActionWaitNamespaces(set.After, original, target)
+	overrideActionWaitNamespaces(set.OnSuccess, original, target)
+	overrideActionWaitNamespaces(set.OnFailure, original, target)
+}
+
+func overrideActionWaitNamespaces(actions []v1alpha1.ZarfComponentAction, original, target string) {
+	for i := range actions {
+		if actions[i].Wait != nil && actions[i].Wait.Cluster != nil && actions[i].Wait.Cluster.Namespace == original {
+			actions[i].Wait.Cluster.Namespace = target
+		}
+	}
 }

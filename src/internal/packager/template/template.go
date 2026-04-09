@@ -57,7 +57,8 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 			// Registry info
 			"REGISTRY":           regInfo.Address,
-			"NODEPORT":           fmt.Sprintf("%d", regInfo.NodePort),
+			"NODEPORT":           fmt.Sprintf("%d", regInfo.Port),
+			"REGISTRY_PORT":      fmt.Sprintf("%d", regInfo.Port),
 			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
 			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 

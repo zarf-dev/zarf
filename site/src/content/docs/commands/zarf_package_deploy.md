@@ -26,6 +26,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --components string              Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
   -c, --confirm                        Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
       --connected                      Deploy without pushing images/repos; label resources to bypass the Zarf agent
+      --force-conflicts                Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
   -h, --help                           help for deploy
   -k, --key string                     Path to public key file for validating signed packages
   -n, --namespace string               [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.

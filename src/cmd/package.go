@@ -40,7 +40,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 )
 
@@ -245,6 +244,7 @@ type packageDeployOptions struct {
 	confirm                 bool
 	adoptExistingResources  bool
 	connected               bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	setVariables            map[string]string
@@ -279,6 +279,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 	cmd.Flags().BoolVar(&o.connected, "connected", false, lang.CmdPackageDeployFlagConnected)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
@@ -332,21 +333,9 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	// Merge values
 	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
 
-	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
-	}
-
-	// Apply CLI --set-values overrides last
-	for key, val := range o.setValues {
-		p := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			p = value.Path("." + key)
-		}
-		if err := values.Set(p, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
 	}
 
 	cachePath, err := getCachePath(ctx)
@@ -386,6 +375,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
 		Connected:              o.connected,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,
@@ -419,7 +409,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := packager.OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -1056,7 +1046,8 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath := filepath.Join(o.outputDir, pkgLayout.Pkg.Metadata.Name)
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Pkg.Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
@@ -1239,8 +1230,8 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-
-	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", pkgLayout.Pkg.Metadata.Name))
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Pkg.Metadata.Name)))
 	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
 }
 
@@ -1498,22 +1489,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Parse values from files
-	vals, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := vals.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	filter := filters.Combine(
