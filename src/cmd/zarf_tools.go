@@ -652,7 +652,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	return nil
 }
 
-func (o *genKeyOptions) genKey(prvKeyFileName string, pubKeyFileName string) error {
+func (o *genKeyOptions) genKey(prvKeyFileName, pubKeyFileName string) error {
 	var password []byte
 	var err error
 	var passwordFunc func(bool) ([]byte, error)
