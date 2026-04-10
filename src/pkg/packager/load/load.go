@@ -108,16 +108,17 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 
-	// When we validate all variants, change component names to include flavors.
-	// This allows us to pass component name unqieness checks between flavors while catching duplicate names within
-	// flavors
+	err := internalv1alpha1.ValidatePackage(pkg)
+
 	if allVariants {
-		for i, component := range pkg.Components {
-			pkg.Components[i].Name = component.Name + component.Only.Flavor
+		var typeErr error
+		err, typeErr = utils.FilterErr[*internalv1alpha1.ComponentNameNotUniqueErr](err)
+		if typeErr != nil {
+			return typeErr
 		}
 	}
 
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+	if err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
