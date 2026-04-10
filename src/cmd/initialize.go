@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -184,10 +185,18 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
 	}
