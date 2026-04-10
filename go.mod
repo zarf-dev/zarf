@@ -50,7 +50,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	golang.org/x/crypto v0.49.0
 	golang.org/x/sync v0.20.0
-	helm.sh/helm/v4 v4.1.3
+	helm.sh/helm/v4 v4.1.4
 	k8s.io/api v0.35.3
 	k8s.io/apimachinery v0.35.3
 	k8s.io/client-go v0.35.3
