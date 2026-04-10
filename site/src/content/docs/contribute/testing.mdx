@@ -22,12 +22,17 @@ There are several ways to run tests depending on your specific situation, such a
 # The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
 make test-unit
 
+# To get a single line readable summary of all the unit tests currently defined:
+make test-unit 2>&1 | grep -E "^(ok|FAIL)\s"
+
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/pkg/... -v
 
 # Let's say you only want to run one test. You would run:
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
+
+All unit tests should pass locally before submitting a PR.
 
 ### Adding New Unit Tests
 
