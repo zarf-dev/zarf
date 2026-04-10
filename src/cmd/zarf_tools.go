@@ -626,7 +626,7 @@ func newGenKeyCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *genKeyOptions) validatePassword(bs []byte) error {
+func validatePassword(bs []byte) error {
 	for _, b := range bs {
 		if b < 32 || b > 126 {
 			return fmt.Errorf("invalid character (ascii code 0x%02X) in password", b)
@@ -640,7 +640,6 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	pubKeyFileName := "cosign.pub"
 
 	err := o.genKey(prvKeyFileName, pubKeyFileName)
-
 	if err != nil {
 		return err
 	}
@@ -655,8 +654,6 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 func (o *genKeyOptions) genKey(prvKeyFileName, pubKeyFileName string) error {
 	var password []byte
 	var err error
-	var passwordFunc func(bool) ([]byte, error)
-	// Utility function to prompt the user for the password to the private key
 
 	if o.interactive {
 		var tmpPassword string
@@ -696,18 +693,9 @@ func (o *genKeyOptions) genKey(prvKeyFileName, pubKeyFileName string) error {
 		password = []byte(o.password)
 	}
 
-	passwordFunc = func(bool) ([]byte, error) {
-		err = o.validatePassword(password)
-		if err != nil {
-			return nil, err
-		}
-		return password, nil
-	}
-
-	// Use cosign to generate the keypair
-	keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
+	err = validatePassword(password)
 	if err != nil {
-		return fmt.Errorf("unable to generate key pair: %w", err)
+		return err
 	}
 
 	// Check if we are about to overwrite existing key files
@@ -732,6 +720,14 @@ func (o *genKeyOptions) genKey(prvKeyFileName, pubKeyFileName string) error {
 		}
 	} else if keyfilesExist && !o.force {
 		return errors.New("cosign key file(s) already exist: pass --force to overwrite")
+	}
+
+	// Use cosign to generate the keypair
+	keyBytes, err := cosign.GenerateKeyPair(func(bool) ([]byte, error) {
+		return password, nil
+	})
+	if err != nil {
+		return fmt.Errorf("unable to generate key pair: %w", err)
 	}
 
 	// Write the key file contents to disk
