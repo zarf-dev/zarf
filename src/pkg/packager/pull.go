@@ -36,8 +36,10 @@ type PullOptions struct {
 	SHASum string
 	// Architecture is the package architecture.
 	Architecture string
-	// PublicKeyPath validates the create-time signage of a package.
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
+	// VerifyBlobOptions configures package signature verification.
+	VerifyBlobOptions *utils.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -69,10 +71,19 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		return "", errors.New("host cannot be empty")
 	}
 
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
+	}
+
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
 		Architecture:         arch,
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
 		OCIConcurrency:       opts.OCIConcurrency,
@@ -95,15 +106,15 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source         string
-	Shasum         string
-	Architecture   string
-	LayerTypes     []zoci.LayerType
-	Filter         filters.ComponentFilterStrategy
-	OCIConcurrency int
-	CachePath      string
-	PublicKeyPath  string
-	Connected      bool
+	Source            string
+	Shasum            string
+	Architecture      string
+	LayerTypes        []zoci.LayerType
+	Filter            filters.ComponentFilterStrategy
+	OCIConcurrency    int
+	CachePath         string
+	VerifyBlobOptions *utils.VerifyBlobOptions
+	Connected         bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -169,7 +180,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		IsPartial:            isPartial,
 		Filter:               opts.Filter,

@@ -354,7 +354,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
@@ -612,7 +612,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
@@ -804,7 +804,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
@@ -919,7 +919,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
@@ -1030,7 +1030,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
 		Filter:               filters.Empty(),
@@ -1128,7 +1128,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1217,7 +1217,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1302,7 +1302,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1508,7 +1508,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filter,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1693,7 +1693,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
 			VerificationStrategy: verificationStrategy,
-			PublicKeyPath:        o.publicKeyPath,
+			VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 			Architecture:         config.GetArch(),
 			OCIConcurrency:       o.ociConcurrency,
 			RemoteOptions:        defaultRemoteOptions(),
@@ -1706,7 +1706,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: verificationStrategy,
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -1802,7 +1802,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
 		SHASum:               o.shasum,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1939,9 +1939,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// To prevent a warning for package not being signed - we'll only run verification when enforced
 	if signed {
 		if o.verify {
-			verifyOpts := utils.VerifyBlobOptions{}
-			verifyOpts.KeyRef = o.publicKeyPath
-			err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+			verifyOpts := verifyBlobOptionsFromKeyPath(o.publicKeyPath)
+			err = pkgLayout.VerifyPackageSignature(ctx, *verifyOpts)
 			if err != nil {
 				return err
 			}
@@ -2015,7 +2014,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -2120,4 +2119,10 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 		return layout.VerifyAlways
 	}
 	return layout.VerifyIfPossible
+}
+
+func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
+	opts := utils.DefaultVerifyBlobOptions()
+	opts.KeyRef = keyPath
+	return &opts
 }
