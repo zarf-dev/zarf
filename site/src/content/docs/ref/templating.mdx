@@ -1,0 +1,445 @@
+---
+title: Templating
+sidebar:
+  order: 37
+---
+
+:::caution
+
+Templating with Package Values is currently an **alpha feature** and requires the `--features="values=true"` flag when creating, deploying, inspecting, or removing packages.
+
+:::
+
+Zarf supports Go template syntax and `text/template` engine with powerful features including control flow and functions. Zarf includes the full library of [Sprig functions](http://masterminds.github.io/sprig/) and some builtins for dynamic configuration in manifests, files, and actions. This powerful templating system enables complex transformations, conditional logic, and data manipulation beyond simple string substitution. Zarf and Helm templates largely work the same, with similar custom functions as well, but they work on different layers. Zarf templates provide Zarf-specific template objects for actions and component items like manifests and files.
+
+## Template Objects
+
+To use Zarf templates, it's important to understand template objects. Template objects contain data that you can access in your templates. They always start with a capital letter.
+
+### `.Values`
+
+Most commonly, [Package Values](/ref/package-values/) files allow you to define and access your own data:
+
+```yaml
+{{ .Values.app.name }}
+{{ .Values.database.host }}
+{{ .Values.site.organization }}
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.app.name }}-config
+data:
+  environment: {{ .Values.app.environment }}
+  replicas: "{{ .Values.app.replicas }}"
+```
+
+### `.Metadata`
+
+Fields from the package definition's `metadata` are available in all templates:
+
+```yaml
+{{ .Metadata.name }}        # Package name
+{{ .Metadata.description }} # Package description
+{{ .Metadata.version }}     # Package version
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: package-info
+data:
+  package-name: {{ .Metadata.name }}
+  package-version: {{ .Metadata.version }}
+```
+
+### `.Build`
+
+Similar to Metadata, Build fields on the package definition can be accessed during deploy and remove:
+
+```yaml
+{{ .Build.timestamp }}    # Build timestamp
+{{ .Build.architecture }} # Target architecture (e.g., amd64, arm64)
+{{ .Build.version }}      # Zarf version used to build
+```
+
+Example in a manifest:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: build-info
+  annotations:
+    build-time: {{ .Build.timestamp }}
+    target-arch: {{ .Build.architecture }}
+```
+
+### `.Variables` and `.Constants`
+
+If users want to start using the new templates before switching over to Values, Variables and Constants are also available.
+
+```yaml
+{{ .Variables.EXAMPLE_VAR }}
+{{ .Constants.EXAMPLE_CONST }}
+```
+
+## Template Syntax
+
+### Basic Interpolation
+
+Use double curly braces to insert values from template objects:
+
+```yaml
+# Simple value insertion
+name: {{ .Values.app.name }}
+
+# Nested values with dot notation
+host: {{ .Values.database.host }}
+port: {{ .Values.database.port }}
+
+# Accessing different template objects
+packageName: {{ .Metadata.name }}
+buildTime: {{ .Build.timestamp }}
+```
+
+### Whitespace Control
+
+Control whitespace around template expressions:
+
+```yaml
+# Remove leading whitespace
+{{- .Values.app.name }}
+
+# Remove trailing whitespace
+{{ .Values.app.name -}}
+
+# Remove both
+{{- .Values.app.name -}}
+```
+
+## Using Templates
+
+### Manifest Files
+
+Enable templating in manifest files by setting `template: true`:
+
+```yaml
+components:
+  - name: my-component
+    manifests:
+      - name: k8s-resources
+        template: true  # Enables Go template processing
+        files:
+          - deployment.yaml
+          - service.yaml
+          - configmap.yaml
+```
+
+Example templated manifest:
+
+```yaml
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.app.name }}
+  labels:
+    app: {{ .Values.app.name }}
+    environment: {{ .Values.app.environment }}
+spec:
+  replicas: {{ .Values.app.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.app.name }}
+    spec:
+      containers:
+      - name: {{ .Values.app.name }}
+        image: {{ .Values.app.image }}:{{ .Values.app.tag }}
+```
+
+:::note
+
+Helm [chart hooks](https://helm.sh/docs/topics/charts_hooks/) are not templated by Zarf.
+
+:::
+
+### Actions
+
+Action templating must be enabled to help avoid conflicts with external tools. Set `template: true` on individual actions:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onCreate:
+        after:
+          # Templating enabled
+          - cmd: |
+              echo "Building {{ .Values.app.name }}"
+              echo "Version: {{ .Values.app.version }}"
+            template: true
+
+          # Templating disabled (default)
+          - cmd: |
+              # This {{ .template }} syntax is preserved
+              envsubst < template.yaml
+```
+
+**Why opt-in for actions?**
+- Prevents conflicts with shell variables like `${VAR}`
+- Avoids breaking external tools that use `{{ }}` syntax (e.g., envsubst, gomplate)
+- Provides explicit control over when Zarf processes templates
+
+### Remove Actions
+
+Templating is also available in remove actions:
+
+```yaml
+components:
+  - name: my-component
+    actions:
+      onRemove:
+        before:
+          - cmd: |
+              echo "Removing {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+              echo "Organization: {{ .Values.site.organization }}"
+            template: true
+```
+
+## Template Functions
+
+Zarf includes both builtin functions and the full [Sprig template function library](http://masterminds.github.io/sprig/), providing powerful data transformation capabilities. See the [values-templating example](/ref/examples/) for comprehensive demonstrations of all function categories.
+
+### String Functions
+
+Transform and manipulate strings with functions like `upper`, `lower`, `title`, `kebabcase`, `snakecase`, `quote`, `trim`, and more:
+
+```yaml
+# Case and format conversion
+name: {{ .Values.app.name | upper }}        # MY-APP
+name: {{ .Values.site.title | kebabcase }}  # my-awesome-app
+value: {{ .Values.app.name | quote }}       # "my-app"
+
+# Trimming and manipulation
+message: {{ .Values.message | trim }}
+short: {{ .Values.longText | trunc 50 }}
+```
+
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more string function examples.
+
+### List Functions
+
+Work with arrays and lists using functions like `join`, `len`, `first`, `last`, `sortAlpha`, `reverse`, and `has`:
+
+```yaml
+features: {{ .Values.app.features | join ", " }}
+count: {{ .Values.app.features | len }}
+first: {{ .Values.app.features | first }}
+sorted: {{ .Values.app.features | sortAlpha | join ", " }}
+```
+
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more list function examples.
+
+### Default and Conditional Functions
+
+Provide fallback values using functions like `default`, `empty`, `coalesce`, and `ternary`:
+
+```yaml
+replicas: {{ .Values.app.replicas | default 3 }}
+namespace: {{ .Values.app.namespace | default "default" }}
+host: {{ coalesce .Values.database.host .Values.database.defaultHost "localhost" }}
+environment: {{ .Values.app.production | ternary "prod" "dev" }}
+```
+
+### Math Functions
+
+Perform arithmetic operations using `add`, `sub`, `mul`, `div`, `max`, `min`, `round`, and more:
+
+```yaml
+sum: {{ add .Values.app.replicas 2 }}
+product: {{ mul .Values.app.replicas 10 }}
+max-port: {{ max .Values.app.port1 .Values.app.port2 .Values.app.port3 }}
+```
+
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more math function examples.
+
+### Encoding and Hashing Functions
+
+Encode data and generate hashes using `b64enc`, `b64dec`, `sha256sum`, `sha1sum`, and more:
+
+```yaml
+encoded: {{ .Values.app.secret | b64enc }}
+sha256: {{ .Values.app.data | sha256sum }}
+```
+
+Common use case for Secrets:
+```yaml
+apiVersion: v1
+kind: Secret
+type: Opaque
+data:
+  username: {{ .Values.database.username | b64enc }}
+  password: {{ .Values.database.password | b64enc }}
+```
+
+See the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) for more encoding examples.
+
+### Formatting Functions
+
+Format and indent output using `indent`, `nindent`, `toString`, `toYaml`, `toJson`, and more:
+
+```yaml
+# Indentation
+{{ .Values.multilineConfig | indent 4 }}
+
+# Type conversion
+port: {{ .Values.app.port | toString }}
+
+# Multi-line values in ConfigMaps
+data:
+  config.yaml: |
+{{ .Values.app.config | toYaml | indent 4 }}
+```
+
+## Conditional Logic
+
+Go's `text/template` engine allows the use of if/else statements for conditional rendering:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  {{ if .Values.app.production }}
+  environment: "production"
+  log-level: "warn"
+  {{ else }}
+  environment: "development"
+  log-level: "debug"
+  {{ end }}
+
+  {{ if eq .Values.app.environment "production" }}
+  replicas: "3"
+  {{ else if eq .Values.app.environment "staging" }}
+  replicas: "2"
+  {{ else }}
+  replicas: "1"
+  {{ end }}
+```
+
+### Comparison Operators
+
+```yaml
+# Equality
+{{ if eq .Values.app.environment "production" }}
+{{ if ne .Values.app.environment "production" }}  # not equal
+
+# Numeric comparisons
+{{ if gt .Values.app.replicas 3 }}  # greater than
+{{ if ge .Values.app.replicas 3 }}  # greater or equal
+{{ if lt .Values.app.replicas 3 }}  # less than
+{{ if le .Values.app.replicas 3 }}  # less or equal
+
+# Logical operators
+{{ if and .Values.app.production .Values.app.secure }}
+{{ if or .Values.app.debug .Values.app.verbose }}
+{{ if not .Values.app.production }}
+```
+
+## Range, Loops, and Iteration
+
+Go's `text/template` engine also allows users to iterate over lists and maps:
+
+```yaml
+# Iterating over a list
+{{ range .Values.app.features }}
+  - {{ . }}
+{{ end }}
+
+# With index
+{{ range $index, $feature := .Values.app.features }}
+  {{ $index }}: {{ $feature }}
+{{ end }}
+
+# Iterating over a map
+{{ range $key, $value := .Values.app.config }}
+  {{ $key }}: {{ $value }}
+{{ end }}
+```
+
+**Example in a ConfigMap:**
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: features-config
+data:
+  features.txt: |
+    Enabled features:
+{{ range .Values.app.features }}
+    - {{ . }}
+{{ end }}
+
+  ports.conf: |
+{{ range $index, $port := .Values.app.ports }}
+    listen {{ $port }};
+{{ end }}
+```
+
+## Go Template Variables
+
+Assign values to go template variables for reuse within a template (note, :
+
+:::note
+Template vars are a feature from Go's `text/template` engine and are _not_ Zarf's Variables. Template variables are
+stored locally within the current template, and variable scope is not shared between Zarf Components or the Package.
+:::
+
+```yaml
+{{ $appName := .Values.app.name }}
+{{ $namespace := .Values.app.namespace | default "default" }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $appName }}-service
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    app: {{ $appName }}
+```
+
+## Complex Examples
+
+For comprehensive examples combining multiple template functions, see the [values-templating example](https://github.com/defenseunicorns/zarf/tree/main/examples/values-templating) which demonstrates:
+
+- String transformations (upper, lower, kebabcase, title)
+- List operations (join, len, first, sortAlpha)
+- Default values and conditionals
+- Math operations (add, mul, max, min)
+- Encoding and hashing (b64enc, sha256sum)
+- Multi-line values with indentation
+- Real-world ConfigMap and Deployment examples
+
+## Using Helm charts within Zarf:
+Helm templating happens inside Helm charts (the standard Helm behavior). Use [Helm value mappings](/ref/package-values/#mapping-to-helm-chart-values) to pass Zarf values into Helm charts so they may be accessed in Helm chart templates.
+
+## Related Documentation
+
+- [Templating Best Practices](/best-practices/templating/) - Best practices for templating
+- [Package Values](/ref/package-values/) - Defining and using package values
+- [Actions](/ref/actions/) - Templating in component actions
+- [Deployment Values (Legacy)](/ref/values/) - Legacy templating system
+- [Sprig Function Documentation](http://masterminds.github.io/sprig/) - Complete Sprig reference
