@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -112,9 +113,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
 	// Flags for providing user-managed agent TLS certificates
-	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", "", "Path to a PEM-encoded CA certificate for the Zarf agent")
-	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", "", "Path to a PEM-encoded TLS certificate for the Zarf agent")
-	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", "", "Path to a PEM-encoded TLS private key for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -168,7 +169,16 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, o.agentTLSCAPath != "")
+	var agentTLS *pki.GeneratedPKI
+	if o.agentTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid agent TLS certificates: %w", err)
+		}
+		agentTLS = &loadedTLS
+	}
+
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
 	}
@@ -225,15 +235,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-
-	var agentTLS *pki.GeneratedPKI
-	if o.agentTLSCAPath != "" {
-		loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
-		if err != nil {
-			return fmt.Errorf("invalid agent TLS certificates: %w", err)
-		}
-		agentTLS = &loadedTLS
-	}
 
 	opts := packager.DeployOptions{
 		GitServer:              o.gitServer,
@@ -351,7 +352,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 }
 
 // Checks if an init has already happened and if so check that none of the Zarf service information has changed
-func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLSProvided bool) error {
+func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
@@ -375,8 +376,12 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
-	if agentTLSProvided && s.AgentTLSUserProvided {
-		return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+	if agentTLS != nil && s.AgentTLSUserProvided {
+		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
+			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
+			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
+			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+		}
 	}
 	return nil
 }
