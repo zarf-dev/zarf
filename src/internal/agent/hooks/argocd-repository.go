@@ -123,7 +123,7 @@ func populateArgoRepositoryPatchOperations(repoURL string, gitServer state.GitSe
 	return patches
 }
 
-// Helper for getting eiher git server of registry creds
+// Helper for getting either git server of registry creds
 func getCreds(isOCIURL bool, gitServer state.GitServerInfo, registry state.RegistryInfo) (string, string) {
 	if isOCIURL {
 		return registry.PullUsername, registry.PullPassword
