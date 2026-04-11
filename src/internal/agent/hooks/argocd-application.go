@@ -150,7 +150,13 @@ func getPatchedRepoURL(
 	return mutateGitURL(ctx, repoURL, gs)
 }
 
-func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (bool, bool, error) {
+// shouldMutateURL reports whether the given repoURL should be mutated for the admission operation.
+//
+// shouldMutate is true for Create operations and for Update operations where repoURL has not
+// already been patched to the Zarf-managed registry or git server address.
+//
+// isPatchedClusterIP is true when repoURL already matches the registry cluster-IP address
+func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (shouldMutate bool, isPatchedClusterIP bool, err error) {
 	isCreate := operation == v1.Create
 	isUpdate := operation == v1.Update
 	if isCreate {
@@ -158,8 +164,6 @@ func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAdd
 	}
 
 	var isPatched bool
-	var isPatchedClusterIP bool
-	var err error
 	if isOCIURL {
 		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
 		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)

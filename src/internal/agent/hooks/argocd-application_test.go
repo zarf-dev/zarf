@@ -310,3 +310,97 @@ func TestArgoAppWebhook(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldMutateURL(t *testing.T) {
+	t.Parallel()
+
+	gitServerInfo := state.GitServerInfo{
+		Address:      "https://git-server.com",
+		PushUsername: "a-push-user",
+	}
+
+	tests := []struct {
+		name                   string
+		operation              v1.Operation
+		isOCIURL               bool
+		repoURL                string
+		registryAddress        string
+		clusterIP              string
+		wantShouldMutate       bool
+		wantIsPatchedClusterIP bool
+	}{
+		{
+			name:             "create always mutates git URL",
+			operation:        v1.Create,
+			repoURL:          "https://github.com/zarf-dev/zarf.git",
+			wantShouldMutate: true,
+		},
+		{
+			name:             "create always mutates OCI URL",
+			operation:        v1.Create,
+			isOCIURL:         true,
+			repoURL:          "oci://ghcr.io/stefanprodan/charts/podinfo",
+			registryAddress:  "127.0.0.1:31999",
+			wantShouldMutate: true,
+		},
+		{
+			name:             "update mutates unpatched git URL",
+			operation:        v1.Update,
+			repoURL:          "https://github.com/zarf-dev/zarf.git",
+			wantShouldMutate: true,
+		},
+		{
+			name:      "update skips already patched git URL",
+			operation: v1.Update,
+			repoURL:   "https://git-server.com/a-push-user/zarf-3883081014",
+		},
+		{
+			name:             "update mutates unpatched OCI URL",
+			operation:        v1.Update,
+			isOCIURL:         true,
+			repoURL:          "oci://ghcr.io/stefanprodan/charts/podinfo",
+			registryAddress:  "127.0.0.1:31999",
+			wantShouldMutate: true,
+		},
+		{
+			name:            "update skips already patched OCI registry address",
+			operation:       v1.Update,
+			isOCIURL:        true,
+			repoURL:         "oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+			registryAddress: "127.0.0.1:31999",
+		},
+		{
+			name:                   "update with OCI URL patched to cluster IP sets isPatchedClusterIP",
+			operation:              v1.Update,
+			isOCIURL:               true,
+			repoURL:                "oci://10.11.12.13:5000/stefanprodan/charts/podinfo",
+			registryAddress:        "zarf-docker-registry.zarf.svc.cluster.local:5000",
+			clusterIP:              "10.11.12.13:5000",
+			wantShouldMutate:       true,
+			wantIsPatchedClusterIP: true,
+		},
+		{
+			name:             "update with empty clusterIP never sets isPatchedClusterIP",
+			operation:        v1.Update,
+			isOCIURL:         true,
+			repoURL:          "oci://ghcr.io/stefanprodan/charts/podinfo",
+			registryAddress:  "127.0.0.1:31999",
+			wantShouldMutate: true,
+		},
+		{
+			name:      "non-create non-update operation does not mutate",
+			operation: v1.Delete,
+			repoURL:   "https://github.com/zarf-dev/zarf.git",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			shouldMutate, isPatchedClusterIP, err := shouldMutateURL(tt.operation, tt.isOCIURL, tt.repoURL, tt.registryAddress, tt.clusterIP, gitServerInfo)
+			require.NoError(t, err)
+			require.Equal(t, tt.wantShouldMutate, shouldMutate)
+			require.Equal(t, tt.wantIsPatchedClusterIP, isPatchedClusterIP)
+		})
+	}
+}
