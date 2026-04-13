@@ -4,11 +4,17 @@
 package helm
 
 import (
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/yaml"
 )
 
 func TestProcessManifestContentPreservesBlockScalarNewlines(t *testing.T) {
@@ -377,6 +383,83 @@ func TestAddAgentIgnoreLabels(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAgentMutatedKindsMatchesWebhook(t *testing.T) {
+	t.Parallel()
+
+	webhookPath := filepath.Join("..", "..", "..", "..", "packages", "zarf-agent", "chart", "templates", "webhook.yaml")
+	data, err := os.ReadFile(webhookPath)
+	require.NoError(t, err)
+
+	// Strip Helm template directives so the manifest can be parsed as plain YAML.
+	cleaned := regexp.MustCompile(`{{[^}]*}}`).ReplaceAllString(string(data), "placeholder")
+
+	// Only parse the rules — decoding the full MutatingWebhookConfiguration would
+	// fail on the templated caBundle placeholder which is not valid base64.
+	var cfg struct {
+		Webhooks []struct {
+			Rules []admissionregistrationv1.RuleWithOperations `json:"rules"`
+		} `json:"webhooks"`
+	}
+	require.NoError(t, yaml.Unmarshal([]byte(cleaned), &cfg))
+	require.NotEmpty(t, cfg.Webhooks, "expected webhook configuration to contain webhooks")
+
+	// Maps plural resource names from the webhook rules to their Kind.
+	// Update this when adding a new resource to webhook.yaml.
+	resourceToKind := map[string]string{
+		"pods":             "Pod",
+		"secrets":          "Secret",
+		"gitrepositories":  "GitRepository",
+		"ocirepositories":  "OCIRepository",
+		"helmrepositories": "HelmRepository",
+		"applications":     "Application",
+		"applicationsets":  "ApplicationSet",
+		"appprojects":      "AppProject",
+	}
+
+	webhookGroupKinds := map[schema.GroupKind]struct{}{}
+	for _, w := range cfg.Webhooks {
+		for _, rule := range w.Rules {
+			for _, group := range rule.APIGroups {
+				for _, resource := range rule.Resources {
+					// Skip subresources (e.g. pods/ephemeralcontainers).
+					if strings.Contains(resource, "/") {
+						continue
+					}
+					kind, ok := resourceToKind[resource]
+					require.Truef(t, ok, "no Kind mapping for webhook resource %q — update resourceToKind in this test", resource)
+					webhookGroupKinds[schema.GroupKind{Group: group, Kind: kind}] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// Every webhook-targeted GroupKind must be present in agentMutatedKinds so
+	// that addAgentIgnoreLabels can annotate it with the ignore label.
+	for gk := range webhookGroupKinds {
+		_, ok := agentMutatedKinds[gk]
+		require.Truef(t, ok, "webhook targets %v but it is missing from agentMutatedKinds", gk)
+	}
+
+	// Workload controllers are included in agentMutatedKinds even though the webhook does not mutate
+	// them directly, because they create pods that the webhook will mutate.
+	// Every other entry in agentMutatedKinds must correspond to a webhook-targeted GroupKind.
+	podControllers := map[schema.GroupKind]struct{}{
+		{Group: "apps", Kind: "Deployment"}:  {},
+		{Group: "apps", Kind: "StatefulSet"}: {},
+		{Group: "apps", Kind: "DaemonSet"}:   {},
+		{Group: "apps", Kind: "ReplicaSet"}:  {},
+		{Group: "batch", Kind: "Job"}:        {},
+		{Group: "batch", Kind: "CronJob"}:    {},
+	}
+	for gk := range agentMutatedKinds {
+		if _, ok := podControllers[gk]; ok {
+			continue
+		}
+		_, ok := webhookGroupKinds[gk]
+		require.Truef(t, ok, "agentMutatedKinds has %v but no matching webhook rule exists", gk)
 	}
 }
 
