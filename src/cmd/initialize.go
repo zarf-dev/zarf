@@ -376,7 +376,7 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
-	if agentTLS != nil && s.AgentTLSUserProvided {
+	if agentTLS != nil {
 		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
 			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
 			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
