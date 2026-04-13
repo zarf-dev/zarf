@@ -19,7 +19,7 @@
     "@astrojs/check": "^0.9.6",
     "@astrojs/starlight": "^0.37.3",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^5.16.0",
+    "astro": "^5.18.1",
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.33.3",
@@ -29,7 +29,7 @@
     "linkinator": "^7.5.3",
     "markdownlint-cli2": "^0.20.0",
     "remark-gemoji": "^8.0.0",
-    "yaml": "^2.4.1"
+    "yaml": "^2.8.3"
   },
   "engines": {
     "node": ">=20.11.1"

@@ -20,6 +20,12 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
+func verifyOptsFromKey(keyPath string) *utils.VerifyBlobOptions {
+	opts := utils.DefaultVerifyBlobOptions()
+	opts.KeyRef = keyPath
+	return &opts
+}
+
 func TestPackageLayout(t *testing.T) {
 	t.Parallel()
 
@@ -175,6 +181,19 @@ func TestPackageFileName(t *testing.T) {
 				},
 			},
 			expected: "zarf-package-my-package-amd64-v0.55.4-upstream.tar.zst",
+		},
+		{
+			name: "path traversal in name is sanitized",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name: "../../evil",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "amd64",
+				},
+			},
+			expected: "evil-amd64.tar.zst",
 		},
 		{
 			name: "uncompressed",
@@ -1385,7 +1404,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyNever,
-			PublicKeyPath:        "./testdata/cosign.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1411,7 +1430,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			PublicKeyPath:        pubKeyPath,
+			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1425,7 +1444,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			PublicKeyPath:        "", // No key provided
+			VerifyBlobOptions:    verifyOptsFromKey(""), // No key provided
 		}
 
 		// Should warn but not fail
@@ -1440,7 +1459,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			PublicKeyPath:        "./testdata/nonexistent.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/nonexistent.pub"),
 		}
 
 		// Should warn but not fail
@@ -1454,7 +1473,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			PublicKeyPath:        "./testdata/cosign.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
 		// Should warn about unsigned package but not fail
@@ -1468,7 +1487,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        pubKeyPath,
+			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1482,7 +1501,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "./testdata/nonexistent.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/nonexistent.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1496,7 +1515,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "",
+			VerifyBlobOptions:    verifyOptsFromKey(""),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1510,7 +1529,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "./testdata/cosign.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
@@ -1525,6 +1544,34 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		// Empty options - should default to VerifyNever (zero value)
 		opts := PackageLayoutOptions{}
 
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("deprecated PublicKeyPath bridges to VerifyBlobOptions", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        pubKeyPath,
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.NoError(t, err)
+		require.NotNil(t, pkgLayout)
+	})
+
+	t.Run("VerifyBlobOptions takes precedence over deprecated PublicKeyPath", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyAlways,
+			PublicKeyPath:        "./testdata/nonexistent.pub",
+			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+		}
+
+		// Should use VerifyBlobOptions (correct key), not PublicKeyPath (wrong key)
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
@@ -1556,7 +1603,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	t.Run("VerifyIfPossible warns but continues on unsigned tarball", func(t *testing.T) {
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
-			PublicKeyPath:        "./testdata/cosign.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
 		// Should succeed with warning since package is unsigned
@@ -1572,7 +1619,7 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 	t.Run("VerifyAlways fails on unsigned tarball", func(t *testing.T) {
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyAlways,
-			PublicKeyPath:        "./testdata/cosign.pub",
+			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
 		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
