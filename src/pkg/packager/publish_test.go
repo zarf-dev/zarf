@@ -18,6 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,14 +37,17 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
+	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts.KeyRef = publicKeyPath
+
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
-		Source:        packageRef,
-		Architecture:  architecture,
-		Filter:        filters.Empty(),
-		RemoteOptions: defaultTestRemoteOptions(),
-		PublicKeyPath: publicKeyPath,
-		CachePath:     cachePath,
+		Source:            packageRef,
+		Architecture:      architecture,
+		Filter:            filters.Empty(),
+		RemoteOptions:     defaultTestRemoteOptions(),
+		VerifyBlobOptions: &verifyOpts,
+		CachePath:         cachePath,
 	}
 	pkgLayout, err := pullOCI(ctx, pullOCIOpts)
 	require.NoError(t, err)

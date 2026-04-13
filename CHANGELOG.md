@@ -1,5 +1,60 @@
 # Changelog
 
+## [0.74.2](https://github.com/zarf-dev/zarf/compare/v0.74.1...v0.74.2) (2026-04-08)
+
+
+### Bug Fixes
+
+* git host matching ([#4801](https://github.com/zarf-dev/zarf/issues/4801)) ([20bead2](https://github.com/zarf-dev/zarf/commit/20bead2738e98835767020e5f94dc6c78b46b082))
+* sanitize inspect output path ([#4793](https://github.com/zarf-dev/zarf/issues/4793)) ([abd00af](https://github.com/zarf-dev/zarf/commit/abd00afc217eeb2b99af8aa69dbde592f9b21621))
+
+## [0.74.1](https://github.com/zarf-dev/zarf/compare/v0.74.0...v0.74.1) (2026-04-02)
+
+
+### Features
+
+* enable plugin support for vender-ed kubectl ([#4705](https://github.com/zarf-dev/zarf/issues/4705)) ([d812a6b](https://github.com/zarf-dev/zarf/commit/d812a6b5d28645cc5f9ac509dd38c96c8848c7d1))
+* introduce page for schema on docs site ([#4732](https://github.com/zarf-dev/zarf/issues/4732)) ([1d193d0](https://github.com/zarf-dev/zarf/commit/1d193d00cab99c2f752ca54627692acc695550f6))
+* **state:** deprecate "nodeport" in registry info in favor of "node" ([#4729](https://github.com/zarf-dev/zarf/issues/4729)) ([c8dd855](https://github.com/zarf-dev/zarf/commit/c8dd855cb3e3a80bdf24fac8f345ffc72c62be80))
+
+
+### Bug Fixes
+
+* **cache:** sbom cachepath existence ([#4762](https://github.com/zarf-dev/zarf/issues/4762)) ([8785473](https://github.com/zarf-dev/zarf/commit/8785473580b269a242955eb435973588d07ba6e1))
+* set transport in `zarf tools registry catalog` when mtls is enabled ([#4728](https://github.com/zarf-dev/zarf/issues/4728)) ([b8e38ec](https://github.com/zarf-dev/zarf/commit/b8e38ecfc4f6beb5af90da448610709e75c1b62c))
+* values with zarf dev find-images ([#4734](https://github.com/zarf-dev/zarf/issues/4734)) ([78b7202](https://github.com/zarf-dev/zarf/commit/78b7202b41d909b520d606973708aaf033c6006b))
+
+## [0.74.0](https://github.com/zarf-dev/zarf/compare/v0.73.1...v0.74.0) (2026-03-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* upgrade to Helm 4 ([#4350](https://github.com/zarf-dev/zarf/issues/4350))
+* **deploy:** override actions wait commands ([#4531](https://github.com/zarf-dev/zarf/issues/4531))
+
+### Features
+
+* add retries on create operations ([#4664](https://github.com/zarf-dev/zarf/issues/4664)) ([23afb84](https://github.com/zarf-dev/zarf/commit/23afb84546c9c51a8a6ee7186f693f6be79fe5e8))
+* **connect:** create zarf connect resource sub-command ([#4683](https://github.com/zarf-dev/zarf/issues/4683)) ([e4f9299](https://github.com/zarf-dev/zarf/commit/e4f9299ec16e572631e2e39180a99709649d1d9f))
+* **init:** clarify --registry-secret or --registry-url ([#4694](https://github.com/zarf-dev/zarf/issues/4694)) ([3ea9a4d](https://github.com/zarf-dev/zarf/commit/3ea9a4df8099f922713bcdd52e84900bc4a045a3))
+* **init:** enable switching between nodeport and proxy mode ([#4608](https://github.com/zarf-dev/zarf/issues/4608)) ([bb5d1df](https://github.com/zarf-dev/zarf/commit/bb5d1dff046fa705d608ea8b7e188beddd137b29))
+* **publish:** support for tag specification ([#4641](https://github.com/zarf-dev/zarf/issues/4641)) ([9cf8912](https://github.com/zarf-dev/zarf/commit/9cf891257763973e79618428ea08e92d5139ec80))
+* **state:** remove architecture field ([#4701](https://github.com/zarf-dev/zarf/issues/4701)) ([910c646](https://github.com/zarf-dev/zarf/commit/910c64601a48e951b7c5316fecca6ab3df874349))
+* stop managing scale down policy in CLI ([#4725](https://github.com/zarf-dev/zarf/issues/4725)) ([d305f82](https://github.com/zarf-dev/zarf/commit/d305f8263fe1b29ad43b828a0e37c5be4f5424c9))
+* update kubectl vender logic ([#4676](https://github.com/zarf-dev/zarf/issues/4676)) ([0847c52](https://github.com/zarf-dev/zarf/commit/0847c525cab3d589ec8ed2522d935afa8a7df212))
+* upgrade to Helm 4 ([#4350](https://github.com/zarf-dev/zarf/issues/4350)) ([505d1df](https://github.com/zarf-dev/zarf/commit/505d1df856a90f35f300a422308311a65a208993))
+* use legacy Helm wait + reconciliation Healthchecks ([#4720](https://github.com/zarf-dev/zarf/issues/4720)) ([fde9d53](https://github.com/zarf-dev/zarf/commit/fde9d53cf89e37c94987dcfe0886e4f58931a7dc))
+* use Zarf Package Config as image config ([#4675](https://github.com/zarf-dev/zarf/issues/4675)) ([e9262d4](https://github.com/zarf-dev/zarf/commit/e9262d412aa04ca20400d6197c8b9c04e0028eb3))
+
+
+### Bug Fixes
+
+* **agent:** support create idempotency for mutation operations ([#4691](https://github.com/zarf-dev/zarf/issues/4691)) ([d0cdef9](https://github.com/zarf-dev/zarf/commit/d0cdef98b3cd9c9da2a656bf8f02dadc8f9ac0cd))
+* close chunk file descriptors per iteration in `SplitFile` ([#4656](https://github.com/zarf-dev/zarf/issues/4656)) ([a9d1700](https://github.com/zarf-dev/zarf/commit/a9d1700c89f06cfd8669484d8d083014bdf16069))
+* close leaked file handles in `pull_test.go` HTTP handlers ([#4657](https://github.com/zarf-dev/zarf/issues/4657)) ([0ef41d7](https://github.com/zarf-dev/zarf/commit/0ef41d7ac9f81c0b495a0e35c8a82155d43f7fca))
+* **deploy:** override actions wait commands ([#4531](https://github.com/zarf-dev/zarf/issues/4531)) ([39fd337](https://github.com/zarf-dev/zarf/commit/39fd337949547078d14509b7d6343a43fb3c65f1))
+* set field manager once during pre-run to avoid data race ([#4707](https://github.com/zarf-dev/zarf/issues/4707)) ([88f60fa](https://github.com/zarf-dev/zarf/commit/88f60fab317177465801dc023d3efc0a855e0083))
+
 ## [0.73.1](https://github.com/zarf-dev/zarf/compare/v0.73.0...v0.73.1) (2026-03-03)
 
 

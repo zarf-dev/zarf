@@ -28,3 +28,17 @@ func TestCreateImageSBOM(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, fileContent, b)
 }
+
+func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
+	t.Parallel()
+
+	ctx := testutil.TestContext(t)
+
+	outputPath := t.TempDir()
+	// Cache path that doesn't exist yet
+	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
+	img := empty.Image
+	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
+	require.NoError(t, err)
+	require.NotEmpty(t, b)
+}
