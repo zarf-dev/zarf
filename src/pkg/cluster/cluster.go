@@ -349,8 +349,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	s.ClusterConnectivity = state.ClusterConnectivityAirgap
-
 	// Save the state back to K8s
 	if err := c.SaveState(ctx, s); err != nil {
 		return nil, fmt.Errorf("unable to save the Zarf state: %w", err)

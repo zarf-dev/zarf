@@ -37,7 +37,6 @@ type renderer struct {
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
 	connectedDeploy        bool
-	skipSecretUpdates      bool
 	state                  *state.State
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
@@ -59,13 +58,11 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
 	// Update secrets when not in connected mode, as connected packages in hybrid / air-gap clusters could rely on pulling from the registry with ###ZARF_REGISTRY###
-	skipSecretUpdates := s.GetClusterConnectivity() == state.ClusterConnectivityConnected
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
 		connectedDeploy:        connectedDeploy,
-		skipSecretUpdates:      skipSecretUpdates,
 		state:                  s,
 		actionConfig:           actionConfig,
 		variableConfig:         variableConfig,
@@ -151,33 +148,30 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 
-		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.skipSecretUpdates {
-			continue
-		}
-
-		// Create the secret
-		validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
-		if err != nil {
-			return err
-		}
-		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
-		if err != nil {
-			return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
-		}
-		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
-		if err != nil {
-			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
-		}
-
-		if r.state.RegistryInfo.ShouldUseMTLS() {
-			clientPKI, err := c.GetRegistryClientMTLSCert(ctx)
+		if r.state.RegistryInfo.IsConfigured() {
+			validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
 			if err != nil {
-				return fmt.Errorf("failed to get registry client certs: %w", err)
+				return err
 			}
-			if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, name); err != nil {
-				return fmt.Errorf("failed to apply registry client secret to ns: %s: %w", name, err)
+			_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+			if err != nil {
+				return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
+			}
+			if r.state.RegistryInfo.ShouldUseMTLS() {
+				clientPKI, err := c.GetRegistryClientMTLSCert(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to get registry client certs: %w", err)
+				}
+				if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, name); err != nil {
+					return fmt.Errorf("failed to apply registry client secret to ns: %s: %w", name, err)
+				}
+			}
+		}
+		if r.state.GitServer.IsConfigured() {
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+			if err != nil {
+				return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
 			}
 		}
 	}

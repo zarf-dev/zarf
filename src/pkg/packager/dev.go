@@ -125,7 +125,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		if opts.RegistryURL != "" {
 			defaultState.RegistryInfo.Address = opts.RegistryURL
 		}
-		defaultState.ClusterConnectivity = state.ClusterConnectivityConnected
 		d.s = defaultState
 	}
 

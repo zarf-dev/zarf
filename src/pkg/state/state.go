@@ -99,17 +99,6 @@ var ZarfRegistryMTLSServerHosts = []string{
 	"[::1]",
 }
 
-// ClusterConnectivity defines how Zarf interacts with the cluster
-type ClusterConnectivity string
-
-const (
-	// ClusterConnectivityAirgap mode is always used on a cluster with Zarf initialized.
-	ClusterConnectivityAirgap ClusterConnectivity = "airgap"
-	// ClusterConnectivityConnected mode is when there is no Zarf infrastructure data
-	// set when there are only connected or YOLO deployments on a non Zarf initialized cluster.
-	ClusterConnectivityConnected ClusterConnectivity = "connected"
-)
-
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
 
@@ -119,8 +108,6 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// The connectivity mode of the cluster
-	ClusterConnectivity ClusterConnectivity `json:"clusterConnectivity"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
@@ -135,15 +122,6 @@ type State struct {
 	RegistryInfo RegistryInfo `json:"registryInfo"`
 	// Information about the artifact registry Zarf is configured to use
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
-}
-
-// GetClusterConnectivity returns the Zarf cluster mode.
-// Assumes airgap mode if this is not set.
-func (s State) GetClusterConnectivity() ClusterConnectivity {
-	if s.ClusterConnectivity == "" {
-		return ClusterConnectivityAirgap
-	}
-	return s.ClusterConnectivity
 }
 
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
@@ -175,6 +153,13 @@ type GitServerInfo struct {
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+// IsConfigured returns true if the git server address has been set
+// Note that even when the Git server component is not used Zarf will set the address to a default value
+// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+func (gs GitServerInfo) IsConfigured() bool {
+	return gs.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -309,6 +294,11 @@ func (ri RegistryInfo) IsInternal() bool {
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+}
+
+// IsConfigured returns true if the registry info address has been set
+func (ri RegistryInfo) IsConfigured() bool {
+	return ri.Address != ""
 }
 
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
