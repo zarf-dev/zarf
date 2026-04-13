@@ -29,7 +29,7 @@
     "linkinator": "^7.5.3",
     "markdownlint-cli2": "^0.20.0",
     "remark-gemoji": "^8.0.0",
-    "yaml": "^2.4.1"
+    "yaml": "^2.8.3"
   },
   "engines": {
     "node": ">=20.11.1"
