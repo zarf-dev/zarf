@@ -42,7 +42,7 @@ type ZarfPackage struct {
 	// Zarf-generated package build data.
 	Build ZarfBuildData `json:"build,omitempty"`
 	// List of components to deploy in this package.
-	Components []ZarfComponent `json:"components"`
+	Components []ZarfComponent `json:"components" jsonschema:"minItems=1"`
 	// Constant template values applied on deploy for K8s resources.
 	Constants []Constant `json:"constants,omitempty"`
 	// Variable template values applied on deploy for K8s resources.

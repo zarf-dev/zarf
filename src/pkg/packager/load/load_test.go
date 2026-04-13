@@ -113,6 +113,18 @@ func TestPackageUsesFlavor(t *testing.T) {
 	}
 }
 
+func TestLoadV1Beta1Package(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	pkg, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
+	require.NoError(t, err)
+	require.Equal(t, "test-v1beta1", pkg.Metadata.Name)
+	require.NotEmpty(t, pkg.Metadata.Architecture)
+	require.Equal(t, "zarf.dev/v1beta1", pkg.Build.APIVersion)
+	require.Len(t, pkg.Components, 1)
+	require.Equal(t, "hello", pkg.Components[0].Name)
+}
+
 func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	t.Parallel()
 

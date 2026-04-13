@@ -11,21 +11,65 @@ import (
 	"slices"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
+// DetectAPIVersion extracts the apiVersion field from raw YAML bytes.
+func DetectAPIVersion(b []byte) (string, error) {
+	var probe struct {
+		APIVersion string `yaml:"apiVersion"`
+	}
+	if err := goyaml.Unmarshal(b, &probe); err != nil {
+		return "", err
+	}
+	return probe.APIVersion, nil
+}
+
 // Parse parses the yaml passed as a byte slice and applies schema migrations.
+// It detects the apiVersion and handles v1beta1 by converting to v1alpha1.
 func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
-	var pkg v1alpha1.ZarfPackage
-	err := goyaml.Unmarshal(b, &pkg)
+	version, err := DetectAPIVersion(b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	switch version {
+	case "zarf.dev/v1beta1":
+		beta, err := ParseV1Beta1(b)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, err
+		}
+		return convert.V1Beta1PkgToV1Alpha1(beta), nil
+	case "", "zarf.dev/v1alpha1":
+		return ParseV1Alpha1(ctx, b)
+	default:
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unknown apiVersion %q", version)
+	}
+}
+
+// ParseV1Alpha1 unmarshals bytes as a v1alpha1 package and applies deprecated migrations.
+func ParseV1Alpha1(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	if err := goyaml.Unmarshal(b, &pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg.Build.APIVersion = v1alpha1.APIVersion
 	pkg, warnings := migrateDeprecated(pkg)
 	for _, warning := range warnings {
 		logger.From(ctx).Warn(warning)
 	}
+	return pkg, nil
+}
+
+// ParseV1Beta1 unmarshals bytes directly as a v1beta1 package.
+func ParseV1Beta1(b []byte) (v1beta1.ZarfPackage, error) {
+	var pkg v1beta1.ZarfPackage
+	if err := goyaml.Unmarshal(b, &pkg); err != nil {
+		return v1beta1.ZarfPackage{}, err
+	}
+	pkg.Build.APIVersion = v1beta1.APIVersion
 	return pkg, nil
 }
 

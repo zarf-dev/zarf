@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -57,20 +58,28 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 
-	b, err := os.ReadFile(pkgPath.ManifestFile)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg, err := pkgcfg.Parse(ctx, b)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+
+	b, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	version, err := pkgcfg.DetectAPIVersion(b)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	var pkg v1alpha1.ZarfPackage
+	switch version {
+	case "zarf.dev/v1beta1":
+		pkg, err = loadV1Beta1(b)
+	default:
+		pkg, err = loadV1Alpha1(ctx, b, pkgPath.ManifestFile, opts)
+	}
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -80,59 +89,61 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
+	if !hasFlavoredComponent(pkg, opts.Flavor) {
+		l.Warn("flavor not used in package", "flavor", opts.Flavor)
+	}
+
+	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, opts.SetVariables)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) != 0 {
+		return v1alpha1.ZarfPackage{}, &lint.LintError{
+			PackageName: pkg.Metadata.Name,
+			Findings:    findings,
+		}
+	}
+
+	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: opts.SkipRequiredValues}); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
+	return pkg, nil
+}
+
+func loadV1Alpha1(ctx context.Context, b []byte, manifestFile string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
+	pkg, err := pkgcfg.ParseV1Alpha1(ctx, b)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	pkg, err = resolveImports(ctx, pkg, manifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
-	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("package validation failed: %w", err)
 	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
 	return pkg, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
-	l := logger.From(ctx)
-	start := time.Now()
-	l.Debug("start layout.Validate",
-		"pkg", pkg.Metadata.Name,
-		"packagePath", packagePath,
-		"flavor", flavor,
-		"setVariables", setVariables,
-	)
-
-	if !hasFlavoredComponent(pkg, flavor) {
-		l.Warn("flavor not used in package", "flavor", flavor)
-	}
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
-		return fmt.Errorf("package validation failed: %w", err)
-	}
-	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
+func loadV1Beta1(b []byte) (v1alpha1.ZarfPackage, error) {
+	beta, err := pkgcfg.ParseV1Beta1(b)
 	if err != nil {
-		return fmt.Errorf("unable to check schema: %w", err)
+		return v1alpha1.ZarfPackage{}, err
 	}
-	if len(findings) != 0 {
-		return &lint.LintError{
-			PackageName: pkg.Metadata.Name,
-			Findings:    findings,
-		}
-	}
+	pkg := convert.V1Beta1PkgToV1Alpha1(beta)
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
-	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
-		return err
-	}
-
-	l.Debug("done layout.Validate",
-		"pkg", pkg.Metadata.Name,
-		"path", packagePath,
-		"findings", findings,
-		"duration", time.Since(start),
-	)
-
-	return nil
+	return pkg, nil
 }
 
 type validateValuesSchemaOptions struct {
