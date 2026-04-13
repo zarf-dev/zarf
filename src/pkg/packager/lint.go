@@ -9,6 +9,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -25,6 +26,13 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 	if packagePath == "" {
 		return errors.New("package path is required")
 	}
+
+	var err error
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return err
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.SetVariables,

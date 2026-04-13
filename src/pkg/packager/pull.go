@@ -57,6 +57,11 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	// ensure architecture is set
 	arch := config.GetArch(opts.Architecture)
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return "", err
+	}
+
 	u, err := url.Parse(source)
 	if err != nil {
 		return "", err

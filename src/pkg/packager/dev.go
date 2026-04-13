@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -59,6 +60,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 	if opts.Timeout == 0 {
 		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return err
 	}
 
 	loadOpts := load.DefinitionOptions{

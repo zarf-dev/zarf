@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -46,6 +47,11 @@ type CreateOptions struct {
 func Create(ctx context.Context, packagePath string, output string, opts CreateOptions) (_ string, err error) {
 	if opts.SkipSBOM && opts.SBOMOut != "" {
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
+	}
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return "", err
 	}
 
 	loadOpts := load.DefinitionOptions{
