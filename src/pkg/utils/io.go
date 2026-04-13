@@ -17,6 +17,19 @@ const (
 	tmpPathPrefix = "zarf-"
 )
 
+// ResolveCachePath returns cachePath if non-empty, otherwise falls back to
+// filepath.Join(os.UserCacheDir(), "zarf") which respects XDG_CACHE_HOME on Linux.
+func ResolveCachePath(cachePath string) (string, error) {
+	if cachePath != "" {
+		return cachePath, nil
+	}
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return "", fmt.Errorf("unable to determine cache directory: %w", err)
+	}
+	return filepath.Join(cacheDir, "zarf"), nil
+}
+
 // MakeTempDir creates a temp directory with the zarf- prefix.
 func MakeTempDir(basePath string) (string, error) {
 	if basePath != "" {
