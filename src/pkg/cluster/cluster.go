@@ -188,8 +188,19 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		return nil, fmt.Errorf("failed to check for existing state: %w", err)
 	}
 
+	l.Debug("applying the Zarf namespace")
+	zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
+	_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
+	if err != nil {
+		return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
+	}
+
+	ipFamily, err := c.GetIPFamily(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
+	}
+
 	// If state is nil, this is a new cluster.
-	// TODO(mkcp): Simplify nesting with early returns closer to the top of the function.
 	if s == nil {
 		s = &state.State{}
 		l.Debug("new cluster, no prior Zarf deployments found")
@@ -248,20 +259,6 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			}
 		}
 
-		// Try to create the zarf namespace.
-		l.Debug("creating the Zarf namespace")
-		zarfNamespace := NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
-		_, err = c.Clientset.CoreV1().Namespaces().Apply(ctx, zarfNamespace, metav1.ApplyOptions{FieldManager: FieldManagerName, Force: true})
-		if err != nil {
-			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
-		}
-
-		ipFamily, err := c.GetIPFamily(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes IP family: %w", err)
-		}
-		s.IPFamily = ipFamily
-
 		// Wait up to 2 minutes for the default service account to be created.
 		// Some clusters seem to take a while to create this, see https://github.com/kubernetes/kubernetes/issues/66689.
 		// The default SA is required for pods to start properly.
@@ -283,13 +280,46 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, err
 		}
 		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(s.IPFamily)
+		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
 		if err != nil {
 			return nil, err
 		}
 		s.RegistryInfo = opts.RegistryInfo
 		opts.ArtifactServer.FillInEmptyValues()
 		s.ArtifactServer = opts.ArtifactServer
+	}
+
+	s.IPFamily = ipFamily
+
+	previousMode := s.RegistryInfo.RegistryMode
+	if opts.RegistryInfo.RegistryMode != "" {
+		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
+	}
+	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
+
+	// If the registry mode is changing the injector will be re-made so the port should be reset
+	if modeChanged {
+		s.InjectorInfo.Port = 0
+	}
+
+	switch s.RegistryInfo.RegistryMode {
+	case state.RegistryModeNodePort:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
+		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	case state.RegistryModeProxy:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfRegistryHostPort
+		}
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
 	}
 
 	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
@@ -456,6 +486,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", stateErr, err)
 	}
+	// Reconcile Port/NodePort for backwards compatibility with older state
+	s.RegistryInfo.ReconcilePort()
 	// If registry mode is not set then this is an old Zarf cluster and we can assume it's either external or nodeport
 	if s.RegistryInfo.RegistryMode == "" {
 		if s.RegistryInfo.IsInternal() {
@@ -470,6 +502,8 @@ func (c *Cluster) LoadState(ctx context.Context) (*state.State, error) {
 
 // SaveState takes a given state.State and persists it to k8s Cluster secrets.
 func (c *Cluster) SaveState(ctx context.Context, s *state.State) error {
+	// Sync NodePort from Port so older Zarf versions can read the state.
+	s.RegistryInfo.ReconcilePort()
 	state.DebugPrint(ctx, s)
 
 	data, err := json.Marshal(&s)

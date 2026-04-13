@@ -58,6 +58,11 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
