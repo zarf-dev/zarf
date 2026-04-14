@@ -66,6 +66,11 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		opts.VerifyBlobOptions = &defaults
 	}
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
 	srcType, err := identifySource(source)
 	if err != nil {
 		return nil, err
