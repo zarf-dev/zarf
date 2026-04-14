@@ -175,7 +175,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm", "--log-level", "debug"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 

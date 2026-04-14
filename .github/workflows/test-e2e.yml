@@ -157,6 +157,9 @@ jobs:
 
       - name: "Describe nodes, pods and deployments"
         run: |
+          echo "***** Getting crds *****"
+
+          sudo env "PATH=$PATH" CI=true kubectl get crds -o yaml
           echo "***** Getting pods *****"
           sudo env "PATH=$PATH" CI=true kubectl get pods -A
 

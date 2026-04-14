@@ -150,7 +150,7 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm", "--log-level", "debug"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 

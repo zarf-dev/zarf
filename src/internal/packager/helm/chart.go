@@ -5,7 +5,6 @@
 package helm
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -31,10 +30,8 @@ import (
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"helm.sh/helm/v4/pkg/storage/driver"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
-	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 )
 
@@ -114,19 +111,17 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 
 	l.Debug("checking for existing helm deployment")
 
-	var newRelease release.Releaser
 	if errors.Is(histErr, driver.ErrReleaseNotFound) {
 		// No prior release, try to install it.
 		l.Info("performing Helm install", "chart", zarfChart.Name)
-
-		newRelease, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
+		_, err = installChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender)
 	} else if histErr == nil && len(releases) > 0 {
 		// Otherwise, there is a prior release so upgrade it.
 		l.Info("performing Helm upgrade", "chart", zarfChart.Name)
 
 		lastReleaser := releases[len(releases)-1]
 
-		newRelease, err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastReleaser)
+		_, err = upgradeChart(helmCtx, zarfChart, chart, values, opts, actionConfig, postRender, lastReleaser)
 	} else {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to verify the chart installation status: %w", histErr)
 	}
@@ -162,29 +157,6 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 			return nil, zarfChart.ReleaseName, fmt.Errorf("%w: unable to rollback: %w", installErr, err)
 		}
 		return nil, zarfChart.ReleaseName, installErr
-	}
-
-	newRel, err := release.NewAccessor(newRelease)
-	if err != nil {
-		return nil, zarfChart.ReleaseName, err
-	}
-
-	resourceList, err := actionConfig.KubeClient.Build(bytes.NewBufferString(newRel.Manifest()), true)
-	if err != nil {
-		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to build the resource list: %w", err)
-	}
-
-	runtimeObjs := []runtime.Object{}
-	for _, resource := range resourceList {
-		runtimeObjs = append(runtimeObjs, resource.Object)
-	}
-
-	if !zarfChart.NoWait {
-		// Ensure we don't go past the timeout by using a context initialized with the helm timeout
-		l.Info("running health checks", "chart", zarfChart.Name)
-		if err := healthchecks.WaitForReadyRuntime(helmCtx, opts.Cluster.Watcher, runtimeObjs); err != nil {
-			return nil, zarfChart.ReleaseName, err
-		}
 	}
 
 	l.Debug("done processing Helm chart", "name", zarfChart.Name, "duration", time.Since(start))
@@ -252,8 +224,8 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		// Set reuse values to only override the values we are explicitly given
 		client.ReuseValues = true
 
-		// Wait for the update operation to successfully complete
-		client.WaitStrategy = kube.LegacyStrategy
+		//Wait for the update operation to successfully complete
+		client.WaitStrategy = kube.StatusWatcherStrategy
 
 		client.ServerSideApply = zarfChart.GetServerSideApply()
 		client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), lastRelease, opts.ForceConflicts)
@@ -282,7 +254,7 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if zarfChart.NoWait {
 		client.WaitStrategy = kube.HookOnlyStrategy
 	} else {
-		client.WaitStrategy = kube.LegacyStrategy
+		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
 
 	// We need to include CRDs or operator installations will fail spectacularly.
@@ -324,7 +296,7 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	if zarfChart.NoWait {
 		client.WaitStrategy = kube.HookOnlyStrategy
 	} else {
-		client.WaitStrategy = kube.LegacyStrategy
+		client.WaitStrategy = kube.StatusWatcherStrategy
 	}
 
 	client.ServerSideApply = zarfChart.GetServerSideApply()
@@ -355,7 +327,7 @@ func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionCon
 	client.CleanupOnFail = true
 	client.ServerSideApply = zarfChart.GetServerSideApply()
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, forceConflicts)
-	client.WaitStrategy = kube.LegacyStrategy
+	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
 	client.Version = rel.Version()
 	client.MaxHistory = maxHelmHistory
@@ -365,7 +337,7 @@ func rollbackChart(zarfChart v1alpha1.ZarfChart, rel release.Accessor, actionCon
 func uninstallChart(name string, actionConfig *action.Configuration, timeout time.Duration) (*release.UninstallReleaseResponse, error) {
 	client := action.NewUninstall(actionConfig)
 	client.KeepHistory = false
-	client.WaitStrategy = kube.LegacyStrategy
+	client.WaitStrategy = kube.StatusWatcherStrategy
 	client.Timeout = timeout
 	return client.Run(name)
 }

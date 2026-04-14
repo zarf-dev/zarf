@@ -5,6 +5,9 @@ runs:
   using: composite
   steps:
     - run: |
+        echo "******* Getting CRDS *****"
+        kubectl get crds -o yaml
+
         echo "***** Getting pods *****"
         kubectl get pods -A
 
