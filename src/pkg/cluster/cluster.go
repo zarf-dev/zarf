@@ -173,6 +173,8 @@ type InitStateOptions struct {
 	StorageClass string
 	// InjectorPort is the port that the injector will be exposed through
 	InjectorPort int
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -229,11 +231,16 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 
 		// Setup zarf agent PKI
-		agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-		if err != nil {
-			return nil, err
+		if opts.AgentTLS != nil {
+			s.AgentTLS = *opts.AgentTLS
+			s.AgentTLSUserProvided = true
+		} else {
+			agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+			if err != nil {
+				return nil, err
+			}
+			s.AgentTLS = agentTLS
 		}
-		s.AgentTLS = agentTLS
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 		if err != nil {
