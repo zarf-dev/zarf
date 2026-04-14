@@ -64,8 +64,8 @@ type InstallUpgradeOptions struct {
 	// State is used to update the registry / git server secrets
 	State   *state.State
 	Cluster *cluster.Cluster
-	// AirgapMode is true if the package being installed is not a YOLO package and it helps determine if Zarf state secrets should be updated
-	AirgapMode bool
+	// ConnectedDeploy is true when deploying with --connected or YOLO mode, causing resources to be labeled with zarf.dev/agent: ignore
+	ConnectedDeploy bool
 	// Timeout for the helm install/upgrade
 	Timeout time.Duration
 	// PkgName is the name of the zarf package being installed
@@ -100,7 +100,7 @@ func InstallOrUpgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, ch
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to initialize the K8s client: %w", err)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return nil, zarfChart.ReleaseName, fmt.Errorf("unable to create helm renderer: %w", err)
 	}
@@ -220,7 +220,7 @@ func UpdateReleaseValues(ctx context.Context, zarfChart v1alpha1.ZarfChart, upda
 		opts.VariableConfig = template.GetZarfVariableConfig(ctx, opts.IsInteractive)
 	}
 
-	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.AirgapMode, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
+	postRender, err := newRenderer(ctx, zarfChart, opts.AdoptExistingResources, opts.Cluster, opts.ConnectedDeploy, opts.State, actionConfig, opts.VariableConfig, opts.PkgName, opts.NamespaceOverride)
 	if err != nil {
 		return fmt.Errorf("unable to create helm renderer: %w", err)
 	}

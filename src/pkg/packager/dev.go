@@ -123,7 +123,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	var d deployer
 	d.vc = variableConfig
 	if !opts.AirgapMode {
-		pkgLayout.Pkg.Metadata.YOLO = true
 		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState, err := state.Default()
 		if err != nil {
@@ -140,6 +139,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SetVariables:   opts.DeploySetVariables,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
+		Connected:      !opts.AirgapMode,
 		OCIConcurrency: opts.OCIConcurrency,
 		RemoteOptions:  opts.RemoteOptions,
 	})

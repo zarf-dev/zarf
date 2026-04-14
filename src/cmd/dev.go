@@ -335,6 +335,7 @@ type devDeployOptions struct {
 	retries                int
 	optionalComponents     string
 	noYOLO                 bool
+	connected              bool
 	ociConcurrency         int
 	skipVersionCheck       bool
 }
@@ -371,7 +372,9 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 
+	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VDevDeployConnected), lang.CmdDevDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.noYOLO, "no-yolo", v.GetBool(VDevDeployNoYolo), lang.CmdDevDeployFlagNoYolo)
+	_ = cmd.Flags().MarkDeprecated("no-yolo", "Use --connected=false instead")
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
@@ -401,7 +404,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	err = packager.DevDeploy(ctx, basePath, packager.DevDeployOptions{
-		AirgapMode:         o.noYOLO,
+		AirgapMode:         o.noYOLO || !o.connected,
 		Flavor:             o.flavor,
 		RegistryURL:        o.registryURL,
 		RegistryOverrides:  overrides,
