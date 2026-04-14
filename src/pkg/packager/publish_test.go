@@ -470,6 +470,54 @@ func TestPublishCopySHA(t *testing.T) {
 	}
 }
 
+func TestPullOCIConnectedExcludesImages(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(ctx, t)
+
+	tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	layoutExpected, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+
+	packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, PublishPackageOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	// Pull with Connected=true — image layers should be excluded
+	pkgLayout, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     true,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayout.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayout.GetImageDirPath())
+	require.ErrorIs(t, err, os.ErrNotExist, "images directory should not exist when pulled with Connected=true")
+
+	// Pull without Connected — image layers should be present
+	pkgLayoutFull, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     false,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayoutFull.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayoutFull.GetImageDirPath())
+	require.NoError(t, err, "images directory should exist when pulled without Connected")
+}
+
 func TestPublishCopyTag(t *testing.T) {
 	tt := []struct {
 		name             string

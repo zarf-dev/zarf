@@ -157,6 +157,13 @@ func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
 
+// IsConfigured returns true if the git server address has been set
+// Note that even when the Git server component is not used Zarf will set the address to a default value
+// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+func (gs GitServerInfo) IsConfigured() bool {
+	return gs.Address != ""
+}
+
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
 func (gs *GitServerInfo) FillInEmptyValues() error {
 	var err error
@@ -289,6 +296,11 @@ func (ri RegistryInfo) IsInternal() bool {
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
 	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+}
+
+// IsConfigured returns true if the registry info address has been set
+func (ri RegistryInfo) IsConfigured() bool {
+	return ri.Address != ""
 }
 
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
@@ -522,15 +534,37 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// WithPackageConnectivity sets the connectivity mode for the deployed package
+func WithPackageConnectivity(connected bool) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		if connected {
+			o.PackageConnectivity = PackageConnectivityConnected
+		} else {
+			o.PackageConnectivity = PackageConnectivityAirGap
+		}
+	}
+}
+
+// PackageConnectivity defines the connectivity mode of package deployments
+type PackageConnectivity string
+
+const (
+	// PackageConnectivityAirGap is the default deploy mode
+	PackageConnectivityAirGap PackageConnectivity = "airgap"
+	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
+	PackageConnectivityConnected PackageConnectivity = "connected"
+)
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string               `json:"name"`
-	Data               v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion         string               `json:"cliVersion"`
-	Generation         int                  `json:"generation"`
-	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	Name                string               `json:"name"`
+	Data                v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion          string               `json:"cliVersion"`
+	Generation          int                  `json:"generation"`
+	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -546,6 +580,15 @@ func (d *DeployedPackage) GetSecretName() string {
 		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
 	}
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// GetPackageConnectivity returns the connectivity mode the package is using
+// Defaults to airgap for packages that were deployed before connectivity was introduced
+func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.PackageConnectivity == "" {
+		return PackageConnectivityAirGap
+	}
+	return d.PackageConnectivity
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
