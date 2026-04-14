@@ -326,16 +326,51 @@ func TestMergeStateArtifact(t *testing.T) {
 func TestMergeStateAgent(t *testing.T) {
 	t.Parallel()
 
-	agentTLS, err := pki.GeneratePKI("example.com")
-	require.NoError(t, err)
-	oldState := &State{
-		AgentTLS: agentTLS,
-	}
-	newState, err := Merge(oldState, MergeOptions{
-		Services: []string{AgentKey},
+	t.Run("auto-generate new certs", func(t *testing.T) {
+		t.Parallel()
+		agentTLS, err := pki.GeneratePKI("example.com")
+		require.NoError(t, err)
+		oldState := &State{
+			AgentTLS: agentTLS,
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+		require.False(t, newState.AgentTLSUserProvided)
 	})
-	require.NoError(t, err)
-	require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+
+	t.Run("user-provided certs are used and provenance is set", func(t *testing.T) {
+		t.Parallel()
+		oldState := &State{}
+		userTLS := pki.GeneratedPKI{
+			CA:   []byte("user-ca"),
+			Cert: []byte("user-cert"),
+			Key:  []byte("user-key"),
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+			AgentTLS: &userTLS,
+		})
+		require.NoError(t, err)
+		require.Equal(t, userTLS, newState.AgentTLS)
+		require.True(t, newState.AgentTLSUserProvided)
+	})
+
+	t.Run("auto-generate resets user-provided provenance", func(t *testing.T) {
+		t.Parallel()
+		oldState := &State{
+			AgentTLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
+			AgentTLSUserProvided: true,
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+		require.False(t, newState.AgentTLSUserProvided)
+	})
 }
 
 func TestMergeInstalledChartsForComponent(t *testing.T) {
