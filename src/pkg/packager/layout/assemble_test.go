@@ -31,7 +31,7 @@ func TestGetChecksum(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	checksumContent, checksumHash, err := getChecksum(tmpDir)
+	checksumContent, checksumHash, err := GetChecksum(tmpDir)
 	require.NoError(t, err)
 
 	expectedContent := `233562de1a0288b139c4fa40b7d189f806e906eeb048517aeb67f34ac0e2faf1 nested/directory/file.md
@@ -50,7 +50,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.NoError(t, err)
 	tarPath := filepath.Join(t.TempDir(), "data.tar")
 
-	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
+	err = CreateReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
 	shaSum, err := helpers.GetSHA256OfFile(tarPath)

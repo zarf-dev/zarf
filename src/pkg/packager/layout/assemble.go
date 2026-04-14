@@ -191,7 +191,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	checksumContent, checksumSha, err := getChecksum(buildPath)
+	checksumContent, checksumSha, err := GetChecksum(buildPath)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +265,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 		}
 	}
 
-	checksumContent, checksumSha, err := getChecksum(buildPath)
+	checksumContent, checksumSha, err := GetChecksum(buildPath)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +524,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	if err != nil {
 		return err
 	}
-	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
+	err = CreateReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
 	if err != nil {
 		return err
 	}
@@ -773,7 +773,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	if err != nil {
 		return err
 	}
-	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
+	err = CreateReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
 	if err != nil {
 		return err
 	}
@@ -844,7 +844,9 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	return pkg
 }
 
-func getChecksum(dirPath string) (string, string, error) {
+// GetChecksum takes a directory then creates a sha256 check sum for each files in the
+// directory recursively, then creates a global checksum for all the files together.
+func GetChecksum(dirPath string) (string, string, error) {
 	checksumData := []string{}
 	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -877,7 +879,10 @@ func getChecksum(dirPath string) (string, string, error) {
 	return checksumContent, hex.EncodeToString(sha[:]), nil
 }
 
-func createReproducibleTarballFromDir(dirPath, dirPrefix, tarballPath string, overrideMode bool) (err error) {
+// CreateReproducibleTarballFromDir takes a directory then walks thru every file in that directory and adds it
+// to a tar ball; the reproducible part comes from changing all the file user and group to 0, and settings the
+// file creation, access, and mod time to midnight on January 1st 1970, UTC.
+func CreateReproducibleTarballFromDir(dirPath string, dirPrefix string, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
@@ -1070,7 +1075,7 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	tarPath := filepath.Join(buildPath, DocumentationTar)
-	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+	if err := CreateReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
