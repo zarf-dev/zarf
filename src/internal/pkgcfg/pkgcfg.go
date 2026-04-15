@@ -58,6 +58,7 @@ func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 // MultiDocDefinition parses the zarf.yaml from an already-built package, which may
 // contain one document per supported apiVersion. It reads the highest priority document
 func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+	l := logger.From(ctx)
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -78,6 +79,7 @@ func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, er
 		}
 		handler, known := handlerFor(version)
 		if !known {
+			l.Debug("found unsupported API version during parse", "API version", version)
 			continue
 		}
 		if seenVersions[handler.version] {
