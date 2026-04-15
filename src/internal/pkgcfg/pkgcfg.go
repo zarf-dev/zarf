@@ -22,7 +22,7 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	switch version {
-	case "", "zarf.dev/v1alpha1":
+	case "", v1alpha1.APIVersion:
 		return ParseV1Alpha1(ctx, b)
 	default:
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unknown apiVersion %q", version)
