@@ -31,8 +31,7 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
-// Definition parses a zarf.yaml file. Use this for package
-// definitions written by the user.
+// Definition parses a package definition
 func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
@@ -57,8 +56,7 @@ func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 }
 
 // MultiDocDefinition parses the zarf.yaml from an already-built package, which may
-// contain one document per supported apiVersion. It returns the highest-
-// priority version this binary recognizes
+// contain one document per supported apiVersion. It reads the highest priority document
 func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
@@ -80,8 +78,6 @@ func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, er
 		}
 		handler, known := handlerFor(version)
 		if !known {
-			logger.From(ctx).Warn("ignoring package definition with unrecognized apiVersion; a newer version of Zarf may be required to read it fully",
-				"apiVersion", version)
 			continue
 		}
 		if seenVersions[handler.version] {
@@ -118,16 +114,16 @@ func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1al
 
 // handlerFor looks up a version in knownAPIVersions, treating "" as v1alpha1.
 func handlerFor(version string) (apiVersionHandler, bool) {
-	canonical := canonicalAPIVersion(version)
+	resolved := resolveAPIVersion(version)
 	for _, h := range knownAPIVersions {
-		if h.version == canonical {
+		if h.version == resolved {
 			return h, true
 		}
 	}
 	return apiVersionHandler{}, false
 }
 
-func canonicalAPIVersion(version string) string {
+func resolveAPIVersion(version string) string {
 	if version == "" {
 		return v1alpha1.APIVersion
 	}

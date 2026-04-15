@@ -4,27 +4,13 @@
 package pkgcfg
 
 import (
-	"bytes"
 	"context"
 	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
-
-func captureLogger(t *testing.T) (context.Context, *bytes.Buffer) {
-	t.Helper()
-	buf := &bytes.Buffer{}
-	l, err := logger.New(logger.Config{
-		Level:       logger.Info,
-		Format:      logger.FormatConsole,
-		Destination: buf,
-	})
-	require.NoError(t, err)
-	return logger.WithContext(context.Background(), l), buf
-}
 
 // newer is a future apiVersion this binary does not understand.
 const newer = "zarf.dev/v1beta999"
@@ -119,11 +105,10 @@ func TestMultiDocDefinition(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		yaml        string
-		wantName    string
-		wantErr     string
-		wantWarning string // substring expected in captured warnings
+		name     string
+		yaml     string
+		wantName string
+		wantErr  string
 	}{
 		{
 			name: "single v1alpha1 doc parses",
@@ -148,8 +133,7 @@ kind: ZarfPackageConfig
 metadata:
   name: from-future
 `,
-			wantName:    "from-v1alpha1",
-			wantWarning: newer,
+			wantName: "from-v1alpha1",
 		},
 		{
 			name: "tolerates reverse order",
@@ -164,8 +148,7 @@ kind: ZarfPackageConfig
 metadata:
   name: from-v1alpha1
 `,
-			wantName:    "from-v1alpha1",
-			wantWarning: newer,
+			wantName: "from-v1alpha1",
 		},
 		{
 			name: "errors when no known version present",
@@ -175,8 +158,7 @@ kind: ZarfPackageConfig
 metadata:
   name: from-future
 `,
-			wantErr:     "no supported apiVersion found",
-			wantWarning: newer,
+			wantErr: "no supported apiVersion found",
 		},
 		{
 			name: "errors on duplicate same-version docs",
@@ -215,19 +197,14 @@ metadata:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx, logs := captureLogger(t)
-			pkg, err := MultiDocDefinition(ctx, []byte(tt.yaml))
+			pkg, err := MultiDocDefinition(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tt.wantName, pkg.Metadata.Name)
+				return
 			}
-
-			if tt.wantWarning != "" {
-				require.Contains(t, logs.String(), tt.wantWarning, logs.String())
-			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
 		})
 	}
 }
