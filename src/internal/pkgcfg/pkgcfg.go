@@ -6,51 +6,144 @@ package pkgcfg
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
 
 	goyaml "github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// Parse parses the package definition yaml passed as a byte slice and applies deprecated migrations
+// apiVersionHandler pairs a supported apiVersion with its decoder. Higher
+// priority means newer.
+type apiVersionHandler struct {
+	version  string
+	priority int
+	decode   func(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error)
+}
+
+// knownAPIVersions lists every apiVersion this binary can decode. To add a
+// new version, append an entry with a higher priority than any existing one.
+var knownAPIVersions = []apiVersionHandler{
+	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
+}
+
+// Parse returns a ZarfPackage from a (possibly multi-document) zarf.yaml,
+// picking the highest-priority apiVersion this binary recognizes. Unrecognized
+// apiVersions are skipped with a warning; an empty apiVersion is treated as
+// v1alpha1.
 func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
-	version, err := detectAPIVersion(b)
+	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	switch version {
-	case "", v1alpha1.APIVersion:
-		return ParseV1Alpha1(ctx, b)
-	default:
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("unknown apiVersion %q", version)
+
+	docs := nonEmptyDocs(file.Docs)
+	if len(docs) == 0 {
+		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
 	}
+
+	var chosen *apiVersionHandler
+	var chosenNode ast.Node
+	seenVersions := map[string]bool{}
+
+	for i, doc := range docs {
+		version, err := apiVersionFromNode(doc.Body)
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+		}
+		handler, known := handlerFor(version)
+		if !known {
+			logger.From(ctx).Warn("ignoring package definition with unrecognized apiVersion; a newer version of Zarf may be required to read it fully",
+				"apiVersion", version)
+			continue
+		}
+		if seenVersions[handler.version] {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
+		}
+		seenVersions[handler.version] = true
+		if chosen == nil || handler.priority > chosen.priority {
+			chosen = &handler
+			chosenNode = doc.Body
+		}
+	}
+
+	if chosen == nil {
+		return v1alpha1.ZarfPackage{}, errors.New("no supported apiVersion found in package definition")
+	}
+	return chosen.decode(ctx, chosenNode)
 }
 
-// ParseV1Alpha1 unmarshals bytes as a v1alpha1 package and applies deprecated migrations.
+// ParseV1Alpha1 unmarshals a single v1alpha1 document and applies deprecated
+// migrations. Callers use this when they already know the bytes are v1alpha1.
 func ParseV1Alpha1(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	var pkg v1alpha1.ZarfPackage
 	if err := goyaml.Unmarshal(b, &pkg); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	return applyV1Alpha1Migrations(ctx, pkg), nil
+}
+
+func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	if err := goyaml.NodeToValue(node, &pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return applyV1Alpha1Migrations(ctx, pkg), nil
+}
+
+func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.ZarfPackage {
 	pkg, warnings := migrateDeprecated(pkg)
 	for _, warning := range warnings {
 		logger.From(ctx).Warn(warning)
 	}
-	return pkg, nil
+	return pkg
 }
 
-// detectAPIVersion extracts the apiVersion field from raw YAML bytes.
-func detectAPIVersion(b []byte) (string, error) {
+// handlerFor looks up a version in knownAPIVersions, treating "" as v1alpha1.
+func handlerFor(version string) (apiVersionHandler, bool) {
+	canonical := canonicalAPIVersion(version)
+	for _, h := range knownAPIVersions {
+		if h.version == canonical {
+			return h, true
+		}
+	}
+	return apiVersionHandler{}, false
+}
+
+func canonicalAPIVersion(version string) string {
+	if version == "" {
+		return v1alpha1.APIVersion
+	}
+	return version
+}
+
+func apiVersionFromNode(node ast.Node) (string, error) {
+	if node == nil {
+		return "", nil
+	}
 	var probe struct {
 		APIVersion string `yaml:"apiVersion"`
 	}
-	if err := goyaml.Unmarshal(b, &probe); err != nil {
+	if err := goyaml.NodeToValue(node, &probe); err != nil {
 		return "", err
 	}
 	return probe.APIVersion, nil
+}
+
+func nonEmptyDocs(docs []*ast.DocumentNode) []*ast.DocumentNode {
+	out := make([]*ast.DocumentNode, 0, len(docs))
+	for _, d := range docs {
+		if d == nil || d.Body == nil {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
 }
 
 // List of migrations tracked in the zarf.yaml build data.
