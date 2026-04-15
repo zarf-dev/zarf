@@ -15,7 +15,7 @@ import (
 // newer is a future apiVersion this binary does not understand.
 const newer = "zarf.dev/v1beta999"
 
-func TestDefinition(t *testing.T) {
+func TestParseDefinition(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -69,6 +69,27 @@ metadata:
 			wantErr: "single YAML document",
 		},
 		{
+			name: "leading document separator is accepted",
+			yaml: `---
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: leading-sep
+`,
+			wantName: "leading-sep",
+		},
+		{
+			name: "leading and trailing separators are accepted",
+			yaml: `---
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: both-sep
+---
+`,
+			wantName: "both-sep",
+		},
+		{
 			name:    "empty input errors",
 			yaml:    "",
 			wantErr: "no package definition found",
@@ -101,7 +122,7 @@ metadata:
 	}
 }
 
-func TestMultiDocDefinition(t *testing.T) {
+func TestParseBuiltPackageDefinition(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -209,9 +230,9 @@ metadata:
 	}
 }
 
-// TestParseDefinitionAndPackageAgreeOnSingleDoc confirms that a single-doc
-// v1alpha1 yaml decodes identically through both entry points
-func TestParseDefinitionAndPackageAgreeOnSingleDoc(t *testing.T) {
+// TestParseDefinitionAndParseBuiltPackageAgreeOnSingleDoc confirms that a
+// single-doc v1alpha1 yaml decodes identically through both entry points.
+func TestParseDefinitionAndParseBuiltPackageAgreeOnSingleDoc(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	body := []byte("apiVersion: " + v1alpha1.APIVersion + "\nkind: ZarfPackageConfig\nmetadata:\n  name: agree\ncomponents:\n  - name: c\n")

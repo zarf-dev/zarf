@@ -18,7 +18,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// apiVersionHandler pairs a supported apiVersion with its decoder
+// apiVersionHandler pairs a supported apiVersion with its decoder.
 type apiVersionHandler struct {
 	version  string
 	priority int
@@ -33,13 +33,9 @@ var knownAPIVersions = []apiVersionHandler{
 
 // ParseDefinition parses a package definition
 func ParseDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
-	file, err := parser.ParseBytes(b, 0)
+	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
-	}
-	docs := filterEmptyDocs(file.Docs)
-	if len(docs) == 0 {
-		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
 	}
 	if len(docs) > 1 {
 		return v1alpha1.ZarfPackage{}, errors.New("package definition must contain a single YAML document")
@@ -59,17 +55,16 @@ func ParseDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error
 // contain one document per supported apiVersion. It reads the highest priority document
 func ParseBuiltPackageDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
-	file, err := parser.ParseBytes(b, 0)
+	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	docs := filterEmptyDocs(file.Docs)
-	if len(docs) == 0 {
-		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
-	}
 
-	var chosen *apiVersionHandler
-	var chosenNode ast.Node
+	var (
+		chosen     apiVersionHandler
+		chosenNode ast.Node
+		found      bool
+	)
 	seenVersions := map[string]bool{}
 
 	for i, doc := range docs {
@@ -86,13 +81,14 @@ func ParseBuiltPackageDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPa
 			return v1alpha1.ZarfPackage{}, fmt.Errorf("duplicate apiVersion %q in package definition", handler.version)
 		}
 		seenVersions[handler.version] = true
-		if chosen == nil || handler.priority > chosen.priority {
-			chosen = &handler
+		if !found || handler.priority > chosen.priority {
+			chosen = handler
 			chosenNode = doc.Body
+			found = true
 		}
 	}
 
-	if chosen == nil {
+	if !found {
 		return v1alpha1.ZarfPackage{}, errors.New("no supported apiVersion found in package definition")
 	}
 	return chosen.decode(ctx, chosenNode)
@@ -114,22 +110,19 @@ func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1al
 	return pkg
 }
 
-// handlerFor looks up a version in knownAPIVersions, treating "" as v1alpha1.
+// handlerFor looks up a version in knownAPIVersions. An empty version is treated
+// as the default so legacy user-authored zarf.yaml files that omit apiVersion
+// continue to work.
 func handlerFor(version string) (apiVersionHandler, bool) {
-	resolved := resolveAPIVersion(version)
+	if version == "" {
+		version = v1alpha1.APIVersion
+	}
 	for _, h := range knownAPIVersions {
-		if h.version == resolved {
+		if h.version == version {
 			return h, true
 		}
 	}
 	return apiVersionHandler{}, false
-}
-
-func resolveAPIVersion(version string) string {
-	if version == "" {
-		return v1alpha1.APIVersion
-	}
-	return version
 }
 
 func apiVersionFromNode(node ast.Node) (string, error) {
@@ -143,6 +136,18 @@ func apiVersionFromNode(node ast.Node) (string, error) {
 		return "", err
 	}
 	return probe.APIVersion, nil
+}
+
+func parseZarfYAMLDocs(b []byte) ([]*ast.DocumentNode, error) {
+	file, err := parser.ParseBytes(b, 0)
+	if err != nil {
+		return nil, err
+	}
+	docs := filterEmptyDocs(file.Docs)
+	if len(docs) == 0 {
+		return nil, errors.New("no package definition found")
+	}
+	return docs, nil
 }
 
 func filterEmptyDocs(docs []*ast.DocumentNode) []*ast.DocumentNode {
