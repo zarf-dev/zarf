@@ -37,7 +37,7 @@ func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	docs := nonEmptyDocs(file.Docs)
+	docs := filterEmptyDocs(file.Docs)
 	if len(docs) == 0 {
 		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
 	}
@@ -62,7 +62,7 @@ func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, er
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	docs := nonEmptyDocs(file.Docs)
+	docs := filterEmptyDocs(file.Docs)
 	if len(docs) == 0 {
 		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
 	}
@@ -143,8 +143,7 @@ func apiVersionFromNode(node ast.Node) (string, error) {
 	return probe.APIVersion, nil
 }
 
-// filters out any empty documents
-func nonEmptyDocs(docs []*ast.DocumentNode) []*ast.DocumentNode {
+func filterEmptyDocs(docs []*ast.DocumentNode) []*ast.DocumentNode {
 	out := make([]*ast.DocumentNode, 0, len(docs))
 	for _, d := range docs {
 		if d == nil || d.Body == nil {
