@@ -15,11 +15,24 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// Parse parses the yaml passed as a byte slice and applies schema migrations.
+// Parse parses the package definition yaml passed as a byte slice and applies deprecated migrations
 func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
-	var pkg v1alpha1.ZarfPackage
-	err := goyaml.Unmarshal(b, &pkg)
+	version, err := detectAPIVersion(b)
 	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	switch version {
+	case "", "zarf.dev/v1alpha1":
+		return ParseV1Alpha1(ctx, b)
+	default:
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unknown apiVersion %q", version)
+	}
+}
+
+// ParseV1Alpha1 unmarshals bytes as a v1alpha1 package and applies deprecated migrations.
+func ParseV1Alpha1(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+	var pkg v1alpha1.ZarfPackage
+	if err := goyaml.Unmarshal(b, &pkg); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg, warnings := migrateDeprecated(pkg)
@@ -27,6 +40,17 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 		logger.From(ctx).Warn(warning)
 	}
 	return pkg, nil
+}
+
+// detectAPIVersion extracts the apiVersion field from raw YAML bytes.
+func detectAPIVersion(b []byte) (string, error) {
+	var probe struct {
+		APIVersion string `yaml:"apiVersion"`
+	}
+	if err := goyaml.Unmarshal(b, &probe); err != nil {
+		return "", err
+	}
+	return probe.APIVersion, nil
 }
 
 // List of migrations tracked in the zarf.yaml build data.
