@@ -113,7 +113,7 @@ func TestGenKey(t *testing.T) {
 		shouldFail bool
 	}{
 		{
-			name:    "gen key",
+			name:    "gen key empty password",
 			options: genKeyOptions{},
 		},
 		{
