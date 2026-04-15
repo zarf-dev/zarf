@@ -31,8 +31,8 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
-// Definition parses a package definition
-func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+// ParseDefinition parses a package definition
+func ParseDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -55,9 +55,9 @@ func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	return handler.decode(ctx, docs[0].Body)
 }
 
-// MultiDocDefinition parses the zarf.yaml from an already-built package, which may
+// ParseBuiltPackageDefinition parses the zarf.yaml from an already-built package, which may
 // contain one document per supported apiVersion. It reads the highest priority document
-func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+func ParseBuiltPackageDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {

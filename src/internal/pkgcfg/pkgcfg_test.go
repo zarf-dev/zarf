@@ -89,7 +89,7 @@ metadata:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			pkg, err := Definition(context.Background(), []byte(tt.yaml))
+			pkg, err := ParseDefinition(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
@@ -197,7 +197,7 @@ metadata:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			pkg, err := MultiDocDefinition(context.Background(), []byte(tt.yaml))
+			pkg, err := ParseBuiltPackageDefinition(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
@@ -216,9 +216,9 @@ func TestParseDefinitionAndPackageAgreeOnSingleDoc(t *testing.T) {
 	ctx := context.Background()
 	body := []byte("apiVersion: " + v1alpha1.APIVersion + "\nkind: ZarfPackageConfig\nmetadata:\n  name: agree\ncomponents:\n  - name: c\n")
 
-	fromDef, err := Definition(ctx, body)
+	fromDef, err := ParseDefinition(ctx, body)
 	require.NoError(t, err)
-	fromPkg, err := MultiDocDefinition(ctx, body)
+	fromPkg, err := ParseBuiltPackageDefinition(ctx, body)
 	require.NoError(t, err)
 	require.Equal(t, fromDef, fromPkg)
 }
