@@ -18,30 +18,52 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// apiVersionHandler pairs a supported apiVersion with its decoder. Higher
-// priority means newer.
+// apiVersionHandler pairs a supported apiVersion with its decoder
 type apiVersionHandler struct {
 	version  string
 	priority int
 	decode   func(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error)
 }
 
-// knownAPIVersions lists every apiVersion this binary can decode. To add a
+// knownAPIVersions lists every apiVersion this Zarf version can decode. To add a
 // new version, append an entry with a higher priority than any existing one.
 var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
-// Parse returns a ZarfPackage from a (possibly multi-document) zarf.yaml,
-// picking the highest-priority apiVersion this binary recognizes. Unrecognized
-// apiVersions are skipped with a warning; an empty apiVersion is treated as
-// v1alpha1.
-func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+// Definition parses a zarf.yaml file. Use this for package
+// definitions written by the user.
+func Definition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	file, err := parser.ParseBytes(b, 0)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
+	docs := nonEmptyDocs(file.Docs)
+	if len(docs) == 0 {
+		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
+	}
+	if len(docs) > 1 {
+		return v1alpha1.ZarfPackage{}, errors.New("package definition must contain a single YAML document")
+	}
+	version, err := apiVersionFromNode(docs[0].Body)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("reading apiVersion: %w", err)
+	}
+	handler, known := handlerFor(version)
+	if !known {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unsupported apiVersion %q", version)
+	}
+	return handler.decode(ctx, docs[0].Body)
+}
 
+// MultiDocDefinition parses the zarf.yaml from an already-built package, which may
+// contain one document per supported apiVersion. It returns the highest-
+// priority version this binary recognizes
+func MultiDocDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+	file, err := parser.ParseBytes(b, 0)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
 	docs := nonEmptyDocs(file.Docs)
 	if len(docs) == 0 {
 		return v1alpha1.ZarfPackage{}, errors.New("no package definition found")
@@ -76,16 +98,6 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 		return v1alpha1.ZarfPackage{}, errors.New("no supported apiVersion found in package definition")
 	}
 	return chosen.decode(ctx, chosenNode)
-}
-
-// ParseV1Alpha1 unmarshals a single v1alpha1 document and applies deprecated
-// migrations. Callers use this when they already know the bytes are v1alpha1.
-func ParseV1Alpha1(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
-	var pkg v1alpha1.ZarfPackage
-	if err := goyaml.Unmarshal(b, &pkg); err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	return applyV1Alpha1Migrations(ctx, pkg), nil
 }
 
 func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
@@ -135,6 +147,7 @@ func apiVersionFromNode(node ast.Node) (string, error) {
 	return probe.APIVersion, nil
 }
 
+// filters out any empty documents
 func nonEmptyDocs(docs []*ast.DocumentNode) []*ast.DocumentNode {
 	out := make([]*ast.DocumentNode, 0, len(docs))
 	for _, d := range docs {

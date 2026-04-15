@@ -26,17 +26,17 @@ func captureLogger(t *testing.T) (context.Context, *bytes.Buffer) {
 	return logger.WithContext(context.Background(), l), buf
 }
 
-func TestParse(t *testing.T) {
+// newer is a future apiVersion this binary does not understand.
+const newer = "zarf.dev/v1beta999"
+
+func TestDefinition(t *testing.T) {
 	t.Parallel()
 
-	const newer = "zarf.dev/v1beta999"
-
 	tests := []struct {
-		name        string
-		yaml        string
-		wantName    string
-		wantErr     string
-		wantWarning string // substring expected in captured warnings; empty = no warning check
+		name     string
+		yaml     string
+		wantName string
+		wantErr  string
 	}{
 		{
 			name: "omitted apiVersion parses as v1alpha1",
@@ -58,7 +58,85 @@ metadata:
 			wantName: "explicit-v1alpha1",
 		},
 		{
-			name: "multi-doc picks v1alpha1 when newer doc is unrecognized",
+			name: "unknown apiVersion errors without silent fallback",
+			yaml: `
+apiVersion: ` + newer + `
+kind: ZarfPackageConfig
+metadata:
+  name: from-future
+`,
+			wantErr: `unsupported apiVersion "` + newer + `"`,
+		},
+		{
+			name: "multi-document input errors",
+			yaml: `
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: first
+---
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: second
+`,
+			wantErr: "single YAML document",
+		},
+		{
+			name:    "empty input errors",
+			yaml:    "",
+			wantErr: "no package definition found",
+		},
+		{
+			name:    "whitespace-only input errors",
+			yaml:    "\n  \n",
+			wantErr: "no package definition found",
+		},
+		{
+			name:    "malformed yaml bubbles up from the parser",
+			yaml:    "apiVersion: [not, a, string]\n",
+			wantErr: "apiVersion",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			pkg, err := Definition(context.Background(), []byte(tt.yaml))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantName, pkg.Metadata.Name)
+		})
+	}
+}
+
+func TestMultiDocDefinition(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		yaml        string
+		wantName    string
+		wantErr     string
+		wantWarning string // substring expected in captured warnings
+	}{
+		{
+			name: "single v1alpha1 doc parses",
+			yaml: `
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: single
+`,
+			wantName: "single",
+		},
+		{
+			name: "picks v1alpha1 when newer doc is unrecognized",
 			yaml: `
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfPackageConfig
@@ -74,7 +152,7 @@ metadata:
 			wantWarning: newer,
 		},
 		{
-			name: "multi-doc tolerates reverse order",
+			name: "tolerates reverse order",
 			yaml: `
 apiVersion: ` + newer + `
 kind: ZarfPackageConfig
@@ -90,7 +168,7 @@ metadata:
 			wantWarning: newer,
 		},
 		{
-			name: "multi-doc errors when no known version present",
+			name: "errors when no known version present",
 			yaml: `
 apiVersion: ` + newer + `
 kind: ZarfPackageConfig
@@ -101,7 +179,7 @@ metadata:
 			wantWarning: newer,
 		},
 		{
-			name: "multi-doc errors on duplicate same-version docs",
+			name: "errors on duplicate same-version docs",
 			yaml: `
 apiVersion: zarf.dev/v1alpha1
 kind: ZarfPackageConfig
@@ -131,16 +209,6 @@ metadata:
 			yaml:    "",
 			wantErr: "no package definition found",
 		},
-		{
-			name:    "whitespace-only input errors",
-			yaml:    "\n  \n",
-			wantErr: "no package definition found",
-		},
-		{
-			name:    "malformed yaml bubbles up from the parser",
-			yaml:    "apiVersion: [not, a, string]\n",
-			wantErr: "apiVersion",
-		},
 	}
 
 	for _, tt := range tests {
@@ -148,7 +216,7 @@ metadata:
 			t.Parallel()
 
 			ctx, logs := captureLogger(t)
-			pkg, err := Parse(ctx, []byte(tt.yaml))
+			pkg, err := MultiDocDefinition(ctx, []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
@@ -158,30 +226,24 @@ metadata:
 			}
 
 			if tt.wantWarning != "" {
-				require.Contains(t, logs.String(), "WRN", logs.String())
 				require.Contains(t, logs.String(), tt.wantWarning, logs.String())
 			}
 		})
 	}
 }
 
-// TestParseDispatchesToV1Alpha1 confirms Parse and ParseV1Alpha1 yield the
-// same package for v1alpha1 bytes.
-func TestParseDispatchesToV1Alpha1(t *testing.T) {
+// TestParseDefinitionAndPackageAgreeOnSingleDoc confirms that a single-doc
+// v1alpha1 yaml decodes identically through both entry points
+func TestParseDefinitionAndPackageAgreeOnSingleDoc(t *testing.T) {
 	t.Parallel()
-
 	ctx := context.Background()
+	body := []byte("apiVersion: " + v1alpha1.APIVersion + "\nkind: ZarfPackageConfig\nmetadata:\n  name: agree\ncomponents:\n  - name: c\n")
 
-	for _, body := range [][]byte{
-		[]byte("kind: ZarfPackageConfig\nmetadata:\n  name: dispatch\ncomponents:\n  - name: c\n"),
-		[]byte("apiVersion: " + v1alpha1.APIVersion + "\nkind: ZarfPackageConfig\nmetadata:\n  name: dispatch\ncomponents:\n  - name: c\n"),
-	} {
-		viaParse, err := Parse(ctx, body)
-		require.NoError(t, err)
-		direct, err := ParseV1Alpha1(ctx, body)
-		require.NoError(t, err)
-		require.Equal(t, direct, viaParse)
-	}
+	fromDef, err := Definition(ctx, body)
+	require.NoError(t, err)
+	fromPkg, err := MultiDocDefinition(ctx, body)
+	require.NoError(t, err)
+	require.Equal(t, fromDef, fromPkg)
 }
 
 func TestHandlerFor(t *testing.T) {

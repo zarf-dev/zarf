@@ -93,7 +93,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.MultiDocDefinition(ctx, b)
 	if err != nil {
 		return nil, err
 	}

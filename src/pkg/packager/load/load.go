@@ -61,7 +61,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.Definition(ctx, b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
