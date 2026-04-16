@@ -21,9 +21,6 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
-const AgentErrTransformGitURL = "unable to transform the git url"
-
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	return operations.Hook{

@@ -120,12 +120,12 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		if isPatchedClusterIP {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
 			if err != nil {
-				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+				return nil, fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
 			}
 		} else {
 			patchedSrc, err = transform.ImageTransformHost(registryAddress, patchedURL)
 			if err != nil {
-				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+				return nil, fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
 			}
 		}
 
@@ -166,7 +166,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		if isChart(mediaType) {
 			patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, patchedURL)
 			if err != nil {
-				return nil, fmt.Errorf("unable to transform the OCIRepo URL: %w", err)
+				return nil, fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
 			}
 		}
 
