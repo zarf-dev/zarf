@@ -29,7 +29,7 @@ func (r *Remote) FetchZarfYAML(ctx context.Context) (v1alpha1.ZarfPackage, error
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	return pkgcfg.ParseBuiltPackageDefinition(ctx, b)
+	return pkgcfg.ParseMultiDoc(ctx, b)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.

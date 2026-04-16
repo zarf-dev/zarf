@@ -31,8 +31,8 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
-// ParseDefinition parses a package definition
-func ParseDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+// Parse parses a package definition
+func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -51,9 +51,9 @@ func ParseDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error
 	return handler.decode(ctx, docs[0].Body)
 }
 
-// ParseBuiltPackageDefinition parses the zarf.yaml from an already-built package, which may
-// contain one document per supported apiVersion. It reads the highest priority document
-func ParseBuiltPackageDefinition(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
+// ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.
+// Multi doc definitions may contain one document per apiVersion.
+func ParseMultiDoc(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
@@ -110,9 +110,6 @@ func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1al
 	return pkg
 }
 
-// handlerFor looks up a version in knownAPIVersions. An empty version is treated
-// as the default so legacy user-authored zarf.yaml files that omit apiVersion
-// continue to work.
 func handlerFor(version string) (apiVersionHandler, bool) {
 	if version == "" {
 		version = v1alpha1.APIVersion
