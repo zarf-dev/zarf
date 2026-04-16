@@ -17,11 +17,33 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
 )
+
+func TestTrustedRootFetch(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputPath := filepath.Join(tmpDir, "trusted_root.json")
+
+	stdOut, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "fetch", "--output", outputPath)
+	require.NoError(t, err, stdOut, stdErr)
+
+	// Verify the file was written and contains valid trusted root JSON
+	trJSON, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, trJSON)
+
+	// Parse it to confirm it's a valid Sigstore trusted root
+	tr, err := root.NewTrustedRootFromJSON(trJSON)
+	require.NoError(t, err)
+	require.NotEmpty(t, tr.FulcioCertificateAuthorities(), "trusted root should contain Fulcio CAs")
+	require.NotEmpty(t, tr.RekorLogs(), "trusted root should contain Rekor transparency logs")
+}
 
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
