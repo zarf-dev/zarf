@@ -36,3 +36,6 @@ configs:
 redis:
   image:
     repository: docker.io/library/redis
+
+extraObjects: []
+repoServer: {}
