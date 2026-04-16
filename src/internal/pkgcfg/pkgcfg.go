@@ -74,7 +74,7 @@ func ParseMultiDoc(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) 
 		}
 		handler, known := handlerFor(version)
 		if !known {
-			l.Debug("found unsupported API version during parse", "API version", version)
+			l.Debug("found unsupported API version during parse", "apiVersion", version)
 			continue
 		}
 		if seenVersions[handler.version] {
