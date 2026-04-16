@@ -31,7 +31,7 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
 }
 
-// Parse parses a package definition
+// Parse parses a single Zarf package definition at any supported API version
 func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
