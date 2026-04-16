@@ -21,39 +21,41 @@ func (c *Cluster) UpdateGiteaPVC(ctx context.Context, pvcName string, shouldRoll
 		Get(ctx,
 			pvcName,
 			metav1.GetOptions{})
-
 	if err != nil {
 		logger.From(ctx).Debug(err.Error())
 		if !errors.IsNotFound(err) {
 			return false, err
 		}
-	} else {
-		// If it exists and shouldRollBack, delete the labels from the object and update it.
+
+		// pvc does not exist
+		// If a rollback is requested on a nonexistent resource, return an error.
 		if shouldRollBack {
-			delete(pvc.Labels, "app.kubernetes.io/managed-by")
-			delete(pvc.Annotations, "meta.helm.sh/release-name")
-			delete(pvc.Annotations, "meta.helm.sh/release-namespace")
-			_, err := c.Clientset.CoreV1().
-				PersistentVolumeClaims(state.ZarfNamespaceName).
-				Update(ctx,
-					pvc,
-					metav1.UpdateOptions{})
-			return false, err
+			return false, fmt.Errorf("cannot rollback Gitea PVC %q: resource does not exist", pvcName)
 		}
-		// It exists we need to add the required fields
-		pvc.Labels["app.kubernetes.io/managed-by"] = "Helm"
-		pvc.Annotations["meta.helm.sh/release-name"] = "zarf-gitea"
-		pvc.Annotations["meta.helm.sh/release-namespace"] = "zarf"
+
+		// we should create it
+		return true, nil
+	}
+
+	// It exists, if a rollback is requested handle it.
+	if shouldRollBack {
+		delete(pvc.Labels, "app.kubernetes.io/managed-by")
+		delete(pvc.Annotations, "meta.helm.sh/release-name")
+		delete(pvc.Annotations, "meta.helm.sh/release-namespace")
 		_, err := c.Clientset.CoreV1().
 			PersistentVolumeClaims(state.ZarfNamespaceName).
-			Update(ctx, pvc, metav1.UpdateOptions{})
+			Update(ctx,
+				pvc,
+				metav1.UpdateOptions{})
 		return false, err
 	}
-	// pvc does not exist
-	// If a rollback is requested on a nonexistent resource, return an error.
-	if shouldRollBack {
-		return false, fmt.Errorf("cannot rollback Gitea PVC %q: resource does not exist", pvcName)
-	}
-	// we should create it
-	return true, nil
+
+	// It exists we need to add the required fields
+	pvc.Labels["app.kubernetes.io/managed-by"] = "Helm"
+	pvc.Annotations["meta.helm.sh/release-name"] = "zarf-gitea"
+	pvc.Annotations["meta.helm.sh/release-namespace"] = "zarf"
+	_, err = c.Clientset.CoreV1().
+		PersistentVolumeClaims(state.ZarfNamespaceName).
+		Update(ctx, pvc, metav1.UpdateOptions{})
+	return false, err
 }
