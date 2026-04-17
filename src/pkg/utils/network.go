@@ -93,7 +93,7 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
 				l.Warn("retrying download",
 					"attempt", n+1,
-					"max_attempts", config.ZarfDefaultRetries,
+					"maxAttempts", config.ZarfDefaultRetries,
 					"url", src,
 					"error", err,
 				)
