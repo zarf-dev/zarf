@@ -57,6 +57,10 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	if err != nil {
 		return nil, err
 	}
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping ArgoCD repository secret mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
 
 	secret := corev1.Secret{}
 	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {

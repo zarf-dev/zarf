@@ -31,13 +31,35 @@ const (
 // Credential keys
 // TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
-	RegistryKey     = "registry"
-	RegistryReadKey = "registry-readonly"
-	GitKey          = "git"
-	GitReadKey      = "git-readonly"
-	ArtifactKey     = "artifact"
-	AgentKey        = "agent"
+	RegistryKey = "registry"
+	GitKey      = "git"
+	ArtifactKey = "artifact"
+	AgentKey    = "agent"
 )
+
+// ServicesForInitComponents returns the state service keys corresponding to the
+// selected init-package components. Callers should pass the deploy-filtered
+// component set so absent components stay absent from state.
+func ServicesForInitComponents(components []v1alpha1.ZarfComponent) []string {
+	var services []string
+	add := func(k string) {
+		if !slices.Contains(services, k) {
+			services = append(services, k)
+		}
+	}
+	for _, c := range components {
+		switch c.Name {
+		case "git-server":
+			add(GitKey)
+			add(ArtifactKey)
+		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
+			add(RegistryKey)
+		case "zarf-agent":
+			add(AgentKey)
+		}
+	}
+	return services
+}
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
@@ -157,9 +179,11 @@ func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
 
-// IsConfigured returns true if the git server address has been set
-// Note that even when the Git server component is not used Zarf will set the address to a default value
-// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+// IsConfigured returns true if the git server address has been set.
+// New clusters only populate the address when the git-server component (or an
+// external --git-url) was supplied, so this reflects whether a git server is
+// actually in use. Legacy clusters initialized before services-gated state
+// may report true even without a real git server.
 func (gs GitServerInfo) IsConfigured() bool {
 	return gs.Address != ""
 }

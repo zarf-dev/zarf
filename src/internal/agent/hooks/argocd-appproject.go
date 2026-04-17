@@ -53,6 +53,10 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 	if err != nil {
 		return nil, err
 	}
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping ArgoCD AppProject mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
 
 	proj := AppProject{}
 	if err = json.Unmarshal(r.Object.Raw, &proj); err != nil {

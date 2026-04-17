@@ -45,6 +45,10 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	if err != nil {
 		return nil, err
 	}
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping Flux GitRepository mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
 
 	repo := flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {

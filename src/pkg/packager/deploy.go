@@ -335,6 +335,17 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 				applianceMode = true
 			}
 		}
+		services := state.ServicesForInitComponents(pkgLayout.Pkg.Components)
+		// Externally-supplied endpoints imply the service is in use even without the matching component.
+		if opts.GitServer.Address != "" && !slices.Contains(services, state.GitKey) {
+			services = append(services, state.GitKey)
+		}
+		if opts.RegistryInfo.Address != "" && !slices.Contains(services, state.RegistryKey) {
+			services = append(services, state.RegistryKey)
+		}
+		if opts.ArtifactServer.Address != "" && !slices.Contains(services, state.ArtifactKey) {
+			services = append(services, state.ArtifactKey)
+		}
 		var err error
 		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
 			GitServer:      opts.GitServer,
@@ -344,6 +355,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			StorageClass:   opts.StorageClass,
 			InjectorPort:   opts.InjectorPort,
 			AgentTLS:       opts.AgentTLS,
+			Services:       services,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)

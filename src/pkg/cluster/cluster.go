@@ -175,6 +175,10 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// Services lists the state keys (state.RegistryKey, GitKey, ArtifactKey, AgentKey)
+	// that this init run is responsible for populating. Services not listed keep
+	// their zero values so state.IsConfigured checks reflect reality.
+	Services []string
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -230,16 +234,18 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI
-		if opts.AgentTLS != nil {
-			s.AgentTLS = *opts.AgentTLS
-			s.AgentTLSUserProvided = true
-		} else {
-			agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-			if err != nil {
-				return nil, err
+		// Setup zarf agent PKI when the agent is being deployed
+		if slices.Contains(opts.Services, state.AgentKey) {
+			if opts.AgentTLS != nil {
+				s.AgentTLS = *opts.AgentTLS
+				s.AgentTLSUserProvided = true
+			} else {
+				agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+				if err != nil {
+					return nil, err
+				}
+				s.AgentTLS = agentTLS
 			}
-			s.AgentTLS = agentTLS
 		}
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -282,59 +288,96 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		err = opts.GitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
+		if slices.Contains(opts.Services, state.GitKey) {
+			if err := opts.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+			s.GitServer = opts.GitServer
 		}
-		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
-		if err != nil {
-			return nil, err
+		if slices.Contains(opts.Services, state.RegistryKey) {
+			if err := opts.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+			s.RegistryInfo = opts.RegistryInfo
 		}
-		s.RegistryInfo = opts.RegistryInfo
-		opts.ArtifactServer.FillInEmptyValues()
-		s.ArtifactServer = opts.ArtifactServer
+		if slices.Contains(opts.Services, state.ArtifactKey) {
+			opts.ArtifactServer.FillInEmptyValues()
+			s.ArtifactServer = opts.ArtifactServer
+		}
+	} else {
+		// Re-init: fill defaults for services that are now being added but were absent before.
+		if slices.Contains(opts.Services, state.GitKey) && s.GitServer.Address == "" {
+			merged := s.GitServer
+			if opts.GitServer.Address != "" {
+				merged = opts.GitServer
+			}
+			if err := merged.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+			s.GitServer = merged
+		}
+		if slices.Contains(opts.Services, state.ArtifactKey) && s.ArtifactServer.Address == "" {
+			merged := s.ArtifactServer
+			if opts.ArtifactServer.Address != "" {
+				merged = opts.ArtifactServer
+			}
+			merged.FillInEmptyValues()
+			s.ArtifactServer = merged
+		}
+		if slices.Contains(opts.Services, state.RegistryKey) && s.RegistryInfo.Address == "" {
+			merged := s.RegistryInfo
+			if opts.RegistryInfo.Address != "" {
+				merged = opts.RegistryInfo
+			}
+			if err := merged.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+			s.RegistryInfo = merged
+		}
 	}
 
 	s.IPFamily = ipFamily
 
-	previousMode := s.RegistryInfo.RegistryMode
-	if opts.RegistryInfo.RegistryMode != "" {
-		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
-	}
-	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
-
-	// If the registry mode is changing the injector will be re-made so the port should be reset
-	if modeChanged {
-		s.InjectorInfo.Port = 0
-	}
-
-	switch s.RegistryInfo.RegistryMode {
-	case state.RegistryModeNodePort:
-		switch {
-		case opts.RegistryInfo.Port != 0:
-			s.RegistryInfo.Port = opts.RegistryInfo.Port
-		case modeChanged:
-			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
+	// Registry-mode reconciliation only applies when the registry service is being managed.
+	if slices.Contains(opts.Services, state.RegistryKey) {
+		previousMode := s.RegistryInfo.RegistryMode
+		if opts.RegistryInfo.RegistryMode != "" {
+			s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
 		}
-		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
-		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
-	case state.RegistryModeProxy:
-		switch {
-		case opts.RegistryInfo.Port != 0:
-			s.RegistryInfo.Port = opts.RegistryInfo.Port
-		case modeChanged:
-			s.RegistryInfo.Port = state.ZarfRegistryHostPort
-		}
-		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
-	}
+		modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
 
-	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-		err = c.InitRegistryCerts(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate certs: %w", err)
+		// If the registry mode is changing the injector will be re-made so the port should be reset
+		if modeChanged {
+			s.InjectorInfo.Port = 0
 		}
-		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+
+		switch s.RegistryInfo.RegistryMode {
+		case state.RegistryModeNodePort:
+			switch {
+			case opts.RegistryInfo.Port != 0:
+				s.RegistryInfo.Port = opts.RegistryInfo.Port
+			case modeChanged:
+				s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
+			}
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+			s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+		case state.RegistryModeProxy:
+			switch {
+			case opts.RegistryInfo.Port != 0:
+				s.RegistryInfo.Port = opts.RegistryInfo.Port
+			case modeChanged:
+				s.RegistryInfo.Port = state.ZarfRegistryHostPort
+			}
+			s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+		}
+
+		if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+			err = c.InitRegistryCerts(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate certs: %w", err)
+			}
+			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+		}
 	}
 
 	switch s.Distro {
