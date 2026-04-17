@@ -310,15 +310,15 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	} else {
 		// Re-init: fill defaults only for internal services that weren't configured
 		// on a prior init. External services are managed via `zarf tools update-creds`.
-		if slices.Contains(opts.InternalServices, state.GitKey) && s.GitServer.Address == "" {
+		if slices.Contains(opts.InternalServices, state.GitKey) && !s.GitServer.IsConfigured() {
 			if err := s.GitServer.FillInEmptyValues(); err != nil {
 				return nil, err
 			}
 		}
-		if slices.Contains(opts.InternalServices, state.ArtifactKey) && s.ArtifactServer.Address == "" {
+		if slices.Contains(opts.InternalServices, state.ArtifactKey) && !s.ArtifactServer.IsConfigured() {
 			s.ArtifactServer.FillInEmptyValues()
 		}
-		if slices.Contains(opts.InternalServices, state.RegistryKey) && s.RegistryInfo.Address == "" {
+		if slices.Contains(opts.InternalServices, state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
 			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
 				return nil, err
 			}

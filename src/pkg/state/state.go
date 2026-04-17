@@ -234,6 +234,11 @@ func (as ArtifactServerInfo) IsInternal() bool {
 	return as.Address == ZarfInClusterArtifactServiceURL
 }
 
+// IsConfigured returns true if the artifact server address has been set.
+func (as ArtifactServerInfo) IsConfigured() bool {
+	return as.Address != ""
+}
+
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
 func (as *ArtifactServerInfo) FillInEmptyValues() {
 	// Set default svc url if an external registry was not provided
