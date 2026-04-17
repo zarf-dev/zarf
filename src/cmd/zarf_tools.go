@@ -370,8 +370,9 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
-	// and sufficient time has passed for users state to get updated we can remove this check
+
+	// Zarf now only configures state with a Git server if a git server is deployed
+	// since there is still old state, we continue to check the cluster if the Git server exists
 	internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
 	if err != nil {
 		return err
