@@ -612,12 +612,17 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenPkiSuccess     = "Successfully created a chain of trust for %s"
 	CmdToolsGenPkiFlagAltName = "Specify Subject Alternative Names for the certificate"
 
-	CmdToolsGenKeyShort                = "Generates a cosign public/private keypair that can be used to sign packages"
-	CmdToolsGenKeyPrompt               = "Private key password (empty for no password): "
-	CmdToolsGenKeyPromptAgain          = "Private key password again (empty for no password): "
-	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
-	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
-	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
+	CmdToolsGenKeyShort                  = "Generates a cosign public/private keypair that can be used to sign packages"
+	CmdToolsGenKeyShortFlagInteractive   = "Interactively prompt for password"
+	CmdToolsGenKeyShortFlagForce         = "Force overwrite of keyfiles"
+	CmdToolsGenKeyShortFlagPassword      = "Private key password"
+	CmdToolsGenKeyShortFlagPasswordStdin = "Take the password from stdin"
+	CmdToolsGenKeyPrompt                 = "Private key password (empty for no password): "
+	CmdToolsGenKeyPromptAgain            = "Private key password again (empty for no password): "
+	CmdToolsGenKeyPromptExists           = "File %s already exists. Overwrite? "
+	CmdToolsGenKeyErrNoPasswordProvided  = "must explicitly pass --password=\"\" for empty password"
+	CmdToolsGenKeyErrUnableGetPassword   = "unable to get password for private key: %w"
+	CmdToolsGenKeyErrPasswordsNotMatch   = "passwords do not match"
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

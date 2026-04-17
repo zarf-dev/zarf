@@ -621,7 +621,13 @@ func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-type genKeyOptions struct{}
+type genKeyOptions struct {
+	interactive   bool
+	force         bool
+	password      string
+	passwordStdin bool
+	reader        io.Reader
+}
 
 func newGenKeyCommand() *cobra.Command {
 	o := &genKeyOptions{}
@@ -631,21 +637,65 @@ func newGenKeyCommand() *cobra.Command {
 		Aliases: []string{"key"},
 		Short:   lang.CmdToolsGenKeyShort,
 		RunE:    o.run,
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
+			if !o.interactive {
+				if !cmd.Flags().Changed("password") && !o.passwordStdin {
+					return errors.New(lang.CmdToolsGenKeyErrNoPasswordProvided)
+				}
+			}
+			if o.passwordStdin {
+				o.reader = os.Stdin
+			}
+			return nil
+		},
 	}
+
+	cmd.Flags().BoolVar(&o.interactive, "interactive", false, lang.CmdToolsGenKeyShortFlagInteractive)
+	cmd.Flags().BoolVar(&o.force, "force", false, lang.CmdToolsGenKeyShortFlagForce)
+	cmd.Flags().StringVar(&o.password, "password", "", lang.CmdToolsGenKeyShortFlagPassword)
+	cmd.Flags().BoolVar(&o.passwordStdin, "password-stdin", false, lang.CmdToolsGenKeyShortFlagPasswordStdin)
+	cmd.MarkFlagsMutuallyExclusive("password", "password-stdin", "interactive")
+	cmd.MarkFlagsMutuallyExclusive("interactive", "force")
 
 	return cmd
 }
 
+func validatePassword(bs []byte) error {
+	for _, b := range bs {
+		if b < 32 || b > 126 {
+			return fmt.Errorf("invalid character (ascii code 0x%02X) in password", b)
+		}
+	}
+	return nil
+}
+
 func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
-	// Utility function to prompt the user for the password to the private key
-	passwordFunc := func(bool) ([]byte, error) {
-		// perform the first prompt
-		var password string
+	prvKeyFileName := "cosign.key"
+	pubKeyFileName := "cosign.pub"
+
+	err := o.genKey(prvKeyFileName, pubKeyFileName)
+	if err != nil {
+		return err
+	}
+
+	logger.From(cmd.Context()).Info("Successfully generated key pair",
+		"private-key-path", prvKeyFileName,
+		"public-key-path", pubKeyFileName)
+
+	return nil
+}
+
+func (o *genKeyOptions) genKey(prvKeyFileName, pubKeyFileName string) error {
+	var password []byte
+	var err error
+
+	if o.interactive {
+		var tmpPassword string
 		prompt := &survey.Password{
 			Message: lang.CmdToolsGenKeyPrompt,
 		}
-		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+		if err := survey.AskOne(prompt, &tmpPassword); err != nil {
+			return fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// perform the second prompt
@@ -654,30 +704,43 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 			Message: lang.CmdToolsGenKeyPromptAgain,
 		}
 		if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
+			return fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// check if the passwords match
-		if password != doubleCheck {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
+		if tmpPassword != doubleCheck {
+			return fmt.Errorf(lang.CmdToolsGenKeyErrPasswordsNotMatch)
 		}
-
-		return []byte(password), nil
+		password = []byte(tmpPassword)
+	} else if o.passwordStdin {
+		if o.reader == nil {
+			return fmt.Errorf("reader not set for genKeyOptions")
+		}
+		password, err = io.ReadAll(o.reader)
+		if err != nil {
+			return err
+		}
+		if len(password) == 0 {
+			return fmt.Errorf("empty password disallowed when using --password-stdin")
+		}
+	} else {
+		password = []byte(o.password)
 	}
 
-	// Use cosign to generate the keypair
-	keyBytes, err := cosign.GenerateKeyPair(passwordFunc)
+	err = validatePassword(password)
 	if err != nil {
-		return fmt.Errorf("unable to generate key pair: %w", err)
+		return err
 	}
-
-	prvKeyFileName := "cosign.key"
-	pubKeyFileName := "cosign.pub"
 
 	// Check if we are about to overwrite existing key files
 	_, prvKeyExistsErr := os.Stat(prvKeyFileName)
 	_, pubKeyExistsErr := os.Stat(pubKeyFileName)
+	var keyfilesExist bool
 	if prvKeyExistsErr == nil || pubKeyExistsErr == nil {
+		keyfilesExist = true
+	}
+
+	if keyfilesExist && o.interactive {
 		var confirm bool
 		confirmOverwritePrompt := &survey.Confirm{
 			Message: fmt.Sprintf(lang.CmdToolsGenKeyPromptExists, prvKeyFileName),
@@ -689,19 +752,22 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 		if !confirm {
 			return errors.New("did not receive confirmation for overwriting key file(s)")
 		}
+	} else if keyfilesExist && !o.force {
+		return errors.New("cosign key file(s) already exist: pass --force to overwrite")
+	}
+
+	// Use cosign to generate the keypair
+	keyBytes, err := cosign.GenerateKeyPair(func(bool) ([]byte, error) {
+		return password, nil
+	})
+	if err != nil {
+		return fmt.Errorf("unable to generate key pair: %w", err)
 	}
 
 	// Write the key file contents to disk
 	if err := os.WriteFile(prvKeyFileName, keyBytes.PrivateBytes, helpers.ReadWriteUser); err != nil {
 		return err
 	}
-	if err := os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.ReadAllWriteUser); err != nil {
-		return err
-	}
 
-	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyFileName,
-		"public-key-path", pubKeyFileName)
-
-	return nil
+	return os.WriteFile(pubKeyFileName, keyBytes.PublicBytes, helpers.ReadAllWriteUser)
 }
