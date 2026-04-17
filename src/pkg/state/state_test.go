@@ -20,7 +20,7 @@ func TestServicesForInitComponents(t *testing.T) {
 	tests := []struct {
 		name       string
 		components []v1alpha1.ZarfComponent
-		expected   []string
+		expected   []ServiceKey
 	}{
 		{
 			name:       "no components",
@@ -32,7 +32,7 @@ func TestServicesForInitComponents(t *testing.T) {
 			components: []v1alpha1.ZarfComponent{
 				{Name: "git-server"},
 			},
-			expected: []string{GitKey, ArtifactKey},
+			expected: []ServiceKey{GitKey, ArtifactKey},
 		},
 		{
 			name: "registry components dedupe to registry key",
@@ -41,14 +41,14 @@ func TestServicesForInitComponents(t *testing.T) {
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
 			},
-			expected: []string{RegistryKey},
+			expected: []ServiceKey{RegistryKey},
 		},
 		{
 			name: "zarf-agent maps to agent",
 			components: []v1alpha1.ZarfComponent{
 				{Name: "zarf-agent"},
 			},
-			expected: []string{AgentKey},
+			expected: []ServiceKey{AgentKey},
 		},
 		{
 			name: "full init package maps to all four services",
@@ -60,7 +60,7 @@ func TestServicesForInitComponents(t *testing.T) {
 				{Name: "zarf-agent"},
 				{Name: "git-server"},
 			},
-			expected: []string{RegistryKey, AgentKey, GitKey, ArtifactKey},
+			expected: []ServiceKey{RegistryKey, AgentKey, GitKey, ArtifactKey},
 		},
 		{
 			name: "unknown components ignored",
@@ -182,7 +182,7 @@ func TestMergeStateRegistry(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				RegistryInfo: tt.initRegistry,
-				Services:     []string{RegistryKey},
+				Services:     []ServiceKey{RegistryKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedRegistry.PushUsername, newState.RegistryInfo.PushUsername)
@@ -287,7 +287,7 @@ func TestMergeStateGit(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				GitServer: tt.initGitServer,
-				Services:  []string{GitKey},
+				Services:  []ServiceKey{GitKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
@@ -383,7 +383,7 @@ func TestMergeStateArtifact(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				ArtifactServer: tt.initArtifactServer,
-				Services:       []string{ArtifactKey},
+				Services:       []ServiceKey{ArtifactKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedArtifactServer, newState.ArtifactServer)
@@ -402,7 +402,7 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLS: agentTLS,
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 		})
 		require.NoError(t, err)
 		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
@@ -418,7 +418,7 @@ func TestMergeStateAgent(t *testing.T) {
 			Key:  []byte("user-key"),
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 			AgentTLS: &userTLS,
 		})
 		require.NoError(t, err)
@@ -433,7 +433,7 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLSUserProvided: true,
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 		})
 		require.NoError(t, err)
 		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)

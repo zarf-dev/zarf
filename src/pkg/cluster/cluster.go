@@ -175,11 +175,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
-	// InternalServices lists the state keys (state.RegistryKey, GitKey, ArtifactKey, AgentKey)
-	// that Zarf is deploying in this init run. External endpoints supplied through
-	// GitServer/RegistryInfo/ArtifactServer addresses are detected separately and
-	// do not belong in this list.
-	InternalServices []string
+	// InternalServices lists the state services that Zarf is deploying in this init run.
+	InternalServices []state.ServiceKey
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.

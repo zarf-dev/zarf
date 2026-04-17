@@ -28,21 +28,36 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
+// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+type ServiceKey string
+
 // Credential keys
-// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
-	RegistryKey = "registry"
-	GitKey      = "git"
-	ArtifactKey = "artifact"
-	AgentKey    = "agent"
+	RegistryKey ServiceKey = "registry"
+	GitKey      ServiceKey = "git"
+	ArtifactKey ServiceKey = "artifact"
+	AgentKey    ServiceKey = "agent"
 )
+
+// AllServiceKeys is the canonical ordered list of every supported service key.
+var AllServiceKeys = []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+
+// ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
+func ParseServiceKey(s string) (ServiceKey, error) {
+	for _, k := range AllServiceKeys {
+		if string(k) == s {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys)
+}
 
 // ServicesForInitComponents returns the state service keys corresponding to the
 // selected init-package components. Callers should pass the deploy-filtered
 // component set so absent components stay absent from state.
-func ServicesForInitComponents(components []v1alpha1.ZarfComponent) []string {
-	var services []string
-	add := func(k string) {
+func ServicesForInitComponents(components []v1alpha1.ZarfComponent) []ServiceKey {
+	var services []ServiceKey
+	add := func(k ServiceKey) {
 		if !slices.Contains(services, k) {
 			services = append(services, k)
 		}
@@ -449,7 +464,7 @@ type MergeOptions struct {
 	GitServer      GitServerInfo
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
-	Services       []string
+	Services       []ServiceKey
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 }
