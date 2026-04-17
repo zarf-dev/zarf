@@ -654,4 +654,31 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "keep-me", s.GitServer.PushPassword)
 	})
+
+	t.Run("re-init propagates RegistryMode when registry is not in InternalServices", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{
+			Distro: DistroIsK3d,
+			RegistryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				RegistryMode: state.RegistryModeNodePort,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Secret:       "secret",
+			},
+			InjectorInfo: state.InjectorInfo{Port: 31999},
+		}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.AgentKey},
+			RegistryInfo: state.RegistryInfo{
+				RegistryMode: state.RegistryModeExternal,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeExternal, s.RegistryInfo.RegistryMode)
+		require.False(t, s.RegistryInfo.IsInternal())
+		require.Equal(t, 0, s.InjectorInfo.Port, "injector port must reset when mode changes")
+	})
 }

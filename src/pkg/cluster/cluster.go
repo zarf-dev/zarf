@@ -327,19 +327,20 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 
 	s.IPFamily = ipFamily
 
-	// Registry-mode reconciliation only applies to internally deployed registries.
+	previousMode := s.RegistryInfo.RegistryMode
+	if opts.RegistryInfo.RegistryMode != "" {
+		s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
+	}
+	modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
+
+	// If the registry mode is changing the injector will be re-made so the port should be reset
+	if modeChanged {
+		s.InjectorInfo.Port = 0
+	}
+
+	// Internal-registry topology (port defaults, localhost address, mTLS certs)
+	// is only reconciled when Zarf is deploying the registry.
 	if slices.Contains(opts.InternalServices, state.RegistryKey) {
-		previousMode := s.RegistryInfo.RegistryMode
-		if opts.RegistryInfo.RegistryMode != "" {
-			s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode
-		}
-		modeChanged := opts.RegistryInfo.RegistryMode != "" && opts.RegistryInfo.RegistryMode != previousMode
-
-		// If the registry mode is changing the injector will be re-made so the port should be reset
-		if modeChanged {
-			s.InjectorInfo.Port = 0
-		}
-
 		switch s.RegistryInfo.RegistryMode {
 		case state.RegistryModeNodePort:
 			switch {
