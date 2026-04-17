@@ -338,36 +338,32 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = 0
 	}
 
-	// Internal-registry topology (port defaults, localhost address, mTLS certs)
-	// is only reconciled when Zarf is deploying the registry.
-	if slices.Contains(opts.InternalServices, state.RegistryKey) {
-		switch s.RegistryInfo.RegistryMode {
-		case state.RegistryModeNodePort:
-			switch {
-			case opts.RegistryInfo.Port != 0:
-				s.RegistryInfo.Port = opts.RegistryInfo.Port
-			case modeChanged:
-				s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
-			}
-			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
-			s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
-		case state.RegistryModeProxy:
-			switch {
-			case opts.RegistryInfo.Port != 0:
-				s.RegistryInfo.Port = opts.RegistryInfo.Port
-			case modeChanged:
-				s.RegistryInfo.Port = state.ZarfRegistryHostPort
-			}
-			s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	switch s.RegistryInfo.RegistryMode {
+	case state.RegistryModeNodePort:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfInClusterContainerRegistryNodePort
 		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyNone
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	case state.RegistryModeProxy:
+		switch {
+		case opts.RegistryInfo.Port != 0:
+			s.RegistryInfo.Port = opts.RegistryInfo.Port
+		case modeChanged:
+			s.RegistryInfo.Port = state.ZarfRegistryHostPort
+		}
+		s.RegistryInfo.Address = state.LocalhostRegistryAddress(ipFamily, s.RegistryInfo.Port)
+	}
 
-		if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
-			err = c.InitRegistryCerts(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate certs: %w", err)
-			}
-			s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
+	if opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
+		err = c.InitRegistryCerts(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate certs: %w", err)
 		}
+		s.RegistryInfo.MTLSStrategy = state.MTLSStrategyZarfManaged
 	}
 
 	switch s.Distro {
