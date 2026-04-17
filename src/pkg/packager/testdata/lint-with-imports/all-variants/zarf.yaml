@@ -1,0 +1,20 @@
+kind: ZarfPackageConfig
+metadata:
+  name: all-variants-lint
+
+components:
+  - name: duplicate
+    only:
+      flavor: first-flavor
+    images:
+      - image-in-first-flavor-component:1.0.0
+  - name: duplicate
+    only:
+      flavor: second-flavor
+    images:
+      - image-in-second-flavor-component:1.0.0
+  - name: duplicate
+    only:
+      flavor: third-flavor
+    images:
+      - image-in-third-flavor-component:1.0.0
