@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -27,6 +29,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/types"
@@ -84,6 +87,12 @@ type ComponentImageScan struct {
 	WhyResources []Resource
 }
 
+// ImageArchivesScan contains the ImageArchives contained for each component
+type ImageArchivesScan struct {
+	ComponentName string
+	ImageArchives []v1alpha1.ImageArchive
+}
+
 // FindImages iterates over the manifests and charts within each component to find any container images
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
@@ -139,7 +148,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	componentImageScans := []ComponentImageScan{}
 	for _, component := range pkg.Components {
 		if len(component.Charts)+len(component.Manifests)+len(component.Repos) < 1 {
-			// Skip if there are no manifests, charts, or repos
+			// Skip if there are no manifests, charts or repos
 			continue
 		}
 		scan := ComponentImageScan{ComponentName: component.Name}
@@ -257,7 +266,14 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		}
 
 		sortedMatchedImages, sortedExpectedImages := getSortedImages(matchedImages, maybeImages)
-		scan.Matches = sortedMatchedImages
+
+		for _, image := range sortedMatchedImages {
+			imageReference, err := transform.ParseImageRef(image)
+			if err != nil {
+				return nil, fmt.Errorf("could not parse image reference for matched image %s: %w", image, err)
+			}
+			scan.Matches = append(scan.Matches, imageReference.Reference)
+		}
 
 		// Handle the "maybes"
 		var validMaybeImages []string
@@ -323,6 +339,82 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	}
 
 	return componentImageScans, nil
+}
+
+// FilterImagesFoundInArchives recieves imageScans and discovers if any of its elements are duplicated by
+// images provided in imageArchives parsed out of the package located at packagePath.  If duplciates are found, they
+// are removed from imageScans and added to archiveImageScans.
+func FilterImagesFoundInArchives(ctx context.Context, packagePath string, imageScans []ComponentImageScan) (_ []ImageArchivesScan, _ []ComponentImageScan, err error) {
+	loadOpts := load.DefinitionOptions{}
+	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var imageArchiveScans []ImageArchivesScan
+	var allArchiveImages []string
+	for _, component := range pkg.Components {
+		if len(component.ImageArchives) < 1 {
+			// Skip if there are no imageArchives
+			continue
+		}
+		scan := ImageArchivesScan{ComponentName: component.Name}
+		for _, archive := range component.ImageArchives {
+			archivePath := path.Join(pkgPath.BaseDir, archive.Path)
+			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to retrieve image manifests from archive %s: %w", archive.Path, err)
+			}
+			archiveImages, err := images.FindImagesInOCIManifests(imageManifests)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
+			}
+			imageArchive := v1alpha1.ImageArchive{
+				Images: archiveImages,
+				Path:   archive.Path,
+			}
+			scan.ImageArchives = append(scan.ImageArchives, imageArchive)
+			allArchiveImages = append(allArchiveImages, archiveImages...)
+		}
+
+		imageArchiveScans = append(imageArchiveScans, scan)
+	}
+
+	var allScanArtifacts []string
+	for _, scan := range imageScans {
+		allScanArtifacts = append(allScanArtifacts, scan.Matches...)
+		allScanArtifacts = append(allScanArtifacts, scan.PotentialMatches...)
+		allScanArtifacts = append(allScanArtifacts, scan.CosignArtifacts...)
+	}
+
+	// Remove scan artifacts if those artifacts are present in any imageArchives
+	for i := range imageScans {
+		imageScans[i].Matches = slices.DeleteFunc(imageScans[i].Matches, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
+		imageScans[i].PotentialMatches = slices.DeleteFunc(imageScans[i].PotentialMatches, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
+		imageScans[i].CosignArtifacts = slices.DeleteFunc(imageScans[i].CosignArtifacts, func(s string) bool {
+			return slices.Contains(allArchiveImages, s)
+		})
+	}
+
+	// Remove archive images if they are not found in imageScans
+	for i, scan := range imageArchiveScans {
+		for j := range scan.ImageArchives {
+			imageArchiveScans[i].ImageArchives[j].Images = slices.DeleteFunc(imageArchiveScans[i].ImageArchives[j].Images, func(s string) bool {
+				return !slices.Contains(allScanArtifacts, s)
+			})
+		}
+	}
+
+	return imageArchiveScans, imageScans, nil
 }
 
 // processUnstructuredImages processes a Kubernetes resource and extracts container images

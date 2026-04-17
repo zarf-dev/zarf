@@ -788,6 +788,17 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	imageArchivesScans, imagesScans, err := packager.FilterImagesFoundInArchives(ctx, basePath, imagesScans)
+	if err != nil {
+		return fmt.Errorf("unable to filter images included in imageArchives: %w", err)
+	}
+
+	imageScanComponentNames := make(map[string]bool)
+
+	for _, scan := range imagesScans {
+		imageScanComponentNames[scan.ComponentName] = true
+	}
+
 	componentDefinition := "\ncomponents:\n"
 	for _, finding := range imagesScans {
 		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts) > 0 {
@@ -810,11 +821,48 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 				componentDefinition += fmt.Sprintf("      - %s\n", cosignArtifact)
 			}
 		}
+		for _, archiveFinding := range imageArchivesScans {
+			if archiveFinding.ComponentName == finding.ComponentName {
+				componentDefinition += fmt.Sprintf("  # Archive images - %s\n", archiveFinding.ComponentName)
+				componentDefinition += "    imageArchives:\n"
+				for _, imageArchive := range archiveFinding.ImageArchives {
+					componentDefinition += fmt.Sprintf("      - path: %s\n", imageArchive.Path)
+					if len(imageArchive.Images) > 0 {
+						componentDefinition += "        images:\n"
+						for _, image := range imageArchive.Images {
+							componentDefinition += fmt.Sprintf("          - %s\n", image)
+						}
+						continue
+					}
+					componentDefinition += "        images: []\n"
+				}
+			}
+		}
+	}
+
+	for _, finding := range imageArchivesScans {
+		if _, found := imageScanComponentNames[finding.ComponentName]; found {
+			continue
+		}
+		componentDefinition += fmt.Sprintf("  # Archive images - %s\n", finding.ComponentName)
+		componentDefinition += fmt.Sprintf("  - name: %s\n", finding.ComponentName)
+		componentDefinition += "    imageArchives:\n"
+		for _, imageArchive := range finding.ImageArchives {
+			componentDefinition += fmt.Sprintf("      - path: %s\n", imageArchive.Path)
+			if len(imageArchive.Images) > 0 {
+				componentDefinition += "        images:\n"
+				for _, image := range imageArchive.Images {
+					componentDefinition += fmt.Sprintf("          - %s\n", image)
+				}
+				continue
+			}
+			componentDefinition += "        images: []\n"
+		}
 	}
 	fmt.Println(componentDefinition)
 
 	if o.update {
-		if err := packager.UpdateImages(ctx, basePath, imagesScans); err != nil {
+		if err := packager.UpdateImages(ctx, basePath, imagesScans, imageArchivesScans); err != nil {
 			return fmt.Errorf("unable to create update: %w", err)
 		}
 	}

@@ -6,6 +6,7 @@ package packager
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 
@@ -19,7 +20,7 @@ import (
 )
 
 // UpdateImages updates the images field for components in a zarf.yaml
-func UpdateImages(ctx context.Context, packagePath string, imagesScans []ComponentImageScan) error {
+func UpdateImages(ctx context.Context, packagePath string, imagesScans []ComponentImageScan, archiveImageScans []ImageArchivesScan) error {
 	l := logger.From(ctx)
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
@@ -37,7 +38,7 @@ func UpdateImages(ctx context.Context, packagePath string, imagesScans []Compone
 		return fmt.Errorf("failed to parse zarf.yaml: %w", err)
 	}
 
-	if !updateNeeded(zarfPackage, imagesScans) {
+	if !updateNeeded(zarfPackage, imagesScans, archiveImageScans) {
 		l.Info("no update needed, images are already up to date", "path", pkgPath.ManifestFile)
 		return nil
 	}
@@ -47,7 +48,7 @@ func UpdateImages(ctx context.Context, packagePath string, imagesScans []Compone
 		return fmt.Errorf("failed to parse %s as AST: %w", pkgPath.ManifestFile, err)
 	}
 
-	updatedZarfYaml, err := createUpdate(zarfPackage, imagesScans, astFile)
+	updatedZarfYaml, err := createUpdate(zarfPackage, imagesScans, archiveImageScans, astFile)
 	if err != nil {
 		return fmt.Errorf("failed to create update: %w", err)
 	}
@@ -60,7 +61,7 @@ func UpdateImages(ctx context.Context, packagePath string, imagesScans []Compone
 	return nil
 }
 
-func createUpdate(zarfPackage v1alpha1.ZarfPackage, imagesScans []ComponentImageScan, astFile *ast.File) (string, error) {
+func createUpdate(zarfPackage v1alpha1.ZarfPackage, imagesScans []ComponentImageScan, archiveImagesScans []ImageArchivesScan, astFile *ast.File) (string, error) {
 	// Note: yamlpath support of goccy/go-yaml only has index-based lookup
 	componentToIndex := make(map[string]int, len(zarfPackage.Components))
 	for i, component := range zarfPackage.Components {
@@ -79,72 +80,103 @@ func createUpdate(zarfPackage v1alpha1.ZarfPackage, imagesScans []ComponentImage
 
 		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
 
-		componentMerge := map[string]any{
+		patch := map[string]any{
 			"images": combined,
 		}
-		componentNode, err := yaml.ValueToNode(componentMerge, yaml.IndentSequence(true))
+
+		err := patchComponent(patch, scan.ComponentName, componentIndex, astFile)
+
 		if err != nil {
-			return "", fmt.Errorf("failed to create YAML node for component %s: %w", scan.ComponentName, err)
+			return "", err
+		}
+	}
+
+	for _, scan := range archiveImagesScans {
+		componentIndex, exists := componentToIndex[scan.ComponentName]
+		if !exists {
+			continue
 		}
 
-		path, err := yaml.PathString(fmt.Sprintf("$.components[%d]", componentIndex))
-		if err != nil {
-			return "", fmt.Errorf("failed to create YAML path for component %s: %w", scan.ComponentName, err)
+		patch := map[string]any{
+			"imageArchives": scan.ImageArchives,
 		}
 
-		if err := path.MergeFromNode(astFile, componentNode); err != nil {
-			return "", fmt.Errorf("failed to merge images for component %s: %w", scan.ComponentName, err)
+		err := patchComponent(patch, scan.ComponentName, componentIndex, astFile)
+
+		if err != nil {
+			return "", err
 		}
 	}
 
 	return astFile.String(), nil
 }
 
-func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan) bool {
-	scanMap := make(map[string]map[string]struct{}, len(imageScans))
+func patchComponent(patch map[string]any, component string, componentIndex int, astFile *ast.File) error {
+	componentNode, err := yaml.ValueToNode(patch, yaml.IndentSequence(true))
+	if err != nil {
+		return fmt.Errorf("failed to create YAML node for component %s: %w", component, err)
+	}
 
-	for _, scan := range imageScans {
-		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
-		imageSet := make(map[string]struct{}, len(combined))
-		for _, img := range combined {
-			imageSet[img] = struct{}{}
-		}
-		scanMap[scan.ComponentName] = imageSet
+	path, err := yaml.PathString(fmt.Sprintf("$.components[%d]", componentIndex))
+	if err != nil {
+		return fmt.Errorf("failed to create YAML path for component %s: %w", component, err)
+	}
+
+	if err := path.MergeFromNode(astFile, componentNode); err != nil {
+		return fmt.Errorf("failed to merge images for component %s: %w", component, err)
+	}
+
+	return nil
+}
+
+func updateNeeded(zarfPackage v1alpha1.ZarfPackage, imageScans []ComponentImageScan, archiveImagesScans []ImageArchivesScan) bool {
+
+	imageScansByComponent := make(map[string]ComponentImageScan, len(imageScans))
+	for _, s := range imageScans {
+		imageScansByComponent[s.ComponentName] = s
+	}
+	archiveScansByComponent := make(map[string]ImageArchivesScan, len(archiveImagesScans))
+	for _, s := range archiveImagesScans {
+		archiveScansByComponent[s.ComponentName] = s
 	}
 
 	for _, component := range zarfPackage.Components {
-		imageSet, found := scanMap[component.Name]
-		if !found {
+		scan := imageScansByComponent[component.Name]
+		archiveScan := archiveScansByComponent[component.Name]
+
+		// Collect archive-scanned images for this component
+		archiveScannedImages := make(map[string]struct{})
+		for _, ia := range archiveScan.ImageArchives {
+			for _, img := range ia.Images {
+				archiveScannedImages[img] = struct{}{}
+			}
+		}
+
+		// Check archive images: package definition vs archive scan
+		componentArchiveImages := make(map[string]struct{})
+		for _, archive := range component.ImageArchives {
+			for _, img := range archive.Images {
+				componentArchiveImages[img] = struct{}{}
+			}
+		}
+		if !maps.Equal(componentArchiveImages, archiveScannedImages) {
 			return true
 		}
 
-		for _, img := range component.Images {
-			if _, found := imageSet[img]; !found {
-				return true
+		// Check regular images: package definition vs image scan
+		// Scanned images that also appear in archives are excluded (they're accounted for above)
+		scannedImages := make(map[string]struct{})
+		for _, img := range slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts) {
+			if _, inArchive := archiveScannedImages[img]; !inArchive {
+				scannedImages[img] = struct{}{}
 			}
 		}
-	}
-
-	componentMap := make(map[string]map[string]struct{}, len(zarfPackage.Components))
-	for _, component := range zarfPackage.Components {
-		imageSet := make(map[string]struct{}, len(component.Images))
+		componentImages := make(map[string]struct{}, len(component.Images))
 		for _, img := range component.Images {
-			imageSet[img] = struct{}{}
+			componentImages[img] = struct{}{}
 		}
-		componentMap[component.Name] = imageSet
-	}
-
-	for _, scan := range imageScans {
-		componentImages, found := componentMap[scan.ComponentName]
-		if !found {
+		if !maps.Equal(componentImages, scannedImages) {
 			return true
-		}
-
-		combined := slices.Concat(scan.Matches, scan.PotentialMatches, scan.CosignArtifacts)
-		for _, img := range combined {
-			if _, found := componentImages[img]; !found {
-				return true
-			}
 		}
 	}
 
