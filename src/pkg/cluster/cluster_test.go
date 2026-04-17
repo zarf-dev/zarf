@@ -497,6 +497,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			}, metav1.CreateOptions{})
 			require.NoError(t, err)
 
+			tt.opts.InternalServices = []state.ServiceKey{state.RegistryKey}
 			result, err := c.InitState(ctx, tt.opts)
 			require.NoError(t, err)
 
@@ -509,4 +510,175 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newFakeInitStateCluster(ctx context.Context, t *testing.T, existing *state.State) *Cluster {
+	t.Helper()
+	cs := fake.NewClientset()
+	c := &Cluster{
+		Clientset: cs,
+		Watcher:   healthchecks.NewImmediateWatcher(status.CurrentStatus),
+	}
+
+	_, err := cs.CoreV1().Nodes().Create(ctx, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "node"}},
+		metav1.CreateOptions{})
+	require.NoError(t, err)
+	_, err = cs.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName}},
+		metav1.CreateOptions{})
+	require.NoError(t, err)
+	if existing != nil {
+		data, err := json.Marshal(existing)
+		require.NoError(t, err)
+		_, err = cs.CoreV1().Secrets(state.ZarfNamespaceName).Create(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: state.ZarfStateSecretName},
+			Data:       map[string][]byte{state.ZarfStateDataKey: data},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	_, err = cs.CoreV1().Services(state.ZarfNamespaceName).Create(ctx, &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Name: "zarf-ip-family-test", Namespace: state.ZarfNamespaceName},
+		Spec:       corev1.ServiceSpec{IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol}},
+	}, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	if existing == nil {
+		_, err = cs.CoreV1().ServiceAccounts(state.ZarfNamespaceName).Create(ctx, &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Namespace: state.ZarfNamespaceName, Name: "default"},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+	}
+	return c
+}
+
+func TestInitStateServicesGating(t *testing.T) {
+	t.Run("new cluster without git service leaves git and artifact empty", func(t *testing.T) {
+		ctx := context.Background()
+		c := newFakeInitStateCluster(ctx, t, nil)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.RegistryKey, state.AgentKey},
+		})
+		require.NoError(t, err)
+		require.Empty(t, s.GitServer.Address)
+		require.Empty(t, s.GitServer.PushPassword)
+		require.Empty(t, s.ArtifactServer.Address)
+		require.False(t, s.GitServer.IsConfigured())
+		require.NotEmpty(t, s.RegistryInfo.Address)
+		require.NotEmpty(t, s.AgentTLS.Cert)
+	})
+
+	t.Run("new cluster without agent service leaves agent TLS empty", func(t *testing.T) {
+		ctx := context.Background()
+		c := newFakeInitStateCluster(ctx, t, nil)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.RegistryKey},
+		})
+		require.NoError(t, err)
+		require.Empty(t, s.AgentTLS.Cert)
+		require.False(t, s.AgentTLSUserProvided)
+	})
+
+	t.Run("new cluster with all services populates everything", func(t *testing.T) {
+		ctx := context.Background()
+		c := newFakeInitStateCluster(ctx, t, nil)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey},
+		})
+		require.NoError(t, err)
+		require.True(t, s.GitServer.IsConfigured())
+		require.True(t, s.ArtifactServer.IsInternal())
+		require.NotEmpty(t, s.RegistryInfo.Address)
+		require.NotEmpty(t, s.AgentTLS.Cert)
+	})
+
+	t.Run("re-init adds a missing git service without overwriting existing registry", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{
+			Distro: DistroIsK3d,
+			RegistryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				RegistryMode: state.RegistryModeNodePort,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Secret:       "secret",
+			},
+		}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.GitKey, state.ArtifactKey},
+		})
+		require.NoError(t, err)
+		require.True(t, s.GitServer.IsConfigured())
+		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
+		require.NotEmpty(t, s.ArtifactServer.Address)
+	})
+
+	t.Run("new cluster with external git URL persists without being in InternalServices", func(t *testing.T) {
+		ctx := context.Background()
+		c := newFakeInitStateCluster(ctx, t, nil)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.RegistryKey, state.AgentKey},
+			GitServer: state.GitServerInfo{
+				Address:      "https://git.example.com",
+				PushUsername: "pusher",
+				PushPassword: "pass",
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, "https://git.example.com", s.GitServer.Address)
+		require.False(t, s.GitServer.IsInternal())
+	})
+
+	t.Run("re-init does not wipe services not listed", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{
+			Distro: DistroIsK3d,
+			GitServer: state.GitServerInfo{
+				Address:      state.ZarfInClusterGitServiceURL,
+				PushUsername: "zarf-git-user",
+				PushPassword: "keep-me",
+			},
+			RegistryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				RegistryMode: state.RegistryModeNodePort,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Secret:       "secret",
+			},
+		}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.RegistryKey},
+		})
+		require.NoError(t, err)
+		require.Equal(t, "keep-me", s.GitServer.PushPassword)
+	})
+
+	t.Run("re-init propagates RegistryMode when registry is not in InternalServices", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{
+			Distro: DistroIsK3d,
+			RegistryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				RegistryMode: state.RegistryModeNodePort,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Secret:       "secret",
+			},
+			InjectorInfo: state.InjectorInfo{Port: 31999},
+		}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []state.ServiceKey{state.AgentKey},
+			RegistryInfo: state.RegistryInfo{
+				RegistryMode: state.RegistryModeExternal,
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, state.RegistryModeExternal, s.RegistryInfo.RegistryMode)
+		require.False(t, s.RegistryInfo.IsInternal())
+		require.Equal(t, 0, s.InjectorInfo.Port, "injector port must reset when mode changes")
+	})
 }

@@ -114,7 +114,7 @@ func TestMergeStateRegistry(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				RegistryInfo: tt.initRegistry,
-				Services:     []string{RegistryKey},
+				Services:     []ServiceKey{RegistryKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedRegistry.PushUsername, newState.RegistryInfo.PushUsername)
@@ -219,7 +219,7 @@ func TestMergeStateGit(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				GitServer: tt.initGitServer,
-				Services:  []string{GitKey},
+				Services:  []ServiceKey{GitKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
@@ -315,7 +315,7 @@ func TestMergeStateArtifact(t *testing.T) {
 			}
 			newState, err := Merge(oldState, MergeOptions{
 				ArtifactServer: tt.initArtifactServer,
-				Services:       []string{ArtifactKey},
+				Services:       []ServiceKey{ArtifactKey},
 			})
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedArtifactServer, newState.ArtifactServer)
@@ -334,7 +334,7 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLS: agentTLS,
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 		})
 		require.NoError(t, err)
 		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
@@ -350,7 +350,7 @@ func TestMergeStateAgent(t *testing.T) {
 			Key:  []byte("user-key"),
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 			AgentTLS: &userTLS,
 		})
 		require.NoError(t, err)
@@ -365,7 +365,7 @@ func TestMergeStateAgent(t *testing.T) {
 			AgentTLSUserProvided: true,
 		}
 		newState, err := Merge(oldState, MergeOptions{
-			Services: []string{AgentKey},
+			Services: []ServiceKey{AgentKey},
 		})
 		require.NoError(t, err)
 		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)

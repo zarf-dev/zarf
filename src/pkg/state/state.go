@@ -28,16 +28,29 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
+// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+type ServiceKey string
+
 // Credential keys
-// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
-	RegistryKey     = "registry"
-	RegistryReadKey = "registry-readonly"
-	GitKey          = "git"
-	GitReadKey      = "git-readonly"
-	ArtifactKey     = "artifact"
-	AgentKey        = "agent"
+	RegistryKey ServiceKey = "registry"
+	GitKey      ServiceKey = "git"
+	ArtifactKey ServiceKey = "artifact"
+	AgentKey    ServiceKey = "agent"
 )
+
+// AllServiceKeys is the canonical ordered list of every supported service key.
+var AllServiceKeys = []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+
+// ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
+func ParseServiceKey(s string) (ServiceKey, error) {
+	for _, k := range AllServiceKeys {
+		if string(k) == s {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys)
+}
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
@@ -157,9 +170,11 @@ func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
 
-// IsConfigured returns true if the git server address has been set
-// Note that even when the Git server component is not used Zarf will set the address to a default value
-// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+// IsConfigured returns true if the git server address has been set.
+// New clusters only populate the address when the git-server component (or an
+// external --git-url) was supplied, so this reflects whether a git server is
+// actually in use. Legacy clusters initialized before services-gated state
+// may report true even without a real git server.
 func (gs GitServerInfo) IsConfigured() bool {
 	return gs.Address != ""
 }
@@ -217,6 +232,11 @@ type ArtifactServerInfo struct {
 // IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
 func (as ArtifactServerInfo) IsInternal() bool {
 	return as.Address == ZarfInClusterArtifactServiceURL
+}
+
+// IsConfigured returns true if the artifact server address has been set.
+func (as ArtifactServerInfo) IsConfigured() bool {
+	return as.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -425,7 +445,7 @@ type MergeOptions struct {
 	GitServer      GitServerInfo
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
-	Services       []string
+	Services       []ServiceKey
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 }
