@@ -10,76 +10,8 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
-
-func TestServicesForInitComponents(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		components []v1alpha1.ZarfComponent
-		expected   []ServiceKey
-	}{
-		{
-			name:       "no components",
-			components: nil,
-			expected:   nil,
-		},
-		{
-			name: "git-server maps to git and artifact",
-			components: []v1alpha1.ZarfComponent{
-				{Name: "git-server"},
-			},
-			expected: []ServiceKey{GitKey, ArtifactKey},
-		},
-		{
-			name: "registry components dedupe to registry key",
-			components: []v1alpha1.ZarfComponent{
-				{Name: "zarf-injector"},
-				{Name: "zarf-seed-registry"},
-				{Name: "zarf-registry"},
-			},
-			expected: []ServiceKey{RegistryKey},
-		},
-		{
-			name: "zarf-agent maps to agent",
-			components: []v1alpha1.ZarfComponent{
-				{Name: "zarf-agent"},
-			},
-			expected: []ServiceKey{AgentKey},
-		},
-		{
-			name: "full init package maps to all four services",
-			components: []v1alpha1.ZarfComponent{
-				{Name: "k3s"},
-				{Name: "zarf-injector"},
-				{Name: "zarf-seed-registry"},
-				{Name: "zarf-registry"},
-				{Name: "zarf-agent"},
-				{Name: "git-server"},
-			},
-			expected: []ServiceKey{RegistryKey, AgentKey, GitKey, ArtifactKey},
-		},
-		{
-			name: "unknown components ignored",
-			components: []v1alpha1.ZarfComponent{
-				{Name: "k3s"},
-				{Name: "some-custom-component"},
-			},
-			expected: nil,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			got := ServicesForInitComponents(tt.components)
-			require.ElementsMatch(t, tt.expected, got)
-		})
-	}
-}
 
 // TODO: Change password gen method to make testing possible.
 func TestMergeStateRegistry(t *testing.T) {

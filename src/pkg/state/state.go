@@ -52,30 +52,6 @@ func ParseServiceKey(s string) (ServiceKey, error) {
 	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys)
 }
 
-// ServicesForInitComponents returns the state service keys corresponding to the
-// selected init-package components. Callers should pass the deploy-filtered
-// component set so absent components stay absent from state.
-func ServicesForInitComponents(components []v1alpha1.ZarfComponent) []ServiceKey {
-	var services []ServiceKey
-	add := func(k ServiceKey) {
-		if !slices.Contains(services, k) {
-			services = append(services, k)
-		}
-	}
-	for _, c := range components {
-		switch c.Name {
-		case "git-server":
-			add(GitKey)
-			add(ArtifactKey)
-		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
-			add(RegistryKey)
-		case "zarf-agent":
-			add(AgentKey)
-		}
-	}
-	return services
-}
-
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
 
