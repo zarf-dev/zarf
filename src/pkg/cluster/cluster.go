@@ -175,10 +175,11 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
-	// Services lists the state keys (state.RegistryKey, GitKey, ArtifactKey, AgentKey)
-	// that this init run is responsible for populating. Services not listed keep
-	// their zero values so state.IsConfigured checks reflect reality.
-	Services []string
+	// InternalServices lists the state keys (state.RegistryKey, GitKey, ArtifactKey, AgentKey)
+	// that Zarf is deploying in this init run. External endpoints supplied through
+	// GitServer/RegistryInfo/ArtifactServer addresses are detected separately and
+	// do not belong in this list.
+	InternalServices []string
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -235,7 +236,7 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 
 		// Setup zarf agent PKI when the agent is being deployed
-		if slices.Contains(opts.Services, state.AgentKey) {
+		if slices.Contains(opts.InternalServices, state.AgentKey) {
 			if opts.AgentTLS != nil {
 				s.AgentTLS = *opts.AgentTLS
 				s.AgentTLSUserProvided = true
@@ -288,58 +289,49 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		if slices.Contains(opts.Services, state.GitKey) {
+		// Populate git/registry/artifact state for each service that is either
+		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
+		gitInternal := slices.Contains(opts.InternalServices, state.GitKey)
+		if gitInternal || opts.GitServer.Address != "" {
 			if err := opts.GitServer.FillInEmptyValues(); err != nil {
 				return nil, err
 			}
 			s.GitServer = opts.GitServer
 		}
-		if slices.Contains(opts.Services, state.RegistryKey) {
+		registryInternal := slices.Contains(opts.InternalServices, state.RegistryKey)
+		if registryInternal || opts.RegistryInfo.Address != "" {
 			if err := opts.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
 				return nil, err
 			}
 			s.RegistryInfo = opts.RegistryInfo
 		}
-		if slices.Contains(opts.Services, state.ArtifactKey) {
+		artifactInternal := slices.Contains(opts.InternalServices, state.ArtifactKey)
+		if artifactInternal || opts.ArtifactServer.Address != "" {
 			opts.ArtifactServer.FillInEmptyValues()
 			s.ArtifactServer = opts.ArtifactServer
 		}
 	} else {
-		// Re-init: fill defaults for services that are now being added but were absent before.
-		if slices.Contains(opts.Services, state.GitKey) && s.GitServer.Address == "" {
-			merged := s.GitServer
-			if opts.GitServer.Address != "" {
-				merged = opts.GitServer
-			}
-			if err := merged.FillInEmptyValues(); err != nil {
+		// Re-init: fill defaults only for internal services that weren't configured
+		// on a prior init. External services are managed via `zarf tools update-creds`.
+		if slices.Contains(opts.InternalServices, state.GitKey) && s.GitServer.Address == "" {
+			if err := s.GitServer.FillInEmptyValues(); err != nil {
 				return nil, err
 			}
-			s.GitServer = merged
 		}
-		if slices.Contains(opts.Services, state.ArtifactKey) && s.ArtifactServer.Address == "" {
-			merged := s.ArtifactServer
-			if opts.ArtifactServer.Address != "" {
-				merged = opts.ArtifactServer
-			}
-			merged.FillInEmptyValues()
-			s.ArtifactServer = merged
+		if slices.Contains(opts.InternalServices, state.ArtifactKey) && s.ArtifactServer.Address == "" {
+			s.ArtifactServer.FillInEmptyValues()
 		}
-		if slices.Contains(opts.Services, state.RegistryKey) && s.RegistryInfo.Address == "" {
-			merged := s.RegistryInfo
-			if opts.RegistryInfo.Address != "" {
-				merged = opts.RegistryInfo
-			}
-			if err := merged.FillInEmptyValues(ipFamily); err != nil {
+		if slices.Contains(opts.InternalServices, state.RegistryKey) && s.RegistryInfo.Address == "" {
+			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
 				return nil, err
 			}
-			s.RegistryInfo = merged
 		}
 	}
 
 	s.IPFamily = ipFamily
 
-	// Registry-mode reconciliation only applies when the registry service is being managed.
-	if slices.Contains(opts.Services, state.RegistryKey) {
+	// Registry-mode reconciliation only applies to internally deployed registries.
+	if slices.Contains(opts.InternalServices, state.RegistryKey) {
 		previousMode := s.RegistryInfo.RegistryMode
 		if opts.RegistryInfo.RegistryMode != "" {
 			s.RegistryInfo.RegistryMode = opts.RegistryInfo.RegistryMode

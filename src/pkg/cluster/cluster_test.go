@@ -497,7 +497,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			}, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			tt.opts.Services = []string{state.RegistryKey}
+			tt.opts.InternalServices = []string{state.RegistryKey}
 			result, err := c.InitState(ctx, tt.opts)
 			require.NoError(t, err)
 
@@ -555,7 +555,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			Services: []string{state.RegistryKey, state.AgentKey},
+			InternalServices: []string{state.RegistryKey, state.AgentKey},
 		})
 		require.NoError(t, err)
 		require.Empty(t, s.GitServer.Address)
@@ -570,7 +570,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			Services: []string{state.RegistryKey},
+			InternalServices: []string{state.RegistryKey},
 		})
 		require.NoError(t, err)
 		require.Empty(t, s.AgentTLS.Cert)
@@ -581,7 +581,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			Services: []string{state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey},
+			InternalServices: []string{state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey},
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
@@ -605,12 +605,28 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			Services: []string{state.GitKey, state.ArtifactKey},
+			InternalServices: []string{state.GitKey, state.ArtifactKey},
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
 		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
 		require.NotEmpty(t, s.ArtifactServer.Address)
+	})
+
+	t.Run("new cluster with external git URL persists without being in InternalServices", func(t *testing.T) {
+		ctx := context.Background()
+		c := newFakeInitStateCluster(ctx, t, nil)
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: []string{state.RegistryKey, state.AgentKey},
+			GitServer: state.GitServerInfo{
+				Address:      "https://git.example.com",
+				PushUsername: "pusher",
+				PushPassword: "pass",
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, "https://git.example.com", s.GitServer.Address)
+		require.False(t, s.GitServer.IsInternal())
 	})
 
 	t.Run("re-init does not wipe services not listed", func(t *testing.T) {
@@ -633,7 +649,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			Services: []string{state.RegistryKey},
+			InternalServices: []string{state.RegistryKey},
 		})
 		require.NoError(t, err)
 		require.Equal(t, "keep-me", s.GitServer.PushPassword)
