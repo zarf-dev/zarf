@@ -469,7 +469,7 @@ func (o *devGenerateOptions) run(cmd *cobra.Command, args []string) (err error) 
 	if !helpers.InvalidPath(generatedZarfYAMLPath) {
 		prefixed := filepath.Join(o.output, fmt.Sprintf("%s-%s", name, layout.ZarfYAML))
 		l.Warn("using a prefixed name since zarf.yaml already exists in the output directory",
-			"output-directory", o.output,
+			"outputDirectory", o.output,
 			"name", prefixed)
 		generatedZarfYAMLPath = prefixed
 		if !helpers.InvalidPath(generatedZarfYAMLPath) {

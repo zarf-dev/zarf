@@ -148,7 +148,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		}
 	}
 
-	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
+	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
