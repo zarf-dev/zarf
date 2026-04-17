@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -48,6 +49,11 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		return "", fmt.Errorf("cannot skip SBOM creation and specify an SBOM output directory")
 	}
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return "", err
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:             opts.Flavor,
 		SetVariables:       opts.SetVariables,
@@ -72,7 +78,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		pkgLayout, err := LoadPackage(ctx, opts.DifferentialPackagePath, LoadOptions{
 			Architecture:   pkg.Metadata.Architecture,
 			RemoteOptions:  opts.RemoteOptions,
-			LayersSelector: zoci.MetadataLayers,
+			LayerTypes:     []zoci.LayerType{zoci.MetadataLayers},
 			OCIConcurrency: opts.OCIConcurrency,
 			CachePath:      opts.CachePath,
 		})

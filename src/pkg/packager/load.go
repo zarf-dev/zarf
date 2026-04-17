@@ -29,17 +29,21 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum        string
-	Architecture  string
-	PublicKeyPath string
-	Filter        filters.ComponentFilterStrategy
-	Output        string
+	Shasum       string
+	Architecture string
+	// Deprecated: Use VerifyBlobOptions instead.
+	PublicKeyPath     string
+	VerifyBlobOptions *utils.VerifyBlobOptions
+	Filter            filters.ComponentFilterStrategy
+	Output            string
 	// number of layers to pull in parallel
 	OCIConcurrency int
-	// Layers to pull during OCI pull
-	LayersSelector zoci.LayersSelector
+	// LayerTypes specifies which layer types to pull from OCI
+	LayerTypes []zoci.LayerType
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
+	// Connected skips pulling image layers from OCI sources
+	Connected bool
 	// Only applicable to OCI + HTTP
 	types.RemoteOptions
 	// VerificationStrategy for explicit definition
@@ -55,8 +59,18 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		opts.Filter = filters.Empty()
 	}
 
-	if opts.LayersSelector == "" {
-		opts.LayersSelector = zoci.AllLayers
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
+	}
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
 	}
 
 	srcType, err := identifySource(source)
@@ -78,14 +92,15 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	case "oci":
 		ociOpts := pullOCIOptions{
 			Source:               source,
-			PublicKeyPath:        opts.PublicKeyPath,
+			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
 			Architecture:         config.GetArch(opts.Architecture),
 			Filter:               opts.Filter,
-			LayersSelector:       opts.LayersSelector,
+			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
+			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
 
@@ -130,7 +145,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	}
 
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:        opts.PublicKeyPath,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Filter:               opts.Filter,
 	}
@@ -214,7 +229,7 @@ func GetPackageFromSourceOrCluster(ctx context.Context, cluster *cluster.Cluster
 		return depPkg.Data, nil
 	}
 	// This function only returns the ZarfPackageConfig so we only need the metadata
-	opts.LayersSelector = zoci.MetadataLayers
+	opts.LayerTypes = []zoci.LayerType{zoci.MetadataLayers}
 	pkgLayout, err := LoadPackage(ctx, src, opts)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err

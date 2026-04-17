@@ -113,8 +113,10 @@ type State struct {
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
-	InjectorInfo InjectorInfo     `json:"injectorInfo"`
+	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
+	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
+	InjectorInfo         InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -153,6 +155,13 @@ type GitServerInfo struct {
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+// IsConfigured returns true if the git server address has been set
+// Note that even when the Git server component is not used Zarf will set the address to a default value
+// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+func (gs GitServerInfo) IsConfigured() bool {
+	return gs.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -289,6 +298,11 @@ func (ri RegistryInfo) IsInternal() bool {
 		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
 }
 
+// IsConfigured returns true if the registry info address has been set
+func (ri RegistryInfo) IsConfigured() bool {
+	return ri.Address != ""
+}
+
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
 func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
@@ -412,6 +426,8 @@ type MergeOptions struct {
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
 	Services       []string
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -460,11 +476,17 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		}
 	}
 	if slices.Contains(opts.Services, AgentKey) {
-		agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
-		if err != nil {
-			return nil, err
+		if opts.AgentTLS != nil {
+			newState.AgentTLS = *opts.AgentTLS
+			newState.AgentTLSUserProvided = true
+		} else {
+			agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
+			if err != nil {
+				return nil, err
+			}
+			newState.AgentTLS = agentTLS
+			newState.AgentTLSUserProvided = false
 		}
-		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil
@@ -512,15 +534,37 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// WithPackageConnectivity sets the connectivity mode for the deployed package
+func WithPackageConnectivity(connected bool) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		if connected {
+			o.PackageConnectivity = PackageConnectivityConnected
+		} else {
+			o.PackageConnectivity = PackageConnectivityAirGap
+		}
+	}
+}
+
+// PackageConnectivity defines the connectivity mode of package deployments
+type PackageConnectivity string
+
+const (
+	// PackageConnectivityAirGap is the default deploy mode
+	PackageConnectivityAirGap PackageConnectivity = "airgap"
+	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
+	PackageConnectivityConnected PackageConnectivity = "connected"
+)
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string               `json:"name"`
-	Data               v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion         string               `json:"cliVersion"`
-	Generation         int                  `json:"generation"`
-	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	Name                string               `json:"name"`
+	Data                v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion          string               `json:"cliVersion"`
+	Generation          int                  `json:"generation"`
+	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
@@ -536,6 +580,15 @@ func (d *DeployedPackage) GetSecretName() string {
 		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
 	}
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// GetPackageConnectivity returns the connectivity mode the package is using
+// Defaults to airgap for packages that were deployed before connectivity was introduced
+func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.PackageConnectivity == "" {
+		return PackageConnectivityAirGap
+	}
+	return d.PackageConnectivity
 }
 
 // ConnectString contains information about a connection made with Zarf connect.

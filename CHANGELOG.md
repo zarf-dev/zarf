@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.75.0](https://github.com/zarf-dev/zarf/compare/v0.74.2...v0.75.0) (2026-04-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove 0.27.0 layout shim ([#4826](https://github.com/zarf-dev/zarf/issues/4826))
+* **deploy:** introduce connected mode ([#4685](https://github.com/zarf-dev/zarf/issues/4685))
+* only pull required layers during OCI deploy ([#4699](https://github.com/zarf-dev/zarf/issues/4699))
+
+### Features
+
+* **deploy:** introduce connected mode ([#4685](https://github.com/zarf-dev/zarf/issues/4685)) ([bb4083d](https://github.com/zarf-dev/zarf/commit/bb4083d694ced66984ae0298cf8e2f7a5655dc3b))
+* **init:** adopt arbitrarily named gitea PVC ([#4808](https://github.com/zarf-dev/zarf/issues/4808)) ([d874d5c](https://github.com/zarf-dev/zarf/commit/d874d5c1d777c3a8b472abbf3f78f1c0e0fe6c8b))
+* **tls:** support for tls generation with duration ([#4769](https://github.com/zarf-dev/zarf/issues/4769)) ([1fd32d5](https://github.com/zarf-dev/zarf/commit/1fd32d56598767bc43211fe11fe44c132cccb829))
+
+
+### Bug Fixes
+
+* **cache:** support for default sdk cache path ([#4765](https://github.com/zarf-dev/zarf/issues/4765)) ([7b0e330](https://github.com/zarf-dev/zarf/commit/7b0e330042f883e3a775a58ffc4d057f4c0df28f))
+* only pull required layers during OCI deploy ([#4699](https://github.com/zarf-dev/zarf/issues/4699)) ([05a3a36](https://github.com/zarf-dev/zarf/commit/05a3a3621055a9a6ac7251a07c8083a3a0f26472))
+* remove 0.27.0 layout shim ([#4826](https://github.com/zarf-dev/zarf/issues/4826)) ([6106d17](https://github.com/zarf-dev/zarf/commit/6106d175111cfa964f10213bc37a02a00f5f386e))
+* **verify:** deprecate PublicKeyPath in favor of VerifyBlobOptions ([#4782](https://github.com/zarf-dev/zarf/issues/4782)) ([2e8e58a](https://github.com/zarf-dev/zarf/commit/2e8e58a755d090c9ec6d09070c65ee1ee84bcfcc))
+
 ## [0.74.2](https://github.com/zarf-dev/zarf/compare/v0.74.1...v0.74.2) (2026-04-08)
 
 

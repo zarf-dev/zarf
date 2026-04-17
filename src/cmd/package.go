@@ -243,6 +243,7 @@ type packageDeployOptions struct {
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
+	connected               bool
 	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
@@ -277,6 +278,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
 	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
@@ -341,15 +343,25 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
+		Connected:            o.connected,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -362,6 +374,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	deployOpts := packager.DeployOptions{
 		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
+		Connected:              o.connected,
 		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
@@ -405,15 +418,16 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	// filter after confirmation to allow users to view the entire package interactively
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return nil, err
+	// In the interactive case we wait until after the component prompt to filter
+	if opts.IsInteractive {
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents, true),
+		)
+		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -598,7 +612,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 
 	loadOpt := packager.LoadOptions{
 		Shasum:               o.shasum,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
@@ -790,9 +804,9 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -905,9 +919,9 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.ComponentLayers,
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
 		Filter:               filters.BySelectState(o.components),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1016,9 +1030,9 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 
 	loadOpts := packager.LoadOptions{
 		Architecture:         config.GetArch(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		LayersSelector:       zoci.SbomLayers,
+		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
 		Filter:               filters.Empty(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1114,7 +1128,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1203,11 +1217,11 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.DocLayers,
+		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -1288,7 +1302,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filters.Empty(),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1354,10 +1368,11 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
-	Package           string   `json:"package"`
-	NamespaceOverride string   `json:"namespaceOverride"`
-	Version           string   `json:"version"`
-	Components        []string `json:"components"`
+	Package           string                    `json:"package"`
+	NamespaceOverride string                    `json:"namespaceOverride"`
+	Version           string                    `json:"version"`
+	Connectivity      state.PackageConnectivity `json:"connectivity"`
+	Components        []string                  `json:"components"`
 }
 
 func (o *packageListOptions) run(ctx context.Context) error {
@@ -1376,6 +1391,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			Package:           pkg.Name,
 			NamespaceOverride: pkg.NamespaceOverride,
 			Version:           pkg.Data.Metadata.Version,
+			Connectivity:      pkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}
@@ -1394,11 +1410,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Namespace Override", "Version", "Components"}
+		header := []string{"Package", "Namespace Override", "Version", "Connectivity", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.NamespaceOverride, info.Version, fmt.Sprintf("%v", info.Components),
+				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)
@@ -1492,7 +1508,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Architecture:         config.GetArch(),
 		Filter:               filter,
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1677,7 +1693,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
 			VerificationStrategy: verificationStrategy,
-			PublicKeyPath:        o.publicKeyPath,
+			VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 			Architecture:         config.GetArch(),
 			OCIConcurrency:       o.ociConcurrency,
 			RemoteOptions:        defaultRemoteOptions(),
@@ -1690,7 +1706,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: verificationStrategy,
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -1786,7 +1802,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
 		SHASum:               o.shasum,
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
@@ -1923,9 +1939,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// To prevent a warning for package not being signed - we'll only run verification when enforced
 	if signed {
 		if o.verify {
-			verifyOpts := utils.VerifyBlobOptions{}
-			verifyOpts.KeyRef = o.publicKeyPath
-			err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+			verifyOpts := verifyBlobOptionsFromKeyPath(o.publicKeyPath)
+			err = pkgLayout.VerifyPackageSignature(ctx, *verifyOpts)
 			if err != nil {
 				return err
 			}
@@ -1999,14 +2014,14 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
-		LayersSelector:       zoci.MetadataLayers,
+		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
@@ -2104,4 +2119,10 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 		return layout.VerifyAlways
 	}
 	return layout.VerifyIfPossible
+}
+
+func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
+	opts := utils.DefaultVerifyBlobOptions()
+	opts.KeyRef = keyPath
+	return &opts
 }

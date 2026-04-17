@@ -36,12 +36,13 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
 	// VerificationStrategy specifies whether verification is enforced
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
-	VerifyBlobOptions    utils.VerifyBlobOptions
+	VerifyBlobOptions    *utils.VerifyBlobOptions
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -92,7 +93,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.ParseMultiDoc(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -109,11 +110,20 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	// Note: VerifyBlobOptions should replace PublicKeyPath in the future
-	verifyOptions := utils.DefaultVerifyBlobOptions()
-	verifyOptions.KeyRef = opts.PublicKeyPath
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
+	}
 
 	if opts.VerificationStrategy < VerifyNever {
+		verifyOptions := utils.DefaultVerifyBlobOptions()
+		if opts.VerifyBlobOptions != nil {
+			verifyOptions = *opts.VerifyBlobOptions
+		}
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
 			if opts.VerificationStrategy == VerifyIfPossible {
