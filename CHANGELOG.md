@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.75.1](https://github.com/zarf-dev/zarf/compare/v0.75.0...v0.75.1) (2026-04-18)
+
+
+### Features
+
+* parse multi doc zarf.yaml files ([#4827](https://github.com/zarf-dev/zarf/issues/4827)) ([44ae0e2](https://github.com/zarf-dev/zarf/commit/44ae0e25503931e6825100a2a17eac192c2c497a))
+
 ## [0.75.0](https://github.com/zarf-dev/zarf/compare/v0.74.2...v0.75.0) (2026-04-16)
 
 
