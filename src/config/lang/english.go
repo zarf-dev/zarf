@@ -619,13 +619,13 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
 
-	CmdToolsTrustedRootShort      = "Tools for working with Sigstore trusted roots"
-	CmdToolsTrustedRootFetchShort = "Fetch the Sigstore trusted root via TUF"
-	CmdToolsTrustedRootFetchLong  = "Fetches the current Sigstore trusted root from the TUF repository and writes it to a file. " +
-		"The trusted root contains certificate authorities, transparency logs, and timestamp authorities " +
-		"needed for signature verification.\n\n" +
-		"Respects the TUF_MIRROR, TUF_ROOT, and TUF_ROOT_JSON environment variables for custom configurations."
-	CmdToolsTrustedRootFetchFlagOutput = "Path to write the trusted root JSON file"
+	CmdToolsTrustedRootShort       = "Tools for working with Sigstore trusted roots"
+	CmdToolsTrustedRootCreateShort = "Create a Sigstore trusted root"
+	CmdToolsTrustedRootCreateLong  = "Create a Sigstore protobuf trusted root, either by retrieving the public Sigstore root via TUF or by composing one from provided verification material.\n\n" +
+		"Use --with-default-services to retrieve the public-good Sigstore trusted root. " +
+		"Combine with --fulcio/--rekor/--ctfe/--tsa to extend or override defaults, " +
+		"or provide only service flags to compose a trusted root for private Sigstore infrastructure.\n\n" +
+		"Respects the TUF_MIRROR, TUF_ROOT, and TUF_ROOT_JSON environment variables for custom TUF configurations."
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

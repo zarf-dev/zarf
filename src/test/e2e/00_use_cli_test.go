@@ -24,25 +24,33 @@ import (
 	"github.com/zarf-dev/zarf/src/test"
 )
 
-func TestTrustedRootFetch(t *testing.T) {
+func TestTrustedRootCreate(t *testing.T) {
 	t.Parallel()
 
-	tmpDir := t.TempDir()
-	outputPath := filepath.Join(tmpDir, "trusted_root.json")
+	t.Run("with default services retrieves public root", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		outputPath := filepath.Join(tmpDir, "trusted_root.json")
 
-	stdOut, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "fetch", "--output", outputPath)
-	require.NoError(t, err, stdOut, stdErr)
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create", "--with-default-services", "--out", outputPath)
+		require.NoError(t, err, stdOut, stdErr)
 
-	// Verify the file was written and contains valid trusted root JSON
-	trJSON, err := os.ReadFile(outputPath)
-	require.NoError(t, err)
-	require.NotEmpty(t, trJSON)
+		trJSON, err := os.ReadFile(outputPath)
+		require.NoError(t, err)
+		require.NotEmpty(t, trJSON)
 
-	// Parse it to confirm it's a valid Sigstore trusted root
-	tr, err := root.NewTrustedRootFromJSON(trJSON)
-	require.NoError(t, err)
-	require.NotEmpty(t, tr.FulcioCertificateAuthorities(), "trusted root should contain Fulcio CAs")
-	require.NotEmpty(t, tr.RekorLogs(), "trusted root should contain Rekor transparency logs")
+		tr, err := root.NewTrustedRootFromJSON(trJSON)
+		require.NoError(t, err)
+		require.NotEmpty(t, tr.FulcioCertificateAuthorities(), "trusted root should contain Fulcio CAs")
+		require.NotEmpty(t, tr.RekorLogs(), "trusted root should contain Rekor transparency logs")
+	})
+
+	t.Run("errors on bare invocation without flags", func(t *testing.T) {
+		t.Parallel()
+		_, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create")
+		require.Error(t, err)
+		require.Contains(t, stdErr, "--with-default-services")
+	})
 }
 
 func TestUseCLI(t *testing.T) {
