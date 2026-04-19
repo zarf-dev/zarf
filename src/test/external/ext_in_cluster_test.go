@@ -107,7 +107,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	t := suite.T()
 	tmpdir := t.TempDir()
-	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom", "--features=\"values=true\"")
 	suite.NoError(err)
 	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)

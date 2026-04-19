@@ -192,11 +192,11 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 func waitArgoDeployment(t *testing.T) {
 	// Deploy the argocd example and verify that it works
 	tmpdir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/argocd", "-o", tmpdir, "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/argocd", "-o", tmpdir, "--skip-sbom", "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 	packageName := fmt.Sprintf("zarf-package-argocd-%s.tar.zst", e2e.Arch)
 	path := filepath.Join(tmpdir, packageName)
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm", "--features=\"values=true\"")
 	require.NoError(t, err, stdOut, stdErr)
 
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
