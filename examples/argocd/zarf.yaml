@@ -2,6 +2,9 @@ kind: ZarfPackageConfig
 metadata:
   name: argocd
   description: Example showcasing installing ArgoCD
+values:
+  files:
+    - values/values.yaml
 
 components:
   - name: argocd-helm-chart
