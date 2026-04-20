@@ -36,6 +36,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -149,6 +150,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
+	multiArch := opts.Arch == v1alpha1.MultiArch
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
@@ -181,6 +183,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
+					if multiArch {
+						return fmt.Errorf("unable to authenticate to host for image %s: %w (docker daemon fallback is not supported for multi-arch packages)", image.overridden.Reference, err)
+					}
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 					imageListLock.Lock()
 					defer imageListLock.Unlock()
@@ -196,6 +201,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
+				if multiArch {
+					return fmt.Errorf("unable to find image %s: %w (docker daemon fallback is not supported for multi-arch packages)", image.overridden.Reference, err)
+				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
@@ -203,8 +211,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return nil
 			}
 
-			// If the image sha points to an index then error
-			if image.original.Digest != "" && isIndex(desc.MediaType) {
+			// In non-multi-arch mode, pinning to an index digest is rejected so the user picks a specific platform.
+			// In multi-arch mode, an index digest is the whole point: we preserve the full index.
+			if !multiArch && image.original.Digest != "" && isIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
 				var idx ocispec.Index
@@ -212,6 +221,19 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					return fmt.Errorf("unable to unmarshal index.json: %w", err)
 				}
 				return constructIndexError(idx, image.overridden)
+			}
+			// If multi-arch and we got an index, keep it as-is so oras.Copy pulls the full graph.
+			if multiArch && isIndex(desc.MediaType) {
+				imageListLock.Lock()
+				defer imageListLock.Unlock()
+				imagesInfo = append(imagesInfo, imagePullInfo{
+					registryOverrideRef: image.overridden.Reference,
+					ref:                 image.original.Reference,
+					byteSize:            desc.Size,
+					manifestDesc:        desc,
+				})
+				l.Debug("pulled index for image", "name", image.overridden.Reference)
+				return nil
 			}
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform

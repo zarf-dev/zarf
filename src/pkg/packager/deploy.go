@@ -737,6 +737,11 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 		return nil
 	}
 
+	// Multi-arch packages can deploy to any cluster
+	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
+		return nil
+	}
+
 	// Get node architectures
 	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {

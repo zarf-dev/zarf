@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: multi-arch-test
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-arch-podinfo
+  namespace: multi-arch-test
+  labels:
+    app: multi-arch-podinfo
+spec:
+  containers:
+    - name: podinfo
+      image: ghcr.io/stefanprodan/podinfo:6.4.0@sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8
+      ports:
+        - containerPort: 9898
+  restartPolicy: Always

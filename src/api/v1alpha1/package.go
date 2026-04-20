@@ -54,6 +54,9 @@ const (
 // SkeletonArch is a special architecture used for skeleton packages
 const SkeletonArch = "skeleton"
 
+// MultiArch is a special architecture used for multi-arch packages.
+const MultiArch = "multi"
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.

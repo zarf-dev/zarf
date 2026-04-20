@@ -14,6 +14,7 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
@@ -183,6 +184,52 @@ func TestPull(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestPullMultiArchIndex(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	// Index digest for ghcr.io/zarf-dev/zarf/agent:v0.32.6 (multi-platform manifest list).
+	ref, err := transform.ParseImageRef("ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48")
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	cacheDir := t.TempDir()
+	opts := PullOptions{
+		Arch:           v1alpha1.MultiArch,
+		CacheDirectory: cacheDir,
+	}
+	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)
+	require.NoError(t, err)
+
+	// The top-level index.json lists every manifest oras.Copy walked; the root is the one
+	// tagged with our image reference.
+	idx, err := getIndexFromOCILayout(destDir)
+	require.NoError(t, err)
+	var rootDigest string
+	for _, m := range idx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == ref.Reference {
+			rootDigest = m.Digest.String()
+			require.Equal(t, ocispec.MediaTypeImageIndex, m.MediaType)
+			break
+		}
+	}
+	require.Equal(t, ref.Digest, rootDigest, "root index digest must match requested digest")
+
+	// The pulled blob at that digest should itself be an OCI index with >1 platform manifest.
+	digestHex := rootDigest[len("sha256:"):]
+	blobPath := filepath.Join(destDir, "blobs", "sha256", digestHex)
+	require.FileExists(t, blobPath)
+	b, err := os.ReadFile(blobPath)
+	require.NoError(t, err)
+	var pulledIdx ocispec.Index
+	require.NoError(t, json.Unmarshal(b, &pulledIdx))
+	require.Greater(t, len(pulledIdx.Manifests), 1, "expected multiple platform manifests in pulled index")
+
+	// Every referenced manifest blob must be present locally (full graph was copied).
+	for _, m := range pulledIdx.Manifests {
+		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Digest.Hex()))
 	}
 }
 

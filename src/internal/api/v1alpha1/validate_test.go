@@ -109,6 +109,49 @@ func TestZarfPackageValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid multi arch",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "valid-multi",
+					Architecture: v1alpha1.MultiArch,
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+						Images: []string{
+							"ghcr.io/stefanprodan/podinfo:6.4.0@sha256:1e6a6a1ba3e4f32e92b6ea2bb78d05dfdc2bd41a3ba5e1a60ab4cbdfacff76bb",
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
+			name: "invalid multi arch missing digest",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "invalid-multi",
+					Architecture: v1alpha1.MultiArch,
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+						Images: []string{
+							"ghcr.io/stefanprodan/podinfo:6.4.0",
+							"nginx@sha256:1e6a6a1ba3e4f32e92b6ea2bb78d05dfdc2bd41a3ba5e1a60ab4cbdfacff76bb",
+							"busybox:latest",
+						},
+					},
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrMultiArchImageNoDigest, "ghcr.io/stefanprodan/podinfo:6.4.0", "component1"),
+				fmt.Sprintf(PkgValidateErrMultiArchImageNoDigest, "busybox:latest", "component1"),
+			},
+		},
+		{
 			name: "invalid yolo",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,

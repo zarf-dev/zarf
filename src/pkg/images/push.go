@@ -21,6 +21,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -152,9 +153,13 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
-			defaultPlatform := &ocispec.Platform{
-				Architecture: cfg.Arch,
-				OS:           "linux",
+			// In multi-arch mode, leave platform nil so copyImage preserves the full index.
+			var defaultPlatform *ocispec.Platform
+			if cfg.Arch != v1alpha1.MultiArch {
+				defaultPlatform = &ocispec.Platform{
+					Architecture: cfg.Arch,
+					OS:           "linux",
+				}
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
@@ -261,8 +266,9 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
-	// If an index is pulled we should try pulling with the default platform
-	if isIndex(desc.MediaType) {
+	// If an index is pulled and a target platform is provided, narrow to that platform.
+	// When defaultPlatform is nil (multi-arch packages) preserve the full index.
+	if isIndex(desc.MediaType) && defaultPlatform != nil {
 		fetchOpts.TargetPlatform = defaultPlatform
 		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
@@ -270,15 +276,20 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		}
 	}
 
-	if !isManifest(desc.MediaType) {
-		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
+	var size int64
+	switch {
+	case isIndex(desc.MediaType):
+		// For an index we can't easily sum the true byte size; use descriptor size for rough progress.
+		size = desc.Size
+	case isManifest(desc.MediaType):
+		var manifest ocispec.Manifest
+		if err := json.Unmarshal(b, &manifest); err != nil {
+			return err
+		}
+		size = getSizeOfImage(desc, manifest)
+	default:
+		return fmt.Errorf("expected OCI manifest or index got %s", desc.MediaType)
 	}
-
-	var manifest ocispec.Manifest
-	if err := json.Unmarshal(b, &manifest); err != nil {
-		return err
-	}
-	size := getSizeOfImage(desc, manifest)
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency

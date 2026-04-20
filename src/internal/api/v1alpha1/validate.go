@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -48,6 +49,7 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrMultiArchImageNoDigest  = "image %q in component %q must be pinned by digest (@sha256:...) in multi-arch packages"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -67,6 +69,16 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	uniqueComponentNames := make(map[string]bool)
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
+	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
+		for _, component := range pkg.Components {
+			for _, image := range component.Images {
+				parsed, parseErr := transform.ParseImageRef(image)
+				if parseErr != nil || parsed.Digest == "" {
+					err = errors.Join(err, fmt.Errorf(PkgValidateErrMultiArchImageNoDigest, image, component.Name))
+				}
+			}
+		}
+	}
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
