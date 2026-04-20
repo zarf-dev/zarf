@@ -280,7 +280,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
-	services := state.AllServiceKeys
+	services := state.AllServiceKeys()
 	if len(args) > 0 {
 		parsed, err := state.ParseServiceKey(args[0])
 		if err != nil {

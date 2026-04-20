@@ -40,16 +40,18 @@ const (
 )
 
 // AllServiceKeys is the canonical ordered list of every supported service key.
-var AllServiceKeys = []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+func AllServiceKeys() []ServiceKey {
+	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+}
 
 // ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
 func ParseServiceKey(s string) (ServiceKey, error) {
-	for _, k := range AllServiceKeys {
+	for _, k := range AllServiceKeys() {
 		if string(k) == s {
 			return k, nil
 		}
 	}
-	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys)
+	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys())
 }
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
