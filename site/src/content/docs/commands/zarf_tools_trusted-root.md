@@ -33,5 +33,5 @@ Tools for working with Sigstore trusted roots
 ### SEE ALSO
 
 * [zarf tools](/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
-* [zarf tools trusted-root fetch](/commands/zarf_tools_trusted-root_fetch/)	 - Fetch the Sigstore trusted root via TUF
+* [zarf tools trusted-root create](/commands/zarf_tools_trusted-root_create/)	 - Create a Sigstore trusted root
 

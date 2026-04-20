@@ -83,10 +83,7 @@ func newTrustedRootCreateCommand() *cobra.Command {
 				return errors.New("provide --with-default-services to retrieve the public Sigstore trusted root, or specify --fulcio/--rekor/--ctfe/--tsa to compose a custom trusted root")
 			}
 
-			// Translate options.TrustedRootCreateOptions to trustedroot.CreateCmd.
-			// This translation is how cosign itself wires the command; keep field
-			// coverage in sync when bumping cosign. New fields on either struct
-			// added in future cosign versions must be added here to reach Exec.
+			// New fields on either struct added in future cosign versions must be added here to reach Exec.
 			trCreateCmd := &trustedroot.CreateCmd{
 				FulcioSpecs:         o.Fulcio,
 				RekorSpecs:          o.Rekor,
