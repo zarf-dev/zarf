@@ -823,6 +823,12 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 			break
 		}
 	}
+	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
+		versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
+			Version: "v0.76.0",
+			Reason:  "This package uses multi-arch images which are only supported on v0.76.0+",
+		})
+	}
 	pkg.Build.VersionRequirements = versionRequirements
 
 	// We lose the ordering for the user-provided registry overrides.

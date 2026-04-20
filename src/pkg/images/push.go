@@ -242,10 +242,11 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
+	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane.
+	// Multi-arch packages also include un-annotated platform manifests pulled via oras.Copy; leave those alone.
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
+		if manifest.Annotations[ocispec.AnnotationRefName] == "" && manifest.Annotations[ocispec.AnnotationBaseImageName] != "" {
 			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
 		}
 		correctedManifests = append(correctedManifests, manifest)

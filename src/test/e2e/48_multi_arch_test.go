@@ -60,10 +60,10 @@ func TestMultiArchPackage(t *testing.T) {
 	require.NoError(t, json.Unmarshal(b, &pulledIdx))
 	require.Greater(t, len(pulledIdx.Manifests), 1, "expected multiple platform manifests under the index")
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 	t.Cleanup(func() {
-		_, _, err = e2e.Zarf(t, "package", "remove", "multi-arch", "--confirm")
+		_, _, err = e2e.Zarf(t, "package", "remove", "multi-arch", "--confirm", "--skip-version-check")
 		require.NoError(t, err)
 	})
 
