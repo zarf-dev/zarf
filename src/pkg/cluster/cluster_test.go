@@ -497,7 +497,7 @@ func TestInitStateRegistryModeSwitch(t *testing.T) {
 			}, metav1.CreateOptions{})
 			require.NoError(t, err)
 
-			tt.opts.InternalServices = []state.ServiceKey{state.RegistryKey}
+			tt.opts.InternalServices = state.NewServiceSet(state.RegistryKey)
 			result, err := c.InitState(ctx, tt.opts)
 			require.NoError(t, err)
 
@@ -555,7 +555,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.RegistryKey, state.AgentKey},
+			InternalServices: state.NewServiceSet(state.RegistryKey, state.AgentKey),
 		})
 		require.NoError(t, err)
 		require.Empty(t, s.GitServer.Address)
@@ -570,7 +570,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.RegistryKey},
+			InternalServices: state.NewServiceSet(state.RegistryKey),
 		})
 		require.NoError(t, err)
 		require.Empty(t, s.AgentTLS.Cert)
@@ -581,7 +581,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey},
+			InternalServices: state.NewServiceSet(state.RegistryKey, state.GitKey, state.ArtifactKey, state.AgentKey),
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
@@ -605,7 +605,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.GitKey, state.ArtifactKey},
+			InternalServices: state.NewServiceSet(state.GitKey, state.ArtifactKey),
 		})
 		require.NoError(t, err)
 		require.True(t, s.GitServer.IsConfigured())
@@ -617,7 +617,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		ctx := context.Background()
 		c := newFakeInitStateCluster(ctx, t, nil)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.RegistryKey, state.AgentKey},
+			InternalServices: state.NewServiceSet(state.RegistryKey, state.AgentKey),
 			GitServer: state.GitServerInfo{
 				Address:      "https://git.example.com",
 				PushUsername: "pusher",
@@ -649,7 +649,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.RegistryKey},
+			InternalServices: state.NewServiceSet(state.RegistryKey),
 		})
 		require.NoError(t, err)
 		require.Equal(t, "keep-me", s.GitServer.PushPassword)
@@ -671,7 +671,7 @@ func TestInitStateServicesGating(t *testing.T) {
 		}
 		c := newFakeInitStateCluster(ctx, t, existing)
 		s, err := c.InitState(ctx, InitStateOptions{
-			InternalServices: []state.ServiceKey{state.AgentKey},
+			InternalServices: state.NewServiceSet(state.AgentKey),
 			RegistryInfo: state.RegistryInfo{
 				RegistryMode: state.RegistryModeExternal,
 			},

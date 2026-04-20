@@ -321,25 +321,20 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 }
 
 // internalServicesFor returns the state services Zarf will deploy internally in this init run.
-func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions) []state.ServiceKey {
-	var services []state.ServiceKey
-	add := func(k state.ServiceKey) {
-		if !slices.Contains(services, k) {
-			services = append(services, k)
-		}
-	}
+func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions) state.ServiceSet {
+	services := state.NewServiceSet()
 	registryExternal := opts.RegistryInfo.Address != ""
 	for _, c := range components {
 		switch c.Name {
 		case "git-server":
-			add(state.GitKey)
-			add(state.ArtifactKey)
+			services.Add(state.GitKey)
+			services.Add(state.ArtifactKey)
 		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
 			if !registryExternal {
-				add(state.RegistryKey)
+				services.Add(state.RegistryKey)
 			}
 		case "zarf-agent":
-			add(state.AgentKey)
+			services.Add(state.AgentKey)
 		}
 	}
 	return services

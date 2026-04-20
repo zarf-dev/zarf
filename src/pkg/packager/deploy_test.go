@@ -18,12 +18,12 @@ func TestInternalServicesFor(t *testing.T) {
 		name       string
 		components []v1alpha1.ZarfComponent
 		opts       DeployOptions
-		expected   []state.ServiceKey
+		expected   state.ServiceSet
 	}{
 		{
 			name:       "no components",
 			components: nil,
-			expected:   nil,
+			expected:   state.NewServiceSet(),
 		},
 		{
 			name: "full init package with no external URLs populates all four",
@@ -35,7 +35,7 @@ func TestInternalServicesFor(t *testing.T) {
 				{Name: "zarf-agent"},
 				{Name: "git-server"},
 			},
-			expected: []state.ServiceKey{state.RegistryKey, state.AgentKey, state.GitKey, state.ArtifactKey},
+			expected: state.NewServiceSet(state.RegistryKey, state.AgentKey, state.GitKey, state.ArtifactKey),
 		},
 		{
 			name: "external registry URL drops registry key even though registry components are present",
@@ -49,7 +49,7 @@ func TestInternalServicesFor(t *testing.T) {
 			opts: DeployOptions{
 				RegistryInfo: state.RegistryInfo{Address: "https://registry.example.com"},
 			},
-			expected: []state.ServiceKey{state.AgentKey, state.GitKey, state.ArtifactKey},
+			expected: state.NewServiceSet(state.AgentKey, state.GitKey, state.ArtifactKey),
 		},
 		{
 			name: "external git URL does not drop git or artifact keys — git-server deploys regardless",
@@ -61,7 +61,7 @@ func TestInternalServicesFor(t *testing.T) {
 				GitServer:      state.GitServerInfo{Address: "https://git.example.com"},
 				ArtifactServer: state.ArtifactServerInfo{Address: "https://artifact.example.com"},
 			},
-			expected: []state.ServiceKey{state.RegistryKey, state.GitKey, state.ArtifactKey},
+			expected: state.NewServiceSet(state.RegistryKey, state.GitKey, state.ArtifactKey),
 		},
 		{
 			name: "registry components dedupe to registry key",
@@ -70,7 +70,7 @@ func TestInternalServicesFor(t *testing.T) {
 				{Name: "zarf-seed-registry"},
 				{Name: "zarf-registry"},
 			},
-			expected: []state.ServiceKey{state.RegistryKey},
+			expected: state.NewServiceSet(state.RegistryKey),
 		},
 		{
 			name: "unknown components ignored",
@@ -78,7 +78,7 @@ func TestInternalServicesFor(t *testing.T) {
 				{Name: "k3s"},
 				{Name: "some-custom-component"},
 			},
-			expected: nil,
+			expected: state.NewServiceSet(),
 		},
 	}
 
@@ -86,7 +86,7 @@ func TestInternalServicesFor(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			got := internalServicesFor(tt.components, tt.opts)
-			require.ElementsMatch(t, tt.expected, got)
+			require.Equal(t, tt.expected, got)
 		})
 	}
 }

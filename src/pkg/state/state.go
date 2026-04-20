@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -42,6 +41,29 @@ const (
 // AllServiceKeys is the canonical ordered list of every supported service key.
 func AllServiceKeys() []ServiceKey {
 	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+}
+
+// ServiceSet is an unordered set of ServiceKeys.
+type ServiceSet map[ServiceKey]struct{}
+
+// NewServiceSet returns a ServiceSet populated with the given keys.
+func NewServiceSet(keys ...ServiceKey) ServiceSet {
+	s := make(ServiceSet, len(keys))
+	for _, k := range keys {
+		s[k] = struct{}{}
+	}
+	return s
+}
+
+// Has reports whether k is in the set.
+func (s ServiceSet) Has(k ServiceKey) bool {
+	_, ok := s[k]
+	return ok
+}
+
+// Add inserts k into the set.
+func (s ServiceSet) Add(k ServiceKey) {
+	s[k] = struct{}{}
 }
 
 // ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
@@ -445,7 +467,7 @@ type MergeOptions struct {
 	GitServer      GitServerInfo
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
-	Services       []ServiceKey
+	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 }
@@ -454,7 +476,7 @@ type MergeOptions struct {
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
 	var err error
-	if slices.Contains(opts.Services, RegistryKey) {
+	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
 
@@ -470,7 +492,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 		}
 	}
-	if slices.Contains(opts.Services, GitKey) {
+	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
 
@@ -486,7 +508,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 		}
 	}
-	if slices.Contains(opts.Services, ArtifactKey) {
+	if opts.Services.Has(ArtifactKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
 
@@ -495,7 +517,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
-	if slices.Contains(opts.Services, AgentKey) {
+	if opts.Services.Has(AgentKey) {
 		if opts.AgentTLS != nil {
 			newState.AgentTLS = *opts.AgentTLS
 			newState.AgentTLSUserProvided = true
