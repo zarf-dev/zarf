@@ -171,9 +171,7 @@ func (gs GitServerInfo) IsInternal() bool {
 }
 
 // IsConfigured returns true if the git server address has been set.
-// New clusters only populate the address when the git-server component (or an
-// external --git-url) was supplied, so this reflects whether a git server is
-// actually in use. Legacy clusters initialized before services-gated state
+// clusters initialized before services-gated state https://github.com/zarf-dev/zarf/pull/4832
 // may report true even without a real git server.
 func (gs GitServerInfo) IsConfigured() bool {
 	return gs.Address != ""
