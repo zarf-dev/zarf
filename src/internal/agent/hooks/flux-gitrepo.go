@@ -58,7 +58,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
 		"operation", r.Operation,
-		"git-server", s.GitServer.Address)
+		"gitServer", s.GitServer.Address)
 
 	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
 	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).

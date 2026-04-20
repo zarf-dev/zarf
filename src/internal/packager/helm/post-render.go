@@ -248,7 +248,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
-				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
+				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connectionKey", key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = state.ConnectString{
