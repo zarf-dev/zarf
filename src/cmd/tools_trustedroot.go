@@ -40,12 +40,6 @@ func newTrustedRootCommand() *cobra.Command {
 // cosign's package-level `ro` RootOptions which is zero-valued outside cosign's own root
 // command (breaking the timeout), its help text and examples reference `cosign` not `zarf`,
 // and injecting our validation guard would require fragile RunE wrapping.
-//
-// When bumping the cosign dependency:
-//  1. Diff options.TrustedRootCreateOptions for new exported fields
-//  2. Diff trustedroot.CreateCmd for new exported fields
-//  3. Add matching assignments to the translation below; a field on Options that is not
-//     forwarded to CreateCmd will appear in --help but silently no-op
 func newTrustedRootCreateCommand() *cobra.Command {
 	o := &options.TrustedRootCreateOptions{}
 
@@ -69,8 +63,10 @@ func newTrustedRootCreateCommand() *cobra.Command {
     --out trusted_root.json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			// validate that user-provided (private or otherwise) infrastructure has been provided
-			// do not default to the public good infrastructure
+			// Intentional divergence from cosign: cosign produces an empty trusted root JSON
+			// on bare invocation. Zarf errors instead, since an empty trusted root is
+			// functionally useless for verification and almost always indicates a missed
+			// flag rather than intended output.
 			if !o.WithDefaultServices &&
 				len(o.Fulcio) == 0 &&
 				len(o.Rekor) == 0 &&
@@ -83,39 +79,45 @@ func newTrustedRootCreateCommand() *cobra.Command {
 				return errors.New("provide --with-default-services to retrieve the public Sigstore trusted root, or specify --fulcio/--rekor/--ctfe/--tsa to compose a custom trusted root")
 			}
 
-			// New fields on either struct added in future cosign versions must be added here to reach Exec.
-			trCreateCmd := &trustedroot.CreateCmd{
-				FulcioSpecs:         o.Fulcio,
-				RekorSpecs:          o.Rekor,
-				CTFESpecs:           o.CTFE,
-				TSASpecs:            o.TSA,
-				WithDefaultServices: o.WithDefaultServices,
-				NoDefaultFulcio:     o.NoDefaultFulcio,
-				NoDefaultCTFE:       o.NoDefaultCTFE,
-				NoDefaultTSA:        o.NoDefaultTSA,
-				NoDefaultRekor:      o.NoDefaultRekor,
-				Out:                 o.Out,
-				// Deprecated flags — cosign accepts them with warnings; pass through for parity.
-				CertChain:        o.CertChain,
-				FulcioURI:        o.FulcioURI,
-				CtfeKeyPath:      o.CtfeKeyPath,
-				CtfeStartTime:    o.CtfeStartTime,
-				CtfeEndTime:      o.CtfeEndTime,
-				CtfeURL:          o.CtfeURL,
-				RekorKeyPath:     o.RekorKeyPath,
-				RekorStartTime:   o.RekorStartTime,
-				RekorEndTime:     o.RekorEndTime,
-				RekorURL:         o.RekorURL,
-				TSACertChainPath: o.TSACertChainPath,
-				TSAURI:           o.TSAURI,
-			}
-
 			ctx, cancel := context.WithTimeout(cmd.Context(), utils.CosignDefaultTimeout)
 			defer cancel()
-			return trCreateCmd.Exec(ctx)
+			return optionsToCreateCmd(o).Exec(ctx)
 		},
 	}
 
 	o.AddFlags(cmd)
 	return cmd
+}
+
+// optionsToCreateCmd translates cosign's flag-binding struct to its execution struct.
+// New fields on either struct added in future cosign versions must be added here to
+// reach Exec. TestTrustedRootTranslationCoverage verifies that every exported field on
+// options.TrustedRootCreateOptions is forwarded to the corresponding field on
+// trustedroot.CreateCmd.
+func optionsToCreateCmd(o *options.TrustedRootCreateOptions) *trustedroot.CreateCmd {
+	return &trustedroot.CreateCmd{
+		FulcioSpecs:         o.Fulcio,
+		RekorSpecs:          o.Rekor,
+		CTFESpecs:           o.CTFE,
+		TSASpecs:            o.TSA,
+		WithDefaultServices: o.WithDefaultServices,
+		NoDefaultFulcio:     o.NoDefaultFulcio,
+		NoDefaultCTFE:       o.NoDefaultCTFE,
+		NoDefaultTSA:        o.NoDefaultTSA,
+		NoDefaultRekor:      o.NoDefaultRekor,
+		Out:                 o.Out,
+		// Deprecated flags — cosign accepts them with warnings; pass through for parity.
+		CertChain:        o.CertChain,
+		FulcioURI:        o.FulcioURI,
+		CtfeKeyPath:      o.CtfeKeyPath,
+		CtfeStartTime:    o.CtfeStartTime,
+		CtfeEndTime:      o.CtfeEndTime,
+		CtfeURL:          o.CtfeURL,
+		RekorKeyPath:     o.RekorKeyPath,
+		RekorStartTime:   o.RekorStartTime,
+		RekorEndTime:     o.RekorEndTime,
+		RekorURL:         o.RekorURL,
+		TSACertChainPath: o.TSACertChainPath,
+		TSAURI:           o.TSAURI,
+	}
 }
