@@ -280,8 +280,10 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	var size int64
 	switch {
 	case isIndex(desc.MediaType):
-		// For an index we can't easily sum the true byte size; use descriptor size for rough progress.
-		size = desc.Size
+		size, err = getSizeOfIndex(ctx, src, desc, b)
+		if err != nil {
+			return fmt.Errorf("failed to calculate size of index %s: %w", srcName, err)
+		}
 	case isManifest(desc.MediaType):
 		var manifest ocispec.Manifest
 		if err := json.Unmarshal(b, &manifest); err != nil {

@@ -183,9 +183,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
-					if multiArch {
-						return fmt.Errorf("unable to authenticate to host for image %s: %w (docker daemon fallback is not supported for multi-arch packages)", image.overridden.Reference, err)
-					}
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 					imageListLock.Lock()
 					defer imageListLock.Unlock()
@@ -200,9 +197,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
-				}
-				if multiArch {
-					return fmt.Errorf("unable to find image %s: %w (docker daemon fallback is not supported for multi-arch packages)", image.overridden.Reference, err)
 				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 				imageListLock.Lock()
@@ -224,12 +218,16 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 			// If multi-arch and we got an index, keep it as-is so oras.Copy pulls the full graph.
 			if multiArch && isIndex(desc.MediaType) {
+				size, err := getSizeOfIndex(ectx, repo, desc, b)
+				if err != nil {
+					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
+				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
 				imagesInfo = append(imagesInfo, imagePullInfo{
 					registryOverrideRef: image.overridden.Reference,
 					ref:                 image.original.Reference,
-					byteSize:            desc.Size,
+					byteSize:            size,
 					manifestDesc:        desc,
 				})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)

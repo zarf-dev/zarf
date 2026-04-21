@@ -21,6 +21,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -222,4 +223,34 @@ func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) 
 	}
 	totalSize += manifest.Config.Size
 	return totalSize
+}
+
+// getSizeOfIndex sums the size of every manifest referenced by the index, including
+// each child manifest's config and layers. Fetches child manifests from the provided
+// fetcher so multi-arch progress tracking reflects real bytes, not just the index stub.
+func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, error) {
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal index: %w", err)
+	}
+	totalSize := indexDesc.Size
+	for _, child := range idx.Manifests {
+		totalSize += child.Size
+		if !isManifest(child.MediaType) {
+			continue
+		}
+		b, err := content.FetchAll(ctx, fetcher, child)
+		if err != nil {
+			return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+		}
+		var m ocispec.Manifest
+		if err := json.Unmarshal(b, &m); err != nil {
+			return 0, fmt.Errorf("failed to unmarshal child manifest %s: %w", child.Digest, err)
+		}
+		totalSize += m.Config.Size
+		for _, layer := range m.Layers {
+			totalSize += layer.Size
+		}
+	}
+	return totalSize, nil
 }
