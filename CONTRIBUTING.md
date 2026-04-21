@@ -21,7 +21,7 @@ We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks, whi
 
 #### Prerequisites
 
-- **Go** matching the version in [`go.mod`](./go.mod), available on your `PATH`. Our pre-commit hooks invoke `golangci-lint` directly from your `PATH` rather than managing a Go environment (see [Supply-chain notes](#supply-chain-notes) below).
+- **Go** matching the version in the project go.mod, available on your `PATH`. Our pre-commit hooks invoke `golangci-lint` directly from your `PATH` rather than managing a Go environment (see [Supply-chain notes](#supply-chain-notes) below).
 - **Python 3**, required by pre-commit itself and by several of our hooks.
 - **pre-commit**, installed per the [pre-commit installation guide](https://pre-commit.com/#installation).
 
