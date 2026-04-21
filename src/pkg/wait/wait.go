@@ -445,7 +445,7 @@ func forNetwork(ctx context.Context, protocol string, address string, condition 
 
 					// If the status code is not in the 2xx range, try again.
 					if resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug("did not receive 2xx status code", "response_code", resp.StatusCode)
+						l.Debug("did not receive 2xx status code", "responseCode", resp.StatusCode)
 						continue
 					}
 

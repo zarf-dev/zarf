@@ -628,12 +628,9 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	installedCharts := []state.InstalledChart{}
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
+			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 			if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
-				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
-				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
-					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
-				}
+				return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 			}
 			if manifest.IsTemplate() {
 				path := filepath.Join(manifestDir, manifest.Files[idx])
