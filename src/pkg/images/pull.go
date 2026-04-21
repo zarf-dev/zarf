@@ -253,7 +253,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return err
 			}
-			size := getSizeOfImage(desc, manifest)
+			size, err := getSizeOfManifest(desc, b)
+			if err != nil {
+				return err
+			}
 			imageListLock.Lock()
 			defer imageListLock.Unlock()
 			imagesInfo = append(imagesInfo, imagePullInfo{
@@ -445,7 +448,10 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 				Image:    daemonImage.original,
 				Manifest: manifest,
 			})
-			size := getSizeOfImage(desc, manifest)
+			size, err := getSizeOfManifest(desc, b)
+			if err != nil {
+				return err
+			}
 			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
 			copyOpts := oras.DefaultCopyOptions
 			copyOpts.WithTargetPlatform(platform)

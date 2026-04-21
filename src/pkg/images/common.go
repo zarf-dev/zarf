@@ -215,14 +215,17 @@ func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
-func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
-	var totalSize int64
-	totalSize += manifestDesc.Size
+func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (int64, error) {
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal manifest %s: %w", manifestDesc.Digest, err)
+	}
+	totalSize := manifestDesc.Size
 	for _, layer := range manifest.Layers {
 		totalSize += layer.Size
 	}
 	totalSize += manifest.Config.Size
-	return totalSize
+	return totalSize, nil
 }
 
 // getSizeOfIndex sums the size of every manifest referenced by the index, including
@@ -235,22 +238,19 @@ func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocis
 	}
 	totalSize := indexDesc.Size
 	for _, child := range idx.Manifests {
-		totalSize += child.Size
 		if !isManifest(child.MediaType) {
+			totalSize += child.Size
 			continue
 		}
 		b, err := content.FetchAll(ctx, fetcher, child)
 		if err != nil {
 			return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
 		}
-		var m ocispec.Manifest
-		if err := json.Unmarshal(b, &m); err != nil {
-			return 0, fmt.Errorf("failed to unmarshal child manifest %s: %w", child.Digest, err)
+		childSize, err := getSizeOfManifest(child, b)
+		if err != nil {
+			return 0, err
 		}
-		totalSize += m.Config.Size
-		for _, layer := range m.Layers {
-			totalSize += layer.Size
-		}
+		totalSize += childSize
 	}
 	return totalSize, nil
 }

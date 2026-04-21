@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -285,11 +284,10 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 			return fmt.Errorf("failed to calculate size of index %s: %w", srcName, err)
 		}
 	case isManifest(desc.MediaType):
-		var manifest ocispec.Manifest
-		if err := json.Unmarshal(b, &manifest); err != nil {
+		size, err = getSizeOfManifest(desc, b)
+		if err != nil {
 			return err
 		}
-		size = getSizeOfImage(desc, manifest)
 	default:
 		return fmt.Errorf("expected OCI manifest or index got %s", desc.MediaType)
 	}
