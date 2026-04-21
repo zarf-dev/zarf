@@ -9,6 +9,7 @@ linters:
     - ineffassign
     - nolintlint
     - revive
+    - sloglint
     - staticcheck
     - testifylint
     - unused

@@ -401,7 +401,6 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
 		State:          newState,
 		Cluster:        c,
-		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
 		ForceConflicts: o.forceConflicts,
@@ -468,7 +467,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
-			l.Info("agent TLS source", "user-provided", newState.AgentTLSUserProvided)
+			l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
 			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
 			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
@@ -701,8 +700,8 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyFileName,
-		"public-key-path", pubKeyFileName)
+		"privateKeyPath", prvKeyFileName,
+		"publicKeyPath", pubKeyFileName)
 
 	return nil
 }

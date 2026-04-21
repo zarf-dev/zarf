@@ -74,7 +74,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
 		"name", app.Name,
 		"operation", r.Operation,
-		"git-server", s.GitServer.Address)
+		"gitServer", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
