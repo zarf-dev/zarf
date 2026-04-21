@@ -35,14 +35,14 @@ func TestCheckForIndex(t *testing.T) {
 			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48",
 			file:        "agent-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
+			expectedErr: "%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "docker manifest list",
 			ref:         "defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af",
 			file:        "game-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
+			expectedErr: "%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "image manifest",

@@ -315,7 +315,7 @@ func constructIndexError(idx ocispec.Index, image transform.Image) error {
 		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 	}
 	imageOptions := strings.Join(lines, "\n")
-	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
+	return fmt.Errorf("%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest: %s", image.Reference, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {

@@ -13,7 +13,7 @@ components:
           # local manifests are specified relative to the `zarf.yaml` that uses them:
           - httpd-deployment.yaml
     # image discovery is supported in all manifests and charts using:
-    # zarf prepare find-images
+    # zarf dev find-images
     images:
       - httpd:alpine3.18
   - name: nginx-remote
@@ -28,7 +28,7 @@ components:
           # this sha256 can be discovered using:
           # zarf prepare sha256sum https://k8s.io/examples/application/deployment.yaml
     # image discovery is supported in all manifests and charts using:
-    # zarf prepare find-images
+    # zarf dev find-images
     images:
       - nginx:1.14.2
   - name: podinfo-kustomize
@@ -43,9 +43,9 @@ components:
           # while ?ref= is not a requirement, it is recommended to use a specific commit hash / git tag to
           # ensure that the kustomization is not changed in a way that breaks your deployment.
     # image discovery is supported in all manifests and charts using:
-    # zarf prepare find-images
+    # zarf dev find-images
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
-      
+
 documentation:
   readme: readme.md
