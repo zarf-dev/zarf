@@ -1193,7 +1193,8 @@
           "description": "The target cluster architecture for this package.",
           "examples": [
             "arm64",
-            "amd64"
+            "amd64",
+            "multi"
           ],
           "type": "string"
         },
