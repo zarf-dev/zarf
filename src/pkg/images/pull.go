@@ -206,8 +206,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return nil
 			}
 
-			// In non-multi-arch mode, pinning to an index digest is rejected so the user picks a specific platform.
-			// In multi-arch mode, an index digest is the whole point: we preserve the full index.
+			// When not in multi arch mode, index shas are not allowed
 			if !multiArch && image.original.Digest != "" && IsIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
@@ -217,7 +216,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				}
 				return constructIndexError(idx, image.overridden)
 			}
-			// If multi-arch and we got an index, keep it as-is so oras.Copy pulls the full graph.
 			if multiArch && IsIndex(desc.MediaType) {
 				size, err := getSizeOfIndex(ectx, repo, desc, b)
 				if err != nil {
@@ -318,10 +316,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	return pulledImages, nil
 }
 
-// indexIsContainerImage reports whether idx has at least one platform manifest that carries only
-// container image layers — the same signal OnlyHasImageLayers uses on a single manifest. Nested
-// indexes are recursed into so the check holds even when attestations or other tooling wrap the
-// platform manifests in a child index.
+// indexIsContainerImage reports whether idx has at least one platform manifest that carries only container image layers
 func indexIsContainerImage(ctx context.Context, fetcher content.Fetcher, ref string, idx ocispec.Index) (bool, error) {
 	for _, child := range idx.Manifests {
 		switch {
