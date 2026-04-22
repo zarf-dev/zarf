@@ -78,6 +78,31 @@
       },
       "type": "object"
     },
+    "ImageArchive": {
+      "additionalProperties": false,
+      "description": "ImageArchive points to an archived file containing an OCI layout",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "images": {
+          "description": "Images within the OCI layout to be brought into the package",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "Path to file containing an OCI-layout",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "images"
+      ],
+      "type": "object"
+    },
     "InteractiveVariable": {
       "additionalProperties": false,
       "description": "InteractiveVariable is a variable that can be used to prompt a user for more information",
@@ -321,6 +346,13 @@
           },
           "type": "array"
         },
+        "provenanceFiles": {
+          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
@@ -405,6 +437,15 @@
           "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.",
           "type": "boolean"
         },
+        "serverSideApply": {
+          "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
+        },
         "url": {
           "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
           "examples": [
@@ -453,9 +494,19 @@
       },
       "properties": {
         "sourcePath": {
+          "description": "Path to Zarf values key. A single dot (.) represents the root.",
+          "examples": [
+            ".registry.port"
+          ],
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         },
         "targetPath": {
+          "description": "Path to chart values key. A single dot (.) represents the root.",
+          "examples": [
+            ".service.port"
+          ],
+          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
         }
       },
@@ -512,7 +563,7 @@
           "type": "array"
         },
         "dataInjections": {
-          "description": "Datasets to inject into a container in the target cluster.",
+          "description": "[Deprecated] Datasets to inject into a container in the target cluster.",
           "items": {
             "$ref": "#/$defs/ZarfDataInjection"
           },
@@ -541,6 +592,13 @@
           "description": "List of resources to health check after deployment",
           "items": {
             "$ref": "#/$defs/NamespacedObjectKindReference"
+          },
+          "type": "array"
+        },
+        "imageArchives": {
+          "description": "List of Tar files of images to bring into the package.",
+          "items": {
+            "$ref": "#/$defs/ImageArchive"
           },
           "type": "array"
         },
@@ -1090,6 +1148,15 @@
           "description": "Whether to not wait for manifest resources to be ready before continuing.",
           "type": "boolean"
         },
+        "serverSideApply": {
+          "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
+        },
         "template": {
           "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
           "type": "boolean"
@@ -1133,7 +1200,7 @@
         "authors": {
           "description": "Comma-separated list of package authors (including contact info).",
           "examples": [
-            "Doug \u0026#60;hello@defenseunicorns.com\u0026#62;\u0026#44; Pepr \u0026#60;hello@defenseunicorns.com\u0026#62;"
+            "Zarf \u003czarf@zarf-dev.com\u003e"
           ],
           "type": "string"
         },
@@ -1199,7 +1266,7 @@
           "type": "array"
         },
         "schema": {
-          "description": "Schema is a placeholder field for importing a .json.schema file for imported Values files.",
+          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
           "type": "string"
         }
       },
@@ -1239,6 +1306,13 @@
         "$ref": "#/$defs/Constant"
       },
       "type": "array"
+    },
+    "documentation": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Documentation files to be added to the package",
+      "type": "object"
     },
     "kind": {
       "default": "ZarfPackageConfig",

@@ -51,7 +51,7 @@ zarf tools yq -P sample.json
   -h, --help                            help for yq
   -I, --indent int                      sets indent level for output (default 2)
   -i, --inplace                         update the file in place of first file given.
-  -p, --input-format string             [auto|a|yaml|y|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|lua|l|ini|i] parse format for input. (default "auto")
+  -p, --input-format string             [auto|a|yaml|y|kyaml|ky|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|hcl|h|lua|l|ini|i] parse format for input. (default "auto")
       --lua-globals                     output keys as top-level global variables
       --lua-prefix string               prefix (default "return ")
       --lua-suffix string               suffix (default ";\n")
@@ -60,7 +60,7 @@ zarf tools yq -P sample.json
   -N, --no-doc                          Don't print document separators (---)
   -0, --nul-output                      Use NUL char to separate values. If unwrap scalar is also set, fail if unwrapped scalar contains NUL char.
   -n, --null-input                      Don't read input, simply evaluate the expression given. Useful for creating docs from scratch.
-  -o, --output-format string            [auto|a|yaml|y|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|shell|s|lua|l|ini|i] output format type. (default "auto")
+  -o, --output-format string            [auto|a|yaml|y|kyaml|ky|json|j|props|p|csv|c|tsv|t|xml|x|base64|uri|toml|hcl|h|shell|s|lua|l|ini|i] output format type. (default "auto")
   -P, --prettyPrint                     pretty print, shorthand for '... style = ""'
       --properties-array-brackets       use [x] in array paths (e.g. for SpringBoot)
       --properties-separator string     separator to use between keys and values (default " = ")
@@ -71,7 +71,7 @@ zarf tools yq -P sample.json
       --split-exp-file string           Use a file to specify the split-exp expression.
       --string-interpolation            Toggles strings interpolation of \(exp) (default true)
       --tsv-auto-parse                  parse TSV YAML/JSON values (default true)
-  -r, --unwrapScalar                    unwrap scalar, print the value with no quotes, colors or comments. Defaults to true for yaml (default true)
+  -r, --unwrapScalar                    unwrap scalar, print the value with no quotes, colours or comments. Defaults to true for yaml (default true)
   -v, --verbose                         verbose mode
   -V, --version                         Print version information and quit
       --xml-attribute-prefix string     prefix for xml attributes (default "+@")
@@ -83,6 +83,7 @@ zarf tools yq -P sample.json
       --xml-skip-directives             skip over directives (e.g. <!DOCTYPE thing cat>)
       --xml-skip-proc-inst              skip over process instructions (e.g. <?xml version="1"?>)
       --xml-strict-mode                 enables strict parsing of XML. See https://pkg.go.dev/encoding/xml for more details.
+  -c, --yaml-compact-seq-indent         Use compact sequence indentation where '- ' is considered part of the indentation.
       --yaml-fix-merge-anchor-to-spec   Fix merge anchor to match YAML spec. Will default to true in late 2025
 ```
 

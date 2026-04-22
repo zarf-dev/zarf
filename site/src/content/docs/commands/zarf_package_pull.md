@@ -19,24 +19,24 @@ zarf package pull PACKAGE_SOURCE [flags]
 ```
 
 # Pull a package matching the current architecture
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0
 
 # Pull a package matching a specific architecture
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a arm64
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a arm64
 
 # Pull a skeleton package
-$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.2.0 -a skeleton
+$ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton
 ```
 
 ### Options
 
 ```
-  -h, --help                        help for pull
-  -k, --key string                  Path to public key file for validating signed packages
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output-directory string     Specify the output directory for the pulled Zarf package
-      --shasum string               Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
-      --skip-signature-validation   Skip validating the signature of the Zarf package
+  -h, --help                      help for pull
+  -k, --key string                Path to public key file for validating signed packages
+      --oci-concurrency int       Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output-directory string   Specify the output directory for the pulled Zarf package
+      --shasum string             Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
+      --verify                    Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

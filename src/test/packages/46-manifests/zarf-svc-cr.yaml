@@ -1,0 +1,7 @@
+apiVersion: test.zarf.dev/v1beta1
+kind: Service
+metadata:
+  name: my-svc-test
+  namespace: wait-for-test
+spec:
+  name: test

@@ -6,7 +6,9 @@ package v1alpha1
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"time"
 )
 
@@ -55,7 +57,7 @@ const SkeletonArch = "skeleton"
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
-	APIVersion string `json:"apiVersion,omitempty," jsonschema:"enum=zarf.dev/v1alpha1"`
+	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1alpha1"`
 	// The kind of Zarf package.
 	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
 	// Package metadata.
@@ -70,6 +72,8 @@ type ZarfPackage struct {
 	Variables []InteractiveVariable `json:"variables,omitempty"`
 	// Values imports Zarf values files for templating and overriding Helm values.
 	Values ZarfValues `json:"values,omitempty"`
+	// Documentation files to be added to the package
+	Documentation map[string]string `json:"documentation,omitempty"`
 }
 
 // IsInitConfig returns whether a Zarf package is an init config.
@@ -80,7 +84,7 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 // HasImages returns true if one of the components contains an image.
 func (pkg ZarfPackage) HasImages() bool {
 	for _, component := range pkg.Components {
-		if len(component.Images) > 0 {
+		if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
 			return true
 		}
 	}
@@ -90,7 +94,7 @@ func (pkg ZarfPackage) HasImages() bool {
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or data injections).
 func (pkg ZarfPackage) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
-		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
+		if len(c.ImageArchives) > 0 || len(c.Images) > 0 || len(c.Files) > 0 || len(c.DataInjections) > 0 {
 			return true
 		}
 	}
@@ -99,6 +103,11 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 
 // UniqueNamespaceCount returns the number of unique namespaces in the package.
 func (pkg ZarfPackage) UniqueNamespaceCount() int {
+	return len(pkg.UniqueNamespaces())
+}
+
+// UniqueNamespaces returns a slice of all unique namespaces in the package
+func (pkg ZarfPackage) UniqueNamespaces() []string {
 	uniqueNamespaces := make(map[string]struct{})
 	for _, component := range pkg.Components {
 		for _, chart := range component.Charts {
@@ -108,20 +117,7 @@ func (pkg ZarfPackage) UniqueNamespaceCount() int {
 			uniqueNamespaces[manifest.Namespace] = struct{}{}
 		}
 	}
-	return len(uniqueNamespaces)
-}
-
-// UpdateAllComponentNamespaces updates all existing namespaces to the provided one
-func (pkg ZarfPackage) UpdateAllComponentNamespaces(namespace string) {
-	for i := range pkg.Components {
-		comp := pkg.Components[i]
-		for j := range comp.Charts {
-			comp.Charts[j].Namespace = namespace
-		}
-		for k := range comp.Manifests {
-			comp.Manifests[k].Namespace = namespace
-		}
-	}
+	return slices.Collect(maps.Keys(uniqueNamespaces))
 }
 
 // AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
@@ -229,7 +225,7 @@ type ZarfMetadata struct {
 	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 	YOLO bool `json:"yolo,omitempty"`
 	// Comma-separated list of package authors (including contact info).
-	Authors string `json:"authors,omitempty" jsonschema:"example=Doug &#60;hello@defenseunicorns.com&#62;&#44; Pepr &#60;hello@defenseunicorns.com&#62;"`
+	Authors string `json:"authors,omitempty" jsonschema:"example=Zarf <zarf@zarf-dev.com>"`
 	// Link to package documentation when online.
 	Documentation string `json:"documentation,omitempty"`
 	// Link to package source code when online.
@@ -273,6 +269,10 @@ type ZarfBuildData struct {
 	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
+	// These are files added after checksum generation (e.g., signature files).
+	// This list is authenticated through the signed zarf.yaml.
+	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 }
 
 // ZarfValues imports package-level values files and validation.

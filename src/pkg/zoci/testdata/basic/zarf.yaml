@@ -6,6 +6,9 @@ metadata:
   version: 0.0.1
   architecture: amd64
 
+documentation:
+  readme: README.md
+
 components:
   - name: alpine
     required: true

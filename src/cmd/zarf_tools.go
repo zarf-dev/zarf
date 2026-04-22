@@ -13,6 +13,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/Masterminds/semver/v3"
@@ -222,10 +223,14 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 }
 
 type updateCredsOptions struct {
-	confirm        bool
-	gitServer      state.GitServerInfo
-	registryInfo   state.RegistryInfo
-	artifactServer state.ArtifactServerInfo
+	confirm          bool
+	forceConflicts   bool
+	gitServer        state.GitServerInfo
+	registryInfo     state.RegistryInfo
+	artifactServer   state.ArtifactServerInfo
+	agentTLSCAPath   string
+	agentTLSCertPath string
+	agentTLSKeyPath  string
 }
 
 func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
@@ -243,6 +248,7 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require confirm flag (no viper)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdToolsUpdateCredsConfirmFlag)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -262,6 +268,12 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+
+	// Flags for providing user-managed agent TLS certificates
+	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", "", "Path to a PEM-encoded CA certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", "", "Path to a PEM-encoded TLS certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", "", "Path to a PEM-encoded TLS private key for the Zarf agent")
+	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
 
 	cmd.Flags().SortFlags = true
 
@@ -308,6 +320,20 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		ArtifactServer: o.artifactServer,
 		Services:       args,
 	}
+
+	if slices.Contains(args, state.AgentKey) {
+		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
+			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or explicitly define service list without `agent`")
+		}
+		if o.agentTLSCAPath != "" {
+			loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
+			if err != nil {
+				return fmt.Errorf("invalid agent TLS certificates: %w", err)
+			}
+			opts.AgentTLS = &loadedTLS
+		}
+	}
+
 	newState, err := state.Merge(oldState, opts)
 	if err != nil {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
@@ -335,6 +361,13 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		err := c.UpdateZarfManagedImageSecrets(ctx, newState)
 		if err != nil {
 			return err
+		}
+
+		if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+			err := c.ApplyZarfManagedMTLSSecrets(ctx)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if slices.Contains(args, state.GitKey) {
@@ -368,9 +401,9 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		VariableConfig: template.GetZarfVariableConfig(cmd.Context(), !o.confirm),
 		State:          newState,
 		Cluster:        c,
-		AirgapMode:     true,
 		Timeout:        config.ZarfDefaultTimeout,
 		IsInteractive:  !o.confirm,
+		ForceConflicts: o.forceConflicts,
 	}
 
 	// Update Zarf 'init' component Helm releases if present
@@ -412,6 +445,11 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
 			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
 			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
+			if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+				l.Info("registry mTLS certificate authority", "changed", "true")
+				l.Info("registry mTLS public certificate", "changed", "true")
+				l.Info("registry mTLS private key", "changed", "true")
+			}
 		case gitKey:
 			oG := oldState.GitServer
 			nG := newState.GitServer
@@ -429,6 +467,7 @@ func printCredentialUpdates(ctx context.Context, oldState *state.State, newState
 		case agentKey:
 			oT := oldState.AgentTLS
 			nT := newState.AgentTLS
+			l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
 			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
 			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
 			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
@@ -535,6 +574,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 
 type genPKIOptions struct {
 	subAltNames []string
+	duration    time.Duration
 }
 
 func newGenPKICommand() *cobra.Command {
@@ -544,17 +584,26 @@ func newGenPKICommand() *cobra.Command {
 		Use:     "gen-pki HOST",
 		Aliases: []string{"pki"},
 		Short:   lang.CmdToolsGenPkiShort,
-		Args:    cobra.ExactArgs(1),
-		RunE:    o.run,
+		Long: lang.CmdToolsGenPkiShort + "\n\n" +
+			"To generate certificates for the Zarf agent with a 1-year lifetime:\n\n" +
+			"  $ zarf tools gen-pki agent-hook.zarf.svc --duration 8760h\n\n" +
+			"The resulting tls.ca, tls.crt, and tls.key files can then be passed to:\n\n" +
+			"  $ zarf init --agent-tls-ca tls.ca --agent-tls-cert tls.crt --agent-tls-key tls.key",
+		Args: cobra.ExactArgs(1),
+		RunE: o.run,
 	}
 
 	cmd.Flags().StringArrayVar(&o.subAltNames, "sub-alt-name", []string{}, lang.CmdToolsGenPkiFlagAltName)
+	cmd.Flags().DurationVar(&o.duration, "duration", time.Hour*24*375, "Duration for the generated certificates (e.g., 8760h for 1 year, 87600h for ~10 years)")
 
 	return cmd
 }
 
 func (o *genPKIOptions) run(cmd *cobra.Command, args []string) error {
-	pki, err := pki.GeneratePKI(args[0], o.subAltNames...)
+	pki, err := pki.GeneratePKIWithOptions(args[0], pki.GenerateOptions{
+		Duration: o.duration,
+		DNSNames: o.subAltNames,
+	})
 	if err != nil {
 		return err
 	}
@@ -596,7 +645,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 			Message: lang.CmdToolsGenKeyPrompt,
 		}
 		if err := survey.AskOne(prompt, &password); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// perform the second prompt
@@ -605,7 +654,7 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 			Message: lang.CmdToolsGenKeyPromptAgain,
 		}
 		if err := survey.AskOne(rePrompt, &doubleCheck); err != nil {
-			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err.Error())
+			return nil, fmt.Errorf(lang.CmdToolsGenKeyErrUnableGetPassword, err)
 		}
 
 		// check if the passwords match
@@ -651,8 +700,8 @@ func (o *genKeyOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	logger.From(cmd.Context()).Info("Successfully generated key pair",
-		"private-key-path", prvKeyFileName,
-		"public-key-path", pubKeyFileName)
+		"privateKeyPath", prvKeyFileName,
+		"publicKeyPath", pubKeyFileName)
 
 	return nil
 }

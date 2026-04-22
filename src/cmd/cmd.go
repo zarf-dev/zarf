@@ -10,7 +10,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // setBaseDirectory sets the base directory. This is a directory with a zarf.yaml.
@@ -21,12 +21,15 @@ func setBaseDirectory(args []string) string {
 	return "."
 }
 
-func defaultRemoteOptions() packager.RemoteOptions {
-	return packager.RemoteOptions{
-		PlainHTTP:             config.CommonOptions.PlainHTTP,
-		InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
+func defaultRemoteOptions() types.RemoteOptions {
+	return types.RemoteOptions{
+		PlainHTTP:             plainHTTP,
+		InsecureSkipTLSVerify: insecureSkipTLSVerify,
 	}
 }
+
+var plainHTTP bool
+var insecureSkipTLSVerify bool
 
 var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 

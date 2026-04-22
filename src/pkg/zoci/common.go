@@ -17,8 +17,8 @@ import (
 	ociDirectory "oras.land/oras-go/v2/content/oci"
 )
 
-// LayersSelector is a type for selecting subsets of layers in a Zarf package
-type LayersSelector string
+// LayerType specifies a category of layers in a Zarf OCI package.
+type LayerType string
 
 const (
 	// ZarfConfigMediaType is the media type for the manifest config
@@ -31,17 +31,22 @@ const (
 	DefaultRetries = 1
 	// ImageCacheDirectory is the directory within the Zarf cache containing an OCI store
 	ImageCacheDirectory = "images"
-	// AllLayers is the default selector for all layers
-	AllLayers LayersSelector = ""
-	//SbomLayers is the selector for SBOM layers including metadata
-	SbomLayers LayersSelector = "sbom"
-	// MetadataLayers is the selector for metadata layers (zarf.yaml, signature, checksums)
-	MetadataLayers LayersSelector = "metadata"
-	// ImageLayers is the selector for image layers including metadata
-	ImageLayers LayersSelector = "images"
-	// ComponentLayers is the selector for component layers including metadata
-	ComponentLayers LayersSelector = "components"
+	// MetadataLayers includes zarf.yaml, signature, and checksums.
+	MetadataLayers LayerType = "metadata"
+	// ComponentLayers includes component tarballs.
+	ComponentLayers LayerType = "components"
+	// ImageLayers includes container image blobs.
+	ImageLayers LayerType = "images"
+	// SbomLayers includes the SBOM tarball.
+	SbomLayers LayerType = "sbom"
+	// DocLayers includes the documentation tarball.
+	DocLayers LayerType = "documentation"
 )
+
+// GetAllLayerTypes returns the complete set of layer types in a Zarf OCI package.
+func GetAllLayerTypes() []LayerType {
+	return []LayerType{MetadataLayers, ComponentLayers, ImageLayers, SbomLayers, DocLayers}
+}
 
 const (
 	defaultDelayTime    = 500 * time.Millisecond
@@ -54,6 +59,8 @@ type PublishOptions struct {
 	Retries int
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
+	// Tag allows for overriding the destination reference
+	Tag string
 }
 
 // Remote is a wrapper around the Oras remote repository with zarf specific functions
@@ -65,10 +72,7 @@ type Remote struct {
 // with zarf opination embedded
 func NewRemote(ctx context.Context, url string, platform ocispec.Platform, mods ...oci.Modifier) (*Remote, error) {
 	l := logger.From(ctx)
-
 	modifiers := append([]oci.Modifier{
-		oci.WithPlainHTTP(config.CommonOptions.PlainHTTP),
-		oci.WithInsecureSkipVerify(config.CommonOptions.InsecureSkipTLSVerify),
 		oci.WithLogger(l),
 		oci.WithUserAgent("zarf/" + config.CLIVersion),
 	}, mods...)

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: alpine-test-pod
+  namespace: image-tar-test
+  labels:
+    app: alpine-test
+spec:
+  containers:
+  - name: alpine
+    image: ghcr.io/zarf-dev/images/alpine:3.21.3
+    command: ["sleep", "infinity"]
+  restartPolicy: Always

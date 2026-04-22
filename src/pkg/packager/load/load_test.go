@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -27,7 +26,7 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 		{
 			name:        "when all components have a flavor, inputting no flavor should error",
 			flavor:      "",
-			expectedErr: fmt.Sprintf("package validation failed: %s", lint.PkgValidateErrNoComponents),
+			expectedErr: fmt.Sprintf("package validation failed: %s", "package does not contain any compatible components"),
 		},
 		{
 			name:   "flavors work",

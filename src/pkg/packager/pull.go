@@ -17,6 +17,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
@@ -33,17 +34,19 @@ import (
 type PullOptions struct {
 	// SHASum uniquely identifies a package based on its contents.
 	SHASum string
-	// SkipSignatureValidation flags whether Pull should skip validating the signature.
-	SkipSignatureValidation bool
 	// Architecture is the package architecture.
 	Architecture string
-	// PublicKeyPath validates the create-time signage of a package.
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
+	// VerifyBlobOptions configures package signature verification.
+	VerifyBlobOptions *utils.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
-	RemoteOptions
+	types.RemoteOptions
+	// VerificationStrategy for explicit definition
+	layout.VerificationStrategy
 }
 
 // Pull takes a source URL and destination directory, fetches the Zarf package from the given sources, and returns the path to the fetched package.
@@ -53,6 +56,11 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 
 	// ensure architecture is set
 	arch := config.GetArch(opts.Architecture)
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return "", err
+	}
 
 	u, err := url.Parse(source)
 	if err != nil {
@@ -68,15 +76,24 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 		return "", errors.New("host cannot be empty")
 	}
 
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
+	}
+
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
-		Shasum:                  opts.SHASum,
-		Architecture:            arch,
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		Output:                  destination,
-		OCIConcurrency:          opts.OCIConcurrency,
-		RemoteOptions:           opts.RemoteOptions,
-		CachePath:               opts.CachePath,
+		Shasum:               opts.SHASum,
+		Architecture:         arch,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerificationStrategy: opts.VerificationStrategy,
+		Output:               destination,
+		OCIConcurrency:       opts.OCIConcurrency,
+		RemoteOptions:        opts.RemoteOptions,
+		CachePath:            opts.CachePath,
 	})
 	if err != nil {
 		return "", err
@@ -94,16 +111,17 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source                  string
-	Shasum                  string
-	Architecture            string
-	LayersSelector          zoci.LayersSelector
-	Filter                  filters.ComponentFilterStrategy
-	OCIConcurrency          int
-	CachePath               string
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	RemoteOptions
+	Source            string
+	Shasum            string
+	Architecture      string
+	LayerTypes        []zoci.LayerType
+	Filter            filters.ComponentFilterStrategy
+	OCIConcurrency    int
+	CachePath         string
+	VerifyBlobOptions *utils.VerifyBlobOptions
+	Connected         bool
+	types.RemoteOptions
+	layout.VerificationStrategy
 }
 
 func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, error) {
@@ -135,9 +153,17 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// zarf creates layers around the contents of component primarily
-	// this assembles the layers for the components - whether filtered above or not
-	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, isSkeleton(desc.Platform), opts.LayersSelector)
+	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
+	layerTypes := opts.LayerTypes
+	if opts.Connected || isSkeleton(desc.Platform) {
+		if len(layerTypes) == 0 {
+			layerTypes = zoci.GetAllLayerTypes()
+		}
+		layerTypes = helpers.RemoveMatches(layerTypes, func(lt zoci.LayerType) bool {
+			return lt == zoci.ImageLayers
+		})
+	}
+	layersToPull, err := remote.AssembleLayers(ctx, pkg.Components, layerTypes...)
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +183,12 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
+
 	layoutOpts := layout.PackageLayoutOptions{
-		PublicKeyPath:           opts.PublicKeyPath,
-		SkipSignatureValidation: opts.SkipSignatureValidation,
-		IsPartial:               isPartial,
-		Filter:                  opts.Filter,
+		VerifyBlobOptions:    opts.VerifyBlobOptions,
+		VerificationStrategy: opts.VerificationStrategy,
+		IsPartial:            isPartial,
+		Filter:               opts.Filter,
 	}
 	pkgLayout, err := layout.LoadFromDir(ctx, dirPath, layoutOpts)
 	if err != nil {

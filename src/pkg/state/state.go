@@ -7,6 +7,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -81,7 +82,22 @@ const (
 
 	ZarfInClusterGitServiceURL      = "http://zarf-gitea-http.zarf.svc.cluster.local:3000"
 	ZarfInClusterArtifactServiceURL = ZarfInClusterGitServiceURL + "/api/packages/" + ZarfGitPushUser
+
+	// ZarfRegistryMTLSServerCommonName is the common name for the registry server certificate
+	ZarfRegistryMTLSServerCommonName = "zarf-docker-registry"
+	// ZarfRegistryMTLSClientCommonName is the common name for the registry client certificate
+	ZarfRegistryMTLSClientCommonName = "zarf-registry-client"
+	ZarfRegistryMTLSCASubject        = "Zarf Registry CA"
 )
+
+// ZarfRegistryMTLSServerHosts is the list of DNS names and IPs for the registry server certificate
+var ZarfRegistryMTLSServerHosts = []string{
+	"zarf-docker-registry",
+	"zarf-docker-registry.zarf.svc.cluster.local",
+	"localhost",
+	"127.0.0.1",
+	"[::1]",
+}
 
 // IPV6Localhost is the IP of localhost in IPv6 (TODO: move to helpers next to IPV4Localhost)
 const IPV6Localhost = "::1"
@@ -92,15 +108,15 @@ type State struct {
 	ZarfAppliance bool `json:"zarfAppliance"`
 	// K8s distribution of the cluster Zarf was deployed to
 	Distro string `json:"distro"`
-	// Machine architecture of the k8s node(s)
-	Architecture string `json:"architecture"`
 	// Default StorageClass value Zarf uses for variable templating
 	StorageClass string `json:"storageClass"`
 	// The IP family of the cluster, can be ipv4, ipv6, or dual
 	IPFamily IPFamily `json:"ipFamily,omitempty"`
 	// PKI certificate information for the agent pods Zarf manages
-	AgentTLS     pki.GeneratedPKI `json:"agentTLS"`
-	InjectorInfo InjectorInfo     `json:"injectorInfo"`
+	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
+	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
+	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
+	InjectorInfo         InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -139,6 +155,13 @@ type GitServerInfo struct {
 // IsInternal returns true if the git server URL is equivalent to a git server deployed through the default init package
 func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
+}
+
+// IsConfigured returns true if the git server address has been set
+// Note that even when the Git server component is not used Zarf will set the address to a default value
+// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+func (gs GitServerInfo) IsConfigured() bool {
+	return gs.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -209,6 +232,16 @@ func (as *ArtifactServerInfo) FillInEmptyValues() {
 	}
 }
 
+// MTLSStrategy defines the strategy to manage the mTLS certificates for the registry
+type MTLSStrategy string
+
+const (
+	// MTLSStrategyNone indicates no mTLS certificate management
+	MTLSStrategyNone MTLSStrategy = "none"
+	// MTLSStrategyZarfManaged indicates Zarf is managing the mTLS certificates
+	MTLSStrategyZarfManaged MTLSStrategy = "zarf-managed"
+)
+
 // RegistryMode defines how the registry is accessed
 type RegistryMode string
 
@@ -233,12 +266,26 @@ type RegistryInfo struct {
 	PullPassword string `json:"pullPassword"`
 	// URL address of the registry
 	Address string `json:"address"`
-	// Nodeport of the registry. Only needed if the internal Zarf registry is used and connected with over a nodeport service.
+	// Deprecated: Use Port instead. Kept for backwards compatibility with state JSON written by older Zarf versions.
 	NodePort int `json:"nodePort"`
+	// Port of the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port.
+	Port int `json:"port"`
 	// Secret value that the registry was seeded with
 	Secret string `json:"secret"`
 	// RegistryMode defines how the registry is accessed (nodeport, proxy, or external)
 	RegistryMode RegistryMode `json:"registryMode"`
+	// MTLSStrategy defines who manages the mTLS certificates for the registry (defaults to none)
+	MTLSStrategy MTLSStrategy `json:"mtlsStrategy,omitempty"`
+}
+
+// ReconcilePort syncs the deprecated NodePort field with Port at serialization boundaries.
+// On read (LoadState): copies NodePort into Port when Port is unset, for state written by older Zarf.
+// On write (SaveState): copies Port into NodePort so older Zarf versions can read the state.
+func (ri *RegistryInfo) ReconcilePort() {
+	if ri.Port == 0 && ri.NodePort != 0 {
+		ri.Port = ri.NodePort
+	}
+	ri.NodePort = ri.Port
 }
 
 // IsInternal returns true if the registry URL is equivalent to the registry deployed through the default init package
@@ -247,8 +294,41 @@ func (ri RegistryInfo) IsInternal() bool {
 		return ri.RegistryMode != RegistryModeExternal
 	}
 	// This is kept for backwards compatibility with previous versions of Zarf that did not set the registry mode
-	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.NodePort) ||
-		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.NodePort)
+	return ri.Address == fmt.Sprintf("%s:%d", helpers.IPV4Localhost, ri.Port) ||
+		ri.Address == fmt.Sprintf("[%s]:%d", IPV6Localhost, ri.Port)
+}
+
+// IsConfigured returns true if the registry info address has been set
+func (ri RegistryInfo) IsConfigured() bool {
+	return ri.Address != ""
+}
+
+// ShouldUseMTLS returns true if mTLS should be used for the registry connection.
+func (ri RegistryInfo) ShouldUseMTLS() bool {
+	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed
+func CheckIfRegistryAddressOrCredsChanged(existing, given RegistryInfo) bool {
+	if given.PushUsername != "" && existing.PushUsername != given.PushUsername {
+		return true
+	}
+	if given.PullUsername != "" && existing.PullUsername != given.PullUsername {
+		return true
+	}
+	if given.PushPassword != "" && existing.PushPassword != given.PushPassword {
+		return true
+	}
+	if given.PullPassword != "" && existing.PullPassword != given.PullPassword {
+		return true
+	}
+	if given.Address != "" && existing.Address != given.Address {
+		return true
+	}
+	if given.Secret != "" && existing.Secret != given.Secret {
+		return true
+	}
+	return false
 }
 
 // FillInEmptyValues sets every necessary value not already set to a reasonable default
@@ -264,20 +344,20 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		}
 	}
 
-	if ri.NodePort == 0 && ri.Address == "" {
+	if ri.Port == 0 && ri.Address == "" {
 		switch ri.RegistryMode {
-		// Set default NodePort if none was provided and the registry is internal
+		// Set default port if none was provided and the registry is internal
 		case RegistryModeNodePort:
-			ri.NodePort = ZarfInClusterContainerRegistryNodePort
+			ri.Port = ZarfInClusterContainerRegistryNodePort
 		// In proxy mode, we should avoid using a port in the nodeport range as Kubernetes will still randomly assign nodeports even on already claimed hostports
 		case RegistryModeProxy:
-			ri.NodePort = ZarfRegistryHostPort
+			ri.Port = ZarfRegistryHostPort
 		}
 	}
 
 	// Set default url if an external registry was not provided
 	if ri.Address == "" {
-		ri.Address = LocalhostRegistryAddress(ipFamily, ri.NodePort)
+		ri.Address = LocalhostRegistryAddress(ipFamily, ri.Port)
 	}
 
 	// Generate a push-user password if not provided by init flag
@@ -317,6 +397,10 @@ func (ri *RegistryInfo) FillInEmptyValues(ipFamily IPFamily) error {
 		}
 	}
 
+	if ri.MTLSStrategy == "" {
+		ri.MTLSStrategy = MTLSStrategyNone
+	}
+
 	return nil
 }
 
@@ -342,6 +426,8 @@ type MergeOptions struct {
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
 	Services       []string
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -352,13 +438,13 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
 
-		// Set the new passwords if they should be autogenerated
-		if newState.RegistryInfo.PushPassword == oldState.RegistryInfo.PushPassword && oldState.RegistryInfo.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the registry is internal
+		if opts.RegistryInfo.PushPassword == "" && oldState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.RegistryInfo.PullPassword == oldState.RegistryInfo.PullPassword && oldState.RegistryInfo.IsInternal() {
+		if opts.RegistryInfo.PullPassword == "" && oldState.RegistryInfo.IsInternal() {
 			if newState.RegistryInfo.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
@@ -368,13 +454,13 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
 
-		// Set the new passwords if they should be autogenerated
-		if newState.GitServer.PushPassword == oldState.GitServer.PushPassword && oldState.GitServer.IsInternal() {
+		// Only autogenerate passwords if the user didn't provide one and the git server is internal
+		if opts.GitServer.PushPassword == "" && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PushPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
 		}
-		if newState.GitServer.PullPassword == oldState.GitServer.PullPassword && oldState.GitServer.IsInternal() {
+		if opts.GitServer.PullPassword == "" && oldState.GitServer.IsInternal() {
 			if newState.GitServer.PullPassword, err = helpers.RandomString(ZarfGeneratedPasswordLen); err != nil {
 				return nil, fmt.Errorf("%s: %w", lang.ErrUnableToGenerateRandomSecret, err)
 			}
@@ -384,17 +470,23 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
 
-		// Set an empty token if it should be autogenerated
-		if newState.ArtifactServer.PushToken == oldState.ArtifactServer.PushToken && oldState.ArtifactServer.IsInternal() {
+		// Only clear token for autogeneration if the user didn't provide one and the artifact server is internal
+		if opts.ArtifactServer.PushToken == "" && oldState.ArtifactServer.IsInternal() {
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
 	if slices.Contains(opts.Services, AgentKey) {
-		agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
-		if err != nil {
-			return nil, err
+		if opts.AgentTLS != nil {
+			newState.AgentTLS = *opts.AgentTLS
+			newState.AgentTLSUserProvided = true
+		} else {
+			agentTLS, err := pki.GeneratePKI(ZarfAgentHost)
+			if err != nil {
+				return nil, err
+			}
+			newState.AgentTLS = agentTLS
+			newState.AgentTLSUserProvided = false
 		}
-		newState.AgentTLS = agentTLS
 	}
 
 	return &newState, nil
@@ -442,18 +534,44 @@ func WithPackageNamespaceOverride(namespaceOverride string) DeployedPackageOptio
 	}
 }
 
+// WithPackageConnectivity sets the connectivity mode for the deployed package
+func WithPackageConnectivity(connected bool) DeployedPackageOptions {
+	return func(o *DeployedPackage) {
+		if connected {
+			o.PackageConnectivity = PackageConnectivityConnected
+		} else {
+			o.PackageConnectivity = PackageConnectivityAirGap
+		}
+	}
+}
+
+// PackageConnectivity defines the connectivity mode of package deployments
+type PackageConnectivity string
+
+const (
+	// PackageConnectivityAirGap is the default deploy mode
+	PackageConnectivityAirGap PackageConnectivity = "airgap"
+	// PackageConnectivityConnected is used when a package is deployed with YOLO or in connected mode.
+	PackageConnectivityConnected PackageConnectivity = "connected"
+)
+
 // DeployedPackage contains information about a Zarf Package that has been deployed to a cluster
 // This object is saved as the data of a k8s secret within the 'Zarf' namespace (not as part of the ZarfState secret).
 type DeployedPackage struct {
-	Name               string               `json:"name"`
-	Data               v1alpha1.ZarfPackage `json:"data"`
-	CLIVersion         string               `json:"cliVersion"`
-	Generation         int                  `json:"generation"`
-	DeployedComponents []DeployedComponent  `json:"deployedComponents"`
-	ConnectStrings     ConnectStrings       `json:"connectStrings,omitempty"`
+	Name                string               `json:"name"`
+	Data                v1alpha1.ZarfPackage `json:"data"`
+	CLIVersion          string               `json:"cliVersion"`
+	Generation          int                  `json:"generation"`
+	DeployedComponents  []DeployedComponent  `json:"deployedComponents"`
+	ConnectStrings      ConnectStrings       `json:"connectStrings,omitempty"`
+	PackageConnectivity PackageConnectivity  `json:"packageConnectivity"`
 	// [ALPHA] Optional namespace override - exported/json-tag for storage in deployed package state secret
 	NamespaceOverride string `json:"namespaceOverride,omitempty"`
 }
+
+// DeployedPackageNameRegex is a regex for lowercase, numbers and hyphens that cannot start with a hyphen.
+// https://regex101.com/r/FLdG9G/2
+var DeployedPackageNameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*$`).MatchString
 
 // GetSecretName returns the k8s secret name for the deployed package
 func (d *DeployedPackage) GetSecretName() string {
@@ -462,6 +580,15 @@ func (d *DeployedPackage) GetSecretName() string {
 		return fmt.Sprintf("%s-%s-override-%s", "zarf-package", d.Name, d.NamespaceOverride)
 	}
 	return fmt.Sprintf("%s-%s", "zarf-package", d.Name)
+}
+
+// GetPackageConnectivity returns the connectivity mode the package is using
+// Defaults to airgap for packages that were deployed before connectivity was introduced
+func (d *DeployedPackage) GetPackageConnectivity() PackageConnectivity {
+	if d.PackageConnectivity == "" {
+		return PackageConnectivityAirGap
+	}
+	return d.PackageConnectivity
 }
 
 // ConnectString contains information about a connection made with Zarf connect.
@@ -540,9 +667,9 @@ func MergeInstalledChartsForComponent(existingCharts, installedCharts []Installe
 }
 
 // LocalhostRegistryAddress builds the IPv4 or IPv6 local address of the Zarf deployed registry.
-func LocalhostRegistryAddress(ipFamily IPFamily, nodePort int) string {
+func LocalhostRegistryAddress(ipFamily IPFamily, port int) string {
 	if ipFamily == IPFamilyIPv6 {
-		return fmt.Sprintf("[%s]:%d", IPV6Localhost, nodePort)
+		return fmt.Sprintf("[%s]:%d", IPV6Localhost, port)
 	}
-	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, nodePort)
+	return fmt.Sprintf("%s:%d", helpers.IPV4Localhost, port)
 }

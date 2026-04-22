@@ -6,7 +6,6 @@ package lint
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -16,23 +15,18 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
-// ValidatePackageSchemaAtPath checks the Zarf package in the current directory against the Zarf schema
+// ValidatePackageSchemaAtPath checks the Zarf package against the Zarf schema
+// If path is a directory, it will look for layout.ZarfYAML within it.
+// If path is a file, it will use that file directly.
 func ValidatePackageSchemaAtPath(path string, setVariables map[string]string) ([]PackageFinding, error) {
 	var untypedZarfPackage interface{}
-	if err := utils.ReadYaml(filepath.Join(path, layout.ZarfYAML), &untypedZarfPackage); err != nil {
-		return nil, err
-	}
-	jsonSchema := schema.GetV1Alpha1Schema()
-	if err := templateZarfObj(&untypedZarfPackage, setVariables); err != nil {
-		return nil, err
-	}
-	return getSchemaFindings(jsonSchema, untypedZarfPackage)
-}
 
-// ValidatePackageSchema checks the Zarf package in the current directory against the Zarf schema
-func ValidatePackageSchema(setVariables map[string]string) ([]PackageFinding, error) {
-	var untypedZarfPackage interface{}
-	if err := utils.ReadYaml(layout.ZarfYAML, &untypedZarfPackage); err != nil {
+	pkgPath, err := layout.ResolvePackagePath(path)
+	if err != nil {
+		return nil, fmt.Errorf("unable to access path %q: %w", path, err)
+	}
+
+	if err := utils.ReadYaml(pkgPath.ManifestFile, &untypedZarfPackage); err != nil {
 		return nil, err
 	}
 	jsonSchema := schema.GetV1Alpha1Schema()

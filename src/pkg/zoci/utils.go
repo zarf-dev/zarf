@@ -16,6 +16,18 @@ import (
 
 // ReferenceFromMetadata returns a reference for the given metadata.
 func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (registry.Reference, error) {
+	return ReferenceFromMetadataWithOptions(registryLocation, pkg, ReferenceFromMetadataOptions{})
+}
+
+// ReferenceFromMetadataOptions provides extensible options
+type ReferenceFromMetadataOptions struct {
+	// Tag specifies the OCI reference to use instead of package.metadata.version
+	Tag string
+}
+
+// ReferenceFromMetadataWithOptions returns a reference for the given metadata with optional overrides
+func ReferenceFromMetadataWithOptions(registryLocation string, pkg v1alpha1.ZarfPackage, opts ReferenceFromMetadataOptions) (registry.Reference, error) {
+	// Explicit requirement for version in order to publish
 	if len(pkg.Metadata.Version) == 0 {
 		return registry.Reference{}, errors.New("version is required for publishing")
 	}
@@ -24,10 +36,18 @@ func ReferenceFromMetadata(registryLocation string, pkg v1alpha1.ZarfPackage) (r
 	}
 	registryLocation = strings.TrimPrefix(registryLocation, helpers.OCIURLPrefix)
 
-	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, pkg.Metadata.Version)
-	if pkg.Build.Flavor != "" {
-		raw = fmt.Sprintf("%s-%s", raw, pkg.Build.Flavor)
+	// Use the explicit tag if provided
+	// do not include flavor if provided
+	tag := pkg.Metadata.Version
+	if opts.Tag != "" {
+		tag = opts.Tag
+	} else {
+		if pkg.Build.Flavor != "" {
+			tag = fmt.Sprintf("%s-%s", tag, pkg.Build.Flavor)
+		}
 	}
+
+	raw := fmt.Sprintf("%s%s:%s", registryLocation, pkg.Metadata.Name, tag)
 
 	ref, err := registry.ParseReference(raw)
 	if err != nil {

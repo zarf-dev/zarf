@@ -18,17 +18,16 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/utils/exec"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"helm.sh/helm/v3/pkg/repo"
+	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 )
 
 // Docker/k3d networking constants
 const (
 	network        = "k3d-k3s-external-test"
-	subnet         = "172.31.0.0/16"
-	gateway        = "172.31.0.1"
 	giteaIP        = "172.31.0.99"
 	giteaHost      = "gitea.localhost"
 	registryHost   = "registry.localhost"
@@ -36,6 +35,7 @@ const (
 	giteaUser      = "git-user"
 	registryUser   = "push-user"
 	commonPassword = "superSecurePassword"
+	registryPort   = "5001" // Port 5001 to avoid macOS port 5000 conflict
 )
 
 var outClusterCredentialArgs = []string{
@@ -44,7 +44,7 @@ var outClusterCredentialArgs = []string{
 	"--git-url=http://" + giteaHost + ":3000",
 	"--registry-push-username=" + registryUser,
 	"--registry-push-password=" + commonPassword,
-	"--registry-url=k3d-" + registryHost + ":5000/test"}
+	fmt.Sprintf("--registry-url=%s:%s/test", registryHost, registryPort)}
 
 type ExtOutClusterTestSuite struct {
 	suite.Suite
@@ -57,36 +57,44 @@ func (suite *ExtOutClusterTestSuite) SetupSuite() {
 	// Teardown any leftovers from previous tests
 	// NOTE(mkcp): We dogsled these errors because some of these commands will error if they don't cleanup a resource,
 	//   which is ok. A better solution would be checking for none or unexpected kinds of errors.
-	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName)   //nolint:errcheck
-	_ = exec.CmdWithPrint("k3d", "registry", "delete", registryHost) //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "compose", "down")               //nolint:errcheck
-	_ = exec.CmdWithPrint("docker", "network", "remove", network)    //nolint:errcheck
+	_ = exec.CmdWithPrint("k3d", "cluster", "delete", clusterName) //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "rm", "-f", registryHost)      //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "compose", "down")             //nolint:errcheck
+	_ = exec.CmdWithPrint("docker", "network", "remove", network)  //nolint:errcheck
 
-	// Setup a network for everything to live inside
-	err := exec.CmdWithPrint("docker", "network", "create", "--driver=bridge", "--subnet="+subnet, "--gateway="+gateway, network)
-	suite.NoError(err, "unable to create the k3d registry")
+	// Start the registry and gitea via docker compose. The network is created by compose.
+	// The registry service depends on
+	// registry-init completing (htpasswd generation) before it starts.
+	err := exec.CmdWithPrint("docker", "compose", "up", "-d")
+	suite.NoError(err, "unable to start external services")
 
-	// Install a k3d-managed registry server to act as the 'remote' container registry
-	err = exec.CmdWithPrint("k3d", "registry", "create", registryHost, "--port", "5000")
-	suite.NoError(err, "unable to create the k3d registry")
+	// Wait for registry to be ready (uses credentials since auth is enabled)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@localhost:%s/v2/_catalog", registryUser, commonPassword, registryPort)
+	registryArgs := []string{"exec", registryHost, "wget", "-q", "-O-", regCatalogURL}
+	err = waitForCondition(suite.T(), 1, "docker", registryArgs, `{"repositories"`)
+	suite.NoError(err, "registry failed to start")
 
 	// Create a k3d cluster with the proper networking and aliases
-	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName, "--registry-use",
-		"k3d-"+registryHost+":5000", "--host-alias", giteaIP+":"+giteaHost, "--network", network)
-	suite.NoError(err, "unable to create the k3d cluster")
+	// Configure containerd to use our registry:3 instance on port 5001
+	registryConfigPath := filepath.Join(suite.T().TempDir(), "registries.yaml")
+	registryConfig := fmt.Sprintf(`mirrors:
+  "%s:%s":
+    endpoint:
+      - http://%s:%s
+`, registryHost, registryPort, registryHost, registryPort)
+	err = os.WriteFile(registryConfigPath, []byte(registryConfig), 0600)
+	suite.NoError(err, "unable to write registry config")
 
-	// Install a gitea server via docker compose to act as the 'remote' git server
-	err = exec.CmdWithPrint("docker", "compose", "up", "-d")
-	suite.NoError(err, "unable to install the gitea-server")
+	err = exec.CmdWithPrint("k3d", "cluster", "create", clusterName,
+		"--network", network,
+		"--host-alias", giteaIP+":"+giteaHost,
+		"--registry-config", registryConfigPath)
+	suite.NoError(err, "unable to create the k3d cluster")
 
 	// Wait for gitea to deploy properly
 	giteaArgs := []string{"inspect", "-f", "{{.State.Health.Status}}", "gitea.localhost"}
 	err = waitForCondition(suite.T(), 2, "docker", giteaArgs, "healthy")
 	suite.NoError(err)
-
-	// Connect gitea to the k3d network
-	err = exec.CmdWithPrint("docker", "network", "connect", "--ip", giteaIP, network, giteaHost)
-	suite.NoError(err, "unable to connect the gitea-server to k3d")
 }
 
 func (suite *ExtOutClusterTestSuite) TearDownSuite() {
@@ -95,13 +103,7 @@ func (suite *ExtOutClusterTestSuite) TearDownSuite() {
 	suite.NoError(err, "unable to teardown cluster")
 
 	err = exec.CmdWithPrint("docker", "compose", "down")
-	suite.NoError(err, "unable to teardown the gitea-server")
-
-	err = exec.CmdWithPrint("k3d", "registry", "delete", registryHost)
-	suite.NoError(err, "unable to teardown the k3d registry")
-
-	err = exec.CmdWithPrint("docker", "network", "remove", network)
-	suite.NoError(err, "unable to teardown the docker test network")
+	suite.NoError(err, "unable to teardown external services")
 }
 
 func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
@@ -110,13 +112,13 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	tmpdir := t.TempDir()
 	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
-	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
 
 	// Check that the registry contains the images we want
-	regCatalogURL := fmt.Sprintf("http://%s:%s@k3d-%s:5000/v2/_catalog", registryUser, commonPassword, registryHost)
+	regCatalogURL := fmt.Sprintf("http://%s:%s@%s:%s/v2/_catalog", registryUser, commonPassword, registryHost, registryPort)
 	respReg, err := http.Get(regCatalogURL)
 	suite.NoError(err)
 	regBody, err := io.ReadAll(respReg.Body)
@@ -148,13 +150,13 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	// Deploy the flux example package
 	temp := suite.T().TempDir()
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
 	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
 	suite.NoError(err)
-	deployArgs = []string{"package", "deploy", filepath.Join(temp, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	deployArgs = []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }
@@ -179,10 +181,10 @@ func (suite *ExtOutClusterTestSuite) Test_3_AuthToPrivateHelmChart() {
 	err = exec.CmdWithPrint(zarfBinPath, findImageArgs...)
 	suite.Error(err, "Since auth has not been setup, this should fail")
 
-	repoFile := repo.NewFile()
+	repoFile := repov1.NewFile()
 
 	chartURL := fmt.Sprintf("%s/api/packages/%s/helm", baseURL, giteaUser)
-	entry := &repo.Entry{
+	entry := &repov1.Entry{
 		Name:     "temp_entry",
 		Username: giteaUser,
 		Password: commonPassword,

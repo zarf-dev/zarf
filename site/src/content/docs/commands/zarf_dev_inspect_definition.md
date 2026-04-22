@@ -23,7 +23,7 @@ zarf dev inspect definition [ DIRECTORY ] [flags]
 ```
   -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                 help for definition
-      --set stringToString   Specify package variables to set on the command line (KEY=value) (default [])
+      --set stringToString   Specify package templates to set on the command line (KEY=value) (default [])
 ```
 
 ### Options inherited from parent commands
@@ -42,5 +42,5 @@ zarf dev inspect definition [ DIRECTORY ] [flags]
 
 ### SEE ALSO
 
-* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to get information about a Zarf package using a `zarf.yaml`
+* [zarf dev inspect](/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
 

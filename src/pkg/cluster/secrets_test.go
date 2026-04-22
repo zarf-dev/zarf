@@ -69,7 +69,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Cluster{
-				Clientset: fake.NewSimpleClientset(),
+				Clientset: fake.NewClientset(),
 			}
 
 			namespace := &corev1.Namespace{
@@ -174,6 +174,8 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			if !tt.updatedImageSecret {
 				expectedImageSecret = *imageSecret
 			}
+			// After getting the actual secret, clear managed fields
+			updatedImageSecret.ManagedFields = nil
 			require.Equal(t, expectedImageSecret, *updatedImageSecret)
 
 			// Check git secret
@@ -200,6 +202,7 @@ func TestUpdateZarfManagedSecrets(t *testing.T) {
 			if !tt.updatedGitSecret {
 				expectedGitSecret = *gitSecret
 			}
+			updatedGitSecret.ManagedFields = nil
 			require.Equal(t, expectedGitSecret, *updatedGitSecret)
 		})
 	}

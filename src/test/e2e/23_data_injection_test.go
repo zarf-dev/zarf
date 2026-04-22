@@ -22,7 +22,7 @@ func TestDataInjection(t *testing.T) {
 
 	tmpdir := t.TempDir()
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/kiwix", "-o", tmpdir, "--confirm")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/23-data-injections", "-o", tmpdir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	ctx := logger.WithContext(context.Background(), test.GetLogger(t))

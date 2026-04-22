@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	autoscalingV2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -201,36 +200,6 @@ func (c *Cluster) RecordPackageDeployment(ctx context.Context, pkg v1alpha1.Zarf
 		return nil, err
 	}
 	return deployedPackage, nil
-}
-
-// EnableRegHPAScaleDown enables the HPA scale down for the Zarf Registry.
-func (c *Cluster) EnableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	policy := autoscalingV2.MinChangePolicySelect
-	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// DisableRegHPAScaleDown disables the HPA scale down for the Zarf Registry.
-func (c *Cluster) DisableRegHPAScaleDown(ctx context.Context) error {
-	hpa, err := c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(state.ZarfNamespaceName).Get(ctx, "zarf-docker-registry", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	policy := autoscalingV2.DisabledPolicySelect
-	hpa.Spec.Behavior.ScaleDown.SelectPolicy = &policy
-	_, err = c.Clientset.AutoscalingV2().HorizontalPodAutoscalers(hpa.Namespace).Update(ctx, hpa, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // GetInstalledChartsForComponent returns any installed Helm Charts for the provided package component.

@@ -17,8 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
-	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/releaseutil"
+	"helm.sh/helm/v4/pkg/action"
+	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type renderer struct {
@@ -35,7 +36,7 @@ type renderer struct {
 
 	adoptExistingResources bool
 	cluster                *cluster.Cluster
-	skipSecretUpdates      bool
+	connectedDeploy        bool
 	state                  *state.State
 	actionConfig           *action.Configuration
 	variableConfig         *variables.VariableConfig
@@ -46,7 +47,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, airgapMode bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -56,12 +57,12 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	if pkgName == "" {
 		return nil, fmt.Errorf("package name required to run post renderer")
 	}
-	skipSecretUpdates := !airgapMode && s.Distro == "YOLO"
+	// Update secrets when not in connected mode, as connected packages in hybrid / air-gap clusters could rely on pulling from the registry with ###ZARF_REGISTRY###
 	rend := &renderer{
 		chart:                  chart,
 		adoptExistingResources: adoptExistingResources,
 		cluster:                c,
-		skipSecretUpdates:      skipSecretUpdates,
+		connectedDeploy:        connectedDeploy,
 		state:                  s,
 		actionConfig:           actionConfig,
 		variableConfig:         variableConfig,
@@ -88,12 +89,17 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 // Run satisfies the Helm post-renderer interface. It templates the Zarf variables, finds connect strings, adopts namespaces, and applies Zarf state secrets
 func (r *renderer) Run(renderedManifests *bytes.Buffer) (*bytes.Buffer, error) {
 	// This is very low cost and consistent for how we replace elsewhere, also good for debugging
-	resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
+	hooks, resources, err := getTemplatedManifests(renderedManifests, r.variableConfig, r.actionConfig)
 	if err != nil {
 		return nil, err
 	}
 	finalManifestsOutput := bytes.NewBuffer(nil)
 	ctx := context.Background()
+
+	for _, hook := range hooks {
+		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", hook.Path, hook.Manifest)
+	}
+
 	if err := r.editHelmResources(ctx, resources, finalManifestsOutput); err != nil {
 		return nil, err
 	}
@@ -142,24 +148,31 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			}
 		}
 
-		// If the package is marked as YOLO and the state is empty, skip the secret creation for this namespace
-		if r.skipSecretUpdates {
-			continue
+		if r.state.RegistryInfo.IsConfigured() {
+			validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
+			if err != nil {
+				return err
+			}
+			_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+			if err != nil {
+				return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
+			}
+			if r.state.RegistryInfo.ShouldUseMTLS() {
+				clientPKI, err := c.GetRegistryClientMTLSCert(ctx)
+				if err != nil {
+					return fmt.Errorf("failed to get registry client certs: %w", err)
+				}
+				if err := c.ApplyRegistryClientCertSecret(ctx, clientPKI, name); err != nil {
+					return fmt.Errorf("failed to apply registry client secret to ns: %s: %w", name, err)
+				}
+			}
 		}
-
-		// Create the secret
-		validRegistrySecret, err := c.GenerateRegistryPullCreds(ctx, name, config.ZarfImagePullSecretName, r.state.RegistryInfo)
-		if err != nil {
-			return err
-		}
-		_, err = c.Clientset.CoreV1().Secrets(*validRegistrySecret.Namespace).Apply(ctx, validRegistrySecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
-		if err != nil {
-			return fmt.Errorf("problem applying registry secret for the %s namespace: %w", name, err)
-		}
-		gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
-		_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
-		if err != nil {
-			return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
+		if r.state.GitServer.IsConfigured() {
+			gitServerSecret := c.GenerateGitPullCreds(name, config.ZarfGitServerSecretName, r.state.GitServer)
+			_, err = c.Clientset.CoreV1().Secrets(*gitServerSecret.Namespace).Apply(ctx, gitServerSecret, metav1.ApplyOptions{Force: true, FieldManager: cluster.FieldManagerName})
+			if err != nil {
+				return fmt.Errorf("problem applying git server secret for the %s namespace: %w", name, err)
+			}
 		}
 	}
 	return nil
@@ -179,28 +192,33 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
-		rawData := &unstructured.Unstructured{}
-		if err := yaml.Unmarshal([]byte(resource.Content), rawData); err != nil {
-			return fmt.Errorf("failed to unmarshal manifest: %w", err)
-		}
-		// If the object is empty, it's a blank resource, so we skip it. If the package name is empty we don't want to add labels.
-		if len(rawData.Object) > 0 {
+		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
 			// Add the package label to all resources
-			labels := rawData.GetLabels()
+			labels := obj.GetLabels()
 			if labels == nil {
 				labels = map[string]string{}
 			}
-			rawData.SetLabels(r.setPackageLabels(labels))
+			obj.SetLabels(r.setPackageLabels(labels))
 			// Add the package label to pod templates (for Deployments, StatefulSets, etc.)
-			if err := r.addLabelsToNestedPath(rawData, []string{"spec", "template", "metadata", "labels"}); err != nil {
+			if err := r.addLabelsToNestedPath(obj, []string{"spec", "template", "metadata", "labels"}); err != nil {
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
-			newContent, err := yaml.Marshal(rawData)
-			if err != nil {
-				return fmt.Errorf("failed to marshal manifest: %w", err)
+			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
+			if r.connectedDeploy {
+				if err := addAgentIgnoreLabels(obj); err != nil {
+					return err
+				}
 			}
-			// Update the resource content with the new labels
-			resource.Content = string(newContent)
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		resource.Content = newContent
+
+		// If the object is empty, it's a blank resource, so we skip it.
+		if len(rawData.Object) == 0 {
+			continue
 		}
 
 		switch rawData.GetKind() {
@@ -230,7 +248,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			}
 			if key, keyExists := labels[cluster.ZarfConnectLabelName]; keyExists {
 				// If there is a zarf-connect label
-				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connection-key", key)
+				l.Debug("match helm service for zarf connection", "service", rawData.GetName(), "connectionKey", key)
 
 				// Add the connectString for processing later in the deployment
 				r.connectStrings[key] = state.ConnectString{
@@ -314,6 +332,55 @@ func (r *renderer) addLabelsToNestedPath(obj *unstructured.Unstructured, path []
 	return unstructured.SetNestedStringMap(obj.Object, templateLabels, path...)
 }
 
+// agentMutatedKinds maps resources mutated by the Zarf agent webhook to the
+// label paths where the ignore label should be applied.
+// These come from the webhook configuration in packages/zarf-agent/chart/templates/webhook.yaml.
+var agentMutatedKinds = map[schema.GroupKind][][]string{
+	{Group: "", Kind: "Pod"}:                                    {{"metadata", "labels"}},
+	{Group: "apps", Kind: "Deployment"}:                         {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "StatefulSet"}:                        {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "DaemonSet"}:                          {{"spec", "template", "metadata", "labels"}},
+	{Group: "apps", Kind: "ReplicaSet"}:                         {{"spec", "template", "metadata", "labels"}},
+	{Group: "batch", Kind: "Job"}:                               {{"spec", "template", "metadata", "labels"}},
+	{Group: "batch", Kind: "CronJob"}:                           {{"spec", "jobTemplate", "spec", "template", "metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "GitRepository"}:  {{"metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "OCIRepository"}:  {{"metadata", "labels"}},
+	{Group: "source.toolkit.fluxcd.io", Kind: "HelmRepository"}: {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "Application"}:                 {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "ApplicationSet"}:              {{"metadata", "labels"}},
+	{Group: "argoproj.io", Kind: "AppProject"}:                  {{"metadata", "labels"}},
+	{Group: "", Kind: "Secret"}:                                 {{"metadata", "labels"}},
+}
+
+func addAgentIgnoreLabels(obj *unstructured.Unstructured) error {
+	labelPaths, ok := agentMutatedKinds[obj.GroupVersionKind().GroupKind()]
+	if !ok {
+		return nil
+	}
+	// The webhook only mutates Secrets with the ArgoCD repository label, skip all others
+	if obj.GetKind() == "Secret" {
+		labels := obj.GetLabels()
+		if labels["argocd.argoproj.io/secret-type"] != "repository" {
+			return nil
+		}
+	}
+
+	for _, path := range labelPaths {
+		labels, found, err := unstructured.NestedStringMap(obj.Object, path...)
+		if err != nil {
+			return err
+		}
+		if !found || labels == nil {
+			labels = map[string]string{}
+		}
+		labels[cluster.AgentLabel] = "ignore"
+		if err := unstructured.SetNestedStringMap(obj.Object, labels, path...); err != nil {
+			return fmt.Errorf("failed to add ignore label to %s: %w", obj.GetName(), err)
+		}
+	}
+	return nil
+}
+
 // setPackageLabels will add the package labels to an existing labels map
 func (r *renderer) setPackageLabels(labels map[string]string) map[string]string {
 	if r.pkgName != "" {
@@ -323,4 +390,39 @@ func (r *renderer) setPackageLabels(labels map[string]string) map[string]string 
 		}
 	}
 	return labels
+}
+
+// processManifestContent unmarshals YAML content into an unstructured object,
+// optionally modifies it via the provided function, and marshals it back to YAML.
+// It ensures the content ends with a newline before unmarshaling to preserve
+// YAML block scalar trailing newlines.
+// Returns the marshaled content, the parsed unstructured object, and any error.
+func processManifestContent(content string, modifyFn func(*unstructured.Unstructured) error) (string, *unstructured.Unstructured, error) {
+	// Ensure content ends with a newline before unmarshaling to preserve YAML trailing newlines.
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		content += "\n"
+	}
+
+	rawData := &unstructured.Unstructured{}
+	if err := yaml.Unmarshal([]byte(content), rawData); err != nil {
+		return "", nil, fmt.Errorf("failed to unmarshal manifest: %w", err)
+	}
+
+	// If the object is empty, return the original content
+	if len(rawData.Object) == 0 {
+		return content, rawData, nil
+	}
+
+	if modifyFn != nil {
+		if err := modifyFn(rawData); err != nil {
+			return "", nil, err
+		}
+	}
+
+	newContent, err := yaml.Marshal(rawData)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to marshal manifest: %w", err)
+	}
+
+	return string(newContent), rawData, nil
 }

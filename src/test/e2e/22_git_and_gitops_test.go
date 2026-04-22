@@ -145,7 +145,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	require.NoError(t, err)
 	s, err := c.LoadState(ctx)
 	require.NoError(t, err, "Failed to load Zarf state")
-	registryAddress, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo.Address)
+	registryAddress, _, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	require.NoError(t, err)
 	// Deploy the flux example and verify that it works
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")
@@ -210,7 +210,7 @@ func waitArgoDeployment(t *testing.T) {
 	require.Equal(t, expectedMutatedRepoURL, string(expectedMutatedPrivateRepoURLSecret))
 
 	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD.
-	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "apps", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "podinfo", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
 

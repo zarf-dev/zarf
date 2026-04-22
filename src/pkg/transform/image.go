@@ -67,7 +67,7 @@ func ParseImageRef(srcReference string) (Image, error) {
 
 	ref, err := reference.ParseAnyReference(srcReference)
 	if err != nil {
-		return Image{}, err
+		return Image{}, fmt.Errorf("unable to parse ref %s: %w", srcReference, err)
 	}
 
 	// Parse the reference into its components

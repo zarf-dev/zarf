@@ -61,12 +61,12 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 
 	l.Info("using the Zarf git server URL to mutate the ArgoCD AppProject",
 		"name", proj.Name,
-		"git-server", s.GitServer.Address)
+		"gitServer", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
 
 	for idx, repo := range proj.Spec.SourceRepos {
-		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer)
 		// The AppProject can also include source repositories like '*' (as in the default project),
 		// which results in an error because '*' cannot be found in Git
 		// For this reason, we will ignore these entries and only patch the Git repositories that are found

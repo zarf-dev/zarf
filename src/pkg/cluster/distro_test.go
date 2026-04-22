@@ -170,10 +170,8 @@ func TestDetectDistro(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.distro, func(t *testing.T) {
 			t.Parallel()
-
 			distro := detectDistro(tt.node, tt.namespaces)
 			require.Equal(t, tt.distro, distro)
 		})

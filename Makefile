@@ -1,8 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-# Provide a default value for the operating system architecture used in tests, e.g. " APPLIANCE_MODE=true|false make test-e2e ARCH=arm64"
-ARCH ?= amd64
+# Detect the system architecture, but allow override via make argument, e.g. "make test-e2e ARCH=arm64"
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+	ARCH ?= amd64
+else ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+	ARCH ?= arm64
+else
+	ARCH ?= amd64
+endif
 ######################################################################################
 
 # Figure out which Zarf binary we should use based on the operating system we are on
@@ -14,10 +21,13 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	UNAME_P := $(shell uname -p)
-	ifneq ($(UNAME_S),Linux)
-		ifeq ($(UNAME_S),Darwin)
-			ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
+	ifeq ($(UNAME_S),Linux)
+		ifneq ($(filter $(UNAME_M),aarch64 arm64),)
+			ZARF_BIN := $(addsuffix -arm,$(ZARF_BIN))
+			BUILD_CLI_FOR_SYSTEM = build-cli-linux-arm
 		endif
+	else ifeq ($(UNAME_S),Darwin)
+		ZARF_BIN := $(addsuffix -mac,$(ZARF_BIN))
 		ifeq ($(UNAME_P),i386)
 			ZARF_BIN := $(addsuffix -intel,$(ZARF_BIN))
 			BUILD_CLI_FOR_SYSTEM = build-cli-mac-intel
@@ -29,7 +39,7 @@ else
 	endif
 endif
 
-CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"UnknownVersion")
+CLI_VERSION ?= $(if $(shell git describe --tags),$(shell git describe --tags),"unset-development-only")
 BUILD_ARGS := -s -w -X github.com/zarf-dev/zarf/src/config.CLIVersion=$(CLI_VERSION)
 K8S_MODULES_VER=$(subst ., ,$(subst v,,$(shell go list -f '{{.Version}}' -m k8s.io/client-go)))
 K8S_MODULES_MAJOR_VER=$(shell echo $$(($(firstword $(K8S_MODULES_VER)) + 1)))
@@ -39,18 +49,14 @@ K9S_VERSION=$(shell go list -f '{{.Version}}' -m github.com/derailed/k9s)
 CRANE_VERSION=$(shell go list -f '{{.Version}}' -m github.com/google/go-containerregistry)
 SYFT_VERSION=$(shell go list -f '{{.Version}}' -m github.com/anchore/syft)
 ARCHIVES_VERSION=$(shell go list -f '{{.Version}}' -m github.com/mholt/archives)
-HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v3)
+HELM_VERSION=$(shell go list -f '{{.Version}}' -m helm.sh/helm/v4)
 
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/lint/rules.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMajor=$(K8S_MODULES_MAJOR_VER)
-BUILD_ARGS += -X helm.sh/helm/v3/pkg/chartutil.k8sVersionMinor=$(K8S_MODULES_MINOR_VER)
 BUILD_ARGS += -X k8s.io/component-base/version.gitVersion=v$(K8S_MODULES_MAJOR_VER).$(K8S_MODULES_MINOR_VER).$(K8S_MODULES_PATCH_VER)
 BUILD_ARGS += -X github.com/derailed/k9s/cmd.version=$(K9S_VERSION)
 BUILD_ARGS += -X github.com/google/go-containerregistry/cmd/crane/cmd.Version=$(CRANE_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.syftVersion=$(SYFT_VERSION)
 BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.archivesVersion=$(ARCHIVES_VERSION)
-BUILD_ARGS += -X github.com/zarf-dev/zarf/src/cmd.helmVersion=$(HELM_VERSION)
+BUILD_ARGS += -X helm.sh/helm/v4/internal/version.version=${HELM_VERSION}
 
 GIT_SHA := $(if $(shell git rev-parse HEAD),$(shell git rev-parse HEAD),"")
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
@@ -153,7 +159,7 @@ publish-init-package:
 build-examples: ## Build all of the example packages
 	@test -s $(ZARF_BIN) || $(MAKE)
 
-	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.2.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
+	@test -s ./build/zarf-package-dos-games-$(ARCH)-1.3.0.tar.zst || $(ZARF_BIN) package create examples/dos-games -o build -a $(ARCH) --confirm
 
 	@test -s ./build/zarf-package-manifests-$(ARCH)-0.0.1.tar.zst || $(ZARF_BIN) package create examples/manifests -o build -a $(ARCH) --confirm
 
@@ -196,6 +202,18 @@ test-external: ## Run the Zarf CLI E2E tests for an external registry and cluste
 	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
 	cd src/test/external && go test -failfast -v -timeout 30m
 
+.PHONY: test-external-out-cluster
+test-external-out-cluster: ## Run only the external out-of-cluster registry tests (registry:3 on port 5001)
+	@test -s $(ZARF_BIN) || $(MAKE)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/external && go test -failfast -v -timeout 30m -run TestExtOurClusterTestSuite
+
+.PHONY: test-proxy
+test-proxy:
+	@test -s $(ZARF_BIN) || $(MAKE)
+	@test -s ./build/zarf-init-$(ARCH)-$(CLI_VERSION).tar.zst || $(MAKE) init-package
+	cd src/test/proxy && go test -failfast -v -timeout 30m
+
 ## NOTE: Requires an existing cluster and
 .PHONY: test-upgrade
 test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
@@ -207,7 +225,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
+	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:

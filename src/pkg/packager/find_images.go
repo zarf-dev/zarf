@@ -14,8 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zarf-dev/zarf/src/pkg/state"
-
 	"github.com/distribution/reference"
 	flux "github.com/fluxcd/source-controller/api/v1"
 	"github.com/goccy/go-yaml"
@@ -24,12 +22,14 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
-	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/types"
 	v1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,6 +54,9 @@ type FindImagesOptions struct {
 	CreateSetVariables map[string]string
 	// DeploySetVariables specifies the package deploy variables
 	DeploySetVariables map[string]string
+	// Values are values passed in at find-images time. They can come from the CLI, user configuration, or set directly
+	// by API callers.
+	Values value.Values
 	// Flavor specifies the flavor to use
 	Flavor string
 	// Why specifies the image to look for so we can print the containing manifest
@@ -64,6 +67,7 @@ type FindImagesOptions struct {
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
+	types.RemoteOptions
 }
 
 // ComponentImageScan contains the results of FindImages for a component
@@ -84,12 +88,19 @@ type ComponentImageScan struct {
 // It returns a FindImageResults which contains a scan result for each component
 func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions) (_ []ComponentImageScan, err error) {
 	l := logger.From(ctx)
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -107,6 +118,16 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	if err != nil {
 		return nil, err
 	}
+
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to access package path %q: %w", packagePath, err)
+	}
+	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
+	if err != nil {
+		return nil, err
+	}
+
 	tmpBuildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
@@ -157,7 +178,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, packagePath, compBuildPath, variableConfig, value.Values{}, opts.KubeVersionOverride, opts.IsInteractive)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -200,7 +221,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, packagePath, compBuildPath, variableConfig, value.Values{}, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
 			if err != nil {
 				return nil, err
 			}
@@ -242,7 +263,7 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		var validMaybeImages []string
 		if len(sortedExpectedImages) > 0 {
 			for _, image := range sortedExpectedImages {
-				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag()...); err != nil {
+				if descriptor, err := crane.Head(image, images.WithGlobalInsecureFlag(opts.InsecureSkipTLSVerify)...); err != nil {
 					// Test if this is a real image, if not just quiet log to debug, this is normal
 					l.Debug("suspected image does not appear to be valid", "error", err)
 				} else {
@@ -410,6 +431,11 @@ func appendToImageMap(imgMap map[string]bool, pod corev1.PodSpec) map[string]boo
 	for _, container := range pod.EphemeralContainers {
 		if reference.ReferenceRegexp.MatchString(container.Image) {
 			imgMap[container.Image] = true
+		}
+	}
+	for _, volume := range pod.Volumes {
+		if volume.Image != nil && reference.ReferenceRegexp.MatchString(volume.Image.Reference) {
+			imgMap[volume.Image.Reference] = true
 		}
 	}
 	return imgMap

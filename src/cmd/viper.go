@@ -27,7 +27,6 @@ const (
 	VArchitecture          = "architecture"
 	VZarfCache             = "zarf_cache"
 	VTmpDir                = "tmp_dir"
-	VInsecure              = "insecure"
 	VPlainHTTP             = "plain_http"
 	VInsecureSkipTLSVerify = "insecure_skip_tls_verify"
 
@@ -58,6 +57,7 @@ const (
 
 	VInitRegistryURL      = "init.registry.url"
 	VInitRegistryNodeport = "init.registry.nodeport"
+	VInitRegistryPort     = "init.registry.port"
 	InjectorPort          = "init.registry.injector_port"
 	VInitRegistrySecret   = "init.registry.secret"
 	VInitRegistryPushUser = "init.registry.push_username"
@@ -71,10 +71,15 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
+	VInitAgentTLSCA   = "init.agent.tls_ca"
+	VInitAgentTLSCert = "init.agent.tls_cert"
+	VInitAgentTLSKey  = "init.agent.tls_key"
+
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
 	VPkgPublicKey      = "package.public_key"
+	VPkgVerify         = "package.verify"
 
 	// Package create config keys
 
@@ -100,6 +105,7 @@ const (
 	VPkgDeployNamespace  = "package.deploy.namespace"
 	VPkgRetries          = "package.deploy.retries"
 	VPkgDeployValues     = "package.deploy.values"
+	VPkgDeploySetValues  = "package.deploy.set_values"
 
 	// Package publish config keys
 
@@ -119,9 +125,18 @@ const (
 
 	VPkgPullOutputDir = "package.pull.output_directory"
 
+	// Package remove config keys
+
+	VPkgRemoveSetValues = "package.remove.set_values"
+
+	// Package deploy config keys
+
+	VPkgDeployConnected = "package.deploy.connected"
+
 	// Dev deploy config keys
 
-	VDevDeployNoYolo = "dev.deploy.no_yolo"
+	VDevDeployNoYolo    = "dev.deploy.no_yolo"
+	VDevDeployConnected = "dev.deploy.connected"
 )
 
 var (
@@ -236,6 +251,9 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Dev deploy defaults
+	v.SetDefault(VDevDeployConnected, true)
 }
 
 // GetStringSlice returns a string slice from viper

@@ -80,7 +80,7 @@ func TestZarfInit(t *testing.T) {
 		// make sure that we upgraded `k3s` correctly and are running the correct version - this should match that found in `packages/distros/k3s`
 		kubeletVersion, _, err := e2e.Kubectl(t, "get", "nodes", "-o", "jsonpath={.items[0].status.nodeInfo.kubeletVersion}")
 		require.NoError(t, err)
-		require.Contains(t, kubeletVersion, "v1.32.3+k3s1")
+		require.Contains(t, kubeletVersion, "v1.34.3+k3s1")
 	}
 
 	// Check that the registry is running on the correct NodePort
@@ -105,8 +105,8 @@ func TestZarfInit(t *testing.T) {
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "kube-system", "coredns", "--replicas=1") //nolint:errcheck
 	_, _, _ = e2e.Kubectl(t, "scale", "deploy", "-n", "zarf", "agent-hook", "--replicas=1")     //nolint:errcheck
 
-	// Zarf should fail since registry info (nodeport) has changed on a subsequent init
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31338", "--confirm")
+	// Zarf should fail since registry credentials are changing on a subsequent init
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--registry-push-password", "new-password", "--confirm")
 	require.Error(t, err)
 }
 

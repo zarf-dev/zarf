@@ -24,10 +24,11 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry/remote"
+	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
 )
 
 const (
-	// Kubernetes’ compiled-in default if the apiserver flag
+	// Kubernetes' compiled-in default if the apiserver flag
 	// --service-node-port-range is not overridden.
 	defaultNodePortMin = 30000
 	defaultNodePortMax = 32767
@@ -135,7 +136,6 @@ func TestConfigMediaTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
@@ -143,7 +143,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			require.NoError(t, err)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
-			mediaType, err := getManifestConfigMediaType(ctx, s, tt.image)
+			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, tt.image)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, mediaType)
 		})
@@ -167,7 +167,7 @@ func GetAvailableNodePort() (int, error) {
 		return 0, err
 	}
 
-	// Seed a *local* rand.Rand so concurrent callers don’t step on each other.
+	// Seed a *local* rand.Rand so concurrent callers don't step on each other.
 	seed := int64(binary.LittleEndian.Uint64(random64()))
 	r := rand.New(rand.NewSource(seed))
 

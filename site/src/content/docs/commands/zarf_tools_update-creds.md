@@ -52,10 +52,14 @@ $ zarf tools update-creds artifact --artifact-push-username={USERNAME} --artifac
 ### Options
 
 ```
+      --agent-tls-ca string             Path to a PEM-encoded CA certificate for the Zarf agent
+      --agent-tls-cert string           Path to a PEM-encoded TLS certificate for the Zarf agent
+      --agent-tls-key string            Path to a PEM-encoded TLS private key for the Zarf agent
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
   -c, --confirm                         Confirm updating credentials without prompting
+      --force-conflicts                 Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
       --git-pull-password string        Password for the pull-only user to access the git server
       --git-pull-username string        Username for pull-only access to the git server
       --git-push-password string        Password for the push-user to access the git server

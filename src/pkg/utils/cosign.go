@@ -6,6 +6,8 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -36,6 +38,10 @@ type SignBlobOptions struct {
 	// Embed Cosign's KeyOpts for signing configuration
 	options.KeyOpts
 
+	// Certificate signing support - X.509 certificate
+	Cert      string
+	CertChain string
+
 	// Zarf-specific options for output control
 	OutputSignature   string // Custom path for signature file
 	OutputCertificate string // Where to write certificate (keyless mode)
@@ -46,6 +52,8 @@ type SignBlobOptions struct {
 
 	// Password provides password for encrypted keys without requiring cosign.PassFunc import
 	Password string
+	// Overwrite allows for opting-into the overwrite of an existing signature
+	Overwrite bool
 }
 
 // VerifyBlobOptions embeds Cosign's native options for verification.
@@ -73,19 +81,35 @@ func (opts SignBlobOptions) ShouldSign() bool {
 	return opts.KeyRef != "" || opts.IDToken != "" || opts.Sk
 }
 
+// CheckOverwrite validates that output files can be written, returning an error if they exist and Overwrite is false.
+func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
+	for _, path := range []string{opts.BundlePath, opts.OutputCertificate, opts.OutputSignature} {
+		if path == "" {
+			continue
+		}
+		if _, err := os.Stat(path); err == nil {
+			if !opts.Overwrite {
+				return fmt.Errorf("file at path %s already exists", path)
+			}
+			logger.From(ctx).Debug("overwriting existing file", "path", path)
+		}
+	}
+	return nil
+}
+
 // DefaultSignBlobOptions returns SignBlobOptions with Zarf defaults.
 // Configures sensible defaults for offline/air-gapped environments.
 func DefaultSignBlobOptions() SignBlobOptions {
 	return SignBlobOptions{
 		KeyOpts: options.KeyOpts{
 			Slot:             "signature",
-			OIDCIssuer:       "https://oauth2.sigstore.dev/auth",
+			OIDCIssuer:       "", // https://oauth2.sigstore.dev/auth
 			OIDCClientID:     "sigstore",
-			OIDCRedirectURL:  "http://localhost:0/auth/callback",
+			OIDCRedirectURL:  "", // http://localhost:0/auth/callback
 			FulcioAuthFlow:   "normal",
-			FulcioURL:        "https://fulcio.sigstore.dev",
-			RekorURL:         "https://rekor.sigstore.dev",
-			NewBundleFormat:  false,
+			FulcioURL:        "", // https://fulcio.sigstore.dev
+			RekorURL:         "", // https://rekor.sigstore.dev
+			NewBundleFormat:  true,
 			SkipConfirmation: false,
 		},
 		Timeout: CosignDefaultTimeout,
@@ -97,6 +121,9 @@ func DefaultSignBlobOptions() SignBlobOptions {
 // Configures sensible defaults for offline/air-gapped environments.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	return VerifyBlobOptions{
+		KeyOpts: options.KeyOpts{
+			NewBundleFormat: true,
+		},
 		CertVerifyOptions: options.CertVerifyOptions{
 			IgnoreSCT: true, // Skip SCT verification by default
 		},
@@ -130,6 +157,10 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		})
 	}
 
+	if err := opts.CheckOverwrite(ctx); err != nil {
+		return nil, err
+	}
+
 	l.Debug("signing blob with cosign",
 		"keyRef", opts.KeyRef,
 		"sk", opts.Sk,
@@ -141,9 +172,12 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	tlogUpload := false // Zarf default: don't upload to transparency log (offline/air-gap friendly)
 
 	sig, err := sign.SignBlobCmd(
+		ctx,
 		rootOpts,
 		keyOpts,
 		blobPath,
+		opts.Cert,
+		opts.CertChain,
 		b64,
 		opts.OutputSignature,
 		opts.OutputCertificate,

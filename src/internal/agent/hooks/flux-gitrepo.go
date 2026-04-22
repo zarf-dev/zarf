@@ -39,13 +39,7 @@ func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster)
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
 func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
-	var (
-		patches   []operations.PatchOperation
-		isPatched bool
-
-		isCreate = r.Operation == v1.Create
-		isUpdate = r.Operation == v1.Update
-	)
+	var patches []operations.PatchOperation
 
 	s, err := cluster.LoadState(ctx)
 	if err != nil {
@@ -59,23 +53,23 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
-		"git-server", s.GitServer.Address)
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address)
 
-	// Check if this is an update operation and the hostname is different from what we have in the zarfState
-	// NOTE: We mutate on updates IF AND ONLY IF the hostname in the request is different than the hostname in the zarfState
-	// NOTE: We are checking if the hostname is different before because we do not want to potentially mutate a URL that has already been mutated.
-	if isUpdate {
-		isPatched, err = helpers.DoHostnamesMatch(s.GitServer.Address, repo.Spec.URL)
-		if err != nil {
-			return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
-		}
+	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
+	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).
+	isPatched, err := helpers.DoHostnamesMatch(s.GitServer.Address, repo.Spec.URL)
+	if err != nil {
+		return nil, fmt.Errorf(lang.AgentErrHostnameMatch, err)
 	}
 
 	patchedURL := repo.Spec.URL
 
-	// Mutate the git URL if necessary
-	if isCreate || (isUpdate && !isPatched) {
-		// Mutate the git URL so that the hostname matches the hostname in the Zarf state
+	if isPatched {
+		l.Debug("skipping mutation, Flux GitRepository URL already points to Zarf git server",
+			"url", repo.Spec.URL,
+			"operation", r.Operation)
+	} else {
 		transformedURL, err := transform.GitURL(s.GitServer.Address, patchedURL, s.GitServer.PushUsername)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)

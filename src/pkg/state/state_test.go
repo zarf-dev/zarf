@@ -39,10 +39,33 @@ func TestMergeStateRegistry(t *testing.T) {
 			oldRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
+				Port:     1,
 			},
 			expectedRegistry: RegistryInfo{
 				Address:  fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
 				NodePort: 1,
+				Port:     1,
+			},
+		},
+		{
+			name: "internal server explicit same password is preserved",
+			oldRegistry: RegistryInfo{
+				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort:     1,
+				Port:         1,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			initRegistry: RegistryInfo{
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			expectedRegistry: RegistryInfo{
+				Address:      fmt.Sprintf("%s:%d", helpers.IPV4Localhost, 1),
+				NodePort:     1,
+				Port:         1,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
 			},
 		},
 		{
@@ -59,6 +82,7 @@ func TestMergeStateRegistry(t *testing.T) {
 				PullUsername: "pull-user",
 				Address:      "address",
 				NodePort:     1,
+				Port:         1,
 				Secret:       "secret",
 			},
 			expectedRegistry: RegistryInfo{
@@ -66,6 +90,7 @@ func TestMergeStateRegistry(t *testing.T) {
 				PullUsername: "pull-user",
 				Address:      "address",
 				NodePort:     1,
+				Port:         1,
 				Secret:       "secret",
 			},
 		},
@@ -81,7 +106,6 @@ func TestMergeStateRegistry(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -97,7 +121,15 @@ func TestMergeStateRegistry(t *testing.T) {
 			require.Equal(t, tt.expectedRegistry.PullUsername, newState.RegistryInfo.PullUsername)
 			require.Equal(t, tt.expectedRegistry.Address, newState.RegistryInfo.Address)
 			require.Equal(t, tt.expectedRegistry.NodePort, newState.RegistryInfo.NodePort)
+			require.Equal(t, tt.expectedRegistry.Port, newState.RegistryInfo.Port)
 			require.Equal(t, tt.expectedRegistry.Secret, newState.RegistryInfo.Secret)
+			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
+			if tt.expectedRegistry.PushPassword != "" {
+				require.Equal(t, tt.expectedRegistry.PushPassword, newState.RegistryInfo.PushPassword)
+			}
+			if tt.expectedRegistry.PullPassword != "" {
+				require.Equal(t, tt.expectedRegistry.PullPassword, newState.RegistryInfo.PullPassword)
+			}
 		})
 	}
 }
@@ -135,6 +167,23 @@ func TestMergeStateGit(t *testing.T) {
 			},
 		},
 		{
+			name: "internal server explicit same password is preserved",
+			oldGitServer: GitServerInfo{
+				Address:      ZarfInClusterGitServiceURL,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			initGitServer: GitServerInfo{
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+			expectedGitServer: GitServerInfo{
+				Address:      ZarfInClusterGitServiceURL,
+				PushPassword: "same-password",
+				PullPassword: "same-password",
+			},
+		},
+		{
 			name: "init options merged",
 			oldGitServer: GitServerInfo{
 				Address:      "doesn't matter",
@@ -162,7 +211,6 @@ func TestMergeStateGit(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -177,6 +225,13 @@ func TestMergeStateGit(t *testing.T) {
 			require.Equal(t, tt.expectedGitServer.PushUsername, newState.GitServer.PushUsername)
 			require.Equal(t, tt.expectedGitServer.PullUsername, newState.GitServer.PullUsername)
 			require.Equal(t, tt.expectedGitServer.Address, newState.GitServer.Address)
+			// Only check passwords if explicitly set in expected (non-empty means explicit expectation)
+			if tt.expectedGitServer.PushPassword != "" {
+				require.Equal(t, tt.expectedGitServer.PushPassword, newState.GitServer.PushPassword)
+			}
+			if tt.expectedGitServer.PullPassword != "" {
+				require.Equal(t, tt.expectedGitServer.PullPassword, newState.GitServer.PullPassword)
+			}
 		})
 	}
 }
@@ -252,7 +307,6 @@ func TestMergeStateArtifact(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -272,16 +326,51 @@ func TestMergeStateArtifact(t *testing.T) {
 func TestMergeStateAgent(t *testing.T) {
 	t.Parallel()
 
-	agentTLS, err := pki.GeneratePKI("example.com")
-	require.NoError(t, err)
-	oldState := &State{
-		AgentTLS: agentTLS,
-	}
-	newState, err := Merge(oldState, MergeOptions{
-		Services: []string{AgentKey},
+	t.Run("auto-generate new certs", func(t *testing.T) {
+		t.Parallel()
+		agentTLS, err := pki.GeneratePKI("example.com")
+		require.NoError(t, err)
+		oldState := &State{
+			AgentTLS: agentTLS,
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+		require.False(t, newState.AgentTLSUserProvided)
 	})
-	require.NoError(t, err)
-	require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+
+	t.Run("user-provided certs are used and provenance is set", func(t *testing.T) {
+		t.Parallel()
+		oldState := &State{}
+		userTLS := pki.GeneratedPKI{
+			CA:   []byte("user-ca"),
+			Cert: []byte("user-cert"),
+			Key:  []byte("user-key"),
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+			AgentTLS: &userTLS,
+		})
+		require.NoError(t, err)
+		require.Equal(t, userTLS, newState.AgentTLS)
+		require.True(t, newState.AgentTLSUserProvided)
+	})
+
+	t.Run("auto-generate resets user-provided provenance", func(t *testing.T) {
+		t.Parallel()
+		oldState := &State{
+			AgentTLS:             pki.GeneratedPKI{CA: []byte("old-ca")},
+			AgentTLSUserProvided: true,
+		}
+		newState, err := Merge(oldState, MergeOptions{
+			Services: []string{AgentKey},
+		})
+		require.NoError(t, err)
+		require.NotEqual(t, oldState.AgentTLS, newState.AgentTLS)
+		require.False(t, newState.AgentTLSUserProvided)
+	})
 }
 
 func TestMergeInstalledChartsForComponent(t *testing.T) {

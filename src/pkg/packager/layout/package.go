@@ -22,6 +22,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -35,11 +36,28 @@ type PackageLayout struct {
 
 // PackageLayoutOptions are the options used when loading a package.
 type PackageLayoutOptions struct {
-	PublicKeyPath           string
-	SkipSignatureValidation bool
-	IsPartial               bool
-	Filter                  filters.ComponentFilterStrategy
+	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
+	PublicKeyPath string
+	// VerificationStrategy specifies whether verification is enforced
+	VerificationStrategy VerificationStrategy
+	IsPartial            bool
+	Filter               filters.ComponentFilterStrategy
+	VerifyBlobOptions    *utils.VerifyBlobOptions
 }
+
+// VerificationStrategy describes a strategy for determining whether to verify a package.
+type VerificationStrategy int
+
+const (
+	// VerifyIfPossible will attempt a verification, it will not error if verification
+	// data is missing. But it will not stop processing if verification fails.
+	VerifyIfPossible VerificationStrategy = iota
+	// VerifyAlways will always attempt a verification, and will fail if the
+	// verification fails.
+	VerifyAlways
+	// VerifyNever will skip all verification of a package.
+	VerifyNever
+)
 
 // DirPath returns base directory of the package layout
 func (p *PackageLayout) DirPath() string {
@@ -67,6 +85,7 @@ func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions)
 
 // LoadFromDir loads and validates a package from the given directory path.
 func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	if opts.Filter == nil {
 		opts.Filter = filters.Empty()
 	}
@@ -74,7 +93,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	if err != nil {
 		return nil, err
 	}
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.ParseMultiDoc(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -91,13 +110,27 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 		return nil, err
 	}
 
-	if pkgLayout.IsSigned() && !opts.SkipSignatureValidation {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
-		verifyOptions.KeyRef = opts.PublicKeyPath
+	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
+	// Only applies when VerifyBlobOptions is not already set,
+	// ensuring the new API takes precedence over the deprecated field.
+	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
+		defaults := utils.DefaultVerifyBlobOptions()
+		defaults.KeyRef = opts.PublicKeyPath
+		opts.VerifyBlobOptions = &defaults
+	}
 
+	if opts.VerificationStrategy < VerifyNever {
+		verifyOptions := utils.DefaultVerifyBlobOptions()
+		if opts.VerifyBlobOptions != nil {
+			verifyOptions = *opts.VerifyBlobOptions
+		}
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOptions)
 		if err != nil {
-			return nil, err
+			if opts.VerificationStrategy == VerifyIfPossible {
+				l.Warn("package signature could not be verified:", "error", err.Error())
+				return pkgLayout, nil
+			}
+			return nil, fmt.Errorf("signature verification failed: %w", err)
 		}
 	}
 
@@ -188,16 +221,33 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	tmpZarfYAMLPath := filepath.Join(tmpDir, ZarfYAML)
 	tmpSignaturePath := filepath.Join(tmpDir, Signature)
+	tmpBundlePath := filepath.Join(tmpDir, Bundle)
 
 	// Update in-memory state to signed:true
 	signed := true
 	p.Pkg.Build.Signed = &signed
+
+	// Save original provenance files for rollback
+	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
+
+	// Append signature files to the provenance files list.
+	// These are created after checksum generation and cannot be in checksums.txt.
+	// Listing them here allows integrity validation to dynamically exclude them
+	// without hardcoded knowledge of every possible signature file.
+	if !slices.Contains(p.Pkg.Build.ProvenanceFiles, Signature) {
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
+	}
+
+	if feature.IsEnabled(feature.BundleSignature) && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
+		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
+	}
 
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -206,17 +256,31 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
 	// Configure signing to write to temp directory
 	signOpts := opts
-	signOpts.OutputSignature = tmpSignaturePath
 
-	// Check if signature already exists in actual layout and warn
+	// Validate outputs before setting temporary paths
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
-	if _, err := os.Stat(actualSignaturePath); err == nil {
-		l.Warn("overwriting existing package signature", "path", actualSignaturePath)
+	actualBundlePath := filepath.Join(p.dirPath, Bundle)
+	signOpts.OutputSignature = actualSignaturePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = actualBundlePath
+	} else {
+		signOpts.NewBundleFormat = false
+		signOpts.BundlePath = ""
+	}
+	err = signOpts.CheckOverwrite(ctx)
+	if err != nil {
+		return err
+	}
+
+	signOpts.OutputSignature = tmpSignaturePath
+	if feature.IsEnabled(feature.BundleSignature) {
+		signOpts.BundlePath = tmpBundlePath
 	}
 
 	// Perform the signing operation on the temp file
@@ -225,6 +289,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	if err != nil {
 		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
+		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
@@ -244,7 +309,14 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	l.Info("package signed successfully", "signature", actualSignaturePath)
+	if feature.IsEnabled(feature.BundleSignature) {
+		err = os.Rename(tmpBundlePath, actualBundlePath)
+		if err != nil {
+			return fmt.Errorf("failed to move bundle after signing: %w", err)
+		}
+	}
+
+	l.Info("package signed successfully")
 	return nil
 }
 
@@ -263,22 +335,49 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
-	// Validate that we have a public key
+	// Handle the case where the package is not signed
+	if !p.IsSigned() {
+		// Note: add future logic for verification material here
+		if opts.KeyRef != "" {
+			return errors.New("a key was provided but the package is not signed")
+		}
+
+		return errors.New("package is not signed - verification cannot be performed")
+	}
+
+	// Validate that we have required verification material
 	// Note: this will later be replaced when verification enhancements are made
 	if opts.KeyRef == "" {
-		return errors.New("package is signed but no key was provided")
+		return errors.New("package is signed but no verification material was provided (Public Key, etc.)")
 	}
 
-	// Validate that the signature exists
+	// Check for bundle format signature (preferred)
+	bundlePath := filepath.Join(p.dirPath, Bundle)
+	_, err := os.Stat(bundlePath)
+	if err == nil {
+		opts.BundlePath = bundlePath
+		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
+		return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("error checking bundle signature: %w", err)
+	}
+
+	// Bundle doesn't exist, check for legacy signature format
 	signaturePath := filepath.Join(p.dirPath, Signature)
-	if _, err := os.Stat(signaturePath); err != nil {
-		return fmt.Errorf("signature not found: %w", err)
+	_, err = os.Stat(signaturePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("signature not found: neither bundle nor legacy signature exists")
+		}
+		return fmt.Errorf("error checking legacy signature: %w", err)
 	}
 
-	// Note: this is the backwards compatible behavior
-	// this will change in the future
+	// Legacy signature found
+	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package with the --features='bundle-signature=true' flag.")
 	opts.SigRef = signaturePath
 
+	opts.NewBundleFormat = false
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
@@ -317,6 +416,93 @@ func (p *PackageLayout) GetSBOM(ctx context.Context, destPath string) error {
 		return err
 	}
 	return nil
+}
+
+// GetDocumentation extracts documentation files from the package to the given destination path.
+// If keys is empty, all documentation files are extracted.
+// If keys are provided, only those specific documentation files are extracted.
+func (p *PackageLayout) GetDocumentation(ctx context.Context, destPath string, keys []string) (err error) {
+	l := logger.From(ctx)
+
+	if len(p.Pkg.Documentation) == 0 {
+		return fmt.Errorf("no documentation files found in package")
+	}
+
+	tarPath := filepath.Join(p.dirPath, DocumentationTar)
+	if _, err := os.Stat(tarPath); os.IsNotExist(err) {
+		return fmt.Errorf("documentation.tar not found in package")
+	}
+
+	keysToExtract := maps.Clone(p.Pkg.Documentation)
+	if len(keys) > 0 {
+		keysToExtract = make(map[string]string)
+		for _, key := range keys {
+			if filePath, ok := p.Pkg.Documentation[key]; ok {
+				keysToExtract[key] = filePath
+			} else {
+				return fmt.Errorf("key %s not found in package documentation", key)
+			}
+		}
+	}
+
+	// Extract tar to temp directory
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	err = archive.Decompress(ctx, tarPath, tmpDir, archive.DecompressOpts{})
+	if err != nil {
+		return fmt.Errorf("failed to extract documentation.tar: %w", err)
+	}
+
+	if err := os.MkdirAll(destPath, helpers.ReadWriteExecuteUser); err != nil {
+		return fmt.Errorf("failed to create output directory %s: %w", destPath, err)
+	}
+
+	fileNames := GetDocumentationFileNames(p.Pkg.Documentation)
+
+	for key, file := range keysToExtract {
+		docFileName := fileNames[key]
+
+		srcPath := filepath.Join(tmpDir, docFileName)
+		dstPath := filepath.Join(destPath, docFileName)
+		if err := helpers.CreatePathAndCopy(srcPath, dstPath); err != nil {
+			return fmt.Errorf("failed to copy documentation file %s: %w", file, err)
+		}
+	}
+
+	l.Info("documentation successfully extracted", "path", destPath)
+	return nil
+}
+
+// FormatDocumentFileName for storing the document in the package or presenting it to the user
+func FormatDocumentFileName(key, file string) string {
+	return fmt.Sprintf("%s-%s", key, filepath.Base(file))
+}
+
+// GetDocumentationFileNames returns a map of documentation keys to their final filenames.
+// Filenames are deconflicted: if multiple keys have the same basename, they get prefixed with the key.
+func GetDocumentationFileNames(documentation map[string]string) map[string]string {
+	basenameCounts := make(map[string]int)
+	for _, file := range documentation {
+		basename := filepath.Base(file)
+		basenameCounts[basename]++
+	}
+
+	result := make(map[string]string)
+	for key, file := range documentation {
+		basename := filepath.Base(file)
+		if basenameCounts[basename] == 1 {
+			result[key] = basename
+		} else {
+			result[key] = FormatDocumentFileName(key, file)
+		}
+	}
+	return result
 }
 
 // GetComponentDir returns a path to the directory in the given component.
@@ -454,6 +640,8 @@ func (p *PackageLayout) FileName() (string, error) {
 		name = fmt.Sprintf("%s-%s", name, p.Pkg.Build.Flavor)
 	}
 
+	name = filepath.Base(name)
+
 	if p.Pkg.Metadata.Uncompressed {
 		return name + ".tar", nil
 	}
@@ -478,10 +666,22 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 	if err != nil {
 		return err
 	}
-	// Remove files which are not in the checksums.
+	// zarf.yaml is the root of trust and is always excluded from checksums.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, ZarfYAML))
+	// Hardcoded exclusions for backward compatibility with packages that predate
+	// the ProvenanceFiles field. These can be removed once all supported
+	// package versions include ProvenanceFiles.
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Checksums))
 	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Signature))
+	delete(packageFiles, filepath.Join(pkgLayout.dirPath, Bundle))
+	// Remove provenance files declared in the signed zarf.yaml.
+	// This enables forward compatibility — new files added by future CLI versions
+	// are excluded from the strict check without requiring code changes.
+	if pkgLayout.IsSigned() {
+		for _, f := range pkgLayout.Pkg.Build.ProvenanceFiles {
+			delete(packageFiles, filepath.Join(pkgLayout.dirPath, f))
+		}
+	}
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.dirPath, Checksums))
 	if err != nil {

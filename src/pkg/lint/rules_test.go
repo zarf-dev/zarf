@@ -117,7 +117,7 @@ func TestIsImagePinned(t *testing.T) {
 		{
 			input:    "busybox:bad/image",
 			expected: false,
-			err:      errors.New("invalid reference format"),
+			err:      errors.New("unable to parse ref busybox:bad/image: invalid reference format"),
 		},
 		{
 			input:    "busybox:###ZARF_PKG_TMPL_BUSYBOX_IMAGE###",

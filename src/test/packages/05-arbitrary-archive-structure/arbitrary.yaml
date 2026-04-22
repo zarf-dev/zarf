@@ -1,0 +1,123 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-archive-structure-arbitrary
+  description: A contrived example for podinfo using many Zarf primitives for archive structure testing``
+  version: 0.0.1
+
+components:
+  - name: test-component-1
+    description: A contrived example for podinfo using many Zarf primitives for compose testing
+    required: true
+    import:
+      path: sub-package/arbitrary.yaml
+      name: test-compose-sub-package
+    charts:
+      - name: podinfo-compose
+        releaseName: podinfo-override
+        namespace: podinfo-override
+        valuesFiles:
+          - files/test-values.yaml
+      - name: podinfo-compose-two
+        releaseName: podinfo-compose-two
+        version: 6.4.0
+        namespace: podinfo-compose-two
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          - files/test-values.yaml
+    manifests:
+      - name: connect-service
+        namespace: podinfo-override
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+      - name: connect-service-two
+        namespace: podinfo-compose-two
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.1
+    repos:
+      - https://github.com/zarf-dev/zarf-public-test.git@refs/heads/dragons
+    files:
+      - source: files/coffee-ipsum.txt
+        target: coffee-ipsum.txt
+    dataInjections:
+      - source: files
+        target:
+          selector: app.kubernetes.io/name=podinfo-compose
+          namespace: podinfo-compose
+          container: podinfo
+          path: /home/app/service.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: ls
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo-compose-two
+                namespace: podinfo-compose-two
+                condition: available
+  - name: test-component-2
+    description: A contrived example for podinfo using many Zarf primitives for compose testing
+    required: true
+    import:
+      path:  sub-package/arbitrary.yaml
+      name: test-compose-sub-package
+    charts:
+      - name: podinfo-compose
+        releaseName: podinfo-override
+        namespace: podinfo-override
+        valuesFiles:
+          - files/test-values.yaml
+      - name: podinfo-compose-two
+        releaseName: podinfo-compose-two
+        version: 6.4.0
+        namespace: podinfo-compose-two
+        url: oci://ghcr.io/stefanprodan/charts/podinfo
+        valuesFiles:
+          - files/test-values.yaml
+    manifests:
+      - name: connect-service
+        namespace: podinfo-override
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+      - name: connect-service-two
+        namespace: podinfo-compose-two
+        files:
+          - files/service.yaml
+        kustomizations:
+          - files/
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.1
+    repos:
+      - https://github.com/zarf-dev/zarf-public-test.git@refs/heads/dragons
+    files:
+      - source: files/coffee-ipsum.txt
+        target: coffee-ipsum.txt
+    dataInjections:
+      - source: files
+        target:
+          selector: app.kubernetes.io/name=podinfo-compose
+          namespace: podinfo-compose
+          container: podinfo
+          path: /home/app/service.yaml
+    actions:
+      onCreate:
+        before:
+          - cmd: ls
+      onDeploy:
+        after:
+          - wait:
+              cluster:
+                kind: deployment
+                name: podinfo-compose-two
+                namespace: podinfo-compose-two
+                condition: available

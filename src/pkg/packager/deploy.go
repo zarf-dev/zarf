@@ -24,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	ptmpl "github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/internal/template"
-	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -36,7 +35,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
+	"github.com/zarf-dev/zarf/src/types"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,6 +53,10 @@ type DeployOptions struct {
 	value.Values
 	// Whether to adopt any pre-existing K8s resources into the Helm charts managed by Zarf
 	AdoptExistingResources bool
+	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
+	Connected bool
+	// Force Helm to take ownership of conflicting fields during Server-Side Apply operations
+	ForceConflicts bool
 	// Timeout for Helm operations
 	Timeout time.Duration
 	// Retries to preform for operations like git and image pushes
@@ -61,13 +66,15 @@ type DeployOptions struct {
 	// Namespace is an optional namespace override for package deployment
 	NamespaceOverride string
 	// Remote Options for image pushes
-	RemoteOptions
+	types.RemoteOptions
 	// How to configure Zarf state if it's not already been configured
 	GitServer      state.GitServerInfo
 	RegistryInfo   state.RegistryInfo
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 	InjectorPort   int
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
@@ -80,11 +87,10 @@ type DeployOptions struct {
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
 // any of these fields are subject to change from one component to the next
 type deployer struct {
-	s           *state.State
-	c           *cluster.Cluster
-	vc          *variables.VariableConfig
-	vals        value.Values
-	hpaModified bool
+	s    *state.State
+	c    *cluster.Cluster
+	vc   *variables.VariableConfig
+	vals value.Values
 }
 
 // DeployResult is the result of a successful deploy
@@ -96,6 +102,11 @@ type DeployResult struct {
 
 // Deploy takes a reference to a `layout.PackageLayout` and deploys the package. If successful, returns a list of components that were successfully deployed and the associated variable config.
 func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOptions) (DeployResult, error) {
+	start := time.Now()
+	if opts.Connected && pkgLayout.Pkg.IsInitConfig() {
+		return DeployResult{}, fmt.Errorf("--connected is not supported for init packages")
+	}
+
 	// Validate operational requirements before proceeding
 	if !opts.SkipVersionCheck {
 		if err := requirements.ValidateVersionRequirements(pkgLayout.Pkg); err != nil {
@@ -106,15 +117,20 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	if !feature.IsEnabled(feature.RegistryProxy) && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		return DeployResult{}, fmt.Errorf("the registry proxy feature gate is not enabled")
 	}
+
+	l := logger.From(ctx)
+	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
+
 	if opts.InjectorPort == 0 && opts.RegistryInfo.RegistryMode == state.RegistryModeProxy {
 		opts.InjectorPort = state.ZarfInjectorDefaultHostPort
 	}
-	l := logger.From(ctx)
-	l.Info("starting deploy", "package", pkgLayout.Pkg.Metadata.Name)
-	start := time.Now()
+
+	if pkgLayout.Pkg.Metadata.YOLO {
+		opts.Connected = true
+	}
 
 	if opts.NamespaceOverride != "" {
-		if err := OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return DeployResult{}, err
 		}
 	}
@@ -151,7 +167,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Package defaults are overridden by deploy values.
 	vals.DeepMerge(opts.Values)
-	l.Debug("package values", "values", vals)
 
 	// Validate merged values against schema if provided
 	if pkgLayout.Pkg.Values.Schema != "" {
@@ -167,8 +182,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		vals: vals,
 	}
 
-	// During deploy we disable
-	defer d.resetRegistryHPA(ctx)
 	l.Debug("variables populated", "time", time.Since(start))
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
@@ -187,15 +200,6 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 		Values:             d.vals,
 	}
 	return deployResult, nil
-}
-
-func (d *deployer) resetRegistryHPA(ctx context.Context) {
-	l := logger.From(ctx)
-	if d.c != nil && d.hpaModified {
-		if err := d.c.EnableRegHPAScaleDown(ctx); err != nil {
-			l.Debug("unable to reenable the registry HPA scale down", "error", err.Error())
-		}
-	}
 }
 
 func (d *deployer) isConnectedToCluster() bool {
@@ -255,7 +259,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -282,7 +286,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				deployedComponents[idx].Status = state.ComponentStatusFailed
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
 				if d.isConnectedToCluster() {
-					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 					}
 				}
@@ -302,7 +306,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -339,6 +343,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			ApplianceMode:  applianceMode,
 			StorageClass:   opts.StorageClass,
 			InjectorPort:   opts.InjectorPort,
+			AgentTLS:       opts.AgentTLS,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -352,11 +357,6 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 	}
 
-	if isRegistry {
-		// If we are deploying the registry then mark the HPA as "modified" to set it to Min later
-		d.hpaModified = true
-	}
-
 	// Before deploying the seed registry, start the injector
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
@@ -366,14 +366,18 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			if err != nil {
 				return nil, err
 			}
-			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, pkgLayout.Pkg.Metadata.Name)
+
+			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
 			if err != nil {
 				return nil, err
 			}
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.Images, d.s.InjectorInfo.Port, d.s.RegistryInfo.NodePort, pkgLayout.Pkg.Metadata.Name)
+			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
+				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -408,10 +412,10 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	l.Info("deploying component", "name", component.Name)
 
-	hasImages := len(component.Images) > 0 && !noImgPush
+	hasImages := len(component.GetImages()) > 0 && !noImgPush && !opts.Connected
 	hasCharts := len(component.Charts) > 0
 	hasManifests := len(component.Manifests) > 0
-	hasRepos := len(component.Repos) > 0
+	hasRepos := len(component.Repos) > 0 && !opts.Connected
 	hasFiles := len(component.Files) > 0
 
 	onDeploy := component.Actions.OnDeploy
@@ -424,18 +428,9 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 		// Setup the state in the config
 		if d.s == nil {
 			var err error
-			d.s, err = setupState(ctx, d.c, pkgLayout.Pkg)
+			d.s, err = setupState(ctx, d.c, opts.Connected)
 			if err != nil {
 				return nil, err
-			}
-		}
-
-		// Disable the registry HPA scale down if we are deploying images and it is not already disabled
-		if hasImages && !d.hpaModified && d.s.RegistryInfo.IsInternal() {
-			if err := d.c.DisableRegHPAScaleDown(ctx); err != nil {
-				l.Debug("unable to disable the registry HPA scale down", "error", err.Error())
-			} else {
-				d.hpaModified = true
 			}
 		}
 	}
@@ -459,7 +454,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 
 	if hasImages {
 		refs := []transform.Image{}
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create ref for image %s: %w", img, err)
@@ -586,14 +581,14 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, err
 		}
-		l.Debug("overrides generated", "values", valuesOverrides, "count", len(valuesOverrides))
 
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
+			ForceConflicts:         opts.ForceConflicts,
 			VariableConfig:         d.vc,
 			State:                  d.s,
 			Cluster:                d.c,
-			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
+			ConnectedDeploy:        opts.Connected,
 			Timeout:                opts.Timeout,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
@@ -603,12 +598,7 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 		if err != nil {
 			return installedCharts, fmt.Errorf("failed to load chart data: %w", err)
 		}
-		l.Debug("loaded chart",
-			"metadata", helmChart.Metadata,
-			"chartValues", helmChart.Values,
-			"valuesOverrides", values,
-			"countValuesOverrides", len(values),
-		)
+		l.Debug("loaded chart", "metadata", helmChart.Metadata, "chartValues", helmChart.Values)
 
 		connectStrings, installedChartName, err := helm.InstallOrUpgradeChart(ctx, chart, helmChart, values, helmOpts)
 		if err != nil {
@@ -638,12 +628,9 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	installedCharts := []state.InstalledChart{}
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
+			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
 			if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
-				// The path is likely invalid because of how we compose OCI components, add an index suffix to the filename
-				manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-				if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
-					return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
-				}
+				return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 			}
 			if manifest.IsTemplate() {
 				path := filepath.Join(manifestDir, manifest.Files[idx])
@@ -678,10 +665,11 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		}
 		helmOpts := helm.InstallUpgradeOptions{
 			AdoptExistingResources: opts.AdoptExistingResources,
+			ForceConflicts:         opts.ForceConflicts,
 			VariableConfig:         d.vc,
 			State:                  d.s,
 			Cluster:                d.c,
-			AirgapMode:             !pkgLayout.Pkg.Metadata.YOLO,
+			ConnectedDeploy:        opts.Connected,
 			Timeout:                opts.Timeout,
 			PkgName:                pkgLayout.Pkg.Metadata.Name,
 			NamespaceOverride:      opts.NamespaceOverride,
@@ -717,24 +705,18 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.Z
 	return pki.CheckForExpiredCert(ctx, s.AgentTLS)
 }
 
-func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) (*state.State, error) {
+func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state.State, error) {
 	l := logger.From(ctx)
 	// If we are touching K8s, make sure we can talk to it once per deployment
 	l.Debug("loading the Zarf State from the Kubernetes cluster")
 
 	s, err := c.LoadState(ctx)
-	// We ignore the error if in YOLO mode because Zarf should not be initiated.
-	if err != nil && !pkg.Metadata.YOLO {
-		return nil, err
-	}
-	// Only ignore state load error in yolo mode when secret could not be found.
-	if err != nil && !kerrors.IsNotFound(err) && pkg.Metadata.YOLO {
-		return nil, err
-	}
-	if s == nil && pkg.Metadata.YOLO {
+	if err != nil {
+		// We ignore not found errors in connected mode and initialize a temporary, ephemeral state
+		if !connected || !kerrors.IsNotFound(err) {
+			return nil, err
+		}
 		s = &state.State{}
-		// YOLO mode, so minimal state needed
-		s.Distro = "YOLO"
 
 		l.Info("creating the Zarf namespace")
 		zarfNamespace := cluster.NewZarfManagedApplyNamespace(state.ZarfNamespaceName)
@@ -742,16 +724,10 @@ func setupState(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackag
 		if err != nil {
 			return nil, fmt.Errorf("unable to apply the Zarf namespace: %w", err)
 		}
+		l.Info("This is a connected or YOLO deploy, but the cluster was already initialized with 'zarf init'. " +
+			"Zarf will automatically add the label `zarf.dev/agent: ignore' to relevant resources, but resources deployed indirectly, " +
+			"for instance through gitops, should set this label")
 	}
-	if s == nil {
-		return nil, errors.New("cluster state should not be nil")
-	}
-	if pkg.Metadata.YOLO && s.Distro != "YOLO" {
-		l.Warn("This package is in YOLO mode, but the cluster was already initialized with 'zarf init'. " +
-			"This may cause issues if the package does not exclude any charts or manifests from the Zarf Agent using " +
-			"the pod or namespace label `zarf.dev/agent: ignore'.")
-	}
-
 	return s, nil
 }
 

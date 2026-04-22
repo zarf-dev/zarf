@@ -50,6 +50,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --signing-key string        Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string   Password for encrypted private key
+      --verify                    Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

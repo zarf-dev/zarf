@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -24,18 +25,17 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/zarf-dev/zarf/src/internal/value"
-	"github.com/zarf-dev/zarf/src/pkg/images"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/message"
+	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -112,7 +112,7 @@ func newPackageCreateCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgCreateOutput), lang.CmdPackageCreateFlagOutput)
 
 	cmd.Flags().StringVar(&o.differentialPackagePath, "differential", v.GetString(VPkgCreateDifferential), lang.CmdPackageCreateFlagDifferential)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
 	cmd.Flags().BoolVarP(&o.sbom, "sbom", "s", v.GetBool(VPkgCreateSbom), lang.CmdPackageCreateFlagSbom)
 	cmd.Flags().StringVar(&o.sbomOutput, "sbom-out", v.GetString(VPkgCreateSbomOutput), lang.CmdPackageCreateFlagSbomOut)
 	cmd.Flags().BoolVar(&o.skipSBOM, "skip-sbom", v.GetBool(VPkgCreateSkipSbom), lang.CmdPackageCreateFlagSkipSbom)
@@ -188,7 +188,7 @@ func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, erro
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
-	baseDir := setBaseDirectory(args)
+	basePath := setBaseDirectory(args)
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
@@ -225,7 +225,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		SkipVersionCheck:        o.skipVersionCheck,
 		WithBuildMachineInfo:    o.withBuildMachineInfo,
 	}
-	pkgPath, err := packager.Create(ctx, baseDir, o.output, opt)
+	pkgPath, err := packager.Create(ctx, basePath, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
@@ -243,13 +243,17 @@ type packageDeployOptions struct {
 	namespaceOverride       string
 	confirm                 bool
 	adoptExistingResources  bool
+	connected               bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	setVariables            map[string]string
+	setValues               map[string]string
 	optionalComponents      string
 	shasum                  string
+	verify                  bool
 	skipSignatureValidation bool
-	SkipVersionCheck        bool
+	skipVersionCheck        bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -274,25 +278,40 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.connected, "connected", v.GetBool(VPkgDeployConnected), lang.CmdPackageDeployFlagConnected)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageDeployFlagComponents)
 	cmd.Flags().StringVar(&o.shasum, "shasum", v.GetString(VPkgDeployShasum), lang.CmdPackageDeployFlagShasum)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	cmd.Flags().BoolVar(&o.SkipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
-
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark flag skip-signature-validation", "error", errSig)
+	}
 	return cmd
 }
 
-func (o *packageDeployOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
+func (o *packageDeployOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -304,12 +323,17 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	}
 
 	v := getViper()
-	o.setVariables = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
 
-	// Load files supplied by --values / -v or a user's zarf-config.{yaml,toml}
-	// REVIEW: Should we also load valuesFiles supplied via URL on the CLI?
-	values, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	// Merge variables
+	o.setVariables = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySet),
+		o.setVariables,
+		strings.ToUpper,
+	)
+	// Merge values
+	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
 	}
@@ -319,15 +343,25 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		return err
 	}
 
+	// If deploy is confirmed, then only pull the necessary layers as we won't need to prompt for optional components
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
-		Shasum:                  o.shasum,
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Shasum:               o.shasum,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filter,
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		Connected:            o.connected,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -340,6 +374,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	deployOpts := packager.DeployOptions{
 		Values:                 values,
 		AdoptExistingResources: o.adoptExistingResources,
+		Connected:              o.connected,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,
@@ -347,7 +383,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
-		SkipVersionCheck:       o.SkipVersionCheck,
+		SkipVersionCheck:       o.skipVersionCheck,
 	}
 
 	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
@@ -373,7 +409,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
-		if err := packager.OverridePackageNamespace(pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
+		if err := packager.OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
@@ -382,15 +418,16 @@ func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.
 		return nil, err
 	}
 
-	// filter after confirmation to allow users to view the entire package interactively
-	filter := filters.Combine(
-		filters.ByLocalOS(runtime.GOOS),
-		filters.ForDeploy(optionalComponents, opts.IsInteractive),
-	)
-
-	pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-	if err != nil {
-		return nil, err
+	// In the interactive case we wait until after the component prompt to filter
+	if opts.IsInteractive {
+		filter := filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(optionalComponents, true),
+		)
+		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
@@ -407,6 +444,10 @@ func confirmDeploy(ctx context.Context, pkgLayout *layout.PackageLayout, setVari
 	err = utils.ColorPrintYAML(pkgLayout.Pkg, getPackageYAMLHints(pkgLayout.Pkg, setVariables), false)
 	if err != nil {
 		return fmt.Errorf("unable to print package definition: %w", err)
+	}
+
+	if len(pkgLayout.Pkg.Documentation) > 0 {
+		l.Info("documentation available for this package - use 'zarf package inspect documentation' to view")
 	}
 
 	if pkgLayout.Pkg.IsSBOMAble() && !pkgLayout.ContainsSBOM() {
@@ -468,6 +509,7 @@ type packageMirrorResourcesOptions struct {
 	confirm                 bool
 	shasum                  string
 	noImgChecksum           bool
+	verify                  bool
 	skipSignatureValidation bool
 	retries                 int
 	optionalComponents      string
@@ -503,7 +545,13 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().BoolVar(&o.noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
+
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
@@ -526,10 +574,16 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageMirrorResourcesOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
+func (o *packageMirrorResourcesOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 
 	// post flag validation - perform both if neither were set
@@ -557,14 +611,14 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	}
 
 	loadOpt := packager.LoadOptions{
-		Shasum:                  o.shasum,
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filter,
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Shasum:               o.shasum,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filter,
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpt)
 	if err != nil {
@@ -578,7 +632,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	images, repos := 0, 0
 	// Let's count the images and repos in the package
 	for _, component := range pkgLayout.Pkg.Components {
-		images += len(component.Images)
+		images += len(component.GetImages())
 		repos += len(component.Repos)
 	}
 	logger.From(ctx).Debug("package contains images and repos", "images", images, "repos", repos)
@@ -648,83 +702,33 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 	return nil
 }
 
-type packageInspectOptions struct {
-	sbomOutputDir           string
-	listImages              bool
-	skipSignatureValidation bool
-	ociConcurrency          int
-	publicKeyPath           string
-}
-
 func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
-	o := &packageInspectOptions{}
 	cmd := &cobra.Command{
-		Use:     "inspect [ PACKAGE_SOURCE ]",
+		Use:     "inspect",
 		Aliases: []string{"i"},
 		Short:   lang.CmdPackageInspectShort,
-		Long:    lang.CmdPackageInspectLong,
-		Args:    cobra.MaximumNArgs(1),
-		PreRun:  o.preRun,
-		RunE:    o.run,
+		Args: func(_ *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("'zarf package inspect' requires a subcommand; did you mean 'zarf package inspect definition %s'?", args[0])
+			}
+			return nil
+		},
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
 	}
 
 	cmd.AddCommand(newPackageInspectSBOMCommand(v))
 	cmd.AddCommand(newPackageInspectImagesCommand(v))
-	cmd.AddCommand(newPackageInspectShowManifestsCommand(v))
+	cmd.AddCommand(newPackageInspectManifestsCommand(v))
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
-
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().StringVar(&o.sbomOutputDir, "sbom-out", "", lang.CmdPackageInspectFlagSbomOut)
-	cmd.Flags().BoolVar(&o.listImages, "list-images", false, lang.CmdPackageInspectFlagListImages)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
 	return cmd
 }
 
-func (o *packageInspectOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
-	}
-}
-
-func (o *packageInspectOptions) run(cmd *cobra.Command, args []string) error {
-	ctx := cmd.Context()
-	logger.From(ctx).Warn("Direct usage of inspect is deprecated and will be removed in a future release. Inspect is now a parent command. Use 'zarf package inspect definition|sbom|images' instead.")
-
-	if o.listImages && o.sbomOutputDir != "" {
-		return fmt.Errorf("cannot use --sbom-out and --list-images at the same time")
-	}
-
-	if o.sbomOutputDir != "" {
-		sbomOpts := packageInspectSBOMOptions{
-			skipSignatureValidation: o.skipSignatureValidation,
-			outputDir:               o.sbomOutputDir,
-			ociConcurrency:          o.ociConcurrency,
-			publicKeyPath:           o.publicKeyPath,
-		}
-		return sbomOpts.run(cmd, args)
-	}
-
-	if o.listImages {
-		imagesOpts := packageInspectImagesOptions{
-			skipSignatureValidation: o.skipSignatureValidation,
-			ociConcurrency:          o.ociConcurrency,
-			publicKeyPath:           o.publicKeyPath,
-		}
-		return imagesOpts.run(cmd, args)
-	}
-
-	definitionOpts := packageInspectDefinitionOptions{
-		skipSignatureValidation: o.skipSignatureValidation,
-		ociConcurrency:          o.ociConcurrency,
-		publicKeyPath:           o.publicKeyPath,
-	}
-	return definitionOpts.run(cmd, args)
-}
-
 type packageInspectValuesFilesOptions struct {
+	verify                  bool
 	skipSignatureValidation bool
 	components              string
 	kubeVersion             string
@@ -743,10 +747,11 @@ func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
 func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectValuesFilesOptions()
 	cmd := &cobra.Command{
-		Use:   "values-files [ PACKAGE ]",
-		Short: "Creates, templates, and outputs the values-files to be sent to each chart",
-		Long:  "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
-		Args:  cobra.MaximumNArgs(1),
+		Use:    "values-files [ PACKAGE ]",
+		Short:  "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:   "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			return o.run(ctx, args)
@@ -756,11 +761,30 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show values files for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectValuesFilesOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []string) (err error) {
@@ -779,14 +803,14 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:            config.GetArch(),
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		LayersSelector:          zoci.ComponentLayers,
-		Filter:                  filters.BySelectState(o.components),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Architecture:         config.GetArch(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		Filter:               filters.BySelectState(o.components),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -800,6 +824,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
 	if err != nil {
@@ -819,6 +844,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 }
 
 type packageInspectManifestsOptions struct {
+	verify                  bool
 	skipSignatureValidation bool
 	components              string
 	kubeVersion             string
@@ -834,12 +860,13 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 	}
 }
 
-func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
+func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
-		Use:   "manifests [ PACKAGE ]",
-		Short: "Template and output all manifests and charts in a package",
-		Args:  cobra.MaximumNArgs(1),
+		Use:    "manifests [ PACKAGE ]",
+		Short:  "Template and output all manifests and charts in a package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			return o.run(ctx, args)
@@ -849,11 +876,30 @@ func newPackageInspectShowManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVar(&o.components, "components", "", "comma separated list of components to show manifests for")
 	cmd.Flags().StringVar(&o.kubeVersion, "kube-version", "", lang.CmdDevFlagKubeVersion)
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSet)
-
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectManifestsOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string) (err error) {
@@ -872,14 +918,14 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:            config.GetArch(),
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		LayersSelector:          zoci.ComponentLayers,
-		Filter:                  filters.BySelectState(o.components),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Architecture:         config.GetArch(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
+		Filter:               filters.BySelectState(o.components),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -893,6 +939,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 		SetVariables:  o.setVariables,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
+		RemoteOptions: defaultRemoteOptions(),
 	}
 
 	resources, err := packager.InspectPackageResources(ctx, pkgLayout, resourceOpts)
@@ -918,6 +965,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 // packageInspectSBOMOptions holds the command-line options for 'package inspect sbom' sub-command.
 type packageInspectSBOMOptions struct {
+	verify                  bool
 	skipSignatureValidation bool
 	outputDir               string
 	ociConcurrency          int
@@ -926,8 +974,8 @@ type packageInspectSBOMOptions struct {
 
 func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 	return &packageInspectSBOMOptions{
-		outputDir:               "",
-		skipSignatureValidation: false,
+		outputDir: "",
+		verify:    false,
 	}
 }
 
@@ -935,18 +983,36 @@ func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
-		Use:   "sbom [ PACKAGE ]",
-		Short: "Output the package SBOM (Software Bill Of Materials) to the specified directory",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "sbom [ PACKAGE ]",
+		Short:  "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
-
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectSBOMOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 // run performs the execution of 'package inspect sbom' sub-command.
@@ -963,14 +1029,14 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architecture:            config.GetArch(),
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		LayersSelector:          zoci.SbomLayers,
-		Filter:                  filters.Empty(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Architecture:         config.GetArch(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
+		Filter:               filters.Empty(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
 	if err != nil {
@@ -980,7 +1046,8 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
-	outputPath := filepath.Join(o.outputDir, pkgLayout.Pkg.Metadata.Name)
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, filepath.Base(pkgLayout.Pkg.Metadata.Name))
 	err = pkgLayout.GetSBOM(ctx, outputPath)
 	if err != nil {
 		return fmt.Errorf("could not get SBOM: %w", err)
@@ -996,6 +1063,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 
 type packageInspectImagesOptions struct {
 	namespaceOverride       string
+	verify                  bool
 	skipSignatureValidation bool
 	ociConcurrency          int
 	publicKeyPath           string
@@ -1003,25 +1071,43 @@ type packageInspectImagesOptions struct {
 
 func newPackageInspectImagesOptions() *packageInspectImagesOptions {
 	return &packageInspectImagesOptions{
-		skipSignatureValidation: false,
+		verify: false,
 	}
 }
 
 func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectImagesOptions()
 	cmd := &cobra.Command{
-		Use:   "images [ PACKAGE_SOURCE ]",
-		Short: "List all container images contained in the package",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "images [ PACKAGE_SOURCE ]",
+		Short:  "List all container images contained in the package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
-
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectImagesOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) error {
@@ -1039,13 +1125,13 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           o.publicKeyPath,
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1054,7 +1140,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 
 	images := make([]string, 0)
 	for _, component := range pkg.Components {
-		images = append(images, component.Images...)
+		images = append(images, component.GetImages()...)
 	}
 	images = helpers.Unique(images)
 	if len(images) == 0 {
@@ -1067,8 +1153,91 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	return nil
 }
 
+type packageInspectDocumentationOptions struct {
+	skipSignatureValidation bool
+	keys                    []string
+	outputDir               string
+	ociConcurrency          int
+	publicKeyPath           string
+	verify                  bool
+}
+
+func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions {
+	return &packageInspectDocumentationOptions{}
+}
+
+func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
+	o := newPackageInspectDocumentationOptions()
+	cmd := &cobra.Command{
+		Use:    "documentation [ PACKAGE_SOURCE ]",
+		Short:  "Extract documentation files from the package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
+	}
+
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
+	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
+	return cmd
+}
+
+func (o *packageInspectDocumentationOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
+}
+
+func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
+	ctx := cmd.Context()
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := packager.LoadOptions{
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		LayerTypes:           []zoci.LayerType{zoci.DocLayers},
+	}
+	pkgLayout, err := packager.LoadPackage(ctx, src, loadOpts)
+	if err != nil {
+		return fmt.Errorf("unable to load the package: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, pkgLayout.Cleanup())
+	}()
+	// Sanitize path to avoid writing outside user directory in the case of malicious edited package definition
+	outputPath := filepath.Join(o.outputDir, fmt.Sprintf("%s-documentation", filepath.Base(pkgLayout.Pkg.Metadata.Name)))
+	return pkgLayout.GetDocumentation(ctx, outputPath, o.keys)
+}
+
 type packageInspectDefinitionOptions struct {
 	namespaceOverride       string
+	verify                  bool
 	skipSignatureValidation bool
 	ociConcurrency          int
 	publicKeyPath           string
@@ -1076,25 +1245,43 @@ type packageInspectDefinitionOptions struct {
 
 func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
 	return &packageInspectDefinitionOptions{
-		skipSignatureValidation: false,
+		verify: false,
 	}
 }
 
 func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDefinitionOptions()
 	cmd := &cobra.Command{
-		Use:   "definition [ PACKAGE_SOURCE ]",
-		Short: "Displays the 'zarf.yaml' definition for the specified package",
-		Args:  cobra.MaximumNArgs(1),
-		RunE:  o.run,
+		Use:    "definition [ PACKAGE_SOURCE ]",
+		Short:  "Displays the 'zarf.yaml' definition for the specified package",
+		Args:   cobra.MaximumNArgs(1),
+		PreRun: o.preRun,
+		RunE:   o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", o.skipSignatureValidation, lang.CmdPackageFlagSkipSignatureValidation)
-
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
+}
+
+func (o *packageInspectDefinitionOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
@@ -1112,13 +1299,13 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filters.Empty(),
-		PublicKeyPath:           o.publicKeyPath,
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filters.Empty(),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, cluster, src, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1181,10 +1368,11 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
-	Package           string   `json:"package"`
-	NamespaceOverride string   `json:"namespaceOverride"`
-	Version           string   `json:"version"`
-	Components        []string `json:"components"`
+	Package           string                    `json:"package"`
+	NamespaceOverride string                    `json:"namespaceOverride"`
+	Version           string                    `json:"version"`
+	Connectivity      state.PackageConnectivity `json:"connectivity"`
+	Components        []string                  `json:"components"`
 }
 
 func (o *packageListOptions) run(ctx context.Context) error {
@@ -1203,6 +1391,7 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			Package:           pkg.Name,
 			NamespaceOverride: pkg.NamespaceOverride,
 			Version:           pkg.Data.Metadata.Version,
+			Connectivity:      pkg.GetPackageConnectivity(),
 			Components:        components,
 		})
 	}
@@ -1221,11 +1410,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Namespace Override", "Version", "Components"}
+		header := []string{"Package", "Namespace Override", "Version", "Connectivity", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.NamespaceOverride, info.Version, fmt.Sprintf("%v", info.Components),
+				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)
@@ -1239,6 +1428,7 @@ type packageRemoveOptions struct {
 	namespaceOverride       string
 	confirm                 bool
 	optionalComponents      string
+	verify                  bool
 	skipSignatureValidation bool
 	skipVersionCheck        bool
 	ociConcurrency          int
@@ -1267,18 +1457,28 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageRemoveFlagComponents)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageRemoveFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when removing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
-	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, "Path to values file(s) for removal actions")
-	cmd.Flags().StringToStringVar(&o.setValues, "set-values", map[string]string{}, "Set specific values via command line (format: key.path=value)")
-
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
 }
 
-func (o *packageRemoveOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
+func (o *packageRemoveOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -1289,22 +1489,9 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Parse values from files
-	vals, err := value.ParseFiles(ctx, o.valuesFiles, value.ParseFilesOptions{})
+	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
-		return fmt.Errorf("unable to parse values files: %w", err)
-	}
-
-	// Apply CLI --set-values overrides
-	for key, val := range o.setValues {
-		// Convert key to path format (ensure it starts with .)
-		path := value.Path(key)
-		if !strings.HasPrefix(key, ".") {
-			path = value.Path("." + key)
-		}
-		if err := vals.Set(path, val); err != nil {
-			return fmt.Errorf("unable to set value at path %s: %w", key, err)
-		}
+		return err
 	}
 
 	filter := filters.Combine(
@@ -1315,15 +1502,16 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Architecture:            config.GetArch(),
-		Filter:                  filter,
-		PublicKeyPath:           o.publicKeyPath,
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Architecture:         config.GetArch(),
+		Filter:               filter,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
 	if err != nil {
@@ -1363,12 +1551,14 @@ type packagePublishOptions struct {
 	retries                 int
 	signingKeyPath          string
 	signingKeyPassword      string
+	verify                  bool
 	skipSignatureValidation bool
 	confirm                 bool
 	ociConcurrency          int
 	publicKeyPath           string
 	skipVersionCheck        bool
 	withBuildMachineInfo    bool
+	tag                     string
 }
 
 func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
@@ -1389,20 +1579,31 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgPublishSigningKey), lang.CmdPackagePublishFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgPublishSigningKeyPassword), lang.CmdPackagePublishFlagSigningKeyPassword)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", v.GetString(VPkgCreateFlavor), lang.CmdPackagePublishFlagFlavor)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgPublishRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().StringVarP(&o.tag, "tag", "t", "", lang.CmdPackagePublishFlagTag)
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdPackagePublishFlagConfirm)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
-
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 	return cmd
 }
 
-func (o *packagePublishOptions) preRun(_ *cobra.Command, _ []string) {
-	// If --insecure was provided, set --skip-signature-validation to match
-	if config.CommonOptions.Insecure {
-		o.skipSignatureValidation = true
+func (o *packagePublishOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
 	}
 }
 
@@ -1443,6 +1644,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 			Flavor:               o.flavor,
 			SkipVersionCheck:     o.skipVersionCheck,
 			WithBuildMachineInfo: o.withBuildMachineInfo,
+			Tag:                  o.tag,
 		}
 		_, err = packager.PublishSkeleton(ctx, packageSource, dstRef, skeletonOpts)
 		return err
@@ -1469,9 +1671,15 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 
 		dstRef.Repository = path.Join(dstRef.Repository, srcPackageName)
 		dstRef.Reference = srcRef.Reference
+		if o.tag != "" {
+			dstRef.Reference = o.tag
+		}
 
 		return packager.PublishFromOCI(ctx, srcRef, dstRef, ociOpts)
 	}
+
+	// Establish default stance
+	verificationStrategy := getVerificationStrategy(o.verify)
 
 	if helpers.IsOCIURL(packageSource) && o.signingKeyPath != "" {
 		l.Info("pulling source package locally to sign", "reference", packageSource)
@@ -1484,12 +1692,12 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		}()
 
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
-			SkipSignatureValidation: o.skipSignatureValidation,
-			PublicKeyPath:           o.publicKeyPath,
-			Architecture:            config.GetArch(),
-			OCIConcurrency:          o.ociConcurrency,
-			RemoteOptions:           defaultRemoteOptions(),
-			CachePath:               cachePath,
+			VerificationStrategy: verificationStrategy,
+			VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+			Architecture:         config.GetArch(),
+			OCIConcurrency:       o.ociConcurrency,
+			RemoteOptions:        defaultRemoteOptions(),
+			CachePath:            cachePath,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to pull package: %w", err)
@@ -1498,13 +1706,13 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: verificationStrategy,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
@@ -1520,6 +1728,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		SigningKeyPassword: o.signingKeyPassword,
 		Retries:            o.retries,
 		RemoteOptions:      defaultRemoteOptions(),
+		Tag:                o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
@@ -1530,6 +1739,7 @@ type packagePullOptions struct {
 	shasum                  string
 	outputDirectory         string
 	skipSignatureValidation bool
+	verify                  bool
 	ociConcurrency          int
 	publicKeyPath           string
 }
@@ -1542,6 +1752,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 		Short:   lang.CmdPackagePullShort,
 		Example: lang.CmdPackagePullExample,
 		Args:    cobra.ExactArgs(1),
+		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
 
@@ -1550,8 +1761,26 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
 	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
 
 	return cmd
+}
+
+func (o *packagePullOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
 }
 
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
@@ -1569,14 +1798,15 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
 	packagePath, err := packager.Pull(ctx, srcURL, outputDir, packager.PullOptions{
-		SHASum:                  o.shasum,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		PublicKeyPath:           o.publicKeyPath,
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		SHASum:               o.shasum,
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
 	})
 	if err != nil {
 		return err
@@ -1593,6 +1823,7 @@ type packageSignOptions struct {
 	output             string
 	ociConcurrency     int
 	retries            int
+	verify             bool
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1615,6 +1846,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageSignFlagKey)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 
 	return cmd
 }
@@ -1663,12 +1895,12 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 		// Create publish options from sign options
 		publishOpts := &packagePublishOptions{
-			signingKeyPath:          o.signingKeyPath,
-			signingKeyPassword:      o.signingKeyPassword,
-			skipSignatureValidation: o.overwrite, // Use overwrite flag for skip validation
-			ociConcurrency:          o.ociConcurrency,
-			retries:                 o.retries,
-			publicKeyPath:           o.publicKeyPath,
+			signingKeyPath:     o.signingKeyPath,
+			signingKeyPassword: o.signingKeyPassword,
+			ociConcurrency:     o.ociConcurrency,
+			retries:            o.retries,
+			publicKeyPath:      o.publicKeyPath,
+			verify:             o.verify,
 		}
 
 		// Call publish with source and destination repository
@@ -1681,15 +1913,14 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Load the package
+	// Load the package - do not verify
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.overwrite,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		VerificationStrategy: layout.VerifyNever,
 	}
 
 	l.Info("loading package", "source", packageSource)
@@ -1705,8 +1936,18 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	signed := pkgLayout.IsSigned()
 
-	if signed && !o.overwrite {
-		return errors.New("package is already signed, use --overwrite to re-sign")
+	// To prevent a warning for package not being signed - we'll only run verification when enforced
+	if signed {
+		if o.verify {
+			verifyOpts := verifyBlobOptionsFromKeyPath(o.publicKeyPath)
+			err = pkgLayout.VerifyPackageSignature(ctx, *verifyOpts)
+			if err != nil {
+				return err
+			}
+		}
+		if !o.overwrite {
+			return errors.New("package is already signed, use --overwrite to re-sign")
+		}
 	}
 
 	// Sign the package
@@ -1715,6 +1956,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.KeyRef = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
+	signOpts.Overwrite = o.overwrite
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
@@ -1768,17 +2010,18 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Load the package (validates checksums automatically)
-	// Note: OCI signature validation does not require the whole package
+	// Load the package with verification enabled
+	// The verify command always uses strict verification (VerifyAlways)
+	// This will error if: signed package without key, or unsigned package with key
 	loadOpts := packager.LoadOptions{
-		PublicKeyPath:           "",
-		SkipSignatureValidation: true,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		OCIConcurrency:          o.ociConcurrency,
-		RemoteOptions:           defaultRemoteOptions(),
-		CachePath:               cachePath,
-		LayersSelector:          zoci.MetadataLayers,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
+		Filter:               filters.Empty(),
+		Architecture:         config.GetArch(),
+		OCIConcurrency:       o.ociConcurrency,
+		RemoteOptions:        defaultRemoteOptions(),
+		CachePath:            cachePath,
+		LayerTypes:           []zoci.LayerType{zoci.MetadataLayers},
 	}
 
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpts)
@@ -1791,36 +2034,20 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	// Checksum verification passed (we successfully loaded the package)
+	// If we got here, all verification passed
 	l.Info("checksum verification", "status", "PASSED")
 
-	isSigned := pkgLayout.IsSigned()
-
-	// Handle signature verification logic
-	if !isSigned && o.publicKeyPath != "" {
-		return errors.New("a key was provided but the package is not signed")
+	// Log signature verification status
+	if pkgLayout.IsSigned() {
+		// If signed and we got here, signature verification passed
+		l.Info("signature verification", "status", "PASSED")
 	}
 
-	if isSigned && o.publicKeyPath == "" {
-		return errors.New("package is signed but no public key was provided (use --key)")
-	}
-
-	if !isSigned && o.publicKeyPath == "" {
+	if !pkgLayout.IsSigned() {
+		// Package is unsigned (allowed when no key provided)
 		l.Warn("package is unsigned", "signed", false)
-		l.Info("verification complete", "status", "SUCCESS")
-		return nil
 	}
 
-	// Package is signed and we have a key - verify using VerifyPackageSignature
-	verifyOpts := utils.DefaultVerifyBlobOptions()
-	verifyOpts.KeyRef = o.publicKeyPath
-
-	err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-	if err != nil {
-		return fmt.Errorf("signature verification failed: %w", err)
-	}
-
-	l.Info("signature verification", "status", "PASSED")
 	l.Info("verification complete", "status", "SUCCESS")
 	return nil
 }
@@ -1885,4 +2112,17 @@ func getPackageCompletionArgs(cmd *cobra.Command, _ []string, _ string) ([]strin
 	}
 
 	return pkgCandidates, cobra.ShellCompDirectiveDefault
+}
+
+func getVerificationStrategy(verify bool) layout.VerificationStrategy {
+	if verify {
+		return layout.VerifyAlways
+	}
+	return layout.VerifyIfPossible
+}
+
+func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
+	opts := utils.DefaultVerifyBlobOptions()
+	opts.KeyRef = keyPath
+	return &opts
 }

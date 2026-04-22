@@ -5,22 +5,29 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -38,30 +45,39 @@ type initOptions struct {
 	artifactServer          state.ArtifactServerInfo
 	injectorPort            int
 	adoptExistingResources  bool
+	forceConflicts          bool
 	timeout                 time.Duration
 	retries                 int
 	publicKeyPath           string
+	verify                  bool
 	skipSignatureValidation bool
 	confirm                 bool
 	ociConcurrency          int
+	agentTLSCAPath          string
+	agentTLSCertPath        string
+	agentTLSKeyPath         string
 }
 
 func newInitCommand() *cobra.Command {
 	o := &initOptions{}
 
 	cmd := &cobra.Command{
-		Use:     "init",
+		Use:     "init [ PACKAGE_SOURCE ]",
 		Aliases: []string{"i"},
 		Short:   lang.CmdInitShort,
 		Long:    lang.CmdInitLong,
 		Example: lang.CmdInitExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
 		RunE:    o.run,
 	}
 
 	v := getViper()
 
 	// Init package set variable flags
-	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSet)
+	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
+	_ = cmd.Flags().MarkDeprecated("set", "Use --set-variables instead")
+	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdInitFlagSetVariables)
 
 	// Continue to require --confirm flag for init command to avoid accidental deployments
 	cmd.Flags().BoolVarP(&o.confirm, "confirm", "c", false, lang.CmdInitFlagConfirm)
@@ -69,11 +85,9 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.storageClass, "storage-class", v.GetString(VInitStorageClass), lang.CmdInitFlagStorageClass)
 
 	cmd.Flags().StringVar((*string)(&o.registryInfo.RegistryMode), "registry-mode", "",
-		fmt.Sprintf("how to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
+		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
-		"the port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
-	// While this feature is in early alpha we will hide the flags
-	cmd.Flags().MarkHidden("registry-mode")
+		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -84,7 +98,9 @@ func newInitCommand() *cobra.Command {
 
 	// Flags for using an external registry
 	cmd.Flags().StringVar(&o.registryInfo.Address, "registry-url", v.GetString(VInitRegistryURL), lang.CmdInitFlagRegURL)
-	cmd.Flags().IntVar(&o.registryInfo.NodePort, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	cmd.Flags().IntVar(&o.registryInfo.Port, "registry-port", v.GetInt(VInitRegistryPort), lang.CmdInitFlagRegPort)
+	cmd.Flags().IntVar(&o.registryInfo.Port, "nodeport", v.GetInt(VInitRegistryNodeport), lang.CmdInitFlagRegNodePort)
+	_ = cmd.Flags().MarkDeprecated("nodeport", "Use --registry-port instead")
 	cmd.Flags().StringVar(&o.registryInfo.PushUsername, "registry-push-username", v.GetString(VInitRegistryPushUser), lang.CmdInitFlagRegPushUser)
 	cmd.Flags().StringVar(&o.registryInfo.PushPassword, "registry-push-password", v.GetString(VInitRegistryPushPass), lang.CmdInitFlagRegPushPass)
 	cmd.Flags().StringVar(&o.registryInfo.PullUsername, "registry-pull-username", v.GetString(VInitRegistryPullUser), lang.CmdInitFlagRegPullUser)
@@ -96,51 +112,93 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
+	// Flags for providing user-managed agent TLS certificates
+	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
+
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.forceConflicts, "force-conflicts", false, lang.CmdPackageDeployFlagForceConflicts)
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
+	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
+	if errSig != nil {
+		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
+	}
+
+	// Agent TLS flags must all be provided together
+	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-mode")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
+	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
+	cmd.MarkFlagsMutuallyExclusive("registry-port", "nodeport")
 
 	cmd.Flags().SortFlags = true
 
 	return cmd
 }
 
-func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
+func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
+	// Handle deprecated --skip-signature-validation flag for backwards compatibility
+	if cmd.Flags().Changed("skip-signature-validation") {
+		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
+
+		if cmd.Flags().Changed("verify") {
+			return
+		}
+
+		o.verify = !o.skipSignatureValidation
+	}
+}
+
+func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
-	if err := o.validateInitFlags(); err != nil {
+	err := o.validateInitFlags()
+	if err != nil {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	if err := validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer); err != nil {
-		return err
-	}
-
-	if o.registryInfo.RegistryMode == "" {
-		if o.registryInfo.Address == "" {
-			o.registryInfo.RegistryMode = state.RegistryModeNodePort
-		} else {
-			o.registryInfo.RegistryMode = state.RegistryModeExternal
+	var agentTLS *pki.GeneratedPKI
+	if o.agentTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid agent TLS certificates: %w", err)
 		}
+		agentTLS = &loadedTLS
 	}
 
-	initPackageName := config.GetInitPackageName()
-
-	// Try to use an init-package in the executable directory if none exist in current working directory
-	packageSource, err := o.findInitPackage(cmd.Context(), initPackageName)
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
+	}
+
+	if o.registryInfo.RegistryMode == "" && o.registryInfo.Address != "" {
+		o.registryInfo.RegistryMode = state.RegistryModeExternal
+	}
+
+	packageSource := ""
+
+	if len(args) > 0 {
+		packageSource = args[0]
+	} else {
+		initPackageName := config.GetInitPackageName()
+
+		// Try to use an init-package in the executable directory if none exist in current working directory
+		packageSource, err = o.findInitPackage(cmd.Context(), initPackageName)
+		if err != nil {
+			return err
+		}
 	}
 
 	v := getViper()
@@ -152,16 +210,27 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:           o.publicKeyPath,
-		SkipSignatureValidation: o.skipSignatureValidation,
-		Filter:                  filters.Empty(),
-		Architecture:            config.GetArch(),
-		CachePath:               cachePath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerificationStrategy: getVerificationStrategy(o.verify),
+		Filter:               filter,
+		Architecture:         config.GetArch(),
+		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
 	if err != nil {
 		return fmt.Errorf("unable to load package: %w", err)
+	}
+	if pkgLayout.Pkg.Kind != v1alpha1.ZarfInitConfig {
+		return fmt.Errorf("zarf init can only deploy packages of kind \"%s\"", v1alpha1.ZarfInitConfig)
 	}
 	defer func() {
 		err = errors.Join(err, pkgLayout.Cleanup())
@@ -172,6 +241,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		RegistryInfo:           o.registryInfo,
 		ArtifactServer:         o.artifactServer,
 		AdoptExistingResources: o.adoptExistingResources,
+		ForceConflicts:         o.forceConflicts,
 		Timeout:                o.timeout,
 		Retries:                o.retries,
 		OCIConcurrency:         o.ociConcurrency,
@@ -180,6 +250,7 @@ func (o *initOptions) run(cmd *cobra.Command, _ []string) error {
 		InjectorPort:           o.injectorPort,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
+		AgentTLS:               agentTLS,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -281,7 +352,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 }
 
 // Checks if an init has already happened and if so check that none of the Zarf service information has changed
-func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo) error {
+func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
@@ -299,13 +370,54 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(gitServer, s.GitServer) {
 		return fmt.Errorf("cannot change git server information after initial init, to update run `zarf tools update-creds git`")
 	}
-	if helpers.IsNotZeroAndNotEqual(registryInfo, s.RegistryInfo) {
+	if state.CheckIfRegistryAddressOrCredsChanged(s.RegistryInfo, registryInfo) {
 		return fmt.Errorf("cannot change registry information after initial init, to update run `zarf tools update-creds registry`")
 	}
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
+	if agentTLS != nil {
+		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
+			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
+			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
+			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+		}
+	}
 	return nil
+}
+
+// loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
+func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	ca, err := os.ReadFile(caPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS CA: %w", err)
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS cert: %w", err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS key: %w", err)
+	}
+	if _, err := tls.X509KeyPair(cert, key); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS cert and key do not match: %w", err)
+	}
+	parsed, err := pki.ParseCertFromPEM(cert)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse agent TLS certificate: %w", err)
+	}
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(ca) {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
+	}
+	if _, err := parsed.Verify(x509.VerifyOptions{
+		Roots:   caPool,
+		DNSName: state.ZarfAgentHost,
+	}); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS certificate failed validation: %w", err)
+	}
+	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
 
 func (o *initOptions) validateInitFlags() error {
@@ -336,6 +448,13 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
 				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
+	}
+
+	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {
+		return fmt.Errorf("--registry-url is required when --registry-mode=external")
+	}
+	if o.registryInfo.RegistryMode != "" && o.registryInfo.RegistryMode != state.RegistryModeExternal && o.registryInfo.Address != "" {
+		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
 	}
 
 	return nil

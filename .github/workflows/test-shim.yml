@@ -68,14 +68,7 @@ jobs:
         run: |
           echo skipped
 
-  validate-kind:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Skipped
-        run: |
-          echo skipped
-
-  validate-minikube:
+  validate-kind-arm64:
     runs-on: ubuntu-latest
     steps:
       - name: Skipped

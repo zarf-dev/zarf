@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -108,7 +109,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	tmpdir := t.TempDir()
 	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
 	suite.NoError(err)
-	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, "zarf-package-argocd-amd64.tar.zst"), "--confirm"}
+	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)
 	err = exec.CmdWithPrint(zarfBinPath, mirrorArgs...)
 	suite.NoError(err, "unable to mirror the package with zarf")
@@ -174,7 +175,7 @@ func (suite *ExtInClusterTestSuite) Test_1_Deploy() {
 	createPodInfoPackageWithInsecureSources(suite.T(), temp)
 
 	// Deploy the flux example package
-	deployArgs := []string{"package", "deploy", filepath.Join(temp, "zarf-package-podinfo-flux-amd64.tar.zst"), "--confirm"}
+	deployArgs := []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", config.GetArch())), "--confirm"}
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 

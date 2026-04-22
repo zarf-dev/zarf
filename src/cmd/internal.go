@@ -134,12 +134,16 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 					addHiddenDummyFlag(toolCmd, "no-progress")
 					addHiddenDummyFlag(toolCmd, "zarf-cache")
 					addHiddenDummyFlag(toolCmd, "tmpdir")
-					addHiddenDummyFlag(toolCmd, "insecure")
 					addHiddenDummyFlag(toolCmd, "no-color")
 				}
 
+				// Remove the docs for the various sub-commands for `kubectl` and `helm`
+				if toolCmd.Use == "kubectl" || toolCmd.Use == "helm" {
+					toolCmd.RemoveCommand(toolCmd.Commands()...)
+				}
+
 				// Remove the default values from all of the helm commands during the CLI command doc generation
-				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" {
+				if toolCmd.Use == "helm" || toolCmd.Use == "sbom" || toolCmd.Use == "kubectl" {
 					toolCmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
 						if flag.Value.Type() == "string" {
 							flag.DefValue = ""
@@ -172,11 +176,11 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 	if err := os.RemoveAll("./site/src/content/docs/commands"); err != nil {
 		return err
 	}
-	if err := os.Mkdir("./site/src/content/docs/commands", 0775); err != nil {
+	if err := os.Mkdir("./site/src/content/docs/commands", 0o775); err != nil {
 		return err
 	}
 
-	var prependTitle = func(s string) string {
+	prependTitle := func(s string) string {
 		fmt.Println(s)
 
 		name := filepath.Base(s)
@@ -198,7 +202,7 @@ tableOfContents: false
 `, title, title)
 	}
 
-	var linkHandler = func(link string) string {
+	linkHandler := func(link string) string {
 		return "/commands/" + link[:len(link)-3] + "/"
 	}
 
@@ -372,7 +376,7 @@ func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) erro
 	if err != nil {
 		logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 	}
-	fmt.Print(helmShouldCreate)
+	fmt.Printf("%v", helmShouldCreate)
 	return nil
 }
 

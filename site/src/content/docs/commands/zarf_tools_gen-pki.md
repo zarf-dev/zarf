@@ -10,6 +10,18 @@ tableOfContents: false
 
 Generates a Certificate Authority and PKI chain of trust for the given host
 
+### Synopsis
+
+Generates a Certificate Authority and PKI chain of trust for the given host
+
+To generate certificates for the Zarf agent with a 1-year lifetime:
+
+  $ zarf tools gen-pki agent-hook.zarf.svc --duration 8760h
+
+The resulting tls.ca, tls.crt, and tls.key files can then be passed to:
+
+  $ zarf init --agent-tls-ca tls.ca --agent-tls-cert tls.crt --agent-tls-key tls.key
+
 ```
 zarf tools gen-pki HOST [flags]
 ```
@@ -17,6 +29,7 @@ zarf tools gen-pki HOST [flags]
 ### Options
 
 ```
+      --duration duration          Duration for the generated certificates (e.g., 8760h for 1 year, 87600h for ~10 years) (default 9000h0m0s)
   -h, --help                       help for gen-pki
       --sub-alt-name stringArray   Specify Subject Alternative Names for the certificate
 ```

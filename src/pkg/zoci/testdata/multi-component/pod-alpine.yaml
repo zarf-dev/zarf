@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alpine-configmap
+data:
+  app: alpine
+  version: "3.21.3"

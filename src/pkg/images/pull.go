@@ -9,22 +9,23 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	retry "github.com/avast/retry-go/v4"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/context/docker"
 	"github.com/docker/cli/cli/flags"
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/name"
 	cranev1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/moby/moby/client"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -41,7 +42,6 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -67,8 +67,8 @@ type imageWithOverride struct {
 	original   transform.Image
 }
 
-// Pull pulls all images from the given config.
-func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) (map[transform.Image]ocispec.Manifest, error) {
+// Pull pulls all images to the destination directory.
+func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]ImageWithManifest, error) {
 	if len(imageList) == 0 {
 		return nil, fmt.Errorf("image list is required")
 	}
@@ -118,8 +118,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if err != nil {
 		return nil, fmt.Errorf("failed to get credentials: %w", err)
 	}
+	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
+	if err != nil {
+		return nil, err
+	}
 	client := &auth.Client{
-		Client:     retry.DefaultClient,
+		Client: &http.Client{
+			Transport: transport,
+		},
 		Cache:      auth.NewCache(),
 		Credential: credentials.Credential(credStore),
 	}
@@ -142,18 +148,13 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		}
 	}
 
-	client.Client.Transport, err = orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	l.Debug("gathering credentials from default Docker config file", "credentials_configured", credStore.IsAuthConfigured())
+	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
 		OS: "linux",
 	}
-	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
+	imagesWithManifests := []ImageWithManifest{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
@@ -168,10 +169,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		eg.Go(func() error {
 			repo := &orasRemote.Repository{}
 
-			repo.Reference, err = registry.ParseReference(image.overridden.Reference)
+			ref, err := registry.ParseReference(image.overridden.Reference)
 			if err != nil {
 				return err
 			}
+			repo.Reference = ref
 			repo.Client = client
 
 			repo.PlainHTTP = opts.PlainHTTP
@@ -240,7 +242,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				byteSize:            size,
 				manifestDesc:        desc,
 			})
-			imagesWithManifests[image.original] = manifest
+			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+				Image:    image.original,
+				Manifest: manifest,
+			})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
 		})
@@ -262,7 +267,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		maps.Copy(imagesWithManifests, daemonImagesWithManifests)
+		imagesWithManifests = append(imagesWithManifests, daemonImagesWithManifests...)
 	}
 
 	for _, imageInfo := range imagesInfo {
@@ -312,17 +317,17 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ map[transform.Image]ocispec.Manifest, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []ImageWithManifest, err error) {
 	l := logger.From(ctx)
-	imagesWithManifests := map[transform.Image]ocispec.Manifest{}
+	imagesWithManifests := []ImageWithManifest{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
 		return nil, err
 	}
-	cli, err := client.NewClientWithOpts(
+	cli, err := client.New(
 		client.WithHost(dockerEndPointHost),
 		client.WithTLSClientConfigFromEnv(),
-		client.WithVersionFromEnv(),
+		client.WithAPIVersionFromEnv(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
@@ -330,7 +335,6 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	defer func() {
 		err = errors.Join(err, cli.Close())
 	}()
-	cli.NegotiateAPIVersion(ctx)
 	for _, daemonImage := range daemonImages {
 		err := func() error {
 			// Pull the image into a Crane directory as the logic for extracting the earlier Docker formats is quite complex
@@ -417,7 +421,10 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return err
 			}
-			imagesWithManifests[daemonImage.original] = manifest
+			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+				Image:    daemonImage.original,
+				Manifest: manifest,
+			})
 			size := getSizeOfImage(desc, manifest)
 			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
 			copyOpts := oras.DefaultCopyOptions
@@ -464,18 +471,37 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 	pullSrc = orasCache.New(repo, localCache)
-	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-	trackedDst.StartReporting(ctx)
-	defer trackedDst.StopReporting()
-	desc, err := oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+	var desc ocispec.Descriptor
+	err = retry.Do(
+		func() error {
+			trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+			trackedDst.StartReporting(ctx)
+			defer trackedDst.StopReporting()
+			var copyErr error
+			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+			return copyErr
+		},
+		retry.Attempts(uint(config.ZarfDefaultRetries)),
+		retry.Delay(config.ZarfDefaultRetryDelay),
+		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.Context(ctx),
+		retry.OnRetry(func(n uint, err error) {
+			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
+				l.Warn("retrying image pull",
+					"attempt", n+1,
+					"maxAttempts", config.ZarfDefaultRetries,
+					"image", imageInfo.registryOverrideRef,
+					"error", err,
+				)
+			}
+		}),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}
-	if desc.Annotations == nil {
-		desc.Annotations = make(map[string]string)
-	}
-	desc.Annotations[ocispec.AnnotationRefName] = imageInfo.ref
-	desc.Annotations[ocispec.AnnotationBaseImageName] = imageInfo.ref
+	desc = addNameAnnotationsToDesc(desc, imageInfo.ref)
 	err = dst.Tag(ctx, desc, imageInfo.ref)
 	if err != nil {
 		return fmt.Errorf("failed to tag image: %w", err)

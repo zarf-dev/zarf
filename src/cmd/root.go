@@ -16,9 +16,11 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"helm.sh/helm/v4/pkg/kube"
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -69,6 +71,8 @@ func (o *outputFormat) Type() string {
 var rootCmd = NewZarfCommand()
 
 func preRun(cmd *cobra.Command, _ []string) error {
+	// This ensures the field manager is set to Zarf during any Helm SDK actions
+	kube.ManagedFieldsManager = cluster.FieldManagerName
 	// Configure user defined Features
 	err := setupFeatures(features)
 	if err != nil {
@@ -79,12 +83,6 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		if _, err = fmt.Fprintln(os.Stderr, logo()); err != nil {
 			return err
 		}
-	}
-
-	// If --insecure was provided, set --insecure-skip-tls-verify and --plain-http to match
-	if config.CommonOptions.Insecure {
-		config.CommonOptions.InsecureSkipTLSVerify = true
-		config.CommonOptions.PlainHTTP = true
 	}
 
 	// Skip for vendor only commands
@@ -184,7 +182,7 @@ func NewZarfCommand() *cobra.Command {
 		Long:         lang.RootCmdLong,
 		Args:         cobra.MaximumNArgs(1),
 		SilenceUsage: true,
-		// TODO(mkcp): Do we actually want to silence errors here?
+		// We use silence errors so we can print out errors in the Zarf log format
 		SilenceErrors:     true,
 		PersistentPreRunE: preRun,
 		Run:               run,
@@ -237,17 +235,15 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVar(&config.CommonOptions.TempDirectory, "tmpdir", vpr.GetString(VTmpDir), lang.RootCmdFlagTempDir)
 
 	// Security
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.Insecure, "insecure", vpr.GetBool(VInsecure), lang.RootCmdFlagInsecure)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.PlainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
-	rootCmd.PersistentFlags().BoolVar(&config.CommonOptions.InsecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
-	_ = rootCmd.PersistentFlags().MarkDeprecated("insecure", "please use --plain-http, --insecure-skip-tls-verify, or --skip-signature-validation instead.")
+	rootCmd.PersistentFlags().BoolVar(&plainHTTP, "plain-http", vpr.GetBool(VPlainHTTP), lang.RootCmdFlagPlainHTTP)
+	rootCmd.PersistentFlags().BoolVar(&insecureSkipTLSVerify, "insecure-skip-tls-verify", vpr.GetBool(VInsecureSkipTLSVerify), lang.RootCmdFlagInsecureSkipTLSVerify)
 }
 
 // Execute is the entrypoint for the CLI.
-func Execute(ctx context.Context) {
+func Execute(ctx context.Context) error {
 	cmd, err := rootCmd.ExecuteContextC(ctx)
 	if err == nil {
-		return
+		return nil
 	}
 
 	// Check if we need to use the default err printer
@@ -260,7 +256,7 @@ func Execute(ctx context.Context) {
 
 	// Use default logger in case there was an error prior to the logger being setup
 	logger.Default().Error(err.Error())
-	os.Exit(1)
+	return err
 }
 
 // setupLogger handles creating a logger and setting it as the global default.

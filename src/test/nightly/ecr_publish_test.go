@@ -65,7 +65,7 @@ func TestECRPublishing(t *testing.T) {
 
 	pulledPackagePath := filepath.Join(pullTempDir, testPackageFileName)
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, "--skip-signature-validation")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath)
 	require.NoError(t, err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "inspect", "definition", pulledPackagePath, keyFlag)

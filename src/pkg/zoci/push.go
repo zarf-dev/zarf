@@ -6,6 +6,7 @@ package zoci
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -101,15 +102,23 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 	// this is a conservative total using layer sizes; progress still works fine.)
 	totalSize := oci.SumDescsSize(descs)
 
-	var publishedDesc ocispec.Descriptor
+	if annotations[ocispec.AnnotationTitle] == "" {
+		return ocispec.Descriptor{}, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
+	}
 
+	var publishedDesc ocispec.Descriptor
 	err = retry.Do(
 		func() error {
 			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
-			manifestConfigDesc, cfgErr := r.OrasRemote.CreateAndPushManifestConfig(ctx, annotations, ZarfConfigMediaType)
-			if cfgErr != nil {
-				return cfgErr
+
+			manifestConfigBytes, err := json.Marshal(pkgLayout.Pkg)
+			if err != nil {
+				return err
+			}
+			manifestConfigDesc, err := r.PushLayer(ctx, manifestConfigBytes, ZarfConfigMediaType)
+			if err != nil {
+				return err
 			}
 
 			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
@@ -128,7 +137,8 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			trackedRemote.StartReporting(ctx)
 			defer trackedRemote.StopReporting()
 
-			publishedDesc, copyErr := oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			var copyErr error
+			publishedDesc, copyErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}
@@ -146,7 +156,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
 				l.Warn("retrying package push",
 					"attempt", n+1,
-					"max_attempts", opts.Retries,
+					"maxAttempts", opts.Retries,
 					"error", err,
 				)
 			}

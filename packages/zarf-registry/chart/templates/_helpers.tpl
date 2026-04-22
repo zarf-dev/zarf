@@ -78,6 +78,19 @@ Create the name of the service account to use
 {{- end -}}
 
 {{/*
+Resolve the registry port. Prefers .Values.service.registryPort when it has been
+substituted to a numeric value. Falls back to .Values.service.nodePort for
+backwards compatibility with older Zarf versions that only template ZARF_NODEPORT.
+*/}}
+{{- define "registry.port" -}}
+{{- if gt (atoi (toString .Values.service.registryPort)) 0 -}}
+{{- .Values.service.registryPort -}}
+{{- else -}}
+{{- .Values.service.nodePort -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Determine if host network proxy should be enabled
 */}}
 {{- define "proxy.hostNetwork" -}}
@@ -97,4 +110,22 @@ Get the appropriate image repository based on proxy configuration
 {{- else -}}
 {{ .Values.image.repository }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Build registry configData with mTLS settings when enabled
+*/}}
+{{- define "docker-registry.configData" -}}
+{{- $config := deepCopy .Values.secrets.configData -}}
+{{- if .Values.mtls.enabled -}}
+{{- $tlsDefaults := dict
+  "certificate" "/certs/server/tls.crt"
+  "key" "/certs/server/tls.key"
+  "clientcas" (list "/certs/server/ca.crt")
+  "clientauth" "verify-client-cert-if-given"
+  "minimumtls" "tls1.2"
+-}}
+{{- $_ := set $config.http "tls" (mergeOverwrite $tlsDefaults (default dict $config.http.tls)) -}}
+{{- end -}}
+{{- toJson $config -}}
 {{- end -}}

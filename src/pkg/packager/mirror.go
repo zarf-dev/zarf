@@ -24,6 +24,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // ImagePushOptions are optional parameters to push images in a zarf package to a registry
@@ -32,7 +33,7 @@ type ImagePushOptions struct {
 	NoImageChecksum bool
 	Retries         int
 	OCIConcurrency  int
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // PushImagesToRegistry pushes images in the package layout to the specified registry
@@ -48,7 +49,7 @@ func PushImagesToRegistry(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	}
 	refs := []transform.Image{}
 	for _, component := range pkgLayout.Pkg.Components {
-		for _, img := range component.Images {
+		for _, img := range component.GetImages() {
 			ref, err := transform.ParseImageRef(img)
 			if err != nil {
 				return fmt.Errorf("failed to create ref for image %s: %w", img, err)

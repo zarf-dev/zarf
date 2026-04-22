@@ -14,14 +14,16 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/internal/value"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DefinitionOptions are the optional parameters to load.PackageDefinition
@@ -37,6 +39,7 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	types.RemoteOptions
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
@@ -49,8 +52,12 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		"setVariables", opts.SetVariables,
 	)
 
-	// Load PackageConfig from disk
-	b, err := os.ReadFile(filepath.Join(packagePath, layout.ZarfYAML))
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+
+	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -59,7 +66,11 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
-	pkg, err = resolveImports(ctx, pkg, packagePath, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -75,7 +86,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return v1alpha1.ZarfPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, packagePath, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
@@ -96,7 +107,7 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 	if !hasFlavoredComponent(pkg, flavor) {
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
-	if err := lint.ValidatePackage(pkg); err != nil {
+	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
@@ -136,10 +147,15 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 
 	l := logger.From(ctx)
 
+	pkgPath, err := layout.ResolvePackagePath(packagePath)
+	if err != nil {
+		return err
+	}
+
 	// Resolve values file paths relative to the package directory
 	valueFilePaths := make([]string, len(pkg.Values.Files))
 	for i, vf := range pkg.Values.Files {
-		valueFilePaths[i] = filepath.Join(packagePath, vf)
+		valueFilePaths[i] = filepath.Join(pkgPath.BaseDir, vf)
 	}
 
 	vals, err := value.ParseFiles(ctx, valueFilePaths, value.ParseFilesOptions{})
@@ -148,7 +164,7 @@ func validateValuesSchema(ctx context.Context, pkg v1alpha1.ZarfPackage, package
 	}
 
 	// Resolve declared schema path relative to package root
-	schemaPath := filepath.Join(packagePath, pkg.Values.Schema)
+	schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
 	if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: opts.skipRequired}); err != nil {
 		return fmt.Errorf("values validation failed: %w", err)
 	}

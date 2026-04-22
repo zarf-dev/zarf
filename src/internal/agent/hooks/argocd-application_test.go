@@ -79,6 +79,39 @@ func TestArgoAppWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
+			name: "should not re-mutate on create if url already points to zarf git server",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "https://git-server.com/a-push-user/peanuts-3883081014"},
+					Sources: []ApplicationSource{
+						{RepoURL: "https://git-server.com/a-push-user/cashews-580170494"},
+						{RepoURL: "https://git-server.com/a-push-user/almonds-640159520"},
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"https://git-server.com/a-push-user/peanuts-3883081014",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/0/repoURL",
+					"https://git-server.com/a-push-user/cashews-580170494",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/1/repoURL",
+					"https://git-server.com/a-push-user/almonds-640159520",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should return internal server error on bad git URL",
 			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
 				Spec: ApplicationSpec{
@@ -91,7 +124,6 @@ func TestArgoAppWebhook(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)

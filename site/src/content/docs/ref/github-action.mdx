@@ -23,7 +23,7 @@ jobs:
       - name: Install Zarf
         uses: zarf-dev/setup-zarf@main # use action's main branch
         with:
-          version: v0.32.2 # any valid zarf version, leave blank to use latest
+          version: v0.69.0 # any valid zarf version, leave blank to use latest
 
       - name: Create the package
         run: zarf package create --confirm

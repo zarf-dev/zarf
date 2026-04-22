@@ -89,6 +89,11 @@ variables:
     default: ""
     autoIndent: true
 
+  - name: REGISTRY_NODE_SELECTOR
+    description: Custom node selector map for the registry
+    default: ""
+    autoIndent: true
+
   - name: PROXY_TOLERATIONS
     description: Custom tolerations array for the registry proxy and injector
     default: ""

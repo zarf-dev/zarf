@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -16,6 +17,8 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 // DevDeployOptions are the optionalParameters to DevDeploy
@@ -44,7 +47,7 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
-	RemoteOptions
+	types.RemoteOptions
 }
 
 // DevDeploy creates + deploys a package in one shot
@@ -59,12 +62,18 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		opts.Timeout = config.ZarfDefaultTimeout
 	}
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return err
+	}
+
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
 		CachePath:        opts.CachePath,
 		IsInteractive:    false,
 		SkipVersionCheck: opts.SkipVersionCheck,
+		RemoteOptions:    opts.RemoteOptions,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
@@ -84,6 +93,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	if !opts.AirgapMode {
 		for idx := range pkg.Components {
 			pkg.Components[idx].Images = []string{}
+			pkg.Components[idx].ImageArchives = []v1alpha1.ImageArchive{}
 			pkg.Components[idx].Repos = []string{}
 		}
 	}
@@ -113,7 +123,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	var d deployer
 	d.vc = variableConfig
 	if !opts.AirgapMode {
-		pkgLayout.Pkg.Metadata.YOLO = true
 		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState, err := state.Default()
 		if err != nil {
@@ -123,10 +132,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			defaultState.RegistryInfo.Address = opts.RegistryURL
 		}
 		d.s = defaultState
-	} else {
-		d.hpaModified = false
-		// Reset registry HPA scale down whether an error occurs or not
-		defer d.resetRegistryHPA(ctx)
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
@@ -134,11 +139,9 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SetVariables:   opts.DeploySetVariables,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
+		Connected:      !opts.AirgapMode,
 		OCIConcurrency: opts.OCIConcurrency,
-		RemoteOptions: RemoteOptions{
-			PlainHTTP:             config.CommonOptions.PlainHTTP,
-			InsecureSkipTLSVerify: config.CommonOptions.InsecureSkipTLSVerify,
-		},
+		RemoteOptions:  opts.RemoteOptions,
 	})
 	if err != nil {
 		return err
