@@ -153,8 +153,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
+		if manifest.IsIndex || images.OnlyHasImageLayers(manifest.Manifest) {
 			sbomImageList = append(sbomImageList, manifest.Image)
 		}
 

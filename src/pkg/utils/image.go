@@ -15,11 +15,13 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
+// FIXME: should we keep this function?
 func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
@@ -45,6 +47,75 @@ func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 			}
 			return img, nil
 		}
+	}
+
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
+}
+
+// PlatformImage pairs a loaded image with the platform it targets.
+// Platform is nil for images stored as a single-platform manifest.
+type PlatformImage struct {
+	Image    v1.Image
+	Platform *v1.Platform
+}
+
+// LoadOCIImagePlatforms returns the v1.Images for refInfo. Single-platform images return one entry
+// with a nil Platform; multi-arch indexes return one entry per platform manifest. Attestation or
+// unknown-platform manifests inside an index are skipped so syft doesn't try to scan them.
+// FIXME: potentially this should be moved to syft, also we may want to not error
+func LoadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]PlatformImage, error) {
+	layoutPath := layout.Path(imgPath)
+	imgIdx, err := layoutPath.ImageIndex()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image index: %w", err)
+	}
+	idxManifest, err := imgIdx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image manifest: %w", err)
+	}
+
+	for _, manifest := range idxManifest.Manifests {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Reference &&
+			(manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Path+refInfo.TagOrDigest || refInfo.Host != "docker.io") &&
+			manifest.Annotations[ocispec.AnnotationRefName] != refInfo.Reference {
+			continue
+		}
+
+		if manifest.MediaType == types.OCIImageIndex || manifest.MediaType == types.DockerManifestList {
+			subIdx, err := imgIdx.ImageIndex(manifest.Digest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load image index for %s: %w", refInfo.Reference, err)
+			}
+			subManifest, err := subIdx.IndexManifest()
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse image index manifest for %s: %w", refInfo.Reference, err)
+			}
+			var platformImages []PlatformImage
+			for _, pm := range subManifest.Manifests {
+				if pm.Platform == nil || pm.Platform.Architecture == "" || pm.Platform.Architecture == "unknown" {
+					continue
+				}
+				img, err := subIdx.Image(pm.Digest)
+				if err != nil {
+					return nil, fmt.Errorf("failed to lookup platform image for %s: %w", refInfo.Reference, err)
+				}
+				platform := pm.Platform
+				platformImages = append(platformImages, PlatformImage{
+					Image:    img,
+					Platform: platform,
+				})
+			}
+			if len(platformImages) == 0 {
+				return nil, fmt.Errorf("image index for %s contained no scannable platform manifests", refInfo.Reference)
+			}
+			return platformImages, nil
+		}
+
+		img, err := layoutPath.Image(manifest.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup image %s: %w", refInfo.Reference, err)
+		}
+		return []PlatformImage{{Image: img}}, nil
 	}
 
 	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)

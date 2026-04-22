@@ -230,6 +230,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					byteSize:            size,
 					manifestDesc:        desc,
 				})
+				imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
+					Image:   image.original,
+					IsIndex: true,
+				})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)
 				return nil
 			}

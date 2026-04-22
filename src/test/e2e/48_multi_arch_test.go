@@ -32,7 +32,7 @@ func TestMultiArchPackage(t *testing.T) {
 	pkgDefinitionPath := filepath.Join("src", "test", "packages", "48-multi-arch")
 	createDir := t.TempDir()
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm", "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
@@ -80,6 +80,22 @@ func TestMultiArchPackage(t *testing.T) {
 	var pulledIdx ocispec.Index
 	require.NoError(t, json.Unmarshal(b, &pulledIdx))
 	require.Greater(t, len(pulledIdx.Manifests), 1, "expected multiple platform manifests under the index")
+
+	sbomDir := t.TempDir()
+	require.NoError(t, pkgLayout.GetSBOM(t.Context(), sbomDir))
+	sbomEntries, err := os.ReadDir(sbomDir)
+	require.NoError(t, err)
+	var platformSBOMs []string
+	for _, entry := range sbomEntries {
+		name := entry.Name()
+		if strings.HasSuffix(name, ".json") && strings.Contains(name, multiArchPodinfoIndexDigest[len("sha256:"):]) {
+			platformSBOMs = append(platformSBOMs, name)
+		}
+	}
+	require.GreaterOrEqual(t, len(platformSBOMs), 2, "expected per-platform SBOMs for the multi-arch image, got %v", platformSBOMs)
+	for _, name := range platformSBOMs {
+		require.Contains(t, name, "linux-", "multi-arch SBOM filenames should be suffixed with their platform, got %q", name)
+	}
 
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pulledPkgPath, "--confirm", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)

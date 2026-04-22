@@ -62,22 +62,42 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 			componentSBOMs = append(componentSBOMs, comp.Name)
 		}
 	}
-	jsonList, err := generateJSONList(componentSBOMs, images)
+
+	type imageSBOMTarget struct {
+		img        v1.Image
+		identifier string
+	}
+	var targets []imageSBOMTarget
+	for _, refInfo := range images {
+		platformImages, err := utils.LoadOCIImagePlatforms(filepath.Join(buildPath, string(ImagesDir)), refInfo)
+		if err != nil {
+			return fmt.Errorf("failed to load OCI image: %w", err)
+		}
+		for _, pi := range platformImages {
+			identifier := refInfo.Reference
+			if pi.Platform != nil && pi.Platform.Architecture != "" {
+				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.Platform.OS, pi.Platform.Architecture)
+			}
+			targets = append(targets, imageSBOMTarget{img: pi.Image, identifier: identifier})
+		}
+	}
+
+	identifiers := make([]string, 0, len(targets))
+	for _, t := range targets {
+		identifiers = append(identifiers, t.identifier)
+	}
+	jsonList, err := generateJSONList(componentSBOMs, identifiers)
 	if err != nil {
 		return err
 	}
 
-	for _, refInfo := range images {
-		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
-		if err != nil {
-			return fmt.Errorf("failed to load OCI image: %w", err)
-		}
-		l.Info("creating image SBOM", "reference", refInfo.Reference)
-		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
+	for _, t := range targets {
+		l.Info("creating image SBOM", "reference", t.identifier)
+		b, err := createImageSBOM(ctx, cachePath, outputPath, t.img, t.identifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
+		err = createSBOMViewerAsset(outputPath, t.identifier, b, jsonList)
 		if err != nil {
 			return err
 		}
@@ -112,7 +132,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	return nil
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
+func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, ImagesDir)
 
 	// This is a write cache
@@ -120,18 +140,14 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 		return nil, fmt.Errorf("failed to create image cache directory %s: %w", imageCachePath, err)
 	}
 
-	refInfo, err := transform.ParseImageRef(src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
-	}
-	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
-	err = syftImage.Read()
+	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(identifier))
+	err := syftImage.Read()
 	if err != nil {
 		return nil, err
 	}
 	cfg := getDefaultSyftConfig()
 	syftSrc := stereoscopesource.New(syftImage, stereoscopesource.ImageConfig{
-		Reference: refInfo.Reference,
+		Reference: identifier,
 	})
 	sbom, err := syft.CreateSBOM(ctx, syftSrc, cfg)
 	if err != nil {
@@ -142,7 +158,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 		return nil, err
 	}
 
-	normalizedName := getNormalizedFileName(fmt.Sprintf("%s.json", refInfo.Reference))
+	normalizedName := getNormalizedFileName(fmt.Sprintf("%s.json", identifier))
 	path := filepath.Join(outputPath, normalizedName)
 	err = os.WriteFile(path, jsonData, 0o666)
 	if err != nil {
@@ -358,11 +374,10 @@ func getNormalizedFileName(identifier string) string {
 	return transformRegex.ReplaceAllString(identifier, "_")
 }
 
-func generateJSONList(components []string, imageList []transform.Image) ([]byte, error) {
+func generateJSONList(components []string, imageIdentifiers []string) ([]byte, error) {
 	var jsonList []string
-	for _, refInfo := range imageList {
-		normalized := getNormalizedFileName(refInfo.Reference)
-		jsonList = append(jsonList, normalized)
+	for _, id := range imageIdentifiers {
+		jsonList = append(jsonList, getNormalizedFileName(id))
 	}
 	for _, k := range components {
 		normalized := getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, k))

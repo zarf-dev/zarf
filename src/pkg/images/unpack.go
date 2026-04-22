@@ -25,9 +25,12 @@ import (
 )
 
 // ImageWithManifest represents an image reference and its associated OCI manifest.
+// Manifest is the zero value when IsIndex is true; the on-disk OCI layout holds the index blob instead.
+// FIXME: probably should change this to sort out whether its an index or manifest
 type ImageWithManifest struct {
 	Image    transform.Image
 	Manifest ocispec.Manifest
+	IsIndex  bool
 }
 
 const (
