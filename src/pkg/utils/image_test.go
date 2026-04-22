@@ -98,6 +98,54 @@ func TestLoadOCIImagePlatformsMultiArch(t *testing.T) {
 	require.ElementsMatch(t, []string{"linux/amd64", "linux/arm64"}, platforms)
 }
 
+func TestLoadOCIImagePlatformsNestedIndex(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path, err := layout.Write(dir, empty.Index)
+	require.NoError(t, err)
+
+	amd64, err := random.Image(256, 1)
+	require.NoError(t, err)
+	arm64, err := random.Image(256, 1)
+	require.NoError(t, err)
+
+	inner := mutate.AppendManifests(empty.Index,
+		mutate.IndexAddendum{
+			Add: amd64,
+			Descriptor: v1.Descriptor{
+				Platform: &v1.Platform{OS: "linux", Architecture: "amd64"},
+			},
+		},
+		mutate.IndexAddendum{
+			Add: arm64,
+			Descriptor: v1.Descriptor{
+				Platform: &v1.Platform{OS: "linux", Architecture: "arm64"},
+			},
+		},
+	)
+	outer := mutate.AppendManifests(empty.Index, mutate.IndexAddendum{Add: inner})
+
+	ref := "example.com/foo/nested:1.0.0"
+	require.NoError(t, path.AppendIndex(outer, layout.WithAnnotations(map[string]string{
+		ocispec.AnnotationBaseImageName: ref,
+		ocispec.AnnotationRefName:       ref,
+	})))
+
+	refInfo, err := transform.ParseImageRef(ref)
+	require.NoError(t, err)
+
+	images, err := LoadOCIImagePlatforms(dir, refInfo)
+	require.NoError(t, err)
+	require.Len(t, images, 2, "nested platform manifests must be found")
+
+	var platforms []string
+	for _, pi := range images {
+		require.NotNil(t, pi.Platform)
+		platforms = append(platforms, pi.Platform.OS+"/"+pi.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"linux/amd64", "linux/arm64"}, platforms)
+}
+
 func TestLoadOCIImagePlatformsNotFound(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

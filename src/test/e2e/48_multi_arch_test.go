@@ -49,7 +49,6 @@ func TestMultiArchPackage(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	pullDir := t.TempDir()
-	//FIXME: worth considering that if there is only one available package, perhaps we should default to pulling that
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "multi")
 	require.NoError(t, err, stdOut, stdErr)
 

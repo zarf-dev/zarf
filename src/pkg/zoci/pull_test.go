@@ -5,10 +5,7 @@
 package zoci_test
 
 import (
-	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,8 +14,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
-	"github.com/opencontainers/go-digest"
-	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -29,7 +24,6 @@ import (
 	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
 	"oras.land/oras-go/v2/registry"
-	"oras.land/oras-go/v2/registry/remote"
 )
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
@@ -160,158 +154,6 @@ func TestAssembleLayers(t *testing.T) {
 	}
 }
 
-// setupUpstreamRegistry starts a plaintext in-memory registry that doubles as
-// both the source of fixture images pulled during zarf create and the
-// destination for publishing the resulting zarf package.
-func setupUpstreamRegistry(ctx context.Context, t *testing.T) string {
-	t.Helper()
-	port, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	return testutil.SetupInMemoryRegistry(ctx, t, port)
-}
-
-// newRepo returns an oras-go Repository configured for plaintext HTTP.
-func newRepo(t *testing.T, refStr string) *remote.Repository {
-	t.Helper()
-	repo, err := remote.NewRepository(refStr)
-	require.NoError(t, err)
-	repo.PlainHTTP = true
-	return repo
-}
-
-// randomBytes returns n cryptographically random bytes; used as synthetic layer
-// content that hashes differently on every test run.
-func randomBytes(t *testing.T, n int) []byte {
-	t.Helper()
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	require.NoError(t, err)
-	return b
-}
-
-// pushBlob pushes raw bytes and returns the resulting descriptor.
-func pushBlob(ctx context.Context, t *testing.T, repo *remote.Repository, mediaType string, data []byte) ocispec.Descriptor {
-	t.Helper()
-	desc := ocispec.Descriptor{
-		MediaType: mediaType,
-		Digest:    digest.FromBytes(data),
-		Size:      int64(len(data)),
-	}
-	// Push is a no-op if the blob already exists.
-	if exists, err := repo.Exists(ctx, desc); err == nil && exists {
-		return desc
-	}
-	require.NoError(t, repo.Push(ctx, desc, bytes.NewReader(data)))
-	return desc
-}
-
-// pushManifest constructs an image manifest pointing at the given config and
-// layers, pushes it, and returns its descriptor.
-func pushManifest(ctx context.Context, t *testing.T, repo *remote.Repository, config ocispec.Descriptor, layers []ocispec.Descriptor) ocispec.Descriptor {
-	t.Helper()
-	manifest := ocispec.Manifest{
-		Versioned: specs.Versioned{SchemaVersion: 2},
-		MediaType: ocispec.MediaTypeImageManifest,
-		Config:    config,
-		Layers:    layers,
-	}
-	body, err := json.Marshal(manifest)
-	require.NoError(t, err)
-	desc := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageManifest,
-		Digest:    digest.FromBytes(body),
-		Size:      int64(len(body)),
-	}
-	require.NoError(t, repo.Push(ctx, desc, bytes.NewReader(body)))
-	return desc
-}
-
-// pushIndex builds and pushes an OCI image index referencing the given child
-// descriptors. Children may themselves be manifests or indexes — nesting is
-// supported by the OCI spec and exercised in the nested-index test below.
-func pushIndex(ctx context.Context, t *testing.T, repo *remote.Repository, children []ocispec.Descriptor) ocispec.Descriptor {
-	t.Helper()
-	idx := ocispec.Index{
-		Versioned: specs.Versioned{SchemaVersion: 2},
-		MediaType: ocispec.MediaTypeImageIndex,
-		Manifests: children,
-	}
-	body, err := json.Marshal(idx)
-	require.NoError(t, err)
-	desc := ocispec.Descriptor{
-		MediaType: ocispec.MediaTypeImageIndex,
-		Digest:    digest.FromBytes(body),
-		Size:      int64(len(body)),
-	}
-	require.NoError(t, repo.Push(ctx, desc, bytes.NewReader(body)))
-	return desc
-}
-
-// pushSinglePlatformImage creates a config blob, a single layer, and a manifest
-// that references both. The config embeds the arch so two platforms produce
-// distinct config blobs. Returns the manifest descriptor.
-func pushSinglePlatformImage(ctx context.Context, t *testing.T, repo *remote.Repository, arch string) ocispec.Descriptor {
-	t.Helper()
-	layer := pushBlob(ctx, t, repo, ocispec.MediaTypeImageLayer, randomBytes(t, 64))
-	configJSON := fmt.Sprintf(`{"architecture":%q,"os":"linux","rootfs":{"type":"layers","diff_ids":[]}}`, arch)
-	config := pushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(configJSON))
-	return pushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
-}
-
-// pushSyntheticImage pushes a single-manifest image and tags it; returns the
-// manifest digest.
-func pushSyntheticImage(ctx context.Context, t *testing.T, repoRef, tag string) string {
-	t.Helper()
-	repo := newRepo(t, repoRef)
-	desc := pushSinglePlatformImage(ctx, t, repo, "amd64")
-	require.NoError(t, repo.Tag(ctx, desc, tag))
-	return desc.Digest.String()
-}
-
-// pushSyntheticIndex pushes a multi-arch OCI image index whose children are
-// single-platform manifests. Returns the index digest.
-func pushSyntheticIndex(ctx context.Context, t *testing.T, repoRef, tag string, platforms int) string {
-	t.Helper()
-	repo := newRepo(t, repoRef)
-	archs := []string{"amd64", "arm64", "arm"}
-	children := make([]ocispec.Descriptor, 0, platforms)
-	for i := range platforms {
-		arch := archs[i%len(archs)]
-		desc := pushSinglePlatformImage(ctx, t, repo, arch)
-		desc.Platform = &ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
-		}
-		children = append(children, desc)
-	}
-	idx := pushIndex(ctx, t, repo, children)
-	require.NoError(t, repo.Tag(ctx, idx, tag))
-	return idx.Digest.String()
-}
-
-// pushSyntheticNestedIndex pushes an OCI image index whose only child is itself
-// an image index (of `platforms` single-platform children). Returns the outer
-// index digest.
-func pushSyntheticNestedIndex(ctx context.Context, t *testing.T, repoRef, tag string, platforms int) string {
-	t.Helper()
-	repo := newRepo(t, repoRef)
-	archs := []string{"amd64", "arm64"}
-	inner := make([]ocispec.Descriptor, 0, platforms)
-	for i := range platforms {
-		arch := archs[i%len(archs)]
-		desc := pushSinglePlatformImage(ctx, t, repo, arch)
-		desc.Platform = &ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
-		}
-		inner = append(inner, desc)
-	}
-	innerIdx := pushIndex(ctx, t, repo, inner)
-	outerIdx := pushIndex(ctx, t, repo, []ocispec.Descriptor{innerIdx})
-	require.NoError(t, repo.Tag(ctx, outerIdx, tag))
-	return outerIdx.Digest.String()
-}
-
 // writePackageDef writes a minimal zarf.yaml + pod.yaml to a temp dir and
 // returns the dir path. The image reference is baked into both files.
 func writePackageDef(t *testing.T, arch, imageRef string) string {
@@ -360,7 +202,7 @@ func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, u
 		OCIConcurrency: 3,
 		CachePath:      tmpdir,
 		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
-		// Synthetic image layers are not real tarballs; syft can't read them.
+		// Image layers in these fixtures are random bytes, not real tarballs; syft can't read them.
 		SkipSBOM: true,
 	})
 	require.NoError(t, err)
@@ -389,8 +231,8 @@ func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, u
 
 func TestLayersFromImages_SingleArch(t *testing.T) {
 	ctx := testutil.TestContext(t)
-	upstream := setupUpstreamRegistry(ctx, t)
-	digest := pushSyntheticImage(ctx, t, upstream+"/fixtures/single", "test")
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	digest := testutil.PushImage(ctx, t, upstream+"/fixtures/single", "test")
 	imageRef := fmt.Sprintf("%s/fixtures/single:test@%s", upstream, digest)
 
 	remote := buildAndPublishPackage(ctx, t, "amd64", imageRef, upstream)
@@ -408,9 +250,12 @@ func TestLayersFromImages_SingleArch(t *testing.T) {
 
 func TestLayersFromImages_MultiArch(t *testing.T) {
 	ctx := testutil.TestContext(t)
-	upstream := setupUpstreamRegistry(ctx, t)
-	const platforms = 2
-	digest := pushSyntheticIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest)
 
 	remote := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
@@ -422,15 +267,15 @@ func TestLayersFromImages_MultiArch(t *testing.T) {
 	//   - images/oci-layout
 	//   - root index blob
 	//   - per platform: manifest blob + config blob + layer blob
-	expected := 2 + 1 + platforms*3
+	expected := 2 + 1 + len(platforms)*3
 	require.Len(t, layers, expected)
 }
 
 func TestLayersFromImages_NestedIndex(t *testing.T) {
 	ctx := testutil.TestContext(t)
-	upstream := setupUpstreamRegistry(ctx, t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	const platforms = 2
-	digest := pushSyntheticNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
+	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest)
 
 	remote := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)

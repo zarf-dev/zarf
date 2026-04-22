@@ -231,8 +231,7 @@ func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (i
 }
 
 // getSizeOfIndex sums the size of every manifest referenced by the index, including
-// each child manifest's config and layers. Fetches child manifests from the provided
-// fetcher so multi-arch progress tracking reflects real bytes, not just the index stub.
+// each child manifest's layers.
 func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, error) {
 	var idx ocispec.Index
 	if err := json.Unmarshal(indexBytes, &idx); err != nil {
@@ -240,19 +239,30 @@ func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocis
 	}
 	totalSize := indexDesc.Size
 	for _, child := range idx.Manifests {
-		if !IsManifest(child.MediaType) {
+		switch {
+		case IsManifest(child.MediaType):
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+			}
+			childSize, err := getSizeOfManifest(child, b)
+			if err != nil {
+				return 0, err
+			}
+			totalSize += childSize
+		case IsIndex(child.MediaType):
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return 0, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
+			}
+			childSize, err := getSizeOfIndex(ctx, fetcher, child, b)
+			if err != nil {
+				return 0, err
+			}
+			totalSize += childSize
+		default:
 			totalSize += child.Size
-			continue
 		}
-		b, err := content.FetchAll(ctx, fetcher, child)
-		if err != nil {
-			return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
-		}
-		childSize, err := getSizeOfManifest(child, b)
-		if err != nil {
-			return 0, err
-		}
-		totalSize += childSize
 	}
 	return totalSize, nil
 }

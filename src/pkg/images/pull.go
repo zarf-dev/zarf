@@ -30,6 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
 
@@ -318,22 +319,40 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 }
 
 // indexIsContainerImage reports whether idx has at least one platform manifest that carries only
-// container image layers — the same signal OnlyHasImageLayers uses on a single manifest.
-func indexIsContainerImage(ctx context.Context, repo *orasRemote.Repository, ref string, idx ocispec.Index) (bool, error) {
-	for _, m := range idx.Manifests {
-		if !IsManifest(m.MediaType) {
-			continue
-		}
-		_, mb, err := oras.FetchBytes(ctx, repo, m.Digest.String(), oras.DefaultFetchBytesOptions)
-		if err != nil {
-			return false, fmt.Errorf("failed to fetch platform manifest %s for %s: %w", m.Digest, ref, err)
-		}
-		var subManifest ocispec.Manifest
-		if err := json.Unmarshal(mb, &subManifest); err != nil {
-			return false, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
-		}
-		if OnlyHasImageLayers(subManifest) {
-			return true, nil
+// container image layers — the same signal OnlyHasImageLayers uses on a single manifest. Nested
+// indexes are recursed into so the check holds even when attestations or other tooling wrap the
+// platform manifests in a child index.
+func indexIsContainerImage(ctx context.Context, fetcher content.Fetcher, ref string, idx ocispec.Index) (bool, error) {
+	for _, child := range idx.Manifests {
+		switch {
+		case IsManifest(child.MediaType):
+			mb, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return false, fmt.Errorf("failed to fetch platform manifest %s for %s: %w", child.Digest, ref, err)
+			}
+			var subManifest ocispec.Manifest
+			if err := json.Unmarshal(mb, &subManifest); err != nil {
+				return false, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
+			}
+			if OnlyHasImageLayers(subManifest) {
+				return true, nil
+			}
+		case IsIndex(child.MediaType):
+			cb, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return false, fmt.Errorf("failed to fetch nested index %s for %s: %w", child.Digest, ref, err)
+			}
+			var childIdx ocispec.Index
+			if err := json.Unmarshal(cb, &childIdx); err != nil {
+				return false, fmt.Errorf("failed to parse nested index for %s: %w", ref, err)
+			}
+			ok, err := indexIsContainerImage(ctx, fetcher, ref, childIdx)
+			if err != nil {
+				return false, err
+			}
+			if ok {
+				return true, nil
+			}
 		}
 	}
 	return false, nil

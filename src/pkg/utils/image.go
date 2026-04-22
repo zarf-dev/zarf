@@ -21,7 +21,6 @@ import (
 )
 
 // LoadOCIImage returns a v1.Image with the image ref specified from a location provided, or an error if the image cannot be found.
-// FIXME: should we keep this function?
 func LoadOCIImage(imgPath string, refInfo transform.Image) (v1.Image, error) {
 	// Use the manifest within the index.json to load the specific image we want
 	layoutPath := layout.Path(imgPath)
@@ -61,8 +60,8 @@ type PlatformImage struct {
 
 // LoadOCIImagePlatforms returns the v1.Images for refInfo. Single-platform images return one entry
 // with a nil Platform; multi-arch indexes return one entry per platform manifest. Attestation or
-// unknown-platform manifests inside an index are skipped so syft doesn't try to scan them.
-// FIXME: potentially this should be moved to syft, also we may want to not error
+// unknown-platform manifests inside an index are skipped so syft doesn't try to scan them. Nested
+// indexes are traversed so platform manifests buried under attestation wrappers are still found.
 func LoadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]PlatformImage, error) {
 	layoutPath := layout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -81,30 +80,10 @@ func LoadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]PlatformI
 			continue
 		}
 
-		// FIXME: we may need to do this recursively
 		if manifest.MediaType == types.OCIImageIndex || manifest.MediaType == types.DockerManifestList {
-			subIdx, err := imgIdx.ImageIndex(manifest.Digest)
+			platformImages, err := collectPlatformImagesFromIndex(imgIdx, manifest.Digest, refInfo.Reference)
 			if err != nil {
-				return nil, fmt.Errorf("failed to load image index for %s: %w", refInfo.Reference, err)
-			}
-			subManifest, err := subIdx.IndexManifest()
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse image index manifest for %s: %w", refInfo.Reference, err)
-			}
-			var platformImages []PlatformImage
-			for _, pm := range subManifest.Manifests {
-				if pm.Platform == nil || pm.Platform.Architecture == "" || pm.Platform.Architecture == "unknown" {
-					continue
-				}
-				img, err := subIdx.Image(pm.Digest)
-				if err != nil {
-					return nil, fmt.Errorf("failed to lookup platform image for %s: %w", refInfo.Reference, err)
-				}
-				platform := pm.Platform
-				platformImages = append(platformImages, PlatformImage{
-					Image:    img,
-					Platform: platform,
-				})
+				return nil, err
 			}
 			if len(platformImages) == 0 {
 				return nil, fmt.Errorf("image index for %s contained no scannable platform manifests", refInfo.Reference)
@@ -120,6 +99,43 @@ func LoadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]PlatformI
 	}
 
 	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
+}
+
+// collectPlatformImagesFromIndex walks an index by digest and returns one PlatformImage per
+// platform leaf manifest. Nested indexes are descended into; entries with no/unknown platform
+// (buildx attestations, etc.) are skipped.
+func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, ref string) ([]PlatformImage, error) {
+	idx, err := parent.ImageIndex(indexDigest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load image index for %s: %w", ref, err)
+	}
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image index manifest for %s: %w", ref, err)
+	}
+	var platformImages []PlatformImage
+	for _, child := range manifest.Manifests {
+		if child.MediaType == types.OCIImageIndex || child.MediaType == types.DockerManifestList {
+			nested, err := collectPlatformImagesFromIndex(idx, child.Digest, ref)
+			if err != nil {
+				return nil, err
+			}
+			platformImages = append(platformImages, nested...)
+			continue
+		}
+		if child.Platform == nil || child.Platform.Architecture == "" || child.Platform.Architecture == "unknown" {
+			continue
+		}
+		img, err := idx.Image(child.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup platform image for %s: %w", ref, err)
+		}
+		platformImages = append(platformImages, PlatformImage{
+			Image:    img,
+			Platform: child.Platform,
+		})
+	}
+	return platformImages, nil
 }
 
 // AddImageNameAnnotation adds an annotation to the index.json file so that the deploying code can figure out what the image reference <-> digest shasum will be.
