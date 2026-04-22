@@ -207,7 +207,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 			// In non-multi-arch mode, pinning to an index digest is rejected so the user picks a specific platform.
 			// In multi-arch mode, an index digest is the whole point: we preserve the full index.
-			if !multiArch && image.original.Digest != "" && isIndex(desc.MediaType) {
+			if !multiArch && image.original.Digest != "" && IsIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
 				var idx ocispec.Index
@@ -217,7 +217,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return constructIndexError(idx, image.overridden)
 			}
 			// If multi-arch and we got an index, keep it as-is so oras.Copy pulls the full graph.
-			if multiArch && isIndex(desc.MediaType) {
+			if multiArch && IsIndex(desc.MediaType) {
 				size, err := getSizeOfIndex(ectx, repo, desc, b)
 				if err != nil {
 					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
@@ -235,7 +235,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				fetchOpts.FetchOptions.TargetPlatform = platform
 				desc, b, err = oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
 				if err != nil {
@@ -244,7 +244,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 
 			// extra validation before we marshall, this should never be true
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
 			// Both oci and docker manifest types can be marshalled into a manifest
@@ -437,7 +437,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err != nil {
 				return fmt.Errorf("failed to get manifest from docker image source: %w", err)
 			}
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 			}
 			var manifest ocispec.Manifest

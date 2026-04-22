@@ -120,7 +120,8 @@ func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 	return true, nil
 }
 
-func isManifest(mediaType string) bool {
+// IsManifest determines if the media type represents an OCI manifest
+func IsManifest(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
 		return true
@@ -128,7 +129,8 @@ func isManifest(mediaType string) bool {
 	return false
 }
 
-func isIndex(mediaType string) bool {
+// IsIndex determines if the media type represents an OCI manifest
+func IsIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
 		return true
@@ -238,7 +240,7 @@ func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocis
 	}
 	totalSize := indexDesc.Size
 	for _, child := range idx.Manifests {
-		if !isManifest(child.MediaType) {
+		if !IsManifest(child.MediaType) {
 			totalSize += child.Size
 			continue
 		}

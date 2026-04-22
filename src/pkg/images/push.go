@@ -268,7 +268,7 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 
 	// If an index is pulled and a target platform is provided, narrow to that platform.
 	// When defaultPlatform is nil (multi-arch packages) preserve the full index.
-	if isIndex(desc.MediaType) && defaultPlatform != nil {
+	if IsIndex(desc.MediaType) && defaultPlatform != nil {
 		fetchOpts.TargetPlatform = defaultPlatform
 		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
@@ -278,12 +278,12 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 
 	var size int64
 	switch {
-	case isIndex(desc.MediaType):
+	case IsIndex(desc.MediaType):
 		size, err = getSizeOfIndex(ctx, src, desc, b)
 		if err != nil {
 			return fmt.Errorf("failed to calculate size of index %s: %w", srcName, err)
 		}
-	case isManifest(desc.MediaType):
+	case IsManifest(desc.MediaType):
 		size, err = getSizeOfManifest(desc, b)
 		if err != nil {
 			return err
