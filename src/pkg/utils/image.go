@@ -81,6 +81,7 @@ func LoadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]PlatformI
 			continue
 		}
 
+		// FIXME: we may need to do this recursively
 		if manifest.MediaType == types.OCIImageIndex || manifest.MediaType == types.DockerManifestList {
 			subIdx, err := imgIdx.ImageIndex(manifest.Digest)
 			if err != nil {
