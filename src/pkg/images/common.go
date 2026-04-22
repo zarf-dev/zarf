@@ -129,7 +129,7 @@ func IsManifest(mediaType string) bool {
 	return false
 }
 
-// IsIndex determines if the media type represents an OCI manifest
+// IsIndex determines if the media type represents an OCI Index
 func IsIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
