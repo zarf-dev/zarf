@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -42,7 +41,6 @@ const (
 	gitKey          = "git"
 	gitReadKey      = "git-readonly"
 	artifactKey     = "artifact"
-	agentKey        = "agent"
 )
 
 type getCredsOptions struct {
@@ -281,19 +279,14 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
-	validKeys := []string{
-		state.RegistryKey,
-		state.GitKey,
-		state.ArtifactKey,
-		state.AgentKey,
-	}
-	if len(args) == 0 {
-		args = validKeys
-	} else {
-		if !slices.Contains(validKeys, args[0]) {
+	services := state.NewServiceSet(state.AllServiceKeys()...)
+	if len(args) > 0 {
+		parsed, err := state.ParseServiceKey(args[0])
+		if err != nil {
 			cmd.Help()
-			return fmt.Errorf("invalid service key specified, valid key choices are: %v", validKeys)
+			return err
 		}
+		services = state.NewServiceSet(parsed)
 	}
 
 	ctx := cmd.Context()
@@ -318,10 +311,10 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		GitServer:      o.gitServer,
 		RegistryInfo:   o.registryInfo,
 		ArtifactServer: o.artifactServer,
-		Services:       args,
+		Services:       services,
 	}
 
-	if slices.Contains(args, state.AgentKey) {
+	if services.Has(state.AgentKey) {
 		if oldState.AgentTLSUserProvided && o.agentTLSCAPath == "" {
 			return fmt.Errorf("current agent TLS certificates are user-provided; provide --agent-tls-ca, --agent-tls-cert, and --agent-tls-key to update them, or explicitly define service list without `agent`")
 		}
@@ -339,7 +332,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to update Zarf credentials: %w", err)
 	}
 
-	printCredentialUpdates(ctx, oldState, newState, args)
+	printCredentialUpdates(ctx, oldState, newState, services)
 
 	confirm := o.confirm
 
@@ -357,7 +350,7 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update registry and git pull secrets
-	if slices.Contains(args, state.RegistryKey) {
+	if services.Has(state.RegistryKey) {
 		err := c.UpdateZarfManagedImageSecrets(ctx, newState)
 		if err != nil {
 			return err
@@ -370,21 +363,22 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-	if slices.Contains(args, state.GitKey) {
+	if services.Has(state.GitKey) {
 		err := c.UpdateZarfManagedGitSecrets(ctx, newState)
 		if err != nil {
 			return err
 		}
 	}
-	// TODO once Zarf is changed so the default state is empty for a service when it is not deployed
-	// and sufficient time has passed for users state to get updated we can remove this check
+
+	// Zarf now only configures state with a Git server if a git server is deployed
+	// since there is still old state, we continue to check the cluster if the Git server exists
 	internalGitServerExists, err := c.InternalGitServerExists(cmd.Context())
 	if err != nil {
 		return err
 	}
 
 	// Update artifact token (if internal)
-	if slices.Contains(args, state.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
+	if services.Has(state.ArtifactKey) && newState.ArtifactServer.PushToken == "" && newState.ArtifactServer.IsInternal() && internalGitServerExists {
 		newState.ArtifactServer.PushToken, err = c.UpdateInternalArtifactServerToken(ctx, oldState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to create the new Gitea artifact token: %w", err)
@@ -407,20 +401,20 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	// Update Zarf 'init' component Helm releases if present
-	if slices.Contains(args, state.RegistryKey) && newState.RegistryInfo.IsInternal() {
+	if services.Has(state.RegistryKey) && newState.RegistryInfo.IsInternal() {
 		err = helm.UpdateZarfRegistryValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the registry (it might not be installed and we should try to continue)
 			l.Warn("unable to update Zarf Registry values", "error", err.Error())
 		}
 	}
-	if slices.Contains(args, state.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
+	if services.Has(state.GitKey) && newState.GitServer.IsInternal() && internalGitServerExists {
 		err := c.UpdateInternalGitServerSecret(cmd.Context(), oldState.GitServer, newState.GitServer)
 		if err != nil {
 			return fmt.Errorf("unable to update Zarf Git Server values: %w", err)
 		}
 	}
-	if slices.Contains(args, state.AgentKey) {
+	if services.Has(state.AgentKey) {
 		err = helm.UpdateZarfAgentValues(ctx, helmOpts)
 		if err != nil {
 			// Warn if we couldn't actually update the agent (it might not be installed and we should try to continue)
@@ -431,47 +425,47 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printCredentialUpdates(ctx context.Context, oldState *state.State, newState *state.State, services []string) {
+func printCredentialUpdates(ctx context.Context, oldState *state.State, newState *state.State, services state.ServiceSet) {
 	// Pause the logfile's output to avoid credentials being printed to the log file
 	l := logger.From(ctx)
 	l.Info("--- printing credential updates. Sensitive values will be redacted ---")
-	for _, service := range services {
-		switch service {
-		case registryKey:
-			oR := oldState.RegistryInfo
-			nR := newState.RegistryInfo
-			l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
-			l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
-			l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
-			l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
-			l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
-			if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
-				l.Info("registry mTLS certificate authority", "changed", "true")
-				l.Info("registry mTLS public certificate", "changed", "true")
-				l.Info("registry mTLS private key", "changed", "true")
-			}
-		case gitKey:
-			oG := oldState.GitServer
-			nG := newState.GitServer
-			l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
-			l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
-			l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
-			l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
-			l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
-		case artifactKey:
-			oA := oldState.ArtifactServer
-			nA := newState.ArtifactServer
-			l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
-			l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
-			l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
-		case agentKey:
-			oT := oldState.AgentTLS
-			nT := newState.AgentTLS
-			l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
-			l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
-			l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
-			l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
+	if services.Has(state.RegistryKey) {
+		oR := oldState.RegistryInfo
+		nR := newState.RegistryInfo
+		l.Info("registry URL address", "existing", oR.Address, "replacement", nR.Address)
+		l.Info("registry push username", "existing", oR.PushUsername, "replacement", nR.PushUsername)
+		l.Info("registry push password", "changed", oR.PushPassword != nR.PushPassword)
+		l.Info("registry pull username", "existing", oR.PullUsername, "replacement", nR.PullUsername)
+		l.Info("registry pull password", "changed", oR.PullPassword != nR.PullPassword)
+		if newState.RegistryInfo.MTLSStrategy == state.MTLSStrategyZarfManaged {
+			l.Info("registry mTLS certificate authority", "changed", "true")
+			l.Info("registry mTLS public certificate", "changed", "true")
+			l.Info("registry mTLS private key", "changed", "true")
 		}
+	}
+	if services.Has(state.GitKey) {
+		oG := oldState.GitServer
+		nG := newState.GitServer
+		l.Info("Git server URL address", "existing", oG.Address, "replacement", nG.Address)
+		l.Info("Git server push username", "existing", oG.PushUsername, "replacement", nG.PushUsername)
+		l.Info("Git server push password", "changed", oG.PushPassword != nG.PushPassword)
+		l.Info("Git server pull username", "existing", oG.PullUsername, "replacement", nG.PullUsername)
+		l.Info("Git server pull password", "changed", oG.PullPassword != nG.PullPassword)
+	}
+	if services.Has(state.ArtifactKey) {
+		oA := oldState.ArtifactServer
+		nA := newState.ArtifactServer
+		l.Info("artifact server URL address", "existing", oA.Address, "replacement", nA.Address)
+		l.Info("artifact server push username", "existing", oA.PushUsername, "replacement", nA.PushUsername)
+		l.Info("artifact server push token", "changed", oA.PushToken != nA.PushToken)
+	}
+	if services.Has(state.AgentKey) {
+		oT := oldState.AgentTLS
+		nT := newState.AgentTLS
+		l.Info("agent TLS source", "userProvided", newState.AgentTLSUserProvided)
+		l.Info("agent certificate authority", "changed", string(oT.CA) != string(nT.CA))
+		l.Info("agent public certificate", "changed", string(oT.Cert) != string(nT.Cert))
+		l.Info("agent private key", "changed", string(oT.Key) != string(nT.Key))
 	}
 }
 

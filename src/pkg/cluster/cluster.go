@@ -175,6 +175,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// InternalServices lists the state services that Zarf is deploying in this init run.
+	InternalServices state.ServiceSet
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -230,16 +232,18 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI
-		if opts.AgentTLS != nil {
-			s.AgentTLS = *opts.AgentTLS
-			s.AgentTLSUserProvided = true
-		} else {
-			agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-			if err != nil {
-				return nil, err
+		// Setup zarf agent PKI when the agent is being deployed
+		if opts.InternalServices.Has(state.AgentKey) {
+			if opts.AgentTLS != nil {
+				s.AgentTLS = *opts.AgentTLS
+				s.AgentTLSUserProvided = true
+			} else {
+				agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+				if err != nil {
+					return nil, err
+				}
+				s.AgentTLS = agentTLS
 			}
-			s.AgentTLS = agentTLS
 		}
 
 		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
@@ -282,18 +286,40 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		err = opts.GitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
+		// Populate git/registry/artifact state for each service that is either
+		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
+		if opts.InternalServices.Has(state.GitKey) || opts.GitServer.Address != "" {
+			if err := opts.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+			s.GitServer = opts.GitServer
 		}
-		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
-		if err != nil {
-			return nil, err
+		if opts.InternalServices.Has(state.RegistryKey) || opts.RegistryInfo.Address != "" {
+			if err := opts.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+			s.RegistryInfo = opts.RegistryInfo
 		}
-		s.RegistryInfo = opts.RegistryInfo
-		opts.ArtifactServer.FillInEmptyValues()
-		s.ArtifactServer = opts.ArtifactServer
+		if opts.InternalServices.Has(state.ArtifactKey) || opts.ArtifactServer.Address != "" {
+			opts.ArtifactServer.FillInEmptyValues()
+			s.ArtifactServer = opts.ArtifactServer
+		}
+	} else {
+		// Re-init: fill defaults only for internal services that weren't configured
+		// on a prior init. External services are managed via `zarf tools update-creds`.
+		if opts.InternalServices.Has(state.GitKey) && !s.GitServer.IsConfigured() {
+			if err := s.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.ArtifactKey) && !s.ArtifactServer.IsConfigured() {
+			s.ArtifactServer.FillInEmptyValues()
+		}
+		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
+			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	s.IPFamily = ipFamily

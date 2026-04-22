@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"slices"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -28,16 +27,54 @@ const (
 	ZarfPackageInfoLabel = "package-deploy-info"
 )
 
+// ServiceKey identifies a Zarf-managed service in state (registry, git, artifact, agent).
+type ServiceKey string
+
 // Credential keys
-// TODO(mkcp): Provide semantic doccomments for how these are used.
 const (
-	RegistryKey     = "registry"
-	RegistryReadKey = "registry-readonly"
-	GitKey          = "git"
-	GitReadKey      = "git-readonly"
-	ArtifactKey     = "artifact"
-	AgentKey        = "agent"
+	RegistryKey ServiceKey = "registry"
+	GitKey      ServiceKey = "git"
+	ArtifactKey ServiceKey = "artifact"
+	AgentKey    ServiceKey = "agent"
 )
+
+// AllServiceKeys is the canonical ordered list of every supported service key.
+func AllServiceKeys() []ServiceKey {
+	return []ServiceKey{RegistryKey, GitKey, ArtifactKey, AgentKey}
+}
+
+// ServiceSet is an unordered set of ServiceKeys.
+type ServiceSet map[ServiceKey]struct{}
+
+// NewServiceSet returns a ServiceSet populated with the given keys.
+func NewServiceSet(keys ...ServiceKey) ServiceSet {
+	s := make(ServiceSet, len(keys))
+	for _, k := range keys {
+		s[k] = struct{}{}
+	}
+	return s
+}
+
+// Has reports whether k is in the set.
+func (s ServiceSet) Has(k ServiceKey) bool {
+	_, ok := s[k]
+	return ok
+}
+
+// Add inserts k into the set.
+func (s ServiceSet) Add(k ServiceKey) {
+	s[k] = struct{}{}
+}
+
+// ParseServiceKey returns the ServiceKey matching s, or an error if s is not recognized.
+func ParseServiceKey(s string) (ServiceKey, error) {
+	for _, k := range AllServiceKeys() {
+		if string(k) == s {
+			return k, nil
+		}
+	}
+	return "", fmt.Errorf("invalid service key %q, valid keys are: %v", s, AllServiceKeys())
+}
 
 // ComponentStatus defines the deployment status of a Zarf component within a package.
 type ComponentStatus string
@@ -157,9 +194,9 @@ func (gs GitServerInfo) IsInternal() bool {
 	return gs.Address == ZarfInClusterGitServiceURL
 }
 
-// IsConfigured returns true if the git server address has been set
-// Note that even when the Git server component is not used Zarf will set the address to a default value
-// TODO make this more accurate https://github.com/zarf-dev/zarf/issues/2947
+// IsConfigured returns true if the git server address has been set.
+// clusters initialized before services-gated state https://github.com/zarf-dev/zarf/pull/4832
+// may report true even without a real git server.
 func (gs GitServerInfo) IsConfigured() bool {
 	return gs.Address != ""
 }
@@ -217,6 +254,11 @@ type ArtifactServerInfo struct {
 // IsInternal returns true if the artifact server URL is equivalent to the artifact server deployed through the default init package
 func (as ArtifactServerInfo) IsInternal() bool {
 	return as.Address == ZarfInClusterArtifactServiceURL
+}
+
+// IsConfigured returns true if the artifact server address has been set.
+func (as ArtifactServerInfo) IsConfigured() bool {
+	return as.Address != ""
 }
 
 // FillInEmptyValues sets every necessary value that's currently empty to a reasonable default
@@ -425,7 +467,7 @@ type MergeOptions struct {
 	GitServer      GitServerInfo
 	RegistryInfo   RegistryInfo
 	ArtifactServer ArtifactServerInfo
-	Services       []string
+	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 }
@@ -434,7 +476,7 @@ type MergeOptions struct {
 func Merge(oldState *State, opts MergeOptions) (*State, error) {
 	newState := *oldState
 	var err error
-	if slices.Contains(opts.Services, RegistryKey) {
+	if opts.Services.Has(RegistryKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.RegistryInfo = helpers.MergeNonZero(newState.RegistryInfo, opts.RegistryInfo)
 
@@ -450,7 +492,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 		}
 	}
-	if slices.Contains(opts.Services, GitKey) {
+	if opts.Services.Has(GitKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.GitServer = helpers.MergeNonZero(newState.GitServer, opts.GitServer)
 
@@ -466,7 +508,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 		}
 	}
-	if slices.Contains(opts.Services, ArtifactKey) {
+	if opts.Services.Has(ArtifactKey) {
 		// TODO: Replace use of reflections with explicit setting
 		newState.ArtifactServer = helpers.MergeNonZero(newState.ArtifactServer, opts.ArtifactServer)
 
@@ -475,7 +517,7 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			newState.ArtifactServer.PushToken = ""
 		}
 	}
-	if slices.Contains(opts.Services, AgentKey) {
+	if opts.Services.Has(AgentKey) {
 		if opts.AgentTLS != nil {
 			newState.AgentTLS = *opts.AgentTLS
 			newState.AgentTLSUserProvided = true
