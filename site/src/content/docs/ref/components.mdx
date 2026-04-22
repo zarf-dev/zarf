@@ -133,7 +133,7 @@ Images can either be discovered manually, or automatically by using [`zarf dev f
 
 #### Multi-architecture images
 
-By default a Zarf package is built for one architecture and each image pulled matches that architecture. To build a single package that deploys on multi-arch clusters, set `metadata.architecture: multi`. Every image in a `multi` package must be pinned by digest. The digest must point to an OCI image index to pull multiple architectures, but can also point to a single-platform manifest.
+By default a Zarf package is built for one architecture and each image pulled matches that architecture. To build a single package that deploys on multi-arch clusters, set `metadata.architecture: multi`. Every image in a `multi` package must be pinned by digest. The digest should point to an OCI image index to pull multiple architectures, but can also point to a single-platform manifest.
 
 :::note
 
