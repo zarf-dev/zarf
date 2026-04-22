@@ -12,30 +12,51 @@ import (
 	"testing"
 	"time"
 
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"oras.land/oras-go/v2/registry"
 
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 // This digest is the multi-arch index manifest of ghcr.io/stefanprodan/podinfo:6.4.0.
 const multiArchPodinfoIndexDigest = "sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8"
 
 func TestMultiArchPackage(t *testing.T) {
-	t.Log("E2E: multi-arch package create + deploy")
+	t.Log("E2E: multi-arch package create + publish + pull + deploy")
 
 	pkgDefinitionPath := filepath.Join("src", "test", "packages", "48-multi-arch")
-	tmpdir := t.TempDir()
+	createDir := t.TempDir()
 
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", tmpdir, "--confirm", "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm", "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 
-	pkgPath := filepath.Join(tmpdir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
-	require.FileExists(t, pkgPath, "package filename must include the multi architecture suffix")
+	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
+	require.FileExists(t, createdPkgPath, "package filename must include the multi architecture suffix")
 
-	pkgLayout, err := layout.LoadFromTar(t.Context(), pkgPath, layout.PackageLayoutOptions{})
+	registryURL := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31891)
+	ref := registry.Reference{
+		Registry:   registryURL,
+		Repository: "multi-arch",
+		Reference:  "0.0.1",
+	}
+
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "publish", createdPkgPath, "oci://"+registryURL, "--plain-http")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pullDir := t.TempDir()
+	//FIXME: worth considering that if there is only one available package, perhaps we should default to pulling that
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "multi")
+	require.NoError(t, err, stdOut, stdErr)
+
+	pulledPkgPath := filepath.Join(pullDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
+	require.FileExists(t, pulledPkgPath, "pulled package filename must include the multi architecture suffix")
+
+	pkgLayout, err := layout.LoadFromTar(t.Context(), pulledPkgPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
 	idxBytes, err := os.ReadFile(filepath.Join(pkgLayout.GetImageDirPath(), "index.json"))
@@ -60,7 +81,7 @@ func TestMultiArchPackage(t *testing.T) {
 	require.NoError(t, json.Unmarshal(b, &pulledIdx))
 	require.Greater(t, len(pulledIdx.Manifests), 1, "expected multiple platform manifests under the index")
 
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pkgPath, "--confirm", "--skip-version-check")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pulledPkgPath, "--confirm", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 	t.Cleanup(func() {
 		_, _, err = e2e.Zarf(t, "package", "remove", "multi-arch", "--confirm", "--skip-version-check")
