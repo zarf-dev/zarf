@@ -153,12 +153,13 @@ func TestPull(t *testing.T) {
 				Arch:              tc.arch,
 			}
 
-			imageManifests, err := Pull(ctx, images, destDir, opts)
+			pulled, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
 			}
 			require.NoError(t, err)
+			require.Len(t, pulled, len(images))
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
@@ -177,8 +178,13 @@ func TestPull(t *testing.T) {
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
 			// Make sure all the layers of the image are pulled in
-			for _, imageWithManifest := range imageManifests {
-				for _, layer := range imageWithManifest.Manifest.Layers {
+			for _, manifest := range idx.Manifests {
+				manifestPath := filepath.Join(destDir, "blobs", "sha256", manifest.Digest.Hex())
+				mb, err := os.ReadFile(manifestPath)
+				require.NoError(t, err)
+				var m ocispec.Manifest
+				require.NoError(t, json.Unmarshal(mb, &m))
+				for _, layer := range m.Layers {
 					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}

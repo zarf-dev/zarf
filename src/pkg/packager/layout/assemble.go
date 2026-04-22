@@ -111,18 +111,18 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	pulledImages := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
 
-			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			archivePulled, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
 			if err != nil {
 				return nil, err
 			}
-			manifests = append(manifests, archiveImageManifests...)
+			pulledImages = append(pulledImages, archivePulled...)
 		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
@@ -145,16 +145,16 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
 			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 		}
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
+		remotePulled, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		manifests = append(manifests, imageManifests...)
+		pulledImages = append(pulledImages, remotePulled...)
 	}
 
-	for _, manifest := range manifests {
-		if manifest.IsIndex || images.OnlyHasImageLayers(manifest.Manifest) {
-			sbomImageList = append(sbomImageList, manifest.Image)
+	for _, pulled := range pulledImages {
+		if pulled.IsContainerImage {
+			sbomImageList = append(sbomImageList, pulled.Image)
 		}
 
 		// Sort images index to make build reproducible.

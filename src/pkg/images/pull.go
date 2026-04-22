@@ -69,7 +69,7 @@ type imageWithOverride struct {
 }
 
 // Pull pulls all images to the destination directory.
-func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]ImageWithManifest, error) {
+func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]PulledImage, error) {
 	if len(imageList) == 0 {
 		return nil, fmt.Errorf("image list is required")
 	}
@@ -156,7 +156,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 		// TODO: in the future we could support Windows images
 		OS: "linux",
 	}
-	imagesWithManifests := []ImageWithManifest{}
+	pulledImages := []PulledImage{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
@@ -222,6 +222,14 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if err != nil {
 					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
 				}
+				var idx ocispec.Index
+				if err := json.Unmarshal(b, &idx); err != nil {
+					return fmt.Errorf("failed to parse image index for %s: %w", image.overridden.Reference, err)
+				}
+				isContainerImage, err := indexIsContainerImage(ectx, repo, image.overridden.Reference, idx)
+				if err != nil {
+					return err
+				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
 				imagesInfo = append(imagesInfo, imagePullInfo{
@@ -230,9 +238,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					byteSize:            size,
 					manifestDesc:        desc,
 				})
-				imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-					Image:   image.original,
-					IsIndex: true,
+				pulledImages = append(pulledImages, PulledImage{
+					Image:            image.original,
+					IsContainerImage: isContainerImage,
 				})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)
 				return nil
@@ -269,9 +277,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				byteSize:            size,
 				manifestDesc:        desc,
 			})
-			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-				Image:    image.original,
-				Manifest: manifest,
+			pulledImages = append(pulledImages, PulledImage{
+				Image:            image.original,
+				IsContainerImage: OnlyHasImageLayers(manifest),
 			})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
@@ -290,11 +298,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
+		daemonPulled, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		imagesWithManifests = append(imagesWithManifests, daemonImagesWithManifests...)
+		pulledImages = append(pulledImages, daemonPulled...)
 	}
 
 	for _, imageInfo := range imagesInfo {
@@ -306,7 +314,29 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
-	return imagesWithManifests, nil
+	return pulledImages, nil
+}
+
+// indexIsContainerImage reports whether idx has at least one platform manifest that carries only
+// container image layers — the same signal OnlyHasImageLayers uses on a single manifest.
+func indexIsContainerImage(ctx context.Context, repo *orasRemote.Repository, ref string, idx ocispec.Index) (bool, error) {
+	for _, m := range idx.Manifests {
+		if !IsManifest(m.MediaType) {
+			continue
+		}
+		_, mb, err := oras.FetchBytes(ctx, repo, m.Digest.String(), oras.DefaultFetchBytesOptions)
+		if err != nil {
+			return false, fmt.Errorf("failed to fetch platform manifest %s for %s: %w", m.Digest, ref, err)
+		}
+		var subManifest ocispec.Manifest
+		if err := json.Unmarshal(mb, &subManifest); err != nil {
+			return false, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
+		}
+		if OnlyHasImageLayers(subManifest) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func constructIndexError(idx ocispec.Index, image transform.Image) error {
@@ -344,9 +374,9 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []ImageWithManifest, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []PulledImage, err error) {
 	l := logger.From(ctx)
-	imagesWithManifests := []ImageWithManifest{}
+	pulledImages := []PulledImage{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
 		return nil, err
@@ -448,9 +478,9 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err := json.Unmarshal(b, &manifest); err != nil {
 				return err
 			}
-			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-				Image:    daemonImage.original,
-				Manifest: manifest,
+			pulledImages = append(pulledImages, PulledImage{
+				Image:            daemonImage.original,
+				IsContainerImage: OnlyHasImageLayers(manifest),
 			})
 			size, err := getSizeOfManifest(desc, b)
 			if err != nil {
@@ -471,7 +501,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 		}
 	}
 
-	return imagesWithManifests, nil
+	return pulledImages, nil
 }
 
 func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {

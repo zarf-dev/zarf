@@ -24,13 +24,11 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
-// ImageWithManifest represents an image reference and its associated OCI manifest.
-// Manifest is the zero value when IsIndex is true; the on-disk OCI layout holds the index blob instead.
-// FIXME: probably should change this to sort out whether its an index or manifest
-type ImageWithManifest struct {
-	Image    transform.Image
-	Manifest ocispec.Manifest
-	IsIndex  bool
+// PulledImage describes an image that landed in the destination OCI layout.
+// IsContainerImage is true when the image (or at least one platform manifest inside its index) carries only container image layers
+type PulledImage struct {
+	Image            transform.Image
+	IsContainerImage bool
 }
 
 const (
@@ -41,8 +39,8 @@ const (
 )
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
+// It returns a list of PulledImage for all images in the tar.
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
@@ -108,7 +106,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		requestedImages[ref.Reference] = false
 	}
 
-	var imagesWithManifest []ImageWithManifest
+	var pulledImages []PulledImage
 	var foundImages []string
 	for _, manifestDesc := range srcIdx.Manifests {
 		imageName := getRefFromManifest(manifestDesc)
@@ -164,9 +162,9 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		imagesWithManifest = append(imagesWithManifest, ImageWithManifest{
-			Image:    manifestImg,
-			Manifest: ociManifest,
+		pulledImages = append(pulledImages, PulledImage{
+			Image:            manifestImg,
+			IsContainerImage: OnlyHasImageLayers(ociManifest),
 		})
 	}
 
@@ -178,7 +176,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 	}
 
-	return imagesWithManifest, nil
+	return pulledImages, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.
