@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,6 +21,43 @@ import (
 	"oras.land/oras-go/v2"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
+
+// requireManifestBlobs asserts the manifest blob at digest is on disk in destDir along with its
+// config and every layer. Returns the parsed manifest so callers can make test-specific assertions.
+func requireManifestBlobs(t *testing.T, destDir, digest string) ocispec.Manifest {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var m ocispec.Manifest
+	require.NoError(t, json.Unmarshal(b, &m))
+	require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
+	for _, layer := range m.Layers {
+		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
+	}
+	return m
+}
+
+// requireIndexBlobs asserts the index blob at digest is on disk and every descendant (nested
+// indexes + leaf manifests with their config/layers) is too. Returns the parsed top-level index.
+func requireIndexBlobs(t *testing.T, destDir, digest string) ocispec.Index {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var idx ocispec.Index
+	require.NoError(t, json.Unmarshal(b, &idx))
+	for _, child := range idx.Manifests {
+		if IsIndex(string(child.MediaType)) {
+			requireIndexBlobs(t, destDir, child.Digest.String())
+			continue
+		}
+		requireManifestBlobs(t, destDir, child.Digest.String())
+	}
+	return idx
+}
 
 func TestCheckForIndex(t *testing.T) {
 	t.Parallel()
@@ -177,15 +215,10 @@ func TestPull(t *testing.T) {
 			}
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
-			// Make sure all the layers of the image are pulled in
-			for _, manifest := range idx.Manifests {
-				manifestPath := filepath.Join(destDir, "blobs", "sha256", manifest.Digest.Hex())
-				mb, err := os.ReadFile(manifestPath)
-				require.NoError(t, err)
-				var m ocispec.Manifest
-				require.NoError(t, json.Unmarshal(mb, &m))
+			// Make sure all the layers of the image are pulled in (including the shared cache).
+			for _, manifestDesc := range idx.Manifests {
+				m := requireManifestBlobs(t, destDir, manifestDesc.Digest.String())
 				for _, layer := range m.Layers {
-					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}
 			}
@@ -210,16 +243,7 @@ func TestPullSingleArchContainerImage(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
 
-	manifestBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
-	require.FileExists(t, manifestBlob)
-	mb, err := os.ReadFile(manifestBlob)
-	require.NoError(t, err)
-	var m ocispec.Manifest
-	require.NoError(t, json.Unmarshal(mb, &m))
-	require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
-	for _, layer := range m.Layers {
-		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
-	}
+	requireManifestBlobs(t, destDir, digest)
 }
 
 func TestPullMultiArchContainerImage(t *testing.T) {
@@ -243,25 +267,8 @@ func TestPullMultiArchContainerImage(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
 
-	idxBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
-	require.FileExists(t, idxBlob)
-	ib, err := os.ReadFile(idxBlob)
-	require.NoError(t, err)
-	var idx ocispec.Index
-	require.NoError(t, json.Unmarshal(ib, &idx))
+	idx := requireIndexBlobs(t, destDir, digest)
 	require.Len(t, idx.Manifests, len(platforms))
-	for _, child := range idx.Manifests {
-		manifestPath := filepath.Join(destDir, "blobs", "sha256", child.Digest.Hex())
-		require.FileExists(t, manifestPath)
-		mb, err := os.ReadFile(manifestPath)
-		require.NoError(t, err)
-		var m ocispec.Manifest
-		require.NoError(t, json.Unmarshal(mb, &m))
-		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
-		for _, layer := range m.Layers {
-			require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
-		}
-	}
 }
 
 func TestPullNestedIndex(t *testing.T) {
@@ -282,34 +289,10 @@ func TestPullNestedIndex(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
 
-	outerBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
-	require.FileExists(t, outerBlob)
-	ob, err := os.ReadFile(outerBlob)
-	require.NoError(t, err)
-	var outerIdx ocispec.Index
-	require.NoError(t, json.Unmarshal(ob, &outerIdx))
+	outerIdx := requireIndexBlobs(t, destDir, digest)
 	require.Len(t, outerIdx.Manifests, 1, "outer index wraps a single inner index")
-
-	innerDesc := outerIdx.Manifests[0]
-	innerBlob := filepath.Join(destDir, "blobs", "sha256", innerDesc.Digest.Hex())
-	require.FileExists(t, innerBlob)
-	ib, err := os.ReadFile(innerBlob)
-	require.NoError(t, err)
-	var innerIdx ocispec.Index
-	require.NoError(t, json.Unmarshal(ib, &innerIdx))
+	innerIdx := requireIndexBlobs(t, destDir, outerIdx.Manifests[0].Digest.String())
 	require.Len(t, innerIdx.Manifests, platforms)
-	for _, child := range innerIdx.Manifests {
-		manifestPath := filepath.Join(destDir, "blobs", "sha256", child.Digest.Hex())
-		require.FileExists(t, manifestPath)
-		mb, err := os.ReadFile(manifestPath)
-		require.NoError(t, err)
-		var m ocispec.Manifest
-		require.NoError(t, json.Unmarshal(mb, &m))
-		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
-		for _, layer := range m.Layers {
-			require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
-		}
-	}
 }
 
 func TestGetSizeOfIndexRecursive(t *testing.T) {

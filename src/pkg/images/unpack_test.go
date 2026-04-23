@@ -220,22 +220,6 @@ func TestUnpackMultiArch(t *testing.T) {
 	require.NotEmpty(t, topDesc.Digest, "ref-tagged descriptor missing from index.json")
 	require.Equal(t, ocispec.MediaTypeImageIndex, topDesc.MediaType, "unpacked multi-arch image must remain an index")
 
-	innerBlob := filepath.Join(dstDir, "blobs", "sha256", topDesc.Digest.Hex())
-	b, err := os.ReadFile(innerBlob)
-	require.NoError(t, err)
-	var innerIdx ocispec.Index
-	require.NoError(t, json.Unmarshal(b, &innerIdx))
+	innerIdx := requireIndexBlobs(t, dstDir, topDesc.Digest.String())
 	require.Len(t, innerIdx.Manifests, len(platforms), "every platform manifest must be preserved")
-	for _, child := range innerIdx.Manifests {
-		manifestPath := filepath.Join(dstDir, "blobs", "sha256", child.Digest.Hex())
-		require.FileExists(t, manifestPath)
-		mb, err := os.ReadFile(manifestPath)
-		require.NoError(t, err)
-		var m ocispec.Manifest
-		require.NoError(t, json.Unmarshal(mb, &m))
-		require.FileExists(t, filepath.Join(dstDir, "blobs", "sha256", m.Config.Digest.Hex()))
-		for _, layer := range m.Layers {
-			require.FileExists(t, filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex()))
-		}
-	}
 }
