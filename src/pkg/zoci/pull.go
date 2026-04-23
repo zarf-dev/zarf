@@ -187,31 +187,29 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 				(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
 		})
 
-		isIndex := images.IsIndex(entry.MediaType)
-
 		// Always include the entry's own blob (manifest or index).
 		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, entry.Digest.Encoded())))
 
-		if isIndex {
+		switch {
+		case images.IsIndex(entry.MediaType):
 			childLayers, err := r.layersFromIndexChildren(ctx, root, entry)
 			if err != nil {
 				return nil, err
 			}
 			layers = append(layers, childLayers...)
-			continue
-		}
-
-		// even though these are technically image manifests, we store them as Zarf blobs
-		entry.MediaType = ZarfLayerMediaTypeBlob
-
-		manifest, err := r.FetchManifest(ctx, entry)
-		if err != nil {
-			return nil, err
-		}
-
-		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifest.Config.Digest.Encoded())))
-		for _, layer := range manifest.Layers {
-			layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())))
+		case images.IsManifest(entry.MediaType):
+			// even though these are technically image manifests, we store them as Zarf blobs
+			entry.MediaType = ZarfLayerMediaTypeBlob
+			manifest, err := r.FetchManifest(ctx, entry)
+			if err != nil {
+				return nil, err
+			}
+			layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifest.Config.Digest.Encoded())))
+			for _, layer := range manifest.Layers {
+				layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())))
+			}
+		default:
+			return nil, fmt.Errorf("unexpected media type %q for image %s", entry.MediaType, entry.Digest)
 		}
 	}
 	// Remove duplicate descriptors in case of shared base layers
