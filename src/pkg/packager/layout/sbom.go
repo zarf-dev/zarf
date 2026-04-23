@@ -80,6 +80,9 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 			identifier := refInfo.Reference
 			if pi.platform != nil && pi.platform.Architecture != "" {
 				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.platform.OS, pi.platform.Architecture)
+				if pi.platform.Variant != "" {
+					identifier = fmt.Sprintf("%s-%s", identifier, pi.platform.Variant)
+				}
 			}
 			targets = append(targets, imageSBOMTarget{img: pi.image, identifier: identifier})
 		}
