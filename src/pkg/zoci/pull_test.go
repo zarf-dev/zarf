@@ -219,9 +219,6 @@ func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, u
 		OCIConcurrency: 3,
 	})
 	require.NoError(t, err)
-	t.Cleanup(func() {
-		os.Remove(pkgLayout.Pkg.Metadata.Name) //nolint: errcheck
-	})
 
 	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
 	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
