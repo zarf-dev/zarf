@@ -127,7 +127,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 
 		var platform *ocispec.Platform
-		if foundDesc.MediaType == ocispec.MediaTypeImageIndex && arch != v1alpha1.MultiArch {
+		if IsIndex(foundDesc.MediaType) && arch != v1alpha1.MultiArch {
 			platform = &ocispec.Platform{
 				Architecture: arch,
 				OS:           "linux",
