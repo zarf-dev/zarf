@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -232,13 +233,17 @@ func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, u
 }
 
 // expectedLayerPaths walks an OCI graph rooted at rootDigest in repo and returns every blob path
-// (relative to the package root) that LayersFromImages should emit. Handles nested indexes.
+// (relative to the package root) that LayersFromImages should emit. Normalizes windows strings
 func expectedLayerPaths(ctx context.Context, t *testing.T, repo *remote.Repository, rootDigest string) []string {
 	t.Helper()
-	paths := []string{layout.IndexPath, layout.OCILayoutPath}
+	blobDir := path.Join(layout.ImagesDir, "blobs", "sha256")
+	paths := []string{
+		path.Join(layout.ImagesDir, "index.json"),
+		path.Join(layout.ImagesDir, "oci-layout"),
+	}
 	var walk func(d string)
 	walk = func(d string) {
-		paths = append(paths, filepath.Join(layout.ImagesBlobsDir, strings.TrimPrefix(d, "sha256:")))
+		paths = append(paths, path.Join(blobDir, strings.TrimPrefix(d, "sha256:")))
 		desc, body, err := oras.FetchBytes(ctx, repo, d, oras.DefaultFetchBytesOptions)
 		require.NoError(t, err)
 		if images.IsIndex(desc.MediaType) {
@@ -251,9 +256,9 @@ func expectedLayerPaths(ctx context.Context, t *testing.T, repo *remote.Reposito
 		}
 		var m ocispec.Manifest
 		require.NoError(t, json.Unmarshal(body, &m))
-		paths = append(paths, filepath.Join(layout.ImagesBlobsDir, m.Config.Digest.Encoded()))
+		paths = append(paths, path.Join(blobDir, m.Config.Digest.Encoded()))
 		for _, l := range m.Layers {
-			paths = append(paths, filepath.Join(layout.ImagesBlobsDir, l.Digest.Encoded()))
+			paths = append(paths, path.Join(blobDir, l.Digest.Encoded()))
 		}
 	}
 	walk(rootDigest)
