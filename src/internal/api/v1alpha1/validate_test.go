@@ -152,6 +152,33 @@ func TestZarfPackageValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid multi arch image archive missing digest",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "invalid-multi-archive",
+					Architecture: v1alpha1.MultiArch,
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+						ImageArchives: []v1alpha1.ImageArchive{
+							{
+								Path: "httpd.tar",
+								Images: []string{
+									"httpd:2.4",
+									"nginx@sha256:1e6a6a1ba3e4f32e92b6ea2bb78d05dfdc2bd41a3ba5e1a60ab4cbdfacff76bb",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrMultiArchImageNoDigest, "httpd:2.4", "component1"),
+			},
+		},
+		{
 			name: "invalid yolo",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,

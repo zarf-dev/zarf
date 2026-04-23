@@ -305,18 +305,25 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 	return err
 }
 
-// validateMultiArchImages requires every component.Images entry to be digest-pinned for multi-arch packages.
+// validateMultiArchImages requires every component.Images and component.ImageArchives[*].Images
+// entry to be digest-pinned for multi-arch packages.
 func validateMultiArchImages(pkg v1alpha1.ZarfPackage) error {
 	if pkg.Metadata.Architecture != v1alpha1.MultiArch {
 		return nil
 	}
 	var err error
-	for _, component := range pkg.Components {
-		for _, image := range component.Images {
+	check := func(componentName string, images []string) {
+		for _, image := range images {
 			parsed, parseErr := transform.ParseImageRef(image)
 			if parseErr != nil || parsed.Digest == "" {
-				err = errors.Join(err, fmt.Errorf(PkgValidateErrMultiArchImageNoDigest, image, component.Name))
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrMultiArchImageNoDigest, image, componentName))
 			}
+		}
+	}
+	for _, component := range pkg.Components {
+		check(component.Name, component.Images)
+		for _, archive := range component.ImageArchives {
+			check(component.Name, archive.Images)
 		}
 	}
 	return err
