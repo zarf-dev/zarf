@@ -31,6 +31,11 @@ func newK9sCommand() *cobra.Command {
 
 			// Mimic k9s/main.go:init()
 			klog.InitFlags(nil)
+			// Opt into the new klog behavior so that -stderrthreshold is honored even
+			// when -logtostderr=true (the default).
+			// Ref: kubernetes/klog#212, kubernetes/klog#432
+			flag.Set("legacy_stderr_threshold_behavior", "false") //nolint:errcheck
+			flag.Set("stderrthreshold", "INFO")                   //nolint:errcheck
 			if err := flag.Set("logtostderr", "false"); err != nil {
 				return err
 			}
