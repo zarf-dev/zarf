@@ -109,7 +109,7 @@ func PushIndex(ctx context.Context, t *testing.T, repo *remote.Repository, child
 func PushSinglePlatformImage(ctx context.Context, t *testing.T, repo *remote.Repository, arch string) ocispec.Descriptor {
 	t.Helper()
 	layer := PushBlob(ctx, t, repo, ocispec.MediaTypeImageLayer, RandomBytes(t, 64))
-	configJSON := fmt.Sprintf(`{"architecture":%q,"os":"linux","rootfs":{"type":"layers","diff_ids":[]}}`, arch)
+	configJSON := fmt.Sprintf(`{"architecture":%q}`, arch)
 	config := PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(configJSON))
 	return PushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
 }

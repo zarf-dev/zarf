@@ -6,10 +6,12 @@ package zoci_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -17,13 +19,16 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
@@ -226,23 +231,71 @@ func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, u
 	return remote
 }
 
+// expectedLayerPaths walks an OCI graph rooted at rootDigest in repo and returns every blob path
+// (relative to the package root) that LayersFromImages should emit. Handles nested indexes.
+func expectedLayerPaths(ctx context.Context, t *testing.T, repo *remote.Repository, rootDigest string) []string {
+	t.Helper()
+	paths := []string{layout.IndexPath, layout.OCILayoutPath}
+	var walk func(d string)
+	walk = func(d string) {
+		paths = append(paths, filepath.Join(layout.ImagesBlobsDir, strings.TrimPrefix(d, "sha256:")))
+		desc, body, err := oras.FetchBytes(ctx, repo, d, oras.DefaultFetchBytesOptions)
+		require.NoError(t, err)
+		if images.IsIndex(desc.MediaType) {
+			var idx ocispec.Index
+			require.NoError(t, json.Unmarshal(body, &idx))
+			for _, c := range idx.Manifests {
+				walk(c.Digest.String())
+			}
+			return
+		}
+		var m ocispec.Manifest
+		require.NoError(t, json.Unmarshal(body, &m))
+		paths = append(paths, filepath.Join(layout.ImagesBlobsDir, m.Config.Digest.Encoded()))
+		for _, l := range m.Layers {
+			paths = append(paths, filepath.Join(layout.ImagesBlobsDir, l.Digest.Encoded()))
+		}
+	}
+	walk(rootDigest)
+	return paths
+}
+
+// pathsFromLayers extracts the image.title annotation (relative blob path) from each descriptor
+// returned by LayersFromImages.
+func pathsFromLayers(layers []ocispec.Descriptor) []string {
+	out := make([]string, 0, len(layers))
+	for _, l := range layers {
+		out = append(out, l.Annotations[ocispec.AnnotationTitle])
+	}
+	return out
+}
+
+// requireNoDuplicatePaths fails the test if any path appears twice — LayersFromImages advertises
+// RemoveDuplicateDescriptors, this catches regressions of that behavior.
+func requireNoDuplicatePaths(t *testing.T, paths []string) {
+	t.Helper()
+	seen := make(map[string]struct{}, len(paths))
+	for _, p := range paths {
+		_, dup := seen[p]
+		require.False(t, dup, "duplicate layer path in result: %s", p)
+		seen[p] = struct{}{}
+	}
+}
+
 func TestLayersFromImages_SingleArch(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	digest := testutil.PushImage(ctx, t, upstream+"/fixtures/single", "test")
 	imageRef := fmt.Sprintf("%s/fixtures/single:test@%s", upstream, digest)
 
-	remote := buildAndPublishPackage(ctx, t, "amd64", imageRef, upstream)
-	layers, err := remote.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	r := buildAndPublishPackage(ctx, t, "amd64", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
 	require.NoError(t, err)
 
-	// Expected blob paths for a single-manifest image:
-	//   - images/index.json
-	//   - images/oci-layout
-	//   - manifest blob
-	//   - config blob
-	//   - layer blob
-	require.Len(t, layers, 5)
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/single"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
 }
 
 func TestLayersFromImages_MultiArch(t *testing.T) {
@@ -255,17 +308,14 @@ func TestLayersFromImages_MultiArch(t *testing.T) {
 	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest)
 
-	remote := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
-	layers, err := remote.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	r := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
 	require.NoError(t, err)
 
-	// Expected blob paths for a multi-arch index with N single-arch children, 1 layer each:
-	//   - images/index.json
-	//   - images/oci-layout
-	//   - root index blob
-	//   - per platform: manifest blob + config blob + layer blob
-	expected := 2 + 1 + len(platforms)*3
-	require.Len(t, layers, expected)
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/multi"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
 }
 
 func TestLayersFromImages_NestedIndex(t *testing.T) {
@@ -275,16 +325,12 @@ func TestLayersFromImages_NestedIndex(t *testing.T) {
 	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest)
 
-	remote := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
-	layers, err := remote.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	r := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
 	require.NoError(t, err)
 
-	// Expected blob paths for an outer index wrapping an inner multi-arch index:
-	//   - images/index.json
-	//   - images/oci-layout
-	//   - outer index blob
-	//   - inner index blob
-	//   - per platform in inner: manifest blob + config blob + layer blob
-	expected := 2 + 1 + 1 + platforms*3
-	require.Len(t, layers, expected)
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/nested"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
 }
