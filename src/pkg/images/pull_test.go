@@ -443,6 +443,21 @@ func TestGetSizeOfIndexRecursive(t *testing.T) {
 	require.Equal(t, expected, size, "getSizeOfIndex must recurse and sum every nested leaf blob")
 }
 
+func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	missingRef := fmt.Sprintf("%s/fixtures/missing:latest", upstream)
+	ref, err := transform.ParseImageRef(missingRef)
+	require.NoError(t, err)
+	_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
+		Arch:           v1alpha1.MultiArch,
+		CacheDirectory: t.TempDir(),
+	})
+	require.ErrorContains(t, err, "multi-arch packages cannot fall back to the docker daemon")
+	require.ErrorContains(t, err, missingRef)
+}
+
 func TestPullInvalidCache(t *testing.T) {
 	// pulling an image with an invalid layer in the cache should still pull the image
 	t.Parallel()

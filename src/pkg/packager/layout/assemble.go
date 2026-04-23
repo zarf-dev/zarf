@@ -156,12 +156,12 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		if pulled.IsContainerImage {
 			sbomImageList = append(sbomImageList, pulled.Image)
 		}
+	}
 
-		// Sort images index to make build reproducible.
-		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
-		if err != nil {
-			return nil, err
-		}
+	// Sort images index to make build reproducible.
+	err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
+	if err != nil {
+		return nil, err
 	}
 
 	l.Info("composed components successfully")

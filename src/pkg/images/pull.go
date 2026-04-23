@@ -184,6 +184,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
+					if multiArch {
+						return fmt.Errorf("multi-arch packages cannot fall back to the docker daemon for %q; publish to a registry: %w", image.overridden.Reference, err)
+					}
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 					imageListLock.Lock()
 					defer imageListLock.Unlock()
@@ -198,6 +201,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				// TODO we could use the k8s library for backoffs here - https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/apimachinery/pkg/util/wait/backoff.go
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
+				}
+				if multiArch {
+					return fmt.Errorf("multi-arch packages cannot fall back to the docker daemon for %q; publish to a registry: %w", image.overridden.Reference, err)
 				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 				imageListLock.Lock()
