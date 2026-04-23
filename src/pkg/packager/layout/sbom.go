@@ -418,9 +418,7 @@ func loadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]platformI
 	}
 
 	for _, manifest := range idxManifest.Manifests {
-		if manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Reference &&
-			(manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Path+refInfo.TagOrDigest || refInfo.Host != "docker.io") &&
-			manifest.Annotations[ocispec.AnnotationRefName] != refInfo.Reference {
+		if manifest.Annotations[ocispec.AnnotationRefName] != refInfo.Reference {
 			continue
 		}
 
