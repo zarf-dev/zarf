@@ -31,10 +31,13 @@ import (
 	"github.com/anchore/syft/syft/source/stereoscopesource"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -69,16 +72,16 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	}
 	var targets []imageSBOMTarget
 	for _, refInfo := range images {
-		platformImages, err := utils.LoadOCIImagePlatforms(filepath.Join(buildPath, string(ImagesDir)), refInfo)
+		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(ImagesDir)), refInfo)
 		if err != nil {
 			return fmt.Errorf("failed to load OCI image: %w", err)
 		}
 		for _, pi := range platformImages {
 			identifier := refInfo.Reference
-			if pi.Platform != nil && pi.Platform.Architecture != "" {
-				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.Platform.OS, pi.Platform.Architecture)
+			if pi.platform != nil && pi.platform.Architecture != "" {
+				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.platform.OS, pi.platform.Architecture)
 			}
-			targets = append(targets, imageSBOMTarget{img: pi.Image, identifier: identifier})
+			targets = append(targets, imageSBOMTarget{img: pi.image, identifier: identifier})
 		}
 	}
 
@@ -391,4 +394,96 @@ func getDefaultSyftConfig() *syft.CreateSBOMConfig {
 	cfg.ToolName = "zarf"
 	cfg.ToolVersion = config.CLIVersion
 	return cfg
+}
+
+// platformImage pairs a loaded image with the platform it targets.
+// platform is nil for images stored as a single-platform manifest.
+type platformImage struct {
+	image    v1.Image
+	platform *v1.Platform
+}
+
+// loadOCIImagePlatforms returns the v1.Images for refInfo. Single-platform images return one entry
+// with a nil platform; multi-arch indexes return one entry per platform manifest.
+// Non container images are skipped
+func loadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]platformImage, error) {
+	layoutPath := clayout.Path(imgPath)
+	imgIdx, err := layoutPath.ImageIndex()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image index: %w", err)
+	}
+	idxManifest, err := imgIdx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image manifest: %w", err)
+	}
+
+	for _, manifest := range idxManifest.Manifests {
+		if manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Reference &&
+			(manifest.Annotations[ocispec.AnnotationBaseImageName] != refInfo.Path+refInfo.TagOrDigest || refInfo.Host != "docker.io") &&
+			manifest.Annotations[ocispec.AnnotationRefName] != refInfo.Reference {
+			continue
+		}
+
+		if images.IsIndex(string(manifest.MediaType)) {
+			platformImages, err := collectPlatformImagesFromIndex(imgIdx, manifest.Digest, refInfo.Reference)
+			if err != nil {
+				return nil, err
+			}
+			if len(platformImages) == 0 {
+				return nil, fmt.Errorf("image index for %s contained no scannable platform manifests", refInfo.Reference)
+			}
+			return platformImages, nil
+		}
+
+		img, err := layoutPath.Image(manifest.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup image %s: %w", refInfo.Reference, err)
+		}
+		return []platformImage{{image: img}}, nil
+	}
+
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
+}
+
+func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, ref string) ([]platformImage, error) {
+	idx, err := parent.ImageIndex(indexDigest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load image index for %s: %w", ref, err)
+	}
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image index manifest for %s: %w", ref, err)
+	}
+	var platformImages []platformImage
+	for _, child := range manifest.Manifests {
+		switch {
+		case images.IsIndex(string(child.MediaType)):
+			nested, err := collectPlatformImagesFromIndex(idx, child.Digest, ref)
+			if err != nil {
+				return nil, err
+			}
+			platformImages = append(platformImages, nested...)
+		case images.IsManifest(string(child.MediaType)):
+			img, err := idx.Image(child.Digest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup platform image for %s: %w", ref, err)
+			}
+			rawManifest, err := img.RawManifest()
+			if err != nil {
+				return nil, fmt.Errorf("failed to read platform manifest for %s: %w", ref, err)
+			}
+			var childManifest ocispec.Manifest
+			if err := json.Unmarshal(rawManifest, &childManifest); err != nil {
+				return nil, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
+			}
+			if !images.OnlyHasImageLayers(childManifest) {
+				continue
+			}
+			platformImages = append(platformImages, platformImage{
+				image:    img,
+				platform: child.Platform,
+			})
+		}
+	}
+	return platformImages, nil
 }
