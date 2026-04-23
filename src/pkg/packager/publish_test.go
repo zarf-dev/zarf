@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
@@ -57,9 +56,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
 	// Setup destination registry
-	dstPort, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
+	dstRegistryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	dstRegistryRef := registry.Reference{
 		Registry:   dstRegistryURL,
 		Repository: "my-namespace",

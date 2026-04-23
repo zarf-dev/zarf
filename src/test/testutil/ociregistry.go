@@ -11,22 +11,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"oras.land/oras-go/v2/registry/remote"
 )
-
-// SetupInMemoryRegistryDynamic starts an in-memory registry on an automatically-allocated port
-// and returns the address. Use this when tests do not need a well-known port.
-func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
-	t.Helper()
-	port, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	return SetupInMemoryRegistry(ctx, t, port)
-}
 
 // NewRepo returns a plaintext-HTTP oras-go Repository suitable for pushing fixtures into an
 // in-memory registry during tests.
