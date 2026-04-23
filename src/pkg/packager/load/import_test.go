@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 )
@@ -46,8 +47,36 @@ func TestResolveImports(t *testing.T) {
 			path: "./testdata/import/import-each-other",
 		},
 		{
-			name: "variables, constants, and values are resolved correctly",
+			name: "variables and constants are resolved correctly",
 			path: "./testdata/import/variables",
+		},
+		{
+			name: "values files from a single import are merged before parent values",
+			path: "./testdata/import/values/basic",
+		},
+		{
+			name: "values files from nested imports preserve deepest-first precedence order",
+			path: "./testdata/import/values/precedence-order",
+		},
+		{
+			name: "values files from multiple sibling imports preserve left-to-right order",
+			path: "./testdata/import/values/multiple-imports",
+		},
+		{
+			name: "duplicate values file paths from consecutive imports are deduplicated",
+			path: "./testdata/import/values/duplicate-consecutive",
+		},
+		{
+			name: "duplicate values file paths from non-consecutive imports are deduplicated",
+			path: "./testdata/import/values/duplicate-interleaved",
+		},
+		{
+			name: "an empty parent schema is kept even when an imported package has one",
+			path: "./testdata/import/values/schema-parent-empty",
+		},
+		{
+			name: "a parent schema takes precedence over an imported package's schema",
+			path: "./testdata/import/values/schema-parent-wins",
 		},
 		{
 			name: "two separate chains of imports importing a common file",
@@ -86,6 +115,61 @@ func TestResolveImports(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
+		})
+	}
+}
+
+func TestResolveImportsValueMerge(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	testCases := []struct {
+		name     string
+		path     string
+		expected value.Values
+	}{
+		{
+			name: "nested imports apply deepest-first so parent overrides inner values",
+			path: "./testdata/import/values/precedence-order",
+			expected: value.Values{
+				"shared":      "top",
+				"top-only":    "present",
+				"middle-only": "present",
+				"bottom-only": "present",
+			},
+		},
+		{
+			name: "non-consecutive duplicate imports are deduplicated so the later sibling's value wins",
+			path: "./testdata/import/values/duplicate-interleaved",
+			expected: value.Values{
+				"origin":      "b",
+				"a-only":      "present",
+				"b-only":      "present",
+				"parent-only": "present",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
+			require.NoError(t, err)
+			pkg, err := pkgcfg.Parse(ctx, b)
+			require.NoError(t, err)
+
+			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			require.NoError(t, err)
+
+			absPaths := make([]string, len(resolved.Values.Files))
+			for i, f := range resolved.Values.Files {
+				absPaths[i] = filepath.Join(tc.path, f)
+			}
+
+			merged, err := value.ParseFiles(ctx, absPaths, value.ParseFilesOptions{})
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, merged)
 		})
 	}
 }
