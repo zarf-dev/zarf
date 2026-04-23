@@ -737,7 +737,6 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 		return nil
 	}
 
-	// Multi-arch packages can deploy to any cluster
 	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
 		return nil
 	}

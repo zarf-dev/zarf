@@ -69,16 +69,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	uniqueComponentNames := make(map[string]bool)
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
-	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
-		for _, component := range pkg.Components {
-			for _, image := range component.Images {
-				parsed, parseErr := transform.ParseImageRef(image)
-				if parseErr != nil || parsed.Digest == "" {
-					err = errors.Join(err, fmt.Errorf(PkgValidateErrMultiArchImageNoDigest, image, component.Name))
-				}
-			}
-		}
-	}
+	err = errors.Join(err, validateMultiArchImages(pkg))
 	if pkg.Metadata.YOLO {
 		for _, component := range pkg.Components {
 			if len(component.Images) > 0 || len(component.ImageArchives) > 0 {
@@ -311,6 +302,23 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		err = errors.Join(err, nameErr)
 	}
 
+	return err
+}
+
+// validateMultiArchImages requires every component.Images entry to be digest-pinned for multi-arch packages.
+func validateMultiArchImages(pkg v1alpha1.ZarfPackage) error {
+	if pkg.Metadata.Architecture != v1alpha1.MultiArch {
+		return nil
+	}
+	var err error
+	for _, component := range pkg.Components {
+		for _, image := range component.Images {
+			parsed, parseErr := transform.ParseImageRef(image)
+			if parseErr != nil || parsed.Digest == "" {
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrMultiArchImageNoDigest, image, component.Name))
+			}
+		}
+	}
 	return err
 }
 
