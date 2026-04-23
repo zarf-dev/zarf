@@ -240,22 +240,22 @@ func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocis
 	totalSize := indexDesc.Size
 	for _, child := range idx.Manifests {
 		switch {
-		case IsManifest(child.MediaType):
-			b, err := content.FetchAll(ctx, fetcher, child)
-			if err != nil {
-				return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
-			}
-			childSize, err := getSizeOfManifest(child, b)
-			if err != nil {
-				return 0, err
-			}
-			totalSize += childSize
 		case IsIndex(child.MediaType):
 			b, err := content.FetchAll(ctx, fetcher, child)
 			if err != nil {
 				return 0, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
 			}
 			childSize, err := getSizeOfIndex(ctx, fetcher, child, b)
+			if err != nil {
+				return 0, err
+			}
+			totalSize += childSize
+		case IsManifest(child.MediaType):
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+			}
+			childSize, err := getSizeOfManifest(child, b)
 			if err != nil {
 				return 0, err
 			}
