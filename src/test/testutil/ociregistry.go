@@ -130,20 +130,16 @@ func PushMultiArchIndex(ctx context.Context, t *testing.T, repoRef, tag string, 
 	return idx.Digest.String()
 }
 
-// PushNestedIndex pushes an OCI image index whose only child is itself an image index (of
-// `platforms` single-platform children). Returns the outer index digest.
-func PushNestedIndex(ctx context.Context, t *testing.T, repoRef, tag string, platforms int) string {
+// PushNestedIndex pushes an OCI image index whose only child is itself an image index containing
+// one single-platform manifest per entry in platforms. Returns the outer index digest.
+func PushNestedIndex(ctx context.Context, t *testing.T, repoRef, tag string, platforms []ocispec.Platform) string {
 	t.Helper()
 	repo := NewRepo(t, repoRef)
-	archs := []string{"amd64", "arm64"}
-	inner := make([]ocispec.Descriptor, 0, platforms)
-	for i := range platforms {
-		arch := archs[i%len(archs)]
-		desc := PushSinglePlatformImage(ctx, t, repo, arch)
-		desc.Platform = &ocispec.Platform{
-			Architecture: arch,
-			OS:           "linux",
-		}
+	inner := make([]ocispec.Descriptor, 0, len(platforms))
+	for _, platform := range platforms {
+		desc := PushSinglePlatformImage(ctx, t, repo, platform.Architecture)
+		p := platform
+		desc.Platform = &p
 		inner = append(inner, desc)
 	}
 	innerIdx := PushIndex(ctx, t, repo, inner)

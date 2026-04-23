@@ -321,7 +321,10 @@ func TestLayersFromImages_MultiArch(t *testing.T) {
 func TestLayersFromImages_NestedIndex(t *testing.T) {
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	const platforms = 2
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
 	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest)
 

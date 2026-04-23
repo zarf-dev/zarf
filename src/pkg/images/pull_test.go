@@ -275,7 +275,10 @@ func TestPullNestedIndex(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	const platforms = 2
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
 	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
 	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest))
 	require.NoError(t, err)
@@ -292,7 +295,7 @@ func TestPullNestedIndex(t *testing.T) {
 	outerIdx := requireIndexBlobs(t, destDir, digest)
 	require.Len(t, outerIdx.Manifests, 1, "outer index wraps a single inner index")
 	innerIdx := requireIndexBlobs(t, destDir, outerIdx.Manifests[0].Digest.String())
-	require.Len(t, innerIdx.Manifests, platforms)
+	require.Len(t, innerIdx.Manifests, len(platforms))
 }
 
 func TestGetSizeOfIndexRecursive(t *testing.T) {
