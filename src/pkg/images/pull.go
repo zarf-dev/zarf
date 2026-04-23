@@ -30,7 +30,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
 	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
 
@@ -227,14 +226,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if err != nil {
 					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
 				}
-				var idx ocispec.Index
-				if err := json.Unmarshal(b, &idx); err != nil {
-					return fmt.Errorf("failed to parse image index for %s: %w", image.overridden.Reference, err)
-				}
-				isContainerImage, err := indexIsContainerImage(ectx, repo, image.overridden.Reference, idx)
-				if err != nil {
-					return err
-				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
 				imagesInfo = append(imagesInfo, imagePullInfo{
@@ -243,10 +234,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					byteSize:            size,
 					manifestDesc:        desc,
 				})
-				pulledImages = append(pulledImages, PulledImage{
-					Image:            image.original,
-					IsContainerImage: isContainerImage,
-				})
+				pulledImages = append(pulledImages, PulledImage{Image: image.original})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)
 				return nil
 			}
@@ -264,12 +252,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
-			// Both oci and docker manifest types can be marshalled into a manifest
-			// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L37
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(b, &manifest); err != nil {
-				return err
-			}
 			size, err := getSizeOfManifest(desc, b)
 			if err != nil {
 				return err
@@ -282,10 +264,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				byteSize:            size,
 				manifestDesc:        desc,
 			})
-			pulledImages = append(pulledImages, PulledImage{
-				Image:            image.original,
-				IsContainerImage: OnlyHasImageLayers(manifest),
-			})
+			pulledImages = append(pulledImages, PulledImage{Image: image.original})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
 		})
@@ -320,43 +299,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return pulledImages, nil
-}
-
-// indexIsContainerImage reports whether idx has at least one platform manifest that carries only container image layers
-func indexIsContainerImage(ctx context.Context, fetcher content.Fetcher, ref string, idx ocispec.Index) (bool, error) {
-	for _, child := range idx.Manifests {
-		switch {
-		case IsManifest(child.MediaType):
-			mb, err := content.FetchAll(ctx, fetcher, child)
-			if err != nil {
-				return false, fmt.Errorf("failed to fetch platform manifest %s for %s: %w", child.Digest, ref, err)
-			}
-			var subManifest ocispec.Manifest
-			if err := json.Unmarshal(mb, &subManifest); err != nil {
-				return false, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
-			}
-			if OnlyHasImageLayers(subManifest) {
-				return true, nil
-			}
-		case IsIndex(child.MediaType):
-			cb, err := content.FetchAll(ctx, fetcher, child)
-			if err != nil {
-				return false, fmt.Errorf("failed to fetch nested index %s for %s: %w", child.Digest, ref, err)
-			}
-			var childIdx ocispec.Index
-			if err := json.Unmarshal(cb, &childIdx); err != nil {
-				return false, fmt.Errorf("failed to parse nested index for %s: %w", ref, err)
-			}
-			ok, err := indexIsContainerImage(ctx, fetcher, ref, childIdx)
-			if err != nil {
-				return false, err
-			}
-			if ok {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
 }
 
 func constructIndexError(idx ocispec.Index, image transform.Image) error {
@@ -494,14 +436,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 			}
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(b, &manifest); err != nil {
-				return err
-			}
-			pulledImages = append(pulledImages, PulledImage{
-				Image:            daemonImage.original,
-				IsContainerImage: OnlyHasImageLayers(manifest),
-			})
+			pulledImages = append(pulledImages, PulledImage{Image: daemonImage.original})
 			size, err := getSizeOfManifest(desc, b)
 			if err != nil {
 				return err

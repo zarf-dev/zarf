@@ -13,12 +13,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/static"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
+
+const helmChartMediaType types.MediaType = "application/vnd.cncf.helm.chart.content.v1.tar+gzip"
 
 func TestCreateImageSBOM(t *testing.T) {
 	t.Parallel()
@@ -169,6 +173,63 @@ func TestLoadOCIImagePlatformsNestedIndex(t *testing.T) {
 		platforms = append(platforms, pi.platform.OS+"/"+pi.platform.Architecture)
 	}
 	require.ElementsMatch(t, []string{"linux/amd64", "linux/arm64"}, platforms)
+}
+
+func TestLoadOCIImagePlatformsSingleNonContainer(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path, err := layout.Write(dir, empty.Index)
+	require.NoError(t, err)
+
+	helmLayer := static.NewLayer([]byte("helm chart payload"), helmChartMediaType)
+	img, err := mutate.AppendLayers(empty.Image, helmLayer)
+	require.NoError(t, err)
+
+	ref := "example.com/foo/chart:1.0.0"
+	require.NoError(t, path.AppendImage(img, layout.WithAnnotations(map[string]string{
+		ocispec.AnnotationBaseImageName: ref,
+		ocispec.AnnotationRefName:       ref,
+	})))
+
+	refInfo, err := transform.ParseImageRef(ref)
+	require.NoError(t, err)
+
+	images, err := loadOCIImagePlatforms(dir, refInfo)
+	require.NoError(t, err)
+	require.Empty(t, images, "non-container single manifest must be skipped, not errored")
+}
+
+func TestLoadOCIImagePlatformsIndexNonContainer(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	path, err := layout.Write(dir, empty.Index)
+	require.NoError(t, err)
+
+	helmLayer := static.NewLayer([]byte("helm chart payload"), helmChartMediaType)
+	chart, err := mutate.AppendLayers(empty.Image, helmLayer)
+	require.NoError(t, err)
+
+	idx := mutate.AppendManifests(empty.Index,
+		mutate.IndexAddendum{
+			Add: chart,
+			Descriptor: v1.Descriptor{
+				Platform: &v1.Platform{OS: "linux", Architecture: "amd64"},
+			},
+		},
+	)
+
+	ref := "example.com/foo/chart-index:1.0.0"
+	require.NoError(t, path.AppendIndex(idx, layout.WithAnnotations(map[string]string{
+		ocispec.AnnotationBaseImageName: ref,
+		ocispec.AnnotationRefName:       ref,
+	})))
+
+	refInfo, err := transform.ParseImageRef(ref)
+	require.NoError(t, err)
+
+	images, err := loadOCIImagePlatforms(dir, refInfo)
+	require.NoError(t, err)
+	require.Empty(t, images, "index whose children are all non-container must return empty without error")
 }
 
 func TestLoadOCIImagePlatformsNotFound(t *testing.T) {

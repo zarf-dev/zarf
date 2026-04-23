@@ -405,7 +405,7 @@ type platformImage struct {
 
 // loadOCIImagePlatforms returns the v1.Images for refInfo. Single-platform images return one entry
 // with a nil platform; multi-arch indexes return one entry per platform manifest.
-// Non container images are skipped
+// Non container images (e.g. Helm charts) are skipped — returning an empty slice is not an error.
 func loadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]platformImage, error) {
 	layoutPath := clayout.Path(imgPath)
 	imgIdx, err := layoutPath.ImageIndex()
@@ -425,24 +425,36 @@ func loadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]platformI
 		}
 
 		if images.IsIndex(string(manifest.MediaType)) {
-			platformImages, err := collectPlatformImagesFromIndex(imgIdx, manifest.Digest, refInfo.Reference)
-			if err != nil {
-				return nil, err
-			}
-			if len(platformImages) == 0 {
-				return nil, fmt.Errorf("image index for %s contained no scannable platform manifests", refInfo.Reference)
-			}
-			return platformImages, nil
+			return collectPlatformImagesFromIndex(imgIdx, manifest.Digest, refInfo.Reference)
 		}
 
 		img, err := layoutPath.Image(manifest.Digest)
 		if err != nil {
 			return nil, fmt.Errorf("failed to lookup image %s: %w", refInfo.Reference, err)
 		}
+		isContainer, err := imageHasOnlyContainerLayers(img)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect manifest for %s: %w", refInfo.Reference, err)
+		}
+		if !isContainer {
+			return nil, nil
+		}
 		return []platformImage{{image: img}}, nil
 	}
 
 	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
+}
+
+func imageHasOnlyContainerLayers(img v1.Image) (bool, error) {
+	raw, err := img.RawManifest()
+	if err != nil {
+		return false, err
+	}
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return false, err
+	}
+	return images.OnlyHasImageLayers(manifest), nil
 }
 
 func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, ref string) ([]platformImage, error) {

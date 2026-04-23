@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -25,10 +24,8 @@ import (
 )
 
 // PulledImage describes an image that landed in the destination OCI layout.
-// IsContainerImage is true when the image (or at least one platform manifest inside its index) carries only container image layers
 type PulledImage struct {
-	Image            transform.Image
-	IsContainerImage bool
+	Image transform.Image
 }
 
 const (
@@ -124,43 +121,17 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		requestedImages[manifestImg.Reference] = true
 
-		foundDesc, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		foundDesc, _, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
 
-		multiArch := arch == v1alpha1.MultiArch
-		isIndex := foundDesc.MediaType == ocispec.MediaTypeImageIndex
 		var platform *ocispec.Platform
-		var isContainerImage bool
-		switch {
-		case isIndex && multiArch:
-			var idx ocispec.Index
-			if err := json.Unmarshal(manifestData, &idx); err != nil {
-				return nil, fmt.Errorf("failed to parse image index for %s: %w", imageName, err)
-			}
-			isContainerImage, err = indexIsContainerImage(ctx, srcStore, imageName, idx)
-			if err != nil {
-				return nil, err
-			}
-		case isIndex:
+		if foundDesc.MediaType == ocispec.MediaTypeImageIndex && arch != v1alpha1.MultiArch {
 			platform = &ocispec.Platform{
 				Architecture: arch,
 				OS:           "linux",
 			}
-			fbOptions := oras.DefaultFetchBytesOptions
-			fbOptions.TargetPlatform = platform
-			foundDesc, manifestData, err = oras.FetchBytes(ctx, srcStore, foundDesc.Digest.String(), fbOptions)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-			}
-			fallthrough
-		default:
-			var ociManifest ocispec.Manifest
-			if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-				return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
-			}
-			isContainerImage = OnlyHasImageLayers(ociManifest)
 		}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
@@ -177,10 +148,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		pulledImages = append(pulledImages, PulledImage{
-			Image:            manifestImg,
-			IsContainerImage: isContainerImage,
-		})
+		pulledImages = append(pulledImages, PulledImage{Image: manifestImg})
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+

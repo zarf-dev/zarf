@@ -209,7 +209,6 @@ func TestPullSingleArchContainerImage(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
-	require.True(t, pulled[0].IsContainerImage, "single-arch container image must be flagged as container")
 
 	manifestBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
 	require.FileExists(t, manifestBlob)
@@ -243,7 +242,6 @@ func TestPullMultiArchContainerImage(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
-	require.True(t, pulled[0].IsContainerImage, "multi-arch index of container images must be flagged as container")
 
 	idxBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
 	require.FileExists(t, idxBlob)
@@ -283,7 +281,6 @@ func TestPullNestedIndex(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, pulled, 1)
-	require.True(t, pulled[0].IsContainerImage, "nested index over container images must be flagged as container")
 
 	outerBlob := filepath.Join(destDir, "blobs", "sha256", digest[len("sha256:"):])
 	require.FileExists(t, outerBlob)
@@ -313,100 +310,6 @@ func TestPullNestedIndex(t *testing.T) {
 			require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
 		}
 	}
-}
-
-// TestPullNonContainerImage pushes a single manifest whose only layer has a non-image media type
-// (mimicking a Helm chart or similar OCI artifact)
-func TestPullNonContainerImage(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	repoRef := upstream + "/fixtures/artifact"
-	repo := testutil.NewRepo(t, repoRef)
-
-	helmLayer := testutil.PushBlob(ctx, t, repo, "application/vnd.cncf.helm.chart.content.v1.tar+gzip", testutil.RandomBytes(t, 64))
-	config := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(`{}`))
-	manifestDesc := testutil.PushManifest(ctx, t, repo, config, []ocispec.Descriptor{helmLayer})
-	require.NoError(t, repo.Tag(ctx, manifestDesc, "test"))
-
-	ref, err := transform.ParseImageRef(fmt.Sprintf("%s:test@%s", repoRef, manifestDesc.Digest.String()))
-	require.NoError(t, err)
-
-	destDir := t.TempDir()
-	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64",
-		CacheDirectory: t.TempDir(),
-		PlainHTTP:      true,
-	})
-	require.NoError(t, err)
-	require.Len(t, pulled, 1)
-	require.False(t, pulled[0].IsContainerImage, "Helm-chart-style artifact must not be flagged as a container image")
-}
-
-// TestPullIndexNonContainerChildren covers an index that references only non-container artifacts
-func TestPullIndexNonContainerChildren(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	repoRef := upstream + "/fixtures/artifact-index"
-	repo := testutil.NewRepo(t, repoRef)
-
-	pushHelmManifest := func(arch string) ocispec.Descriptor {
-		layer := testutil.PushBlob(ctx, t, repo, "application/vnd.cncf.helm.chart.content.v1.tar+gzip", testutil.RandomBytes(t, 64))
-		config := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, fmt.Appendf(nil, `{"architecture":%q}`, arch))
-		desc := testutil.PushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
-		desc.Platform = &ocispec.Platform{OS: "linux", Architecture: arch}
-		return desc
-	}
-	// real charts wouldn't have architecture, adding for the sake of tests
-	children := []ocispec.Descriptor{pushHelmManifest("amd64"), pushHelmManifest("arm64")}
-	idxDesc := testutil.PushIndex(ctx, t, repo, children)
-	require.NoError(t, repo.Tag(ctx, idxDesc, "test"))
-
-	ref, err := transform.ParseImageRef(fmt.Sprintf("%s:test@%s", repoRef, idxDesc.Digest.String()))
-	require.NoError(t, err)
-
-	destDir := t.TempDir()
-	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           v1alpha1.MultiArch,
-		CacheDirectory: t.TempDir(),
-		PlainHTTP:      true,
-	})
-	require.NoError(t, err)
-	require.Len(t, pulled, 1)
-	require.False(t, pulled[0].IsContainerImage, "index of non-container artifacts must not be flagged as container")
-}
-
-func TestIndexIsContainerImageRecursive(t *testing.T) {
-	t.Parallel()
-	ctx := testutil.TestContext(t)
-	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-	repoRef := upstream + "/fixtures/recursive"
-	repo := testutil.NewRepo(t, repoRef)
-
-	imageManifest := testutil.PushSinglePlatformImage(ctx, t, repo, "amd64")
-
-	helmLayer := testutil.PushBlob(ctx, t, repo, "application/vnd.cncf.helm.chart.content.v1.tar+gzip", testutil.RandomBytes(t, 64))
-	helmConfig := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(`{}`))
-	helmManifest := testutil.PushManifest(ctx, t, repo, helmConfig, []ocispec.Descriptor{helmLayer})
-
-	flatContainer := ocispec.Index{Manifests: []ocispec.Descriptor{imageManifest}}
-	flatHelm := ocispec.Index{Manifests: []ocispec.Descriptor{helmManifest}}
-
-	innerContainerDesc := testutil.PushIndex(ctx, t, repo, []ocispec.Descriptor{imageManifest})
-	nested := ocispec.Index{Manifests: []ocispec.Descriptor{innerContainerDesc}}
-
-	ok, err := indexIsContainerImage(ctx, repo, repoRef, flatContainer)
-	require.NoError(t, err)
-	require.True(t, ok, "index with a container image child must be flagged")
-
-	ok, err = indexIsContainerImage(ctx, repo, repoRef, flatHelm)
-	require.NoError(t, err)
-	require.False(t, ok, "index with only helm chart children must not be flagged")
-
-	ok, err = indexIsContainerImage(ctx, repo, repoRef, nested)
-	require.NoError(t, err)
-	require.True(t, ok, "outer index wrapping a container-image inner index must be flagged (recursion)")
 }
 
 func TestGetSizeOfIndexRecursive(t *testing.T) {

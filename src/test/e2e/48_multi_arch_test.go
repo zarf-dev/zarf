@@ -38,7 +38,7 @@ func TestMultiArchPackage(t *testing.T) {
 	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
 	require.FileExists(t, createdPkgPath, "package filename must include the multi architecture suffix")
 
-	registryURL := testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31891)
+	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	ref := registry.Reference{
 		Registry:   registryURL,
 		Repository: "multi-arch",

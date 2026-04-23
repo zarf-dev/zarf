@@ -207,7 +207,6 @@ func TestUnpackMultiArch(t *testing.T) {
 	}, dstDir, v1alpha1.MultiArch)
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
-	require.True(t, unpacked[0].IsContainerImage, "multi-arch index of container images must be flagged as container")
 
 	idx, err := getIndexFromOCILayout(dstDir)
 	require.NoError(t, err)

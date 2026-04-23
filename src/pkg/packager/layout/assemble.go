@@ -135,7 +135,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			componentImages = append(componentImages, refInfo)
 		}
 	}
-	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
@@ -152,16 +151,14 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		pulledImages = append(pulledImages, remotePulled...)
 	}
 
+	sbomImageList := make([]transform.Image, 0, len(pulledImages))
 	for _, pulled := range pulledImages {
-		if pulled.IsContainerImage {
-			sbomImageList = append(sbomImageList, pulled.Image)
+		sbomImageList = append(sbomImageList, pulled.Image)
+		// Sort images index to make build reproducible.
+		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
+		if err != nil {
+			return nil, err
 		}
-	}
-
-	// Sort images index to make build reproducible.
-	err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
-	if err != nil {
-		return nil, err
 	}
 
 	l.Info("composed components successfully")
