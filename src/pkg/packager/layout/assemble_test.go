@@ -217,3 +217,79 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectVersionRequirements(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		expected []v1alpha1.VersionRequirement
+	}{
+		{
+			name:     "no requirements for a plain package",
+			pkg:      v1alpha1.ZarfPackage{},
+			expected: nil,
+		},
+		{
+			name: "image archives trigger v0.68.0",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "c1",
+						ImageArchives: []v1alpha1.ImageArchive{
+							{Path: "/tmp/archive.tar", Images: []string{"nginx:1.21"}},
+						},
+					},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{
+				{Version: "v0.68.0", Reason: "This package contains image archives which will only be recognized on v0.68.0+"},
+			},
+		},
+		{
+			name: "multi-arch triggers v0.76.0",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: v1alpha1.MultiArch},
+			},
+			expected: []v1alpha1.VersionRequirement{
+				{Version: "v0.76.0", Reason: "This package uses multi-arch images which are only supported on v0.76.0+"},
+			},
+		},
+		{
+			name: "image archives and multi-arch trigger both",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Architecture: v1alpha1.MultiArch},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:          "c1",
+						ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}},
+					},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{
+				{Version: "v0.68.0", Reason: "This package contains image archives which will only be recognized on v0.68.0+"},
+				{Version: "v0.76.0", Reason: "This package uses multi-arch images which are only supported on v0.76.0+"},
+			},
+		},
+		{
+			name: "image archives requirement is only emitted once across components",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "c1", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}}},
+					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{
+				{Version: "v0.68.0", Reason: "This package contains image archives which will only be recognized on v0.68.0+"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg))
+		})
+	}
+}

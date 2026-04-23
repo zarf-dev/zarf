@@ -809,23 +809,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	var versionRequirements []v1alpha1.VersionRequirement
-	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
-			break
-		}
-	}
-	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
-		versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-			Version: "v0.76.0",
-			Reason:  "This package uses multi-arch images which are only supported on v0.76.0+",
-		})
-	}
-	pkg.Build.VersionRequirements = versionRequirements
+	pkg.Build.VersionRequirements = collectVersionRequirements(pkg)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -844,6 +828,26 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	pkg.Build.ProvenanceFiles = []string{Checksums}
 
 	return pkg
+}
+
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage) []v1alpha1.VersionRequirement {
+	var reqs []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			reqs = append(reqs, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	if pkg.Metadata.Architecture == v1alpha1.MultiArch {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.76.0",
+			Reason:  "This package uses multi-arch images which are only supported on v0.76.0+",
+		})
+	}
+	return reqs
 }
 
 func getChecksum(dirPath string) (string, string, error) {
