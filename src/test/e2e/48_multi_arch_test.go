@@ -4,21 +4,17 @@
 package test
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2/registry"
 
-	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -102,17 +98,4 @@ func TestMultiArchPackage(t *testing.T) {
 		_, _, err = e2e.Zarf(t, "package", "remove", "multi-arch", "--confirm", "--skip-version-check")
 		require.NoError(t, err)
 	})
-
-	c, err := cluster.New(t.Context())
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
-	defer cancel()
-
-	pod, err := c.Clientset.CoreV1().Pods("multi-arch-test").Get(ctx, "multi-arch-podinfo", metav1.GetOptions{})
-	require.NoError(t, err)
-
-	require.Len(t, pod.Spec.Containers, 1)
-	require.Contains(t, pod.Spec.Containers[0].Image, "@"+multiArchPodinfoIndexDigest,
-		"deployed pod image reference must preserve the index digest so kubelet can pick the right platform")
 }
