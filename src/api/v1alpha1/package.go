@@ -267,6 +267,8 @@ type ZarfBuildData struct {
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
+	// The API version defined in the package definition used to build the package.
+	APIVersion string `json:"apiVersion,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.

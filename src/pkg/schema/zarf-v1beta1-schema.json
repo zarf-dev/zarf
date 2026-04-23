@@ -35,65 +35,84 @@
       ],
       "type": "object"
     },
-    "DeprecatedZarfComponentScripts": {
+    "Duration": {
       "additionalProperties": false,
-      "description": "DeprecatedZarfComponentScripts are scripts that run before or after a component is deployed.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
-        "after": {
-          "description": "Scripts to run after the component successfully deploys.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "before": {
-          "description": "Scripts to run before the component is deployed.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "prepare": {
-          "description": "Scripts to run before the component is added during package create.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "retry": {
-          "description": "Retry the script if it fails.",
-          "type": "boolean"
-        },
-        "showOutput": {
-          "description": "Show the output of the script during package deployment.",
-          "type": "boolean"
-        },
-        "timeoutSeconds": {
-          "description": "Timeout in seconds for the script.",
-          "type": "integer"
+        "Duration": {
+          "$ref": "#/$defs/Duration"
         }
       },
+      "required": [
+        "Duration"
+      ],
+      "type": "object"
+    },
+    "GitRepoSource": {
+      "additionalProperties": false,
+      "description": "GitRepoSource represents a Helm chart stored in a Git repository.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "path": {
+          "description": "The sub directory to the chart within a git repo.",
+          "type": "string"
+        },
+        "url": {
+          "description": "The URL of the git repository where the helm chart is stored.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "HelmRepoSource": {
+      "additionalProperties": false,
+      "description": "HelmRepoSource represents a Helm chart stored in a Helm repository.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart).",
+          "type": "string"
+        },
+        "url": {
+          "description": "The URL of the chart repository where the helm chart is stored.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the chart to deploy.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ],
       "type": "object"
     },
     "ImageArchive": {
       "additionalProperties": false,
-      "description": "ImageArchive points to an archived file containing an OCI layout",
+      "description": "ImageArchive defines a tar archive of images to include in the package.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "images": {
-          "description": "Images within the OCI layout to be brought into the package",
+          "description": "The list of images contained in the archive.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "path": {
-          "description": "Path to file containing an OCI-layout",
+          "description": "The path to the tar archive.",
           "type": "string"
         }
       },
@@ -101,6 +120,41 @@
         "path",
         "images"
       ],
+      "type": "object"
+    },
+    "Injector": {
+      "additionalProperties": false,
+      "description": "Injector defines the configuration for the Zarf injector.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enabled": {
+          "description": "Whether the injector is enabled.",
+          "type": "boolean"
+        },
+        "values": {
+          "$ref": "#/$defs/InjectorValues",
+          "description": "Values for the injector."
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": "object"
+    },
+    "InjectorValues": {
+      "additionalProperties": false,
+      "description": "InjectorValues defines configurable values for the Zarf injector.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "tolerations": {
+          "description": "Tolerations for the injector pod.",
+          "type": "string"
+        }
+      },
       "type": "object"
     },
     "InteractiveVariable": {
@@ -153,35 +207,42 @@
       ],
       "type": "object"
     },
-    "NamespacedObjectKindReference": {
+    "LocalRepoSource": {
       "additionalProperties": false,
-      "description": "NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.",
+      "description": "LocalRepoSource represents a Helm chart stored locally.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
-        "apiVersion": {
-          "description": "API Version of the resource",
-          "type": "string"
-        },
-        "kind": {
-          "description": "Kind of the resource",
-          "type": "string"
-        },
-        "name": {
-          "description": "Name of the resource",
-          "type": "string"
-        },
-        "namespace": {
-          "description": "Namespace of the resource",
+        "path": {
+          "description": "The path to a local chart's folder or .tgz archive.",
           "type": "string"
         }
       },
       "required": [
-        "apiVersion",
-        "kind",
-        "namespace",
-        "name"
+        "path"
+      ],
+      "type": "object"
+    },
+    "OCISource": {
+      "additionalProperties": false,
+      "description": "OCISource represents a Helm chart stored in an OCI registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "url": {
+          "description": "The URL of the OCI registry where the helm chart is stored.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the chart to deploy.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "version"
       ],
       "type": "object"
     },
@@ -290,22 +351,23 @@
     },
     "VersionRequirement": {
       "additionalProperties": false,
-      "description": "VersionRequirement specifies minimum version requirements for the package",
+      "description": "VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "reason": {
-          "description": "Explanation for why this version is required",
+          "description": "The reason this version is required.",
           "type": "string"
         },
         "version": {
-          "description": "The minimum version of Zarf required to use this package",
+          "description": "The minimum version of Zarf required.",
           "type": "string"
         }
       },
       "required": [
-        "version"
+        "version",
+        "reason"
       ],
       "type": "object"
     },
@@ -316,6 +378,10 @@
         "^x-": {}
       },
       "properties": {
+        "aggregateChecksum": {
+          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
+          "type": "string"
+        },
         "apiVersion": {
           "description": "The API version defined in the package definition used to build the package.",
           "type": "string"
@@ -327,13 +393,6 @@
         "differential": {
           "description": "Whether this package was created with differential components.",
           "type": "boolean"
-        },
-        "differentialMissing": {
-          "description": "List of components that were not included in this package due to differential packaging.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
         },
         "differentialPackageVersion": {
           "description": "Version of a previously built package used as the basis for creating this differential package.",
@@ -351,7 +410,7 @@
           "type": "array"
         },
         "provenanceFiles": {
-          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).\nThis list is authenticated through the signed zarf.yaml.",
+          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt.\nThese are files added after checksum generation (e.g., signature files).",
           "items": {
             "type": "string"
           },
@@ -365,7 +424,7 @@
           "type": "object"
         },
         "signed": {
-          "description": "Whether this package was signed",
+          "description": "Whether this package was signed.",
           "type": "boolean"
         },
         "terminal": {
@@ -385,7 +444,7 @@
           "type": "string"
         },
         "versionRequirements": {
-          "description": "Requirements for specific package operations.",
+          "description": "Requirements for specific Zarf versions needed to deploy this package.",
           "items": {
             "$ref": "#/$defs/VersionRequirement"
           },
@@ -406,16 +465,17 @@
         "^x-": {}
       },
       "properties": {
-        "gitPath": {
-          "description": "(git repo only) The sub directory to the chart within a git repo.",
-          "examples": [
-            "charts/your-chart"
-          ],
-          "type": "string"
+        "git": {
+          "$ref": "#/$defs/GitRepoSource",
+          "description": "The Git repo where the chart is stored."
         },
-        "localPath": {
-          "description": "The path to a local chart's folder or .tgz archive.",
-          "type": "string"
+        "helmRepo": {
+          "$ref": "#/$defs/HelmRepoSource",
+          "description": "The Helm repo where the chart is stored."
+        },
+        "local": {
+          "$ref": "#/$defs/LocalRepoSource",
+          "description": "The local path where the chart is stored."
         },
         "name": {
           "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.",
@@ -425,20 +485,16 @@
           "description": "The namespace to deploy the chart to.",
           "type": "string"
         },
-        "noWait": {
-          "description": "Whether to not wait for chart resources to be ready before continuing.",
-          "type": "boolean"
+        "oci": {
+          "$ref": "#/$defs/OCISource",
+          "description": "The OCI registry where the chart is stored."
         },
         "releaseName": {
           "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
           "type": "string"
         },
-        "repoName": {
-          "description": "The name of a chart within a Helm repository (defaults to the Zarf name of the chart).",
-          "type": "string"
-        },
         "schemaValidation": {
-          "description": "Whether or not to validate the values.yaml schema, defaults to true. Necessary in the air-gap when the JSON Schema references resources on the internet.",
+          "description": "Whether to validate the chart's values against its JSON schema. Defaults to true.",
           "type": "boolean"
         },
         "serverSideApply": {
@@ -450,17 +506,8 @@
           ],
           "type": "string"
         },
-        "url": {
-          "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
-          "examples": [
-            "OCI registry: oci://ghcr.io/stefanprodan/charts/podinfo",
-            "helm chart repo: https://stefanprodan.github.io/podinfo",
-            "git repo: https://github.com/stefanprodan/podinfo (note the '@' syntax for 'repos' is supported here too)"
-          ],
-          "type": "string"
-        },
         "values": {
-          "description": "[alpha] List of values sources to their Helm override target",
+          "description": "List of values sources to their Helm override target.",
           "items": {
             "$ref": "#/$defs/ZarfChartValue"
           },
@@ -473,16 +520,9 @@
           },
           "type": "array"
         },
-        "variables": {
-          "description": "[alpha] List of variables to set in the Helm chart.",
-          "items": {
-            "$ref": "#/$defs/ZarfChartVariable"
-          },
-          "type": "array"
-        },
-        "version": {
-          "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').",
-          "type": "string"
+        "wait": {
+          "description": "Whether to wait for chart resources to be ready before continuing. Defaults to true.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -492,59 +532,23 @@
     },
     "ZarfChartValue": {
       "additionalProperties": false,
-      "description": "ZarfChartValue maps a Zarf Value key to a Helm Value.",
+      "description": "ZarfChartValue maps a values source path to a Helm chart target path.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "sourcePath": {
-          "description": "Path to Zarf values key. A single dot (.) represents the root.",
-          "examples": [
-            ".registry.port"
-          ],
-          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
+          "description": "The source path for the value.",
           "type": "string"
         },
         "targetPath": {
-          "description": "Path to chart values key. A single dot (.) represents the root.",
-          "examples": [
-            ".service.port"
-          ],
-          "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
+          "description": "The target path within the Helm chart values.",
           "type": "string"
         }
       },
       "required": [
         "sourcePath",
         "targetPath"
-      ],
-      "type": "object"
-    },
-    "ZarfChartVariable": {
-      "additionalProperties": false,
-      "description": "ZarfChartVariable represents a variable that can be set for a Helm chart overrides.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "description": {
-          "description": "A brief description of what the variable controls.",
-          "type": "string"
-        },
-        "name": {
-          "description": "The name of the variable.",
-          "pattern": "^[A-Z0-9_]+$",
-          "type": "string"
-        },
-        "path": {
-          "description": "The path within the Helm chart values where this variable applies.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "name",
-        "description",
-        "path"
       ],
       "type": "object"
     },
@@ -566,13 +570,6 @@
           },
           "type": "array"
         },
-        "dataInjections": {
-          "description": "[Deprecated] Datasets to inject into a container in the target cluster.",
-          "items": {
-            "$ref": "#/$defs/ZarfDataInjection"
-          },
-          "type": "array"
-        },
         "default": {
           "description": "Determines the default Y/N state for installing this component on package deploy.",
           "type": "boolean"
@@ -581,6 +578,10 @@
           "description": "Message to include during package deploy describing the purpose of this component.",
           "type": "string"
         },
+        "features": {
+          "$ref": "#/$defs/ZarfComponentFeatures",
+          "description": "Features of the Zarf CLI to enable for this component."
+        },
         "files": {
           "description": "Files or folders to place on disk during package deployment.",
           "items": {
@@ -588,19 +589,8 @@
           },
           "type": "array"
         },
-        "group": {
-          "description": "[Deprecated] Create a user selector field based on all components in the same group. This will be removed in Zarf v1.0.0. Consider using 'only.flavor' instead.",
-          "type": "string"
-        },
-        "healthChecks": {
-          "description": "List of resources to health check after deployment",
-          "items": {
-            "$ref": "#/$defs/NamespacedObjectKindReference"
-          },
-          "type": "array"
-        },
         "imageArchives": {
-          "description": "List of Tar files of images to bring into the package.",
+          "description": "List of tar archives of images to include in the package.",
           "items": {
             "$ref": "#/$defs/ImageArchive"
           },
@@ -609,13 +599,13 @@
         "images": {
           "description": "List of OCI images to include in the package.",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/ZarfImage"
           },
           "type": "array"
         },
         "import": {
           "$ref": "#/$defs/ZarfComponentImport",
-          "description": "Import a component from another Zarf package."
+          "description": "Import a component from another Zarf component config."
         },
         "manifests": {
           "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy.",
@@ -633,20 +623,16 @@
           "$ref": "#/$defs/ZarfComponentOnlyTarget",
           "description": "Filter when this component is included in package creation or deployment."
         },
+        "optional": {
+          "description": "Do not prompt user to install this component. Defaults to false, meaning the component is required.",
+          "type": "boolean"
+        },
         "repos": {
           "description": "List of git repos to include in the package.",
           "items": {
             "type": "string"
           },
           "type": "array"
-        },
-        "required": {
-          "description": "Do not prompt user to install this component.",
-          "type": "boolean"
-        },
-        "scripts": {
-          "$ref": "#/$defs/DeprecatedZarfComponentScripts",
-          "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
         }
       },
       "required": [
@@ -680,29 +666,20 @@
           },
           "type": "array"
         },
-        "maxRetries": {
-          "description": "Retry the command if it fails up to given number of times (default 0).",
-          "type": "integer"
-        },
-        "maxTotalSeconds": {
-          "description": "Timeout in seconds for the command (default to 0, no timeout for cmd actions and 300, 5 minutes for wait actions).",
-          "type": "integer"
-        },
         "mute": {
           "description": "Hide the output of the command during package deployment (default false).",
           "type": "boolean"
         },
+        "retries": {
+          "description": "Retry the command if it fails up to given number of times (default 0).",
+          "type": "integer"
+        },
         "setValues": {
-          "description": "(onDeploy/onRemove/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.",
+          "description": "An array of values to set with the output of the command.",
           "items": {
             "$ref": "#/$defs/SetValue"
           },
           "type": "array"
-        },
-        "setVariable": {
-          "description": "[Deprecated] (replaced by setVariables) (onDeploy/cmd only) The name of a variable to update with the output of the command. This variable will be available to all remaining actions and components in the package. This will be removed in Zarf v1.0.0.",
-          "pattern": "^[A-Z0-9_]+$",
-          "type": "string"
         },
         "setVariables": {
           "description": "(onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.",
@@ -716,8 +693,12 @@
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
         },
         "template": {
-          "description": "Disable go-template processing on the cmd field. This is useful when the cmd contains go-templates that should be passed to another system.",
+          "description": "Disable go-template processing on the cmd field.",
           "type": "boolean"
+        },
+        "timeout": {
+          "$ref": "#/$defs/Duration",
+          "description": "Timeout for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions)."
         },
         "wait": {
           "$ref": "#/$defs/ZarfComponentActionWait",
@@ -744,21 +725,21 @@
           },
           "type": "array"
         },
-        "maxRetries": {
-          "description": "Retry commands given number of times if they fail (default 0).",
-          "type": "integer"
-        },
-        "maxTotalSeconds": {
-          "description": "Default timeout in seconds for commands (default to 0, no timeout).",
-          "type": "integer"
-        },
         "mute": {
           "description": "Hide the output of commands during execution (default false).",
           "type": "boolean"
         },
+        "retries": {
+          "description": "Retry commands given number of times if they fail (default 0).",
+          "type": "integer"
+        },
         "shell": {
           "$ref": "#/$defs/Shell",
           "description": "(cmd only) Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+        },
+        "timeout": {
+          "$ref": "#/$defs/Duration",
+          "description": "Default timeout for commands (default no timeout)."
         }
       },
       "type": "object"
@@ -794,13 +775,6 @@
             "$ref": "#/$defs/ZarfComponentAction"
           },
           "type": "array"
-        },
-        "onSuccess": {
-          "description": "Actions to run if all operations succeed.",
-          "items": {
-            "$ref": "#/$defs/ZarfComponentAction"
-          },
-          "type": "array"
         }
       },
       "type": "object"
@@ -831,9 +805,8 @@
       },
       "properties": {
         "condition": {
-          "description": "The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist.",
+          "description": "The condition or jsonpath state to wait for; defaults to kstatus readiness checks.",
           "examples": [
-            "Ready",
             "Available"
           ],
           "type": "string"
@@ -926,6 +899,28 @@
       },
       "type": "object"
     },
+    "ZarfComponentFeatures": {
+      "additionalProperties": false,
+      "description": "ZarfComponentFeatures defines features of the Zarf CLI to enable for a component.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "injector": {
+          "$ref": "#/$defs/Injector",
+          "description": "Injector configuration for the component."
+        },
+        "isAgent": {
+          "description": "Whether this component provides an agent.",
+          "type": "boolean"
+        },
+        "isRegistry": {
+          "description": "Whether this component provides a registry.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
     "ZarfComponentImport": {
       "additionalProperties": false,
       "description": "ZarfComponentImport structure for including imported Zarf components.",
@@ -933,16 +928,12 @@
         "^x-": {}
       },
       "properties": {
-        "name": {
-          "description": "The name of the component to import from the referenced zarf.yaml.",
-          "type": "string"
-        },
         "path": {
-          "description": "The path to the directory containing the zarf.yaml to import.",
+          "description": "The path to the component config file to import.",
           "type": "string"
         },
         "url": {
-          "description": "[beta] The URL to a Zarf package to import via OCI.",
+          "description": "The URL to a Zarf component config to import via OCI.",
           "pattern": "^oci://.*$",
           "type": "string"
         }
@@ -1005,67 +996,6 @@
       },
       "type": "object"
     },
-    "ZarfContainerTarget": {
-      "additionalProperties": false,
-      "description": "ZarfContainerTarget defines the destination info for a ZarfData target",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "container": {
-          "description": "The container name to target for data injection.",
-          "type": "string"
-        },
-        "namespace": {
-          "description": "The namespace to target for data injection.",
-          "type": "string"
-        },
-        "path": {
-          "description": "The path within the container to copy the data into.",
-          "type": "string"
-        },
-        "selector": {
-          "description": "The K8s selector to target for data injection.",
-          "examples": [
-            "app=data-injection"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "namespace",
-        "selector",
-        "container",
-        "path"
-      ],
-      "type": "object"
-    },
-    "ZarfDataInjection": {
-      "additionalProperties": false,
-      "description": "ZarfDataInjection is a data-injection definition.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "compress": {
-          "description": "Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image.",
-          "type": "boolean"
-        },
-        "source": {
-          "description": "Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container.",
-          "type": "string"
-        },
-        "target": {
-          "$ref": "#/$defs/ZarfContainerTarget",
-          "description": "The target pod + container to inject the data into."
-        }
-      },
-      "required": [
-        "source",
-        "target"
-      ],
-      "type": "object"
-    },
     "ZarfFile": {
       "additionalProperties": false,
       "description": "ZarfFile defines a file to deploy.",
@@ -1101,13 +1031,38 @@
           "type": "string"
         },
         "template": {
-          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+          "description": "Template enables go-template processing on this file during deploy.",
           "type": "boolean"
         }
       },
       "required": [
         "source",
         "target"
+      ],
+      "type": "object"
+    },
+    "ZarfImage": {
+      "additionalProperties": false,
+      "description": "ZarfImage defines an OCI image to include in the package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The image reference.",
+          "type": "string"
+        },
+        "source": {
+          "description": "The source to pull the image from. Defaults to \"registry\".",
+          "enum": [
+            "registry",
+            "daemon"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
       ],
       "type": "object"
     },
@@ -1118,10 +1073,6 @@
         "^x-": {}
       },
       "properties": {
-        "enableKustomizePlugins": {
-          "description": "Enable kustomize plugins during kustomize builds.",
-          "type": "boolean"
-        },
         "files": {
           "description": "List of local K8s YAML files or remote URLs to deploy (in order).",
           "items": {
@@ -1137,7 +1088,7 @@
           "type": "array"
         },
         "kustomizeAllowAnyDirectory": {
-          "description": "Allow traversing directory above the current directory if needed for kustomization.",
+          "description": "Allow traversing directory above the current directory if needed for kustomization. (Defaults to false)",
           "type": "boolean"
         },
         "name": {
@@ -1147,10 +1098,6 @@
         "namespace": {
           "description": "The namespace to deploy the manifests to.",
           "type": "string"
-        },
-        "noWait": {
-          "description": "Whether to not wait for manifest resources to be ready before continuing.",
-          "type": "boolean"
         },
         "serverSideApply": {
           "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.\n  - \"true\":  always use SSA\n  - \"false\": always use CSA\n  - \"auto\":  use SSA for fresh installs; for upgrades, match whichever strategy\n             was used when the chart was first installed\nDefaults to \"auto\" when omitted.",
@@ -1162,7 +1109,11 @@
           "type": "string"
         },
         "template": {
-          "description": "[alpha]\nTemplate enables go-templates inside manifests. This is useful for parameterizing fields that the value will be\nknown at deploy-time. See documentation for Zarf Values for how to set these values.",
+          "description": "Template enables go-template processing on these manifests during deploy.",
+          "type": "boolean"
+        },
+        "wait": {
+          "description": "Whether to wait for manifest resources to be ready before continuing. Defaults to true.",
           "type": "boolean"
         }
       },
@@ -1178,19 +1129,15 @@
         "^x-": {}
       },
       "properties": {
-        "aggregateChecksum": {
-          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
-          "type": "string"
-        },
         "allowNamespaceOverride": {
-          "description": "AllowNamespaceOverride controls whether a package's namespace may be overridden.",
+          "description": "Whether to allow namespace overrides for this package.",
           "type": "boolean"
         },
         "annotations": {
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Annotations contains arbitrary metadata about the package.\nUsers are encouraged to follow OCI image-spec https://github.com/opencontainers/image-spec/blob/main/annotations.md",
+          "description": "Annotations are key-value pairs that can be used to store metadata about the package.",
           "type": "object"
         },
         "architecture": {
@@ -1201,23 +1148,8 @@
           ],
           "type": "string"
         },
-        "authors": {
-          "description": "Comma-separated list of package authors (including contact info).",
-          "examples": [
-            "Zarf \u003czarf@zarf-dev.com\u003e"
-          ],
-          "type": "string"
-        },
         "description": {
-          "description": "Additional information about this package.",
-          "type": "string"
-        },
-        "documentation": {
-          "description": "Link to package documentation when online.",
-          "type": "string"
-        },
-        "image": {
-          "description": "An image URL to embed in this package (Reserved for future use in Zarf UI).",
+          "description": "Additional information about this Zarf package.",
           "type": "string"
         },
         "name": {
@@ -1225,29 +1157,13 @@
           "pattern": "^[a-z0-9][a-z0-9\\-]*$",
           "type": "string"
         },
-        "source": {
-          "description": "Link to package source code when online.",
-          "type": "string"
-        },
         "uncompressed": {
           "description": "Disable compression of this package.",
           "type": "boolean"
         },
-        "url": {
-          "description": "Link to package information when online.",
-          "type": "string"
-        },
-        "vendor": {
-          "description": "Name of the distributing entity, organization or individual.",
-          "type": "string"
-        },
         "version": {
           "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).",
           "type": "string"
-        },
-        "yolo": {
-          "description": "Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.",
-          "type": "boolean"
         }
       },
       "required": [
@@ -1257,27 +1173,27 @@
     },
     "ZarfValues": {
       "additionalProperties": false,
-      "description": "ZarfValues imports package-level values files and validation.",
+      "description": "ZarfValues defines values files and schema for templating and overriding Helm values.",
       "patternProperties": {
         "^x-": {}
       },
       "properties": {
         "files": {
-          "description": "Files declares the relative filepath of Values files.",
+          "description": "List of values file paths to include.",
           "items": {
             "type": "string"
           },
           "type": "array"
         },
         "schema": {
-          "description": "Schema declares a path to a .schema.json file that validates the contents of Files.",
+          "description": "Path to a JSON schema file for validating values.",
           "type": "string"
         }
       },
       "type": "object"
     }
   },
-  "$id": "https://github.com/zarf-dev/zarf/src/api/v1alpha1/zarf-package",
+  "$id": "https://github.com/zarf-dev/zarf/src/api/v1beta1/zarf-package",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "ZarfPackage the top-level structure of a Zarf config file.",
@@ -1288,7 +1204,7 @@
     "apiVersion": {
       "description": "The API version of the Zarf package.",
       "enum": [
-        "zarf.dev/v1alpha1"
+        "zarf.dev/v1beta1"
       ],
       "type": "string"
     },
@@ -1301,7 +1217,6 @@
       "items": {
         "$ref": "#/$defs/ZarfComponent"
       },
-      "minItems": 1,
       "type": "array"
     },
     "constants": {
@@ -1315,7 +1230,7 @@
       "additionalProperties": {
         "type": "string"
       },
-      "description": "Documentation files to be added to the package",
+      "description": "Documentation files.",
       "type": "object"
     },
     "kind": {
@@ -1333,7 +1248,7 @@
     },
     "values": {
       "$ref": "#/$defs/ZarfValues",
-      "description": "Values imports Zarf values files for templating and overriding Helm values."
+      "description": "Values imports Zarf values files for templating."
     },
     "variables": {
       "description": "Variable template values applied on deploy for K8s resources.",
