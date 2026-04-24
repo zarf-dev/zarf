@@ -17,17 +17,34 @@ Specifically:
 
 ### Pre-Commit Hooks and Linting
 
-We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks. This ensures that all code is linted and formatted before it is committed. After `pre-commit` is [installed](https://pre-commit.com/#installation):
+We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks, which lint and format code before it's committed.
+
+#### Prerequisites
+
+- **Go** matching the version in the project go.mod, available on your `PATH`. Our pre-commit hooks invoke `golangci-lint` directly from your `PATH` rather than managing a Go environment (see [Supply-chain notes](#supply-chain-notes) below).
+- **Python 3**, required by pre-commit itself and by several of our hooks.
+- **pre-commit**, installed per the [pre-commit installation guide](https://pre-commit.com/#installation).
+
+#### Setup
 
 ```bash
-# install hooks
+# install hooks into .git/hooks
 pre-commit install
 
-# install golang-ci-lint
+# install golangci-lint (used by the goimports and lint hooks)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
 
-Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
+Every commit now runs the hooks; linting can also be invoked directly via `make lint-go`.
+
+#### Supply-chain notes
+
+`.pre-commit-config.yaml` is deliberately configured to reduce the attack surface of the contributor loop:
+
+- **External hook repos are pinned by commit SHA**, with the original tag in a trailing comment. Git tags are mutable on the server side; pinning by SHA ensures a fresh `pre-commit install` or `pre-commit autoupdate` cannot silently pull a retargeted tag. This matches the SHA-pinning convention we already use for GitHub Actions.
+- **Go-based hooks use `language: system`** so pre-commit invokes the `golangci-lint` already on your `PATH` rather than managing its own Go environment or fetching a toolchain from `go.dev`. This keeps lint/format behavior aligned with CI and avoids introducing a second trust root.
+
+When upgrading a pinned hook, run `pre-commit autoupdate --freeze` — the `--freeze` flag writes the resolved commit SHA (rather than the tag) back into `rev:`. Update the trailing tag comment to match, so the config stays auditable.
 
 ### Contributing Guidelines
 
