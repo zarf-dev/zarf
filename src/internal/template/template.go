@@ -165,6 +165,8 @@ func funcMap() ttmpl.FuncMap {
 	m := sprig.TxtFuncMap()
 	delete(m, "env")
 	delete(m, "expandenv")
+	// live DNS lookup leaks templating context to attacker-controlled resolvers; see Helm GHSA-pwcw-6f5g-gxf8
+	delete(m, "getHostByName")
 	extras := ttmpl.FuncMap{
 		"toToml":        toTOML,
 		"fromToml":      fromTOML,
