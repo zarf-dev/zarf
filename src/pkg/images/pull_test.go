@@ -393,6 +393,7 @@ func TestPullInvalidCache(t *testing.T) {
 
 	opts := PullOptions{
 		CacheDirectory: cacheDir,
+		Arch:           "amd64",
 	}
 	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)
 	require.NoError(t, err)
