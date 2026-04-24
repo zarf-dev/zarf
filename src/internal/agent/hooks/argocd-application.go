@@ -58,16 +58,12 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) o
 	}
 }
 
-// mutateApplication mutates the git repository url to point to the repository URL defined in the ZarfState.
+// mutateApplication mutates the repository url to point to the repository URL defined in the ZarfState.
 func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
 	l := logger.From(ctx)
 	s, err := cluster.LoadState(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if !s.GitServer.IsConfigured() {
-		l.Debug("no Zarf git server configured, skipping ArgoCD Application mutation")
-		return &operations.Result{Allowed: true}, nil
 	}
 
 	app := Application{}
@@ -75,14 +71,29 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
+	requiresGit, requiresRegistry := classifySourceSchemes(app)
+
+	gitUsable := requiresGit && s.GitServer.IsConfigured()
+	registryUsable := requiresRegistry && s.RegistryInfo.IsConfigured()
+
+	if !gitUsable && !registryUsable {
+		l.Debug("no Zarf services configured for source URL schemes, skipping ArgoCD Application mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
+
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("mutating the ArgoCD Application",
 		"name", app.Name,
-		"operation", r.Operation,
-		"gitServer", s.GitServer.Address)
+		"operation", r.Operation)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, s.GitServer)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
 		if err != nil {
 			return nil, err
 		}
@@ -91,7 +102,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, s.GitServer)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
 			if err != nil {
 				return nil, err
 			}
@@ -107,7 +118,12 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
+func getPatchedRepoURL(
+	ctx context.Context,
+	repoURL, registryAddress, clusterIP string,
+	gs state.GitServerInfo,
+	r *v1.AdmissionRequest,
+) (string, error) {
 	l := logger.From(ctx)
 
 	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
@@ -122,6 +138,95 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 		return repoURL, nil
 	}
 
+	isOCIURL := helpers.IsOCIURL(repoURL)
+
+	if isOCIURL && registryAddress == "" {
+		l.Debug("no Zarf registry configured, skipping OCI repoURL mutation", "url", repoURL)
+		return repoURL, nil
+	}
+	if !isOCIURL && !gs.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping git repoURL mutation", "url", repoURL)
+		return repoURL, nil
+	}
+
+	shouldMutate, isPatchedClusterIP, err := shouldMutateURL(r.Operation, isOCIURL, repoURL, registryAddress, clusterIP, gs)
+	if err != nil {
+		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
+	}
+
+	if !shouldMutate {
+		return repoURL, nil
+	}
+
+	if isOCIURL {
+		return mutateOCIURL(ctx, repoURL, registryAddress, isPatchedClusterIP)
+	}
+	return mutateGitURL(ctx, repoURL, gs)
+}
+
+// shouldMutateURL reports whether the given repoURL should be mutated for the admission operation.
+//
+// shouldMutate is true for Create operations and for Update operations where repoURL has not
+// already been patched to the Zarf-managed registry or git server address.
+//
+// isPatchedClusterIP is true when repoURL already matches the registry cluster-IP address
+func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (shouldMutate bool, isPatchedClusterIP bool, err error) {
+	isCreate := operation == v1.Create
+	isUpdate := operation == v1.Update
+	if isCreate {
+		return true, false, nil
+	}
+
+	var isPatched bool
+	if isOCIURL {
+		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
+		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
+		if err != nil {
+			return false, false, err
+		}
+		if clusterIP != "" {
+			zarfStateClusterIPAddress := helpers.OCIURLPrefix + clusterIP
+			isPatchedClusterIP, err = helpers.DoHostnamesMatch(zarfStateClusterIPAddress, repoURL)
+			if err != nil {
+				return false, false, err
+			}
+		}
+	} else {
+		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
+	}
+
+	return (isUpdate && !isPatched), isPatchedClusterIP, err
+}
+
+func mutateOCIURL(ctx context.Context, repoURL, registryAddress string, isPatchedClusterIP bool) (string, error) {
+	l := logger.From(ctx)
+	var patchedSrc string
+	var err error
+
+	if isPatchedClusterIP {
+		patchedSrc, err = transform.ImageTransformHostWithoutChecksum(registryAddress, repoURL)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+		}
+	} else {
+		patchedSrc, err = transform.ImageTransformHost(registryAddress, repoURL)
+		if err != nil {
+			return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+		}
+	}
+
+	patchedRefInfo, err := transform.ParseImageRef(patchedSrc)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", AgentErrTransformOCIURL, err)
+	}
+
+	patchedURL := helpers.OCIURLPrefix + patchedRefInfo.Name
+	l.Debug("mutated ArgoCD application OCI repoURL to the Zarf Registry URL", "original", repoURL, "mutated", patchedURL)
+	return patchedURL, nil
+}
+
+func mutateGitURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (string, error) {
+	l := logger.From(ctx)
 	transformedURL, err := transform.GitURL(gs.Address, repoURL, gs.PushUsername)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", AgentErrTransformGitURL, err)
@@ -129,6 +234,26 @@ func getPatchedRepoURL(ctx context.Context, repoURL string, gs state.GitServerIn
 	patchedURL := transformedURL.String()
 	l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	return patchedURL, nil
+}
+
+// classifySourceSchemes inspects the URL schemes of all sources in an ArgoCD Application spec and
+// reports whether the application has git sources (requiring the Zarf git server) or OCI sources
+// (requiring the Zarf registry).
+func classifySourceSchemes(app Application) (requiresGit, requiresRegistry bool) {
+	check := func(repoURL string) {
+		if helpers.IsOCIURL(repoURL) {
+			requiresRegistry = true
+		} else {
+			requiresGit = true
+		}
+	}
+	if app.Spec.Source != nil {
+		check(app.Spec.Source.RepoURL)
+	}
+	for _, src := range app.Spec.Sources {
+		check(src.RepoURL)
+	}
+	return
 }
 
 // Patch updates of the Argo source spec.
