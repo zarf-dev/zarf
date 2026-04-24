@@ -55,6 +55,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
+	if cfg.Arch == "" {
+		return fmt.Errorf("architecture is required")
+	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
 	}
