@@ -61,6 +61,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"importStack", len(importStack),
 	)
 
+	var valuesFiles []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -182,8 +183,20 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+		for _, v := range importedPkg.Values.Files {
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+		}
 	}
 
+	valuesFiles = append(valuesFiles, pkg.Values.Files...)
+	valuesFilesMap := map[string]bool{}
+	pkg.Values.Files = nil
+	for _, v := range valuesFiles {
+		if _, present := valuesFilesMap[v]; !present {
+			pkg.Values.Files = append(pkg.Values.Files, v)
+			valuesFilesMap[v] = true
+		}
+	}
 	pkg.Components = components
 
 	varMap := map[string]bool{}

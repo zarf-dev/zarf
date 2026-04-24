@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+values:
+  files:
+    - child-values.yaml
+components:
+  - name: shared
+    required: true
