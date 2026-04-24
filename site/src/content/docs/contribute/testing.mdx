@@ -12,7 +12,9 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 
 1. GoLang version >= the version specified in the [go.mod](https://github.com/zarf-dev/zarf/blob/main/go.mod)
 2. Make
-3. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
+3. Docker
+4. Docker Buildx
+5. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
 ## Unit Tests
 
@@ -22,12 +24,17 @@ There are several ways to run tests depending on your specific situation, such a
 # The default way, from the root directory of the repo. Will run all of the unit tests that are currently defined.
 make test-unit
 
+# To get a single-line readable summary of all the unit tests currently defined:
+make test-unit 2>&1 | grep -E "^(ok|FAIL)\s"
+
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/pkg/... -v
 
 # Let's say you only want to run one test. You would run:
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
+
+All unit tests should pass locally before submitting a PR.
 
 ### Adding New Unit Tests
 
@@ -51,10 +58,13 @@ There are several ways to run tests depending on your specific situation, such a
 # The default way, from the root directory of the repo. Will run all of the tests against your chosen k8s distro. Will automatically build any binary dependencies that don't already exist.
 make test-e2e ARCH="[amd64|arm64]"
 
+# To get a single-line readable summary of all the e2e tests currently defined:
+cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m 2>&1 | grep -E "^(--- FAIL|--- PASS|FAIL|ok)"
+
 # To test against a Zarf-created cluster (on Linux with sudo)
 APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
 
-# If you already have everything build, you can run this inside this folder. This lets you customize the test run.
+# If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/test/... -v -failfast -count=1
 
 # Let's say you only want to run one test. You would run:
