@@ -61,9 +61,7 @@ type imagePullInfo struct {
 	ref                 string
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
-	// platforms is populated for multi-arch pulls with one entry per leaf platform
-	// ("os/arch[/variant]"). Empty for single-arch pulls.
-	platforms []string
+	platforms           []string
 }
 
 type imageWithOverride struct {

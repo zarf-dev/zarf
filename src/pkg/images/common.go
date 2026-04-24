@@ -217,13 +217,13 @@ func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
-// formatPlatform renders an ocispec.Platform as "os/arch[/variant]". Returns an empty string
-// when the platform has no os or architecture set.
+// formatPlatform renders an ocispec.Platform as "arch[/variant]". Returns an empty string
+// when the platform has no architecture set.
 func formatPlatform(p *ocispec.Platform) string {
-	if p == nil || p.OS == "" || p.Architecture == "" {
+	if p == nil || p.Architecture == "" {
 		return ""
 	}
-	s := p.OS + "/" + p.Architecture
+	s := p.Architecture
 	if p.Variant != "" {
 		s += "/" + p.Variant
 	}
@@ -259,9 +259,9 @@ func collectPlatformsFromIndex(ctx context.Context, fetcher content.Fetcher, ind
 	return platforms, nil
 }
 
-// collectPlatformsFromManifest reads the architecture and os from the config blob referenced
-// by the given image manifest and returns a single-element slice of "os/arch[/variant]".
-// Returns an empty slice when the config is not a standard OCI image config.
+// collectPlatformsFromManifest reads the architecture from the config blob referenced by the
+// given image manifest and returns a single-element slice of "arch[/variant]". Returns an
+// empty slice when the config is not a standard OCI image config.
 func collectPlatformsFromManifest(ctx context.Context, fetcher content.Fetcher, manifestBytes []byte) ([]string, error) {
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
@@ -275,14 +275,13 @@ func collectPlatformsFromManifest(ctx context.Context, fetcher content.Fetcher, 
 		return nil, fmt.Errorf("unable to fetch manifest config: %w", err)
 	}
 	var cfg struct {
-		OS           string `json:"os"`
 		Architecture string `json:"architecture"`
 		Variant      string `json:"variant"`
 	}
 	if err := json.Unmarshal(configBytes, &cfg); err != nil {
 		return nil, nil
 	}
-	s := formatPlatform(&ocispec.Platform{OS: cfg.OS, Architecture: cfg.Architecture, Variant: cfg.Variant})
+	s := formatPlatform(&ocispec.Platform{Architecture: cfg.Architecture, Variant: cfg.Variant})
 	if s == "" {
 		return nil, nil
 	}
