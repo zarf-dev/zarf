@@ -19,6 +19,12 @@ import (
 func TestZarfInit(t *testing.T) {
 	t.Log("E2E: Zarf init")
 
+	// Verify cluster connectivity before running with-cluster tests
+	if !e2e.ApplianceMode {
+		_, _, err := e2e.Kubectl(t, "cluster-info")
+		require.NoError(t, err, "No cluster found. Ensure a valid kubeconfig is available and cluster is running.")
+	}
+
 	initComponents := "git-server"
 	if e2e.ApplianceMode {
 		initComponents = "k3s,git-server"
