@@ -37,7 +37,7 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, allVariants, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
@@ -66,7 +66,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	components := []v1alpha1.ZarfComponent{}
 
 	for _, component := range pkg.Components {
-		if !compatibleComponent(component, arch, flavor) {
+		if !compatibleComponent(component, arch, flavor, allVariants) {
 			continue
 		}
 
@@ -109,7 +109,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, allVariants, skipVersionCheck, remoteOptions)
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
@@ -145,7 +145,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
 		for _, component := range importedPkg.Components {
-			if component.Name == name && compatibleComponent(component, arch, flavor) {
+			if component.Name == name && compatibleComponent(component, arch, flavor, allVariants) {
 				found = append(found, component)
 			}
 		}
@@ -237,9 +237,9 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 	return errors.Join(errs...)
 }
 
-func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
+func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string, allVariants bool) bool {
 	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
-	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
+	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor || allVariants
 	return satisfiesArch && satisfiesFlavor
 }
 

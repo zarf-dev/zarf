@@ -28,7 +28,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -37,9 +37,10 @@ func TestResolveImports(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name   string
-		path   string
-		flavor string
+		name        string
+		path        string
+		flavor      string
+		allVariants bool
 	}{
 		{
 			name: "two zarf.yaml files import each other",
@@ -77,7 +78,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, tc.allVariants, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -217,6 +218,7 @@ func TestCompatibleComponent(t *testing.T) {
 		component      v1alpha1.ZarfComponent
 		arch           string
 		flavor         string
+		allVariants    bool
 		expectedResult bool
 	}{
 		{
@@ -294,7 +296,7 @@ func TestCompatibleComponent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := compatibleComponent(tt.component, tt.arch, tt.flavor)
+			result := compatibleComponent(tt.component, tt.arch, tt.flavor, tt.allVariants)
 			require.Equal(t, tt.expectedResult, result)
 		})
 	}

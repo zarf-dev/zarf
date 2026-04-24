@@ -50,6 +50,15 @@ const (
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 )
 
+// ComponentNameNotUniqueErr is the error type emitted when two components are found to have identical names
+type ComponentNameNotUniqueErr struct {
+	component string
+}
+
+func (e *ComponentNameNotUniqueErr) Error() string {
+	return fmt.Sprintf(PkgValidateErrComponentNameNotUnique, e.component)
+}
+
 // ValidatePackage runs all validation checks on the package.
 func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	var err error
@@ -86,7 +95,10 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	for _, component := range pkg.Components {
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+			uniqueErr := ComponentNameNotUniqueErr{
+				component: component.Name,
+			}
+			err = errors.Join(err, &uniqueErr)
 		}
 		uniqueComponentNames[component.Name] = true
 		if component.IsRequired() {
