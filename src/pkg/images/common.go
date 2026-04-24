@@ -217,6 +217,78 @@ func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
+// formatPlatform renders an ocispec.Platform as "os/arch[/variant]". Returns an empty string
+// when the platform has no os or architecture set.
+func formatPlatform(p *ocispec.Platform) string {
+	if p == nil || p.OS == "" || p.Architecture == "" {
+		return ""
+	}
+	s := p.OS + "/" + p.Architecture
+	if p.Variant != "" {
+		s += "/" + p.Variant
+	}
+	return s
+}
+
+// collectPlatformsFromIndex walks an OCI image index (recursing into nested indexes) and
+// returns a "os/arch[/variant]" string for each leaf manifest.
+func collectPlatformsFromIndex(ctx context.Context, fetcher content.Fetcher, indexBytes []byte) ([]string, error) {
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal index: %w", err)
+	}
+	var platforms []string
+	for _, child := range idx.Manifests {
+		switch {
+		case IsIndex(child.MediaType):
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
+			}
+			nested, err := collectPlatformsFromIndex(ctx, fetcher, b)
+			if err != nil {
+				return nil, err
+			}
+			platforms = append(platforms, nested...)
+		default:
+			if s := formatPlatform(child.Platform); s != "" {
+				platforms = append(platforms, s)
+			}
+		}
+	}
+	return platforms, nil
+}
+
+// collectPlatformsFromManifest reads the architecture and os from the config blob referenced
+// by the given image manifest and returns a single-element slice of "os/arch[/variant]".
+// Returns an empty slice when the config is not a standard OCI image config.
+func collectPlatformsFromManifest(ctx context.Context, fetcher content.Fetcher, manifestBytes []byte) ([]string, error) {
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal manifest: %w", err)
+	}
+	if manifest.Config.Digest == "" {
+		return nil, nil
+	}
+	configBytes, err := content.FetchAll(ctx, fetcher, manifest.Config)
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch manifest config: %w", err)
+	}
+	var cfg struct {
+		OS           string `json:"os"`
+		Architecture string `json:"architecture"`
+		Variant      string `json:"variant"`
+	}
+	if err := json.Unmarshal(configBytes, &cfg); err != nil {
+		return nil, nil
+	}
+	s := formatPlatform(&ocispec.Platform{OS: cfg.OS, Architecture: cfg.Architecture, Variant: cfg.Variant})
+	if s == "" {
+		return nil, nil
+	}
+	return []string{s}, nil
+}
+
 func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (int64, error) {
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {

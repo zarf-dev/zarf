@@ -5,6 +5,8 @@
 package images
 
 import (
+	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -16,6 +18,7 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
@@ -271,6 +274,32 @@ func TestPullMultiArchContainerImage(t *testing.T) {
 	require.Len(t, idx.Manifests, len(platforms))
 }
 
+func TestPullMultiArchContainerImageByTag(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi-tag", "test", platforms)
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi-tag:test", upstream))
+	require.NoError(t, err)
+	require.Empty(t, ref.Digest, "test relies on the reference carrying no digest")
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Arch:           v1alpha1.MultiArch,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	idx := requireIndexBlobs(t, destDir, digest)
+	require.Len(t, idx.Manifests, len(platforms))
+}
+
 func TestPullNestedIndex(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -330,6 +359,72 @@ func TestGetSizeOfIndexRecursive(t *testing.T) {
 		}
 	}
 	require.Equal(t, expected, size, "getSizeOfIndex must recurse and sum every nested leaf blob")
+}
+
+func TestPullMultiArchLogsPlatforms(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name              string
+		push              func(t *testing.T, ctx context.Context, repoRef string) string
+		expectedPlatforms []string
+	}{
+		{
+			name: "multi-arch index lists all leaf platforms",
+			push: func(t *testing.T, ctx context.Context, repoRef string) string {
+				testutil.PushMultiArchIndex(ctx, t, repoRef, "test", []ocispec.Platform{
+					{OS: "linux", Architecture: "amd64"},
+					{OS: "linux", Architecture: "arm64"},
+					{OS: "linux", Architecture: "arm", Variant: "v7"},
+				})
+				return "test"
+			},
+			expectedPlatforms: []string{"linux/amd64", "linux/arm64", "linux/arm/v7"},
+		},
+		{
+			name: "single-platform manifest lists its platform",
+			push: func(t *testing.T, ctx context.Context, repoRef string) string {
+				repo := testutil.NewRepo(t, repoRef)
+				layer := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageLayer, testutil.RandomBytes(t, 64))
+				config := testutil.PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(`{"os":"linux","architecture":"amd64"}`))
+				desc := testutil.PushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
+				require.NoError(t, repo.Tag(ctx, desc, "test"))
+				return "test"
+			},
+			expectedPlatforms: []string{"linux/amd64"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			var buf bytes.Buffer
+			l, err := logger.New(logger.Config{
+				Level:       logger.Info,
+				Format:      logger.FormatJSON,
+				Destination: &buf,
+			})
+			require.NoError(t, err)
+			ctx := logger.WithContext(testutil.TestContext(t), l)
+
+			upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+			repoRef := upstream + "/fixtures/platforms-" + strings.ReplaceAll(tc.name, " ", "-")
+			tag := tc.push(t, ctx, repoRef)
+
+			ref, err := transform.ParseImageRef(fmt.Sprintf("%s:%s", repoRef, tag))
+			require.NoError(t, err)
+			_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
+				Arch:           v1alpha1.MultiArch,
+				CacheDirectory: t.TempDir(),
+				PlainHTTP:      true,
+			})
+			require.NoError(t, err)
+
+			out := buf.String()
+			require.Contains(t, out, `"msg":"saving image"`)
+			for _, p := range tc.expectedPlatforms {
+				require.Contains(t, out, p, "expected platform %q in saving-image log: %s", p, out)
+			}
+		})
+	}
 }
 
 func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {

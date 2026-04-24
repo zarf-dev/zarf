@@ -61,6 +61,9 @@ type imagePullInfo struct {
 	ref                 string
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
+	// platforms is populated for multi-arch pulls with one entry per leaf platform
+	// ("os/arch[/variant]"). Empty for single-arch pulls.
+	platforms []string
 }
 
 type imageWithOverride struct {
@@ -226,6 +229,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if err != nil {
 					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
 				}
+				platforms, err := collectPlatformsFromIndex(ectx, repo, b)
+				if err != nil {
+					return fmt.Errorf("failed to collect platforms of index %s: %w", image.overridden.Reference, err)
+				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
 				imagesInfo = append(imagesInfo, imagePullInfo{
@@ -233,6 +240,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					ref:                 image.original.Reference,
 					byteSize:            size,
 					manifestDesc:        desc,
+					platforms:           platforms,
 				})
 				pulledImages = append(pulledImages, PulledImage{Image: image.original})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)
@@ -256,6 +264,13 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			if err != nil {
 				return err
 			}
+			var platforms []string
+			if multiArch {
+				platforms, err = collectPlatformsFromManifest(ectx, repo, b)
+				if err != nil {
+					return fmt.Errorf("failed to collect platform of %s: %w", image.overridden.Reference, err)
+				}
+			}
 			imageListLock.Lock()
 			defer imageListLock.Unlock()
 			imagesInfo = append(imagesInfo, imagePullInfo{
@@ -263,6 +278,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				ref:                 image.original.Reference,
 				byteSize:            size,
 				manifestDesc:        desc,
+				platforms:           platforms,
 			})
 			pulledImages = append(pulledImages, PulledImage{Image: image.original})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
@@ -480,7 +496,11 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	if len(imageInfo.platforms) > 0 {
+		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
+	}
+	l.Info("saving image", saveArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
