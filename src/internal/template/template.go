@@ -160,11 +160,13 @@ func ApplyToFile(ctx context.Context, src, dst string, objs Objects) error {
 
 // Source: https://github.com/helm/helm/blob/main/pkg/engine/funcs.go#L45
 // SPDX-License-Identifier: Apache 2.0
-// Minor edits: revised var names
+// Minor edits: revised var names, getHostByName removal
 func funcMap() ttmpl.FuncMap {
 	m := sprig.TxtFuncMap()
 	delete(m, "env")
 	delete(m, "expandenv")
+	// live DNS lookup could leak templating context
+	delete(m, "getHostByName")
 	extras := ttmpl.FuncMap{
 		"toToml":        toTOML,
 		"fromToml":      fromTOML,

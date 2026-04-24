@@ -26,7 +26,7 @@ require (
 	github.com/fluxcd/gitkit v0.6.0
 	github.com/fluxcd/pkg/apis/meta v1.26.0
 	github.com/fluxcd/source-controller/api v1.8.2
-	github.com/go-git/go-git/v5 v5.17.2
+	github.com/go-git/go-git/v5 v5.18.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/golang-cz/devslog v0.0.15
 	github.com/google/go-containerregistry v0.21.4
@@ -39,6 +39,7 @@ require (
 	github.com/pterm/pterm v0.12.83
 	github.com/sergi/go-diff v1.4.0
 	github.com/sigstore/cosign/v3 v3.0.6
+	github.com/sigstore/sigstore-go v1.1.4
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.5
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.5
@@ -201,7 +202,6 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/sigstore/protobuf-specs v0.5.0 // indirect
 	github.com/sigstore/rekor-tiles/v2 v2.2.1 // indirect
-	github.com/sigstore/sigstore-go v1.1.4 // indirect
 	github.com/sigstore/timestamp-authority/v2 v2.0.5 // indirect
 	github.com/smallnest/ringbuffer v0.0.0-20241116012123-461381446e3d // indirect
 	github.com/sorairolake/lzip-go v0.3.8 // indirect

@@ -17,11 +17,41 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/otiai10/copy"
+	"github.com/sigstore/sigstore-go/pkg/root"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test"
 )
+
+func TestTrustedRootCreate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with default services retrieves public root", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		outputPath := filepath.Join(tmpDir, "trusted_root.json")
+
+		stdOut, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create", "--with-default-services", "--out", outputPath)
+		require.NoError(t, err, stdOut, stdErr)
+
+		trJSON, err := os.ReadFile(outputPath)
+		require.NoError(t, err)
+		require.NotEmpty(t, trJSON)
+
+		tr, err := root.NewTrustedRootFromJSON(trJSON)
+		require.NoError(t, err)
+		require.NotEmpty(t, tr.FulcioCertificateAuthorities(), "trusted root should contain Fulcio CAs")
+		require.NotEmpty(t, tr.RekorLogs(), "trusted root should contain Rekor transparency logs")
+	})
+
+	t.Run("errors on bare invocation without flags", func(t *testing.T) {
+		t.Parallel()
+		_, stdErr, err := e2e.Zarf(t, "tools", "trusted-root", "create")
+		require.Error(t, err)
+		require.Contains(t, stdErr, "--with-default-services")
+	})
+}
 
 func TestUseCLI(t *testing.T) {
 	t.Parallel()
