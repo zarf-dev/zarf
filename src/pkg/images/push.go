@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -54,6 +54,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	}
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
+	}
+	if cfg.Arch == "" {
+		return fmt.Errorf("architecture is required")
 	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
@@ -152,9 +155,13 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
-			defaultPlatform := &ocispec.Platform{
-				Architecture: cfg.Arch,
-				OS:           "linux",
+			// In multi-arch mode, leave platform nil so copyImage preserves the full index.
+			var defaultPlatform *ocispec.Platform
+			if cfg.Arch != v1alpha1.MultiArch {
+				defaultPlatform = &ocispec.Platform{
+					Architecture: cfg.Arch,
+					OS:           "linux",
+				}
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
@@ -237,10 +244,11 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
+	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane.
+	// Multi-arch packages also include un-annotated platform manifests pulled via oras.Copy; leave those alone.
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
+		if manifest.Annotations[ocispec.AnnotationRefName] == "" && manifest.Annotations[ocispec.AnnotationBaseImageName] != "" {
 			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
 		}
 		correctedManifests = append(correctedManifests, manifest)
@@ -261,8 +269,9 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
-	// If an index is pulled we should try pulling with the default platform
-	if isIndex(desc.MediaType) {
+	// If an index is pulled and a target platform is provided, narrow to that platform.
+	// When defaultPlatform is nil (multi-arch packages) preserve the full index.
+	if IsIndex(desc.MediaType) && defaultPlatform != nil {
 		fetchOpts.TargetPlatform = defaultPlatform
 		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
 		if err != nil {
@@ -270,15 +279,21 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 		}
 	}
 
-	if !isManifest(desc.MediaType) {
-		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
+	var size int64
+	switch {
+	case IsIndex(desc.MediaType):
+		size, _, err = inspectIndex(ctx, src, desc, b)
+		if err != nil {
+			return fmt.Errorf("failed to inspect index %s: %w", srcName, err)
+		}
+	case IsManifest(desc.MediaType):
+		size, err = getSizeOfManifest(desc, b)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("expected OCI manifest or index got %s", desc.MediaType)
 	}
-
-	var manifest ocispec.Manifest
-	if err := json.Unmarshal(b, &manifest); err != nil {
-		return err
-	}
-	size := getSizeOfImage(desc, manifest)
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency

@@ -54,6 +54,9 @@ const (
 // SkeletonArch is a special architecture used for skeleton packages
 const SkeletonArch = "skeleton"
 
+// MultiArch is a special architecture used for multi-arch packages.
+const MultiArch = "multi"
+
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
@@ -221,7 +224,7 @@ type ZarfMetadata struct {
 	// Disable compression of this package.
 	Uncompressed bool `json:"uncompressed,omitempty"`
 	// The target cluster architecture for this package.
-	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
+	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64,example=multi"`
 	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 	YOLO bool `json:"yolo,omitempty"`
 	// Comma-separated list of package authors (including contact info).

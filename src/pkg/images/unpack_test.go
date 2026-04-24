@@ -5,7 +5,10 @@
 package images
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -141,34 +145,81 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			imageMap := make(map[string]ImageWithManifest)
+			imageMap := make(map[string]PulledImage)
 			for _, img := range images {
 				imageMap[img.Image.Reference] = img
 			}
 
 			for _, ref := range tc.requestedImages {
-				img, found := imageMap[ref]
+				_, found := imageMap[ref]
 				require.True(t, found)
-				require.NotEmpty(t, img.Manifest.Config.Digest)
 			}
 
 			idx, err := getIndexFromOCILayout(dstDir)
 			require.NoError(t, err)
 
-			// Verify manifests are annotated
+			// Verify manifests are annotated and their layers exist on disk
 			for _, descs := range idx.Manifests {
 				imageName, ok := descs.Annotations[ocispec.AnnotationRefName]
 				require.True(t, ok)
 				require.Contains(t, tc.requestedImages, imageName)
-			}
 
-			// Verify all the required layers exist in the oci layout
-			for _, img := range images {
-				for _, layer := range img.Manifest.Layers {
-					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-					require.FileExists(t, layerBlobPath)
+				manifestPath := filepath.Join(dstDir, "blobs", "sha256", descs.Digest.Hex())
+				mb, err := os.ReadFile(manifestPath)
+				require.NoError(t, err)
+				var manifest ocispec.Manifest
+				require.NoError(t, json.Unmarshal(mb, &manifest))
+				for _, layer := range manifest.Layers {
+					require.FileExists(t, filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex()))
 				}
 			}
 		})
 	}
+}
+
+func TestUnpackMultiArch(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	indexDigest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
+	refInfo, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, indexDigest))
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
+		Arch:           v1alpha1.MultiArch,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	dstDir := t.TempDir()
+	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path:   tarFile,
+		Images: []string{refInfo.Reference},
+	}, dstDir, v1alpha1.MultiArch)
+	require.NoError(t, err)
+	require.Len(t, unpacked, 1)
+
+	idx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var topDesc ocispec.Descriptor
+	for _, m := range idx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == refInfo.Reference {
+			topDesc = m
+			break
+		}
+	}
+	require.NotEmpty(t, topDesc.Digest, "ref-tagged descriptor missing from index.json")
+	require.Equal(t, ocispec.MediaTypeImageIndex, topDesc.MediaType, "unpacked multi-arch image must remain an index")
+
+	innerIdx := requireIndexBlobs(t, dstDir, topDesc.Digest.String())
+	require.Len(t, innerIdx.Manifests, len(platforms), "every platform manifest must be preserved")
 }

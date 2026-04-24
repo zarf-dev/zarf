@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -24,10 +23,9 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
-// ImageWithManifest represents an image reference and its associated OCI manifest.
-type ImageWithManifest struct {
-	Image    transform.Image
-	Manifest ocispec.Manifest
+// PulledImage describes an image that landed in the destination OCI layout.
+type PulledImage struct {
+	Image transform.Image
 }
 
 const (
@@ -38,8 +36,8 @@ const (
 )
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
+// It returns a list of PulledImage for all images in the tar.
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
@@ -105,7 +103,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		requestedImages[ref.Reference] = false
 	}
 
-	var imagesWithManifest []ImageWithManifest
+	var pulledImages []PulledImage
 	var foundImages []string
 	for _, manifestDesc := range srcIdx.Manifests {
 		imageName := getRefFromManifest(manifestDesc)
@@ -123,28 +121,17 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		requestedImages[manifestImg.Reference] = true
 
-		foundDesc, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		foundDesc, _, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
-		// If an image index is returned, then grab the manifest at the specific platform, and set the platform for the later oras.Copy
+
 		var platform *ocispec.Platform
-		if foundDesc.MediaType == ocispec.MediaTypeImageIndex {
+		if IsIndex(foundDesc.MediaType) && arch != v1alpha1.MultiArch {
 			platform = &ocispec.Platform{
 				Architecture: arch,
 				OS:           "linux",
 			}
-			fbOptions := oras.DefaultFetchBytesOptions
-			fbOptions.TargetPlatform = platform
-			foundDesc, manifestData, err = oras.FetchBytes(ctx, srcStore, foundDesc.Digest.String(), fbOptions)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-			}
-		}
-
-		var ociManifest ocispec.Manifest
-		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
 		}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
@@ -161,10 +148,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		imagesWithManifest = append(imagesWithManifest, ImageWithManifest{
-			Image:    manifestImg,
-			Manifest: ociManifest,
-		})
+		pulledImages = append(pulledImages, PulledImage{Image: manifestImg})
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
@@ -175,7 +159,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 	}
 
-	return imagesWithManifest, nil
+	return pulledImages, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.

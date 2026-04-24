@@ -36,6 +36,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -60,6 +61,7 @@ type imagePullInfo struct {
 	ref                 string
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
+	platforms           []string
 }
 
 type imageWithOverride struct {
@@ -68,12 +70,15 @@ type imageWithOverride struct {
 }
 
 // Pull pulls all images to the destination directory.
-func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]ImageWithManifest, error) {
+func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory string, opts PullOptions) ([]PulledImage, error) {
 	if len(imageList) == 0 {
 		return nil, fmt.Errorf("image list is required")
 	}
 	if destinationDirectory == "" {
 		return nil, fmt.Errorf("destination directory is required")
+	}
+	if opts.Arch == "" {
+		return nil, fmt.Errorf("architecture is required")
 	}
 	imageList = helpers.Unique(imageList)
 	l := logger.From(ctx)
@@ -149,12 +154,13 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
+	multiArch := opts.Arch == v1alpha1.MultiArch
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
 		OS: "linux",
 	}
-	imagesWithManifests := []ImageWithManifest{}
+	pulledImages := []PulledImage{}
 	imagesInfo := []imagePullInfo{}
 	dockerFallBackImages := []imageWithOverride{}
 	var imageListLock sync.Mutex
@@ -181,6 +187,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 				// If the pings to localhost fail, it could be an image on the daemon
 				if err != nil {
+					if multiArch {
+						return fmt.Errorf("multi-arch packages cannot fall back to the docker daemon for %q; publish to a registry: %w", image.overridden.Reference, err)
+					}
 					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 					imageListLock.Lock()
 					defer imageListLock.Unlock()
@@ -196,6 +205,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if strings.Contains(err.Error(), "toomanyrequests") {
 					return fmt.Errorf("rate limited by registry: %w", err)
 				}
+				if multiArch {
+					return fmt.Errorf("multi-arch packages cannot fall back to the docker daemon for %q; publish to a registry: %w", image.overridden.Reference, err)
+				}
 				l.Warn("unable to find image, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
@@ -203,8 +215,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return nil
 			}
 
-			// If the image sha points to an index then error
-			if image.original.Digest != "" && isIndex(desc.MediaType) {
+			// When not in multi arch mode, index shas are not allowed
+			if !multiArch && image.original.Digest != "" && IsIndex(desc.MediaType) {
 				// Both index types can be marshalled into an ocispec.Index
 				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
 				var idx ocispec.Index
@@ -213,9 +225,27 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				}
 				return constructIndexError(idx, image.overridden)
 			}
+			if multiArch && IsIndex(desc.MediaType) {
+				size, platforms, err := inspectIndex(ectx, repo, desc, b)
+				if err != nil {
+					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
+				}
+				imageListLock.Lock()
+				defer imageListLock.Unlock()
+				imagesInfo = append(imagesInfo, imagePullInfo{
+					registryOverrideRef: image.overridden.Reference,
+					ref:                 image.original.Reference,
+					byteSize:            size,
+					manifestDesc:        desc,
+					platforms:           platforms,
+				})
+				pulledImages = append(pulledImages, PulledImage{Image: image.original})
+				l.Debug("pulled index for image", "name", image.overridden.Reference)
+				return nil
+			}
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				fetchOpts.FetchOptions.TargetPlatform = platform
 				desc, b, err = oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
 				if err != nil {
@@ -224,16 +254,21 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 
 			// extra validation before we marshall, this should never be true
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
-			// Both oci and docker manifest types can be marshalled into a manifest
-			// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L37
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(b, &manifest); err != nil {
+			size, err := getSizeOfManifest(desc, b)
+			if err != nil {
 				return err
 			}
-			size := getSizeOfImage(desc, manifest)
+			var platforms []string
+			if multiArch {
+				platform, err := platformFromManifest(ectx, repo, b)
+				if err != nil {
+					return fmt.Errorf("failed to collect platform of %s: %w", image.overridden.Reference, err)
+				}
+				platforms = []string{platform}
+			}
 			imageListLock.Lock()
 			defer imageListLock.Unlock()
 			imagesInfo = append(imagesInfo, imagePullInfo{
@@ -241,11 +276,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				ref:                 image.original.Reference,
 				byteSize:            size,
 				manifestDesc:        desc,
+				platforms:           platforms,
 			})
-			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-				Image:    image.original,
-				Manifest: manifest,
-			})
+			pulledImages = append(pulledImages, PulledImage{Image: image.original})
 			l.Debug("pulled manifest for image", "name", image.overridden.Reference)
 			return nil
 		})
@@ -263,11 +296,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	if len(dockerFallBackImages) > 0 {
-		daemonImagesWithManifests, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
+		daemonPulled, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
-		imagesWithManifests = append(imagesWithManifests, daemonImagesWithManifests...)
+		pulledImages = append(pulledImages, daemonPulled...)
 	}
 
 	for _, imageInfo := range imagesInfo {
@@ -279,7 +312,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
-	return imagesWithManifests, nil
+	return pulledImages, nil
 }
 
 func constructIndexError(idx ocispec.Index, image transform.Image) error {
@@ -292,7 +325,7 @@ func constructIndexError(idx ocispec.Index, image transform.Image) error {
 		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 	}
 	imageOptions := strings.Join(lines, "\n")
-	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
+	return fmt.Errorf("%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest: %s", image.Reference, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {
@@ -317,9 +350,9 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []ImageWithManifest, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []PulledImage, err error) {
 	l := logger.From(ctx)
-	imagesWithManifests := []ImageWithManifest{}
+	pulledImages := []PulledImage{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
 		return nil, err
@@ -414,18 +447,14 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 			if err != nil {
 				return fmt.Errorf("failed to get manifest from docker image source: %w", err)
 			}
-			if !isManifest(desc.MediaType) {
+			if !IsManifest(desc.MediaType) {
 				return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
 			}
-			var manifest ocispec.Manifest
-			if err := json.Unmarshal(b, &manifest); err != nil {
+			pulledImages = append(pulledImages, PulledImage{Image: daemonImage.original})
+			size, err := getSizeOfManifest(desc, b)
+			if err != nil {
 				return err
 			}
-			imagesWithManifests = append(imagesWithManifests, ImageWithManifest{
-				Image:    daemonImage.original,
-				Manifest: manifest,
-			})
-			size := getSizeOfImage(desc, manifest)
 			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
 			copyOpts := oras.DefaultCopyOptions
 			copyOpts.WithTargetPlatform(platform)
@@ -441,7 +470,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 		}
 	}
 
-	return imagesWithManifests, nil
+	return pulledImages, nil
 }
 
 func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
@@ -465,7 +494,11 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	if opts.Arch == v1alpha1.MultiArch {
+		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
+	}
+	l.Info("saving image", saveArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
