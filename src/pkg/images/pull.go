@@ -77,6 +77,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if destinationDirectory == "" {
 		return nil, fmt.Errorf("destination directory is required")
 	}
+	if opts.Arch == "" {
+		return nil, fmt.Errorf("architecture is required")
+	}
 	imageList = helpers.Unique(imageList)
 	l := logger.From(ctx)
 	pullStart := time.Now()
