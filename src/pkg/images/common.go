@@ -230,35 +230,6 @@ func formatPlatform(p *ocispec.Platform) string {
 	return s
 }
 
-// collectPlatformsFromIndex walks an OCI image index (recursing into nested indexes) and
-// returns a "os/arch[/variant]" string for each leaf manifest.
-func collectPlatformsFromIndex(ctx context.Context, fetcher content.Fetcher, indexBytes []byte) ([]string, error) {
-	var idx ocispec.Index
-	if err := json.Unmarshal(indexBytes, &idx); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal index: %w", err)
-	}
-	var platforms []string
-	for _, child := range idx.Manifests {
-		switch {
-		case IsIndex(child.MediaType):
-			b, err := content.FetchAll(ctx, fetcher, child)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
-			}
-			nested, err := collectPlatformsFromIndex(ctx, fetcher, b)
-			if err != nil {
-				return nil, err
-			}
-			platforms = append(platforms, nested...)
-		default:
-			if s := formatPlatform(child.Platform); s != "" {
-				platforms = append(platforms, s)
-			}
-		}
-	}
-	return platforms, nil
-}
-
 // collectPlatformsFromManifest reads the architecture from the config blob referenced by the
 // given image manifest and returns a single-element slice of "arch[/variant]". Returns an
 // empty slice when the config is not a standard OCI image config.
@@ -301,39 +272,45 @@ func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (i
 	return totalSize, nil
 }
 
-// getSizeOfIndex sums the size of every manifest referenced by the index, including
-// each child manifest's layers.
-func getSizeOfIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, error) {
+// inspectIndex walks an OCI image index (recursing into nested indexes) and returns the total
+// byte size of every referenced blob and one "arch[/variant]" string per leaf manifest. Each
+// nested index and each leaf manifest is fetched at most once.
+func inspectIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, []string, error) {
 	var idx ocispec.Index
 	if err := json.Unmarshal(indexBytes, &idx); err != nil {
-		return 0, fmt.Errorf("unable to unmarshal index: %w", err)
+		return 0, nil, fmt.Errorf("unable to unmarshal index: %w", err)
 	}
 	totalSize := indexDesc.Size
+	var platforms []string
 	for _, child := range idx.Manifests {
 		switch {
 		case IsIndex(child.MediaType):
 			b, err := content.FetchAll(ctx, fetcher, child)
 			if err != nil {
-				return 0, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
+				return 0, nil, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
 			}
-			childSize, err := getSizeOfIndex(ctx, fetcher, child, b)
+			childSize, childPlatforms, err := inspectIndex(ctx, fetcher, child, b)
 			if err != nil {
-				return 0, err
+				return 0, nil, err
 			}
 			totalSize += childSize
+			platforms = append(platforms, childPlatforms...)
 		case IsManifest(child.MediaType):
 			b, err := content.FetchAll(ctx, fetcher, child)
 			if err != nil {
-				return 0, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+				return 0, nil, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
 			}
 			childSize, err := getSizeOfManifest(child, b)
 			if err != nil {
-				return 0, err
+				return 0, nil, err
 			}
 			totalSize += childSize
+			if s := formatPlatform(child.Platform); s != "" {
+				platforms = append(platforms, s)
+			}
 		default:
 			totalSize += child.Size
 		}
 	}
-	return totalSize, nil
+	return totalSize, platforms, nil
 }

@@ -223,13 +223,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return constructIndexError(idx, image.overridden)
 			}
 			if multiArch && IsIndex(desc.MediaType) {
-				size, err := getSizeOfIndex(ectx, repo, desc, b)
+				size, platforms, err := inspectIndex(ectx, repo, desc, b)
 				if err != nil {
-					return fmt.Errorf("failed to calculate size of index %s: %w", image.overridden.Reference, err)
-				}
-				platforms, err := collectPlatformsFromIndex(ectx, repo, b)
-				if err != nil {
-					return fmt.Errorf("failed to collect platforms of index %s: %w", image.overridden.Reference, err)
+					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
 				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()

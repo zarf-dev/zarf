@@ -324,7 +324,7 @@ func TestPullNestedIndex(t *testing.T) {
 	require.Len(t, innerIdx.Manifests, len(platforms))
 }
 
-func TestGetSizeOfIndexRecursive(t *testing.T) {
+func TestInspectIndexRecursive(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
@@ -341,7 +341,7 @@ func TestGetSizeOfIndexRecursive(t *testing.T) {
 	_, outerBytes, err := oras.FetchBytes(ctx, repo, outerDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 	require.NoError(t, err)
 
-	size, err := getSizeOfIndex(ctx, repo, outerDesc, outerBytes)
+	size, platforms, err := inspectIndex(ctx, repo, outerDesc, outerBytes)
 	require.NoError(t, err)
 
 	expected := outerDesc.Size + innerDesc.Size
@@ -355,7 +355,8 @@ func TestGetSizeOfIndexRecursive(t *testing.T) {
 			expected += layer.Size
 		}
 	}
-	require.Equal(t, expected, size, "getSizeOfIndex must recurse and sum every nested leaf blob")
+	require.Equal(t, expected, size, "inspectIndex must recurse and sum every nested leaf blob")
+	require.Equal(t, []string{"amd64", "arm64"}, platforms, "inspectIndex must collect leaf platforms")
 }
 
 func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {

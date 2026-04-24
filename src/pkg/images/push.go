@@ -279,9 +279,9 @@ func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName 
 	var size int64
 	switch {
 	case IsIndex(desc.MediaType):
-		size, err = getSizeOfIndex(ctx, src, desc, b)
+		size, _, err = inspectIndex(ctx, src, desc, b)
 		if err != nil {
-			return fmt.Errorf("failed to calculate size of index %s: %w", srcName, err)
+			return fmt.Errorf("failed to inspect index %s: %w", srcName, err)
 		}
 	case IsManifest(desc.MediaType):
 		size, err = getSizeOfManifest(desc, b)
