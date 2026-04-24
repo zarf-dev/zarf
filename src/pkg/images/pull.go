@@ -260,10 +260,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 			var platforms []string
 			if multiArch {
-				platforms, err = collectPlatformsFromManifest(ectx, repo, b)
+				platform, err := platformFromManifest(ectx, repo, b)
 				if err != nil {
 					return fmt.Errorf("failed to collect platform of %s: %w", image.overridden.Reference, err)
 				}
+				platforms = []string{platform}
 			}
 			imageListLock.Lock()
 			defer imageListLock.Unlock()
@@ -491,7 +492,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
-	if len(imageInfo.platforms) > 0 {
+	if opts.Arch == v1alpha1.MultiArch {
 		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
 	l.Info("saving image", saveArgs...)

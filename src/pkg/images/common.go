@@ -218,7 +218,6 @@ func WithPushAuth(ri state.RegistryInfo) crane.Option {
 }
 
 // formatPlatform renders an ocispec.Platform as "arch[/variant]". Returns an empty string
-// when the platform has no architecture set.
 func formatPlatform(p *ocispec.Platform) string {
 	if p == nil || p.Architecture == "" {
 		return ""
@@ -230,33 +229,23 @@ func formatPlatform(p *ocispec.Platform) string {
 	return s
 }
 
-// collectPlatformsFromManifest reads the architecture from the config blob referenced by the
-// given image manifest and returns a single-element slice of "arch[/variant]". Returns an
-// empty slice when the config is not a standard OCI image config.
-func collectPlatformsFromManifest(ctx context.Context, fetcher content.Fetcher, manifestBytes []byte) ([]string, error) {
+func platformFromManifest(ctx context.Context, fetcher content.Fetcher, manifestBytes []byte) (string, error) {
 	var manifest ocispec.Manifest
 	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal manifest: %w", err)
+		return "", fmt.Errorf("unable to unmarshal manifest: %w", err)
 	}
 	if manifest.Config.Digest == "" {
-		return nil, nil
+		return "", nil
 	}
 	configBytes, err := content.FetchAll(ctx, fetcher, manifest.Config)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch manifest config: %w", err)
+		return "", fmt.Errorf("unable to fetch manifest config: %w", err)
 	}
-	var cfg struct {
-		Architecture string `json:"architecture"`
-		Variant      string `json:"variant"`
-	}
+	var cfg ocispec.Image
 	if err := json.Unmarshal(configBytes, &cfg); err != nil {
-		return nil, nil
+		return "", nil
 	}
-	s := formatPlatform(&ocispec.Platform{Architecture: cfg.Architecture, Variant: cfg.Variant})
-	if s == "" {
-		return nil, nil
-	}
-	return []string{s}, nil
+	return formatPlatform(&cfg.Platform), nil
 }
 
 func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (int64, error) {
