@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.75.1](https://github.com/zarf-dev/zarf/compare/v0.75.0...v0.75.1) (2026-04-24)
+
+
+### Features
+
+* parse multi doc zarf.yaml files ([#4827](https://github.com/zarf-dev/zarf/issues/4827)) ([44ae0e2](https://github.com/zarf-dev/zarf/commit/44ae0e25503931e6825100a2a17eac192c2c497a))
+* stop adding Zarf service default values to state when the service does not exist ([#4832](https://github.com/zarf-dev/zarf/issues/4832)) ([c4a06fb](https://github.com/zarf-dev/zarf/commit/c4a06fb5dc5f80c6577cddbea34189bfa54c591d))
+* **verfication:** trusted root fetch command ([#4829](https://github.com/zarf-dev/zarf/issues/4829)) ([73825da](https://github.com/zarf-dev/zarf/commit/73825da520a53fa6c245bb8a6ee1138c1248e3b3))
+
+
+### Bug Fixes
+
+* **template:** add to dissallowed functions ([#4848](https://github.com/zarf-dev/zarf/issues/4848)) ([cedec4d](https://github.com/zarf-dev/zarf/commit/cedec4dcbae3e5cfd234c030ebd4c71aebfe7c8b))
+
 ## [0.75.0](https://github.com/zarf-dev/zarf/compare/v0.74.2...v0.75.0) (2026-04-16)
 
 
