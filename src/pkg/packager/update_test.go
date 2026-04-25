@@ -15,11 +15,10 @@ func TestUpdateNeeded(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name               string
-		zarfPackage        v1alpha1.ZarfPackage
-		imageScans         []ComponentImageScan
-		imageArchivesScans []ImageArchivesScan
-		want               bool
+		name                   string
+		zarfPackage            v1alpha1.ZarfPackage
+		definitionImageResults []DefinitionImageResult
+		want                   bool
 	}{
 		{
 			name: "equal images in components and images scans",
@@ -42,23 +41,27 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageScans: []ComponentImageScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "podinfo",
-					Matches: []string{
-						"ghcr.io/stefanprodan/podinfo:6.4.0",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "podinfo",
+						Matches: []string{
+							"ghcr.io/stefanprodan/podinfo:6.4.0",
+						},
 					},
 				},
 				{
+					ComponentImageScan: ComponentImageScan{
 
-					ComponentName: "argocd",
-					Matches: []string{
-						"docker.io/library/redis:7.0.15-alpine",
-						"quay.io/argoproj/argocd:v2.9.6",
-					},
-					CosignArtifacts: []string{
-						"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig",
-						"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att",
+						ComponentName: "argocd",
+						Matches: []string{
+							"docker.io/library/redis:7.0.15-alpine",
+							"quay.io/argoproj/argocd:v2.9.6",
+						},
+						CosignArtifacts: []string{
+							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.sig",
+							"quay.io/argoproj/argocd:sha256-2dafd800fb617ba5b16ae429e388ca140f66f88171463d23d158b372bb2fae08.att",
+						},
 					},
 				},
 			},
@@ -77,13 +80,15 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageScans: []ComponentImageScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
+					ComponentImageScan: ComponentImageScan{
 
-					ComponentName: "argocd",
-					Matches: []string{
-						"docker.io/library/redis:7.0.15-alpine",
-						"quay.io/argoproj/argocd:v2.9.6",
+						ComponentName: "argocd",
+						Matches: []string{
+							"docker.io/library/redis:7.0.15-alpine",
+							"quay.io/argoproj/argocd:v2.9.6",
+						},
 					},
 				},
 			},
@@ -102,12 +107,13 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageScans: []ComponentImageScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-
-					ComponentName: "argocd",
-					Matches: []string{
-						"docker.io/library/redis:7.0.14-alpine",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd",
+						Matches: []string{
+							"docker.io/library/redis:7.0.14-alpine",
+						},
 					},
 				},
 			},
@@ -125,13 +131,14 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageScans: []ComponentImageScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-
-					ComponentName: "argocd",
-					Matches: []string{
-						"docker.io/library/redis:7.0.14-alpine",
-						"quay.io/argoproj/argocd:v2.8.6",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd",
+						Matches: []string{
+							"docker.io/library/redis:7.0.14-alpine",
+							"quay.io/argoproj/argocd:v2.8.6",
+						},
 					},
 				},
 			},
@@ -156,9 +163,11 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageArchivesScans: []ImageArchivesScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "argocd-archive",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd-archive",
+					},
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
@@ -189,9 +198,11 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageArchivesScans: []ImageArchivesScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "argocd-archive",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd-archive",
+					},
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
@@ -220,9 +231,11 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageArchivesScans: []ImageArchivesScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "argocd-archive",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd-archive",
+					},
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
@@ -250,9 +263,11 @@ func TestUpdateNeeded(t *testing.T) {
 					},
 				},
 			},
-			imageArchivesScans: []ImageArchivesScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "argocd-archive",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "argocd-archive",
+					},
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Images: []string{
@@ -269,7 +284,7 @@ func TestUpdateNeeded(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := updateNeeded(tt.zarfPackage, tt.imageScans, tt.imageArchivesScans)
+			got := updateNeeded(tt.zarfPackage, tt.definitionImageResults)
 			require.Equal(t, tt.want, got)
 		})
 	}
@@ -279,13 +294,12 @@ func TestCreateUpdate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name               string
-		zarfPackage        v1alpha1.ZarfPackage
-		imageScans         []ComponentImageScan
-		imageArchivesScans []ImageArchivesScan
-		inputYAML          string
-		outputYAML         string
-		wantErr            bool
+		name                   string
+		zarfPackage            v1alpha1.ZarfPackage
+		definitionImageResults []DefinitionImageResult
+		inputYAML              string
+		outputYAML             string
+		wantErr                bool
 	}{
 		{
 			name: "updates multiple components with all artifact types and preserves yaml structure",
@@ -296,28 +310,32 @@ func TestCreateUpdate(t *testing.T) {
 					{Name: "flux-automation-controller-archive"},
 				},
 			},
-			imageScans: []ComponentImageScan{
+			definitionImageResults: []DefinitionImageResult{
 				{
-					ComponentName: "flux",
-					Matches: []string{
-						"ghcr.io/fluxcd/helm-controller:v1.1.0",
-					},
-					CosignArtifacts: []string{
-						"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.sig",
-						"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.att",
-						"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.sig",
-						"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.att",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "flux",
+						Matches: []string{
+							"ghcr.io/fluxcd/helm-controller:v1.1.0",
+						},
+						CosignArtifacts: []string{
+							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.sig",
+							"ghcr.io/fluxcd/helm-controller:sha256-4c75ca6c24ceb1f1bd7e935d9287a93e4f925c512f206763ec5a47de3ef3ff48.att",
+							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.sig",
+							"ghcr.io/fluxcd/image-automation-controller:sha256-5b6c2e97055cfe69fe8996f48b53db039c136210dbc98c5631864a9e573d0e20.att",
+						},
 					},
 				},
 
 				{
-					ComponentName: "podinfo",
-					Matches:       []string{"ghcr.io/stefanprodan/podinfo:6.4.0"},
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "podinfo",
+						Matches:       []string{"ghcr.io/stefanprodan/podinfo:6.4.0"},
+					},
 				},
-			},
-			imageArchivesScans: []ImageArchivesScan{
 				{
-					ComponentName: "flux-automation-controller-archive",
+					ComponentImageScan: ComponentImageScan{
+						ComponentName: "flux-automation-controller-archive",
+					},
 					ImageArchives: []v1alpha1.ImageArchive{
 						{
 							Path: "automation-controller.tar",
@@ -378,7 +396,7 @@ components:
 			astFile, err := parser.ParseBytes([]byte(tt.inputYAML), parser.ParseComments)
 			require.NoError(t, err)
 
-			got, err := createUpdate(tt.zarfPackage, tt.imageScans, tt.imageArchivesScans, astFile)
+			got, err := createUpdate(tt.zarfPackage, tt.definitionImageResults, astFile)
 
 			require.NoError(t, err)
 			require.Equal(t, tt.outputYAML, got)
