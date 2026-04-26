@@ -137,6 +137,34 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "namespaces exists",
+			initOpts: InitStateOptions{
+				InternalServices: state.NewServiceSet(state.AgentKey),
+			},
+			nodes: []corev1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node",
+					},
+				},
+			},
+			namespaces: []corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kube-system",
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "default",
+					},
+				},
+			},
+		},
+		{
+			name: "namespaces exist without agent service",
+			initOpts: InitStateOptions{
+				InternalServices: state.NewServiceSet(state.RegistryKey),
+			},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -159,6 +187,9 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "Zarf namespace exists",
+			initOpts: InitStateOptions{
+				InternalServices: state.NewServiceSet(state.AgentKey),
+			},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -176,6 +207,9 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "empty Zarf state exists",
+			initOpts: InitStateOptions{
+				InternalServices: state.NewServiceSet(state.AgentKey),
+			},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -204,6 +238,9 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "Zarf state exists",
+			initOpts: InitStateOptions{
+				InternalServices: state.NewServiceSet(state.AgentKey),
+			},
 			nodes: []corev1.Node{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -306,7 +343,11 @@ func TestInit(t *testing.T) {
 				}
 				ns, err := cs.CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
 				require.NoError(t, err)
-				require.Equal(t, map[string]string{AgentLabel: "ignore"}, ns.Labels)
+				if tt.initOpts.InternalServices.Has(state.AgentKey) {
+					require.Equal(t, map[string]string{AgentLabel: "ignore"}, ns.Labels)
+				} else {
+					require.NotContains(t, ns.Labels, AgentLabel)
+				}
 			}
 		})
 	}

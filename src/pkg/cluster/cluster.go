@@ -246,27 +246,29 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			}
 		}
 
-		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
-		}
-		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaceList.Items {
-			if namespace.Name == "zarf" {
-				continue
-			}
-			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
-
-			if namespace.Labels == nil {
-				// Ensure label map exists to avoid nil panic
-				namespace.Labels = make(map[string]string)
-			}
-			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[AgentLabel] = "ignore"
-			namespaceCopy := namespace
-			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+		if opts.InternalServices.Has(state.AgentKey) {
+			namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 			if err != nil {
-				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+				return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+			}
+			// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
+			for _, namespace := range namespaceList.Items {
+				if namespace.Name == "zarf" {
+					continue
+				}
+				l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
+				if namespace.Labels == nil {
+					// Ensure label map exists to avoid nil panic
+					namespace.Labels = make(map[string]string)
+				}
+				// This label will tell the Zarf Agent to ignore this namespace.
+				namespace.Labels[AgentLabel] = "ignore"
+				namespaceCopy := namespace
+				_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+				if err != nil {
+					return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+				}
 			}
 		}
 
