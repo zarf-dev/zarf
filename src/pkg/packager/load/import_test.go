@@ -64,8 +64,9 @@ func TestResolveImports(t *testing.T) {
 			expectedChecksum: "9c60125954b1b38a5947401411b87cde3d586e5ff8eef03bcc37dae1e24ab08e",
 		},
 		{
-			name:             "chart version and url properties are not overridden",
-			path:             "./testdata/import/chart",
+			name: "chart version and url properties are not overridden",
+			path: "./testdata/import/chart",
+
 			expectedChecksum: "cc62674a6faa1c9685aac0c8266dacec3b91e0a9466c8d1ce3664e019348b43a",
 		},
 		{
@@ -102,6 +103,9 @@ func TestResolveImports(t *testing.T) {
 func TestMakePathRelativeTo(t *testing.T) {
 	t.Parallel()
 
+	absPath, err := filepath.Abs(filepath.Join("abs", "data.txt"))
+	require.NoError(t, err)
+
 	tests := []struct {
 		name       string
 		path       string
@@ -128,9 +132,9 @@ func TestMakePathRelativeTo(t *testing.T) {
 		},
 		{
 			name:       "absolute path passes through untouched",
-			path:       "/abs/data.txt",
+			path:       absPath,
 			relativeTo: "import",
-			expected:   "/abs/data.txt",
+			expected:   absPath,
 		},
 	}
 
@@ -139,7 +143,9 @@ func TestMakePathRelativeTo(t *testing.T) {
 			t.Parallel()
 			got := makePathRelativeTo(tt.path, tt.relativeTo)
 			require.Equal(t, tt.expected, got)
-			require.Falsef(t, strings.ContainsRune(got, '\\'), "result %q contains a backslash", got)
+			if !filepath.IsAbs(tt.path) {
+				require.Falsef(t, strings.ContainsRune(got, '\\'), "result %q contains a backslash", got)
+			}
 		})
 	}
 }
