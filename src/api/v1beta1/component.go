@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package
 package v1beta1
 
 import (
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -18,14 +20,17 @@ type ZarfComponent struct {
 	// Determines the default Y/N state for installing this component on package deploy.
 	Default bool `json:"default,omitempty"`
 
-	// Do not prompt user to install this component. (Defaults to false)
+	// Do not prompt user to install this component. Defaults to false, meaning the component is required.
 	Optional *bool `json:"optional,omitempty"`
 
 	// Filter when this component is included in package creation or deployment.
 	Only ZarfComponentOnlyTarget `json:"only,omitempty"`
 
-	// Import a component from another Zarf package.
+	// Import a component from another Zarf component config.
 	Import ZarfComponentImport `json:"import,omitempty"`
+
+	// Features of the Zarf CLI to enable for this component.
+	Features ZarfComponentFeatures `json:"features,omitempty"`
 
 	// Kubernetes manifests to be included in a generated Helm chart on package deploy.
 	Manifests []ZarfManifest `json:"manifests,omitempty"`
@@ -33,14 +38,14 @@ type ZarfComponent struct {
 	// Helm charts to install during package deploy.
 	Charts []ZarfChart `json:"charts,omitempty"`
 
-	// Datasets to inject into a container in the target cluster.
-	DataInjections []ZarfDataInjection `json:"dataInjections,omitempty"`
-
 	// Files or folders to place on disk during package deployment.
 	Files []ZarfFile `json:"files,omitempty"`
 
 	// List of OCI images to include in the package.
-	Images []string `json:"images,omitempty"`
+	Images []ZarfImage `json:"images,omitempty"`
+
+	// List of tar archives of images to include in the package.
+	ImageArchives []ImageArchive `json:"imageArchives,omitempty"`
 
 	// List of git repos to include in the package.
 	Repos []string `json:"repos,omitempty"`
@@ -48,20 +53,32 @@ type ZarfComponent struct {
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ZarfComponentActions `json:"actions,omitempty"`
 
-	// List of resources to health check after deployment
-	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+	// Datasets to inject into a container in the target cluster.
+	// This field is not part of the v1beta1 schema but is kept as a backwards compatibility shim so v1alpha1 packages can be losslessly
+	// converted to v1beta1 for packager logic.
+	dataInjections []v1alpha1.ZarfDataInjection
 }
 
-// NamespacedObjectKindReference is a reference to a specific resource in a namespace using its kind and API version.
-type NamespacedObjectKindReference struct {
-	// API Version of the resource
-	APIVersion string `json:"apiVersion"`
-	// Kind of the resource
-	Kind string `json:"kind"`
-	// Namespace of the resource
-	Namespace string `json:"namespace"`
-	// Name of the resource
-	Name string `json:"name"`
+// SetDataInjections allows setting data injections for lossless v1alpha1 conversions
+func (c *ZarfComponent) SetDataInjections(dataInjections []v1alpha1.ZarfDataInjection) {
+	c.dataInjections = dataInjections
+}
+
+// GetDataInjections is a shim to retrieving data injections when set for lossless v1alpha1 conversions
+func (c ZarfComponent) GetDataInjections() []v1alpha1.ZarfDataInjection {
+	return c.dataInjections
+}
+
+// GetImages returns all image names specified in the component, including those from ImageArchives.
+func (c ZarfComponent) GetImages() []string {
+	images := []string{}
+	for _, img := range c.Images {
+		images = append(images, img.Name)
+	}
+	for _, ia := range c.ImageArchives {
+		images = append(images, ia.Images...)
+	}
+	return images
 }
 
 // RequiresCluster returns if the component requires a cluster connection to deploy.
@@ -70,9 +87,8 @@ func (c ZarfComponent) RequiresCluster() bool {
 	hasCharts := len(c.Charts) > 0
 	hasManifests := len(c.Manifests) > 0
 	hasRepos := len(c.Repos) > 0
-	hasDataInjections := len(c.DataInjections) > 0
 
-	if hasImages || hasCharts || hasManifests || hasRepos || hasDataInjections {
+	if hasImages || hasCharts || hasManifests || hasRepos {
 		return true
 	}
 
@@ -119,40 +135,97 @@ type ZarfFile struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
+	// Template enables go-template processing on this file during deploy.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether go-template processing is enabled for this file.
+func (f ZarfFile) ShouldTemplate() bool {
+	if f.Template != nil {
+		return *f.Template
+	}
+	return false
 }
 
 // ZarfChart defines a helm chart to be deployed.
 type ZarfChart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.
 	Name string `json:"name"`
-	// The Helm repo where the chart is stored
-	Helm HelmRepoSource `json:"helm,omitempty"`
-	// The Git repo where the chart is stored
+	// The version of the chart. This field is not part of the v1beta1 schema but is kept
+	// as a backwards compatibility shim so v1alpha1 packages can be converted to v1beta1.
+	version string
+	// The Helm repo where the chart is stored.
+	HelmRepo HelmRepoSource `json:"helmRepo,omitempty"`
+	// The Git repo where the chart is stored.
 	Git GitRepoSource `json:"git,omitempty"`
-	// The local path where the chart is stored
+	// The local path where the chart is stored.
 	Local LocalRepoSource `json:"local,omitempty"`
-	// The OCI registry where the chart is stored
+	// The OCI registry where the chart is stored.
 	OCI OCISource `json:"oci,omitempty"`
-	// The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').
-	Version string `json:"version,omitempty"`
 	// The namespace to deploy the chart to.
 	Namespace string `json:"namespace,omitempty"`
 	// The name of the Helm release to create (defaults to the Zarf name of the chart).
 	ReleaseName string `json:"releaseName,omitempty"`
-	// Whether to not wait for chart resources to be ready before continuing.
+	// Whether to wait for chart resources to be ready before continuing. Defaults to true.
 	Wait *bool `json:"wait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
-	// [alpha] List of variables to set in the Helm chart.
-	Variables []ZarfChartVariable `json:"variables,omitempty"`
+	// List of values sources to their Helm override target.
+	Values []ZarfChartValue `json:"values,omitempty"`
+	// Whether to validate the chart's values against its JSON schema. Defaults to true.
+	SchemaValidation *bool `json:"schemaValidation,omitempty"`
+	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
+}
+
+// ShouldRunSchemaValidation returns whether Helm schema validation should run.
+func (zc ZarfChart) ShouldRunSchemaValidation() bool {
+	if zc.SchemaValidation != nil {
+		return *zc.SchemaValidation
+	}
+	return true
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (zc ZarfChart) GetServerSideApply() string {
+	if zc.ServerSideApply == "" {
+		return "auto"
+	}
+	return zc.ServerSideApply
+}
+
+// GetDeprecatedVersion gets the version of the chart, used as a backwards compatibility shim with v1alpha1.
+func (zc ZarfChart) GetDeprecatedVersion() string {
+	return zc.version
+}
+
+// SetDeprecatedVersion sets the version of the chart, used as a backwards compatibility shim with v1alpha1.
+// This function will be deleted when v1alpha1 packages are no longer deployable
+func (zc *ZarfChart) SetDeprecatedVersion(version string) {
+	zc.version = version
+}
+
+// ZarfChartValue maps a values source path to a Helm chart target path.
+type ZarfChartValue struct {
+	// The source path for the value.
+	SourcePath string `json:"sourcePath"`
+	// The target path within the Helm chart values.
+	TargetPath string `json:"targetPath"`
 }
 
 // HelmRepoSource represents a Helm chart stored in a Helm repository.
 type HelmRepoSource struct {
 	// The name of a chart within a Helm repository (defaults to the Zarf name of the chart).
-	RepoName string `json:"repoName,omitempty"`
+	Name string `json:"name,omitempty"`
 	// The URL of the chart repository where the helm chart is stored.
 	URL string `json:"url"`
+	// The version of the chart to deploy.
+	Version string `json:"version"`
 }
 
 // GitRepoSource represents a Helm chart stored in a Git repository.
@@ -166,23 +239,15 @@ type GitRepoSource struct {
 // LocalRepoSource represents a Helm chart stored locally.
 type LocalRepoSource struct {
 	// The path to a local chart's folder or .tgz archive.
-	Path string `json:"path,omitempty"`
+	Path string `json:"path"`
 }
 
 // OCISource represents a Helm chart stored in an OCI registry.
 type OCISource struct {
 	// The URL of the OCI registry where the helm chart is stored.
 	URL string `json:"url"`
-}
-
-// ZarfChartVariable represents a variable that can be set for a Helm chart overrides.
-type ZarfChartVariable struct {
-	// The name of the variable.
-	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
-	// A brief description of what the variable controls.
-	Description string `json:"description"`
-	// The path within the Helm chart values where this variable applies.
-	Path string `json:"path"`
+	// The version of the chart to deploy.
+	Version string `json:"version"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
@@ -197,8 +262,73 @@ type ZarfManifest struct {
 	KustomizeAllowAnyDirectory bool `json:"kustomizeAllowAnyDirectory,omitempty"`
 	// List of local kustomization paths or remote URLs to include in the package.
 	Kustomizations []string `json:"kustomizations,omitempty"`
-	// Whether to not wait for manifest resources to be ready before continuing. (Defaults to true)
+	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy.
+	//   - "true":  always use SSA
+	//   - "false": always use CSA
+	//   - "auto":  use SSA for fresh installs; for upgrades, match whichever strategy
+	//              was used when the chart was first installed
+	// Defaults to "auto" when omitted.
+	ServerSideApply string `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
+	// Whether to wait for manifest resources to be ready before continuing. Defaults to true.
 	Wait *bool `json:"wait,omitempty"`
+	// Template enables go-template processing on these manifests during deploy.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether go-template processing is enabled for this manifest.
+func (m ZarfManifest) ShouldTemplate() bool {
+	if m.Template != nil {
+		return *m.Template
+	}
+	return false
+}
+
+// GetServerSideApply returns server side apply with default of "auto" if it is not set
+func (m ZarfManifest) GetServerSideApply() string {
+	if m.ServerSideApply == "" {
+		return "auto"
+	}
+	return m.ServerSideApply
+}
+
+// ZarfImage defines an OCI image to include in the package.
+type ZarfImage struct {
+	// The image reference.
+	Name string `json:"name"`
+	// The source to pull the image from. Defaults to "registry".
+	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon"`
+}
+
+// ImageArchive defines a tar archive of images to include in the package.
+type ImageArchive struct {
+	// The path to the tar archive.
+	Path string `json:"path"`
+	// The list of images contained in the archive.
+	Images []string `json:"images"`
+}
+
+// ZarfComponentFeatures defines features of the Zarf CLI to enable for a component.
+type ZarfComponentFeatures struct {
+	// Whether this component provides a registry.
+	IsRegistry bool `json:"isRegistry,omitempty"`
+	// Injector configuration for the component.
+	Injector *Injector `json:"injector,omitempty"`
+	// Whether this component provides an agent.
+	IsAgent bool `json:"isAgent,omitempty"`
+}
+
+// Injector defines the configuration for the Zarf injector.
+type Injector struct {
+	// Whether the injector is enabled.
+	Enabled bool `json:"enabled"`
+	// Values for the injector.
+	Values *InjectorValues `json:"values,omitempty"`
+}
+
+// InjectorValues defines configurable values for the Zarf injector.
+type InjectorValues struct {
+	// Tolerations for the injector pod.
+	Tolerations string `json:"tolerations,omitempty"`
 }
 
 // ZarfComponentActions are ActionSets that map to different zarf package operations.
@@ -219,8 +349,6 @@ type ZarfComponentActionSet struct {
 	Before []ZarfComponentAction `json:"before,omitempty"`
 	// Actions to run at the end of an operation.
 	After []ZarfComponentAction `json:"after,omitempty"`
-	// Actions to run if all operations succeed.
-	OnSuccess []ZarfComponentAction `json:"onSuccess,omitempty"`
 	// Actions to run if all operations fail.
 	OnFailure []ZarfComponentAction `json:"onFailure,omitempty"`
 }
@@ -229,7 +357,7 @@ type ZarfComponentActionSet struct {
 type ZarfComponentActionDefaults struct {
 	// Hide the output of commands during execution (default false).
 	Mute bool `json:"mute,omitempty"`
-	// Default timeout in seconds for commands (default no timeout).
+	// Default timeout for commands (default no timeout).
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry commands given number of times if they fail (default 0).
 	Retries int `json:"retries,omitempty"`
@@ -245,7 +373,7 @@ type ZarfComponentActionDefaults struct {
 type ZarfComponentAction struct {
 	// Hide the output of the command during package deployment (default false).
 	Mute *bool `json:"mute,omitempty"`
-	// Timeout in seconds for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).
+	// Timeout for the command (default to 0, no timeout for cmd actions and 5 minutes for wait actions).
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 	// Retry the command if it fails up to given number of times (default 0).
 	Retries int `json:"retries,omitempty"`
@@ -259,10 +387,45 @@ type ZarfComponentAction struct {
 	Shell *Shell `json:"shell,omitempty"`
 	// (onDeploy/cmd only) An array of variables to update with the output of the command. These variables will be available to all remaining actions and components in the package.
 	SetVariables []Variable `json:"setVariables,omitempty"`
+	// An array of values to set with the output of the command.
+	SetValues []SetValue `json:"setValues,omitempty"`
 	// Description of the action to be displayed during package execution instead of the command.
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing. Must specify either cmd or wait for the action. See the 'zarf tools wait-for' command for more info.
 	Wait *ZarfComponentActionWait `json:"wait,omitempty"`
+	// Disable go-template processing on the cmd field.
+	Template *bool `json:"template,omitempty"`
+}
+
+// ShouldTemplate returns whether the action should have go-template processing.
+func (a ZarfComponentAction) ShouldTemplate() bool {
+	if a.Template != nil {
+		return *a.Template
+	}
+	return false
+}
+
+// SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
+type SetValueType string
+
+// SetValueYAML enables YAML parsing.
+var SetValueYAML = SetValueType("yaml")
+
+// SetValueJSON enables JSON parsing.
+var SetValueJSON = SetValueType("json")
+
+// SetValueString sets the raw value.
+var SetValueString = SetValueType("string")
+
+// SetValue declares a value that can be set during a package deploy.
+type SetValue struct {
+	// Key represents which value to assign to.
+	Key string `json:"key,omitempty"`
+	// Value is the current value at the key.
+	Value any `json:"value,omitempty"`
+	// Type declares the kind of data being stored in the value. JSON and YAML types ensure proper formatting when
+	// inserting the value into the template. Defaults to SetValueString behavior when empty.
+	Type SetValueType `json:"type,omitempty"`
 }
 
 // ZarfComponentActionWait specifies a condition to wait for before continuing
@@ -281,8 +444,8 @@ type ZarfComponentActionWaitCluster struct {
 	Name string `json:"name" jsonschema:"example=podinfo,example=app=podinfo"`
 	// The namespace of the resource to wait for.
 	Namespace string `json:"namespace,omitempty"`
-	// The condition or jsonpath state to wait for; defaults to exist, a special condition that will wait for the resource to exist.
-	Condition string `json:"condition,omitempty" jsonschema:"example=Ready,example=Available,'{.status.availableReplicas}'=23"`
+	// The condition or jsonpath state to wait for; defaults to kstatus readiness checks.
+	Condition string `json:"condition,omitempty" jsonschema:"example=Available,'{.status.availableReplicas}'=23"`
 }
 
 // ZarfComponentActionWaitNetwork specifies a condition to wait for before continuing
@@ -295,35 +458,11 @@ type ZarfComponentActionWaitNetwork struct {
 	Code int `json:"code,omitempty" jsonschema:"example=200,example=404"`
 }
 
-// ZarfContainerTarget defines the destination info for a ZarfData target
-type ZarfContainerTarget struct {
-	// The namespace to target for data injection.
-	Namespace string `json:"namespace"`
-	// The K8s selector to target for data injection.
-	Selector string `json:"selector" jsonschema:"example=app=data-injection"`
-	// The container name to target for data injection.
-	Container string `json:"container"`
-	// The path within the container to copy the data into.
-	Path string `json:"path"`
-}
-
-// ZarfDataInjection is a data-injection definition.
-type ZarfDataInjection struct {
-	// Either a path to a local folder/file or a remote URL of a file to inject into the given target pod + container.
-	Source string `json:"source"`
-	// The target pod + container to inject the data into.
-	Target ZarfContainerTarget `json:"target"`
-	// Compress the data before transmitting using gzip. Note: this requires support for tar/gzip locally and in the target image.
-	Compress bool `json:"compress,omitempty"`
-}
-
 // ZarfComponentImport structure for including imported Zarf components.
 type ZarfComponentImport struct {
-	// The name of the component to import from the referenced zarf.yaml.
-	Name string `json:"name,omitempty"`
-	// The path to the directory containing the zarf.yaml to import.
+	// The path to the component config file to import.
 	Path string `json:"path,omitempty"`
-	// [beta] The URL to a Zarf package to import via OCI.
+	// The URL to a Zarf component config to import via OCI.
 	URL string `json:"url,omitempty" jsonschema:"pattern=^oci://.*$"`
 }
 

@@ -37,7 +37,7 @@ func TestZarfPackageHasImages(t *testing.T) {
 		Components: []ZarfComponent{
 			{
 				Name:   "with images",
-				Images: []string{"docker.io/library/alpine:latest"},
+				Images: []ZarfImage{{Name: "docker.io/library/alpine:latest"}},
 			},
 		},
 	}
@@ -48,11 +48,11 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name           string
-		images         []string
-		files          []ZarfFile
-		dataInjections []ZarfDataInjection
-		expected       bool
+		name          string
+		images        []ZarfImage
+		files         []ZarfFile
+		imageArchives []ImageArchive
+		expected      bool
 	}{
 		{
 			name:     "empty component",
@@ -60,7 +60,7 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 		},
 		{
 			name:     "only images",
-			images:   []string{""},
+			images:   []ZarfImage{{Name: "alpine"}},
 			expected: true,
 		},
 		{
@@ -69,16 +69,16 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:           "only data injections",
-			dataInjections: []ZarfDataInjection{{}},
-			expected:       true,
+			name:          "only image archives",
+			imageArchives: []ImageArchive{{Path: "archive.tar", Images: []string{"img"}}},
+			expected:      true,
 		},
 		{
-			name:           "all three set",
-			images:         []string{""},
-			files:          []ZarfFile{{}},
-			dataInjections: []ZarfDataInjection{{}},
-			expected:       true,
+			name:          "all three set",
+			images:        []ZarfImage{{Name: "alpine"}},
+			files:         []ZarfFile{{}},
+			imageArchives: []ImageArchive{{Path: "archive.tar", Images: []string{"img"}}},
+			expected:      true,
 		},
 	}
 	for _, tt := range tests {
@@ -88,10 +88,10 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 			pkg := ZarfPackage{
 				Components: []ZarfComponent{
 					{
-						Name:           "without images",
-						Images:         tt.images,
-						Files:          tt.files,
-						DataInjections: tt.dataInjections,
+						Name:          "test-component",
+						Images:        tt.images,
+						Files:         tt.files,
+						ImageArchives: tt.imageArchives,
 					},
 				},
 			}
