@@ -13,9 +13,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
-	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestResolveImportsCircular(t *testing.T) {
@@ -23,48 +23,52 @@ func TestResolveImportsCircular(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
 	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", layout.ZarfYAML))
 	require.NoError(t, err)
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false)
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
 func TestResolveImports(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	testCases := []struct {
-		name   string
-		path   string
-		flavor string
+		name             string
+		path             string
+		flavor           string
+		expectedChecksum string
 	}{
 		{
-			name: "two zarf.yaml files import each other",
-			path: "./testdata/import/import-each-other",
+			name:             "two zarf.yaml files import each other",
+			path:             "./testdata/import/import-each-other",
+			expectedChecksum: "1ba733591d28761e89f6a576593cb3a09000f3d6a699212214a5aceaf74455c0",
 		},
 		{
-			name: "variables and constants are resolved correctly",
-			path: "./testdata/import/variables",
+			name:             "variables and constants are resolved correctly",
+			path:             "./testdata/import/variables",
+			expectedChecksum: "41e3bdf823769eb2c13079191179ee723a6b8550c5492a8668233de8b77e03da",
 		},
 		{
-			name: "two separate chains of imports importing a common file",
-			path: "./testdata/import/branch",
+			name:             "two separate chains of imports importing a common file",
+			path:             "./testdata/import/branch",
+			expectedChecksum: "5213106f8fb4a752a44fc2fd370c06335c31069113d9148ad627082510e9a4ef",
 		},
 		{
-			name:   "flavor is preserved when importing",
-			path:   "./testdata/import/flavor",
-			flavor: "pistachio",
+			name:             "flavor is preserved when importing",
+			path:             "./testdata/import/flavor",
+			flavor:           "pistachio",
+			expectedChecksum: "9c60125954b1b38a5947401411b87cde3d586e5ff8eef03bcc37dae1e24ab08e",
 		},
 		{
-			name: "chart version and url properties are not overridden",
-			path: "./testdata/import/chart",
-		},
-		{
-			name: "archives work as expected",
-			path: "./testdata/import/archives",
+			name:             "chart version and url properties are not overridden",
+			path:             "./testdata/import/chart",
+			expectedChecksum: "e1b2c6ed6e17d37a6861046e4443440028994c38400e7089d481435a9e149df8",
 		},
 	}
 
@@ -77,7 +81,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false)
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -86,6 +90,8 @@ func TestResolveImports(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
+			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
+			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
 		})
 	}
 }

@@ -12,17 +12,19 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	_ "modernc.org/sqlite"
 )
 
-func TestAssembleSkeleton(t *testing.T) {
+func TestCreateSkeleton(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.TestContext(t)
 
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	pkg, err := load.PackageDefinition(ctx, "./testdata/zarf-skeleton-package", load.DefinitionOptions{})
 	require.NoError(t, err)
 
@@ -35,12 +37,13 @@ func TestAssembleSkeleton(t *testing.T) {
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
 879bfe82d20f7bdcd60f9e876043cc4343af4177a6ee8b2660c304a5b6c70be7 components/files.tar
-bd82245bfc3c79abfa23dcf72c8099a2788c1b6073464f1ee0c6b64b9c8ef2f6 documentation.tar
 c497f1a56559ea0a9664160b32e4b377df630454ded6a3787924130c02f341a6 components/manifests.tar
 fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm-charts.tar
 `
 
 	require.Equal(t, expectedChecksum, string(b))
+	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
+	require.Equal(t, "e9cc0c25b81b7a5abb29f181110210eab3274ec07a080cd171730bfa590575d9", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
@@ -54,6 +57,7 @@ func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
 
 func TestGetSBOM(t *testing.T) {
 	t.Parallel()
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 
 	ctx := testutil.TestContext(t)
 
@@ -85,6 +89,7 @@ func TestGetSBOM(t *testing.T) {
 }
 
 func TestCreateAbsoluteSources(t *testing.T) {
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tests := []struct {
 		name       string
@@ -108,16 +113,11 @@ func TestCreateAbsoluteSources(t *testing.T) {
 			require.NoError(t, err)
 			absoluteKustomizePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "kustomize"))
 			require.NoError(t, err)
-			absoluteDocsPath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "doc.md"))
-			require.NoError(t, err)
 			componentName := "absolute-files"
 			pkg := v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfPackageConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name: "standard",
-				},
-				Documentation: map[string]string{
-					"docs": absoluteDocsPath,
 				},
 				Components: []v1alpha1.ZarfComponent{
 					{
@@ -172,10 +172,6 @@ func TestCreateAbsoluteSources(t *testing.T) {
 				pkgLayout, err = layout.AssemblePackage(ctx, pkg, tmpdir, layout.AssembleOptions{SkipSBOM: true})
 				require.NoError(t, err)
 			}
-			docsDir := filepath.Join(tmpdir, "docs-dir")
-			err = pkgLayout.GetDocumentation(ctx, docsDir, []string{})
-			require.NoError(t, err)
-			require.FileExists(t, filepath.Join(docsDir, "doc.md"))
 
 			// Ensure the component has the correct files
 			fileComponent, err := pkgLayout.GetComponentDir(ctx, tmpdir, componentName, layout.FilesComponentDir)
@@ -204,7 +200,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 func TestCreateAbsolutePathImports(t *testing.T) {
 	t.Parallel()
-
+	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
 	ctx := testutil.TestContext(t)
 	tmpdir := t.TempDir()
 	absoluteFilePath, err := filepath.Abs(filepath.Join("testdata", "zarf-package", "data.txt"))
