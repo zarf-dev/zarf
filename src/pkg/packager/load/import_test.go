@@ -13,9 +13,9 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
-	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"github.com/zarf-dev/zarf/src/types"
 )
 
 func TestResolveImportsCircular(t *testing.T) {
@@ -23,21 +23,19 @@ func TestResolveImportsCircular(t *testing.T) {
 
 	ctx := testutil.TestContext(t)
 
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
-
 	b, err := os.ReadFile(filepath.Join("./testdata/import/circular/first", layout.ZarfYAML))
 	require.NoError(t, err)
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false)
+	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
 func TestResolveImports(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	lint.ZarfSchema = testutil.LoadSchema(t, "../../../../zarf.schema.json")
+
 	testCases := []struct {
 		name             string
 		path             string
@@ -70,6 +68,10 @@ func TestResolveImports(t *testing.T) {
 			path:             "./testdata/import/chart",
 			expectedChecksum: "e1b2c6ed6e17d37a6861046e4443440028994c38400e7089d481435a9e149df8",
 		},
+		{
+			name: "archives work as expected",
+			path: "./testdata/import/archives",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -81,7 +83,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false)
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
