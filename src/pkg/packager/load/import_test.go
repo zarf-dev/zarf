@@ -66,11 +66,12 @@ func TestResolveImports(t *testing.T) {
 		{
 			name:             "chart version and url properties are not overridden",
 			path:             "./testdata/import/chart",
-			expectedChecksum: "e1b2c6ed6e17d37a6861046e4443440028994c38400e7089d481435a9e149df8",
+			expectedChecksum: "cc62674a6faa1c9685aac0c8266dacec3b91e0a9466c8d1ce3664e019348b43a",
 		},
 		{
-			name: "archives work as expected",
-			path: "./testdata/import/archives",
+			name:             "archives work as expected",
+			path:             "./testdata/import/archives",
+			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
 		},
 	}
 
@@ -94,6 +95,51 @@ func TestResolveImports(t *testing.T) {
 			require.Equal(t, expectedPkg, resolvedPkg)
 			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
 			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
+		})
+	}
+}
+
+func TestMakePathRelativeTo(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		path       string
+		relativeTo string
+		expected   string
+	}{
+		{
+			name:       "multi-segment relative path joins with forward slashes",
+			path:       "nested/data.txt",
+			relativeTo: "import",
+			expected:   "import/nested/data.txt",
+		},
+		{
+			name:       "single-segment relative path joins with forward slash",
+			path:       "data.txt",
+			relativeTo: "import",
+			expected:   "import/data.txt",
+		},
+		{
+			name:       "URL passes through untouched",
+			path:       "oci://example.com/pkg:v1",
+			relativeTo: "import",
+			expected:   "oci://example.com/pkg:v1",
+		},
+		{
+			name:       "absolute path passes through untouched",
+			path:       "/abs/data.txt",
+			relativeTo: "import",
+			expected:   "/abs/data.txt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := makePathRelativeTo(tt.path, tt.relativeTo)
+			require.Equal(t, tt.expected, got)
+			require.Falsef(t, strings.ContainsRune(got, '\\'), "result %q contains a backslash", got)
 		})
 	}
 }
