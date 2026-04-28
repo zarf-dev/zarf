@@ -55,6 +55,10 @@ jobs:
       - name: Run external service test
         run: make test-external
 
+      - name: get crds
+        run: kubectl get crds -o yaml
+        if: failure()
+
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: failure()

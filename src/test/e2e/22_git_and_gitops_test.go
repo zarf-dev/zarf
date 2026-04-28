@@ -151,7 +151,7 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/podinfo-flux", "-o", tmpdir, "--skip-sbom")
 	require.NoError(t, err, stdOut, stdErr)
 	packageName := fmt.Sprintf("zarf-package-podinfo-flux-%s.tar.zst", e2e.Arch)
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", filepath.Join(tmpdir, packageName), "--confirm", "--log-level", "debug")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Tests the URL mutation for GitRepository CRD for Flux.
