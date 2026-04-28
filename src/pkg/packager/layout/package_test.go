@@ -1202,7 +1202,7 @@ func TestGetDocumentation(t *testing.T) {
 			}
 
 			tarPath := filepath.Join(pkgDir, DocumentationTar)
-			err := CreateReproducibleTarballFromDir(docTempDir, "", tarPath, false)
+			err := createReproducibleTarballFromDir(docTempDir, "", tarPath, false)
 			require.NoError(t, err)
 		}
 

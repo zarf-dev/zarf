@@ -50,7 +50,7 @@ func TestCreateReproducibleTarballFromDir(t *testing.T) {
 	require.NoError(t, err)
 	tarPath := filepath.Join(t.TempDir(), "data.tar")
 
-	err = CreateReproducibleTarballFromDir(tmpDir, "", tarPath, true)
+	err = createReproducibleTarballFromDir(tmpDir, "", tarPath, true)
 	require.NoError(t, err)
 
 	shaSum, err := helpers.GetSHA256OfFile(tarPath)

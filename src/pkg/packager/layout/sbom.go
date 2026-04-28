@@ -77,7 +77,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		err = CreateSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
+		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
 		if err != nil {
 			return err
 		}
@@ -92,19 +92,19 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 		if err != nil {
 			return err
 		}
-		err = CreateSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
+		err = createSBOMViewerAsset(outputPath, fmt.Sprintf("%s%s", componentPrefix, comp.Name), jsonData, jsonList)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Include the compare tool if there are any image SBOMs OR component SBOMs
-	err = CreateSBOMCompareAsset(outputPath)
+	err = createSBOMCompareAsset(outputPath)
 	if err != nil {
 		return err
 	}
 
-	err = CreateReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
+	err = createReproducibleTarballFromDir(outputPath, "", filepath.Join(buildPath, "sboms.tar"), false)
 	if err != nil {
 		return err
 	}
@@ -271,16 +271,16 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 	return jsonData, nil
 }
 
-// CreateSBOMViewerAsset creates an offline software bill of material html webpage that
+// createSBOMViewerAsset creates an offline software bill of material html webpage that
 // that can be used to viewed before installing any packages into a cluster.
-func CreateSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
+func createSBOMViewerAsset(outputDir, identifier string, jsonData, jsonList []byte) error {
 	filename := fmt.Sprintf("sbom-viewer-%s.html", getNormalizedFileName(identifier))
 	return createSBOMHTML(outputDir, filename, "viewer/template.gohtml", jsonData, jsonList)
 }
 
-// CreateSBOMCompareAsset creates an offline html webpage used to to compare the all the
+// createSBOMCompareAsset creates an offline html webpage used to to compare the all the
 // images and files associated with a package.
-func CreateSBOMCompareAsset(outputDir string) error {
+func createSBOMCompareAsset(outputDir string) error {
 	return createSBOMHTML(outputDir, "compare.html", "viewer/compare.gohtml", nil, nil)
 }
 

@@ -524,7 +524,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	if err != nil {
 		return err
 	}
-	err = CreateReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
+	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, false)
 	if err != nil {
 		return err
 	}
@@ -773,7 +773,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	if err != nil {
 		return err
 	}
-	err = CreateReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
+	err = createReproducibleTarballFromDir(compBuildPath, component.Name, tarPath, true)
 	if err != nil {
 		return err
 	}
@@ -879,10 +879,10 @@ func GetChecksum(dirPath string) (string, string, error) {
 	return checksumContent, hex.EncodeToString(sha[:]), nil
 }
 
-// CreateReproducibleTarballFromDir takes a directory then walks thru every file in that directory and adds it
+// createReproducibleTarballFromDir takes a directory then walks thru every file in that directory and adds it
 // to a tar ball; the reproducible part comes from changing all the file user and group to 0, and settings the
 // file creation, access, and mod time to midnight on January 1st 1970, UTC.
-func CreateReproducibleTarballFromDir(dirPath string, dirPrefix string, tarballPath string, overrideMode bool) (err error) {
+func createReproducibleTarballFromDir(dirPath string, dirPrefix string, tarballPath string, overrideMode bool) (err error) {
 	tb, err := os.Create(tarballPath)
 	if err != nil {
 		return fmt.Errorf("error creating tarball: %w", err)
@@ -1075,7 +1075,7 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	tarPath := filepath.Join(buildPath, DocumentationTar)
-	if err := CreateReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
+	if err := createReproducibleTarballFromDir(tmpDir, "", tarPath, true); err != nil {
 		return fmt.Errorf("failed to create documentation tarball: %w", err)
 	}
 
