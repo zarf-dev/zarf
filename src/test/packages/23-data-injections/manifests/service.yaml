@@ -4,6 +4,7 @@ metadata:
   name: file-server
   annotations:
     zarf.dev/connect-description: "View the injected files"
+    zarf.dev/connect-url: "/hello.txt"    
   labels:
     zarf.dev/connect-name: file-server
 spec:
