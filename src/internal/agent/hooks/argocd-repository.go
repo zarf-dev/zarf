@@ -53,19 +53,11 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	if err != nil {
 		return nil, err
 	}
-	if !s.GitServer.IsConfigured() {
-		l.Debug("no Zarf git server configured, skipping ArgoCD repository secret mutation")
-		return &operations.Result{Allowed: true}, nil
-	}
 
 	secret := corev1.Secret{}
 	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
-
-	l.Info("using the Zarf git server URL to mutate the ArgoCD Repository secret",
-		"name", secret.Name,
-		"gitServer", s.GitServer.Address)
 
 	url, exists := secret.Data["url"]
 	if !exists {
@@ -76,6 +68,16 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	repoCreds.URL = string(url)
 
 	isOCIURL := helpers.IsOCIURL(repoCreds.URL)
+	requiresGit, requiresRegistry := classifyURLSchemes([]string{repoCreds.URL})
+
+	if !anyZarfServiceUsable(requiresGit, requiresRegistry, s) {
+		l.Debug("no Zarf services configured for source URL schemes, skipping ArgoCD repository secret mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
+
+	l.Info("mutating the ArgoCD repository secret",
+		"name", secret.Name,
+		"operation", r.Operation)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
 	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
