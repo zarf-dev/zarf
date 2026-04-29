@@ -606,7 +606,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 	for chartIdx, chart := range component.Charts {
 		if chart.LocalPath != "" {
-			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			file := chart.LocalPath
@@ -625,7 +625,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
+			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {
@@ -642,7 +642,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			continue
 		}
 
-		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 		src := file.Source
@@ -699,7 +699,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		rel := filepath.ToSlash(filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path)))
 		dst := filepath.Join(compBuildPath, rel)
 
 		src := data.Source
@@ -721,7 +721,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.

@@ -5,11 +5,16 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -22,6 +27,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -47,6 +53,9 @@ type initOptions struct {
 	skipSignatureValidation bool
 	confirm                 bool
 	ociConcurrency          int
+	agentTLSCAPath          string
+	agentTLSCertPath        string
+	agentTLSKeyPath         string
 }
 
 func newInitCommand() *cobra.Command {
@@ -103,6 +112,11 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
 
+	// Flags for providing user-managed agent TLS certificates
+	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
+
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
 	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
@@ -118,6 +132,9 @@ func newInitCommand() *cobra.Command {
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
 	}
+
+	// Agent TLS flags must all be provided together
+	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
@@ -152,7 +169,16 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid command flags were provided: %w", err)
 	}
 
-	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer)
+	var agentTLS *pki.GeneratedPKI
+	if o.agentTLSCAPath != "" {
+		loadedTLS, err := loadAndValidateAgentTLS(o.agentTLSCAPath, o.agentTLSCertPath, o.agentTLSKeyPath)
+		if err != nil {
+			return fmt.Errorf("invalid agent TLS certificates: %w", err)
+		}
+		agentTLS = &loadedTLS
+	}
+
+	err = validateExistingStateMatchesInput(cmd.Context(), o.registryInfo, o.gitServer, o.artifactServer, agentTLS)
 	if err != nil {
 		return err
 	}
@@ -184,10 +210,18 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	filter := filters.Empty()
+	if o.confirm {
+		filter = filters.Combine(
+			filters.ByLocalOS(runtime.GOOS),
+			filters.ForDeploy(o.optionalComponents, false),
+		)
+	}
+
 	loadOpt := packager.LoadOptions{
-		PublicKeyPath:        o.publicKeyPath,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Filter:               filters.Empty(),
+		Filter:               filter,
 		Architecture:         config.GetArch(),
 		CachePath:            cachePath,
 	}
@@ -216,6 +250,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		InjectorPort:           o.injectorPort,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
+		AgentTLS:               agentTLS,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -317,7 +352,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 }
 
 // Checks if an init has already happened and if so check that none of the Zarf service information has changed
-func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo) error {
+func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.RegistryInfo, gitServer state.GitServerInfo, artifactServer state.ArtifactServerInfo, agentTLS *pki.GeneratedPKI) error {
 	c, err := cluster.New(ctx)
 	// If there's no cluster available an init has not happened yet, or this is a custom init
 	if err != nil {
@@ -341,7 +376,48 @@ func validateExistingStateMatchesInput(ctx context.Context, registryInfo state.R
 	if helpers.IsNotZeroAndNotEqual(artifactServer, s.ArtifactServer) {
 		return fmt.Errorf("cannot change artifact server information after initial init, to update run `zarf tools update-creds artifact`")
 	}
+	if agentTLS != nil {
+		if !bytes.Equal(agentTLS.CA, s.AgentTLS.CA) ||
+			!bytes.Equal(agentTLS.Cert, s.AgentTLS.Cert) ||
+			!bytes.Equal(agentTLS.Key, s.AgentTLS.Key) {
+			return fmt.Errorf("cannot change agent TLS certificates after initial init, to update run `zarf tools update-creds agent`")
+		}
+	}
 	return nil
+}
+
+// loadAndValidateAgentTLS reads agent TLS files from disk and validates them.
+func loadAndValidateAgentTLS(caPath, certPath, keyPath string) (pki.GeneratedPKI, error) {
+	ca, err := os.ReadFile(caPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS CA: %w", err)
+	}
+	cert, err := os.ReadFile(certPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS cert: %w", err)
+	}
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("unable to read agent TLS key: %w", err)
+	}
+	if _, err := tls.X509KeyPair(cert, key); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS cert and key do not match: %w", err)
+	}
+	parsed, err := pki.ParseCertFromPEM(cert)
+	if err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse agent TLS certificate: %w", err)
+	}
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(ca) {
+		return pki.GeneratedPKI{}, fmt.Errorf("failed to parse provided CA certificate")
+	}
+	if _, err := parsed.Verify(x509.VerifyOptions{
+		Roots:   caPool,
+		DNSName: state.ZarfAgentHost,
+	}); err != nil {
+		return pki.GeneratedPKI{}, fmt.Errorf("agent TLS certificate failed validation: %w", err)
+	}
+	return pki.GeneratedPKI{CA: ca, Cert: cert, Key: key}, nil
 }
 
 func (o *initOptions) validateInitFlags() error {

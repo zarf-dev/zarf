@@ -23,7 +23,7 @@ components:
       onCreate:
         before:
           # Download a .zim file of a DevOps Stack Exchange snapshot so that it can placed in the image we're building
-          - cmd: curl https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
+          - cmd: curl -fSL https://zarf-init-resources-dev.s3.us-east-1.amazonaws.com/devops.stackexchange.com_en_all_2026-02.zim -o zim-data/devops.stackexchange.com_en_all_2026-02.zim
           # Below are some more examples of *.zim files of available content:
           # https://library.kiwix.org/?lang=eng
           # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor
@@ -34,11 +34,5 @@ components:
           # Export the container image to a tar archive for use as an image archive
           - cmd: docker save kiwix-data:local -o kiwix-data.tar
 
-# YAML keys starting with `x-` are custom keys that are ignored by the Zarf CLI
-# The `x-mdx` key is used to render the markdown content for https://docs.zarf.dev/ref/examples
-x-mdx: |
-  This example shows how to save data during package create so that it can be loaded into a container running in a pod, in this case to initialize a [Kiwix server](https://www.kiwix.org/en/) to allow offline viewing of documentation and wiki pages.
-
-  By utilizing read-only OCI volumes the filesystem of the kiwix-data:local image is directly mounted into the pod.
-
-  To test this example read-only OCI volumes must be enabled in your Kubernetes cluster, and the cluster must be initialized with Zarf version 0.70.0 or greater. OCI volumes are generally available in Kubernetes 1.35.
+documentation:
+  readme: readme.md

@@ -2,7 +2,7 @@
 
 First off, thanks so much for wanting to help out! :tada:
 
-This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf!  If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA). The doc also details a bit about the governance structure of the project.
+This document describes the steps and requirements for contributing a bug fix or feature in a Pull Request to Zarf! If you have any questions about the process or the pull request you are working on feel free to reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3). The doc also details a bit about the governance structure of the project.
 
 ## Developer Experience
 
@@ -17,17 +17,34 @@ Specifically:
 
 ### Pre-Commit Hooks and Linting
 
-We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks. This ensures that all code is linted and formatted before it is committed. After `pre-commit` is [installed](https://pre-commit.com/#installation):
+We use [pre-commit](https://pre-commit.com/) to manage our pre-commit hooks, which lint and format code before it's committed.
+
+#### Prerequisites
+
+- **Go** matching the version in the project go.mod, available on your `PATH`. Our pre-commit hooks invoke `golangci-lint` directly from your `PATH` rather than managing a Go environment (see [Supply-chain notes](#supply-chain-notes) below).
+- **Python 3**, required by pre-commit itself and by several of our hooks.
+- **pre-commit**, installed per the [pre-commit installation guide](https://pre-commit.com/#installation).
+
+#### Setup
 
 ```bash
-# install hooks
+# install hooks into .git/hooks
 pre-commit install
 
-# install golang-ci-lint
+# install golangci-lint (used by the goimports and lint hooks)
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 ```
 
-Now every time you commit, the hooks will run and format your code, linting can be called via `make lint-go`.
+Every commit now runs the hooks; linting can also be invoked directly via `make lint-go`.
+
+#### Supply-chain notes
+
+`.pre-commit-config.yaml` is deliberately configured to reduce the attack surface of the contributor loop:
+
+- **External hook repos are pinned by commit SHA**, with the original tag in a trailing comment. Git tags are mutable on the server side; pinning by SHA ensures a fresh `pre-commit install` or `pre-commit autoupdate` cannot silently pull a retargeted tag. This matches the SHA-pinning convention we already use for GitHub Actions.
+- **Go-based hooks use `language: system`** so pre-commit invokes the `golangci-lint` already on your `PATH` rather than managing its own Go environment or fetching a toolchain from `go.dev`. This keeps lint/format behavior aligned with CI and avoids introducing a second trust root.
+
+When upgrading a pinned hook, run `pre-commit autoupdate --freeze` — the `--freeze` flag writes the resolved commit SHA (rather than the tag) back into `rev:`. Update the trailing tag comment to match, so the config stays auditable.
 
 ### Contributing Guidelines
 
@@ -38,13 +55,12 @@ Zarf is a tool used within the United States Government and as such security is 
 :key: == Required by automation
 
 1. Look at the next due [release milestone](https://github.com/zarf-dev/zarf/milestones) and pick an issue that you want to work on. If you don't see anything that interests you, create an issue and assign it to yourself.
-1. Drop a comment in the issue to let everyone know you're working on it and submit a Draft PR (step 4) as soon as you are able. If you have any questions as you work through the code, reach out in the [Zarf Dev Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03BP9Z3CMA).
+1. Drop a comment in the issue to let everyone know you're working on it and submit a Draft PR (step 4) as soon as you are able. If you have any questions as you work through the code, reach out in the [Zarf Kubernetes Slack Channel](https://kubernetes.slack.com/archives/C03B6BJAUJ3).
 1. :key: Set up your Git config to GPG sign all commits. [Here's some documentation on how to set it up](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits). You won't be able to merge your PR if you have any unverified commits.
 1. In addition to signing your commits, you will also need to sign-off on commits stating you agree to the contribution terms.
    - This can be done by using `-s` with your git commit - adding "Signed-off-by" line automatically.
    - Example: `git commit -s -m "fix: add missing newline"`
 1. Create a Draft Pull Request as soon as you can, even if it is just 5 minutes after you started working on it. We lean towards working in the open as much as we can. If you're not sure what to put in the PR description, just put a link to the issue you're working on.
-
    - :key: We follow the [conventional commits spec](https://www.conventionalcommits.org/en/v1.0.0/) with the [commitlint conventional config](https://github.com/conventional-changelog/commitlint/tree/master/%40commitlint/config-conventional) as extended types for PR titles.
 
 1. :key: Automated tests will begin based on the paths you have edited in your Pull Request.
@@ -68,6 +84,7 @@ The CLI docs (located at `site/src/content/docs/commands`), and [`zarf.schema.js
 We do this so that there is a git commit signature from a person on the commit for better traceability, rather than a non-person entity (e.g. GitHub CI token).
 
 ## Examples
+
 Zarf maintains a gallery of different examples to give users living documentation on real-life Zarf use cases.
 Contributions are highly welcome. When adding an example, be sure to also add it to the [make target](https://github.com/zarf-dev/zarf/blob/main/Makefile#L152) `build-examples`.
 
@@ -80,24 +97,30 @@ ZEPs replace Architecture Decision Records (ADRs) which are kept at the base of 
 ## Governance
 
 ### Technical Steering Committee
+
 The Technical Steering Committee (the "TSC") will be responsible for all technical oversight of the project. The TSC may elect a TSC Chair, who will preside over meetings of the TSC and will serve until their resignation or replacement by the TSC. Current members of the TSC include:
 
 #### Austin Abro
+
 Affiliation: Defense Unicorns
 GitHub: @AustinAbro321
 
 #### Brandt Keller
+
 Affiliation: Defense Unicorns
 GitHub: @brandtkeller
 
 #### Danny Gershman
+
 Affiliation: Radius Method
 GitHub: @dgershman
 
 #### Jeff McCoy (TSC Chair)
+
 Affiliation: Defense Unicorns
 GitHub: @jeff-mccoy
 
 #### Wayne Starr
+
 Affiliation: Defense Unicorns
 GitHub: @Racer159

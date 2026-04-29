@@ -6,10 +6,12 @@ package zoci
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
@@ -19,11 +21,15 @@ func (r *Remote) FetchZarfYAML(ctx context.Context) (v1alpha1.ZarfPackage, error
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	result, err := oci.FetchYAMLFile[v1alpha1.ZarfPackage](ctx, r.FetchLayer, manifest, layout.ZarfYAML)
+	descriptor := manifest.Locate(layout.ZarfYAML)
+	if oci.IsEmptyDescriptor(descriptor) {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to find %s in the manifest", layout.ZarfYAML)
+	}
+	b, err := r.FetchLayer(ctx, descriptor)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	return result, nil
+	return pkgcfg.ParseMultiDoc(ctx, b)
 }
 
 // FetchImagesIndex fetches the images/index.json file from the remote repository.

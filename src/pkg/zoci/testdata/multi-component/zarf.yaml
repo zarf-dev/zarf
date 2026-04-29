@@ -1,0 +1,21 @@
+kind: ZarfPackageConfig
+
+metadata:
+  name: multi-component
+  version: 0.0.1
+  architecture: amd64
+
+components:
+  - name: alpine
+    required: true
+    manifests:
+      - name: alpine
+        namespace: test
+        files:
+          - pod-alpine.yaml
+  - name: nginx
+    manifests:
+      - name: nginx
+        namespace: test
+        files:
+          - pod-nginx.yaml
