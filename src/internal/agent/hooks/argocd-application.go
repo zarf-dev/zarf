@@ -71,12 +71,16 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	requiresGit, requiresRegistry := classifySourceSchemes(app)
+	var urls []string
+	if app.Spec.Source != nil {
+		urls = append(urls, app.Spec.Source.RepoURL)
+	}
+	for _, src := range app.Spec.Sources {
+		urls = append(urls, src.RepoURL)
+	}
+	requiresGit, requiresRegistry := classifyURLSchemes(urls)
 
-	gitUsable := requiresGit && s.GitServer.IsConfigured()
-	registryUsable := requiresRegistry && s.RegistryInfo.IsConfigured()
-
-	if !gitUsable && !registryUsable {
+	if !anyZarfServiceUsable(requiresGit, requiresRegistry, s) {
 		l.Debug("no Zarf services configured for source URL schemes, skipping ArgoCD Application mutation")
 		return &operations.Result{Allowed: true}, nil
 	}
@@ -234,26 +238,6 @@ func mutateGitURL(ctx context.Context, repoURL string, gs state.GitServerInfo) (
 	patchedURL := transformedURL.String()
 	l.Debug("mutated ArgoCD application repoURL to the Zarf URL", "original", repoURL, "mutated", patchedURL)
 	return patchedURL, nil
-}
-
-// classifySourceSchemes inspects the URL schemes of all sources in an ArgoCD Application spec and
-// reports whether the application has git sources (requiring the Zarf git server) or OCI sources
-// (requiring the Zarf registry).
-func classifySourceSchemes(app Application) (requiresGit, requiresRegistry bool) {
-	check := func(repoURL string) {
-		if helpers.IsOCIURL(repoURL) {
-			requiresRegistry = true
-		} else {
-			requiresGit = true
-		}
-	}
-	if app.Spec.Source != nil {
-		check(app.Spec.Source.RepoURL)
-	}
-	for _, src := range app.Spec.Sources {
-		check(src.RepoURL)
-	}
-	return
 }
 
 // Patch updates of the Argo source spec.
