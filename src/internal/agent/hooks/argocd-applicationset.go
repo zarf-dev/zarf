@@ -83,21 +83,23 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	l.Info("mutating the ArgoCD ApplicationSet",
-		"name", appSet.Name,
-		"operation", r.Operation)
-
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
 	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
 
+	l.Info("mutating the ArgoCD ApplicationSet",
+		"name", appSet.Name,
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address,
+		"registry", registryAddress)
+
 	patches := make([]operations.PatchOperation, 0)
 
 	for genIdx, generator := range appSet.Spec.Generators {
 		if generator.Git != nil && generator.Git.RepoURL != "" {
-			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, registryAddress, clusterIP, s.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, registryAddress, clusterIP, s.GitServer)
 			if err != nil {
 				return nil, err
 			}
