@@ -1,0 +1,31 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-registry
+  description: |
+    Updates the Zarf Registry to use the self-hosted registry image.
+    Serves as the primary docker registry for the cluster.
+
+component:
+  services:
+    isRegistry: true
+  manifests:
+    - name: registry-connect
+      namespace: zarf
+      files:
+        - ../../zarf-registry/connect.yaml
+    - name: kep-1755-registry-annotation
+      namespace: zarf
+      files:
+        - ../../zarf-registry/configmap.yaml
+  charts:
+    - name: docker-registry
+      releaseName: zarf-docker-registry
+      namespace: zarf
+      local:
+        path: ../../zarf-registry/chart
+      valuesFiles:
+        - ../../zarf-registry/registry-values.yaml
+  images:
+    - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
+    - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"

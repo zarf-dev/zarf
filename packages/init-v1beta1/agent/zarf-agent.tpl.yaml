@@ -1,0 +1,49 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-agent
+  description: |
+    A Kubernetes mutating webhook to enable automated URL rewriting for container
+    images and git repository references in Kubernetes manifests. This prevents
+    the need to manually update URLs from their original sources to the Zarf-managed
+    docker registry and git server.
+
+variables:
+  - name: AGENT_AFFINITY
+    description: Custom affinity map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_TOLERATIONS
+    description: Custom tolerations array for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+  - name: AGENT_NODE_SELECTOR
+    description: Custom node selector map for the zarf-agent deployment
+    default: ""
+    autoIndent: true
+
+component:
+  services:
+    isAgent: true
+  charts:
+    - name: zarf-agent
+      releaseName: zarf-d2db14ef40305397791454e883b26fc94ad9615d
+      namespace: zarf
+      local:
+        path: ../../zarf-agent/chart
+      valuesFiles:
+        - ../../zarf-agent/agent-values.yaml
+  images:
+    - name: "[[ .AGENT_IMAGE_DOMAIN ]][[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
+      source: [[ if eq .AGENT_IMAGE_TAG "local" ]]daemon[[ else ]]registry[[ end ]]
+  actions:
+    onCreate:
+      before:
+        - cmd: 'test "[[ .AGENT_IMAGE_TAG ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .AGENT_IMAGE_TAG ]]" ARCH="[[ .PKG.ARCH ]]"'
+          shell:
+            windows: pwsh
+          dir: ../../..
+          template: true
+          description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')

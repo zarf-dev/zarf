@@ -1,0 +1,41 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: Used to establish a new Zarf cluster
+  allowNamespaceOverride: false
+  annotations:
+    source: https://github.com/zarf-dev/zarf
+    documentation: https://docs.zarf.dev
+
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
+
+components:
+  - name: k3s
+    optional: true
+    import:
+      path: k3s/k3s.yaml
+
+  - name: zarf-injector
+    import:
+      path: registry/zarf-injector.tpl.yaml
+
+  - name: zarf-seed-registry
+    import:
+      path: registry/zarf-seed-registry.tpl.yaml
+
+  - name: zarf-registry
+    import:
+      path: registry/zarf-registry.tpl.yaml
+
+  - name: zarf-agent
+    import:
+      path: agent/zarf-agent.tpl.yaml
+
+  - name: git-server
+    optional: true
+    import:
+      path: git-server/gitea.tpl.yaml

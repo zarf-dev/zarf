@@ -1,0 +1,80 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: git-server
+  description: |
+    Deploys Gitea to provide git repositories for Kubernetes configurations.
+    Required for GitOps deployments if no other git server is available.
+
+variables:
+  - name: GIT_SERVER_EXISTING_PVC
+    description: "Optional: Use an existing PVC for the git server instead of creating a new one. If this is set, the GIT_SERVER_PVC_SIZE variable will be ignored."
+    default: "data-zarf-gitea-0"
+
+  - name: GIT_SERVER_PVC_SIZE
+    description: The size of the persistent volume claim for the git server
+    default: 10Gi
+
+  - name: GIT_SERVER_PVC_ACCESS_MODE
+    description: The access mode of the persistent volume claim for the git server
+    default: ReadWriteOnce
+
+  - name: GIT_SERVER_CPU_REQ
+    description: The CPU request for git server
+    default: 200m
+
+  - name: GIT_SERVER_MEM_REQ
+    description: The memory request for git server
+    default: 512Mi
+
+  - name: GIT_SERVER_CPU_LIMIT
+    description: The CPU limit for git server
+    default: "3"
+
+  - name: GIT_SERVER_MEM_LIMIT
+    description: The memory limit for git server
+    default: 2Gi
+
+  - name: GIT_SERVER_REPLICA_COUNT
+    description: The number of git server replicas to deploy
+    default: "1"
+
+  - name: GIT_SERVER_DISABLE_REGISTRATION
+    description: Disables the ability to register new users
+    default: "true"
+
+component:
+  manifests:
+    - name: git-connect
+      namespace: zarf
+      files:
+        - ../../gitea/connect.yaml
+  charts:
+    - name: gitea
+      releaseName: zarf-gitea
+      namespace: zarf
+      oci:
+        url: oci://registry-1.docker.io/giteacharts/gitea
+        version: 12.3.0
+      valuesFiles:
+        - ../../gitea/gitea-values.yaml
+  images:
+    - name: "[[ .GITEA_IMAGE ]]"
+  actions:
+    onDeploy:
+      before:
+        - cmd: ./zarf internal update-gitea-pvc
+          setVariables:
+            - name: GIT_SERVER_CREATE_PVC
+          mute: true
+      after:
+        - cmd: ./zarf internal create-read-only-gitea-user
+          retries: 3
+          maxTotalSeconds: 60
+          description: Create the read-only Gitea user
+        - cmd: ./zarf internal create-artifact-registry-token
+          retries: 3
+          maxTotalSeconds: 60
+          description: Create an artifact registry token
+      onFailure:
+        - cmd: ./zarf internal update-gitea-pvc --rollback
