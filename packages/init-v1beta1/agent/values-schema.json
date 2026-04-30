@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "affinity": {
+          "type": "object",
+          "description": "Custom affinity map for the zarf-agent deployment"
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Custom tolerations array for the zarf-agent deployment",
+          "items": {
+            "type": "object"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Custom node selector map for the zarf-agent deployment"
+        }
+      }
+    }
+  }
+}

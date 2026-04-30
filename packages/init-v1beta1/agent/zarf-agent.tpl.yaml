@@ -8,21 +8,10 @@ metadata:
     the need to manually update URLs from their original sources to the Zarf-managed
     docker registry and git server.
 
-variables:
-  - name: AGENT_AFFINITY
-    description: Custom affinity map for the zarf-agent deployment
-    default: ""
-    autoIndent: true
-
-  - name: AGENT_TOLERATIONS
-    description: Custom tolerations array for the zarf-agent deployment
-    default: ""
-    autoIndent: true
-
-  - name: AGENT_NODE_SELECTOR
-    description: Custom node selector map for the zarf-agent deployment
-    default: ""
-    autoIndent: true
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
 
 component:
   services:

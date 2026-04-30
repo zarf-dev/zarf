@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "gitServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pvc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "existing": {
+              "type": "string",
+              "description": "Optional: name of an existing PVC to use for the git server. When set, size is ignored."
+            },
+            "size": {
+              "type": "string",
+              "description": "Size of the persistent volume claim for the git server"
+            },
+            "accessMode": {
+              "type": "string",
+              "description": "Access mode of the persistent volume claim for the git server"
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuRequest": {
+              "type": "string",
+              "description": "CPU request for the git server"
+            },
+            "memoryRequest": {
+              "type": "string",
+              "description": "Memory request for the git server"
+            },
+            "cpuLimit": {
+              "type": "string",
+              "description": "CPU limit for the git server"
+            },
+            "memoryLimit": {
+              "type": "string",
+              "description": "Memory limit for the git server"
+            }
+          }
+        },
+        "replicaCount": {
+          "type": "integer",
+          "description": "Number of git server replicas to deploy"
+        },
+        "disableRegistration": {
+          "type": "boolean",
+          "description": "Disables the ability to register new users"
+        }
+      }
+    }
+  }
+}
