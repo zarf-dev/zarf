@@ -24,15 +24,3 @@ component:
         path: ../../zarf-agent/chart
       valuesFiles:
         - ../../zarf-agent/agent-values.yaml
-  images:
-    - name: "[[ .AGENT_IMAGE_DOMAIN ]][[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
-      source: [[ if eq .AGENT_IMAGE_TAG "local" ]]daemon[[ else ]]registry[[ end ]]
-  actions:
-    onCreate:
-      before:
-        - cmd: 'test "[[ .AGENT_IMAGE_TAG ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .AGENT_IMAGE_TAG ]]" ARCH="[[ .PKG.ARCH ]]"'
-          shell:
-            windows: pwsh
-          dir: ../../..
-          template: true
-          description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')

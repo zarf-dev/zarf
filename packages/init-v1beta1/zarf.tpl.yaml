@@ -21,21 +21,41 @@ components:
 
   - name: zarf-injector
     import:
-      path: registry/zarf-injector.tpl.yaml
+      path: registry/zarf-injector.yaml
 
   - name: zarf-seed-registry
     import:
-      path: registry/zarf-seed-registry.tpl.yaml
+      path: registry/zarf-seed-registry.yaml
+    images:
+      - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
+      - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
 
   - name: zarf-registry
     import:
-      path: registry/zarf-registry.tpl.yaml
+      path: registry/zarf-registry.yaml
+    images:
+      - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
+      - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
 
   - name: zarf-agent
     import:
-      path: agent/zarf-agent.tpl.yaml
+      path: agent/zarf-agent.yaml
+    images:
+      - name: "[[ .AGENT_IMAGE_DOMAIN ]][[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
+        source: [[ if eq .AGENT_IMAGE_TAG "local" ]]daemon[[ else ]]registry[[ end ]]
+    actions:
+      onCreate:
+        before:
+          - cmd: 'test "[[ .AGENT_IMAGE_TAG ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .AGENT_IMAGE_TAG ]]" ARCH="[[ .PKG.ARCH ]]"'
+            shell:
+              windows: pwsh
+            dir: ../..
+            template: true
+            description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')
 
   - name: git-server
     optional: true
     import:
-      path: git-server/gitea.tpl.yaml
+      path: git-server/gitea.yaml
+    images:
+      - name: "[[ .GITEA_IMAGE ]]"

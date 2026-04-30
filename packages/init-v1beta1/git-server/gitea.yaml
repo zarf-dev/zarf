@@ -26,8 +26,6 @@ component:
         version: 12.3.0
       valuesFiles:
         - ../../gitea/gitea-values.yaml
-  images:
-    - name: "[[ .GITEA_IMAGE ]]"
   actions:
     onDeploy:
       before:

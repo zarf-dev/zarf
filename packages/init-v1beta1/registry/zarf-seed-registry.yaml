@@ -22,6 +22,3 @@ component:
       valuesFiles:
         - ../../zarf-registry/registry-values.yaml
         - ../../zarf-registry/registry-values-seed.yaml
-  images:
-    - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
-    - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
