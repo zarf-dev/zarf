@@ -93,11 +93,13 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	l.Info("mutating the ArgoCD Application",
 		"name", app.Name,
-		"operation", r.Operation)
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address,
+		"registry", registryAddress)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
-		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
+		patchedURL, err := getPatchedRepoURL(ctx, app.Spec.Source.RepoURL, registryAddress, clusterIP, s.GitServer)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +108,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 
 	if len(app.Spec.Sources) > 0 {
 		for idx, source := range app.Spec.Sources {
-			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, registryAddress, clusterIP, s.GitServer, r)
+			patchedURL, err := getPatchedRepoURL(ctx, source.RepoURL, registryAddress, clusterIP, s.GitServer)
 			if err != nil {
 				return nil, err
 			}
@@ -122,84 +124,45 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}, nil
 }
 
-func getPatchedRepoURL(
-	ctx context.Context,
-	repoURL, registryAddress, clusterIP string,
-	gs state.GitServerInfo,
-	r *v1.AdmissionRequest,
-) (string, error) {
+func getPatchedRepoURL(ctx context.Context, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (string, error) {
 	l := logger.From(ctx)
 
-	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
-	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).
+	if helpers.IsOCIURL(repoURL) {
+		if registryAddress == "" {
+			l.Debug("no Zarf registry configured, skipping OCI repoURL mutation", "url", repoURL)
+			return repoURL, nil
+		}
+		isPatched, err := helpers.DoHostnamesMatch(helpers.OCIURLPrefix+registryAddress, repoURL)
+		if err != nil {
+			return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
+		}
+		if isPatched {
+			l.Debug("skipping mutation, ArgoCD Application OCI repoURL already points to Zarf registry", "url", repoURL)
+			return repoURL, nil
+		}
+		var isPatchedClusterIP bool
+		if clusterIP != "" {
+			isPatchedClusterIP, err = helpers.DoHostnamesMatch(helpers.OCIURLPrefix+clusterIP, repoURL)
+			if err != nil {
+				return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
+			}
+		}
+		return mutateOCIURL(ctx, repoURL, registryAddress, isPatchedClusterIP)
+	}
+
+	if !gs.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping git repoURL mutation", "url", repoURL)
+		return repoURL, nil
+	}
 	isPatched, err := helpers.DoHostnamesMatch(gs.Address, repoURL)
 	if err != nil {
 		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
 	}
-
 	if isPatched {
 		l.Debug("skipping mutation, ArgoCD Application repoURL already points to Zarf git server", "url", repoURL)
 		return repoURL, nil
 	}
-
-	isOCIURL := helpers.IsOCIURL(repoURL)
-
-	if isOCIURL && registryAddress == "" {
-		l.Debug("no Zarf registry configured, skipping OCI repoURL mutation", "url", repoURL)
-		return repoURL, nil
-	}
-	if !isOCIURL && !gs.IsConfigured() {
-		l.Debug("no Zarf git server configured, skipping git repoURL mutation", "url", repoURL)
-		return repoURL, nil
-	}
-
-	shouldMutate, isPatchedClusterIP, err := shouldMutateURL(r.Operation, isOCIURL, repoURL, registryAddress, clusterIP, gs)
-	if err != nil {
-		return "", fmt.Errorf(lang.AgentErrHostnameMatch, err)
-	}
-
-	if !shouldMutate {
-		return repoURL, nil
-	}
-
-	if isOCIURL {
-		return mutateOCIURL(ctx, repoURL, registryAddress, isPatchedClusterIP)
-	}
 	return mutateGitURL(ctx, repoURL, gs)
-}
-
-// shouldMutateURL reports whether the given repoURL should be mutated for the admission operation.
-//
-// shouldMutate is true for Create operations and for Update operations where repoURL has not
-// already been patched to the Zarf-managed registry or git server address.
-//
-// isPatchedClusterIP is true when repoURL already matches the registry cluster-IP address
-func shouldMutateURL(operation v1.Operation, isOCIURL bool, repoURL, registryAddress, clusterIP string, gs state.GitServerInfo) (shouldMutate bool, isPatchedClusterIP bool, err error) {
-	isCreate := operation == v1.Create
-	isUpdate := operation == v1.Update
-	if isCreate {
-		return true, false, nil
-	}
-
-	var isPatched bool
-	if isOCIURL {
-		zarfStateAddress := helpers.OCIURLPrefix + registryAddress
-		isPatched, err = helpers.DoHostnamesMatch(zarfStateAddress, repoURL)
-		if err != nil {
-			return false, false, err
-		}
-		if clusterIP != "" {
-			zarfStateClusterIPAddress := helpers.OCIURLPrefix + clusterIP
-			isPatchedClusterIP, err = helpers.DoHostnamesMatch(zarfStateClusterIPAddress, repoURL)
-			if err != nil {
-				return false, false, err
-			}
-		}
-	} else {
-		isPatched, err = helpers.DoHostnamesMatch(gs.Address, repoURL)
-	}
-
-	return (isUpdate && !isPatched), isPatchedClusterIP, err
 }
 
 func mutateOCIURL(ctx context.Context, repoURL, registryAddress string, isPatchedClusterIP bool) (string, error) {
