@@ -5,6 +5,8 @@ runs:
   using: composite
   steps:
     - uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+      with:
+        cosign-release: 'v3.0.6'
 
     - uses: anchore/sbom-action/download-syft@f8bdd1d8ac5e901a77a92f111440fdb1b593736b # v0.20.6
 
