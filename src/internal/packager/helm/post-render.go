@@ -178,6 +178,10 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 	return nil
 }
 
+func (r *renderer) shouldAddAgentIgnoreLabels() bool {
+	return r.connectedDeploy && r.state != nil && r.state.AgentIsConfigured()
+}
+
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	l := logger.From(ctx)
 	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
@@ -204,7 +208,7 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 				return fmt.Errorf("failed to add labels to pod template: %w", err)
 			}
 			// In connected or YOLO mode, add agent ignore labels so the webhook doesn't mutate resources
-			if r.connectedDeploy {
+			if r.shouldAddAgentIgnoreLabels() {
 				if err := addAgentIgnoreLabels(obj); err != nil {
 					return err
 				}

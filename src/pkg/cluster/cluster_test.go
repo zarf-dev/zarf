@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -652,6 +653,56 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.True(t, s.GitServer.IsConfigured())
 		require.Equal(t, "127.0.0.1:31999", s.RegistryInfo.Address)
 		require.NotEmpty(t, s.ArtifactServer.Address)
+	})
+
+	t.Run("re-init adds missing agent and ignores existing namespaces", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{
+			Distro: DistroIsK3d,
+			RegistryInfo: state.RegistryInfo{
+				Address:      "127.0.0.1:31999",
+				Port:         31999,
+				RegistryMode: state.RegistryModeNodePort,
+				PushUsername: "push-user",
+				PullUsername: "pull-user",
+				Secret:       "secret",
+			},
+		}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		_, err := c.Clientset.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "app"},
+		}, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: state.NewServiceSet(state.AgentKey),
+		})
+		require.NoError(t, err)
+		require.True(t, s.AgentIsConfigured())
+		require.False(t, s.AgentTLSUserProvided)
+
+		ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "app", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "ignore", ns.Labels[AgentLabel])
+	})
+
+	t.Run("re-init uses provided agent TLS when adding missing agent", func(t *testing.T) {
+		ctx := context.Background()
+		existing := &state.State{Distro: DistroIsK3d}
+		c := newFakeInitStateCluster(ctx, t, existing)
+		agentTLS := pki.GeneratedPKI{
+			CA:   []byte("ca"),
+			Cert: []byte("cert"),
+			Key:  []byte("key"),
+		}
+
+		s, err := c.InitState(ctx, InitStateOptions{
+			InternalServices: state.NewServiceSet(state.AgentKey),
+			AgentTLS:         &agentTLS,
+		})
+		require.NoError(t, err)
+		require.Equal(t, agentTLS, s.AgentTLS)
+		require.True(t, s.AgentTLSUserProvided)
 	})
 
 	t.Run("new cluster with external git URL persists without being in InternalServices", func(t *testing.T) {
