@@ -46,6 +46,17 @@ Every commit now runs the hooks; linting can also be invoked directly via `make 
 
 When upgrading a pinned hook, run `pre-commit autoupdate --freeze` — the `--freeze` flag writes the resolved commit SHA (rather than the tag) back into `rev:`. Update the trailing tag comment to match, so the config stays auditable.
 
+### Go Version Policy
+
+Zarf is consumed as a Go library, so the `go` directive in `go.mod` sets the minimum Go version every downstream consumer must use to build zarf.
+
+- Keep the directive at the oldest currently-supported Go major version (see [Go's release policy](https://go.dev/doc/devel/release#policy)). Setting it higher forces every downstream consumer to upgrade alongside us.
+- Bump the directive only when zarf code adopts a language feature or stdlib API that requires it. Transitive dependencies can also force a bump if they raise their own `go` directive above ours.
+- Patch-version bumps are optional for library consumers (they patch via their own toolchain), but appropriate when fixes affect code paths zarf exercises, the shipped CLI binary, or trigger scanner/SBOM noise against the declared version.
+- Reassess on each Go major release.
+
+Bumping the directive raises the minimum for every consumer; call it out in the PR description and reference it in release notes.
+
 ### Contributing Guidelines
 
 Zarf is a tool used within the United States Government and as such security is our highest priority. Contributors external to Defense Unicorns or non-Zarf maintainers will require two (2) reviewers.
