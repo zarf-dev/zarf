@@ -207,7 +207,7 @@ func fillActiveTemplate(ctx context.Context, pkg v1alpha1.ZarfPackage, setVariab
 				}
 				setVariables[key] = setVal
 			} else if !present {
-				return fmt.Errorf("template %q must be '--set' when using the '--confirm' flag", key)
+				return fmt.Errorf("template %q must be set with `--set` or '--create-set' when using the '--confirm' flag", key)
 			}
 		}
 
