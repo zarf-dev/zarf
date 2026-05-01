@@ -32,11 +32,8 @@ const defaultRetries = 3
 
 // PushOptions is the configuration for pushing images.
 type PushOptions struct {
-	OCIConcurrency int
-	NoChecksum     bool
-	// Platforms are the target platforms for the push. A single entry pushes a single-arch
-	// image; multiple entries preserve the upstream index (multi-arch).
-	Platforms             []ocispec.Platform
+	OCIConcurrency        int
+	NoChecksum            bool
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
@@ -55,9 +52,6 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	}
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
-	}
-	if len(cfg.Platforms) == 0 {
-		return fmt.Errorf("at least one platform is required")
 	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
@@ -156,19 +150,12 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
-			// In multi-arch mode, leave platform nil so copyImage preserves the full index.
-			var defaultPlatform *ocispec.Platform
-			// FIXME: probably want a non-sha test to confirm this works correctly
-			if len(cfg.Platforms) == 1 {
-				p := cfg.Platforms[0]
-				defaultPlatform = &p
-			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
+					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
 				})
 			}
-			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
+			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
 		}
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
@@ -261,22 +248,14 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 	return nil
 }
 
-func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
-	// Assume no platform to start as it can be nil in non container image situations
+func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int) error {
+	// The local OCI layout was already platform-filtered at pull time, so whatever the source
+	// resolves to here (single-platform manifest or full multi-arch index) is what we want to
+	// ship to the destination registry as-is.
 	fetchOpts := oras.DefaultFetchBytesOptions
 	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
-	}
-
-	// If an index is pulled and a target platform is provided, narrow to that platform.
-	// When defaultPlatform is nil (multi-arch packages) preserve the full index.
-	if IsIndex(desc.MediaType) && defaultPlatform != nil {
-		fetchOpts.TargetPlatform = defaultPlatform
-		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
-		if err != nil {
-			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
-		}
 	}
 
 	var size int64

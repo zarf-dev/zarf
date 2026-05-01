@@ -112,7 +112,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	componentImages := []transform.Image{}
 	pulledImages := []images.PulledImage{}
-	platforms := PlatformsFromArchString(pkg.Metadata.Architecture)
+	platforms := platformsFromArchString(pkg.Metadata.Architecture)
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {

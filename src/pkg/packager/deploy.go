@@ -489,7 +489,6 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			OCIConcurrency:        opts.OCIConcurrency,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
-			Platforms:             layout.PlatformsFromArchString(pkgLayout.Pkg.Build.Architecture),
 			Retries:               opts.Retries,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,

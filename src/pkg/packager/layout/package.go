@@ -652,9 +652,9 @@ func (p *PackageLayout) FileName() (string, error) {
 	return name + ".tar.zst", nil
 }
 
-// PlatformsFromArchString parses the comma-separated architecture string into a list of OCI
+// platformsFromArchString parses the comma-separated architecture string into a list of OCI
 // platforms. Each entry may be "arch" or "arch/variant"; OS is always "linux" for Zarf Packages.
-func PlatformsFromArchString(s string) []ocispec.Platform {
+func platformsFromArchString(s string) []ocispec.Platform {
 	arches := v1alpha1.ParseArchitectures(s)
 	platforms := make([]ocispec.Platform, len(arches))
 	for i, a := range arches {
