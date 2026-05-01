@@ -15,22 +15,38 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func TestLoadPackageWithFlavors(t *testing.T) {
+func TestLoadPackage(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name        string
 		flavor      string
+		allVariants bool
+		packageDir  string
 		expectedErr string
 	}{
 		{
 			name:        "when all components have a flavor, inputting no flavor should error",
 			flavor:      "",
+			packageDir:  "package-with-flavors",
 			expectedErr: fmt.Sprintf("package validation failed: %s", "package does not contain any compatible components"),
 		},
 		{
-			name:   "flavors work",
-			flavor: "cashew",
+			name:        "when flavor and allVariants are set, we should error",
+			flavor:      "foo",
+			packageDir:  "package-with-flavors",
+			allVariants: true,
+			expectedErr: "only one of Flavor or AllVariants can be set",
+		},
+		{
+			name:        "when allVariants is set for a package without flavors, we should not error",
+			packageDir:  "package-without-flavors",
+			allVariants: true,
+		},
+		{
+			name:       "flavors work",
+			packageDir: "package-with-flavors",
+			flavor:     "cashew",
 		},
 	}
 
@@ -38,9 +54,10 @@ func TestLoadPackageWithFlavors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			opts := DefinitionOptions{
-				Flavor: tt.flavor,
+				Flavor:      tt.flavor,
+				AllVariants: tt.allVariants,
 			}
-			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", "package-with-flavors"), opts)
+			_, err := PackageDefinition(context.Background(), filepath.Join("testdata", tt.packageDir), opts)
 			if tt.expectedErr != "" {
 				require.ErrorContains(t, err, tt.expectedErr)
 				return

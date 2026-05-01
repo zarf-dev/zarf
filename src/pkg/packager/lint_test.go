@@ -62,6 +62,33 @@ func TestLintPackageWithImports(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "all-variants test",
+			path: filepath.Join("testdata", "lint-with-imports", "all-variants"),
+			opts: LintOptions{
+				AllVariants: true,
+			},
+			findings: []lint.PackageFinding{
+				{
+					YqPath:      ".components.[0].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-first-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[1].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-second-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+				{
+					YqPath:      ".components.[2].images.[0]",
+					Description: "Image not pinned with digest",
+					Item:        "image-in-third-flavor-component:1.0.0",
+					Severity:    lint.SevWarn,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

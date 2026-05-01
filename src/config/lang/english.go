@@ -426,8 +426,9 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevFlagFindImagesSkipCosign = "Skip searching for cosign artifacts related to discovered images"
 	CmdDevFlagFindImagesUpdate     = "Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change."
 
-	CmdDevLintShort = "Lints the given package for valid schema and recommended practices"
-	CmdDevLintLong  = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
+	CmdDevLintShort           = "Lints the given package for valid schema and recommended practices"
+	CmdDevLintLong            = "Verifies the package schema, checks if any variables won't be evaluated, and checks for unpinned images/repos/files"
+	CmdDevLintFlagAllVariants = "Lints all package components, regardless of flavor. NOTE: This will disable checks for component name uniqueness."
 
 	// zarf tools
 	CmdToolsShort = "Collection of additional tools to make airgap easier"

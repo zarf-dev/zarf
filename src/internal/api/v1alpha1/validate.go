@@ -50,8 +50,13 @@ const (
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 )
 
+// ValidateOpts governs what validation checks are run in ValidatePackage
+type ValidateOpts struct {
+	SkipComponentNameUniquenessValidation bool
+}
+
 // ValidatePackage runs all validation checks on the package.
-func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
+func ValidatePackage(pkg v1alpha1.ZarfPackage, opts ValidateOpts) error {
 	var err error
 	if len(pkg.Components) == 0 {
 		err = errors.Join(err, errors.New(PkgValidateErrNoComponents))
@@ -85,7 +90,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	}
 	for _, component := range pkg.Components {
 		// ensure component name is unique
-		if _, ok := uniqueComponentNames[component.Name]; ok {
+		if _, ok := uniqueComponentNames[component.Name]; ok && !opts.SkipComponentNameUniquenessValidation {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
 		}
 		uniqueComponentNames[component.Name] = true
