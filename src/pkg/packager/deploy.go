@@ -234,11 +234,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
-			if opts.Connected && d.s != nil && !d.s.AgentIsConfigured() {
-				if err := applyConnectedDeployAgentState(ctx, d.s, d.c); err != nil {
-					return nil, err
-				}
-			}
 			// If this package has been deployed before, increment the package generation within the secret
 			//nolint: errcheck // this may be the first time deploying the package therefore it will not exist
 			if existingDeployedPackage, _ := d.c.GetDeployedPackage(ctx, pkgLayout.Pkg.Metadata.Name, state.WithPackageNamespaceOverride(opts.NamespaceOverride)); existingDeployedPackage != nil {
@@ -323,21 +318,6 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	}
 
 	return deployedComponents, nil
-}
-
-func applyConnectedDeployAgentState(ctx context.Context, s *state.State, c *cluster.Cluster) error {
-	clusterState, err := c.LoadState(ctx)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	if clusterState.AgentIsConfigured() {
-		s.AgentTLS = clusterState.AgentTLS
-		s.AgentTLSUserProvided = clusterState.AgentTLSUserProvided
-	}
-	return nil
 }
 
 // internalServicesFor returns the state services Zarf will deploy internally in this init run.

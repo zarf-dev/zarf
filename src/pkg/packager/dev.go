@@ -7,10 +7,12 @@ import (
 	"context"
 	"errors"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
@@ -19,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // DevDeployOptions are the optionalParameters to DevDeploy
@@ -124,14 +127,31 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	d.vc = variableConfig
 	if !opts.AirgapMode {
 		// Set default builtin values so they exist in case any helm charts rely on them
-		defaultState, err := state.Default()
+		d.s, err = state.Default()
 		if err != nil {
 			return err
 		}
-		if opts.RegistryURL != "" {
-			defaultState.RegistryInfo.Address = opts.RegistryURL
+
+		requiresCluster := slices.ContainsFunc(pkgLayout.Pkg.Components, func(c v1alpha1.ZarfComponent) bool {
+			return c.RequiresCluster()
+		})
+		if requiresCluster {
+			d.c, err = cluster.NewWithWait(ctx)
+			if err != nil {
+				return err
+			}
+			clusterState, err := d.c.LoadState(ctx)
+			if err != nil && !kerrors.IsNotFound(err) {
+				return err
+			}
+			if clusterState != nil {
+				d.s = clusterState
+			}
 		}
-		d.s = defaultState
+
+		if opts.RegistryURL != "" {
+			d.s.RegistryInfo.Address = opts.RegistryURL
+		}
 	}
 
 	// Get a list of all the components we are deploying and actually deploy them
