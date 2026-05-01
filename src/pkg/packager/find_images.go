@@ -449,7 +449,7 @@ func appendToImageMapOCIRepo(ctx context.Context, imgMap map[string]bool, repo f
 	} else if repo.Spec.Reference.Digest != "" {
 		url = url + "@" + repo.Spec.Reference.Digest
 	} else if repo.Spec.Reference.SemVer != "" || repo.Spec.Reference.SemverFilter != "" {
-		logger.From(ctx).Warn("cannot create image reference with semver or semverFilter", "image", url, "OCIRepository", repo.Name)
+		logger.From(ctx).Warn("cannot create image reference with semver or semverFilter", "image", url, "ociRepository", repo.Name)
 		return imgMap
 	}
 	if reference.ReferenceRegexp.MatchString(url) {
