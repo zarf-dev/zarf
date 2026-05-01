@@ -66,10 +66,14 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 
-	vals, err := loadPackageValues(ctx, pkgLayout.Pkg, pkgLayout.DirPath(), opts.Values)
+	// Built packages bundle a single merged values.yaml; mirror Deploy's read+merge precedence
+	// so user overrides win over package-baked values.
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
 	if err != nil {
 		return nil, err
 	}
+	vals.DeepMerge(opts.Values)
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {

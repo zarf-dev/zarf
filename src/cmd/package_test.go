@@ -264,12 +264,16 @@ type ValuesFilesTestData struct {
 	expectedOutput string
 	packageName    string
 	setVariables   map[string]string
+	valuesFiles    []string
+	setValues      map[string]string
 	kubeVersion    string
 	expectedErr    string
 }
 
 func TestPackageInspectValuesFiles(t *testing.T) {
 	t.Parallel()
+	// Some sub-cases exercise package-level values, which are gated behind the values feature.
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []ValuesFilesTestData{
 		{
@@ -302,6 +306,31 @@ func TestPackageInspectValuesFiles(t *testing.T) {
 			packageName:   "manifests",
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "manifest"),
 			expectedErr:   "0 values files found",
+		},
+		{
+			name:           "chart with values mapping",
+			packageName:    "chart-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected.yaml"),
+			setVariables: map[string]string{
+				"REPLICAS": "3",
+			},
+			valuesFiles: []string{filepath.Join("testdata", "inspect-values-files", "chart-with-values", "user-values.yaml")},
+			setValues: map[string]string{
+				"customField": "fromCLI",
+			},
+		},
+		{
+			// Same fixture as "chart with values mapping" but exercises a distinct precedence
+			// subset: with no --values and no --set-variables, baked-in pkg.values survive
+			// where --set-values does not override them.
+			name:           "package-baked values overridden by --set-values",
+			packageName:    "chart-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-values-files", "chart-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-values-files", "chart-with-values", "expected-baked.yaml"),
+			setValues: map[string]string{
+				"port": "9999",
+			},
 		},
 	}
 
@@ -356,6 +385,8 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		outputWriter: buf,
 		kubeVersion:  tc.kubeVersion,
 		setVariables: tc.setVariables,
+		valuesFiles:  tc.valuesFiles,
+		setValues:    tc.setValues,
 		components:   tc.components,
 	}
 	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))

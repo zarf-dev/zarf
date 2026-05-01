@@ -733,6 +733,8 @@ type packageInspectValuesFilesOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
+	setValues               map[string]string
 	outputWriter            io.Writer
 	ociConcurrency          int
 	publicKeyPath           string
@@ -767,6 +769,8 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
@@ -796,6 +800,12 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -822,6 +832,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables:  o.setVariables,
+		Values:        values,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
 		RemoteOptions: defaultRemoteOptions(),

@@ -1,0 +1,4 @@
+customField: fromPackage
+image:
+  pullPolicy: IfNotPresent
+port: 1111
