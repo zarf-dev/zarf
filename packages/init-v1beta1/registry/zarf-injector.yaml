@@ -16,7 +16,8 @@ variants:
           tolerations: ".injector.tolerations"
     files:
       - source: https://github.com/zarf-dev/zarf-injector/releases/download/v0.3.0/zarf-injector-amd64
-        target: "###ZARF_TEMP###/zarf-injector"
+        # this was ###ZARF_TEMP### which there is no alternative to with values, but I assume we'll add one in the future
+        target: "{{ .Zarf.Temp }}/zarf-injector"
         shasum: "54c37ca19a101c795786510cb89cf4fe2aa7504d4c399985606a3d8f58f42119"
         executable: true
 

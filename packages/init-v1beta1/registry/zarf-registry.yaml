@@ -26,3 +26,6 @@ component:
         path: chart
       valuesFiles:
         - registry-values.yaml
+      values:
+        - sourcePath: ".registry"
+          targetPath: "."

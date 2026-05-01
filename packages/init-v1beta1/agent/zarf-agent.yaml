@@ -24,3 +24,6 @@ component:
         path: chart
       valuesFiles:
         - agent-values.yaml
+      values:
+        - sourcePath: ".agent"
+          targetPath: "."

@@ -22,3 +22,6 @@ component:
       valuesFiles:
         - registry-values.yaml
         - registry-values-seed.yaml
+      values:
+        - sourcePath: ".registry"
+          targetPath: "."

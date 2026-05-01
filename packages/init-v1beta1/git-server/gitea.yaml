@@ -26,6 +26,9 @@ component:
         version: 12.3.0
       valuesFiles:
         - gitea-values.yaml
+      values:
+        - sourcePath: ".agent"
+          targetPath: "."
   actions:
     onDeploy:
       before:
