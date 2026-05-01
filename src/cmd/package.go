@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -330,8 +329,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		o.setVariables,
 		strings.ToUpper,
 	)
-	// Merge values
-	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -800,7 +803,11 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -926,7 +933,11 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
