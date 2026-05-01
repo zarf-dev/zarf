@@ -21,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -132,6 +133,8 @@ func TestPackageList(t *testing.T) {
 
 func TestPackageInspectManifests(t *testing.T) {
 	t.Parallel()
+	// Some sub-cases exercise package-level values, which are gated behind the values feature.
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name           string
@@ -140,6 +143,8 @@ func TestPackageInspectManifests(t *testing.T) {
 		expectedOutput string
 		packageName    string
 		setVariables   map[string]string
+		valuesFiles    []string
+		setValues      map[string]string
 		kubeVersion    string
 		expectedErr    string
 	}{
@@ -181,6 +186,17 @@ func TestPackageInspectManifests(t *testing.T) {
 			},
 		},
 		{
+			name:           "manifest with values templating",
+			packageName:    "manifest-with-values",
+			definitionDir:  filepath.Join("testdata", "inspect-manifests", "manifest-with-values"),
+			expectedOutput: filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "expected.yaml"),
+			valuesFiles:    []string{filepath.Join("testdata", "inspect-manifests", "manifest-with-values", "user-values.yaml")},
+			setValues: map[string]string{
+				"replicas": "5",
+				"imageTag": "latest",
+			},
+		},
+		{
 			name:          "empty inspect",
 			packageName:   "empty",
 			definitionDir: filepath.Join("testdata", "inspect-manifests", "empty"),
@@ -207,6 +223,8 @@ func TestPackageInspectManifests(t *testing.T) {
 				outputWriter: buf,
 				kubeVersion:  tc.kubeVersion,
 				setVariables: tc.setVariables,
+				valuesFiles:  tc.valuesFiles,
+				setValues:    tc.setValues,
 				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
