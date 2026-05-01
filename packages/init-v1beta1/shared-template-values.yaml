@@ -1,3 +1,4 @@
+# This file works both for templates on create, and to set the images dynamically on deploy
 agent:
   image: ghcr.io/zarf-dev/zarf/agent
   tag: local

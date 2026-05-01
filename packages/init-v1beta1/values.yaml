@@ -1,2 +1,3 @@
+# This won't be set for the default init package
 injector:
   tolerations: []

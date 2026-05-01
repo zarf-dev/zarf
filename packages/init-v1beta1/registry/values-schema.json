@@ -152,23 +152,23 @@
               "description": "Filesystem group ID to run the registry as"
             }
           }
-        }
-      }
-    },
-    "proxy": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "tolerations": {
-          "type": "array",
-          "description": "Custom tolerations for the registry proxy",
-          "items": {
-            "type": "object"
-          }
         },
-        "hostNetwork": {
-          "type": "boolean",
-          "description": "Use host network instead of host port for the registry proxy"
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tolerations": {
+              "type": "array",
+              "description": "Custom tolerations for the registry proxy",
+              "items": {
+                "type": "object"
+              }
+            },
+            "hostNetwork": {
+              "type": "boolean",
+              "description": "Use host network instead of host port for the registry proxy"
+            }
+          }
         }
       }
     }
