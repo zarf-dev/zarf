@@ -19,9 +19,8 @@ import (
 func TestDevInspectManifests(t *testing.T) {
 	t.Parallel()
 
-	// Enable values feature for tests
-	err := feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}})
-	require.NoError(t, err)
+	// Enable values feature for tests (ignore error if already set by a sibling test)
+	_ = feature.Set([]feature.Feature{{Name: feature.Values, Enabled: true}}) //nolint:errcheck
 
 	tests := []struct {
 		name               string
