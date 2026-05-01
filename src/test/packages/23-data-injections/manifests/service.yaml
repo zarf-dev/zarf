@@ -1,14 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: kiwix
+  name: file-server
   annotations:
-    zarf.dev/connect-description: "View the Kiwix web interface"
+    zarf.dev/connect-description: "View the injected files"
+    zarf.dev/connect-url: "/hello.txt"    
   labels:
-    zarf.dev/connect-name: kiwix
+    zarf.dev/connect-name: file-server
 spec:
   selector:
-    app: kiwix-serve
+    app: file-server
   ports:
     - name: http
       port: 8080

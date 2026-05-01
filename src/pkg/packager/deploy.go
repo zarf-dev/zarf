@@ -320,6 +320,26 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 	return deployedComponents, nil
 }
 
+// internalServicesFor returns the state services Zarf will deploy internally in this init run.
+func internalServicesFor(components []v1alpha1.ZarfComponent, opts DeployOptions) state.ServiceSet {
+	services := state.NewServiceSet()
+	registryExternal := opts.RegistryInfo.Address != ""
+	for _, c := range components {
+		switch c.Name {
+		case "git-server":
+			services.Add(state.GitKey)
+			services.Add(state.ArtifactKey)
+		case "zarf-registry", "zarf-seed-registry", "zarf-injector":
+			if !registryExternal {
+				services.Add(state.RegistryKey)
+			}
+		case "zarf-agent":
+			services.Add(state.AgentKey)
+		}
+	}
+	return services
+}
+
 func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, opts DeployOptions) ([]state.InstalledChart, error) {
 	l := logger.From(ctx)
 	isSeedRegistry := component.Name == "zarf-seed-registry"
@@ -337,13 +357,14 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 		var err error
 		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:      opts.GitServer,
-			RegistryInfo:   opts.RegistryInfo,
-			ArtifactServer: opts.ArtifactServer,
-			ApplianceMode:  applianceMode,
-			StorageClass:   opts.StorageClass,
-			InjectorPort:   opts.InjectorPort,
-			AgentTLS:       opts.AgentTLS,
+			GitServer:        opts.GitServer,
+			RegistryInfo:     opts.RegistryInfo,
+			ArtifactServer:   opts.ArtifactServer,
+			ApplianceMode:    applianceMode,
+			StorageClass:     opts.StorageClass,
+			InjectorPort:     opts.InjectorPort,
+			AgentTLS:         opts.AgentTLS,
+			InternalServices: internalServicesFor(pkgLayout.Pkg.Components, opts),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
