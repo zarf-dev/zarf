@@ -7,6 +7,7 @@ package cluster
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -16,8 +17,10 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/status"
@@ -772,5 +775,71 @@ func TestInitStateServicesGating(t *testing.T) {
 		require.Equal(t, state.RegistryModeExternal, s.RegistryInfo.RegistryMode)
 		require.False(t, s.RegistryInfo.IsInternal())
 		require.Equal(t, 0, s.InjectorInfo.Port, "injector port must reset when mode changes")
+	})
+}
+
+func TestIgnoreExistingNamespacesForAgent(t *testing.T) {
+	t.Parallel()
+
+	t.Run("adds agent ignore label and preserves existing labels while skipping zarf namespace", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		c := &Cluster{Clientset: fake.NewClientset(
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "app",
+					Labels: map[string]string{
+						"keep": "me",
+					},
+				},
+			},
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: "default"},
+			},
+			&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: state.ZarfNamespaceName},
+			},
+		)}
+
+		require.NoError(t, c.ignoreExistingNamespacesForAgent(ctx))
+
+		app, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "app", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "me", app.Labels["keep"])
+		require.Equal(t, "ignore", app.Labels[AgentLabel])
+
+		defaultNS, err := c.Clientset.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Equal(t, "ignore", defaultNS.Labels[AgentLabel])
+
+		zarfNS, err := c.Clientset.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.NotContains(t, zarfNS.Labels, AgentLabel)
+	})
+
+	t.Run("returns list namespaces errors", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		cs := fake.NewClientset()
+		cs.PrependReactor("list", "namespaces", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, errors.New("list failed")
+		})
+		c := &Cluster{Clientset: cs}
+
+		require.ErrorContains(t, c.ignoreExistingNamespacesForAgent(ctx), "unable to get the Kubernetes namespaces")
+	})
+
+	t.Run("returns update namespace errors", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		cs := fake.NewClientset(&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{Name: "app"},
+		})
+		cs.PrependReactor("update", "namespaces", func(_ k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, kerrors.NewForbidden(schema.GroupResource{Resource: "namespaces"}, "app", errors.New("denied"))
+		})
+		c := &Cluster{Clientset: cs}
+
+		require.ErrorContains(t, c.ignoreExistingNamespacesForAgent(ctx), "unable to mark the namespace app as ignored by Zarf Agent")
 	})
 }
