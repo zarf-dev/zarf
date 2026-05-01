@@ -69,6 +69,10 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return v1alpha1.ZarfPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
 	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.AllVariants, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err

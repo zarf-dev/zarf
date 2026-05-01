@@ -471,7 +471,7 @@ func makePathRelativeTo(path, relativeTo string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}
-	return filepath.Join(relativeTo, path)
+	return filepath.ToSlash(filepath.Join(relativeTo, path))
 }
 
 func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) v1alpha1.ZarfComponent {

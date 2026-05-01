@@ -227,6 +227,10 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 test-unit: ## Run unit tests
 	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
+.PHONY: test-unit-quick
+test-unit-quick: ## Run unit tests without the race detector or coverage
+	go test -failfast -v $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
+
 # INTERNAL: used to test that a dev has ran `make docs-and-schema` in their PR
 test-docs-and-schema:
 	$(MAKE) docs-and-schema

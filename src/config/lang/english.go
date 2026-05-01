@@ -292,6 +292,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagConnected              = "Deploy without pushing images/repos; label resources to bypass the Zarf agent"
 	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value)."
@@ -389,9 +390,10 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"
 
-	CmdDevDeployShort      = "Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong       = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
-	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
+	CmdDevDeployShort         = "Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong          = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployFlagConnected = "Create and deploy without images and repositories; label resources to bypass the Zarf agent"
+	CmdDevDeployFlagNoYolo    = "Disable the YOLO mode default override and create / deploy the package as-defined"
 
 	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo --output-directory ./podinfo"
@@ -617,6 +619,14 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
+
+	CmdToolsTrustedRootShort       = "Tools for working with Sigstore trusted roots"
+	CmdToolsTrustedRootCreateShort = "Create a Sigstore trusted root"
+	CmdToolsTrustedRootCreateLong  = "Create a Sigstore protobuf trusted root, either by retrieving the public Sigstore root via TUF or by composing one from provided verification material.\n\n" +
+		"Use --with-default-services to retrieve the public-good Sigstore trusted root. " +
+		"Combine with --fulcio/--rekor/--ctfe/--tsa to extend or override defaults, " +
+		"or provide only service flags to compose a trusted root for private Sigstore infrastructure.\n\n" +
+		"Respects the TUF_MIRROR, TUF_ROOT, and TUF_ROOT_JSON environment variables for custom TUF configurations."
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

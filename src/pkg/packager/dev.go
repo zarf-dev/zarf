@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 )
 
@@ -59,6 +60,11 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	}
 	if opts.Timeout == 0 {
 		opts.Timeout = config.ZarfDefaultTimeout
+	}
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return err
 	}
 
 	loadOpts := load.DefinitionOptions{
@@ -117,7 +123,6 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 	var d deployer
 	d.vc = variableConfig
 	if !opts.AirgapMode {
-		pkgLayout.Pkg.Metadata.YOLO = true
 		// Set default builtin values so they exist in case any helm charts rely on them
 		defaultState, err := state.Default()
 		if err != nil {
@@ -134,6 +139,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		SetVariables:   opts.DeploySetVariables,
 		Timeout:        opts.Timeout,
 		Retries:        opts.Retries,
+		Connected:      !opts.AirgapMode,
 		OCIConcurrency: opts.OCIConcurrency,
 		RemoteOptions:  opts.RemoteOptions,
 	})

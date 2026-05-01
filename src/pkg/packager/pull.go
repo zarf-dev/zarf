@@ -57,6 +57,11 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	// ensure architecture is set
 	arch := config.GetArch(opts.Architecture)
 
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return "", err
+	}
+
 	u, err := url.Parse(source)
 	if err != nil {
 		return "", err
@@ -114,6 +119,7 @@ type pullOCIOptions struct {
 	OCIConcurrency    int
 	CachePath         string
 	VerifyBlobOptions *utils.VerifyBlobOptions
+	Connected         bool
 	types.RemoteOptions
 	layout.VerificationStrategy
 }
@@ -147,9 +153,9 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		}
 	}
 
-	// Get all the layers for relevant components, exclude images if it's a skeleton package
+	// Get all the layers for relevant components, exclude images if it's a skeleton or connected package
 	layerTypes := opts.LayerTypes
-	if isSkeleton(desc.Platform) {
+	if opts.Connected || isSkeleton(desc.Platform) {
 		if len(layerTypes) == 0 {
 			layerTypes = zoci.GetAllLayerTypes()
 		}

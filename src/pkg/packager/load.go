@@ -42,6 +42,8 @@ type LoadOptions struct {
 	LayerTypes []zoci.LayerType
 	// CachePath is used to cache layers from OCI package pulls
 	CachePath string
+	// Connected skips pulling image layers from OCI sources
+	Connected bool
 	// Only applicable to OCI + HTTP
 	types.RemoteOptions
 	// VerificationStrategy for explicit definition
@@ -64,6 +66,11 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 		defaults := utils.DefaultVerifyBlobOptions()
 		defaults.KeyRef = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
+	}
+
+	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
 	}
 
 	srcType, err := identifySource(source)
@@ -93,6 +100,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,
 			RemoteOptions:        opts.RemoteOptions,
+			Connected:            opts.Connected,
 			CachePath:            opts.CachePath,
 		}
 

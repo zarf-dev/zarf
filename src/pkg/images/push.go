@@ -222,7 +222,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
 			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
 		}
-		l.Debug("retrying component image(s) push", "response_timeout", cfg.ResponseHeaderTimeout)
+		l.Debug("retrying component image(s) push", "responseTimeout", cfg.ResponseHeaderTimeout)
 	}))
 	if err != nil {
 		return err

@@ -65,6 +65,10 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	if err != nil {
 		return nil, err
 	}
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping ArgoCD Application mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
 
 	app := Application{}
 	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
@@ -74,7 +78,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	l.Info("using the Zarf git server URL to mutate the ArgoCD Application",
 		"name", app.Name,
 		"operation", r.Operation,
-		"git-server", s.GitServer.Address)
+		"gitServer", s.GitServer.Address)
 
 	patches := make([]operations.PatchOperation, 0)
 	if app.Spec.Source != nil {
