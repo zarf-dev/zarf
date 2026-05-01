@@ -1,0 +1,47 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfInitConfig
+metadata:
+  name: init
+  description: This is how a custom init package user would create their package
+  allowNamespaceOverride: false
+
+values:
+  files:
+    - values.yaml
+
+components:
+  - name: k3s
+    optional: true
+    import:
+      url: oci://ghcr.io/zarf-dev/init/k3s:1.0.0
+
+  - name: zarf-injector
+    import:
+      url: oci://ghcr.io/zarf-dev/init/zarf-injector:1.0.0
+
+  - name: zarf-seed-registry
+    import:
+      url: oci://ghcr.io/zarf-dev/init/zarf-seed-registry:1.0.0
+    images:
+      - name: custom.enterprise.org/library/registry:3.1.0
+      - name: custom.enterprise.org/alpine/socat:1.8.0.3
+
+  - name: zarf-registry
+    import:
+      url: oci://ghcr.io/zarf-dev/init/zarf-registry:1.0.0
+    images:
+      - name: custom.enterprise.org/library/registry:3.1.0
+      - name: custom.enterprise.org/alpine/socat:1.8.0.3
+
+  - name: zarf-agent
+    import:
+      url: oci://ghcr.io/zarf-dev/init/zarf-agent:1.0.0
+    images:
+      - name: custom.enterprise.org/zarf-dev/zarf/agent:v1.0.0
+
+  - name: git-server
+    optional: true
+    import:
+      url: oci://ghcr.io/zarf-dev/init/git-server:1.0.0
+    images:
+      - name: custom.enterprise.org/go-gitea/gitea:1.24.6-rootless

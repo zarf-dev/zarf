@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registry"],
+  "properties": {
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "tag", "proxy"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the registry (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the registry"
+        },
+        "pvc": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Toggle the creation and use of a PVC off/on"
+            },
+            "size": {
+              "type": "string",
+              "description": "Size of the persistent volume claim for the registry"
+            },
+            "accessMode": {
+              "type": "string",
+              "description": "Access mode of the persistent volume claim for the registry"
+            },
+            "existing": {
+              "type": "string",
+              "description": "Optional: name of an existing PVC to use for the registry. When set, size is ignored."
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuRequest": {
+              "type": "string",
+              "description": "CPU request for the registry"
+            },
+            "memoryRequest": {
+              "type": "string",
+              "description": "Memory request for the registry"
+            },
+            "cpuLimit": {
+              "type": "string",
+              "description": "CPU limit for the registry"
+            },
+            "memoryLimit": {
+              "type": "string",
+              "description": "Memory limit for the registry"
+            }
+          }
+        },
+        "hpa": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the Horizontal Pod Autoscaler for the registry"
+            },
+            "autoSize": {
+              "type": "boolean",
+              "description": "Set min and max replicas based on the number of nodes"
+            },
+            "minReplicas": {
+              "type": "integer",
+              "description": "Minimum number of registry replicas"
+            },
+            "maxReplicas": {
+              "type": "integer",
+              "description": "Maximum number of registry replicas"
+            },
+            "targetCPU": {
+              "type": "integer",
+              "description": "Target CPU utilization percentage for the registry"
+            }
+          }
+        },
+        "affinity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable pod affinity for the registry"
+            },
+            "custom": {
+              "type": "object",
+              "description": "Custom pod affinity for the registry"
+            }
+          }
+        },
+        "tolerations": {
+          "type": "array",
+          "description": "Custom tolerations for the registry",
+          "items": {
+            "type": "object"
+          }
+        },
+        "nodeSelector": {
+          "type": "object",
+          "description": "Custom node selector for the registry"
+        },
+        "caBundle": {
+          "type": "string",
+          "description": "PEM-encoded bundle of trusted certificates to mount into the registry container"
+        },
+        "extraEnvs": {
+          "type": "array",
+          "description": "Additional environment variables passed to the registry container",
+          "items": {
+            "type": "object"
+          }
+        },
+        "otelExporter": {
+          "type": "string",
+          "description": "OpenTelemetry exporter to use"
+        },
+        "serviceAccount": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean",
+              "description": "Toggle the creation of a new service account for the registry"
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the service account to use"
+            },
+            "annotations": {
+              "type": "object",
+              "description": "Annotations to add to the created service account"
+            }
+          }
+        },
+        "securityContext": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runAsUser": {
+              "type": "integer",
+              "description": "User ID to run the registry as"
+            },
+            "runAsGroup": {
+              "type": "integer",
+              "description": "Group ID to run the registry as"
+            },
+            "fsGroup": {
+              "type": "integer",
+              "description": "Filesystem group ID to run the registry as"
+            }
+          }
+        },
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["image", "tag"],
+          "properties": {
+            "image": {
+              "type": "string",
+              "description": "Container image for the registry proxy (without tag)"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Container image tag for the registry proxy"
+            },
+            "tolerations": {
+              "type": "array",
+              "description": "Custom tolerations for the registry proxy",
+              "items": {
+                "type": "object"
+              }
+            },
+            "hostNetwork": {
+              "type": "boolean",
+              "description": "Use host network instead of host port for the registry proxy"
+            }
+          }
+        }
+      }
+    }
+  }
+}

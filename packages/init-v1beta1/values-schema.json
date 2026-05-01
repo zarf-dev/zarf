@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "injector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tolerations": {
+          "type": "array",
+          "description": "Custom tolerations applied to the Zarf injector pod",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

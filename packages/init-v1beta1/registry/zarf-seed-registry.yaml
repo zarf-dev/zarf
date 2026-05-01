@@ -1,0 +1,27 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: zarf-seed-registry
+  description: |
+    Deploys the Zarf Registry using the registry image provided by the Zarf Injector.
+
+values:
+  files:
+    - values.yaml
+  schema: values-schema.json
+
+component:
+  services:
+    isRegistry: true
+  charts:
+    - name: docker-registry
+      releaseName: zarf-docker-registry
+      namespace: zarf
+      local:
+        path: chart
+      valuesFiles:
+        - registry-values.yaml
+        - registry-values-seed.yaml
+      values:
+        - sourcePath: ".registry"
+          targetPath: "."
