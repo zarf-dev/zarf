@@ -13,16 +13,16 @@ component:
     - name: registry-connect
       namespace: zarf
       files:
-        - ../../zarf-registry/connect.yaml
+        - connect.yaml
     - name: kep-1755-registry-annotation
       namespace: zarf
       files:
-        - ../../zarf-registry/configmap.yaml
+        - configmap.yaml
   charts:
     - name: docker-registry
       releaseName: zarf-docker-registry
       namespace: zarf
       local:
-        path: ../../zarf-registry/chart
+        path: chart
       valuesFiles:
-        - ../../zarf-registry/registry-values.yaml
+        - registry-values.yaml

@@ -16,7 +16,7 @@ component:
     - name: git-connect
       namespace: zarf
       files:
-        - ../../gitea/connect.yaml
+        - connect.yaml
   charts:
     - name: gitea
       releaseName: zarf-gitea
@@ -25,7 +25,7 @@ component:
         url: oci://registry-1.docker.io/giteacharts/gitea
         version: 12.3.0
       valuesFiles:
-        - ../../gitea/gitea-values.yaml
+        - gitea-values.yaml
   actions:
     onDeploy:
       before:

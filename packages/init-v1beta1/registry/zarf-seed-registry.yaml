@@ -18,7 +18,7 @@ component:
       releaseName: zarf-docker-registry
       namespace: zarf
       local:
-        path: ../../zarf-registry/chart
+        path: chart
       valuesFiles:
-        - ../../zarf-registry/registry-values.yaml
-        - ../../zarf-registry/registry-values-seed.yaml
+        - registry-values.yaml
+        - registry-values-seed.yaml
