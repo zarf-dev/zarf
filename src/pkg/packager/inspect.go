@@ -66,8 +66,6 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 
-	// Built packages bundle a single merged values.yaml; mirror Deploy's read+merge precedence
-	// so user overrides win over package-baked values.
 	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
 	vals, err := value.ParseLocalFile(ctx, valuesPath)
 	if err != nil {
