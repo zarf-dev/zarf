@@ -20,7 +20,7 @@ func TestCreateImageSBOM(t *testing.T) {
 
 	outputPath := t.TempDir()
 	img := empty.Image
-	b, err := createImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
+	b, err := CreateImageSBOM(ctx, t.TempDir(), outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 
@@ -38,7 +38,7 @@ func TestCreateImageSBOMNonExistentCachePath(t *testing.T) {
 	// Cache path that doesn't exist yet
 	cachePath := filepath.Join(t.TempDir(), "non-existent-cache")
 	img := empty.Image
-	b, err := createImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
+	b, err := CreateImageSBOM(ctx, cachePath, outputPath, img, "docker.io/foo/bar:latest")
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
