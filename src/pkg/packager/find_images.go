@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -162,7 +161,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 		}
 
 		for _, archive := range component.ImageArchives {
-			archivePath := path.Join(pkgPath.BaseDir, archive.Path)
+			archivePath := filepath.Join(pkgPath.BaseDir, archive.Path)
 			imageManifests, err := images.GetManifestsFromArchive(ctx, archivePath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to retrieve image manifests from archive %s: %w", archive.Path, err)
