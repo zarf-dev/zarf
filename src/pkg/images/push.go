@@ -157,7 +157,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}
 			// In multi-arch mode, leave platform nil so copyImage preserves the full index.
 			var defaultPlatform *ocispec.Platform
-			if cfg.Arch != v1alpha1.MultiArch {
+			// FIXME: probably want a non-sha test to confirm this works correctly
+			if len(v1alpha1.ParseArchitectures(cfg.Arch)) <= 1 {
 				defaultPlatform = &ocispec.Platform{
 					Architecture: cfg.Arch,
 					OS:           "linux",

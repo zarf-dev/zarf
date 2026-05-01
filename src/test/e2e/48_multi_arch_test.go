@@ -31,8 +31,9 @@ func TestMultiArchPackage(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
-	require.FileExists(t, createdPkgPath, "package filename must include the multi architecture suffix")
+	// FIXME: make sure this tests variants
+	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-amd64+arm64-0.0.1.tar.zst")
+	require.FileExists(t, createdPkgPath, "package filename must include the multi-arch suffix")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	ref := registry.Reference{
@@ -45,10 +46,10 @@ func TestMultiArchPackage(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	pullDir := t.TempDir()
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "multi")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "amd64,arm64")
 	require.NoError(t, err, stdOut, stdErr)
 
-	pulledPkgPath := filepath.Join(pullDir, "zarf-package-multi-arch-multi-0.0.1.tar.zst")
+	pulledPkgPath := filepath.Join(pullDir, "zarf-package-multi-arch-amd64+arm64-0.0.1.tar.zst")
 	pkgLayout, err := layout.LoadFromTar(t.Context(), pulledPkgPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 

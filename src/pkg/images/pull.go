@@ -154,11 +154,17 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
-	multiArch := opts.Arch == v1alpha1.MultiArch
+	requestedArches := v1alpha1.ParseArchitectures(opts.Arch)
+	multiArch := len(requestedArches) > 1
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images
 		OS: "linux",
+	}
+	// FIXME: we don't care about perserving the index when there is a tag. I may need to add a test to confirm this works correctly
+	if multiArch {
+		// Avoid using a single-arch platform filter when multi-arch — index preservation requires nil platform.
+		platform = nil
 	}
 	pulledImages := []PulledImage{}
 	imagesInfo := []imagePullInfo{}
@@ -325,7 +331,7 @@ func constructIndexError(idx ocispec.Index, image transform.Image) error {
 		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
 	}
 	imageOptions := strings.Join(lines, "\n")
-	return fmt.Errorf("%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest: %s", image.Reference, imageOptions)
+	return fmt.Errorf("%s resolved to an OCI image index. Either list multiple architectures (comma-separated) in metadata.architecture to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest: %s", image.Reference, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {
@@ -495,7 +501,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
 	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
-	if opts.Arch == v1alpha1.MultiArch {
+	if len(v1alpha1.ParseArchitectures(opts.Arch)) > 1 {
 		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
 	l.Info("saving image", saveArgs...)

@@ -313,7 +313,7 @@ func TestLayersFromImages_MultiArch(t *testing.T) {
 	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest)
 
-	r := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
+	r := buildAndPublishPackage(ctx, t, "amd64,arm64", imageRef, upstream)
 	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
 	require.NoError(t, err)
 
@@ -333,7 +333,7 @@ func TestLayersFromImages_NestedIndex(t *testing.T) {
 	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
 	imageRef := fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest)
 
-	r := buildAndPublishPackage(ctx, t, "multi", imageRef, upstream)
+	r := buildAndPublishPackage(ctx, t, "amd64,arm64", imageRef, upstream)
 	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
 	require.NoError(t, err)
 

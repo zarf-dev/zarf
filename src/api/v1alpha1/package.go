@@ -9,6 +9,7 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -54,8 +55,29 @@ const (
 // SkeletonArch is a special architecture used for skeleton packages
 const SkeletonArch = "skeleton"
 
-// MultiArch is a special architecture used for multi-arch packages.
-const MultiArch = "multi"
+// ParseArchitectures splits a comma-separated architecture string into a deduped, trimmed slice
+// preserving input order. An empty string returns nil.
+// FIXME: instead of complicated logic to make sure everything appears once, just add validation that there are no repeats
+func ParseArchitectures(s string) []string {
+	if s == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	return out
+}
 
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
@@ -82,6 +104,20 @@ type ZarfPackage struct {
 // IsInitConfig returns whether a Zarf package is an init config.
 func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
+}
+
+// Architectures returns the parsed list of target architectures for the package.
+// Build.Architecture takes precedence when set (post-create), falling back to Metadata.Architecture.
+func (pkg ZarfPackage) Architectures() []string {
+	if pkg.Build.Architecture != "" {
+		return ParseArchitectures(pkg.Build.Architecture)
+	}
+	return ParseArchitectures(pkg.Metadata.Architecture)
+}
+
+// IsMultiArch returns true when the package targets more than one architecture.
+func (pkg ZarfPackage) IsMultiArch() bool {
+	return len(pkg.Architectures()) > 1
 }
 
 // HasImages returns true if one of the components contains an image.
@@ -223,8 +259,8 @@ type ZarfMetadata struct {
 	Image string `json:"image,omitempty"`
 	// Disable compression of this package.
 	Uncompressed bool `json:"uncompressed,omitempty"`
-	// The target cluster architecture for this package.
-	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64,example=multi"`
+	// The target cluster architecture(s) for this package. Comma-separated for multi-arch packages (e.g. "amd64,arm64").
+	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64,example=amd64\\,arm64"`
 	// Yaml OnLy Online (YOLO): True enables deploying a Zarf package without first running zarf init against the cluster. This is ideal for connected environments where you want to use existing VCS and container registries.
 	YOLO bool `json:"yolo,omitempty"`
 	// Comma-separated list of package authors (including contact info).

@@ -191,7 +191,7 @@ func TestUnpackMultiArch(t *testing.T) {
 
 	layoutDir := t.TempDir()
 	_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
-		Arch:           v1alpha1.MultiArch,
+		Arch:           "amd64,arm64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -204,7 +204,7 @@ func TestUnpackMultiArch(t *testing.T) {
 	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
 		Path:   tarFile,
 		Images: []string{refInfo.Reference},
-	}, dstDir, v1alpha1.MultiArch)
+	}, dstDir, "amd64,arm64")
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
 

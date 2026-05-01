@@ -82,6 +82,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 
 	filter := filters.Combine(
 		filters.ByLocalOS(runtime.GOOS),
+		filters.ByArchitecture(runtime.GOARCH),
 		filters.ForDeploy(opts.OptionalComponents, false),
 	)
 	pkg.Components, err = filter.Apply(pkg)

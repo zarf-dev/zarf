@@ -15,7 +15,6 @@ import (
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2"
@@ -73,14 +72,14 @@ func TestCheckForIndex(t *testing.T) {
 			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48",
 			file:        "agent-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
+			expectedErr: "%s resolved to an OCI image index. Either list multiple architectures (comma-separated) in metadata.architecture to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "docker manifest list",
 			ref:         "defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af",
 			file:        "game-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index. Either set metadata.architecture to \"multi\" to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
+			expectedErr: "%s resolved to an OCI image index. Either list multiple architectures (comma-separated) in metadata.architecture to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "image manifest",
@@ -260,7 +259,7 @@ func TestPullMultiArchContainerImage(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           v1alpha1.MultiArch,
+		Arch:           "amd64,arm64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -286,7 +285,7 @@ func TestPullMultiArchContainerImageByTag(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           v1alpha1.MultiArch,
+		Arch:           "amd64,arm64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -311,7 +310,7 @@ func TestPullNestedIndex(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           v1alpha1.MultiArch,
+		Arch:           "amd64,arm64",
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -367,7 +366,7 @@ func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {
 	ref, err := transform.ParseImageRef(missingRef)
 	require.NoError(t, err)
 	_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
-		Arch:           v1alpha1.MultiArch,
+		Arch:           "amd64,arm64",
 		CacheDirectory: t.TempDir(),
 	})
 	require.ErrorContains(t, err, "multi-arch packages cannot fall back to the docker daemon")

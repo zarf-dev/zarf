@@ -114,7 +114,7 @@ func TestZarfPackageValidate(t *testing.T) {
 				Kind: v1alpha1.ZarfPackageConfig,
 				Metadata: v1alpha1.ZarfMetadata{
 					Name:         "valid-multi",
-					Architecture: v1alpha1.MultiArch,
+					Architecture: "amd64,arm64",
 				},
 				Components: []v1alpha1.ZarfComponent{
 					{

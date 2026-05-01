@@ -3,7 +3,7 @@ metadata:
   name: multi-arch
   description: Deploy a digest-pinned and a tag-only multi-arch image on any cluster architecture.
   version: 0.0.1
-  architecture: multi
+  architecture: amd64,arm64
 
 components:
   - name: podinfo
