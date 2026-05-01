@@ -37,34 +37,42 @@ func TestResolveImports(t *testing.T) {
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name   string
-		path   string
-		flavor string
+		name             string
+		path             string
+		flavor           string
+		expectedChecksum string
 	}{
 		{
-			name: "two zarf.yaml files import each other",
-			path: "./testdata/import/import-each-other",
+			name:             "two zarf.yaml files import each other",
+			path:             "./testdata/import/import-each-other",
+			expectedChecksum: "1ba733591d28761e89f6a576593cb3a09000f3d6a699212214a5aceaf74455c0",
 		},
 		{
-			name: "variables and constants are resolved correctly",
-			path: "./testdata/import/variables",
+			name:             "variables and constants are resolved correctly",
+			path:             "./testdata/import/variables",
+			expectedChecksum: "41e3bdf823769eb2c13079191179ee723a6b8550c5492a8668233de8b77e03da",
 		},
 		{
-			name: "two separate chains of imports importing a common file",
-			path: "./testdata/import/branch",
+			name:             "two separate chains of imports importing a common file",
+			path:             "./testdata/import/branch",
+			expectedChecksum: "5213106f8fb4a752a44fc2fd370c06335c31069113d9148ad627082510e9a4ef",
 		},
 		{
-			name:   "flavor is preserved when importing",
-			path:   "./testdata/import/flavor",
-			flavor: "pistachio",
+			name:             "flavor is preserved when importing",
+			path:             "./testdata/import/flavor",
+			flavor:           "pistachio",
+			expectedChecksum: "9c60125954b1b38a5947401411b87cde3d586e5ff8eef03bcc37dae1e24ab08e",
 		},
 		{
 			name: "chart version and url properties are not overridden",
 			path: "./testdata/import/chart",
+
+			expectedChecksum: "cc62674a6faa1c9685aac0c8266dacec3b91e0a9466c8d1ce3664e019348b43a",
 		},
 		{
-			name: "archives work as expected",
-			path: "./testdata/import/archives",
+			name:             "archives work as expected",
+			path:             "./testdata/import/archives",
+			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
 		},
 	}
 
@@ -86,6 +94,58 @@ func TestResolveImports(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, expectedPkg, resolvedPkg)
+			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
+			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
+		})
+	}
+}
+
+func TestMakePathRelativeTo(t *testing.T) {
+	t.Parallel()
+
+	absPath, err := filepath.Abs(filepath.Join("abs", "data.txt"))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		path       string
+		relativeTo string
+		expected   string
+	}{
+		{
+			name:       "multi-segment relative path joins with forward slashes",
+			path:       "nested/data.txt",
+			relativeTo: "import",
+			expected:   "import/nested/data.txt",
+		},
+		{
+			name:       "single-segment relative path joins with forward slash",
+			path:       "data.txt",
+			relativeTo: "import",
+			expected:   "import/data.txt",
+		},
+		{
+			name:       "URL passes through untouched",
+			path:       "oci://example.com/pkg:v1",
+			relativeTo: "import",
+			expected:   "oci://example.com/pkg:v1",
+		},
+		{
+			name:       "absolute path passes through untouched",
+			path:       absPath,
+			relativeTo: "import",
+			expected:   absPath,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := makePathRelativeTo(tt.path, tt.relativeTo)
+			require.Equal(t, tt.expected, got)
+			if !filepath.IsAbs(tt.path) {
+				require.Falsef(t, strings.ContainsRune(got, '\\'), "result %q contains a backslash", got)
+			}
 		})
 	}
 }

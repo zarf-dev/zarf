@@ -41,6 +41,8 @@ fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm
 `
 
 	require.Equal(t, expectedChecksum, string(b))
+	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
+	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {
