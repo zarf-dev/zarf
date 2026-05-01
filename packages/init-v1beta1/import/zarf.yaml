@@ -5,6 +5,10 @@ metadata:
   description: This is how a custom init package user would create their package
   allowNamespaceOverride: false
 
+values:
+  files:
+    - values.yaml
+
 components:
   - name: k3s
     optional: true

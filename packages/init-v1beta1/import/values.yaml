@@ -1,3 +1,9 @@
+injector:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
 agent:
   image: custom.enterprise.org/zarf-dev/zarf/agent
   tag: v1.0.0
