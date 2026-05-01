@@ -38,7 +38,6 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -50,8 +49,8 @@ import (
 // PullOptions is the configuration for pulling images.
 type PullOptions struct {
 	OCIConcurrency int
-	// FIXME: this should change to ocispec.Platforms
-	Arch                  string
+	// Platforms that tagged images should be pulled to; digest images are pulled as is
+	Platforms             []ocispec.Platform
 	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
 	PlainHTTP             bool
@@ -85,8 +84,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	if destinationDirectory == "" {
 		return nil, fmt.Errorf("destination directory is required")
 	}
-	if opts.Arch == "" {
-		return nil, fmt.Errorf("architecture is required")
+	if len(opts.Platforms) == 0 {
+		return nil, fmt.Errorf("at least one platform is required")
 	}
 	imageList = helpers.Unique(imageList)
 	l := logger.From(ctx)
@@ -162,17 +161,13 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
-	requestedArches := v1alpha1.ParseArchitectures(opts.Arch)
-	multiArch := len(requestedArches) > 1
-	platform := &ocispec.Platform{
-		Architecture: opts.Arch,
-		// TODO: in the future we could support Windows images
-		OS: "linux",
-	}
-	// FIXME: we don't care about perserving the index when there is a tag. I may need to add a test to confirm this works correctly
-	if multiArch {
-		// Avoid using a single-arch platform filter when multi-arch — index preservation requires nil platform.
-		platform = nil
+	multiArch := len(opts.Platforms) > 1
+	// Single-arch path uses a platform filter at fetch time; multi-arch leaves it nil so
+	// indexes round-trip (digest-pinned) or get filtered explicitly (tag-resolved).
+	var platform *ocispec.Platform
+	if !multiArch {
+		p := opts.Platforms[0]
+		platform = &p
 	}
 	pulledImages := []PulledImage{}
 	imagesInfo := []imagePullInfo{}
@@ -252,9 +247,9 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					if err := json.Unmarshal(b, &idx); err != nil {
 						return fmt.Errorf("unable to unmarshal index for %s: %w", image.overridden.Reference, err)
 					}
-					kept := filterIndexManifests(idx.Manifests, requestedArches)
+					kept := filterIndexManifests(idx.Manifests, opts.Platforms)
 					if len(kept) == 0 {
-						return fmt.Errorf("no manifests in index %s match requested architectures %s", image.overridden.Reference, strings.Join(requestedArches, ","))
+						return fmt.Errorf("no manifests in index %s match requested platforms %s", image.overridden.Reference, formatPlatforms(opts.Platforms))
 					}
 					// Cost out only the kept platforms so progress reporting reflects what we
 					// actually pull, not the unfiltered upstream total.
@@ -333,7 +328,8 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	if len(dockerFallBackImages) > 0 {
-		daemonPulled, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Arch, opts.OCIConcurrency)
+		// Multi-arch errored before reaching the daemon path, so a single platform is in play here.
+		daemonPulled, err := pullFromDockerDaemon(ctx, dockerFallBackImages, dst, opts.Platforms[0], opts.OCIConcurrency)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pull images from docker: %w", err)
 		}
@@ -391,7 +387,7 @@ func getDockerEndpointHost() (string, error) {
 	return endpoint.Host, nil
 }
 
-func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []PulledImage, err error) {
+func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, targetPlatform ocispec.Platform, concurrency int) (_ []PulledImage, err error) {
 	l := logger.From(ctx)
 	pulledImages := []PulledImage{}
 	dockerEndPointHost, err := getDockerEndpointHost()
@@ -442,13 +438,11 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 				ocispec.AnnotationBaseImageName: daemonImage.original.Reference,
 				ocispec.AnnotationRefName:       daemonImage.original.Reference,
 			}
-			platform := &ocispec.Platform{
-				Architecture: arch,
-				OS:           "linux",
-			}
+			platform := &targetPlatform
 			cranePlatform := cranev1.Platform{
 				OS:           platform.OS,
 				Architecture: platform.Architecture,
+				Variant:      platform.Variant,
 			}
 			err = cranePath.AppendImage(img, clayout.WithAnnotations(annotations), clayout.WithPlatform(cranePlatform))
 			if err != nil {
@@ -571,7 +565,7 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	}
 
 	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
-	if len(v1alpha1.ParseArchitectures(opts.Arch)) > 1 {
+	if len(opts.Platforms) > 1 {
 		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
 	}
 	l.Info("saving image", saveArgs...)
@@ -604,20 +598,24 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 // pulls only ship the leaf platform manifests the user asked for.
 //
 // Match rule:
-//   - "amd64" matches Platform{Architecture: "amd64"} regardless of variant
-//   - "arm64/v8" matches Platform{Architecture: "arm64", Variant: "v8"} only
-func filterIndexManifests(manifests []ocispec.Descriptor, requestedArches []string) []ocispec.Descriptor {
+//   - Architecture must match exactly.
+//   - Empty Variant on the requested platform matches any variant on the manifest.
+//   - Set Variant on the requested platform must match exactly.
+//   - OS is matched only when set on the requested platform.
+func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Platform) []ocispec.Descriptor {
 	kept := []ocispec.Descriptor{}
 	for _, m := range manifests {
 		if m.Platform == nil {
 			continue
 		}
-		for _, req := range requestedArches {
-			reqArch, reqVariant := splitArchVariant(req)
-			if m.Platform.Architecture != reqArch {
+		for _, req := range requested {
+			if req.Architecture != m.Platform.Architecture {
 				continue
 			}
-			if reqVariant != "" && m.Platform.Variant != reqVariant {
+			if req.Variant != "" && req.Variant != m.Platform.Variant {
+				continue
+			}
+			if req.OS != "" && req.OS != m.Platform.OS {
 				continue
 			}
 			kept = append(kept, m)
@@ -627,11 +625,18 @@ func filterIndexManifests(manifests []ocispec.Descriptor, requestedArches []stri
 	return kept
 }
 
-func splitArchVariant(s string) (arch, variant string) {
-	if i := strings.Index(s, "/"); i >= 0 {
-		return s[:i], s[i+1:]
+// formatPlatforms renders a list of platforms into a comma-separated "os/arch[/variant]" string,
+// suitable for log/error messages.
+func formatPlatforms(platforms []ocispec.Platform) string {
+	parts := make([]string, len(platforms))
+	for i, p := range platforms {
+		s := p.OS + "/" + p.Architecture
+		if p.Variant != "" {
+			s += "/" + p.Variant
+		}
+		parts[i] = s
 	}
-	return s, ""
+	return strings.Join(parts, ",")
 }
 
 // orasSaveFilteredIndex copies each kept platform manifest's full graph from the upstream registry

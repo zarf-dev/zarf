@@ -20,7 +20,6 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -33,9 +32,11 @@ const defaultRetries = 3
 
 // PushOptions is the configuration for pushing images.
 type PushOptions struct {
-	OCIConcurrency        int
-	NoChecksum            bool
-	Arch                  string
+	OCIConcurrency int
+	NoChecksum     bool
+	// Platforms are the target platforms for the push. A single entry pushes a single-arch
+	// image; multiple entries preserve the upstream index (multi-arch).
+	Platforms             []ocispec.Platform
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
@@ -55,8 +56,8 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 	if registryInfo.Address == "" {
 		return fmt.Errorf("registry address must be specified")
 	}
-	if cfg.Arch == "" {
-		return fmt.Errorf("architecture is required")
+	if len(cfg.Platforms) == 0 {
+		return fmt.Errorf("at least one platform is required")
 	}
 	if cfg.Retries < 1 {
 		cfg.Retries = defaultRetries
@@ -158,11 +159,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			// In multi-arch mode, leave platform nil so copyImage preserves the full index.
 			var defaultPlatform *ocispec.Platform
 			// FIXME: probably want a non-sha test to confirm this works correctly
-			if len(v1alpha1.ParseArchitectures(cfg.Arch)) <= 1 {
-				defaultPlatform = &ocispec.Platform{
-					Architecture: cfg.Arch,
-					OS:           "linux",
-				}
+			if len(cfg.Platforms) == 1 {
+				p := cfg.Platforms[0]
+				defaultPlatform = &p
 			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {

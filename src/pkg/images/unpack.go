@@ -37,7 +37,7 @@ const (
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
 // It returns a list of PulledImage for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, platforms []ocispec.Platform) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
@@ -127,12 +127,10 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 
 		var platform *ocispec.Platform
-		// FIXME: test to make sure we're only pulling requested platforms
-		if IsIndex(foundDesc.MediaType) && len(v1alpha1.ParseArchitectures(arch)) <= 1 {
-			platform = &ocispec.Platform{
-				Architecture: arch,
-				OS:           "linux",
-			}
+		// FIXME: test to make sure we're correctly handling multiple platforms
+		if IsIndex(foundDesc.MediaType) && len(platforms) == 1 {
+			p := platforms[0]
+			platform = &p
 		}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)

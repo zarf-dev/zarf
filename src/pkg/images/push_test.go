@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -95,7 +96,7 @@ func TestPush(t *testing.T) {
 			// push images to registry
 			opts := PushOptions{
 				PlainHTTP: true,
-				Arch:      "amd64",
+				Platforms: []ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
 			}
 			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
 

@@ -112,13 +112,14 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	componentImages := []transform.Image{}
 	pulledImages := []images.PulledImage{}
+	platforms := PlatformsFromArchString(pkg.Metadata.Architecture)
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
 
-			archivePulled, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			archivePulled, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), platforms)
 			if err != nil {
 				return nil, err
 			}
@@ -138,7 +139,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  pkg.Metadata.Architecture,
+			Platforms:             platforms,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             opts.RemoteOptions.PlainHTTP,

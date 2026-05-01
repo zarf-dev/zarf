@@ -138,7 +138,7 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 
 			// Run
-			images, err := Unpack(ctx, imageArchives, dstDir, "amd64")
+			images, err := Unpack(ctx, imageArchives, dstDir, []ocispec.Platform{{OS: "linux", Architecture: "amd64"}})
 			if tc.expectErr != nil {
 				require.ErrorContains(t, err, tc.expectErr.Error())
 				return
@@ -189,9 +189,13 @@ func TestUnpackMultiArch(t *testing.T) {
 	refInfo, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, indexDigest))
 	require.NoError(t, err)
 
+	multiArchPlatforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
 	layoutDir := t.TempDir()
 	_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      multiArchPlatforms,
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -204,7 +208,7 @@ func TestUnpackMultiArch(t *testing.T) {
 	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
 		Path:   tarFile,
 		Images: []string{refInfo.Reference},
-	}, dstDir, "amd64,arm64")
+	}, dstDir, multiArchPlatforms)
 	require.NoError(t, err)
 	require.Len(t, unpacked, 1)
 

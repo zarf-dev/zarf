@@ -113,7 +113,7 @@ func TestCheckForIndex(t *testing.T) {
 			cacheDir := t.TempDir()
 			dstDir := t.TempDir()
 			opts := PullOptions{
-				Arch:           tc.arch,
+				Platforms:      []ocispec.Platform{{OS: "linux", Architecture: tc.arch}},
 				CacheDirectory: cacheDir,
 			}
 			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
@@ -187,7 +187,7 @@ func TestPull(t *testing.T) {
 			opts := PullOptions{
 				CacheDirectory:    cacheDir,
 				RegistryOverrides: tc.RegistryOverrides,
-				Arch:              tc.arch,
+				Platforms:         []ocispec.Platform{{OS: "linux", Architecture: tc.arch}},
 			}
 
 			pulled, err := Pull(ctx, images, destDir, opts)
@@ -235,7 +235,7 @@ func TestPullSingleArchContainerImage(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -259,7 +259,7 @@ func TestPullMultiArchContainerImage(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -285,7 +285,7 @@ func TestPullMultiArchContainerImageByTag(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -317,7 +317,7 @@ func TestPullMultiArchTagFiltersToRequestedArches(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -372,7 +372,7 @@ func TestPullNestedIndex(t *testing.T) {
 
 	destDir := t.TempDir()
 	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
 		CacheDirectory: t.TempDir(),
 		PlainHTTP:      true,
 	})
@@ -428,7 +428,7 @@ func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {
 	ref, err := transform.ParseImageRef(missingRef)
 	require.NoError(t, err)
 	_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
-		Arch:           "amd64,arm64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
 		CacheDirectory: t.TempDir(),
 	})
 	require.ErrorContains(t, err, "multi-arch packages cannot fall back to the docker daemon")
@@ -454,7 +454,7 @@ func TestPullInvalidCache(t *testing.T) {
 
 	opts := PullOptions{
 		CacheDirectory: cacheDir,
-		Arch:           "amd64",
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
 	}
 	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)
 	require.NoError(t, err)
