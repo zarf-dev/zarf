@@ -49,7 +49,8 @@ import (
 
 // PullOptions is the configuration for pulling images.
 type PullOptions struct {
-	OCIConcurrency        int
+	OCIConcurrency int
+	// FIXME: this should change to ocispec.Platforms
 	Arch                  string
 	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
@@ -239,16 +240,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return constructIndexError(idx, image.overridden)
 			}
 			if multiArch && IsIndex(desc.MediaType) {
-				size, platforms, err := inspectIndex(ectx, repo, desc, b)
-				if err != nil {
-					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
-				}
 				info := imagePullInfo{
 					registryOverrideRef: image.overridden.Reference,
 					ref:                 image.original.Reference,
-					byteSize:            size,
 					manifestDesc:        desc,
-					platforms:           platforms,
 				}
 				// Tag-resolved indexes get filtered to the requested arches; digest-pinned
 				// indexes must round-trip the original digest, so preserve as-is.
@@ -261,7 +256,22 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 					if len(kept) == 0 {
 						return fmt.Errorf("no manifests in index %s match requested architectures %s", image.overridden.Reference, strings.Join(requestedArches, ","))
 					}
+					// Cost out only the kept platforms so progress reporting reflects what we
+					// actually pull, not the unfiltered upstream total.
+					size, platforms, err := sumManifestsSize(ectx, repo, kept)
+					if err != nil {
+						return fmt.Errorf("failed to size kept manifests for %s: %w", image.overridden.Reference, err)
+					}
 					info.filteredManifests = kept
+					info.byteSize = size
+					info.platforms = platforms
+				} else {
+					size, platforms, err := inspectIndex(ectx, repo, desc, b)
+					if err != nil {
+						return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
+					}
+					info.byteSize = size
+					info.platforms = platforms
 				}
 				imageListLock.Lock()
 				defer imageListLock.Unlock()
@@ -504,47 +514,36 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	return pulledImages, nil
 }
 
-func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
-	l := logger.From(ctx)
-	var pullSrc oras.ReadOnlyTarget
-	var err error
+// newCachedPullSource builds a cached oras.ReadOnlyTarget for the given upstream registry reference.
+// It detects plain-HTTP for localhost and layers a local on-disk cache in front of the remote repo.
+func newCachedPullSource(ctx context.Context, ref string, opts PullOptions, client *auth.Client) (oras.ReadOnlyTarget, error) {
 	repo := &orasRemote.Repository{}
-	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	parsed, err := registry.ParseReference(ref)
 	if err != nil {
-		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
+		return nil, fmt.Errorf("failed to parse image reference %s: %w", ref, err)
 	}
+	repo.Reference = parsed
 	repo.PlainHTTP = opts.PlainHTTP
 	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
 		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
 		if err != nil {
-			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
+			return nil, fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
 		}
 	}
 	repo.Client = client
 
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = opts.OCIConcurrency
-	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
-	if len(v1alpha1.ParseArchitectures(opts.Arch)) > 1 {
-		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
-	}
-	l.Info("saving image", saveArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
-		return fmt.Errorf("failed to create oci formatted directory: %w", err)
+		return nil, fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
-	pullSrc = orasCache.New(repo, localCache)
-	var desc ocispec.Descriptor
-	err = retry.Do(
-		func() error {
-			trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-			trackedDst.StartReporting(ctx)
-			defer trackedDst.StopReporting()
-			var copyErr error
-			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
-			return copyErr
-		},
+	return orasCache.New(repo, localCache), nil
+}
+
+// retryPull runs fn under the standard image-pull retry policy, logging retries against ref.
+func retryPull(ctx context.Context, ref string, fn func() error) error {
+	l := logger.From(ctx)
+	return retry.Do(
+		fn,
 		retry.Attempts(uint(config.ZarfDefaultRetries)),
 		retry.Delay(config.ZarfDefaultRetryDelay),
 		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
@@ -556,18 +555,45 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 				l.Warn("retrying image pull",
 					"attempt", n+1,
 					"maxAttempts", config.ZarfDefaultRetries,
-					"image", imageInfo.registryOverrideRef,
+					"image", ref,
 					"error", err,
 				)
 			}
 		}),
 	)
+}
+
+func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
+	l := logger.From(ctx)
+	pullSrc, err := newCachedPullSource(ctx, imageInfo.registryOverrideRef, opts, client)
+	if err != nil {
+		return err
+	}
+
+	saveArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	if len(v1alpha1.ParseArchitectures(opts.Arch)) > 1 {
+		saveArgs = append(saveArgs, "platforms", strings.Join(imageInfo.platforms, ","))
+	}
+	l.Info("saving image", saveArgs...)
+
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = opts.OCIConcurrency
+	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
+
+	var desc ocispec.Descriptor
+	err = retryPull(ctx, imageInfo.registryOverrideRef, func() error {
+		trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+		trackedDst.StartReporting(ctx)
+		defer trackedDst.StopReporting()
+		var copyErr error
+		desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+		return copyErr
+	})
 	if err != nil {
 		return fmt.Errorf("failed to copy: %w", err)
 	}
 	desc = addNameAnnotationsToDesc(desc, imageInfo.ref)
-	err = dst.Tag(ctx, desc, imageInfo.ref)
-	if err != nil {
+	if err := dst.Tag(ctx, desc, imageInfo.ref); err != nil {
 		return fmt.Errorf("failed to tag image: %w", err)
 	}
 	return nil
@@ -614,51 +640,29 @@ func splitArchVariant(s string) (arch, variant string) {
 // not the full upstream index.
 func orasSaveFilteredIndex(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
 	l := logger.From(ctx)
-	repo := &orasRemote.Repository{}
-	var err error
-	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	pullSrc, err := newCachedPullSource(ctx, imageInfo.registryOverrideRef, opts, client)
 	if err != nil {
-		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
+		return err
 	}
-	repo.PlainHTTP = opts.PlainHTTP
-	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
-		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
-		}
-	}
-	repo.Client = client
 
-	platforms := make([]string, 0, len(imageInfo.filteredManifests))
-	for _, m := range imageInfo.filteredManifests {
-		platforms = append(platforms, formatPlatform(m.Platform))
-	}
 	l.Info("saving image",
 		"name", imageInfo.registryOverrideRef,
 		"size", utils.ByteFormat(float64(imageInfo.byteSize), 2),
-		"platforms", strings.Join(platforms, ","),
+		"platforms", strings.Join(imageInfo.platforms, ","),
 	)
-
-	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
-	if err != nil {
-		return fmt.Errorf("failed to create oci formatted directory: %w", err)
-	}
-	pullSrc := orasCache.New(repo, localCache)
 
 	copyOpts := oras.DefaultCopyGraphOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 
+	trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+	trackedDst.StartReporting(ctx)
+	defer trackedDst.StopReporting()
+
 	// Copy each kept platform manifest's full graph (manifest + config + layers) into dst.
 	for _, m := range imageInfo.filteredManifests {
-		err := retry.Do(
-			func() error { return oras.CopyGraph(ctx, pullSrc, dst, m, copyOpts) },
-			retry.Attempts(uint(config.ZarfDefaultRetries)),
-			retry.Delay(config.ZarfDefaultRetryDelay),
-			retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-			retry.DelayType(retry.BackOffDelay),
-			retry.LastErrorOnly(true),
-			retry.Context(ctx),
-		)
+		err := retryPull(ctx, imageInfo.registryOverrideRef, func() error {
+			return oras.CopyGraph(ctx, pullSrc, trackedDst, m, copyOpts)
+		})
 		if err != nil {
 			return fmt.Errorf("failed to copy manifest %s: %w", m.Digest, err)
 		}
