@@ -349,9 +349,9 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		if availCPU.Cmp(*resReq.Requests.Cpu()) < 0 || availMem.Cmp(*resReq.Requests.Memory()) < 0 {
 			l.Debug("skipping node: insufficient resources",
 				"node", node.Name,
-				"requiredCPU", resReq.Requests.Cpu().String(),
+				"requiredCpu", resReq.Requests.Cpu().String(),
 				"requiredMem", resReq.Requests.Memory().String(),
-				"availCPU", availCPU.String(),
+				"availCpu", availCPU.String(),
 				"availMem", availMem.String(),
 			)
 			continue

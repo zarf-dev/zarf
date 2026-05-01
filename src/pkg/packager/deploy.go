@@ -650,28 +650,34 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
 			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
-			if helpers.InvalidPath(filepath.Join(manifestDir, manifest.Files[idx])) {
+			path := filepath.Join(manifestDir, manifest.Files[idx])
+			if helpers.InvalidPath(path) {
 				return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
 			}
+			// Apply ###ZARF_VAR_*### substitution before Helm sees the file.
+			if err := d.vc.ReplaceTextTemplate(path); err != nil {
+				return installedCharts, fmt.Errorf("error templating manifest %s: %w", path, err)
+			}
 			if manifest.IsTemplate() {
-				path := filepath.Join(manifestDir, manifest.Files[idx])
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
-
 				objs := template.NewObjects(d.vals).
 					WithPackage(pkgLayout.Pkg).
 					WithBuild(pkgLayout.Pkg.Build).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants())
-				err := template.ApplyToFile(ctx, path, path, objs)
-				if err != nil {
+				if err := template.ApplyToFile(ctx, path, path, objs); err != nil {
 					return nil, err
 				}
 			}
 		}
-		// Move kustomizations to files now
+		// Move kustomizations to files now, applying ###ZARF_VAR_*### substitution as well.
 		for idx := range manifest.Kustomizations {
 			kustomization := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
 			manifest.Files = append(manifest.Files, kustomization)
+			path := filepath.Join(manifestDir, kustomization)
+			if err := d.vc.ReplaceTextTemplate(path); err != nil {
+				return installedCharts, fmt.Errorf("error templating kustomization %s: %w", path, err)
+			}
 		}
 
 		if manifest.Namespace == "" {
