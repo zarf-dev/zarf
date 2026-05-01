@@ -55,6 +55,10 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		"setVariables", opts.SetVariables,
 	)
 
+	if opts.Flavor != "" && opts.AllVariants {
+		return v1alpha1.ZarfPackage{}, fmt.Errorf("only one of Flavor or AllVariants can be set")
+	}
+
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
@@ -112,19 +116,16 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 
-	err := internalv1alpha1.ValidatePackage(pkg)
+	validationOpts := internalv1alpha1.ValidateOpts{}
 
 	if allVariants {
-		var typeErr error
-		err, typeErr = utils.FilterErr[*internalv1alpha1.ComponentNameNotUniqueErr](err)
-		if typeErr != nil {
-			return typeErr
-		}
+		validationOpts.SkipComponentNameUniquenessValidation = true
 	}
 
-	if err != nil {
+	if err := internalv1alpha1.ValidatePackage(pkg, validationOpts); err != nil {
 		return fmt.Errorf("package validation failed: %w", err)
 	}
+
 	findings, err := lint.ValidatePackageSchemaAtPath(packagePath, setVariables)
 	if err != nil {
 		return fmt.Errorf("unable to check schema: %w", err)
