@@ -2,7 +2,19 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
+  "required": ["gitea"],
   "properties": {
+    "gitea": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Full container image reference for Gitea, including tag"
+        }
+      }
+    },
     "gitServer": {
       "type": "object",
       "additionalProperties": false,

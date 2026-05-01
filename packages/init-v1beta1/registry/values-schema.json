@@ -2,11 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
+  "required": ["registry"],
   "properties": {
     "registry": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["image", "tag", "proxy"],
       "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the registry (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the registry"
+        },
         "pvc": {
           "type": "object",
           "additionalProperties": false,
@@ -156,7 +166,16 @@
         "proxy": {
           "type": "object",
           "additionalProperties": false,
+          "required": ["image", "tag"],
           "properties": {
+            "image": {
+              "type": "string",
+              "description": "Container image for the registry proxy (without tag)"
+            },
+            "tag": {
+              "type": "string",
+              "description": "Container image tag for the registry proxy"
+            },
             "tolerations": {
               "type": "array",
               "description": "Custom tolerations for the registry proxy",

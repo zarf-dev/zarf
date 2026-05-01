@@ -2,11 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
+  "required": ["agent"],
   "properties": {
     "agent": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["image", "tag"],
       "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for the zarf-agent (without tag)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Container image tag for the zarf-agent"
+        },
         "affinity": {
           "type": "object",
           "description": "Custom affinity map for the zarf-agent deployment"
