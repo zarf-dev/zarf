@@ -27,21 +27,21 @@ components:
     import:
       path: registry/zarf-seed-registry.yaml
     images:
-      - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
-      - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
+      - name: "[[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
+      - name: "[[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
 
   - name: zarf-registry
     import:
       path: registry/zarf-registry.yaml
     images:
-      - name: "[[ .REGISTRY_IMAGE_DOMAIN ]][[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
-      - name: "[[ .PROXY_IMAGE_DOMAIN ]][[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
+      - name: "[[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
+      - name: "[[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
 
   - name: zarf-agent
     import:
       path: agent/zarf-agent.yaml
     images:
-      - name: "[[ .AGENT_IMAGE_DOMAIN ]][[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
+      - name: "[[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
         source: [[ if eq .AGENT_IMAGE_TAG "local" ]]daemon[[ else ]]registry[[ end ]]
     actions:
       onCreate:

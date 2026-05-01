@@ -1,12 +1,9 @@
-AGENT_IMAGE_DOMAIN: ghcr.io/
-AGENT_IMAGE: zarf-dev/zarf/agent
+AGENT_IMAGE: ghcr.io/zarf-dev/zarf/agent
 AGENT_IMAGE_TAG: local
 
-REGISTRY_IMAGE_DOMAIN: ""
 REGISTRY_IMAGE: library/registry
 REGISTRY_IMAGE_TAG: 3.1.0
 
-PROXY_IMAGE_DOMAIN: ""
 PROXY_IMAGE: alpine/socat
 PROXY_IMAGE_TAG: 1.8.0.3
 

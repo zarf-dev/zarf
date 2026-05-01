@@ -2,7 +2,7 @@ apiVersion: zarf.dev/v1beta1
 kind: ZarfInitConfig
 metadata:
   name: init
-  description: Custom init package
+  description: This is how a custom init package user would create their package
   allowNamespaceOverride: false
 
 components:
