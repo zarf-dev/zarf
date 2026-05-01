@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/images"
@@ -20,12 +21,39 @@ import (
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
+const (
+	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
+	AgentErrTransformGitURL = "unable to transform the git url"
+	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
+	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
+)
+
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {
 		currLabels = make(map[string]string)
 	}
 	currLabels["zarf-agent"] = "patched"
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
+}
+
+// classifyURLSchemes reports whether any of the given repository URLs require
+// the Zarf git server or the Zarf registry (OCI).
+func classifyURLSchemes(urls []string) (requiresGit, requiresRegistry bool) {
+	for _, u := range urls {
+		if helpers.IsOCIURL(u) {
+			requiresRegistry = true
+		} else {
+			requiresGit = true
+		}
+	}
+	return
+}
+
+// anyZarfServiceUsable returns true when at least one required Zarf service is
+// configured in the given state. Use this to decide whether a mutation hook
+// should proceed.
+func anyZarfServiceUsable(requiresGit, requiresRegistry bool, s *state.State) bool {
+	return (requiresGit && s.GitServer.IsConfigured()) || (requiresRegistry && s.RegistryInfo.IsConfigured())
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {
