@@ -593,15 +593,10 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	return nil
 }
 
-// filterIndexManifests returns the subset of manifest descriptors whose platform matches one of the
-// requested arches. An entry whose Platform is nil (e.g. a nested index) is dropped — multi-arch tag
-// pulls only ship the leaf platform manifests the user asked for.
-//
-// Match rule:
-//   - Architecture must match exactly.
-//   - Empty Variant on the requested platform matches any variant on the manifest.
-//   - Set Variant on the requested platform must match exactly.
-//   - OS is matched only when set on the requested platform.
+// filterIndexManifests returns the subset of manifest descriptors whose platform matches one of
+// the requested platforms exactly on OS, Architecture, and Variant. An entry whose Platform is
+// nil (e.g. a nested index) is dropped — multi-arch tag pulls only ship the leaf platform
+// manifests the caller asked for.
 func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Platform) []ocispec.Descriptor {
 	kept := []ocispec.Descriptor{}
 	for _, m := range manifests {
@@ -609,17 +604,12 @@ func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Pl
 			continue
 		}
 		for _, req := range requested {
-			if req.Architecture != m.Platform.Architecture {
-				continue
+			if req.Architecture == m.Platform.Architecture &&
+				req.OS == m.Platform.OS &&
+				req.Variant == m.Platform.Variant {
+				kept = append(kept, m)
+				break
 			}
-			if req.Variant != "" && req.Variant != m.Platform.Variant {
-				continue
-			}
-			if req.OS != "" && req.OS != m.Platform.OS {
-				continue
-			}
-			kept = append(kept, m)
-			break
 		}
 	}
 	return kept
