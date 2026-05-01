@@ -5,6 +5,7 @@
 package images
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -26,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/moby/moby/client"
+	"github.com/opencontainers/go-digest"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -62,6 +64,11 @@ type imagePullInfo struct {
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
 	platforms           []string
+	// filteredManifests is non-nil for tag-resolved multi-arch indexes: only these
+	// platform manifests should be copied into the local layout, and a synthesized
+	// index that references them is then tagged under ref. Empty/nil means copy
+	// the full manifestDesc graph (single-platform manifest, or digest-pinned index).
+	filteredManifests []ocispec.Descriptor
 }
 
 type imageWithOverride struct {
@@ -236,15 +243,29 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				if err != nil {
 					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
 				}
-				imageListLock.Lock()
-				defer imageListLock.Unlock()
-				imagesInfo = append(imagesInfo, imagePullInfo{
+				info := imagePullInfo{
 					registryOverrideRef: image.overridden.Reference,
 					ref:                 image.original.Reference,
 					byteSize:            size,
 					manifestDesc:        desc,
 					platforms:           platforms,
-				})
+				}
+				// Tag-resolved indexes get filtered to the requested arches; digest-pinned
+				// indexes must round-trip the original digest, so preserve as-is.
+				if image.original.Digest == "" {
+					var idx ocispec.Index
+					if err := json.Unmarshal(b, &idx); err != nil {
+						return fmt.Errorf("unable to unmarshal index for %s: %w", image.overridden.Reference, err)
+					}
+					kept := filterIndexManifests(idx.Manifests, requestedArches)
+					if len(kept) == 0 {
+						return fmt.Errorf("no manifests in index %s match requested architectures %s", image.overridden.Reference, strings.Join(requestedArches, ","))
+					}
+					info.filteredManifests = kept
+				}
+				imageListLock.Lock()
+				defer imageListLock.Unlock()
+				imagesInfo = append(imagesInfo, info)
 				pulledImages = append(pulledImages, PulledImage{Image: image.original})
 				l.Debug("pulled index for image", "name", image.overridden.Reference)
 				return nil
@@ -310,7 +331,11 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	}
 
 	for _, imageInfo := range imagesInfo {
-		err = orasSave(ctx, imageInfo, opts, dst, client)
+		if len(imageInfo.filteredManifests) > 0 {
+			err = orasSaveFilteredIndex(ctx, imageInfo, opts, dst, client)
+		} else {
+			err = orasSave(ctx, imageInfo, opts, dst, client)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to save images: %w", err)
 		}
@@ -544,6 +569,122 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	err = dst.Tag(ctx, desc, imageInfo.ref)
 	if err != nil {
 		return fmt.Errorf("failed to tag image: %w", err)
+	}
+	return nil
+}
+
+// filterIndexManifests returns the subset of manifest descriptors whose platform matches one of the
+// requested arches. An entry whose Platform is nil (e.g. a nested index) is dropped — multi-arch tag
+// pulls only ship the leaf platform manifests the user asked for.
+//
+// Match rule:
+//   - "amd64" matches Platform{Architecture: "amd64"} regardless of variant
+//   - "arm64/v8" matches Platform{Architecture: "arm64", Variant: "v8"} only
+func filterIndexManifests(manifests []ocispec.Descriptor, requestedArches []string) []ocispec.Descriptor {
+	kept := []ocispec.Descriptor{}
+	for _, m := range manifests {
+		if m.Platform == nil {
+			continue
+		}
+		for _, req := range requestedArches {
+			reqArch, reqVariant := splitArchVariant(req)
+			if m.Platform.Architecture != reqArch {
+				continue
+			}
+			if reqVariant != "" && m.Platform.Variant != reqVariant {
+				continue
+			}
+			kept = append(kept, m)
+			break
+		}
+	}
+	return kept
+}
+
+func splitArchVariant(s string) (arch, variant string) {
+	if i := strings.Index(s, "/"); i >= 0 {
+		return s[:i], s[i+1:]
+	}
+	return s, ""
+}
+
+// orasSaveFilteredIndex copies each kept platform manifest's full graph from the upstream registry
+// into dst, then synthesizes an OCI index referencing only those manifests and tags it under
+// imageInfo.ref. This produces a multi-arch package layout that contains *only* the requested arches,
+// not the full upstream index.
+func orasSaveFilteredIndex(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
+	l := logger.From(ctx)
+	repo := &orasRemote.Repository{}
+	var err error
+	repo.Reference, err = registry.ParseReference(imageInfo.registryOverrideRef)
+	if err != nil {
+		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
+	}
+	repo.PlainHTTP = opts.PlainHTTP
+	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
+		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
+		if err != nil {
+			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
+		}
+	}
+	repo.Client = client
+
+	platforms := make([]string, 0, len(imageInfo.filteredManifests))
+	for _, m := range imageInfo.filteredManifests {
+		platforms = append(platforms, formatPlatform(m.Platform))
+	}
+	l.Info("saving image",
+		"name", imageInfo.registryOverrideRef,
+		"size", utils.ByteFormat(float64(imageInfo.byteSize), 2),
+		"platforms", strings.Join(platforms, ","),
+	)
+
+	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to create oci formatted directory: %w", err)
+	}
+	pullSrc := orasCache.New(repo, localCache)
+
+	copyOpts := oras.DefaultCopyGraphOptions
+	copyOpts.Concurrency = opts.OCIConcurrency
+
+	// Copy each kept platform manifest's full graph (manifest + config + layers) into dst.
+	for _, m := range imageInfo.filteredManifests {
+		err := retry.Do(
+			func() error { return oras.CopyGraph(ctx, pullSrc, dst, m, copyOpts) },
+			retry.Attempts(uint(config.ZarfDefaultRetries)),
+			retry.Delay(config.ZarfDefaultRetryDelay),
+			retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
+			retry.DelayType(retry.BackOffDelay),
+			retry.LastErrorOnly(true),
+			retry.Context(ctx),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to copy manifest %s: %w", m.Digest, err)
+		}
+	}
+
+	// Synthesize a new index that points at the kept manifests and push it as a blob.
+	newIdx := ocispec.Index{
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: imageInfo.filteredManifests,
+	}
+	newIdx.SchemaVersion = 2
+	indexBytes, err := json.Marshal(newIdx)
+	if err != nil {
+		return fmt.Errorf("failed to marshal synthesized index: %w", err)
+	}
+	indexDesc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageIndex,
+		Digest:    digest.FromBytes(indexBytes),
+		Size:      int64(len(indexBytes)),
+	}
+	if err := dst.Push(ctx, indexDesc, bytes.NewReader(indexBytes)); err != nil {
+		return fmt.Errorf("failed to push synthesized index: %w", err)
+	}
+	indexDesc = addNameAnnotationsToDesc(indexDesc, imageInfo.ref)
+	if err := dst.Tag(ctx, indexDesc, imageInfo.ref); err != nil {
+		return fmt.Errorf("failed to tag synthesized index: %w", err)
 	}
 	return nil
 }

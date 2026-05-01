@@ -296,6 +296,68 @@ func TestPullMultiArchContainerImageByTag(t *testing.T) {
 	require.Len(t, idx.Manifests, len(platforms))
 }
 
+// TestPullMultiArchTagFiltersToRequestedArches verifies that when a tag-resolved upstream index
+// contains more platforms than the user asked for, the locally stored index is synthesized with
+// only the requested platforms (i.e. extra platforms are NOT pulled into the package layout).
+func TestPullMultiArchTagFiltersToRequestedArches(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	upstreamPlatforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+		{OS: "linux", Architecture: "ppc64le"},
+		{OS: "linux", Architecture: "s390x"},
+	}
+	testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/extra-platforms", "test", upstreamPlatforms)
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/extra-platforms:test", upstream))
+	require.NoError(t, err)
+	require.Empty(t, ref.Digest, "filtering only applies to tag-resolved refs")
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Arch:           "amd64,arm64",
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	// Walk the local layout's top-level index.json to find the synthesized manifest tagged
+	// under the image reference, then read its blob to inspect the platform list.
+	topBytes, err := os.ReadFile(filepath.Join(destDir, "index.json"))
+	require.NoError(t, err)
+	var topIdx ocispec.Index
+	require.NoError(t, json.Unmarshal(topBytes, &topIdx))
+
+	var found *ocispec.Descriptor
+	for i, m := range topIdx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == ref.Reference {
+			found = &topIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "synthesized index must be tagged under the requested ref")
+	require.Equal(t, ocispec.MediaTypeImageIndex, found.MediaType)
+
+	idx := requireIndexBlobs(t, destDir, found.Digest.String())
+	require.Len(t, idx.Manifests, 2, "only the requested arches should be in the local index")
+	gotArches := []string{}
+	for _, m := range idx.Manifests {
+		require.NotNil(t, m.Platform)
+		gotArches = append(gotArches, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, gotArches)
+
+	// Confirm the unwanted platforms' manifest blobs are NOT in the local layout.
+	for _, p := range []string{"ppc64le", "s390x"} {
+		for _, m := range idx.Manifests {
+			require.NotEqual(t, p, m.Platform.Architecture, "unexpected %s manifest in filtered index", p)
+		}
+	}
+}
+
 func TestPullNestedIndex(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
