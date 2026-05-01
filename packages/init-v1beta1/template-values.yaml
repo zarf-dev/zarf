@@ -1,10 +1,14 @@
-AGENT_IMAGE: ghcr.io/zarf-dev/zarf/agent
-AGENT_IMAGE_TAG: local
+agent:
+  image: ghcr.io/zarf-dev/zarf/agent
+  tag: local
 
-REGISTRY_IMAGE: library/registry
-REGISTRY_IMAGE_TAG: 3.1.0
+registry:
+  image: library/registry
+  tag: 3.1.0
 
-PROXY_IMAGE: alpine/socat
-PROXY_IMAGE_TAG: 1.8.0.3
+proxy:
+  image: alpine/socat
+  tag: 1.8.0.3
 
-GITEA_IMAGE: ghcr.io/go-gitea/gitea:1.24.6-rootless
+gitea:
+  image: ghcr.io/go-gitea/gitea:1.24.6-rootless

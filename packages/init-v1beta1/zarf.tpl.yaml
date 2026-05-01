@@ -27,35 +27,35 @@ components:
     import:
       path: registry/zarf-seed-registry.yaml
     images:
-      - name: "[[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
-      - name: "[[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
+      - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
+      - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
 
   - name: zarf-registry
     import:
       path: registry/zarf-registry.yaml
     images:
-      - name: "[[ .REGISTRY_IMAGE ]]:[[ .REGISTRY_IMAGE_TAG ]]"
-      - name: "[[ .PROXY_IMAGE ]]:[[ .PROXY_IMAGE_TAG ]]"
+      - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
+      - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
 
   - name: zarf-agent
     import:
       path: agent/zarf-agent.yaml
     images:
-      - name: "[[ .AGENT_IMAGE ]]:[[ .AGENT_IMAGE_TAG ]]"
-        source: [[ if eq .AGENT_IMAGE_TAG "local" ]]daemon[[ else ]]registry[[ end ]]
+      - name: "[[ .agent.image ]]:[[ .agent.tag ]]"
+        source: [[ if eq .agent.tag "local" ]]daemon[[ else ]]registry[[ end ]]
     actions:
       onCreate:
         before:
-          - cmd: 'test "[[ .AGENT_IMAGE_TAG ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .AGENT_IMAGE_TAG ]]" ARCH="[[ .PKG.ARCH ]]"'
+          - cmd: 'test "[[ .agent.tag ]]" != "local" || make build-local-agent-image AGENT_IMAGE_TAG="[[ .agent.tag ]]" ARCH="[[ .PKG.ARCH ]]"'
             shell:
               windows: pwsh
             dir: ../..
             template: true
-            description: Build the local agent image (if 'AGENT_IMAGE_TAG' was specified as 'local')
+            description: Build the local agent image (if 'agent.tag' was specified as 'local')
 
   - name: git-server
     optional: true
     import:
       path: git-server/gitea.yaml
     images:
-      - name: "[[ .GITEA_IMAGE ]]"
+      - name: "[[ .gitea.image ]]"
