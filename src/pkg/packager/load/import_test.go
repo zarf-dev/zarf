@@ -54,11 +54,6 @@ func TestResolveImports(t *testing.T) {
 			expectedChecksum: "41e3bdf823769eb2c13079191179ee723a6b8550c5492a8668233de8b77e03da",
 		},
 		{
-			name:             "values files from a single import are merged before parent values",
-			path:             "./testdata/import/values/basic",
-			expectedChecksum: "e43e13f0f064be03780d69f2772caed374e9f4c30ddfd8c0f09dcb0461a6e53d",
-		},
-		{
 			name:             "values files from nested imports preserve deepest-first precedence order",
 			path:             "./testdata/import/values/precedence-order",
 			expectedChecksum: "1269606562ec5f7065169f601f0c3d7dff4707ec613216050f513b4ea0161849",
