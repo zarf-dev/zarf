@@ -242,11 +242,29 @@ type AssembleSkeletonOptions struct {
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
+	l := logger.From(ctx)
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
+	}
+
+	// Bundle package-level values the same way AssemblePackage does: merge into a single
+	// values.yaml at the build root, copy the schema flat, then rewrite the spec fields so
+	// the published zarf.yaml points at those paths for downstream importers.
+	if len(pkg.Values.Files) > 0 {
+		l.Debug("merging values files to package", "files", pkg.Values.Files)
+		if err = mergeAndWriteValuesFile(ctx, pkg.Values.Files, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+		pkg.Values.Files = []string{ValuesYAML}
+	}
+	if pkg.Values.Schema != "" {
+		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
+			return nil, err
+		}
+		pkg.Values.Schema = ValuesSchema
 	}
 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {

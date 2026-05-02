@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-shared
+
+components:
+  - name: common
+    charts:
+      - name: chart
+        url: oci://test/placeholder
+        version: 1.2.3
+        values:
+          - sourcePath: .baseValue
+            targetPath: .config.base
