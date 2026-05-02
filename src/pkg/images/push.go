@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -35,7 +34,6 @@ const defaultRetries = 3
 type PushOptions struct {
 	OCIConcurrency        int
 	NoChecksum            bool
-	Arch                  string
 	Retries               int
 	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
@@ -152,16 +150,12 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			if err != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
-			defaultPlatform := &ocispec.Platform{
-				Architecture: cfg.Arch,
-				OS:           "linux",
-			}
 			if tunnel != nil {
 				return tunnel.Wrap(func() error {
-					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
+					return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
 				})
 			}
-			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency, defaultPlatform)
+			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
 		}
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
@@ -237,10 +231,11 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 		return err
 	}
 	// Crane sets ocispec.AnnotationBaseImageName instead of ocispec.AnnotationRefName
-	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane
+	// which ORAS uses to find images. We do this to be backwards compatible with packages built with Crane.
+	// Multi-arch packages also include un-annotated platform manifests pulled via oras.Copy; leave those alone.
 	var correctedManifests []ocispec.Descriptor
 	for _, manifest := range idx.Manifests {
-		if manifest.Annotations[ocispec.AnnotationRefName] == "" {
+		if manifest.Annotations[ocispec.AnnotationRefName] == "" && manifest.Annotations[ocispec.AnnotationBaseImageName] != "" {
 			manifest.Annotations[ocispec.AnnotationRefName] = manifest.Annotations[ocispec.AnnotationBaseImageName]
 		}
 		correctedManifests = append(correctedManifests, manifest)
@@ -253,32 +248,31 @@ func addRefNameAnnotationToImages(ociLayoutDirectory string) error {
 	return nil
 }
 
-func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int, defaultPlatform *ocispec.Platform) error {
-	// Assume no platform to start as it can be nil in non container image situations
+func copyImage(ctx context.Context, src *oci.Store, remote oras.Target, srcName string, dstName string, concurrency int) error {
+	// The local OCI layout was already platform-filtered at pull time, so whatever the source
+	// resolves to here (single-platform manifest or full multi-arch index) is what we want to
+	// ship to the destination registry as-is.
 	fetchOpts := oras.DefaultFetchBytesOptions
 	desc, b, err := oras.FetchBytes(ctx, src, srcName, fetchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to resolve image: %s: %w", srcName, err)
 	}
 
-	// If an index is pulled we should try pulling with the default platform
-	if isIndex(desc.MediaType) {
-		fetchOpts.TargetPlatform = defaultPlatform
-		desc, b, err = oras.FetchBytes(ctx, src, srcName, fetchOpts)
+	var size int64
+	switch {
+	case IsIndex(desc.MediaType):
+		size, _, err = inspectIndex(ctx, src, desc, b)
 		if err != nil {
-			return fmt.Errorf("failed to resolve image %s with architecture %s: %w", srcName, defaultPlatform.Architecture, err)
+			return fmt.Errorf("failed to inspect index %s: %w", srcName, err)
 		}
+	case IsManifest(desc.MediaType):
+		size, err = getSizeOfManifest(desc, b)
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("expected OCI manifest or index got %s", desc.MediaType)
 	}
-
-	if !isManifest(desc.MediaType) {
-		return fmt.Errorf("expected OCI manifest got %s", desc.MediaType)
-	}
-
-	var manifest ocispec.Manifest
-	if err := json.Unmarshal(b, &manifest); err != nil {
-		return err
-	}
-	size := getSizeOfImage(desc, manifest)
 
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = concurrency

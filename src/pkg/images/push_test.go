@@ -6,10 +6,12 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -95,7 +97,6 @@ func TestPush(t *testing.T) {
 			// push images to registry
 			opts := PushOptions{
 				PlainHTTP: true,
-				Arch:      "amd64",
 			}
 			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
 
@@ -126,4 +127,60 @@ func verifyImageExists(ctx context.Context, t *testing.T, ref string) {
 	repo.PlainHTTP = true
 	_, err = oras.Resolve(ctx, repo, ref, oras.DefaultResolveOptions)
 	require.NoError(t, err)
+}
+
+// TestPushMultiArch verifies that pushing a tag-resolved multi-platform image preserves the full
+// index in the destination registry rather than narrowing to one platform.
+func TestPushMultiArch(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+
+	// Stage a multi-arch image upstream and pull it into a local OCI layout that Push can read.
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
+	digestRef, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest))
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{digestRef}, layoutDir, PullOptions{
+		Platforms:      platforms,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	// Spin up a fresh dest registry and push the multi-arch image to it.
+	destPort, err := helpers.GetAvailablePort()
+	require.NoError(t, err)
+	destAddress := testutil.SetupInMemoryRegistry(ctx, t, destPort)
+
+	err = Push(ctx, []transform.Image{digestRef}, layoutDir, state.RegistryInfo{Address: destAddress}, PushOptions{
+		PlainHTTP: true,
+	})
+	require.NoError(t, err)
+
+	// Resolve the pushed tag in the dest registry and confirm it's an index with N platforms.
+	pushedRef, err := transform.ImageTransformHostWithoutChecksum(destAddress, digestRef.Reference)
+	require.NoError(t, err)
+	repo := &orasRemote.Repository{PlainHTTP: true}
+	repo.Reference, err = registry.ParseReference(pushedRef)
+	require.NoError(t, err)
+	desc, b, err := oras.FetchBytes(ctx, repo, pushedRef, oras.DefaultFetchBytesOptions)
+	require.NoError(t, err)
+	require.Equal(t, ocispec.MediaTypeImageIndex, desc.MediaType, "pushed multi-arch tag must resolve to an index, not a single-platform manifest")
+
+	var idx ocispec.Index
+	require.NoError(t, json.Unmarshal(b, &idx))
+	require.Len(t, idx.Manifests, len(platforms), "pushed index must list every requested platform")
+
+	gotArches := []string{}
+	for _, m := range idx.Manifests {
+		require.NotNil(t, m.Platform)
+		gotArches = append(gotArches, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, gotArches)
 }

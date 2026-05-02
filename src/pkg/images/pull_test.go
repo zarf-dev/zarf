@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -19,6 +20,43 @@ import (
 	"oras.land/oras-go/v2"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 )
+
+// requireManifestBlobs asserts the manifest blob at digest is on disk in destDir along with its
+// config and every layer. Returns the parsed manifest so callers can make test-specific assertions.
+func requireManifestBlobs(t *testing.T, destDir, digest string) ocispec.Manifest {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var m ocispec.Manifest
+	require.NoError(t, json.Unmarshal(b, &m))
+	require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
+	for _, layer := range m.Layers {
+		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
+	}
+	return m
+}
+
+// requireIndexBlobs asserts the index blob at digest is on disk and every descendant (nested
+// indexes + leaf manifests with their config/layers) is too. Returns the parsed top-level index.
+func requireIndexBlobs(t *testing.T, destDir, digest string) ocispec.Index {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var idx ocispec.Index
+	require.NoError(t, json.Unmarshal(b, &idx))
+	for _, child := range idx.Manifests {
+		if IsIndex(string(child.MediaType)) {
+			requireIndexBlobs(t, destDir, child.Digest.String())
+			continue
+		}
+		requireManifestBlobs(t, destDir, child.Digest.String())
+	}
+	return idx
+}
 
 func TestCheckForIndex(t *testing.T) {
 	t.Parallel()
@@ -34,14 +72,14 @@ func TestCheckForIndex(t *testing.T) {
 			ref:         "ghcr.io/zarf-dev/zarf/agent:v0.32.6@sha256:05a82656df5466ce17c3e364c16792ae21ce68438bfe06eeab309d0520c16b48",
 			file:        "agent-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
+			expectedErr: "%s resolved to an OCI image index. Either list multiple architectures (comma-separated) in metadata.architecture to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "docker manifest list",
 			ref:         "defenseunicorns/zarf-game@sha256:0b694ca1c33afae97b7471488e07968599f1d2470c629f76af67145ca64428af",
 			file:        "game-index.json",
 			arch:        "arm64",
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
+			expectedErr: "%s resolved to an OCI image index. Either list multiple architectures (comma-separated) in metadata.architecture to build a multi-arch package that preserves the full index, or pin the image to a platform-specific digest",
 		},
 		{
 			name:        "image manifest",
@@ -75,7 +113,7 @@ func TestCheckForIndex(t *testing.T) {
 			cacheDir := t.TempDir()
 			dstDir := t.TempDir()
 			opts := PullOptions{
-				Arch:           tc.arch,
+				Platforms:      []ocispec.Platform{{OS: "linux", Architecture: tc.arch}},
 				CacheDirectory: cacheDir,
 			}
 			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
@@ -149,15 +187,16 @@ func TestPull(t *testing.T) {
 			opts := PullOptions{
 				CacheDirectory:    cacheDir,
 				RegistryOverrides: tc.RegistryOverrides,
-				Arch:              tc.arch,
+				Platforms:         []ocispec.Platform{{OS: "linux", Architecture: tc.arch}},
 			}
 
-			imageManifests, err := Pull(ctx, images, destDir, opts)
+			pulled, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err, tc.expectErr)
 				return
 			}
 			require.NoError(t, err)
+			require.Len(t, pulled, len(images))
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
@@ -175,15 +214,225 @@ func TestPull(t *testing.T) {
 			}
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
-			// Make sure all the layers of the image are pulled in
-			for _, imageWithManifest := range imageManifests {
-				for _, layer := range imageWithManifest.Manifest.Layers {
-					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+			// Make sure all the layers of the image are pulled in (including the shared cache).
+			for _, manifestDesc := range idx.Manifests {
+				m := requireManifestBlobs(t, destDir, manifestDesc.Digest.String())
+				for _, layer := range m.Layers {
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}
 			}
 		})
 	}
+}
+
+func TestPullSingleArchContainerImage(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	digest := testutil.PushImage(ctx, t, upstream+"/fixtures/single", "test")
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/single:test@%s", upstream, digest))
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	requireManifestBlobs(t, destDir, digest)
+}
+
+func TestPullMultiArchContainerImage(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest))
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	idx := requireIndexBlobs(t, destDir, digest)
+	require.Len(t, idx.Manifests, len(platforms))
+}
+
+func TestPullMultiArchContainerImageByTag(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi-tag", "test", platforms)
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/multi-tag:test", upstream))
+	require.NoError(t, err)
+	require.Empty(t, ref.Digest, "test relies on the reference carrying no digest")
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	idx := requireIndexBlobs(t, destDir, digest)
+	require.Len(t, idx.Manifests, len(platforms))
+}
+
+// TestPullMultiArchTagFiltersToRequestedArches verifies that when a tag-resolved upstream index
+// contains more platforms than the user asked for, the locally stored index is synthesized with
+// only the requested platforms (i.e. extra platforms are NOT pulled into the package layout).
+func TestPullMultiArchTagFiltersToRequestedArches(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	upstreamPlatforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+		{OS: "linux", Architecture: "ppc64le"},
+		{OS: "linux", Architecture: "s390x"},
+	}
+	testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/extra-platforms", "test", upstreamPlatforms)
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/extra-platforms:test", upstream))
+	require.NoError(t, err)
+	require.Empty(t, ref.Digest, "filtering only applies to tag-resolved refs")
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	// Walk the local layout's top-level index.json to find the synthesized manifest tagged
+	// under the image reference, then read its blob to inspect the platform list.
+	topBytes, err := os.ReadFile(filepath.Join(destDir, "index.json"))
+	require.NoError(t, err)
+	var topIdx ocispec.Index
+	require.NoError(t, json.Unmarshal(topBytes, &topIdx))
+
+	var found *ocispec.Descriptor
+	for i, m := range topIdx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == ref.Reference {
+			found = &topIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "synthesized index must be tagged under the requested ref")
+	require.Equal(t, ocispec.MediaTypeImageIndex, found.MediaType)
+
+	idx := requireIndexBlobs(t, destDir, found.Digest.String())
+	require.Len(t, idx.Manifests, 2, "only the requested arches should be in the local index")
+	gotArches := []string{}
+	for _, m := range idx.Manifests {
+		require.NotNil(t, m.Platform)
+		gotArches = append(gotArches, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, gotArches)
+
+	// Confirm the unwanted platforms' manifest blobs are NOT in the local layout.
+	for _, p := range []string{"ppc64le", "s390x"} {
+		for _, m := range idx.Manifests {
+			require.NotEqual(t, p, m.Platform.Architecture, "unexpected %s manifest in filtered index", p)
+		}
+	}
+}
+
+func TestPullNestedIndex(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest))
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	outerIdx := requireIndexBlobs(t, destDir, digest)
+	require.Len(t, outerIdx.Manifests, 1, "outer index wraps a single inner index")
+	innerIdx := requireIndexBlobs(t, destDir, outerIdx.Manifests[0].Digest.String())
+	require.Len(t, innerIdx.Manifests, len(platforms))
+}
+
+func TestInspectIndexRecursive(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	repoRef := upstream + "/fixtures/size"
+	repo := testutil.NewRepo(t, repoRef)
+
+	amd64 := testutil.PushSinglePlatformImage(ctx, t, repo, "amd64")
+	amd64.Platform = &ocispec.Platform{OS: "linux", Architecture: "amd64"}
+	arm64 := testutil.PushSinglePlatformImage(ctx, t, repo, "arm64")
+	arm64.Platform = &ocispec.Platform{OS: "linux", Architecture: "arm64"}
+	innerDesc := testutil.PushIndex(ctx, t, repo, []ocispec.Descriptor{amd64, arm64})
+	outerDesc := testutil.PushIndex(ctx, t, repo, []ocispec.Descriptor{innerDesc})
+
+	_, outerBytes, err := oras.FetchBytes(ctx, repo, outerDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+	require.NoError(t, err)
+
+	size, platforms, err := inspectIndex(ctx, repo, outerDesc, outerBytes)
+	require.NoError(t, err)
+
+	expected := outerDesc.Size + innerDesc.Size
+	for _, leafDesc := range []ocispec.Descriptor{amd64, arm64} {
+		_, mb, err := oras.FetchBytes(ctx, repo, leafDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		require.NoError(t, err)
+		var m ocispec.Manifest
+		require.NoError(t, json.Unmarshal(mb, &m))
+		expected += leafDesc.Size + m.Config.Size
+		for _, layer := range m.Layers {
+			expected += layer.Size
+		}
+	}
+	require.Equal(t, expected, size, "inspectIndex must recurse and sum every nested leaf blob")
+	require.Equal(t, []string{"amd64", "arm64"}, platforms, "inspectIndex must collect leaf platforms")
+}
+
+func TestPullMultiArchRejectsDaemonFallback(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	missingRef := fmt.Sprintf("%s/fixtures/missing:latest", upstream)
+	ref, err := transform.ParseImageRef(missingRef)
+	require.NoError(t, err)
+	_, err = Pull(ctx, []transform.Image{ref}, t.TempDir(), PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+	})
+	require.ErrorContains(t, err, "multi-arch packages cannot fall back to the docker daemon")
+	require.ErrorContains(t, err, missingRef)
 }
 
 func TestPullInvalidCache(t *testing.T) {
@@ -205,6 +454,7 @@ func TestPullInvalidCache(t *testing.T) {
 
 	opts := PullOptions{
 		CacheDirectory: cacheDir,
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
 	}
 	_, err = Pull(ctx, []transform.Image{ref}, destDir, opts)
 	require.NoError(t, err)

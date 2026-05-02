@@ -210,6 +210,20 @@ func TestPackageFileName(t *testing.T) {
 			},
 			expected: "zarf-package-my-package-amd64-v0.55.4.tar",
 		},
+		{
+			name: "multi-arch sorts and joins with plus, slash becomes underscore",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:    "dos-games",
+					Version: "0.0.1",
+				},
+				Build: v1alpha1.ZarfBuildData{
+					Architecture: "arm64,amd64,arm64/v8",
+				},
+			},
+			expected: "zarf-package-dos-games-amd64+arm64+arm64_v8-0.0.1.tar.zst",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

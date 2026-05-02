@@ -143,7 +143,10 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	var err error
-	pkgLayout.Pkg.Components, err = filters.ByLocalOS(runtime.GOOS).Apply(pkgLayout.Pkg)
+	pkgLayout.Pkg.Components, err = filters.Combine(
+		filters.ByLocalOS(runtime.GOOS),
+		filters.ByArchitecture(runtime.GOARCH),
+	).Apply(pkgLayout.Pkg)
 	if err != nil {
 		return DeployResult{}, err
 	}
@@ -486,7 +489,6 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 			OCIConcurrency:        opts.OCIConcurrency,
 			PlainHTTP:             opts.PlainHTTP,
 			NoChecksum:            noImgChecksum,
-			Arch:                  pkgLayout.Pkg.Build.Architecture,
 			Retries:               opts.Retries,
 			InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify,
 			Cluster:               d.c,
@@ -781,12 +783,14 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 		architectures = append(architectures, arch)
 	}
 
-	// Check if the package architecture and the cluster architecture are the same.
-	if !slices.Contains(architectures, pkg.Metadata.Architecture) {
-		return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, pkg.Metadata.Architecture, strings.Join(architectures, ", "))
+	// At least one of the package's architectures must match a cluster node arch.
+	pkgArches := pkg.Architectures()
+	for _, a := range pkgArches {
+		if slices.Contains(architectures, a) {
+			return nil
+		}
 	}
-
-	return nil
+	return fmt.Errorf(lang.CmdPackageDeployValidateArchitectureErr, strings.Join(pkgArches, ","), strings.Join(architectures, ", "))
 }
 
 func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values) (err error) {

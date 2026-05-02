@@ -31,10 +31,13 @@ import (
 	"github.com/anchore/syft/syft/source/stereoscopesource"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -62,22 +65,45 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 			componentSBOMs = append(componentSBOMs, comp.Name)
 		}
 	}
-	jsonList, err := generateJSONList(componentSBOMs, images)
+
+	type imageSBOMTarget struct {
+		img        v1.Image
+		identifier string
+	}
+	var targets []imageSBOMTarget
+	for _, refInfo := range images {
+		platformImages, err := loadOCIImagePlatforms(filepath.Join(buildPath, string(ImagesDir)), refInfo)
+		if err != nil {
+			return fmt.Errorf("failed to load OCI image: %w", err)
+		}
+		for _, pi := range platformImages {
+			identifier := refInfo.Reference
+			if pi.platform != nil && pi.platform.Architecture != "" {
+				identifier = fmt.Sprintf("%s-%s-%s", refInfo.Reference, pi.platform.OS, pi.platform.Architecture)
+				if pi.platform.Variant != "" {
+					identifier = fmt.Sprintf("%s-%s", identifier, pi.platform.Variant)
+				}
+			}
+			targets = append(targets, imageSBOMTarget{img: pi.image, identifier: identifier})
+		}
+	}
+
+	identifiers := make([]string, 0, len(targets))
+	for _, t := range targets {
+		identifiers = append(identifiers, t.identifier)
+	}
+	jsonList, err := generateJSONList(componentSBOMs, identifiers)
 	if err != nil {
 		return err
 	}
 
-	for _, refInfo := range images {
-		img, err := utils.LoadOCIImage(filepath.Join(buildPath, string(ImagesDir)), refInfo)
-		if err != nil {
-			return fmt.Errorf("failed to load OCI image: %w", err)
-		}
-		l.Info("creating image SBOM", "reference", refInfo.Reference)
-		b, err := createImageSBOM(ctx, cachePath, outputPath, img, refInfo.Reference)
+	for _, t := range targets {
+		l.Info("creating image SBOM", "reference", t.identifier)
+		b, err := createImageSBOM(ctx, cachePath, outputPath, t.img, t.identifier)
 		if err != nil {
 			return fmt.Errorf("failed to create image sbom: %w", err)
 		}
-		err = createSBOMViewerAsset(outputPath, refInfo.Reference, b, jsonList)
+		err = createSBOMViewerAsset(outputPath, t.identifier, b, jsonList)
 		if err != nil {
 			return err
 		}
@@ -112,7 +138,7 @@ func generateSBOM(ctx context.Context, pkg v1alpha1.ZarfPackage, buildPath strin
 	return nil
 }
 
-func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, src string) ([]byte, error) {
+func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.Image, identifier string) ([]byte, error) {
 	imageCachePath := filepath.Join(cachePath, ImagesDir)
 
 	// This is a write cache
@@ -120,18 +146,14 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 		return nil, fmt.Errorf("failed to create image cache directory %s: %w", imageCachePath, err)
 	}
 
-	refInfo, err := transform.ParseImageRef(src)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ref for image %s: %w", src, err)
-	}
-	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(refInfo.Reference))
-	err = syftImage.Read()
+	syftImage := image.New(img, file.NewTempDirGenerator("zarf"), imageCachePath, image.WithTags(identifier))
+	err := syftImage.Read()
 	if err != nil {
 		return nil, err
 	}
 	cfg := getDefaultSyftConfig()
 	syftSrc := stereoscopesource.New(syftImage, stereoscopesource.ImageConfig{
-		Reference: refInfo.Reference,
+		Reference: identifier,
 	})
 	sbom, err := syft.CreateSBOM(ctx, syftSrc, cfg)
 	if err != nil {
@@ -142,7 +164,7 @@ func createImageSBOM(ctx context.Context, cachePath, outputPath string, img v1.I
 		return nil, err
 	}
 
-	normalizedName := getNormalizedFileName(fmt.Sprintf("%s.json", refInfo.Reference))
+	normalizedName := getNormalizedFileName(fmt.Sprintf("%s.json", identifier))
 	path := filepath.Join(outputPath, normalizedName)
 	err = os.WriteFile(path, jsonData, 0o666)
 	if err != nil {
@@ -358,11 +380,10 @@ func getNormalizedFileName(identifier string) string {
 	return transformRegex.ReplaceAllString(identifier, "_")
 }
 
-func generateJSONList(components []string, imageList []transform.Image) ([]byte, error) {
+func generateJSONList(components []string, imageIdentifiers []string) ([]byte, error) {
 	var jsonList []string
-	for _, refInfo := range imageList {
-		normalized := getNormalizedFileName(refInfo.Reference)
-		jsonList = append(jsonList, normalized)
+	for _, id := range imageIdentifiers {
+		jsonList = append(jsonList, getNormalizedFileName(id))
 	}
 	for _, k := range components {
 		normalized := getNormalizedFileName(fmt.Sprintf("%s%s", componentPrefix, k))
@@ -376,4 +397,106 @@ func getDefaultSyftConfig() *syft.CreateSBOMConfig {
 	cfg.ToolName = "zarf"
 	cfg.ToolVersion = config.CLIVersion
 	return cfg
+}
+
+// platformImage pairs a loaded image with the platform it targets.
+// platform is nil for images stored as a single-platform manifest.
+type platformImage struct {
+	image    v1.Image
+	platform *v1.Platform
+}
+
+// loadOCIImagePlatforms returns the v1.Images for refInfo. Single-platform images return one entry
+// with a nil platform; multi-arch indexes return one entry per platform manifest.
+// Non container images (e.g. Helm charts) are skipped — returning an empty slice is not an error.
+func loadOCIImagePlatforms(imgPath string, refInfo transform.Image) ([]platformImage, error) {
+	layoutPath := clayout.Path(imgPath)
+	imgIdx, err := layoutPath.ImageIndex()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image index: %w", err)
+	}
+	idxManifest, err := imgIdx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image manifest: %w", err)
+	}
+
+	for _, manifest := range idxManifest.Manifests {
+		if manifest.Annotations[ocispec.AnnotationRefName] != refInfo.Reference {
+			continue
+		}
+
+		if images.IsIndex(string(manifest.MediaType)) {
+			return collectPlatformImagesFromIndex(imgIdx, manifest.Digest, refInfo.Reference)
+		}
+
+		img, err := layoutPath.Image(manifest.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("failed to lookup image %s: %w", refInfo.Reference, err)
+		}
+		isContainer, err := imageHasOnlyContainerLayers(img)
+		if err != nil {
+			return nil, fmt.Errorf("failed to inspect manifest for %s: %w", refInfo.Reference, err)
+		}
+		if !isContainer {
+			return nil, nil
+		}
+		return []platformImage{{image: img}}, nil
+	}
+
+	return nil, fmt.Errorf("unable to find image (%s) at the path (%s)", refInfo.Reference, imgPath)
+}
+
+func imageHasOnlyContainerLayers(img v1.Image) (bool, error) {
+	raw, err := img.RawManifest()
+	if err != nil {
+		return false, err
+	}
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return false, err
+	}
+	return images.OnlyHasImageLayers(manifest), nil
+}
+
+func collectPlatformImagesFromIndex(parent v1.ImageIndex, indexDigest v1.Hash, ref string) ([]platformImage, error) {
+	idx, err := parent.ImageIndex(indexDigest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load image index for %s: %w", ref, err)
+	}
+	manifest, err := idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse image index manifest for %s: %w", ref, err)
+	}
+	var platformImages []platformImage
+	for _, child := range manifest.Manifests {
+		switch {
+		case images.IsIndex(string(child.MediaType)):
+			nested, err := collectPlatformImagesFromIndex(idx, child.Digest, ref)
+			if err != nil {
+				return nil, err
+			}
+			platformImages = append(platformImages, nested...)
+		case images.IsManifest(string(child.MediaType)):
+			img, err := idx.Image(child.Digest)
+			if err != nil {
+				return nil, fmt.Errorf("failed to lookup platform image for %s: %w", ref, err)
+			}
+			rawManifest, err := img.RawManifest()
+			if err != nil {
+				return nil, fmt.Errorf("failed to read platform manifest for %s: %w", ref, err)
+			}
+			var childManifest ocispec.Manifest
+			if err := json.Unmarshal(rawManifest, &childManifest); err != nil {
+				return nil, fmt.Errorf("failed to parse platform manifest for %s: %w", ref, err)
+			}
+			if !images.OnlyHasImageLayers(childManifest) {
+				continue
+			}
+			platformImages = append(platformImages, platformImage{
+				image:    img,
+				platform: child.Platform,
+			})
+		}
+	}
+	return platformImages, nil
 }

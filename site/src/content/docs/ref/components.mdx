@@ -131,6 +131,10 @@ Kustomizations are handled a bit differently than normal manifests in that Zarf 
 
 Images can either be discovered manually, or automatically by using [`zarf dev find-images`](/commands/zarf_dev_find-images/). The image list is not limited to containers, any OCI image following the [Image Manifest specification](https://github.com/opencontainers/image-spec/blob/main/manifest.md) can be pulled
 
+#### Multi-architecture images
+
+By default a Zarf package is built for one architecture and each image pulled matches that architecture. To build a single package that deploys on multi-arch clusters, set `metadata.architecture: multi`. Zarf will then pull all available platforms for an image reference; pinning to an index digest is recommended for reproducibility and integrity.
+
 :::note
 
 `zarf dev find-images` will find images for most standard manifests, kustomizations, and helm charts, however some images cannot be discovered this way as some upstream resources (like operators) may bury image definitions inside. For these images, `zarf dev find-images` also offers support for the draft [Helm Improvement Proposal 15](https://github.com/helm/community/blob/main/hips/hip-0015.md) which allows chart creators to annotate any hidden images in their charts along with the [values conditions](https://github.com/helm/community/issues/277) that will cause those images to be used.

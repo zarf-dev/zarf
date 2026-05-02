@@ -109,6 +109,33 @@ func TestZarfPackageValidate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid multi arch with tags and digests",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "valid-multi",
+					Architecture: "amd64,arm64",
+				},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "component1",
+						Images: []string{
+							"ghcr.io/stefanprodan/podinfo:6.4.0@sha256:1e6a6a1ba3e4f32e92b6ea2bb78d05dfdc2bd41a3ba5e1a60ab4cbdfacff76bb",
+							"ghcr.io/stefanprodan/podinfo:6.4.0",
+							"busybox:latest",
+						},
+						ImageArchives: []v1alpha1.ImageArchive{
+							{
+								Path:   "httpd.tar",
+								Images: []string{"httpd:2.4"},
+							},
+						},
+					},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
 			name: "invalid yolo",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,

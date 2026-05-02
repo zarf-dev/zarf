@@ -6,21 +6,30 @@ package zoci_test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
 	_ "modernc.org/sqlite"
+	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
 )
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
@@ -149,4 +158,187 @@ func TestAssembleLayers(t *testing.T) {
 			}
 		})
 	}
+}
+
+// writePackageDef writes a minimal zarf.yaml + pod.yaml to a temp dir and
+// returns the dir path. The image reference is baked into both files.
+func writePackageDef(t *testing.T, arch, imageRef string) string {
+	t.Helper()
+	dir := t.TempDir()
+	zarfYAML := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: layers-from-images-test
+  version: 0.0.1
+  architecture: %s
+components:
+  - name: app
+    required: true
+    manifests:
+      - name: app
+        namespace: test
+        files:
+          - pod.yaml
+    images:
+      - %s
+`, arch, imageRef)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	pod := fmt.Sprintf(`apiVersion: v1
+kind: Pod
+metadata:
+  name: app
+  namespace: test
+spec:
+  containers:
+    - name: app
+      image: %s
+`, imageRef)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), []byte(pod), 0o644))
+	return dir
+}
+
+// buildAndPublishPackage builds a zarf package from the given image ref and
+// publishes it to a fresh destination registry. Returns a connected Remote.
+func buildAndPublishPackage(ctx context.Context, t *testing.T, arch, imageRef, upstream string) *zoci.Remote {
+	t.Helper()
+
+	pkgDefDir := writePackageDef(t, arch, imageRef)
+	tmpdir := t.TempDir()
+
+	packagePath, err := packager.Create(ctx, pkgDefDir, tmpdir, packager.CreateOptions{
+		OCIConcurrency: 3,
+		CachePath:      tmpdir,
+		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
+		// Image layers in these fixtures are random bytes, not real tarballs; syft can't read them.
+		SkipSBOM: true,
+	})
+	require.NoError(t, err)
+
+	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	dstRef := registry.Reference{
+		Registry:   upstream,
+		Repository: "zarf-packages",
+	}
+	packageRef, err := packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
+		OCIConcurrency: 3,
+	})
+	require.NoError(t, err)
+
+	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, oci.WithPlainHTTP(true))
+	require.NoError(t, err)
+	return remote
+}
+
+// expectedLayerPaths walks an OCI graph rooted at rootDigest in repo and returns every blob path
+// (relative to the package root) that LayersFromImages should emit. Normalizes windows strings
+func expectedLayerPaths(ctx context.Context, t *testing.T, repo *remote.Repository, rootDigest string) []string {
+	t.Helper()
+	blobDir := path.Join(layout.ImagesDir, "blobs", "sha256")
+	paths := []string{
+		path.Join(layout.ImagesDir, "index.json"),
+		path.Join(layout.ImagesDir, "oci-layout"),
+	}
+	var walk func(d string)
+	walk = func(d string) {
+		paths = append(paths, path.Join(blobDir, strings.TrimPrefix(d, "sha256:")))
+		desc, body, err := oras.FetchBytes(ctx, repo, d, oras.DefaultFetchBytesOptions)
+		require.NoError(t, err)
+		if images.IsIndex(desc.MediaType) {
+			var idx ocispec.Index
+			require.NoError(t, json.Unmarshal(body, &idx))
+			for _, c := range idx.Manifests {
+				walk(c.Digest.String())
+			}
+			return
+		}
+		var m ocispec.Manifest
+		require.NoError(t, json.Unmarshal(body, &m))
+		paths = append(paths, path.Join(blobDir, m.Config.Digest.Encoded()))
+		for _, l := range m.Layers {
+			paths = append(paths, path.Join(blobDir, l.Digest.Encoded()))
+		}
+	}
+	walk(rootDigest)
+	return paths
+}
+
+// pathsFromLayers extracts the image.title annotation (relative blob path) from each descriptor
+// returned by LayersFromImages.
+func pathsFromLayers(layers []ocispec.Descriptor) []string {
+	out := make([]string, 0, len(layers))
+	for _, l := range layers {
+		out = append(out, l.Annotations[ocispec.AnnotationTitle])
+	}
+	return out
+}
+
+// requireNoDuplicatePaths fails the test if any path appears twice — LayersFromImages advertises
+// RemoveDuplicateDescriptors, this catches regressions of that behavior.
+func requireNoDuplicatePaths(t *testing.T, paths []string) {
+	t.Helper()
+	seen := make(map[string]struct{}, len(paths))
+	for _, p := range paths {
+		_, dup := seen[p]
+		require.False(t, dup, "duplicate layer path in result: %s", p)
+		seen[p] = struct{}{}
+	}
+}
+
+func TestLayersFromImages_SingleArch(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	digest := testutil.PushImage(ctx, t, upstream+"/fixtures/single", "test")
+	imageRef := fmt.Sprintf("%s/fixtures/single:test@%s", upstream, digest)
+
+	r := buildAndPublishPackage(ctx, t, "amd64", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	require.NoError(t, err)
+
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/single"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
+}
+
+func TestLayersFromImages_MultiArch(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "test", platforms)
+	imageRef := fmt.Sprintf("%s/fixtures/multi:test@%s", upstream, digest)
+
+	r := buildAndPublishPackage(ctx, t, "amd64,arm64", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	require.NoError(t, err)
+
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/multi"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
+}
+
+func TestLayersFromImages_NestedIndex(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
+	imageRef := fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, digest)
+
+	r := buildAndPublishPackage(ctx, t, "amd64,arm64", imageRef, upstream)
+	layers, err := r.LayersFromImages(ctx, map[string]bool{imageRef: true})
+	require.NoError(t, err)
+
+	expected := expectedLayerPaths(ctx, t, testutil.NewRepo(t, upstream+"/fixtures/nested"), digest)
+	actual := pathsFromLayers(layers)
+	require.ElementsMatch(t, expected, actual)
+	requireNoDuplicatePaths(t, actual)
 }

@@ -111,18 +111,19 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	pulledImages := []images.PulledImage{}
+	platforms := platformsFromArchString(pkg.Metadata.Architecture)
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
 				imageArchive.Path = filepath.Join(packagePath, imageArchive.Path)
 			}
 
-			archiveImageManifests, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), pkg.Metadata.Architecture)
+			archivePulled, err := images.Unpack(ctx, imageArchive, filepath.Join(buildPath, ImagesDir), platforms)
 			if err != nil {
 				return nil, err
 			}
-			manifests = append(manifests, archiveImageManifests...)
+			pulledImages = append(pulledImages, archivePulled...)
 		}
 		for _, src := range component.Images {
 			refInfo, err := transform.ParseImageRef(src)
@@ -135,29 +136,25 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			componentImages = append(componentImages, refInfo)
 		}
 	}
-	sbomImageList := []transform.Image{}
 	if len(componentImages) > 0 {
 		pullOpts := images.PullOptions{
 			OCIConcurrency:        opts.OCIConcurrency,
-			Arch:                  pkg.Metadata.Architecture,
+			Platforms:             platforms,
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
 			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
 		}
-		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
+		remotePulled, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {
 			return nil, err
 		}
-		manifests = append(manifests, imageManifests...)
+		pulledImages = append(pulledImages, remotePulled...)
 	}
 
-	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
-			sbomImageList = append(sbomImageList, manifest.Image)
-		}
-
+	sbomImageList := make([]transform.Image, 0, len(pulledImages))
+	for _, pulled := range pulledImages {
+		sbomImageList = append(sbomImageList, pulled.Image)
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
 		if err != nil {
@@ -813,17 +810,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	var versionRequirements []v1alpha1.VersionRequirement
-	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
-			break
-		}
-	}
-	pkg.Build.VersionRequirements = versionRequirements
+	pkg.Build.VersionRequirements = collectVersionRequirements(pkg)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -842,6 +829,26 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	pkg.Build.ProvenanceFiles = []string{Checksums}
 
 	return pkg
+}
+
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage) []v1alpha1.VersionRequirement {
+	var reqs []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			reqs = append(reqs, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	if pkg.IsMultiArch() {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.76.0",
+			Reason:  "This package uses multi-arch images which are only supported on v0.76.0+",
+		})
+	}
+	return reqs
 }
 
 func getChecksum(dirPath string) (string, string, error) {

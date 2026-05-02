@@ -10,14 +10,14 @@ wordpressBlogName: ###ZARF_VAR_WORDPRESS_BLOG_NAME###
 # https://github.com/bitnami/containers/issues/83267
 image:
   repository: bitnamilegacy/wordpress
-  tag: 6.8.2-debian-12-r4
+  digest: sha256:73acc0d5b2a4910ece87824628eb2825612e66503c1eb867fe840262771ceaf5
 
 # This value turns on the metrics exporter and thus will require another image.
 metrics:
   enabled: true
   image:
     repository: bitnamilegacy/apache-exporter
-    tag: 1.0.10-debian-12-r55
+    digest: sha256:1da525d8ae96589ae7848d8d97f70111bb1206be901ed2fec6b7a67a3e10b982
 
 # Sets the WordPress service as a ClusterIP service to not conflict with potential
 # pre-existing LoadBalancer services.
@@ -27,4 +27,4 @@ service:
 mariadb:
   image:
     repository: bitnamilegacy/mariadb
-    tag: 12.0.2-debian-12-r0
+    digest: sha256:888cdaae3cb996c4d28f7916106511de553545929957dd1d35221112df631e19

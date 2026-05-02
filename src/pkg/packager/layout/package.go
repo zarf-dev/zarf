@@ -17,6 +17,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
 
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -619,7 +620,10 @@ func (p *PackageLayout) FileName() (string, error) {
 	if p.Pkg.Build.Architecture == "" {
 		return "", errors.New("package must include a build architecture")
 	}
-	arch := p.Pkg.Build.Architecture
+	arch := archFilenameSuffix(p.Pkg.Architectures())
+	if arch == "" {
+		arch = p.Pkg.Build.Architecture
+	}
 
 	var name string
 	switch p.Pkg.Kind {
@@ -646,6 +650,38 @@ func (p *PackageLayout) FileName() (string, error) {
 		return name + ".tar", nil
 	}
 	return name + ".tar.zst", nil
+}
+
+// platformsFromArchString parses the comma-separated architecture string into a list of OCI
+// platforms. Each entry may be "arch" or "arch/variant"; OS is always "linux" for Zarf Packages.
+func platformsFromArchString(s string) []ocispec.Platform {
+	arches := v1alpha1.ParseArchitectures(s)
+	platforms := make([]ocispec.Platform, len(arches))
+	for i, a := range arches {
+		arch, variant, _ := strings.Cut(a, "/")
+		platforms[i] = ocispec.Platform{
+			OS:           "linux",
+			Architecture: arch,
+			Variant:      variant,
+		}
+	}
+	return platforms
+}
+
+// archFilenameSuffix renders an architecture list into a filename-safe suffix:
+// each "/" represents variants and becomes "_", entries are sorted lexicographically, and joined with "+".
+// Returns empty string for empty input.
+// FIXME: a package must have an architecture
+func archFilenameSuffix(archs []string) string {
+	if len(archs) == 0 {
+		return ""
+	}
+	parts := make([]string, len(archs))
+	for i, a := range archs {
+		parts[i] = strings.ReplaceAll(a, "/", "_")
+	}
+	slices.Sort(parts)
+	return strings.Join(parts, "+")
 }
 
 func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
