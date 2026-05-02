@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.75.2](https://github.com/zarf-dev/zarf/compare/v0.75.1...v0.75.2) (2026-05-02)
+
+
+### Bug Fixes
+
+* **variables:** file variable substitution alignment ([#4866](https://github.com/zarf-dev/zarf/issues/4866)) ([a16872c](https://github.com/zarf-dev/zarf/commit/a16872cd3d81496cabf831a897b4b60bd1509a72))
+
 ## [0.75.1](https://github.com/zarf-dev/zarf/compare/v0.75.0...v0.75.1) (2026-04-30)
 
 
