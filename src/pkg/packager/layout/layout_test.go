@@ -12,11 +12,24 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	_ "modernc.org/sqlite"
 )
+
+// feature.Set is write-once across the test binary, so any feature this package's tests
+// rely on is enabled here once before tests run.
+func TestMain(m *testing.M) {
+	if err := feature.Set([]feature.Feature{
+		{Name: feature.Values, Enabled: true},
+		{Name: feature.BundleSignature, Enabled: true},
+	}); err != nil {
+		panic(err)
+	}
+	os.Exit(m.Run())
+}
 
 func TestAssembleSkeleton(t *testing.T) {
 	t.Parallel()
@@ -30,19 +43,29 @@ func TestAssembleSkeleton(t *testing.T) {
 	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, "./testdata/zarf-skeleton-package", opt)
 	require.NoError(t, err)
 
+	// Package-level values are merged to a single values.yaml at the skeleton root and the
+	// schema is copied flat — same storage format AssemblePackage uses. The published
+	// zarf.yaml's Values fields point at those rewritten paths.
+	require.Equal(t, []string{layout.ValuesYAML}, pkgLayout.Pkg.Values.Files)
+	require.Equal(t, layout.ValuesSchema, pkgLayout.Pkg.Values.Schema)
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML))
+	require.FileExists(t, filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema))
+
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
 	require.NoError(t, err)
 	expectedChecksum := `0fea7403536c0c0e2a2d9b235d4b3716e86eefd8e78e7b14412dd5a750b77474 components/kustomizations.tar
 54f657b43323e1ebecb0758835b8d01a0113b61b7bab0f4a8156f031128d00f9 components/data-injections.tar
 879bfe82d20f7bdcd60f9e876043cc4343af4177a6ee8b2660c304a5b6c70be7 components/files.tar
+a94b27907f8c7f0945e81e29fd97c2c8574b80dd07ad619473cdf074686fdd31 values.yaml
 bd82245bfc3c79abfa23dcf72c8099a2788c1b6073464f1ee0c6b64b9c8ef2f6 documentation.tar
+c0d7fe697e6c07add12cd49a033e5803cec1f11bc311a820433bfa2df33ef539 values.schema.json
 c497f1a56559ea0a9664160b32e4b377df630454ded6a3787924130c02f341a6 components/manifests.tar
 fb7ebee94a4479bacddd71195030a483b0b0b96d4f73f7fcd2c2c8e0fce0c5c6 components/helm-charts.tar
 `
 
 	require.Equal(t, expectedChecksum, string(b))
 	testutil.RequireNoBackslashInPackagePaths(t, pkgLayout.Pkg)
-	require.Equal(t, "20c2cf8bde902c8daad1ad9fb3cd9f06741550ac34401474500a24835cb36114", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
+	require.Equal(t, "a2b6fbb6f722d48f3385e3a0a090f48a6b30cf7f60af615a249862cc37301364", testutil.ChecksumZarfYAMLContent(t, pkgLayout.Pkg), "skeleton zarf.yaml checksum drift — package would differ across build hosts")
 }
 
 func writePackageToDisk(t *testing.T, pkg v1alpha1.ZarfPackage, dir string) {

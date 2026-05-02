@@ -4,6 +4,10 @@ metadata:
   version: v0.0.1
 documentation:
   my-doc: doc.md
+values:
+  files:
+    - pkg-values/values.yaml
+  schema: pkg-values/values.schema.json
 components:
   - name: helm-charts
     required: true

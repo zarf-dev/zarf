@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-package-flavors-child
+
+components:
+  - name: has-no-flavor
+
+  - name: child-has-flavor
+    only:
+      flavor: pistachio

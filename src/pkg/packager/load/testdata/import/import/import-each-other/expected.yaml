@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: parent-package
+components:
+- name: first-is-parent
+  description: this component gets imported by second-package
+- name: second-is-parent
+  description: this component gets imported by first-package

@@ -61,9 +61,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"importStack", len(importStack),
 	)
 
+	var valuesFiles []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
+	// pkgValuesByURL memoizes per-skeleton package-scoped values dirs so multiple
+	// components importing the same OCI URL only materialize the top-level layers once.
+	pkgValuesByURL := map[string]string{}
 
 	for _, component := range pkg.Components {
 		if !compatibleComponent(component, arch, flavor) {
@@ -81,6 +85,9 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 
 		var importedPkg v1alpha1.ZarfPackage
+		// Set when the URL branch materializes the imported skeleton's package-scoped
+		// values layer; used as the rebase anchor for Values.Files.
+		var pkgValuesPath string
 		if component.Import.Path != "" {
 			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
 			for _, sp := range importStack {
@@ -123,7 +130,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
-			_, err = remote.ResolveRoot(ctx)
+			rootDesc, err := remote.ResolveRoot(ctx)
 			if err != nil {
 				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
 					return v1alpha1.ZarfPackage{}, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
@@ -138,6 +145,62 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
 					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+				}
+			}
+
+			// Materialize the published package-scoped values layer (fixed name per
+			// AssembleSkeleton's contract) into a per-skeleton cache dir keyed by root
+			// manifest digest. Memoized per URL so multiple components importing the
+			// same skeleton only pull once. Schema propagation is intentionally left
+			// for a follow-up — see TestResolveImports/schema-parent-{empty,wins}.
+			if len(importedPkg.Values.Files) > 0 {
+				if cached, ok := pkgValuesByURL[component.Import.URL]; ok {
+					pkgValuesPath = cached
+				} else {
+					cache := filepath.Join(cachePath, "oci")
+					if err := helpers.CreateDirectory(cache, helpers.ReadWriteExecuteUser); err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					manifest, err := remote.FetchRoot(ctx)
+					if err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					pkgDir := filepath.Join(cache, "pkgs", rootDesc.Digest.Encoded())
+					if err := helpers.CreateDirectory(pkgDir, helpers.ReadWriteExecuteUser); err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					store, err := ocistore.New(cache)
+					if err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					desc := manifest.Locate(layout.ValuesYAML)
+					if oci.IsEmptyDescriptor(desc) {
+						return v1alpha1.ZarfPackage{}, fmt.Errorf("skeleton %s declares values but %q layer was not published", component.Import.URL, layout.ValuesYAML)
+					}
+					exists, err := store.Exists(ctx, desc)
+					if err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					if !exists {
+						if err := remote.CopyToTarget(ctx, []ocispec.Descriptor{desc}, store, remote.GetDefaultCopyOpts()); err != nil {
+							return v1alpha1.ZarfPackage{}, err
+						}
+					}
+					src := filepath.Join(cache, "blobs", "sha256", desc.Digest.Encoded())
+					dst := filepath.Join(pkgDir, layout.ValuesYAML)
+					if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+						return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to materialize %s for skeleton %s: %w", layout.ValuesYAML, component.Import.URL, err)
+					}
+					abs, err := filepath.Abs(pkgPath.BaseDir)
+					if err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					rel, err := filepath.Rel(abs, pkgDir)
+					if err != nil {
+						return v1alpha1.ZarfPackage{}, err
+					}
+					pkgValuesPath = rel
+					pkgValuesByURL[component.Import.URL] = pkgValuesPath
 				}
 			}
 		}
@@ -182,8 +245,28 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+
+		// pkg.Values.Files is package-scoped. URL imports rebase against the
+		// per-skeleton cache dir set up earlier in the URL branch; path imports
+		// continue to anchor at the per-component importPath as before.
+		valuesAnchorPath := importPath
+		if pkgValuesPath != "" {
+			valuesAnchorPath = pkgValuesPath
+		}
+		for _, v := range importedPkg.Values.Files {
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, valuesAnchorPath))
+		}
 	}
 
+	valuesFiles = append(valuesFiles, pkg.Values.Files...)
+	valuesFilesMap := map[string]bool{}
+	pkg.Values.Files = nil
+	for _, v := range valuesFiles {
+		if _, present := valuesFilesMap[v]; !present {
+			pkg.Values.Files = append(pkg.Values.Files, v)
+			valuesFilesMap[v] = true
+		}
+	}
 	pkg.Components = components
 
 	varMap := map[string]bool{}
