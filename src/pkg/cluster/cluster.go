@@ -232,41 +232,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI when the agent is being deployed
 		if opts.InternalServices.Has(state.AgentKey) {
-			if opts.AgentTLS != nil {
-				s.AgentTLS = *opts.AgentTLS
-				s.AgentTLSUserProvided = true
-			} else {
-				agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-				if err != nil {
-					return nil, err
-				}
-				s.AgentTLS = agentTLS
-			}
-		}
-
-		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
-		}
-		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaceList.Items {
-			if namespace.Name == "zarf" {
-				continue
-			}
-			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
-
-			if namespace.Labels == nil {
-				// Ensure label map exists to avoid nil panic
-				namespace.Labels = make(map[string]string)
-			}
-			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[AgentLabel] = "ignore"
-			namespaceCopy := namespace
-			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
-			if err != nil {
-				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
 			}
 		}
 
@@ -317,6 +285,11 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		}
 		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
 			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
 				return nil, err
 			}
 		}
@@ -388,6 +361,47 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	return s, nil
+}
+
+func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	if agentTLS != nil {
+		s.AgentTLS = *agentTLS
+		s.AgentTLSUserProvided = true
+	} else {
+		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		s.AgentTLS = generatedAgentTLS
+		s.AgentTLSUserProvided = false
+	}
+	return c.ignoreExistingNamespacesForAgent(ctx)
+}
+
+func (c *Cluster) ignoreExistingNamespacesForAgent(ctx context.Context) error {
+	l := logger.From(ctx)
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+	}
+	// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
+	for _, namespace := range namespaceList.Items {
+		if namespace.Name == "zarf" {
+			continue
+		}
+		l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
+		if namespace.Labels == nil {
+			namespace.Labels = make(map[string]string)
+		}
+		namespace.Labels[AgentLabel] = "ignore"
+		namespaceCopy := namespace
+		_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+		}
+	}
+	return nil
 }
 
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.
