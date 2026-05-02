@@ -1,7 +1,9 @@
 kind: ZarfPackageConfig
 metadata:
   name: chart-with-values
-
+values:
+  files:
+    - base-values.yaml
 components:
   - name: demo-helm-charts
     charts:

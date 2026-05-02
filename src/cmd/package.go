@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -330,8 +329,12 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		o.setVariables,
 		strings.ToUpper,
 	)
-	// Merge values
-	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -733,6 +736,8 @@ type packageInspectValuesFilesOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
+	setValues               map[string]string
 	outputWriter            io.Writer
 	ociConcurrency          int
 	publicKeyPath           string
@@ -767,6 +772,8 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
@@ -796,6 +803,16 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -822,6 +839,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables:  o.setVariables,
+		Values:        values,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
 		RemoteOptions: defaultRemoteOptions(),
@@ -849,6 +867,8 @@ type packageInspectManifestsOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
+	setValues               map[string]string
 	outputWriter            io.Writer
 	ociConcurrency          int
 	publicKeyPath           string
@@ -882,6 +902,8 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
@@ -911,6 +933,16 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = helpers.TransformAndMergeMap(
+		v.GetStringMapString(VPkgDeploySetValues),
+		o.setValues,
+		func(s string) string { return s },
+	)
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -937,6 +969,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables:  o.setVariables,
+		Values:        values,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
 		RemoteOptions: defaultRemoteOptions(),
