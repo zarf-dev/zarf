@@ -192,9 +192,13 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	valuesFilesMap := map[string]bool{}
 	pkg.Values.Files = nil
 	for _, v := range valuesFiles {
-		if _, present := valuesFilesMap[v]; !present {
-			pkg.Values.Files = append(pkg.Values.Files, v)
-			valuesFilesMap[v] = true
+		norm := v
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
+			norm = filepath.ToSlash(filepath.Clean(v))
+		}
+		if _, present := valuesFilesMap[norm]; !present {
+			pkg.Values.Files = append(pkg.Values.Files, norm)
+			valuesFilesMap[norm] = true
 		}
 	}
 	pkg.Components = components

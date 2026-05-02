@@ -130,6 +130,31 @@ func TestResolveImports(t *testing.T) {
 	}
 }
 
+func TestResolveImportsDedupNormalization(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	// Imports rebase through makePathRelativeTo (which Cleans paths), but the parent's
+	// own Values.Files entries are appended verbatim. Without normalization in the
+	// dedup loop, syntactic variants like "./foo.yaml" and "foo.yaml" survive as two
+	// entries pointing at the same file. Verify the loop normalizes both forms to one.
+	pkg := v1alpha1.ZarfPackage{
+		Kind:     v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{Name: "parent"},
+		Values: v1alpha1.ZarfValues{
+			Files: []string{"./parent-values.yaml", "parent-values.yaml"},
+		},
+		Components: []v1alpha1.ZarfComponent{{Name: "standalone"}},
+	}
+
+	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
+	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
+	resolved, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
+		"", "", []string{}, "", false, types.RemoteOptions{})
+	require.NoError(t, err)
+	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
+}
+
 func TestMakePathRelativeTo(t *testing.T) {
 	t.Parallel()
 
