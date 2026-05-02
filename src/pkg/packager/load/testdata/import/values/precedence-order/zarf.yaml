@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: top-package
+values:
+  files:
+    - top-values.yaml
+components:
+  - name: nested-component
+    required: true
+    import:
+      path: middle
