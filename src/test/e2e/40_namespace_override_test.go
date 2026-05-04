@@ -66,19 +66,10 @@ func TestSingleNamespaceOverride(t *testing.T) {
 		require.Equal(t, "test2", configMap.Namespace)
 	}
 
-	// The override package's state secret must list only charts deployed under the override namespace
-	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-package-test-package-override-test2", "-o", "jsonpath={.data.data}")
-	require.NoError(t, err, stdOut, stdErr)
-	rawSecret, err := base64.StdEncoding.DecodeString(stdOut)
+	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
-	overridePkg := struct {
-		DeployedComponents []struct {
-			InstalledCharts []struct {
-				Namespace string `json:"namespace"`
-			} `json:"installedCharts"`
-		} `json:"deployedComponents"`
-	}{}
-	require.NoError(t, json.Unmarshal(rawSecret, &overridePkg))
+	overridePkg, err := c.GetDeployedPackage(t.Context(), "test-package", state.WithPackageNamespaceOverride("test2"))
+	require.NoError(t, err)
 	for _, c := range overridePkg.DeployedComponents {
 		for _, chart := range c.InstalledCharts {
 			require.Equal(t, "test2", chart.Namespace, "override package secret must not reference baseline namespace charts")
