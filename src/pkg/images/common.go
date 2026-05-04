@@ -243,7 +243,7 @@ func platformFromManifest(ctx context.Context, fetcher content.Fetcher, manifest
 	}
 	var cfg ocispec.Image
 	if err := json.Unmarshal(configBytes, &cfg); err != nil {
-		return "", nil
+		return "", fmt.Errorf("unable to unmarshal image config: %w", err)
 	}
 	return formatPlatform(&cfg.Platform), nil
 }
