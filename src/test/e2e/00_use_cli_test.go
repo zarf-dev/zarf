@@ -207,6 +207,22 @@ func TestUseCLI(t *testing.T) {
 		require.NotContains(t, stdErr, "DESELECT-ME COMPONENT")
 	})
 
+	t.Run("zarf deploy of a package filters out different architecture", func(t *testing.T) {
+		t.Parallel()
+		if runtime.GOARCH != "amd64" {
+			t.Skip("fixture is locked to arm64; only runs on amd64 hosts")
+		}
+		tmpdir := t.TempDir()
+		stdout, stderr, err := e2e.Zarf(t, "package", "create", "src/test/packages/00-mismatched-arch", "-o", tmpdir, "--architecture", "arm64", "--confirm")
+		require.NoError(t, err, stdout, stderr)
+		path := filepath.Join(tmpdir, "zarf-package-mismatched-arch-arm64.tar.zst")
+
+		// The architecture filter drops the arm64-locked default component on the amd64 host so no components are deployed
+		stdout, stdErr, err := e2e.Zarf(t, "package", "deploy", path, "--confirm")
+		require.NoError(t, err, stdout, stderr)
+		require.Contains(t, stdErr, "no components were selected for deployment")
+	})
+
 	t.Run("changing log level", func(t *testing.T) {
 		t.Parallel()
 		// Test that changing the log level actually applies the requested level

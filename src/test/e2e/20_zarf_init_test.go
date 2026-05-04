@@ -6,11 +6,9 @@ package test
 
 import (
 	"encoding/base64"
-	"fmt"
-	"runtime"
-	"testing"
-
 	"encoding/json"
+	"fmt"
+	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -22,29 +20,6 @@ func TestZarfInit(t *testing.T) {
 	initComponents := "git-server"
 	if e2e.ApplianceMode {
 		initComponents = "k3s,git-server"
-	}
-
-	initPackageVersion := e2e.GetZarfVersion(t)
-
-	var (
-		mismatchedArch        = e2e.GetMismatchedArch()
-		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage  = "package is not deployable to this system"
-	)
-	t.Cleanup(func() {
-		e2e.CleanFiles(t, mismatchedInitPackage)
-	})
-
-	if runtime.GOOS == "linux" {
-		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
-		require.NoError(t, err, stdOut, stdErr)
-
-		// Check that `zarf init` returns an error because of the mismatched architectures.
-		// We need to use the --architecture flag here to force zarf to find the package.
-		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--confirm")
-		require.Error(t, err, stdErr)
-		require.Contains(t, stdErr, expectedErrorMessage)
 	}
 
 	if !e2e.ApplianceMode {

@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: mismatched-arch
+
+components:
+  - name: arch-locked
+    default: true
+    only:
+      cluster:
+        architecture: arm64
