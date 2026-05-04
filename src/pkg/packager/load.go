@@ -29,7 +29,10 @@ import (
 
 // LoadOptions are the options for LoadPackage.
 type LoadOptions struct {
-	Shasum       string
+	Shasum string
+	// Architectures of the package being loaded; multiple entires pull a single multi-arch package
+	Architectures []string
+	// Deprecated: Use Architectures instead.
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead.
 	PublicKeyPath     string
@@ -95,7 +98,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 			VerifyBlobOptions:    opts.VerifyBlobOptions,
 			VerificationStrategy: opts.VerificationStrategy,
 			Shasum:               opts.Shasum,
-			Architecture:         config.GetArch(opts.Architecture),
+			Architectures:        resolveArchitectures(opts.Architectures, opts.Architecture),
 			Filter:               opts.Filter,
 			LayerTypes:           opts.LayerTypes,
 			OCIConcurrency:       opts.OCIConcurrency,

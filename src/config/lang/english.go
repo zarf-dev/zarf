@@ -42,7 +42,7 @@ const (
 		"using a declarative packaging strategy to support DevSecOps in offline and semi-connected environments."
 
 	RootCmdFlagLogLevel              = "Log level when running Zarf. Valid options are: warn, info, debug, trace"
-	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages"
+	RootCmdFlagArch                  = "Architecture for OCI images and Zarf packages. Pass a comma-separated list (e.g. amd64,arm64) to create or pull a multi-arch package."
 	RootCmdFlagCachePath             = "Specify the location of the Zarf cache directory"
 	RootCmdFlagTempDir               = "Specify the temporary directory to use for intermediate files"
 	RootCmdFlagPlainHTTP             = "Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture."

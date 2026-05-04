@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -30,7 +29,9 @@ const defaultPublishRetries = 1
 type PublishFromOCIOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// Architecture is the architecture we are publishing to
+	// Architectures of the package being publish; multiple entires pull multi-arch packages
+	Architectures []string
+	// Deprecated: Use Architectures instead.
 	Architecture string
 	// Retries is the number of times to retry a failed push
 	Retries int
@@ -71,8 +72,8 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 		return fmt.Errorf("source and destination repositories must have the same name")
 	}
 
-	arch := config.GetArch(opts.Architecture)
-	p := oci.PlatformForArch(arch)
+	architectures := resolveArchitectures(opts.Architectures, opts.Architecture)
+	p := oci.PlatformForArch(strings.Join(architectures, ","))
 
 	// Set up remote repo client
 	srcRemote, err := zoci.NewRemote(ctx, src.String(), p, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify))

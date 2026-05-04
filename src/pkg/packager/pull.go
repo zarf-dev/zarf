@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -34,7 +35,9 @@ import (
 type PullOptions struct {
 	// SHASum uniquely identifies a package based on its contents.
 	SHASum string
-	// Architecture is the package architecture.
+	// Architectures of the package being pulled; multiple entires pull multi-arch packages
+	Architectures []string
+	// Deprecated: Use Architectures instead.
 	Architecture string
 	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
@@ -54,8 +57,8 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	l := logger.From(ctx)
 	start := time.Now()
 
-	// ensure architecture is set
-	arch := config.GetArch(opts.Architecture)
+	// Resolve and canonicalize the requested architectures (sorted, comma-joined).
+	architectures := resolveArchitectures(opts.Architectures, opts.Architecture)
 
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
@@ -87,7 +90,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 
 	pkgLayout, err := LoadPackage(ctx, source, LoadOptions{
 		Shasum:               opts.SHASum,
-		Architecture:         arch,
+		Architectures:        architectures,
 		VerifyBlobOptions:    opts.VerifyBlobOptions,
 		VerificationStrategy: opts.VerificationStrategy,
 		Output:               destination,
@@ -111,9 +114,10 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 }
 
 type pullOCIOptions struct {
-	Source            string
-	Shasum            string
-	Architecture      string
+	Source string
+	Shasum string
+	// Architectures is the canonical sorted list joined for the OCI platform lookup.
+	Architectures     []string
 	LayerTypes        []zoci.LayerType
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
@@ -132,7 +136,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 	if err != nil {
 		return nil, err
 	}
-	platform := oci.PlatformForArch(opts.Architecture)
+	platform := oci.PlatformForArch(strings.Join(opts.Architectures, ","))
 	remote, err := zoci.NewRemote(ctx, opts.Source, platform, oci.WithPlainHTTP(opts.PlainHTTP), oci.WithInsecureSkipVerify(opts.InsecureSkipTLSVerify), cacheMod)
 	if err != nil {
 		return nil, err

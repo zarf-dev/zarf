@@ -81,40 +81,32 @@ func GetArch(archs ...string) string {
 	return runtime.GOARCH
 }
 
-// GetArches returns the parsed list of architectures based on a priority list of comma-separated
-// candidates. The first non-empty candidate is split on commas, trimmed, and deduped (preserving order).
-// Falls back to the host architecture (runtime.GOARCH) when no candidate is specified.
-func GetArches(archs ...string) []string {
-	priority := append([]string{CLIArch}, archs...)
-	for _, arch := range priority {
-		parsed := parseArchList(arch)
-		if len(parsed) > 0 {
-			return parsed
-		}
-	}
-	return []string{runtime.GOARCH}
-}
-
-// FIXME: I'd rather just separate by string than fix bad input
-func parseArchList(s string) []string {
+// ParseArchitectures splits a comma-separated architecture string into a trimmed slice preserving
+// input order. An empty string returns nil.
+func ParseArchitectures(s string) []string {
 	if s == "" {
 		return nil
 	}
 	parts := strings.Split(s, ",")
 	out := make([]string, 0, len(parts))
-	seen := map[string]struct{}{}
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
 		}
-		if _, ok := seen[p]; ok {
-			continue
-		}
-		seen[p] = struct{}{}
 		out = append(out, p)
 	}
 	return out
+}
+
+// GetArches returns the parsed architecture list, falling back to runtime.GOARCH when the input
+// parses to an empty slice.
+func GetArches(s string) []string {
+	archs := ParseArchitectures(s)
+	if len(archs) == 0 {
+		return []string{runtime.GOARCH}
+	}
+	return archs
 }
 
 // GetStartTime returns the timestamp of when the CLI was started.

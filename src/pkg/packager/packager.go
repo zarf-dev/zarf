@@ -8,12 +8,31 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
+
+// resolveArchitectures returns the canonical, sorted architecture list for a request. It prefers
+// the new Architectures slice, falls back to the deprecated Architecture string, then to
+// config.GetArch (which honors --architecture / runtime.GOARCH). Sorting matches the canonical
+// form written into pkg.Build.Architecture at create time, so OCI lookups succeed regardless of
+// the order in which the caller listed the arches.
+func resolveArchitectures(architectures []string, architecture string) []string {
+	archs := slices.Clone(architectures)
+	if len(archs) == 0 && architecture != "" {
+		archs = config.GetArches(architecture)
+	}
+	if len(archs) == 0 {
+		archs = config.GetArches(config.GetArch(""))
+	}
+	slices.Sort(archs)
+	return archs
+}
 
 // ValuesOverrides is a map of component names to chart names containing Helm Chart values to override values on deploy.
 type ValuesOverrides map[string]map[string]map[string]any

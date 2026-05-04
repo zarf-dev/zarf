@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -150,7 +151,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 // validateArchitectures rejects metadata.architecture strings that list the same architecture
 // more than once. The list is small (a handful of arches at most), so an O(N²) scan is fine.
 func validateArchitectures(s string) error {
-	archs := v1alpha1.ParseArchitectures(s)
+	archs := config.GetArches(s)
 	var err error
 	for i, a := range archs {
 		if slices.Contains(archs[:i], a) {

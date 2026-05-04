@@ -801,7 +801,7 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 	// Sort the architecture list so two packages with the same architectures produce the same
 	// Build.Architecture, OCI tag, and filename regardless of how the user ordered the input.
-	archs := v1alpha1.ParseArchitectures(pkg.Metadata.Architecture)
+	archs := config.ParseArchitectures(pkg.Metadata.Architecture)
 	slices.Sort(archs)
 	pkg.Build.Architecture = strings.Join(archs, ",")
 

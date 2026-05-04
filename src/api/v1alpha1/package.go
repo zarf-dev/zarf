@@ -9,8 +9,9 @@ import (
 	"maps"
 	"regexp"
 	"slices"
-	"strings"
 	"time"
+
+	"github.com/zarf-dev/zarf/src/config"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -55,24 +56,6 @@ const (
 // SkeletonArch is a special architecture used for skeleton packages
 const SkeletonArch = "skeleton"
 
-// ParseArchitectures splits a comma-separated architecture string into a trimmed slice
-// preserving input order. An empty string returns nil.
-func ParseArchitectures(s string) []string {
-	if s == "" {
-		return nil
-	}
-	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "" {
-			continue
-		}
-		out = append(out, p)
-	}
-	return out
-}
-
 // ZarfPackage the top-level structure of a Zarf config file.
 type ZarfPackage struct {
 	// The API version of the Zarf package.
@@ -104,9 +87,9 @@ func (pkg ZarfPackage) IsInitConfig() bool {
 // Build.Architecture takes precedence when set (post-create), falling back to Metadata.Architecture.
 func (pkg ZarfPackage) Architectures() []string {
 	if pkg.Build.Architecture != "" {
-		return ParseArchitectures(pkg.Build.Architecture)
+		return config.ParseArchitectures(pkg.Build.Architecture)
 	}
-	return ParseArchitectures(pkg.Metadata.Architecture)
+	return config.ParseArchitectures(pkg.Metadata.Architecture)
 }
 
 // IsMultiArch returns true when the package targets more than one architecture.

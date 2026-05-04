@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -39,6 +40,8 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// Architectures overrides the package's metadata.architecture (e.g. ["amd64", "arm64"]).
+	Architectures []string
 	types.RemoteOptions
 }
 
@@ -65,7 +68,14 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	// An explicit Architectures option from the caller takes precedence over the package's own
+	// metadata.architecture; falls back to config.GetArch (--architecture flag / runtime.GOARCH)
+	// for the legacy implicit-global path.
+	if len(opts.Architectures) > 0 {
+		pkg.Metadata.Architecture = strings.Join(opts.Architectures, ",")
+	} else {
+		pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	}
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return v1alpha1.ZarfPackage{}, err

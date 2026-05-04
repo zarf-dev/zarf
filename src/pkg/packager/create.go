@@ -35,6 +35,8 @@ type CreateOptions struct {
 	OCIConcurrency          int
 	CachePath               string
 	WithBuildMachineInfo    bool
+	// Architectures overrides the package metadata.Architecture
+	Architectures []string
 	// applicable when output is an OCI registry
 	types.RemoteOptions
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -62,6 +64,7 @@ func Create(ctx context.Context, packagePath string, output string, opts CreateO
 		SkipRequiredValues: true,
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		RemoteOptions:      opts.RemoteOptions,
+		Architectures:      opts.Architectures,
 	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {

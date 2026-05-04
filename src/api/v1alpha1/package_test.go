@@ -221,26 +221,6 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 	}
 }
 
-func TestParseArchitectures(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		in   string
-		want []string
-	}{
-		{name: "empty", in: "", want: nil},
-		{name: "single", in: "amd64", want: []string{"amd64"}},
-		{name: "trims whitespace", in: " amd64 , arm64 ", want: []string{"amd64", "arm64"}},
-		{name: "drops empty entries", in: "amd64,,arm64", want: []string{"amd64", "arm64"}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tt.want, ParseArchitectures(tt.in))
-		})
-	}
-}
-
 func TestZarfPackageIsMultiArch(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

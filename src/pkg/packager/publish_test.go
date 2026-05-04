@@ -15,6 +15,7 @@ import (
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -42,7 +43,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
 		Source:            packageRef,
-		Architecture:      architecture,
+		Architectures:     config.GetArches(architecture),
 		Filter:            filters.Empty(),
 		RemoteOptions:     defaultTestRemoteOptions(),
 		VerifyBlobOptions: &verifyOpts,
@@ -448,7 +449,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				Architectures:  config.GetArches(layoutExpected.Pkg.Build.Architecture),
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -483,7 +484,7 @@ func TestPullOCIConnectedExcludesImages(t *testing.T) {
 	// Pull with Connected=true — image layers should be excluded
 	pkgLayout, err := pullOCI(ctx, pullOCIOptions{
 		Source:        packageRef.String(),
-		Architecture:  "amd64",
+		Architectures: []string{"amd64"},
 		Filter:        filters.Empty(),
 		CachePath:     t.TempDir(),
 		Connected:     true,
@@ -500,7 +501,7 @@ func TestPullOCIConnectedExcludesImages(t *testing.T) {
 	// Pull without Connected — image layers should be present
 	pkgLayoutFull, err := pullOCI(ctx, pullOCIOptions{
 		Source:        packageRef.String(),
-		Architecture:  "amd64",
+		Architectures: []string{"amd64"},
 		Filter:        filters.Empty(),
 		CachePath:     t.TempDir(),
 		Connected:     false,
@@ -563,7 +564,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architecture:   layoutExpected.Pkg.Build.Architecture,
+				Architectures:  config.GetArches(layoutExpected.Pkg.Build.Architecture),
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
