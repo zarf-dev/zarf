@@ -5,7 +5,6 @@
 package test
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -13,6 +12,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
 func TestSingleNamespaceOverride(t *testing.T) {
