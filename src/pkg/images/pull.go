@@ -592,10 +592,8 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	return nil
 }
 
-// filterIndexManifests returns the subset of manifest descriptors whose platform matches one of
-// the requested platforms exactly on OS, Architecture, and Variant. An entry whose Platform is
-// nil (e.g. a nested index) is dropped — multi-arch tag pulls only ship the leaf platform
-// manifests the caller asked for.
+// filterIndexManifests returns every manifest descriptor whose Platform matches one of the
+// requested OS+Architecture pairs.
 func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Platform) []ocispec.Descriptor {
 	kept := []ocispec.Descriptor{}
 	for _, m := range manifests {
@@ -603,10 +601,7 @@ func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Pl
 			continue
 		}
 		for _, req := range requested {
-			if req.Architecture == m.Platform.Architecture &&
-				req.OS == m.Platform.OS &&
-				// FIXME: this probably isn't right. I should see which image docker pulls when variants aren't specified
-				req.Variant == m.Platform.Variant {
+			if m.Platform.OS == req.OS && m.Platform.Architecture == req.Architecture {
 				kept = append(kept, m)
 				break
 			}
@@ -615,16 +610,12 @@ func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Pl
 	return kept
 }
 
-// formatPlatforms renders a list of platforms into a comma-separated "os/arch[/variant]" string,
-// suitable for log/error messages.
+// formatPlatforms renders a list of platforms into a comma-separated "os/arch" string, suitable
+// for log/error messages.
 func formatPlatforms(platforms []ocispec.Platform) string {
 	parts := make([]string, len(platforms))
 	for i, p := range platforms {
-		s := p.OS + "/" + p.Architecture
-		if p.Variant != "" {
-			s += "/" + p.Variant
-		}
-		parts[i] = s
+		parts[i] = p.OS + "/" + p.Architecture
 	}
 	return strings.Join(parts, ",")
 }

@@ -436,6 +436,89 @@ func TestPullNestedIndexByTag(t *testing.T) {
 	require.ElementsMatch(t, []string{"amd64", "arm64"}, got)
 }
 
+func TestFilterIndexManifests(t *testing.T) {
+	t.Parallel()
+	amd64 := ocispec.Descriptor{Digest: "sha256:amd64", Platform: &ocispec.Platform{OS: "linux", Architecture: "amd64"}}
+	arm64plain := ocispec.Descriptor{Digest: "sha256:arm64", Platform: &ocispec.Platform{OS: "linux", Architecture: "arm64"}}
+	arm64v7 := ocispec.Descriptor{Digest: "sha256:arm64v7", Platform: &ocispec.Platform{OS: "linux", Architecture: "arm64", Variant: "v7"}}
+	arm64v8 := ocispec.Descriptor{Digest: "sha256:arm64v8", Platform: &ocispec.Platform{OS: "linux", Architecture: "arm64", Variant: "v8"}}
+	darwinArm64 := ocispec.Descriptor{Digest: "sha256:darwin-arm64", Platform: &ocispec.Platform{OS: "darwin", Architecture: "arm64"}}
+	noPlatform := ocispec.Descriptor{Digest: "sha256:nested", Platform: nil}
+
+	t.Run("keeps every arm64 variant when arm64 is requested", func(t *testing.T) {
+		t.Parallel()
+		got := filterIndexManifests(
+			[]ocispec.Descriptor{amd64, arm64plain, arm64v7, arm64v8},
+			[]ocispec.Platform{{OS: "linux", Architecture: "arm64"}},
+		)
+		require.Equal(t, []ocispec.Descriptor{arm64plain, arm64v7, arm64v8}, got)
+	})
+
+	t.Run("OS must match", func(t *testing.T) {
+		t.Parallel()
+		got := filterIndexManifests(
+			[]ocispec.Descriptor{darwinArm64, arm64plain},
+			[]ocispec.Platform{{OS: "linux", Architecture: "arm64"}},
+		)
+		require.Equal(t, []ocispec.Descriptor{arm64plain}, got)
+	})
+
+	t.Run("nil platform entries are skipped", func(t *testing.T) {
+		t.Parallel()
+		got := filterIndexManifests(
+			[]ocispec.Descriptor{noPlatform, amd64},
+			[]ocispec.Platform{{OS: "linux", Architecture: "amd64"}},
+		)
+		require.Equal(t, []ocispec.Descriptor{amd64}, got)
+	})
+
+	t.Run("multi-arch request returns matches for each requested arch", func(t *testing.T) {
+		t.Parallel()
+		got := filterIndexManifests(
+			[]ocispec.Descriptor{amd64, arm64v7, arm64v8},
+			[]ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		)
+		require.Equal(t, []ocispec.Descriptor{amd64, arm64v7, arm64v8}, got)
+	})
+}
+
+// TestPullMultiArchKeepsEveryVariantPerArch pushes an index with two arm64 variants (plain and v8)
+// plus an amd64, then pulls multi-arch [amd64, arm64]. Both arm64 flavors must land — the
+// architecture filter is OS+Arch only, so heterogeneous downstream nodes can each pick a runnable
+// manifest.
+func TestPullMultiArchKeepsEveryVariantPerArch(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	repoRef := upstream + "/fixtures/keep-variants"
+	repo := testutil.NewRepo(t, repoRef)
+
+	amd64 := testutil.PushSinglePlatformImage(ctx, t, repo, "amd64")
+	amd64.Platform = &ocispec.Platform{OS: "linux", Architecture: "amd64"}
+	arm64plain := testutil.PushSinglePlatformImage(ctx, t, repo, "arm64")
+	arm64plain.Platform = &ocispec.Platform{OS: "linux", Architecture: "arm64"}
+	arm64v8 := testutil.PushSinglePlatformImage(ctx, t, repo, "arm64")
+	arm64v8.Platform = &ocispec.Platform{OS: "linux", Architecture: "arm64", Variant: "v8"}
+	idx := testutil.PushIndex(ctx, t, repo, []ocispec.Descriptor{amd64, arm64plain, arm64v8})
+	require.NoError(t, repo.Tag(ctx, idx, "test"))
+
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s:test", repoRef))
+	require.NoError(t, err)
+
+	destDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      []ocispec.Platform{{OS: "linux", Architecture: "amd64"}, {OS: "linux", Architecture: "arm64"}},
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	for _, leaf := range []ocispec.Descriptor{amd64, arm64plain, arm64v8} {
+		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", leaf.Digest.Hex()),
+			"manifest %s for arch=%s variant=%q must land in the local layout", leaf.Digest, leaf.Platform.Architecture, leaf.Platform.Variant)
+	}
+}
+
 func TestInspectIndexRecursive(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

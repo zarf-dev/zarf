@@ -653,33 +653,28 @@ func (p *PackageLayout) FileName() (string, error) {
 }
 
 // platformsFromArchString parses the comma-separated architecture string into a list of OCI
-// platforms. Each entry may be "arch" or "arch/variant"; OS is always "linux" for Zarf Packages.
+// platforms. OS is always "linux" for Zarf Packages and Variant is intentionally not surfaced —
+// multi-arch image pulls keep every variant matching the architecture.
 func platformsFromArchString(s string) []ocispec.Platform {
 	arches := v1alpha1.ParseArchitectures(s)
 	platforms := make([]ocispec.Platform, len(arches))
 	for i, a := range arches {
-		arch, variant, _ := strings.Cut(a, "/")
 		platforms[i] = ocispec.Platform{
 			OS:           "linux",
-			Architecture: arch,
-			Variant:      variant,
+			Architecture: a,
 		}
 	}
 	return platforms
 }
 
-// archFilenameSuffix renders an architecture list into a filename-safe suffix:
-// each "/" represents variants and becomes "_", entries are sorted lexicographically, and joined with "+".
-// Returns empty string for empty input.
+// archFilenameSuffix renders an architecture list into a filename-safe suffix: entries are sorted
+// lexicographically and joined with "+". Returns empty string for empty input.
 // FIXME: a package must have an architecture
 func archFilenameSuffix(archs []string) string {
 	if len(archs) == 0 {
 		return ""
 	}
-	parts := make([]string, len(archs))
-	for i, a := range archs {
-		parts[i] = strings.ReplaceAll(a, "/", "_")
-	}
+	parts := slices.Clone(archs)
 	slices.Sort(parts)
 	return strings.Join(parts, "+")
 }
