@@ -276,7 +276,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 		{
 			name: "multi-arch triggers v0.76.0",
 			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64,arm64"},
+				Build: v1alpha1.ZarfBuildData{Architecture: "amd64,arm64"},
 			},
 			expected: []v1alpha1.VersionRequirement{
 				{Version: "v0.76.0", Reason: "This package uses multi-arch images which are only supported on v0.76.0+"},
@@ -285,7 +285,7 @@ func TestCollectVersionRequirements(t *testing.T) {
 		{
 			name: "image archives and multi-arch trigger both",
 			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Architecture: "amd64,arm64"},
+				Build: v1alpha1.ZarfBuildData{Architecture: "amd64,arm64"},
 				Components: []v1alpha1.ZarfComponent{
 					{
 						Name:          "c1",
