@@ -135,6 +135,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
+
+			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
+			}
+
 			if !skipVersionCheck {
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
