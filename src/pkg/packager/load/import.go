@@ -241,7 +241,7 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 
 func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
 	satisfiesArch := c.Only.Cluster.Architecture == "" ||
-		slices.Contains(config.GetArches(arch), c.Only.Cluster.Architecture)
+		slices.Contains(config.ParseArchitecturesOrDefault(arch), c.Only.Cluster.Architecture)
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }

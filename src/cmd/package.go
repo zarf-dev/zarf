@@ -224,7 +224,7 @@ func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 		IsInteractive:           !o.confirm,
 		SkipVersionCheck:        o.skipVersionCheck,
 		WithBuildMachineInfo:    o.withBuildMachineInfo,
-		Architectures:           config.ParseArchitectures(config.CLIArch),
+		Architectures:           cliArchitectures(),
 	}
 	pkgPath, err := packager.Create(ctx, basePath, o.output, opt)
 	// NOTE(mkcp): LintErrors are rendered with a table
@@ -358,7 +358,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -616,7 +616,7 @@ func (o *packageMirrorResourcesOptions) run(cmd *cobra.Command, args []string) (
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -804,7 +804,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
@@ -919,7 +919,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.ComponentLayers},
@@ -1030,7 +1030,7 @@ func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err 
 	}
 
 	loadOpts := packager.LoadOptions{
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		LayerTypes:           []zoci.LayerType{zoci.SbomLayers},
@@ -1127,7 +1127,7 @@ func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) err
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1216,7 +1216,7 @@ func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []stri
 
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1301,7 +1301,7 @@ func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string)
 	cluster, _ := cluster.New(ctx) //nolint: errcheck // package source may or may not be a cluster
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		Filter:               filters.Empty(),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1507,7 +1507,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	c, _ := cluster.New(ctx) //nolint:errcheck
 	loadOpts := packager.LoadOptions{
 		VerificationStrategy: getVerificationStrategy(o.verify),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		Filter:               filter,
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		OCIConcurrency:       o.ociConcurrency,
@@ -1654,7 +1654,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 	if helpers.IsOCIURL(packageSource) && o.signingKeyPath == "" {
 		ociOpts := packager.PublishFromOCIOptions{
 			OCIConcurrency: o.ociConcurrency,
-			Architectures:  config.ParseArchitectures(config.CLIArch),
+			Architectures:  cliArchitectures(),
 			RemoteOptions:  defaultRemoteOptions(),
 			Retries:        o.retries,
 		}
@@ -1695,7 +1695,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		packagePath, err := packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
 			VerificationStrategy: verificationStrategy,
 			VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
-			Architectures:        config.ParseArchitectures(config.CLIArch),
+			Architectures:        cliArchitectures(),
 			OCIConcurrency:       o.ociConcurrency,
 			RemoteOptions:        defaultRemoteOptions(),
 			CachePath:            cachePath,
@@ -1710,7 +1710,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: verificationStrategy,
 		Filter:               filters.Empty(),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1804,7 +1804,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 		SHASum:               o.shasum,
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -1917,7 +1917,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// Load the package - do not verify
 	loadOpts := packager.LoadOptions{
 		Filter:               filters.Empty(),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
@@ -2018,7 +2018,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		OCIConcurrency:       o.ociConcurrency,
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,

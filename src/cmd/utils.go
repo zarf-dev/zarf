@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/config"
 )
 
 // ReplaceCommandName recursively replaces all references of one string with another in the Example string
@@ -19,4 +20,9 @@ func ReplaceCommandName(from, to string, c *cobra.Command) *cobra.Command {
 		ReplaceCommandName(from, to, sub)
 	}
 	return c
+}
+
+// cliArchitectures returns the parsed architecture list from the global --architecture / config.CLIArch flag.
+func cliArchitectures() []string {
+	return config.ParseArchitectures(config.CLIArch)
 }

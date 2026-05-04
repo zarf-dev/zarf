@@ -553,7 +553,7 @@ func (o *downloadInitOptions) run(cmd *cobra.Command, _ []string) error {
 	}
 
 	pullOptions := packager.PullOptions{
-		Architectures: config.ParseArchitectures(config.CLIArch),
+		Architectures: cliArchitectures(),
 		CachePath:     cachePath,
 	}
 

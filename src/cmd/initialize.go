@@ -222,7 +222,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
-		Architectures:        config.ParseArchitectures(config.CLIArch),
+		Architectures:        cliArchitectures(),
 		CachePath:            cachePath,
 	}
 	pkgLayout, err := packager.LoadPackage(ctx, packageSource, loadOpt)
@@ -335,7 +335,7 @@ func (o *initOptions) downloadInitPackage(ctx context.Context, cacheDirectory st
 		}
 
 		pullOptions := packager.PullOptions{
-			Architectures:  config.ParseArchitectures(config.CLIArch),
+			Architectures:  cliArchitectures(),
 			OCIConcurrency: o.ociConcurrency,
 			CachePath:      cachePath,
 		}

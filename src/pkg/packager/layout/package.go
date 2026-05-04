@@ -653,7 +653,7 @@ func (p *PackageLayout) FileName() (string, error) {
 // platforms. OS is always "linux" for Zarf Packages and Variant is intentionally not surfaced —
 // multi-arch image pulls keep every variant matching the architecture.
 func platformsFromArchString(s string) []ocispec.Platform {
-	arches := config.GetArches(s)
+	arches := config.ParseArchitecturesOrDefault(s)
 	platforms := make([]ocispec.Platform, len(arches))
 	for i, a := range arches {
 		platforms[i] = ocispec.Platform{

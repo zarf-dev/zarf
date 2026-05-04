@@ -88,7 +88,7 @@ func ParseArchitectures(s string) []string {
 		return nil
 	}
 	parts := strings.Split(s, ",")
-	out := make([]string, 0, len(parts))
+	out := []string{}
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		if p == "" {
@@ -99,12 +99,12 @@ func ParseArchitectures(s string) []string {
 	return out
 }
 
-// GetArches returns the parsed architecture list, falling back to runtime.GOARCH when the input
-// parses to an empty slice.
-func GetArches(s string) []string {
+// ParseArchitecturesOrDefault parses s and falls back to a single-element slice containing
+// GetArch("") (CLIArch or runtime.GOARCH) when s parses to an empty slice.
+func ParseArchitecturesOrDefault(s string) []string {
 	archs := ParseArchitectures(s)
 	if len(archs) == 0 {
-		return []string{runtime.GOARCH}
+		return []string{GetArch("")}
 	}
 	return archs
 }

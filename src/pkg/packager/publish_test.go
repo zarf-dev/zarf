@@ -43,7 +43,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
 		Source:            packageRef,
-		Architectures:     config.GetArches(architecture),
+		Architectures:     config.ParseArchitecturesOrDefault(architecture),
 		Filter:            filters.Empty(),
 		RemoteOptions:     defaultTestRemoteOptions(),
 		VerifyBlobOptions: &verifyOpts,
@@ -449,7 +449,7 @@ func TestPublishCopySHA(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architectures:  config.GetArches(layoutExpected.Pkg.Build.Architecture),
+				Architectures:  config.ParseArchitecturesOrDefault(layoutExpected.Pkg.Build.Architecture),
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 
@@ -564,7 +564,7 @@ func TestPublishCopyTag(t *testing.T) {
 
 			opts := PublishFromOCIOptions{
 				RemoteOptions:  tc.opts.RemoteOptions,
-				Architectures:  config.GetArches(layoutExpected.Pkg.Build.Architecture),
+				Architectures:  config.ParseArchitecturesOrDefault(layoutExpected.Pkg.Build.Architecture),
 				OCIConcurrency: tc.opts.OCIConcurrency,
 			}
 

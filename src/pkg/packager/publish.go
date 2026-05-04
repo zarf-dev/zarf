@@ -29,7 +29,7 @@ const defaultPublishRetries = 1
 type PublishFromOCIOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// Architectures of the package being publish; multiple entires pull multi-arch packages
+	// Architecture of the package to publish; multiple entires represent multi-arch packages
 	Architectures []string
 	// Deprecated: Use Architectures instead.
 	Architecture string

@@ -30,14 +30,20 @@ func TestParseArchitectures(t *testing.T) {
 	}
 }
 
-func TestGetArches(t *testing.T) {
-	t.Parallel()
-	t.Run("empty falls back to runtime.GOARCH", func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, []string{runtime.GOARCH}, GetArches(""))
-	})
+func TestParseArchitecturesOrDefault(t *testing.T) {
 	t.Run("non-empty parses normally", func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, []string{"amd64", "arm64"}, GetArches("amd64,arm64"))
+		require.Equal(t, []string{"amd64", "arm64"}, ParseArchitecturesOrDefault("amd64,arm64"))
+	})
+	t.Run("empty falls back to runtime.GOARCH when CLIArch is unset", func(t *testing.T) {
+		original := CLIArch
+		CLIArch = ""
+		t.Cleanup(func() { CLIArch = original })
+		require.Equal(t, []string{runtime.GOARCH}, ParseArchitecturesOrDefault(""))
+	})
+	t.Run("empty falls back to CLIArch when set", func(t *testing.T) {
+		original := CLIArch
+		CLIArch = "ppc64le"
+		t.Cleanup(func() { CLIArch = original })
+		require.Equal(t, []string{"ppc64le"}, ParseArchitecturesOrDefault(""))
 	})
 }

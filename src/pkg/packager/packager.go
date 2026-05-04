@@ -17,18 +17,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-// resolveArchitectures returns the canonical, sorted architecture list for a request. It prefers
-// the new Architectures slice, falls back to the deprecated Architecture string, then to
-// config.GetArch (which honors --architecture / runtime.GOARCH). Sorting matches the canonical
-// form written into pkg.Build.Architecture at create time, so OCI lookups succeed regardless of
-// the order in which the caller listed the arches.
+// resolveArchitectures returns the canonical, sorted architecture list for a request, preferring
+// the Architectures slice over the deprecated Architecture string and falling back to the host
+// default. Sorting matches the form written into pkg.Build.Architecture at create time so OCI
+// lookups succeed regardless of caller-provided order.
 func resolveArchitectures(architectures []string, architecture string) []string {
 	archs := slices.Clone(architectures)
-	if len(archs) == 0 && architecture != "" {
-		archs = config.GetArches(architecture)
-	}
 	if len(archs) == 0 {
-		archs = config.GetArches(config.GetArch(""))
+		archs = config.ParseArchitecturesOrDefault(architecture)
 	}
 	slices.Sort(archs)
 	return archs

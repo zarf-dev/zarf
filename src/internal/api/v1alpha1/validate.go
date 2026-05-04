@@ -151,7 +151,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 // validateArchitectures rejects metadata.architecture strings that list the same architecture
 // more than once. The list is small (a handful of arches at most), so an O(N²) scan is fine.
 func validateArchitectures(s string) error {
-	archs := config.GetArches(s)
+	archs := config.ParseArchitectures(s)
 	var err error
 	for i, a := range archs {
 		if slices.Contains(archs[:i], a) {
