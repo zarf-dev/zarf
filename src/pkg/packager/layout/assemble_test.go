@@ -218,6 +218,32 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 	}
 }
 
+func TestRecordPackageMetadataSortsArchitectures(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{name: "single", in: "amd64", want: "amd64"},
+		{name: "already sorted", in: "amd64,arm64", want: "amd64,arm64"},
+		{name: "reverses to canonical order", in: "arm64,amd64", want: "amd64,arm64"},
+		{name: "trims and sorts", in: " arm64 , amd64 ,ppc64le", want: "amd64,arm64,ppc64le"},
+		{name: "empty stays empty", in: "", want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1alpha1.ZarfPackage{
+				Kind:     v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{Architecture: tc.in},
+			}
+			got := recordPackageMetadata(pkg, "", nil, false)
+			require.Equal(t, tc.want, got.Build.Architecture)
+		})
+	}
+}
+
 func TestCollectVersionRequirements(t *testing.T) {
 	t.Parallel()
 

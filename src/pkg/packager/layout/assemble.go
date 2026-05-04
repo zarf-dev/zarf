@@ -799,7 +799,11 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 		pkg.Metadata.Version = config.CLIVersion
 	}
 
-	pkg.Build.Architecture = pkg.Metadata.Architecture
+	// Sort the architecture list so two packages with the same architectures produce the same
+	// Build.Architecture, OCI tag, and filename regardless of how the user ordered the input.
+	archs := v1alpha1.ParseArchitectures(pkg.Metadata.Architecture)
+	slices.Sort(archs)
+	pkg.Build.Architecture = strings.Join(archs, ",")
 
 	// Record the Zarf Version the CLI was built with.
 	pkg.Build.Version = config.CLIVersion
