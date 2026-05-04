@@ -667,13 +667,7 @@ func platformsFromArchString(s string) []ocispec.Platform {
 	return platforms
 }
 
-// archFilenameSuffix renders an architecture list into a filename-safe suffix: entries are sorted
-// lexicographically and joined with "+". Returns empty string for empty input.
-// FIXME: a package must have an architecture
 func archFilenameSuffix(archs []string) string {
-	if len(archs) == 0 {
-		return ""
-	}
 	parts := slices.Clone(archs)
 	slices.Sort(parts)
 	return strings.Join(parts, "+")

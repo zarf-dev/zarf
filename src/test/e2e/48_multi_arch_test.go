@@ -31,7 +31,6 @@ func TestMultiArchPackage(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// FIXME: make sure this tests variants
 	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-arch-amd64+arm64-0.0.1.tar.zst")
 	require.FileExists(t, createdPkgPath, "package filename must include the multi-arch suffix")
 
