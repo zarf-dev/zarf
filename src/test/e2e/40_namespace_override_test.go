@@ -5,6 +5,7 @@
 package test
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -65,9 +66,35 @@ func TestSingleNamespaceOverride(t *testing.T) {
 		require.Equal(t, "test2", configMap.Namespace)
 	}
 
+	// The override package's state secret must list only charts deployed under the override namespace
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "-n", "zarf", "zarf-package-test-package-override-test2", "-o", "jsonpath={.data.data}")
+	require.NoError(t, err, stdOut, stdErr)
+	rawSecret, err := base64.StdEncoding.DecodeString(stdOut)
+	require.NoError(t, err)
+	overridePkg := struct {
+		DeployedComponents []struct {
+			InstalledCharts []struct {
+				Namespace string `json:"namespace"`
+			} `json:"installedCharts"`
+		} `json:"deployedComponents"`
+	}{}
+	require.NoError(t, json.Unmarshal(rawSecret, &overridePkg))
+	for _, c := range overridePkg.DeployedComponents {
+		for _, chart := range c.InstalledCharts {
+			require.Equal(t, "test2", chart.Namespace, "override package secret must not reference baseline namespace charts")
+		}
+	}
+
 	// remove the baseline by package name
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
+
+	// removing the baseline must not tear down the override's helm release
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "configmaps", "-l", "zarf.dev/package=test-package,zarf.dev/namespace-override=test2", "--all-namespaces", "-o", "json")
+	require.NoError(t, err, stdOut, stdErr)
+	configMaps = &corev1.ConfigMapList{}
+	require.NoError(t, json.Unmarshal([]byte(stdOut), configMaps))
+	require.Len(t, configMaps.Items, 3, "override deployment should survive baseline removal")
 
 	// remove the namespace-override package by package name
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-package", "--namespace", "test2", "--confirm")
