@@ -244,6 +244,11 @@ type AssembleSkeletonOptions struct {
 func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
+	// Creating skeletons packages with the values feature is not yet supported
+	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" {
+		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
+	}
+
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err
