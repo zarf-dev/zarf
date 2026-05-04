@@ -228,6 +228,62 @@ func TestUnpackMultiArch(t *testing.T) {
 	require.Len(t, innerIdx.Manifests, len(platforms), "every platform manifest must be preserved")
 }
 
+// TestUnpackNestedIndex verifies that a tar containing an outer index whose only child is itself
+// an index unpacks correctly: the multi-arch unpack path must recurse into the inner index to
+// reach the per-platform manifests rather than dropping the nested entry on the filter step.
+func TestUnpackNestedIndex(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	indexDigest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "test", platforms)
+	refInfo, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/nested:test@%s", upstream, indexDigest))
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
+		Platforms:      platforms,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	dstDir := t.TempDir()
+	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path:   tarFile,
+		Images: []string{refInfo.Reference},
+	}, dstDir, platforms)
+	require.NoError(t, err)
+	require.Len(t, unpacked, 1)
+
+	idx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var topDesc ocispec.Descriptor
+	for _, m := range idx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == refInfo.Reference {
+			topDesc = m
+			break
+		}
+	}
+	require.NotEmpty(t, topDesc.Digest, "ref-tagged descriptor missing from index.json")
+	require.Equal(t, ocispec.MediaTypeImageIndex, topDesc.MediaType, "unpacked nested-index image must remain an index")
+
+	innerIdx := requireIndexBlobs(t, dstDir, topDesc.Digest.String())
+	require.Len(t, innerIdx.Manifests, len(platforms), "nested index must be flattened to its leaf platform manifests")
+	got := []string{}
+	for _, m := range innerIdx.Manifests {
+		require.NotNil(t, m.Platform)
+		got = append(got, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, got)
+}
+
 // TestUnpackMultiArchFiltersToRequestedPlatforms verifies that when an unpacked tar contains an
 // index with more platforms than the caller requested, only the requested platforms land in the
 // destination layout.

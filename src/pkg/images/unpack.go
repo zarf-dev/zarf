@@ -173,16 +173,14 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	return pulledImages, nil
 }
 
-// unpackFilteredIndex copies each child manifest of indexBytes whose platform is in requested
-// from src to dst, then synthesizes and pushes a new index referencing only those manifests.
-// Returns the descriptor of the synthesized index (untagged).
-// FIXME: I don't think this handles recursive indexes
+// unpackFilteredIndex walks indexBytes (recursing through any nested indexes), copies every leaf
+// manifest whose platform matches requested from src to dst, then synthesizes and pushes a new
+// flat index referencing those leaves. Returns the descriptor of the synthesized index (untagged).
 func unpackFilteredIndex(ctx context.Context, src, dst *oci.Store, indexBytes []byte, requested []ocispec.Platform, ref string) (ocispec.Descriptor, error) {
-	var idx ocispec.Index
-	if err := json.Unmarshal(indexBytes, &idx); err != nil {
-		return ocispec.Descriptor{}, fmt.Errorf("unable to unmarshal index: %w", err)
+	kept, err := collectLeafManifests(ctx, src, indexBytes, requested)
+	if err != nil {
+		return ocispec.Descriptor{}, err
 	}
-	kept := filterIndexManifests(idx.Manifests, requested)
 	if len(kept) == 0 {
 		return ocispec.Descriptor{}, fmt.Errorf("no manifests in archive index for %s match requested platforms", ref)
 	}
@@ -209,6 +207,33 @@ func unpackFilteredIndex(ctx context.Context, src, dst *oci.Store, indexBytes []
 		return ocispec.Descriptor{}, fmt.Errorf("failed to push synthesized index: %w", err)
 	}
 	return desc, nil
+}
+
+// collectLeafManifests walks indexBytes, recursing into any child that is itself an index, and
+// returns the platform-matching leaf manifest descriptors. Nested-index descriptors are fetched
+// from src to read their children.
+func collectLeafManifests(ctx context.Context, src *oci.Store, indexBytes []byte, requested []ocispec.Platform) ([]ocispec.Descriptor, error) {
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal index: %w", err)
+	}
+	var leaves []ocispec.Descriptor
+	for _, m := range idx.Manifests {
+		if IsIndex(m.MediaType) {
+			_, childBytes, err := oras.FetchBytes(ctx, src, m.Digest.String(), oras.DefaultFetchBytesOptions)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch nested index %s: %w", m.Digest, err)
+			}
+			childLeaves, err := collectLeafManifests(ctx, src, childBytes, requested)
+			if err != nil {
+				return nil, err
+			}
+			leaves = append(leaves, childLeaves...)
+			continue
+		}
+		leaves = append(leaves, filterIndexManifests([]ocispec.Descriptor{m}, requested)...)
+	}
+	return leaves, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.
