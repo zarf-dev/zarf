@@ -9,9 +9,8 @@ import (
 	"maps"
 	"regexp"
 	"slices"
+	"strings"
 	"time"
-
-	"github.com/zarf-dev/zarf/src/config"
 )
 
 // VariableType represents a type of a Zarf package variable
@@ -81,20 +80,6 @@ type ZarfPackage struct {
 // IsInitConfig returns whether a Zarf package is an init config.
 func (pkg ZarfPackage) IsInitConfig() bool {
 	return pkg.Kind == ZarfInitConfig
-}
-
-// Architectures returns the parsed list of target architectures for the package.
-// Build.Architecture takes precedence when set (post-create), falling back to Metadata.Architecture.
-func (pkg ZarfPackage) Architectures() []string {
-	if pkg.Build.Architecture != "" {
-		return config.ParseArchitectures(pkg.Build.Architecture)
-	}
-	return config.ParseArchitectures(pkg.Metadata.Architecture)
-}
-
-// IsMultiArch returns true when the package targets more than one architecture.
-func (pkg ZarfPackage) IsMultiArch() bool {
-	return len(pkg.Architectures()) > 1
 }
 
 // HasImages returns true if one of the components contains an image.
@@ -289,6 +274,11 @@ type ZarfBuildData struct {
 	// These are files added after checksum generation (e.g., signature files).
 	// This list is authenticated through the signed zarf.yaml.
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+}
+
+// Architectures returns the package architectures as a list
+func (b ZarfBuildData) Architectures() []string {
+	return strings.Split(b.Architecture, ",")
 }
 
 // ZarfValues imports package-level values files and validation.

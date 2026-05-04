@@ -220,26 +220,3 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 		})
 	}
 }
-
-func TestZarfPackageIsMultiArch(t *testing.T) {
-	t.Parallel()
-	tests := []struct {
-		name string
-		pkg  ZarfPackage
-		want bool
-	}{
-		{name: "single arch metadata", pkg: ZarfPackage{Metadata: ZarfMetadata{Architecture: "amd64"}}, want: false},
-		{name: "multi arch metadata", pkg: ZarfPackage{Metadata: ZarfMetadata{Architecture: "amd64,arm64"}}, want: true},
-		{name: "build arch overrides metadata", pkg: ZarfPackage{
-			Metadata: ZarfMetadata{Architecture: "amd64"},
-			Build:    ZarfBuildData{Architecture: "amd64,arm64"},
-		}, want: true},
-		{name: "empty", pkg: ZarfPackage{}, want: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tt.want, tt.pkg.IsMultiArch())
-		})
-	}
-}

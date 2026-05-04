@@ -778,7 +778,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1a
 	}
 
 	// At least one of the package's architectures must match a cluster node arch.
-	pkgArches := pkg.Architectures()
+	pkgArches := pkg.Build.Architectures()
 	for _, a := range pkgArches {
 		if slices.Contains(architectures, a) {
 			return nil

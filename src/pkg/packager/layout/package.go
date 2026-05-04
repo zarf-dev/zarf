@@ -620,10 +620,7 @@ func (p *PackageLayout) FileName() (string, error) {
 	if p.Pkg.Build.Architecture == "" {
 		return "", errors.New("package must include a build architecture")
 	}
-	arch := archFilenameSuffix(p.Pkg.Architectures())
-	if arch == "" {
-		arch = p.Pkg.Build.Architecture
-	}
+	arch := archFilenameSuffix(p.Pkg.Build.Architectures())
 
 	var name string
 	switch p.Pkg.Kind {
