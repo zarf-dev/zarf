@@ -227,3 +227,68 @@ func TestUnpackMultiArch(t *testing.T) {
 	innerIdx := requireIndexBlobs(t, dstDir, topDesc.Digest.String())
 	require.Len(t, innerIdx.Manifests, len(platforms), "every platform manifest must be preserved")
 }
+
+// TestUnpackMultiArchFiltersToRequestedPlatforms verifies that when an unpacked tar contains an
+// index with more platforms than the caller requested, only the requested platforms land in the
+// destination layout.
+func TestUnpackMultiArchFiltersToRequestedPlatforms(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	upstreamPlatforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+		{OS: "linux", Architecture: "ppc64le"},
+		{OS: "linux", Architecture: "s390x"},
+	}
+	indexDigest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/extra-platforms", "test", upstreamPlatforms)
+	refInfo, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/extra-platforms:test@%s", upstream, indexDigest))
+	require.NoError(t, err)
+
+	// Pull all four upstream platforms into a local layout, then tar it. The digest pin keeps the
+	// index intact (no filtering at pull time), so the tar carries every upstream platform.
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
+		Platforms:      upstreamPlatforms,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	// Unpack asking for only amd64 + arm64.
+	requested := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	dstDir := t.TempDir()
+	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path:   tarFile,
+		Images: []string{refInfo.Reference},
+	}, dstDir, requested)
+	require.NoError(t, err)
+	require.Len(t, unpacked, 1)
+
+	// Walk the destination index.json to find our tagged entry, then read its blob.
+	idx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var topDesc ocispec.Descriptor
+	for _, m := range idx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == refInfo.Reference {
+			topDesc = m
+			break
+		}
+	}
+	require.NotEmpty(t, topDesc.Digest, "tagged descriptor missing from index.json")
+	require.Equal(t, ocispec.MediaTypeImageIndex, topDesc.MediaType, "unpacked entry must still be an index")
+
+	innerIdx := requireIndexBlobs(t, dstDir, topDesc.Digest.String())
+	require.Len(t, innerIdx.Manifests, 2, "only the requested platforms should land in the local index")
+	got := []string{}
+	for _, m := range innerIdx.Manifests {
+		require.NotNil(t, m.Platform)
+		got = append(got, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, got)
+}

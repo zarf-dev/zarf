@@ -5,13 +5,16 @@
 package images
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -121,25 +124,34 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		requestedImages[manifestImg.Reference] = true
 
-		foundDesc, _, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		foundDesc, foundBytes, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
 
-		var platform *ocispec.Platform
-		// FIXME: test to make sure we're correctly handling multiple platforms
-		if IsIndex(foundDesc.MediaType) && len(platforms) == 1 {
-			p := platforms[0]
-			platform = &p
+		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
+
+		var desc ocispec.Descriptor
+		switch {
+		case IsIndex(foundDesc.MediaType) && len(platforms) > 1:
+			// Multi-platform request on an index: copy only the matching child manifests, then
+			// tag a synthesized index that references just those.
+			desc, err = unpackFilteredIndex(ctx, srcStore, dstStore, foundBytes, platforms, manifestImg.Reference)
+			if err != nil {
+				return nil, fmt.Errorf("failed to unpack filtered index for %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
+			}
+		default:
+			copyOpts := oras.DefaultCopyOptions
+			if IsIndex(foundDesc.MediaType) && len(platforms) == 1 {
+				p := platforms[0]
+				copyOpts.WithTargetPlatform(&p)
+			}
+			desc, err = oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
+			}
 		}
 
-		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
-		copyOpts := oras.DefaultCopyOptions
-		copyOpts.WithTargetPlatform(platform)
-		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
-		if err != nil {
-			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
-		}
 		// Tag the image with annotations so that Syft and ORAS can see them
 		desc = addNameAnnotationsToDesc(desc, manifestImg.Reference)
 		err = dstStore.Tag(ctx, desc, manifestImg.Reference)
@@ -159,6 +171,44 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	return pulledImages, nil
+}
+
+// unpackFilteredIndex copies each child manifest of indexBytes whose platform is in requested
+// from src to dst, then synthesizes and pushes a new index referencing only those manifests.
+// Returns the descriptor of the synthesized index (untagged).
+// FIXME: I don't think this handles recursive indexes
+func unpackFilteredIndex(ctx context.Context, src, dst *oci.Store, indexBytes []byte, requested []ocispec.Platform, ref string) (ocispec.Descriptor, error) {
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("unable to unmarshal index: %w", err)
+	}
+	kept := filterIndexManifests(idx.Manifests, requested)
+	if len(kept) == 0 {
+		return ocispec.Descriptor{}, fmt.Errorf("no manifests in archive index for %s match requested platforms", ref)
+	}
+	for _, m := range kept {
+		if _, err := oras.Copy(ctx, src, m.Digest.String(), dst, "", oras.DefaultCopyOptions); err != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("failed to copy manifest %s: %w", m.Digest, err)
+		}
+	}
+	newIdx := ocispec.Index{
+		MediaType: ocispec.MediaTypeImageIndex,
+		Manifests: kept,
+	}
+	newIdx.SchemaVersion = 2
+	newIdxBytes, err := json.Marshal(newIdx)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to marshal synthesized index: %w", err)
+	}
+	desc := ocispec.Descriptor{
+		MediaType: ocispec.MediaTypeImageIndex,
+		Digest:    digest.FromBytes(newIdxBytes),
+		Size:      int64(len(newIdxBytes)),
+	}
+	if err := dst.Push(ctx, desc, bytes.NewReader(newIdxBytes)); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to push synthesized index: %w", err)
+	}
+	return desc, nil
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.

@@ -606,6 +606,7 @@ func filterIndexManifests(manifests []ocispec.Descriptor, requested []ocispec.Pl
 		for _, req := range requested {
 			if req.Architecture == m.Platform.Architecture &&
 				req.OS == m.Platform.OS &&
+				// FIXME: this probably isn't right. I should see which image docker pulls when variants aren't specified
 				req.Variant == m.Platform.Variant {
 				kept = append(kept, m)
 				break
