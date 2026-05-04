@@ -1190,11 +1190,11 @@
           "type": "object"
         },
         "architecture": {
-          "description": "The target cluster architecture for this package.",
+          "description": "The target cluster architecture(s) for this package. Comma-separated for multi-arch packages (e.g. \"amd64,arm64\").",
           "examples": [
             "arm64",
             "amd64",
-            "multi"
+            "amd64,arm64"
           ],
           "type": "string"
         },
