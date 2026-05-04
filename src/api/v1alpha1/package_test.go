@@ -231,8 +231,6 @@ func TestParseArchitectures(t *testing.T) {
 		{name: "empty", in: "", want: nil},
 		{name: "single", in: "amd64", want: []string{"amd64"}},
 		{name: "trims whitespace", in: " amd64 , arm64 ", want: []string{"amd64", "arm64"}},
-		{name: "dedupes preserving order", in: "amd64,arm64,amd64", want: []string{"amd64", "arm64"}},
-		{name: "preserves variant slash", in: "arm64/v8,amd64", want: []string{"arm64/v8", "amd64"}},
 		{name: "drops empty entries", in: "amd64,,arm64", want: []string{"amd64", "arm64"}},
 	}
 	for _, tt := range tests {

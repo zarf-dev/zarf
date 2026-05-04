@@ -55,25 +55,19 @@ const (
 // SkeletonArch is a special architecture used for skeleton packages
 const SkeletonArch = "skeleton"
 
-// ParseArchitectures splits a comma-separated architecture string into a deduped, trimmed slice
+// ParseArchitectures splits a comma-separated architecture string into a trimmed slice
 // preserving input order. An empty string returns nil.
-// FIXME: instead of complicated logic to make sure everything appears once, just add validation that there are no repeats
 func ParseArchitectures(s string) []string {
 	if s == "" {
 		return nil
 	}
 	parts := strings.Split(s, ",")
 	out := make([]string, 0, len(parts))
-	seen := map[string]struct{}{}
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		if p == "" {
 			continue
 		}
-		if _, ok := seen[p]; ok {
-			continue
-		}
-		seen[p] = struct{}{}
 		out = append(out, p)
 	}
 	return out

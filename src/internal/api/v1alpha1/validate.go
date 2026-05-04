@@ -7,6 +7,7 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -48,6 +49,7 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrDuplicateArchitecture   = "metadata.architecture lists %q more than once"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -58,6 +60,9 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 	}
 	if pkg.Kind == v1alpha1.ZarfInitConfig && pkg.Metadata.YOLO {
 		err = errors.Join(err, errors.New(PkgValidateErrInitNoYOLO))
+	}
+	if archErr := validateArchitectures(pkg.Metadata.Architecture); archErr != nil {
+		err = errors.Join(err, archErr)
 	}
 	for _, constant := range pkg.Constants {
 		if varErr := constant.Validate(); varErr != nil {
@@ -139,6 +144,19 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 
+	return err
+}
+
+// validateArchitectures rejects metadata.architecture strings that list the same architecture
+// more than once. The list is small (a handful of arches at most), so an O(N²) scan is fine.
+func validateArchitectures(s string) error {
+	archs := v1alpha1.ParseArchitectures(s)
+	var err error
+	for i, a := range archs {
+		if slices.Contains(archs[:i], a) {
+			err = errors.Join(err, fmt.Errorf(PkgValidateErrDuplicateArchitecture, a))
+		}
+	}
 	return err
 }
 

@@ -136,6 +136,20 @@ func TestZarfPackageValidate(t *testing.T) {
 			expectedErrs: nil,
 		},
 		{
+			name: "duplicate architectures",
+			pkg: v1alpha1.ZarfPackage{
+				Kind: v1alpha1.ZarfPackageConfig,
+				Metadata: v1alpha1.ZarfMetadata{
+					Name:         "dup-arch",
+					Architecture: "amd64,arm64,amd64",
+				},
+				Components: []v1alpha1.ZarfComponent{{Name: "component1"}},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrDuplicateArchitecture, "amd64"),
+			},
+		},
+		{
 			name: "invalid yolo",
 			pkg: v1alpha1.ZarfPackage{
 				Kind: v1alpha1.ZarfInitConfig,
