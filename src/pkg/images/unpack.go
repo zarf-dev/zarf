@@ -212,7 +212,7 @@ func unpackFilteredIndex(ctx context.Context, src, dst *oci.Store, indexBytes []
 // collectLeafManifests walks indexBytes, recursing into any child that is itself an index, and
 // returns the platform-matching leaf manifest descriptors. Nested-index descriptors are fetched
 // from src to read their children.
-func collectLeafManifests(ctx context.Context, src *oci.Store, indexBytes []byte, requested []ocispec.Platform) ([]ocispec.Descriptor, error) {
+func collectLeafManifests(ctx context.Context, src oras.ReadOnlyTarget, indexBytes []byte, requested []ocispec.Platform) ([]ocispec.Descriptor, error) {
 	var idx ocispec.Index
 	if err := json.Unmarshal(indexBytes, &idx); err != nil {
 		return nil, fmt.Errorf("unable to unmarshal index: %w", err)

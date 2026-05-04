@@ -385,6 +385,57 @@ func TestPullNestedIndex(t *testing.T) {
 	require.Len(t, innerIdx.Manifests, len(platforms))
 }
 
+// TestPullNestedIndexByTag pulls a nested-index image by tag (no digest pin) so the multi-arch
+// tag-resolved code path runs. That path filters the top-level index for matching platforms; if
+// it doesn't recurse, every entry in a nested index has nil Platform and the pull errors with
+// "no manifests in index ... match requested platforms".
+func TestPullNestedIndexByTag(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested-tag", "test", platforms)
+	ref, err := transform.ParseImageRef(fmt.Sprintf("%s/fixtures/nested-tag:test", upstream))
+	require.NoError(t, err)
+	require.Empty(t, ref.Digest, "test relies on the reference carrying no digest")
+
+	destDir := t.TempDir()
+	pulled, err := Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
+		Platforms:      platforms,
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, pulled, 1)
+
+	topBytes, err := os.ReadFile(filepath.Join(destDir, "index.json"))
+	require.NoError(t, err)
+	var topIdx ocispec.Index
+	require.NoError(t, json.Unmarshal(topBytes, &topIdx))
+
+	var found *ocispec.Descriptor
+	for i, m := range topIdx.Manifests {
+		if m.Annotations[ocispec.AnnotationRefName] == ref.Reference {
+			found = &topIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "synthesized index must be tagged under the requested ref")
+	require.Equal(t, ocispec.MediaTypeImageIndex, found.MediaType)
+
+	idx := requireIndexBlobs(t, destDir, found.Digest.String())
+	require.Len(t, idx.Manifests, len(platforms), "nested index must be flattened to leaf platform manifests")
+	got := []string{}
+	for _, m := range idx.Manifests {
+		require.NotNil(t, m.Platform)
+		got = append(got, m.Platform.Architecture)
+	}
+	require.ElementsMatch(t, []string{"amd64", "arm64"}, got)
+}
+
 func TestInspectIndexRecursive(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

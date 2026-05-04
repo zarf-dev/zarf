@@ -243,11 +243,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				// Tag-resolved indexes get filtered to the requested arches; digest-pinned
 				// indexes must round-trip the original digest, so preserve as-is.
 				if image.original.Digest == "" {
-					var idx ocispec.Index
-					if err := json.Unmarshal(b, &idx); err != nil {
-						return fmt.Errorf("unable to unmarshal index for %s: %w", image.overridden.Reference, err)
+					kept, err := collectLeafManifests(ectx, repo, b, opts.Platforms)
+					if err != nil {
+						return fmt.Errorf("unable to walk index for %s: %w", image.overridden.Reference, err)
 					}
-					kept := filterIndexManifests(idx.Manifests, opts.Platforms)
 					if len(kept) == 0 {
 						return fmt.Errorf("no manifests in index %s match requested platforms %s", image.overridden.Reference, formatPlatforms(opts.Platforms))
 					}
