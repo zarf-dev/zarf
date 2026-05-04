@@ -29,7 +29,7 @@ func TestZarfInit(t *testing.T) {
 	var (
 		mismatchedArch        = e2e.GetMismatchedArch()
 		mismatchedInitPackage = fmt.Sprintf("zarf-init-%s-%s.tar.zst", mismatchedArch, initPackageVersion)
-		expectedErrorMessage  = "unable to run component before action: command \"Check that the host architecture matches the package architecture\""
+		expectedErrorMessage  = "package is not deployable to this system"
 	)
 	t.Cleanup(func() {
 		e2e.CleanFiles(t, mismatchedInitPackage)
@@ -42,7 +42,7 @@ func TestZarfInit(t *testing.T) {
 
 		// Check that `zarf init` returns an error because of the mismatched architectures.
 		// We need to use the --architecture flag here to force zarf to find the package.
-		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--components=k3s", "--confirm")
+		_, stdErr, err = e2e.Zarf(t, "init", "--architecture", mismatchedArch, "--confirm")
 		require.Error(t, err, stdErr)
 		require.Contains(t, stdErr, expectedErrorMessage)
 	}

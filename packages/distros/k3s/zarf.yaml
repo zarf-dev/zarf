@@ -49,9 +49,6 @@ components:
         defaults:
           maxRetries: 5
         before:
-          - cmd: if [ "$(uname -m)" != "x86_64" ]; then echo "this package architecture is amd64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
-            description: Check that the host architecture matches the package architecture
-            maxRetries: 0
           - cmd: ./zarf internal is-valid-hostname
             maxRetries: 0
             description: Check if the current system has a, RFC1123 compliant hostname
@@ -115,9 +112,6 @@ components:
         defaults:
           maxRetries: 5
         before:
-          - cmd: if [ "$(uname -m)" != "aarch64" ] && [ "$(uname -m)" != "arm64" ]; then echo "this package architecture is arm64, but the target system has a different architecture. These architectures must be the same" && exit 1; fi
-            description: Check that the host architecture matches the package architecture
-            maxRetries: 0
           - cmd: ./zarf internal is-valid-hostname
             maxRetries: 0
             description: Check if the current system has a, RFC1123 compliant hostname
