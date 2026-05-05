@@ -23,8 +23,7 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 )
 
-// pushDockerManifestList pushes a Docker-mediaType manifest list referencing the given children
-// so tests can exercise the docker code path through isIndex alongside OCI image indexes.
+// pushDockerManifestList pushes a Docker-mediaType manifest list to exercise isIndex's docker path.
 func pushDockerManifestList(ctx context.Context, t *testing.T, repo *remote.Repository, children []ocispec.Descriptor) ocispec.Descriptor {
 	t.Helper()
 	list := struct {

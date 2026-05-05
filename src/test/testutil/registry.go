@@ -19,8 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// SetupInMemoryRegistryDynamic starts an in-memory registry on an automatically-allocated port
-// and returns the address. Use this when tests do not need a well-known port.
+// SetupInMemoryRegistryDynamic starts an in-memory registry on an auto-allocated port.
 func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
 	t.Helper()
 	port, err := helpers.GetAvailablePort()
