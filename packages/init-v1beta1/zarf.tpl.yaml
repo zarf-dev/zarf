@@ -11,6 +11,8 @@ metadata:
 values:
   files:
     - values.yaml
+    # The shared template values file both templates the zarf.yaml and provides the image values to the chart. No duplication necessary
+    - shared-template-values.yaml
   schema: values-schema.json
 
 components:
