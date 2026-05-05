@@ -10,7 +10,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -24,11 +23,9 @@ import (
 )
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	dstPort, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
+	t.Helper()
 	return registry.Reference{
-		Registry:   dstRegistryURL,
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
 }
