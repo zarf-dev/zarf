@@ -598,7 +598,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 
 	ctx := context.Background()
 	url := testutil.SetupInMemoryRegistry(ctx, t, port)
-	populateLocalRegistries(ctx, t, url, artifacts, oras.DefaultCopyOptions)
+	populateRegistry(ctx, t, url, artifacts, oras.DefaultCopyOptions)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

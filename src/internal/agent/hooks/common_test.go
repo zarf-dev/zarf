@@ -35,7 +35,7 @@ const (
 	maxAttemptsFactor = 2
 )
 
-func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
+func pushToRegistry(ctx context.Context, t *testing.T, localURL string, artifact transform.Image, copyOpts oras.CopyOptions) {
 	localReg, err := remote.NewRegistry(localURL)
 	require.NoError(t, err)
 
@@ -60,11 +60,10 @@ func populateLocalRegistry(ctx context.Context, t *testing.T, localURL string, a
 	require.NoError(t, err)
 }
 
-// populateLocalRegistries copies each artifact into the in-memory registry at registryURL.
-func populateLocalRegistries(ctx context.Context, t *testing.T, registryURL string, artifacts []transform.Image, copyOpts oras.CopyOptions) {
+func populateRegistry(ctx context.Context, t *testing.T, registryURL string, artifacts []transform.Image, copyOpts oras.CopyOptions) {
 	t.Helper()
 	for _, art := range artifacts {
-		populateLocalRegistry(ctx, t, registryURL, art, copyOpts)
+		pushToRegistry(ctx, t, registryURL, art, copyOpts)
 	}
 }
 
@@ -134,7 +133,7 @@ func TestConfigMediaTypes(t *testing.T) {
 			t.Parallel()
 			ctx := testutil.TestContext(t)
 			url := testutil.SetupInMemoryRegistryDynamic(ctx, t)
-			populateLocalRegistries(ctx, t, url, tt.artifact, tt.Opts)
+			populateRegistry(ctx, t, url, tt.artifact, tt.Opts)
 
 			s := &state.State{RegistryInfo: state.RegistryInfo{Address: url}}
 			mediaType, err := getManifestConfigMediaType(ctx, s, orasRetry.DefaultClient.Transport, fmt.Sprintf("%s/%s", url, tt.relRef))
