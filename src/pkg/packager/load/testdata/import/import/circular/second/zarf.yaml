@@ -1,0 +1,8 @@
+kind: ZarfPackageConfig
+metadata:
+  name: second
+components:
+  - name: component
+    required: true
+    import:
+      path: ../third

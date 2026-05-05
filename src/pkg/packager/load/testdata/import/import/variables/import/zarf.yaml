@@ -1,0 +1,18 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+constants:
+  - name: PARENT_CONSTANT
+    value: "value from child"
+  - name: CHILD_CONSTANT
+    value: "value from child"
+variables:
+  - name: PARENT_VAR
+    default: "default from child"
+  - name: CHILD_VAR
+    default: "default from child"
+components:
+  - name: first-imported-component
+    required: true
+  - name: same-package-imported-again
+    required: true

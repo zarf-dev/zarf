@@ -1,0 +1,11 @@
+kind: ZarfPackageConfig
+metadata:
+  name: middle-package
+values:
+  files:
+    - middle-values.yaml
+components:
+  - name: nested-component
+    required: true
+    import:
+      path: bottom

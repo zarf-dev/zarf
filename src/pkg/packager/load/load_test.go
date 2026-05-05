@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -116,14 +115,7 @@ func TestPackageUsesFlavor(t *testing.T) {
 func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	t.Parallel()
 
-	// Enable the values feature for these tests
-	err := feature.Set([]feature.Feature{
-		{
-			Name:    feature.Values,
-			Enabled: true,
-		},
-	})
-	require.NoError(t, err)
+	// Values feature is enabled in TestMain (main_test.go) since feature.Set is write-once.
 
 	tests := []struct {
 		name        string

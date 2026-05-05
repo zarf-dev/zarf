@@ -1,0 +1,17 @@
+kind: ZarfPackageConfig
+metadata:
+  name: example-package-flavors
+
+components:
+  - name: has-flavor
+    description: this already has a flavor so it shouldn't get overwritten
+    import:
+      path: child
+      name: has-no-flavor
+    only:
+      flavor: pistachio
+
+  - name: child-has-flavor
+    description: this doesn't have a flavor so it should get it's child's flavor
+    import:
+      path: child

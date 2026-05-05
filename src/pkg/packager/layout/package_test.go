@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
@@ -1044,15 +1043,9 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 }
 
 // TestSignPackageBundleSignatureEnabled tests signing behavior when the BundleSignature
-// feature flag is enabled. This test uses feature.Set() which is write-once, so it must
-// be the last signing-related test to run. It is intentionally not parallel.
+// feature flag is enabled. The feature is enabled in TestMain (layout_test.go) for the
+// whole package since feature.Set is write-once.
 func TestSignPackageBundleSignatureEnabled(t *testing.T) {
-	// Enable the BundleSignature feature flag via feature.Set()
-	err := feature.Set([]feature.Feature{
-		{Name: feature.BundleSignature, Enabled: true},
-	})
-	require.NoError(t, err)
-
 	ctx := testutil.TestContext(t)
 
 	t.Run("signing produces both bundle and legacy formats", func(t *testing.T) {
