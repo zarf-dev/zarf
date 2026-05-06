@@ -121,8 +121,7 @@ func PushMultiArchIndex(ctx context.Context, t *testing.T, repoRef, tag string, 
 	children := make([]ocispec.Descriptor, 0, len(platforms))
 	for _, platform := range platforms {
 		desc := PushSinglePlatformImage(ctx, t, repo, platform.Architecture)
-		p := platform
-		desc.Platform = &p
+		desc.Platform = &platform
 		children = append(children, desc)
 	}
 	idx := PushIndex(ctx, t, repo, children)
@@ -138,8 +137,7 @@ func PushNestedIndex(ctx context.Context, t *testing.T, repoRef, tag string, pla
 	inner := make([]ocispec.Descriptor, 0, len(platforms))
 	for _, platform := range platforms {
 		desc := PushSinglePlatformImage(ctx, t, repo, platform.Architecture)
-		p := platform
-		desc.Platform = &p
+		desc.Platform = &platform
 		inner = append(inner, desc)
 	}
 	innerIdx := PushIndex(ctx, t, repo, inner)

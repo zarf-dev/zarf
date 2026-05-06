@@ -60,7 +60,6 @@ func TestCheckForIndex(t *testing.T) {
 	ociChildren := make([]ocispec.Descriptor, 0, len(platforms))
 	for _, p := range platforms {
 		desc := testutil.PushSinglePlatformImage(ctx, t, ociRepo, p.Architecture)
-		p := p
 		desc.Platform = &p
 		ociChildren = append(ociChildren, desc)
 	}
@@ -71,7 +70,6 @@ func TestCheckForIndex(t *testing.T) {
 	dockerChildren := make([]ocispec.Descriptor, 0, len(platforms))
 	for _, p := range platforms {
 		desc := testutil.PushSinglePlatformImage(ctx, t, dockerRepo, p.Architecture)
-		p := p
 		desc.Platform = &p
 		dockerChildren = append(dockerChildren, desc)
 	}
