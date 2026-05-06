@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -111,7 +113,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
@@ -152,17 +154,29 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
-			sbomImageList = append(sbomImageList, manifest.Image)
-		}
+	for _, pulled := range manifests {
+		// Hand every pulled image to the SBOM step; the per-platform manifest filter (skip helm
+		// charts, etc.) lives in generateSBOM where each platform manifest is inspected directly.
+		sbomImageList = append(sbomImageList, pulled.Image)
 
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// If the package layout preserves any image index (multi-platform-images flag at create time),
+	// stamp a version requirement so an older Zarf doesn't try to deploy it without index support.
+	hasIndex, err := imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect image layout: %w", err)
+	}
+	if hasIndex {
+		pkg.Build.VersionRequirements = append(pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
+			Version: "v0.76.0",
+			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
+		})
 	}
 
 	l.Info("composed components successfully")
@@ -1075,4 +1089,27 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	return nil
+}
+
+// imageLayoutHasIndex reports whether any top-level entry in the OCI layout's index.json is an
+// image index — i.e. the layout preserves a multi-platform image graph.
+func imageLayoutHasIndex(imageDir string) (bool, error) {
+	idxPath := filepath.Join(imageDir, "index.json")
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read %s: %w", idxPath, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", idxPath, err)
+	}
+	for _, m := range idx.Manifests {
+		if images.IsIndex(m.MediaType) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

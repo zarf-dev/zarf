@@ -5,7 +5,9 @@
 package images
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -141,15 +143,12 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			imageMap := make(map[string]ImageWithManifest)
+			seen := make(map[string]bool)
 			for _, img := range images {
-				imageMap[img.Image.Reference] = img
+				seen[img.Image.Reference] = true
 			}
-
 			for _, ref := range tc.requestedImages {
-				img, found := imageMap[ref]
-				require.True(t, found)
-				require.NotEmpty(t, img.Manifest.Config.Digest)
+				require.True(t, seen[ref], "expected pulled image for %s", ref)
 			}
 
 			idx, err := getIndexFromOCILayout(dstDir)
@@ -162,11 +161,18 @@ func TestUnpackMultipleImages(t *testing.T) {
 				require.Contains(t, tc.requestedImages, imageName)
 			}
 
-			// Verify all the required layers exist in the oci layout
-			for _, img := range images {
-				for _, layer := range img.Manifest.Layers {
-					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-					require.FileExists(t, layerBlobPath)
+			// Verify every manifest's layers landed on disk by re-reading from the layout.
+			for _, m := range idx.Manifests {
+				if !IsManifest(m.MediaType) {
+					continue
+				}
+				manifestPath := filepath.Join(dstDir, "blobs", "sha256", m.Digest.Hex())
+				body, err := os.ReadFile(manifestPath)
+				require.NoError(t, err)
+				var manifest ocispec.Manifest
+				require.NoError(t, json.Unmarshal(body, &manifest))
+				for _, layer := range manifest.Layers {
+					require.FileExists(t, filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex()))
 				}
 			}
 		})

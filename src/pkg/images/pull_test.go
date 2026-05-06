@@ -206,12 +206,13 @@ func TestPull(t *testing.T) {
 				PlainHTTP:         true,
 			}
 
-			imageManifests, err := Pull(ctx, images, destDir, opts)
+			pulled, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
+			require.Len(t, pulled, len(images))
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
@@ -229,8 +230,17 @@ func TestPull(t *testing.T) {
 			}
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
-			for _, imageWithManifest := range imageManifests {
-				for _, layer := range imageWithManifest.Manifest.Layers {
+			// Walk the layout's index to verify every manifest's layers landed on disk.
+			for _, m := range idx.Manifests {
+				if !IsManifest(m.MediaType) {
+					continue
+				}
+				manifestPath := filepath.Join(destDir, "blobs", "sha256", m.Digest.Hex())
+				body, err := os.ReadFile(manifestPath)
+				require.NoError(t, err)
+				var manifest ocispec.Manifest
+				require.NoError(t, json.Unmarshal(body, &manifest))
+				for _, layer := range manifest.Layers {
 					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}

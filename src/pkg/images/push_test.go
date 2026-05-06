@@ -90,7 +90,6 @@ func TestPush(t *testing.T) {
 			// push images to registry
 			opts := PushOptions{
 				PlainHTTP: true,
-				Arch:      "amd64",
 			}
 			err = Push(ctx, imageList, tc.SourceDirectory, regInfo, opts)
 
