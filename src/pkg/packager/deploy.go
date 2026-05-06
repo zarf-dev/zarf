@@ -249,7 +249,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 
 		// Ensure we don't overwrite any installedCharts data when updating the package secret
 		if d.isConnectedToCluster() {
-			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkgLayout.Pkg.Metadata.Name, component)
+			installedCharts, err := d.c.GetInstalledChartsForComponent(ctx, pkgLayout.Pkg.Metadata.Name, component, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
 			if err != nil {
 				l.Debug("unable to fetch installed Helm charts", "component", component.Name, "error", err.Error())
 			}
@@ -727,6 +727,9 @@ func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.Z
 	s, err := d.c.LoadState(ctx)
 	if err != nil {
 		// don't return the err here as state may not yet be setup
+		return nil
+	}
+	if !s.AgentIsConfigured() {
 		return nil
 	}
 	return pki.CheckForExpiredCert(ctx, s.AgentTLS)

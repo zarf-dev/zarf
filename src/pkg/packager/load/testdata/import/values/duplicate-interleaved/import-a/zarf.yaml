@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: import-a-package
+values:
+  files:
+    - a-values.yaml
+components:
+  - name: shared
+    required: true

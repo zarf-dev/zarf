@@ -1,6 +1,6 @@
 image:
   repository: docker.io/library/registry
-  tag: 3.1.0
+  tag: 3.1.1
   pullPolicy: IfNotPresent
 imagePullSecrets:
   - name: private-registry

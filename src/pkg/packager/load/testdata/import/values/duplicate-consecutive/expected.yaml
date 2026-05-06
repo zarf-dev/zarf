@@ -1,0 +1,12 @@
+kind: ZarfPackageConfig
+metadata:
+  name: parent-package
+values:
+  files:
+    - import/child-values.yaml
+    - parent-values.yaml
+components:
+  - name: first
+    required: true
+  - name: second
+    required: true
