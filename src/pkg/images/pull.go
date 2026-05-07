@@ -59,6 +59,9 @@ type imagePullInfo struct {
 	ref                 string
 	manifestDesc        ocispec.Descriptor
 	byteSize            int64
+	// platforms is populated only when the image resolves to an OCI image index; one entry per
+	// leaf manifest in "arch[/variant]" form. Empty for single-platform manifests.
+	platforms []string
 }
 
 type imageWithOverride struct {
@@ -160,7 +163,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	// This loop pulls the metadata from images with three goals
 	// - Get all the manifests from images that will be pulled so they can be returned to the function
-	// - discover if any images are sha'd to an index, if so error and inform user on the different available platforms
 	// - Mark any images that don't resolve so we can attempt to pull them from the daemon
 	eg, ectx := errgroup.WithContext(ctx)
 	eg.SetLimit(10)
@@ -214,9 +216,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			}
 
 			var size int64
+			var platforms []string
 			switch {
 			case IsIndex(desc.MediaType):
-				size, _, err = inspectIndex(ectx, repo, desc, b)
+				size, platforms, err = inspectIndex(ectx, repo, desc, b)
 				if err != nil {
 					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
 				}
@@ -235,6 +238,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				ref:                 image.original.Reference,
 				byteSize:            size,
 				manifestDesc:        desc,
+				platforms:           platforms,
 			})
 			pulledImages = append(pulledImages, PulledImage{Image: image.original})
 			l.Debug("pulled image", "name", image.overridden.Reference)
@@ -439,7 +443,11 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	copyOpts := oras.DefaultCopyOptions
 	copyOpts.Concurrency = opts.OCIConcurrency
 	copyOpts.WithTargetPlatform(imageInfo.manifestDesc.Platform)
-	l.Info("saving image", "name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2))
+	logArgs := []any{"name", imageInfo.registryOverrideRef, "size", utils.ByteFormat(float64(imageInfo.byteSize), 2)}
+	if len(imageInfo.platforms) > 0 {
+		logArgs = append(logArgs, "platforms", strings.Join(imageInfo.platforms, ","))
+	}
+	l.Info("saving image", logArgs...)
 	localCache, err := oci.NewWithContext(ctx, opts.CacheDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
