@@ -64,7 +64,7 @@ func LoadPackage(ctx context.Context, source string, opts LoadOptions) (_ *layou
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
 		defaults := utils.DefaultVerifyBlobOptions()
-		defaults.KeyRef = opts.PublicKeyPath
+		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
 
