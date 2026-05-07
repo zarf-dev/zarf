@@ -333,11 +333,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		strings.ToUpper,
 	)
 	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues),
-		o.setValues,
-		func(s string) string { return s },
-	)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -806,11 +802,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues),
-		o.setValues,
-		func(s string) string { return s },
-	)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -936,11 +928,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues),
-		o.setValues,
-		func(s string) string { return s },
-	)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {

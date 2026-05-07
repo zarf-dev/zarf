@@ -191,8 +191,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -289,8 +288,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -755,8 +753,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {

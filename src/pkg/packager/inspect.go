@@ -265,6 +265,13 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		return nil, err
 	}
 
+	if pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
+			return nil, fmt.Errorf("inspect values validation failed: %w", err)
+		}
+	}
+
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, err

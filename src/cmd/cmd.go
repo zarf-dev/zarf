@@ -17,15 +17,12 @@ import (
 
 // setBaseDirectory returns the path to a package definition (a directory containing zarf.yaml,
 // or a path to a definition file). args[0] is used if provided, otherwise ".".
-//
-// Built-package artifacts (.tar.zst, .tar, .part000*) are rejected with a redirect to the
-// `zarf package` subcommands — passing a built package to a definition-side command would
-// otherwise feed a binary blob to the YAML parser.
 func setBaseDirectory(args []string) (string, error) {
 	path := "."
 	if len(args) > 0 {
 		path = args[0]
 	}
+	// Built-package artifacts (.tar.zst, .tar, .part000*) are rejected with a redirect to the `zarf package` subcommands
 	switch {
 	case strings.HasSuffix(path, ".tar.zst"), strings.HasSuffix(path, ".tar"):
 		return "", fmt.Errorf("%q is a built Zarf package; use a `zarf package` subcommand (e.g. `zarf package inspect`) instead", path)
