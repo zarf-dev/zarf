@@ -5,6 +5,7 @@ package test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,11 +23,9 @@ import (
 // podinfoIndexDigest is the index digest of ghcr.io/stefanprodan/podinfo:6.4.0.
 const podinfoIndexDigest = "sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8"
 
-// TestMultiPlatformIndexImage exercises digest-pinned multi-platform images end-to-end:
-// create + publish + pull + deploy of a single-arch package whose only image is pinned by an
-// index digest. The package layout must preserve the full upstream index, the per-platform
-// SBOMs must exist, and the image must end up at the original digest in the destination registry.
-func TestMultiPlatformIndexImage(t *testing.T) {
+// TestIndexImage exercises digest-pinned multi-platform images end-to-end:
+// create + publish + pull + deploy of a single-arch package with an image pulled by index digest
+func TestIndexImage(t *testing.T) {
 	t.Log("E2E: index-sha image preserved as the full upstream index")
 
 	pkgDefinitionPath := filepath.Join("src", "test", "packages", "48-multi-platform-image")
@@ -35,13 +34,12 @@ func TestMultiPlatformIndexImage(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	createdPkgPath := filepath.Join(createDir, "zarf-package-multi-platform-image-amd64-0.0.1.tar.zst")
-	require.FileExists(t, createdPkgPath)
+	createdPkgPath := filepath.Join(createDir, fmt.Sprintf("zarf-package-index-image-%s-0.0.1.tar.zst", e2e.Arch))
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	ref := registry.Reference{
 		Registry:   registryURL,
-		Repository: "multi-platform-image",
+		Repository: "index-image",
 		Reference:  "0.0.1",
 	}
 
@@ -52,7 +50,8 @@ func TestMultiPlatformIndexImage(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir)
 	require.NoError(t, err, stdOut, stdErr)
 
-	pulledPkgPath := filepath.Join(pullDir, "zarf-package-multi-platform-image-amd64-0.0.1.tar.zst")
+	pulledPkgPath := filepath.Join(pullDir, fmt.Sprintf("zarf-package-index-image-%s-0.0.1.tar.zst", e2e.Arch))
+
 	pkgLayout, err := layout.LoadFromTar(t.Context(), pulledPkgPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)
 
@@ -80,7 +79,7 @@ func TestMultiPlatformIndexImage(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", pulledPkgPath, "--confirm", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 	t.Cleanup(func() {
-		_, _, err = e2e.Zarf(t, "package", "remove", "multi-platform-image", "--confirm", "--skip-version-check")
+		_, _, err = e2e.Zarf(t, "package", "remove", "index-image", "--confirm", "--skip-version-check")
 		require.NoError(t, err)
 	})
 }

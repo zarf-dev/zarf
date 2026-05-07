@@ -1,6 +1,6 @@
 kind: ZarfPackageConfig
 metadata:
-  name: multi-platform-image
+  name: index-image
   description: Pin a container image by index digest; the entire index is preserved in the package.
   version: 0.0.1
   architecture: amd64
