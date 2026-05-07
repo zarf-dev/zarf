@@ -230,7 +230,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				if err != nil {
 					return nil, fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
 				}
-				if err := d.verifyPackageIsDeployable(ctx, pkgLayout.Pkg); err != nil {
+				if err := d.verifyPackageIsDeployable(ctx, pkgLayout); err != nil {
 					return nil, fmt.Errorf("package is not deployable to this system: %w", err)
 				}
 			}
@@ -714,8 +714,8 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	return installedCharts, nil
 }
 
-func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkg v1alpha1.ZarfPackage) error {
-	if err := verifyClusterCompatibility(ctx, d.c, pkg); err != nil {
+func (d *deployer) verifyPackageIsDeployable(ctx context.Context, pkgLayout *layout.PackageLayout) error {
+	if err := verifyClusterCompatibility(ctx, d.c, pkgLayout); err != nil {
 		if errors.Is(err, lang.ErrUnableToCheckArch) {
 			logger.From(ctx).Warn("unable to validate package architecture", "error", err)
 		} else {
@@ -757,9 +757,18 @@ func setupState(ctx context.Context, c *cluster.Cluster, connected bool) (*state
 	return s, nil
 }
 
-func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkg v1alpha1.ZarfPackage) error {
+func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayout *layout.PackageLayout) error {
+	pkg := pkgLayout.Pkg
 	// Ignore this check if the package contains no images
 	if !pkg.HasImages() {
+		return nil
+	}
+
+	hasImageIndex, err := pkgLayout.HasImageIndex()
+	if err != nil {
+		return fmt.Errorf("failed to inspect package image layout: %w", err)
+	}
+	if hasImageIndex {
 		return nil
 	}
 
