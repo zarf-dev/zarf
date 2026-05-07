@@ -202,13 +202,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return nil
 			}
 
-			// When the ref is digest-pinned to an index, preserve the entire index intact so the
-			// original digest round-trips. Tag-resolved indexes are still platform-filtered below.
-			// FIXME: I might not need this
-			preserveIndex := image.original.Digest != "" && IsIndex(desc.MediaType)
+			isIndexSha := image.original.Digest != "" && IsIndex(desc.MediaType)
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
-			if !IsManifest(desc.MediaType) && !preserveIndex {
+			if !IsManifest(desc.MediaType) && !isIndexSha {
 				fetchOpts.FetchOptions.TargetPlatform = platform
 				desc, b, err = oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
 				if err != nil {
@@ -216,21 +213,20 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				}
 			}
 
-			if !preserveIndex && !IsManifest(desc.MediaType) {
-				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
-			}
-
 			var size int64
-			if preserveIndex {
+			switch {
+			case IsIndex(desc.MediaType):
 				size, _, err = inspectIndex(ectx, repo, desc, b)
 				if err != nil {
 					return fmt.Errorf("failed to inspect index %s: %w", image.overridden.Reference, err)
 				}
-			} else {
+			case IsManifest(desc.MediaType):
 				size, err = getSizeOfManifest(desc, b)
 				if err != nil {
 					return err
 				}
+			default:
+				return fmt.Errorf("received unexpected mediatype %s", desc.MediaType)
 			}
 			imageListLock.Lock()
 			defer imageListLock.Unlock()
