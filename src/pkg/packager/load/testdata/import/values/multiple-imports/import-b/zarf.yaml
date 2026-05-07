@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: import-b-package
+values:
+  files:
+    - b-values.yaml
+components:
+  - name: component-b
+    required: true

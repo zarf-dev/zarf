@@ -61,6 +61,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"importStack", len(importStack),
 	)
 
+	var valuesFiles []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -134,6 +135,11 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			if err != nil {
 				return v1alpha1.ZarfPackage{}, err
 			}
+
+			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
+				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
+			}
+
 			if !skipVersionCheck {
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
@@ -182,8 +188,24 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		components = append(components, composed)
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
+		for _, v := range importedPkg.Values.Files {
+			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+		}
 	}
 
+	valuesFiles = append(valuesFiles, pkg.Values.Files...)
+	valuesFilesMap := map[string]bool{}
+	pkg.Values.Files = nil
+	for _, v := range valuesFiles {
+		norm := v
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
+			norm = filepath.ToSlash(filepath.Clean(v))
+		}
+		if _, present := valuesFilesMap[norm]; !present {
+			pkg.Values.Files = append(pkg.Values.Files, norm)
+			valuesFilesMap[norm] = true
+		}
+	}
 	pkg.Components = components
 
 	varMap := map[string]bool{}

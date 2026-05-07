@@ -1,0 +1,10 @@
+kind: ZarfPackageConfig
+metadata:
+  name: child-package
+values:
+  files:
+    - child-values.yaml
+  schema: "child-values.schema.json"
+components:
+  - name: imported-component
+    required: true
