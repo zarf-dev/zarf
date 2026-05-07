@@ -46,6 +46,7 @@ func pushDockerManifestList(ctx context.Context, t *testing.T, repo *remote.Repo
 	return desc
 }
 
+// FIXME: could probably delete this test
 func TestCheckForIndex(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
@@ -79,28 +80,16 @@ func TestCheckForIndex(t *testing.T) {
 	manifestDigest := testutil.PushImage(ctx, t, upstream+"/fixtures/img", "v1")
 
 	testCases := []struct {
-		name            string
-		ref             string
-		expectedDigests []string
-		expectedErr     string
+		name string
+		ref  string
 	}{
 		{
-			name:        "oci index sha",
-			ref:         fmt.Sprintf("%s/fixtures/idx@%s", upstream, ociIdx.Digest),
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
-			expectedDigests: []string{
-				ociChildren[0].Digest.String(),
-				ociChildren[1].Digest.String(),
-			},
+			name: "oci index sha",
+			ref:  fmt.Sprintf("%s/fixtures/idx@%s", upstream, ociIdx.Digest),
 		},
 		{
-			name:        "docker manifest list",
-			ref:         fmt.Sprintf("%s/fixtures/docker-list@%s", upstream, dockerList.Digest),
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
-			expectedDigests: []string{
-				dockerChildren[0].Digest.String(),
-				dockerChildren[1].Digest.String(),
-			},
+			name: "docker manifest list",
+			ref:  fmt.Sprintf("%s/fixtures/docker-list@%s", upstream, dockerList.Digest),
 		},
 		{
 			name: "image manifest by tag",
@@ -126,13 +115,6 @@ func TestCheckForIndex(t *testing.T) {
 				PlainHTTP:      true,
 			}
 			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
-			if tc.expectedErr != "" {
-				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
-				for _, d := range tc.expectedDigests {
-					require.ErrorContains(t, err, d)
-				}
-				return
-			}
 			require.NoError(t, err)
 		})
 	}

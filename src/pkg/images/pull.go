@@ -6,7 +6,6 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,7 +36,6 @@ import (
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -204,21 +202,10 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				return nil
 			}
 
-			// When the ref is digest-pinned to an index, preserve the entire index intact under
-			// the multi-platform-images feature flag so the original digest round-trips. Without
-			// the flag (or for tag-resolved indexes) we keep the existing platform-filter path
-			// and the existing digest+index error.
-			// FIXME: I'm not sure if the preserveIndex framing is quite right
-			preserveIndex := image.original.Digest != "" && IsIndex(desc.MediaType) && feature.IsEnabled(feature.MultiPlatformImages)
-			if image.original.Digest != "" && IsIndex(desc.MediaType) && !preserveIndex {
-				// Both index types can be marshalled into an ocispec.Index
-				// https://github.com/oras-project/oras-go/blob/853e0125ccad32ff691e4ed70e156c7619021bfd/internal/manifestutil/parser.go#L55
-				var idx ocispec.Index
-				if err := json.Unmarshal(b, &idx); err != nil {
-					return fmt.Errorf("unable to unmarshal index.json: %w", err)
-				}
-				return constructIndexError(idx, image.overridden)
-			}
+			// When the ref is digest-pinned to an index, preserve the entire index intact so the
+			// original digest round-trips. Tag-resolved indexes are still platform-filtered below.
+			// FIXME: I might not need this
+			preserveIndex := image.original.Digest != "" && IsIndex(desc.MediaType)
 			// If a manifest was returned from FetchBytes, either it's a tag with only one image or it's a non container image
 			// If it's not a manifest then we received an index and need to pull the manifest by platform
 			if !IsManifest(desc.MediaType) && !preserveIndex {
@@ -288,19 +275,6 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	l.Info("done pulling images", "count", imageCount, "duration", time.Since(pullStart).Round(time.Millisecond*100))
 
 	return pulledImages, nil
-}
-
-func constructIndexError(idx ocispec.Index, image transform.Image) error {
-	lines := []string{"The following images are available in the index:"}
-	name := image.Name
-	if image.Tag != "" {
-		name += ":" + image.Tag
-	}
-	for _, desc := range idx.Manifests {
-		lines = append(lines, fmt.Sprintf("image - %s@%s with platform %s", name, desc.Digest, desc.Platform))
-	}
-	imageOptions := strings.Join(lines, "\n")
-	return fmt.Errorf("%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use: %s", image.Reference, imageOptions)
 }
 
 func getDockerEndpointHost() (string, error) {

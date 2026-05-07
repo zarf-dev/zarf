@@ -18,7 +18,6 @@ import (
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -322,7 +321,6 @@ func TestLayersFromImages_SingleArch(t *testing.T) {
 }
 
 func TestLayersFromImages_MultiArch(t *testing.T) {
-	_ = feature.Set([]feature.Feature{{Name: feature.MultiPlatformImages, Enabled: true}}) //nolint:errcheck
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	platforms := []ocispec.Platform{
@@ -343,7 +341,6 @@ func TestLayersFromImages_MultiArch(t *testing.T) {
 }
 
 func TestLayersFromImages_NestedIndex(t *testing.T) {
-	_ = feature.Set([]feature.Feature{{Name: feature.MultiPlatformImages, Enabled: true}}) //nolint:errcheck
 	ctx := testutil.TestContext(t)
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	platforms := []ocispec.Platform{

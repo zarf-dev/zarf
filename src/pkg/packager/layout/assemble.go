@@ -166,7 +166,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	// If the package layout preserves any image index (multi-platform-images flag at create time),
+	// If the package layout preserves any image index (digest-pinned multi-platform image),
 	// stamp a version requirement so an older Zarf doesn't try to deploy it without index support.
 	hasIndex, err := imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
 	if err != nil {
