@@ -70,7 +70,7 @@ func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
 }
 
 // DefaultSignBlobOptions returns SignBlobOptions seeded with zarf defaults.
-// Divergence: TlogUpload defaults to false (cosign default true) for air-gap.
+// Divergence: TlogUpload defaults to false (cosign default true) for airgap.
 func DefaultSignBlobOptions() SignBlobOptions {
 	var opts SignBlobOptions
 	opts.TlogUpload = false
@@ -84,7 +84,7 @@ func DefaultSignBlobOptions() SignBlobOptions {
 }
 
 // DefaultVerifyBlobOptions returns VerifyBlobOptions seeded with zarf defaults.
-// Divergences: IgnoreTlog and IgnoreSCT default to true (cosign default false) for air-gap.
+// Divergences: IgnoreTlog and IgnoreSCT default to true (cosign default false) for airgap.
 func DefaultVerifyBlobOptions() VerifyBlobOptions {
 	var opts VerifyBlobOptions
 	opts.CommonVerifyOptions.IgnoreTlog = true
@@ -96,12 +96,6 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 
 // CosignSignBlobWithOptions signs a blob via cosign's SignBlobCmd.
 // Mirrors cmd/cosign/cli/signblob.go (v3.0.6) SignBlob().RunE.
-//
-// Stage-2 limitation: signcommon.LoadTrustedMaterialAndSigningConfig is not
-// invoked here — it would emit deprecation warnings against zarf's internal
-// --output-signature tempfile. As a result, --signing-config, --use-signing-config,
-// and --trusted-root on sign are bound but inert; they're hidden in package sign.
-// Stage 3 wires this alongside trusted-root embedding.
 func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBlobOptions) ([]byte, error) {
 	l := logger.From(ctx)
 

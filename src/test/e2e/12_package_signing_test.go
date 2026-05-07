@@ -105,7 +105,7 @@ func TestPackageSigning(t *testing.T) {
 		} {
 			require.Contains(t, stdOut, flag, "expected %q in `package verify --help`", flag)
 		}
-		// Air-gap-safe defaults must remain enabled.
+		// airgap-safe defaults must remain enabled.
 		require.Contains(t, stdOut, "--insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default true)")
 		require.Contains(t, stdOut, "--insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log (default true)")
 	})
