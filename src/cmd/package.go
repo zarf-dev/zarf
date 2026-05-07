@@ -187,7 +187,10 @@ func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, erro
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
-	basePath := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
