@@ -166,19 +166,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		}
 	}
 
-	// If the package layout preserves any image index (digest-pinned multi-platform image),
-	// stamp a version requirement so an older Zarf doesn't try to deploy it without index support.
-	hasIndex, err := imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
-	if err != nil {
-		return nil, fmt.Errorf("failed to inspect image layout: %w", err)
-	}
-	if hasIndex {
-		pkg.Build.VersionRequirements = append(pkg.Build.VersionRequirements, v1alpha1.VersionRequirement{
-			Version: "v0.76.0",
-			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
-		})
-	}
-
 	l.Info("composed components successfully")
 
 	if !opts.SkipSBOM && pkg.IsSBOMAble() {
@@ -216,7 +203,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -290,7 +280,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -794,7 +787,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) (v1alpha1.ZarfPackage, error) {
 	now := time.Now()
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.
@@ -827,17 +820,15 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	var versionRequirements []v1alpha1.VersionRequirement
-	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
-			break
+	hasIndex := false
+	if buildPath != "" {
+		var err error
+		hasIndex, err = imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	pkg.Build.VersionRequirements = versionRequirements
+	pkg.Build.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -855,7 +846,30 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Signature files are appended by SignPackage() if signing occurs.
 	pkg.Build.ProvenanceFiles = []string{Checksums}
 
-	return pkg
+	return pkg, nil
+}
+
+// collectVersionRequirements returns the minimum-Zarf-version requirements implied by a package's
+// contents. hasIndex reports whether the assembled image layout preserves a multi-platform image
+// index — that information lives on disk, so callers compute it before invoking this.
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
+	var reqs []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			reqs = append(reqs, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	if hasIndex {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.76.0",
+			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
+		})
+	}
+	return reqs
 }
 
 func getChecksum(dirPath string) (string, string, error) {

@@ -217,3 +217,79 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 		})
 	}
 }
+
+func TestCollectVersionRequirements(t *testing.T) {
+	t.Parallel()
+
+	imageArchivesReq := v1alpha1.VersionRequirement{
+		Version: "v0.68.0",
+		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+	}
+	indexReq := v1alpha1.VersionRequirement{
+		Version: "v0.76.0",
+		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
+	}
+
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		hasIndex bool
+		expected []v1alpha1.VersionRequirement
+	}{
+		{
+			name:     "no requirements for a plain package",
+			pkg:      v1alpha1.ZarfPackage{},
+			expected: nil,
+		},
+		{
+			name: "image archives trigger v0.68.0",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "c1",
+						ImageArchives: []v1alpha1.ImageArchive{
+							{Path: "/tmp/archive.tar", Images: []string{"nginx:1.21"}},
+						},
+					},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+		},
+		{
+			name:     "preserved index triggers v0.76.0",
+			pkg:      v1alpha1.ZarfPackage{},
+			hasIndex: true,
+			expected: []v1alpha1.VersionRequirement{indexReq},
+		},
+		{
+			name: "image archives and preserved index trigger both",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:          "c1",
+						ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}},
+					},
+				},
+			},
+			hasIndex: true,
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq, indexReq},
+		},
+		{
+			name: "image archives requirement is only emitted once across components",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "c1", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}}},
+					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+		})
+	}
+}
