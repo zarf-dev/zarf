@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/generate"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
@@ -29,6 +28,15 @@ import (
 
 // CosignDefaultTimeout is the default timeout for cosign sign and verify operations.
 const CosignDefaultTimeout = 3 * time.Minute
+
+// nonPromptingPassFunc resolves a private-key password without ever blocking on
+// terminal or stdin input.
+var nonPromptingPassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
+	if pw, ok := os.LookupEnv("COSIGN_PASSWORD"); ok {
+		return []byte(pw), nil
+	}
+	return []byte{}, nil
+})
 
 // SignBlobOptions wraps cosign's SignBlobOptions with zarf-specific fields.
 type SignBlobOptions struct {
@@ -111,7 +119,7 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 
 	ko := options.KeyOpts{
 		KeyRef:                         opts.Key,
-		PassFunc:                       generate.GetPass,
+		PassFunc:                       nonPromptingPassFunc,
 		Sk:                             opts.SecurityKey.Use,
 		Slot:                           opts.SecurityKey.Slot,
 		FulcioURL:                      opts.Fulcio.URL,
