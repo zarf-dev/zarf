@@ -215,10 +215,6 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 	return oci.RemoveDuplicateDescriptors(layers), nil
 }
 
-// layersFromIndexChildren walks an OCI image index's children and returns every blob
-// (child manifests, their configs, and their layers) that must be pulled alongside the index.
-// Recurses into nested indexes — the OCI spec allows an index entry to point at either
-// an image manifest or another image index.
 func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest, indexDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
 	idx, err := oci.FetchJSONFile[*ocispec.Index](ctx, r.FetchLayer, root, filepath.Join(layout.ImagesBlobsDir, indexDesc.Digest.Encoded()))
 	if err != nil {
