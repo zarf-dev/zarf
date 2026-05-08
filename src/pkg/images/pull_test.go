@@ -114,6 +114,8 @@ func TestCheckForIndex(t *testing.T) {
 	dockerList := pushDockerManifestList(ctx, t, dockerRepo, dockerChildren)
 	require.NoError(t, dockerRepo.Tag(ctx, dockerList, "v1"))
 
+	nestedIdxDigest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested-idx", "v1", platforms)
+
 	manifestDigest := testutil.PushImage(ctx, t, upstream+"/fixtures/img", "v1")
 
 	testCases := []struct {
@@ -127,6 +129,10 @@ func TestCheckForIndex(t *testing.T) {
 		{
 			name: "docker manifest list",
 			ref:  fmt.Sprintf("%s/fixtures/docker-list@%s", upstream, dockerList.Digest),
+		},
+		{
+			name: "nested oci index sha",
+			ref:  fmt.Sprintf("%s/fixtures/nested-idx@%s", upstream, nestedIdxDigest),
 		},
 		{
 			name: "image manifest by tag",
