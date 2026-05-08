@@ -187,6 +187,10 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 				(layer.Annotations[ocispec.AnnotationBaseImageName] == refInfo.Path+refInfo.TagOrDigest && refInfo.Host == "docker.io")
 		})
 
+		if entry.Digest == "" {
+			return nil, fmt.Errorf("image %q not found in package index", refInfo.Reference)
+		}
+
 		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, entry.Digest.Encoded())))
 
 		switch {
