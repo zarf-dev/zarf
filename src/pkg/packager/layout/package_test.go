@@ -1785,3 +1785,132 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 		require.Equal(t, []string{Checksums}, pkgLayout.Pkg.Build.ProvenanceFiles)
 	})
 }
+
+func TestValidatePackagePaths(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		pkg     v1alpha1.ZarfPackage
+		wantErr string
+	}{
+		{
+			name: "valid names",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "my-package", Version: "1.0.0"},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:      "my-component",
+						Charts:    []v1alpha1.ZarfChart{{Name: "my-chart", Version: "1.2.3"}},
+						Manifests: []v1alpha1.ZarfManifest{{Name: "my-manifest"}},
+					},
+				},
+			},
+		},
+		{
+			name:    "metadata name traversal",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "../../evil"}},
+			wantErr: `package metadata name "../../evil" would result in an invalid path`,
+		},
+		{
+			name:    "metadata name is traversal",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: ".."}},
+			wantErr: `package metadata name ".." would result in an invalid path`,
+		},
+		{
+			name:    "metadata version traversal",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg", Version: "../bad"}},
+			wantErr: `package metadata version "../bad" would result in an invalid path`,
+		},
+		{
+			name:    "metadata name absolute path",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "/etc/passwd"}},
+			wantErr: `package metadata name "/etc/passwd" would result in an invalid path`,
+		},
+		{
+			name:    "build flavor traversal",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg"}, Build: v1alpha1.ZarfBuildData{Flavor: "../evil"}},
+			wantErr: `package build flavor "../evil" would result in an invalid path`,
+		},
+		{
+			name:    "build differential package version traversal",
+			pkg:     v1alpha1.ZarfPackage{Metadata: v1alpha1.ZarfMetadata{Name: "pkg"}, Build: v1alpha1.ZarfBuildData{DifferentialPackageVersion: "../evil"}},
+			wantErr: `package build differential package version "../evil" would result in an invalid path`,
+		},
+		{
+			name: "component name traversal",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{{Name: "../../etc/passwd"}},
+			},
+			wantErr: `component name "../../etc/passwd" would result in an invalid path`,
+		},
+		{
+			name: "component name is traversal",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{{Name: ".."}},
+			},
+			wantErr: `component name ".." would result in an invalid path`,
+		},
+		{
+			name: "component name with backslash",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{{Name: `evil\path`}},
+			},
+			wantErr: `component name "evil\\path" would result in an invalid path`,
+		},
+		{
+			name: "chart name traversal",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Charts: []v1alpha1.ZarfChart{{Name: "../evil", Version: "1.0"}}},
+				},
+			},
+			wantErr: `chart name "../evil" in component "comp" would result in an invalid path`,
+		},
+		{
+			name: "chart version traversal",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Charts: []v1alpha1.ZarfChart{{Name: "chart", Version: "../bad"}}},
+				},
+			},
+			wantErr: `chart version "../bad" in component "comp" would result in an invalid path`,
+		},
+		{
+			name: "manifest name with slash",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Manifests: []v1alpha1.ZarfManifest{{Name: "a/b"}}},
+				},
+			},
+			wantErr: `manifest name "a/b" in component "comp" would result in an invalid path`,
+		},
+		{
+			name: "manifest name is traversal",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "pkg"},
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "comp", Manifests: []v1alpha1.ZarfManifest{{Name: ".."}}},
+				},
+			},
+			wantErr: `manifest name ".." in component "comp" would result in an invalid path`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := validatePackagePaths(tt.pkg)
+			if tt.wantErr == "" {
+				require.NoError(t, err)
+			} else {
+				require.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
+}

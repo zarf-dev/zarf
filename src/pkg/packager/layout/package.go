@@ -725,5 +725,47 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
+	return validatePackagePaths(pkgLayout.Pkg)
+}
+
+// validatePackagePaths checks that package config fields used as filesystem
+// path components do not contain path traversal sequences or separators.
+func validatePackagePaths(pkg v1alpha1.ZarfPackage) error {
+	if !isCleanPath(pkg.Metadata.Name) {
+		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
+	}
+	if !isCleanPath(pkg.Metadata.Version) {
+		return fmt.Errorf("package metadata version %q would result in an invalid path", pkg.Metadata.Version)
+	}
+	if !isCleanPath(pkg.Build.Flavor) {
+		return fmt.Errorf("package build flavor %q would result in an invalid path", pkg.Build.Flavor)
+	}
+	if !isCleanPath(pkg.Build.DifferentialPackageVersion) {
+		return fmt.Errorf("package build differential package version %q would result in an invalid path", pkg.Build.DifferentialPackageVersion)
+	}
+	for _, comp := range pkg.Components {
+		if !isCleanPath(comp.Name) {
+			return fmt.Errorf("component name %q would result in an invalid path", comp.Name)
+		}
+		for _, chart := range comp.Charts {
+			if !isCleanPath(chart.Name) {
+				return fmt.Errorf("chart name %q in component %q would result in an invalid path", chart.Name, comp.Name)
+			}
+			if !isCleanPath(chart.Version) {
+				return fmt.Errorf("chart version %q in component %q would result in an invalid path", chart.Version, comp.Name)
+			}
+		}
+		for _, manifest := range comp.Manifests {
+			if !isCleanPath(manifest.Name) {
+				return fmt.Errorf("manifest name %q in component %q would result in an invalid path", manifest.Name, comp.Name)
+			}
+		}
+	}
 	return nil
+}
+
+// isCleanPath returns true if s is safe to embed in a file path:
+// it must not be ".." and must not contain path separators.
+func isCleanPath(s string) bool {
+	return s != ".." && !strings.ContainsAny(s, `/\`)
 }
