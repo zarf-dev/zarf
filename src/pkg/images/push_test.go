@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -73,10 +72,7 @@ func TestPush(t *testing.T) {
 				require.NoError(t, saveIndexToOCILayout(tc.SourceDirectory, idx))
 			}()
 			ctx := testutil.TestContext(t)
-			// setup in memory registry
-			port, err := helpers.GetAvailablePort()
-			require.NoError(t, err)
-			address := testutil.SetupInMemoryRegistry(ctx, t, port)
+			address := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 			if tc.namespace != "" {
 				address = fmt.Sprintf("%s/%s", address, tc.namespace)
 			}
@@ -84,7 +80,6 @@ func TestPush(t *testing.T) {
 			regInfo := state.RegistryInfo{
 				Address: address,
 			}
-			require.NoError(t, err)
 
 			for _, name := range tc.imageNames {
 				ref, err := transform.ParseImageRef(name)

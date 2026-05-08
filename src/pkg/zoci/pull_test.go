@@ -6,12 +6,13 @@ package zoci_test
 
 import (
 	"context"
+	"fmt"
 	"os"
-	"slices"
+	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager"
@@ -24,11 +25,9 @@ import (
 )
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	dstPort, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
+	t.Helper()
 	return registry.Reference{
-		Registry:   dstRegistryURL,
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
 }
@@ -82,44 +81,129 @@ func TestAllLayersRespectsRequestedComponents(t *testing.T) {
 	require.Len(t, allLayersSubset, 3)
 }
 
+// writeVirtualPackageDef writes a minimal zarf package definition that references imageRef.
+func writeVirtualPackageDef(t *testing.T, imageRef string) string {
+	t.Helper()
+	dir := t.TempDir()
+	zarfYAML := fmt.Sprintf(`kind: ZarfPackageConfig
+metadata:
+  name: assemble-layers-test
+  version: 0.0.1
+  architecture: amd64
+documentation:
+  readme: README.md
+components:
+  - name: alpine
+    required: true
+    manifests:
+      - name: alpine
+        namespace: test
+        files:
+          - pod.yaml
+    images:
+      - %s
+`, imageRef)
+	pod := fmt.Sprintf(`apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+spec:
+  containers:
+    - name: test
+      image: %s
+`, imageRef)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "pod.yaml"), []byte(pod), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test\n"), 0o644))
+	return dir
+}
+
+// virtualImage holds descriptors of the image pushed by buildVirtualPackage so callers can
+// assert the package layers reference these exact blobs.
+type virtualImage struct {
+	layer    ocispec.Descriptor
+	config   ocispec.Descriptor
+	manifest ocispec.Descriptor
+}
+
+// virtualPackage bundles the in-memory registry address, built package tar path, build tmpdir,
+// and image descriptors returned by buildVirtualPackage.
+type virtualPackage struct {
+	registryAddr string
+	packagePath  string
+	tmpdir       string
+	image        virtualImage
+}
+
+// buildVirtualPackage pushes a virtual image to a fresh in-memory registry and runs
+// packager.Create against a generated package def. SBOM is skipped as the image has random bytes
+func buildVirtualPackage(ctx context.Context, t *testing.T) virtualPackage {
+	t.Helper()
+	upstreamAddr := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	imageRepo := testutil.NewRepo(t, upstreamAddr+"/fixtures/test-image")
+	layerDesc := testutil.PushBlob(ctx, t, imageRepo, ocispec.MediaTypeImageLayer, testutil.RandomBytes(t, 256))
+	configDesc := testutil.PushBlob(ctx, t, imageRepo, ocispec.MediaTypeImageConfig, []byte(`{"architecture":"amd64","os":"linux"}`))
+	manifestDesc := testutil.PushManifest(ctx, t, imageRepo, configDesc, []ocispec.Descriptor{layerDesc})
+	require.NoError(t, imageRepo.Tag(ctx, manifestDesc, "test"))
+	imageRef := fmt.Sprintf("%s/fixtures/test-image:test", upstreamAddr)
+
+	pkgDefDir := writeVirtualPackageDef(t, imageRef)
+	tmpdir := t.TempDir()
+	packagePath, err := packager.Create(ctx, pkgDefDir, tmpdir, packager.CreateOptions{
+		CachePath:     tmpdir,
+		RemoteOptions: types.RemoteOptions{PlainHTTP: true},
+		SkipSBOM:      true, // random-bytes layer can't be syft-scanned
+	})
+	require.NoError(t, err)
+	return virtualPackage{
+		registryAddr: upstreamAddr,
+		packagePath:  packagePath,
+		tmpdir:       tmpdir,
+		image: virtualImage{
+			layer:    layerDesc,
+			config:   configDesc,
+			manifest: manifestDesc,
+		},
+	}
+}
+
 func TestAssembleLayers(t *testing.T) {
 	ctx := testutil.TestContext(t)
+	pkg := buildVirtualPackage(ctx, t)
 
-	remote, pkgLayout := publishAndConnect(ctx, t, "testdata/basic")
+	pkgLayout, err := layout.LoadFromTar(ctx, pkg.packagePath, layout.PackageLayoutOptions{})
+	require.NoError(t, err)
+
+	registryRef := registry.Reference{Registry: pkg.registryAddr, Repository: "zarf-packages"}
+	packageRef, err := packager.PublishPackage(ctx, pkgLayout, registryRef, packager.PublishPackageOptions{
+		RemoteOptions:  types.RemoteOptions{PlainHTTP: true},
+		OCIConcurrency: 3,
+	})
+	require.NoError(t, err)
+	t.Cleanup(func() { os.Remove(pkgLayout.Pkg.Metadata.Name) }) //nolint:errcheck
+
+	cacheModifier, err := zoci.GetOCICacheModifier(ctx, pkg.tmpdir)
+	require.NoError(t, err)
+	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
+	remote, err := zoci.NewRemote(ctx, packageRef.String(), platform, append([]oci.Modifier{oci.WithPlainHTTP(true)}, cacheModifier)...)
+	require.NoError(t, err)
+
 	components := pkgLayout.Pkg.Components
 
-	nonDeterministicLayers := []string{"zarf.yaml", "checksums.txt"}
-	expectedImageLayers := []string{
-		"sha256:da324ac903c3287a9ab7f12d10fea0177251ca5d1aae156b293f042a722c414d",
-		"sha256:18f0797eab35a4597c1e9624aa4f15fd91f6254e5538c1e0d193b2a95dd4acc6",
-		"sha256:1c4eef651f65e2f7daee7ee785882ac164b02b78fb74503052a26dc061c90474",
-		"sha256:aded1e1a5b3705116fa0a92ba074a5e0b0031647d9c315983ccba2ee5428ec8b",
-		"sha256:f18232174bc91741fdf3da96d85011092101a032a93a388b79e99e69c2d5c870",
-	}
-
 	tests := []struct {
-		name           string
-		include        []zoci.LayerType
-		expectedLen    int
-		verifyDigests  bool
-		expectedDigest []string
+		name        string
+		include     []zoci.LayerType
+		expectedLen int
 	}{
 		{
 			name:        "all layers (default)",
 			include:     nil,
-			expectedLen: 10,
+			expectedLen: 9,
 		},
 		{
-			name:        "sbom layers",
-			include:     []zoci.LayerType{zoci.SbomLayers},
-			expectedLen: 3,
-		},
-		{
-			name:           "image layers",
-			include:        []zoci.LayerType{zoci.ImageLayers},
-			expectedLen:    7,
-			verifyDigests:  true,
-			expectedDigest: expectedImageLayers,
+			name:        "image layers",
+			include:     []zoci.LayerType{zoci.ImageLayers},
+			expectedLen: 7,
 		},
 		{
 			name:        "component layers",
@@ -132,21 +216,22 @@ func TestAssembleLayers(t *testing.T) {
 			expectedLen: 3,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			layers, err := remote.AssembleLayers(ctx, components, tt.include...)
 			require.NoError(t, err)
 			require.Len(t, layers, tt.expectedLen)
-
-			if tt.verifyDigests {
-				for _, layer := range layers {
-					if !slices.Contains(nonDeterministicLayers, layer.Annotations["org.opencontainers.image.title"]) {
-						t.Logf("Layer: %s, Title: %s", layer.Digest.String(), layer.Annotations["org.opencontainers.image.title"])
-						require.Contains(t, tt.expectedDigest, layer.Digest.String())
-					}
-				}
-			}
 		})
 	}
+
+	// Verify image-walking logic against known digests instead of upstream-drifting ones.
+	imageLayers, err := remote.AssembleLayers(ctx, components, zoci.ImageLayers)
+	require.NoError(t, err)
+	digests := map[string]struct{}{}
+	for _, l := range imageLayers {
+		digests[l.Digest.String()] = struct{}{}
+	}
+	require.Contains(t, digests, pkg.image.manifest.Digest.String(), "image manifest blob present")
+	require.Contains(t, digests, pkg.image.config.Digest.String(), "image config blob present")
+	require.Contains(t, digests, pkg.image.layer.Digest.String(), "image layer blob present")
 }

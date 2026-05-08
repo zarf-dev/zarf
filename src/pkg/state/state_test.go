@@ -13,6 +13,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
+func TestAgentIsConfigured(t *testing.T) {
+	t.Parallel()
+
+	require.False(t, (&State{}).AgentIsConfigured())
+	require.False(t, (&State{AgentTLS: pki.GeneratedPKI{CA: []byte("ca"), Key: []byte("key")}}).AgentIsConfigured())
+	require.True(t, (&State{AgentTLS: pki.GeneratedPKI{Cert: []byte("cert")}}).AgentIsConfigured())
+}
+
 // TODO: Change password gen method to make testing possible.
 func TestMergeStateRegistry(t *testing.T) {
 	t.Parallel()
