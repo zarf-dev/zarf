@@ -154,7 +154,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
-		"annotations in the index.json: %s, %s<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
+		"annotations in the index.json: %s, %s.<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
 	for img, found := range requestedImages {
 		if !found {
 			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
