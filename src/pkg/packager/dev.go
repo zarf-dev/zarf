@@ -136,7 +136,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 			return c.RequiresCluster()
 		})
 		if requiresCluster {
-			d.c, err = cluster.NewWithWait(ctx)
+			d.c, err = cluster.New(ctx)
 			if err != nil {
 				return err
 			}
