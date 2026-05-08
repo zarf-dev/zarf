@@ -6,6 +6,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -186,7 +187,7 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 
 // CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd.
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
-func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
+func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) (err error) {
 	l := logger.From(ctx)
 
 	hashAlgorithm, err := opts.SignatureDigest.HashAlgorithm()
@@ -196,6 +197,19 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 
 	if opts.CommonVerifyOptions.PrivateInfrastructure {
 		opts.CommonVerifyOptions.IgnoreTlog = true
+	}
+
+	// Keyless verify needs a trusted root. If the user didn't supply --trusted-root,
+	// fall back to the embedded copy. Key-based and cert-based paths skip this
+	// entirely so they don't pay for an unused tempfile per verify.
+	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
+	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot()
+		if prepErr != nil {
+			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
+		}
+		defer func() { err = errors.Join(err, cleanup()) }()
+		trustedRootPath = path
 	}
 
 	ko := options.KeyOpts{
@@ -227,7 +241,7 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		Offline:                      opts.CommonVerifyOptions.Offline,
 		IgnoreTlog:                   opts.CommonVerifyOptions.IgnoreTlog,
 		UseSignedTimestamps:          opts.CommonVerifyOptions.UseSignedTimestamps,
-		TrustedRootPath:              opts.CommonVerifyOptions.TrustedRootPath,
+		TrustedRootPath:              trustedRootPath,
 		HashAlgorithm:                hashAlgorithm,
 	}
 

@@ -60,12 +60,26 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 
 ### Standard Releases (via Release Please)
 
+* [ ] Refresh the embedded Sigstore TrustedRoot used for keyless verification (see [Embedded TrustedRoot](#embedded-trustedroot))
 * [ ] Review and merge the open Release Please PR
 * [ ] The tag is automatically created and pushed, triggering the release workflow
 * [ ] Review the GitHub release:
   * [ ] Add a summary of release updates and any required documentation around updates or breaking changes
 * [ ] Ensure goreleaser workflows execute successfully and review the release assets
 * [ ] Review, approve, and merge the [homebrew-tap](https://github.com/defenseunicorns/homebrew-tap) PR for the zarf release
+
+### Embedded TrustedRoot
+
+Zarf binaries embed a Sigstore TrustedRoot JSON used by `zarf package verify` for keyless verification when `--trusted-root` is not supplied. The TUF-fetched copy is committed at `src/pkg/utils/embedded_trusted_root.json` and must be refreshed before each release so binaries ship with current Sigstore trust material.
+
+```bash
+make build
+hack/refresh-trusted-root.sh
+git add src/pkg/utils/embedded_trusted_root.json
+git commit -m "chore: refresh embedded trusted root"
+```
+
+The script wraps `zarf tools trusted-root create --with-default-services`, which reaches `tuf-repo-cdn.sigstore.dev` and writes the verified TrustedRoot to the embed path. Users who run their own Sigstore infrastructure can bypass the embedded copy at runtime via `zarf package verify --trusted-root /path/to/custom.json`.
 
 ### Manual Releases (if needed)
 
