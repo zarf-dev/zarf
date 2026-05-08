@@ -194,36 +194,17 @@ func TestUnpackImageIndexes(t *testing.T) {
 	multiArchDigest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "v1", platforms)
 	nestedDigest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "v1", platforms)
 
-	multiArchDigestRef := fmt.Sprintf("%s/fixtures/multi@%s", upstream, multiArchDigest)
-	nestedDigestRef := fmt.Sprintf("%s/fixtures/nested@%s", upstream, nestedDigest)
-	multiArchTagRef := fmt.Sprintf("%s/fixtures/multi:v1", upstream)
-
 	testCases := []struct {
-		name    string
-		pullRef string
-		// retagAs, when non-empty, swaps the source layout's ref annotation from pullRef to this
-		// value so Unpack sees a tag-style ref over an existing multi-arch index.
-		retagAs     string
-		unpackRef   string
-		expectIndex bool
+		name string
+		ref  string
 	}{
 		{
-			name:        "multi-arch index by digest preserves index",
-			pullRef:     multiArchDigestRef,
-			unpackRef:   multiArchDigestRef,
-			expectIndex: true,
+			name: "multi-arch index by digest preserves index",
+			ref:  fmt.Sprintf("%s/fixtures/multi@%s", upstream, multiArchDigest),
 		},
 		{
-			name:        "nested index by digest preserves nested structure",
-			pullRef:     nestedDigestRef,
-			unpackRef:   nestedDigestRef,
-			expectIndex: true,
-		},
-		{
-			name:      "multi-arch index by tag filters to platform",
-			pullRef:   multiArchDigestRef,
-			retagAs:   multiArchTagRef,
-			unpackRef: multiArchTagRef,
+			name: "nested index by digest preserves nested structure",
+			ref:  fmt.Sprintf("%s/fixtures/nested@%s", upstream, nestedDigest),
 		},
 	}
 
@@ -231,25 +212,16 @@ func TestUnpackImageIndexes(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			pullRefInfo, err := transform.ParseImageRef(tc.pullRef)
+			refInfo, err := transform.ParseImageRef(tc.ref)
 			require.NoError(t, err)
 
 			layoutDir := t.TempDir()
-			_, err = Pull(ctx, []transform.Image{pullRefInfo}, layoutDir, PullOptions{
+			_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
 				Arch:           "amd64",
 				CacheDirectory: t.TempDir(),
 				PlainHTTP:      true,
 			})
 			require.NoError(t, err)
-
-			if tc.retagAs != "" {
-				store, err := oci.NewWithContext(ctx, layoutDir)
-				require.NoError(t, err)
-				desc, err := store.Resolve(ctx, tc.pullRef)
-				require.NoError(t, err)
-				require.NoError(t, store.Untag(ctx, tc.pullRef))
-				require.NoError(t, store.Tag(ctx, desc, tc.retagAs))
-			}
 
 			tarFile := filepath.Join(t.TempDir(), "images.tar")
 			require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
@@ -257,37 +229,87 @@ func TestUnpackImageIndexes(t *testing.T) {
 			dstDir := t.TempDir()
 			unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
 				Path:   tarFile,
-				Images: []string{tc.unpackRef},
+				Images: []string{tc.ref},
 			}, dstDir, "amd64")
 			require.NoError(t, err)
 			require.Len(t, unpacked, 1)
-			require.Equal(t, tc.unpackRef, unpacked[0].Image.Reference)
+			require.Equal(t, tc.ref, unpacked[0].Image.Reference)
 
 			dstIdx, err := getIndexFromOCILayout(dstDir)
 			require.NoError(t, err)
 			var top *ocispec.Descriptor
 			for i := range dstIdx.Manifests {
-				if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tc.unpackRef {
+				if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tc.ref {
 					top = &dstIdx.Manifests[i]
 					break
 				}
 			}
-			require.NotNil(t, top, "no manifest tagged with ref %s in %v", tc.unpackRef, dstIdx.Manifests)
-
-			if tc.expectIndex {
-				require.True(t, IsIndex(top.MediaType), "expected preserved index, got %s", top.MediaType)
-				preserved := requireIndexBlobs(t, dstDir, top.Digest.String())
-				require.NotEmpty(t, preserved.Manifests)
-				return
-			}
-
-			require.True(t, IsManifest(top.MediaType), "expected platform-filtered manifest, got %s", top.MediaType)
-			manifest := requireManifestBlobs(t, dstDir, top.Digest.String())
-			cfgBytes, err := os.ReadFile(filepath.Join(dstDir, "blobs", "sha256", manifest.Config.Digest.Hex()))
-			require.NoError(t, err)
-			var cfg ocispec.Image
-			require.NoError(t, json.Unmarshal(cfgBytes, &cfg))
-			require.Equal(t, "amd64", cfg.Architecture)
+			require.NotNil(t, top, "no manifest tagged with ref %s in %v", tc.ref, dstIdx.Manifests)
+			require.True(t, IsIndex(top.MediaType), "expected preserved index, got %s", top.MediaType)
+			preserved := requireIndexBlobs(t, dstDir, top.Digest.String())
+			require.NotEmpty(t, preserved.Manifests)
 		})
 	}
+}
+
+func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "v1", platforms)
+	digestRef := fmt.Sprintf("%s/fixtures/multi@%s", upstream, digest)
+	tagRef := fmt.Sprintf("%s/fixtures/multi:v1", upstream)
+
+	digestRefInfo, err := transform.ParseImageRef(digestRef)
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{digestRefInfo}, layoutDir, PullOptions{
+		Arch:           "amd64",
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	store, err := oci.NewWithContext(ctx, layoutDir)
+	require.NoError(t, err)
+	desc, err := store.Resolve(ctx, digestRef)
+	require.NoError(t, err)
+	require.NoError(t, store.Untag(ctx, digestRef))
+	require.NoError(t, store.Tag(ctx, desc, tagRef))
+
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	dstDir := t.TempDir()
+	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path:   tarFile,
+		Images: []string{tagRef},
+	}, dstDir, "amd64")
+	require.NoError(t, err)
+	require.Len(t, unpacked, 1)
+	require.Equal(t, tagRef, unpacked[0].Image.Reference)
+
+	dstIdx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var top *ocispec.Descriptor
+	for i := range dstIdx.Manifests {
+		if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tagRef {
+			top = &dstIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, top, "no manifest tagged with ref %s in %v", tagRef, dstIdx.Manifests)
+	require.True(t, IsManifest(top.MediaType), "expected platform-filtered manifest, got %s", top.MediaType)
+	manifest := requireManifestBlobs(t, dstDir, top.Digest.String())
+	cfgBytes, err := os.ReadFile(filepath.Join(dstDir, "blobs", "sha256", manifest.Config.Digest.Hex()))
+	require.NoError(t, err)
+	var cfg ocispec.Image
+	require.NoError(t, json.Unmarshal(cfgBytes, &cfg))
+	require.Equal(t, "amd64", cfg.Architecture)
 }
