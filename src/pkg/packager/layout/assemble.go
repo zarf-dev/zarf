@@ -155,8 +155,6 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	for _, pulled := range manifests {
-		// Hand every pulled image to the SBOM step; the per-platform manifest filter (skip helm
-		// charts, etc.) lives in generateSBOM where each platform manifest is inspected directly.
 		sbomImageList = append(sbomImageList, pulled.Image)
 
 		// Sort images index to make build reproducible.
@@ -854,9 +852,6 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	return pkg, nil
 }
 
-// collectVersionRequirements returns the minimum-Zarf-version requirements implied by a package's
-// contents. hasIndex reports whether the assembled image layout preserves a multi-platform image
-// index — that information lives on disk, so callers compute it before invoking this.
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
 	for _, comp := range pkg.Components {
@@ -1110,10 +1105,8 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	return nil
 }
 
-// imageLayoutHasIndex reports whether any top-level entry in the OCI layout's index.json is an
-// image index — i.e. the layout preserves a multi-platform image graph.
 func imageLayoutHasIndex(imageDir string) (bool, error) {
-	idxPath := filepath.Join(imageDir, "index.json")
+	idxPath := filepath.Join(imageDir, IndexJSON)
 	b, err := os.ReadFile(idxPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

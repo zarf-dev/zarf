@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 )
 
 func TestGetChecksum(t *testing.T) {
@@ -290,6 +292,75 @@ func TestCollectVersionRequirements(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+		})
+	}
+}
+
+func TestImageLayoutHasIndex(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		indexJSON   string
+		writeFile   bool
+		expected    bool
+		errContains string
+	}{
+		{
+			name:      "missing index.json returns false",
+			writeFile: false,
+			expected:  false,
+		},
+		{
+			name:      "empty manifests returns false",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[]}`,
+			expected:  false,
+		},
+		{
+			name:      "only image manifests returns false",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + ocispec.MediaTypeImageManifest + `","digest":"sha256:abc","size":1}]}`,
+			expected:  false,
+		},
+		{
+			name:      "OCI image index returns true",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + ocispec.MediaTypeImageIndex + `","digest":"sha256:abc","size":1}]}`,
+			expected:  true,
+		},
+		{
+			name:      "docker manifest list returns true",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + images.DockerMediaTypeManifestList + `","digest":"sha256:abc","size":1}]}`,
+			expected:  true,
+		},
+		{
+			name:        "malformed JSON returns error",
+			writeFile:   true,
+			indexJSON:   `{not valid json`,
+			expected:    false,
+			errContains: "failed to parse",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			if tt.writeFile {
+				err := os.WriteFile(filepath.Join(dir, IndexJSON), []byte(tt.indexJSON), 0o600)
+				require.NoError(t, err)
+			}
+
+			got, err := imageLayoutHasIndex(dir)
+			if tt.errContains != "" {
+				require.ErrorContains(t, err, tt.errContains)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, got)
 		})
 	}
 }
