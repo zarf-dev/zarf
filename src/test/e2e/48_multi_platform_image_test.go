@@ -5,7 +5,6 @@ package test
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,7 +33,8 @@ func TestIndexImage(t *testing.T) {
 	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", pkgDefinitionPath, "-o", createDir, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
-	createdPkgPath := filepath.Join(createDir, fmt.Sprintf("zarf-package-index-image-%s-0.0.1.tar.zst", e2e.Arch))
+	// Since there's only one image, tagged by index digest this will also work on arm64
+	createdPkgPath := filepath.Join(createDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")
 
 	registryURL := testutil.SetupInMemoryRegistryDynamic(testutil.TestContext(t), t)
 	ref := registry.Reference{
@@ -50,7 +50,7 @@ func TestIndexImage(t *testing.T) {
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir)
 	require.NoError(t, err, stdOut, stdErr)
 
-	pulledPkgPath := filepath.Join(pullDir, fmt.Sprintf("zarf-package-index-image-%s-0.0.1.tar.zst", e2e.Arch))
+	pulledPkgPath := filepath.Join(pullDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")
 
 	pkgLayout, err := layout.LoadFromTar(t.Context(), pulledPkgPath, layout.PackageLayoutOptions{})
 	require.NoError(t, err)

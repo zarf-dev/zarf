@@ -6,6 +6,7 @@ package images
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -20,6 +21,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/oci"
 )
 
@@ -127,16 +129,19 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
-		// Image-archive unpack is single-arch: when the archive holds an index, filter to the
-		// package architecture; single-manifest sources copy as-is. Index-sha preservation lives
-		// on the registry pull path (images.Pull), not here.
-		var platform *ocispec.Platform
-		if IsIndex(foundDesc.MediaType) {
-			platform = &ocispec.Platform{Architecture: arch, OS: "linux"}
+		// Mirror images.Pull: an index-digest reference preserves the full index (all platforms),
+		// while a tag or manifest-digest reference resolves to a single platform manifest. For
+		// indexes that's a recursive walk so nested indexes work.
+		copyDesc := manifestDesc
+		isIndexSha := manifestImg.Digest != "" && IsIndex(foundDesc.MediaType)
+		if IsIndex(foundDesc.MediaType) && !isIndexSha {
+			target := &ocispec.Platform{Architecture: arch, OS: "linux"}
+			copyDesc, err = resolvePlatformManifest(ctx, srcStore, manifestDesc, target)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve %s/%s manifest for %s: %w", target.OS, target.Architecture, manifestImg.Reference, err)
+			}
 		}
-		copyOpts := oras.DefaultCopyOptions
-		copyOpts.WithTargetPlatform(platform)
-		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
+		desc, err := oras.Copy(ctx, srcStore, copyDesc.Digest.String(), dstStore, manifestImg.Reference, oras.DefaultCopyOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy image %s from archive %s: %w", manifestImg.Reference, imageArchive.Path, err)
 		}
@@ -159,6 +164,50 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	return pulledImages, nil
+}
+
+// resolvePlatformManifest walks an index (recursing into nested indexes) and returns the first
+// leaf manifest descriptor whose platform matches target. If root is already a manifest, it is
+// returned unchanged.
+func resolvePlatformManifest(ctx context.Context, src content.ReadOnlyStorage, root ocispec.Descriptor, target *ocispec.Platform) (ocispec.Descriptor, error) {
+	if !IsIndex(root.MediaType) {
+		return root, nil
+	}
+	body, err := content.FetchAll(ctx, src, root)
+	if err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to fetch index %s: %w", root.Digest, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(body, &idx); err != nil {
+		return ocispec.Descriptor{}, fmt.Errorf("failed to unmarshal index %s: %w", root.Digest, err)
+	}
+	for _, child := range idx.Manifests {
+		if IsManifest(child.MediaType) && platformMatches(child.Platform, target) {
+			return child, nil
+		}
+	}
+	for _, child := range idx.Manifests {
+		if !IsIndex(child.MediaType) {
+			continue
+		}
+		if desc, err := resolvePlatformManifest(ctx, src, child, target); err == nil {
+			return desc, nil
+		}
+	}
+	return ocispec.Descriptor{}, fmt.Errorf("no manifest matched platform %s/%s in index %s", target.OS, target.Architecture, root.Digest)
+}
+
+func platformMatches(got, want *ocispec.Platform) bool {
+	if got == nil || want == nil {
+		return false
+	}
+	if want.Architecture != "" && got.Architecture != want.Architecture {
+		return false
+	}
+	if want.OS != "" && got.OS != want.OS {
+		return false
+	}
+	return true
 }
 
 // getRefFromManifest extracts the image reference from a manifest descriptor.
