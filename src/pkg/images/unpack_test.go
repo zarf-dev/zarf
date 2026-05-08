@@ -49,7 +49,17 @@ func TestGetRefFromManifest(t *testing.T) {
 					"containerd.io/distribution.source.docker.io": "library/nginx",
 				},
 			},
-			expected: "library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+			expected: "docker.io/library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+		},
+		{
+			name: "non-docker.io distribution source uses its registry",
+			desc: ocispec.Descriptor{
+				Digest: "sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c",
+				Annotations: map[string]string{
+					"containerd.io/distribution.source.ghcr.io": "zarf-dev/images/alpine",
+				},
+			},
+			expected: "ghcr.io/zarf-dev/images/alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c",
 		},
 		{
 			name: "org.opencontainers.image.ref.name present",

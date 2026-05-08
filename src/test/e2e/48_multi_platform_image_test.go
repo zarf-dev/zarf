@@ -47,7 +47,7 @@ func TestIndexImage(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 
 	pullDir := t.TempDir()
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir)
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "pull", "oci://"+ref.String(), "--plain-http", "-o", pullDir, "-a", "amd64")
 	require.NoError(t, err, stdOut, stdErr)
 
 	pulledPkgPath := filepath.Join(pullDir, "zarf-package-index-image-amd64-0.0.1.tar.zst")

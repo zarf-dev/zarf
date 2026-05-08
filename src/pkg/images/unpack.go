@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -31,8 +32,10 @@ type PulledImage struct {
 const (
 	// This is the default docker annotation for the image name
 	dockerRefAnnotation = "io.containerd.image.name"
-	// When the Docker engine containerd image store is used only this annotation is used for sha referenced images
-	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
+	// Prefix used by the Docker containerd image store to identify the registry an image
+	// was pulled from. The suffix after the prefix is the registry host (e.g. "docker.io",
+	// "ghcr.io"); the value is the repository path within that registry.
+	containerdDistributionSourcePrefix = "containerd.io/distribution.source."
 )
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
@@ -151,7 +154,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
-		"annotations in the index.json: %s, %s, %s", dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
+		"annotations in the index.json: %s, %s<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
 	for img, found := range requestedImages {
 		if !found {
 			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
@@ -171,8 +174,12 @@ func getRefFromManifest(manifestDesc ocispec.Descriptor) string {
 		return ref
 	}
 
-	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStoreAnnotation]; ok && repo != "" {
-		return fmt.Sprintf("%s@%s", repo, manifestDesc.Digest.String())
+	for k, v := range manifestDesc.Annotations {
+		registry, ok := strings.CutPrefix(k, containerdDistributionSourcePrefix)
+		if !ok || registry == "" || v == "" {
+			continue
+		}
+		return fmt.Sprintf("%s/%s@%s", registry, v, manifestDesc.Digest.String())
 	}
 
 	// This is the annotation oras-go uses to check for the name during oras.copy
