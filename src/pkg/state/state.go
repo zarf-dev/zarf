@@ -163,6 +163,11 @@ type State struct {
 	ArtifactServer ArtifactServerInfo `json:"artifactServer"`
 }
 
+// AgentIsConfigured returns true when Zarf has agent TLS configured.
+func (s *State) AgentIsConfigured() bool {
+	return len(s.AgentTLS.Cert) > 0
+}
+
 // InjectorInfo contains information on how to run the long lived Daemonset Injector
 type InjectorInfo struct {
 	// The image to be used for the long lived injector

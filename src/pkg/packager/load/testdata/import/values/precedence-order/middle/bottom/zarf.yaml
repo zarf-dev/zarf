@@ -1,0 +1,9 @@
+kind: ZarfPackageConfig
+metadata:
+  name: bottom-package
+values:
+  files:
+    - bottom-values.yaml
+components:
+  - name: nested-component
+    required: true

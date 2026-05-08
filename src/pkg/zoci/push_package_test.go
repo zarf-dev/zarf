@@ -10,7 +10,6 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -21,17 +20,13 @@ import (
 func TestPushPackage(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
-	registryRef := createRegistry(ctx, t)
+	pkg := buildVirtualPackage(ctx, t)
 
-	tmpdir := t.TempDir()
-	packagePath, err := packager.Create(ctx, "testdata/basic", tmpdir, packager.CreateOptions{CachePath: tmpdir, SkipSBOM: true})
-	require.NoError(t, err)
-
-	pkgLayout, err := layout.LoadFromTar(ctx, packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	pkgLayout, err := layout.LoadFromTar(ctx, pkg.packagePath, layout.PackageLayoutOptions{Filter: filters.Empty()})
 	require.NoError(t, err)
 
 	platform := oci.PlatformForArch(pkgLayout.Pkg.Build.Architecture)
-	remote, err := zoci.NewRemote(ctx, registryRef.String()+"/"+pkgLayout.Pkg.Metadata.Name+":"+pkgLayout.Pkg.Metadata.Version, platform, oci.WithPlainHTTP(true))
+	remote, err := zoci.NewRemote(ctx, pkg.registryAddr+"/"+pkgLayout.Pkg.Metadata.Name+":"+pkgLayout.Pkg.Metadata.Version, platform, oci.WithPlainHTTP(true))
 	require.NoError(t, err)
 
 	desc, err := remote.PushPackage(ctx, pkgLayout, zoci.PublishOptions{

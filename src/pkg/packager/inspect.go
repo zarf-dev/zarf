@@ -16,6 +16,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
 	tmpl "github.com/zarf-dev/zarf/src/internal/template"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -46,7 +47,9 @@ type Resource struct {
 // InspectPackageResourcesOptions are the optional parameters to InspectPackageResources
 type InspectPackageResourcesOptions struct {
 	SetVariables map[string]string
-	KubeVersion  string
+	// Values merge on top of the package's values.yaml and feed chart overrides and manifest Go-templates.
+	Values      value.Values
+	KubeVersion string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	types.RemoteOptions
@@ -59,9 +62,28 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 		return nil, err
 	}
 
+	if !feature.IsEnabled(feature.Values) && (len(pkgLayout.Pkg.Values.Files) > 0 || len(opts.Values) > 0) {
+		return nil, fmt.Errorf("package-level values passed in but \"%s\" feature is not enabled."+
+			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
+	}
+
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err
+	}
+
+	valuesPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesYAML)
+	vals, err := value.ParseLocalFile(ctx, valuesPath)
+	if err != nil {
+		return nil, err
+	}
+	vals.DeepMerge(opts.Values)
+
+	if pkgLayout.Pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
+			return nil, fmt.Errorf("inspect values validation failed: %w", err)
+		}
 	}
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
@@ -100,6 +122,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			for _, chart := range component.Charts {
 				chartOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
 					variableConfig: variableConfig,
+					values:         vals,
 				})
 				if err != nil {
 					return nil, err
@@ -138,27 +161,39 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			if err != nil {
 				return nil, fmt.Errorf("failed to get package manifests: %w", err)
 			}
-			manifestFiles, err := os.ReadDir(manifestDir)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read manifest directory: %w", err)
-			}
-			for _, file := range manifestFiles {
-				path := filepath.Join(manifestDir, file.Name())
-				if file.IsDir() {
-					continue
+			for _, manifest := range component.Manifests {
+				files := make([]string, 0, len(manifest.Files)+len(manifest.Kustomizations))
+				for idx := range manifest.Files {
+					files = append(files, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
 				}
-				if err := variableConfig.ReplaceTextTemplate(path); err != nil {
-					return nil, fmt.Errorf("error templating the manifest: %w", err)
+				for idx := range manifest.Kustomizations {
+					files = append(files, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx))
 				}
-				contents, err := os.ReadFile(path)
-				if err != nil {
-					return nil, fmt.Errorf("could not read the file %s: %w", path, err)
+				for _, file := range files {
+					path := filepath.Join(manifestDir, file)
+					if err := variableConfig.ReplaceTextTemplate(path); err != nil {
+						return nil, fmt.Errorf("error templating the manifest: %w", err)
+					}
+					if manifest.IsTemplate() {
+						objs := tmpl.NewObjects(vals).
+							WithPackage(pkgLayout.Pkg).
+							WithBuild(pkgLayout.Pkg.Build).
+							WithVariables(variableConfig.GetSetVariableMap()).
+							WithConstants(variableConfig.GetConstants())
+						if err := tmpl.ApplyToFile(ctx, path, path, objs); err != nil {
+							return nil, fmt.Errorf("error applying Go templates to manifest: %w", err)
+						}
+					}
+					contents, err := os.ReadFile(path)
+					if err != nil {
+						return nil, fmt.Errorf("could not read the file %s: %w", path, err)
+					}
+					resources = append(resources, Resource{
+						Content:      string(contents),
+						Name:         file,
+						ResourceType: ManifestResource,
+					})
 				}
-				resources = append(resources, Resource{
-					Content:      string(contents),
-					Name:         file.Name(),
-					ResourceType: ManifestResource,
-				})
 			}
 		}
 	}
@@ -228,6 +263,13 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	vals, err := loadPackageValues(ctx, pkg, pkgPath.BaseDir, opts.Values)
 	if err != nil {
 		return nil, err
+	}
+
+	if pkg.Values.Schema != "" {
+		schemaPath := filepath.Join(pkgPath.BaseDir, pkg.Values.Schema)
+		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
+			return nil, fmt.Errorf("inspect values validation failed: %w", err)
+		}
 	}
 
 	tmpPackagePath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
