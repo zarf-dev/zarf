@@ -197,22 +197,32 @@ func (r *Remote) LayersFromImages(ctx context.Context, imageList map[string]bool
 			}
 			layers = append(layers, childLayers...)
 		case images.IsManifest(entry.MediaType):
-			// even though these are technically image manifests, we store them as Zarf blobs
-			entry.MediaType = ZarfLayerMediaTypeBlob
-			manifest, err := r.FetchManifest(ctx, entry)
+			manifestLayers, err := r.layersFromManifestChildren(ctx, root, entry)
 			if err != nil {
 				return nil, err
 			}
-			layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifest.Config.Digest.Encoded())))
-			for _, layer := range manifest.Layers {
-				layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())))
-			}
+			layers = append(layers, manifestLayers...)
 		default:
 			return nil, fmt.Errorf("unexpected media type %q for image %s", entry.MediaType, entry.Digest)
 		}
 	}
 	// Remove duplicate descriptors in case of shared base layers
 	return oci.RemoveDuplicateDescriptors(layers), nil
+}
+
+func (r *Remote) layersFromManifestChildren(ctx context.Context, root *oci.Manifest, manifestDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
+	manifest, err := oci.FetchJSONFile[*ocispec.Manifest](ctx, r.FetchLayer, root, filepath.Join(layout.ImagesBlobsDir, manifestDesc.Digest.Encoded()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch manifest %s: %w", manifestDesc.Digest, err)
+	}
+	layers := make([]ocispec.Descriptor, 0, len(manifest.Layers)+1)
+	if manifest.Config.Digest != "" {
+		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, manifest.Config.Digest.Encoded())))
+	}
+	for _, layer := range manifest.Layers {
+		layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())))
+	}
+	return layers, nil
 }
 
 func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest, indexDesc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
@@ -231,18 +241,11 @@ func (r *Remote) layersFromIndexChildren(ctx context.Context, root *oci.Manifest
 			}
 			layers = append(layers, nestedLayers...)
 		case images.IsManifest(child.MediaType):
-			childWithBlobType := child
-			childWithBlobType.MediaType = ZarfLayerMediaTypeBlob
-			childManifest, err := r.FetchManifest(ctx, childWithBlobType)
+			manifestLayers, err := r.layersFromManifestChildren(ctx, root, child)
 			if err != nil {
-				return nil, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+				return nil, err
 			}
-			if childManifest.Config.Digest != "" {
-				layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, childManifest.Config.Digest.Encoded())))
-			}
-			for _, layer := range childManifest.Layers {
-				layers = append(layers, root.Locate(filepath.Join(layout.ImagesBlobsDir, layer.Digest.Encoded())))
-			}
+			layers = append(layers, manifestLayers...)
 		default:
 			return nil, fmt.Errorf("unexpected media type %q for index child %s", child.MediaType, child.Digest)
 		}
