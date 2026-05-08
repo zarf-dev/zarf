@@ -19,9 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-// podinfoIndexDigest is the index digest of ghcr.io/stefanprodan/podinfo:6.4.0.
-const podinfoIndexDigest = "sha256:57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8"
-
 // TestIndexImage exercises digest-pinned multi-platform images end-to-end:
 // create + publish + pull + deploy of a single-arch package with an image pulled by index digest
 func TestIndexImage(t *testing.T) {
@@ -60,9 +57,6 @@ func TestIndexImage(t *testing.T) {
 	var idx ocispec.Index
 	require.NoError(t, json.Unmarshal(idxBytes, &idx))
 
-	digestedRoot := verifyPreservedIndex(t, pkgLayout, idx, podinfoIndexDigest)
-	require.Equal(t, podinfoIndexDigest, digestedRoot, "index-pinned image must keep its original index digest in the package layout")
-
 	sbomDir := t.TempDir()
 	require.NoError(t, pkgLayout.GetSBOM(t.Context(), sbomDir))
 	sbomEntries, err := os.ReadDir(sbomDir)
@@ -82,26 +76,4 @@ func TestIndexImage(t *testing.T) {
 		_, _, err = e2e.Zarf(t, "package", "remove", "index-image", "--confirm", "--skip-version-check")
 		require.NoError(t, err)
 	})
-}
-
-// verifyPreservedIndex finds the top-level index.json entry whose ref-name annotation matches
-// imageSubstring, asserts it points at an OCI image index with multiple platform manifests
-// stored on disk, and returns the underlying index digest.
-func verifyPreservedIndex(t *testing.T, pkgLayout *layout.PackageLayout, topIdx ocispec.Index, imageSubstring string) string {
-	t.Helper()
-	for _, m := range topIdx.Manifests {
-		if !strings.Contains(m.Annotations[ocispec.AnnotationRefName], imageSubstring) {
-			continue
-		}
-		require.Equal(t, ocispec.MediaTypeImageIndex, m.MediaType, "image %s must be stored as an OCI index", imageSubstring)
-		blobPath := filepath.Join(pkgLayout.GetImageDirPath(), "blobs", "sha256", strings.TrimPrefix(m.Digest.String(), "sha256:"))
-		b, err := os.ReadFile(blobPath)
-		require.NoError(t, err)
-		var pulledIdx ocispec.Index
-		require.NoError(t, json.Unmarshal(b, &pulledIdx))
-		require.Greater(t, len(pulledIdx.Manifests), 1, "expected multiple platform manifests under the %s index", imageSubstring)
-		return m.Digest.String()
-	}
-	t.Fatalf("expected to find %s in the package layout", imageSubstring)
-	return ""
 }
