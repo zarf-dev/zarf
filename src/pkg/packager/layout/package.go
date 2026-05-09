@@ -238,7 +238,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
 	}
 
-	if feature.IsEnabled(feature.BundleSignature) && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
+	// Keyless requires bundle format — the cert chain is the only verification material.
+	bundleEnabled := feature.IsEnabled(feature.BundleSignature) || opts.Keyless
+
+	if bundleEnabled && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
 		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
 	}
 
@@ -267,7 +270,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
 	signOpts.OutputSignature = actualSignaturePath
-	if feature.IsEnabled(feature.BundleSignature) {
+	if bundleEnabled {
 		signOpts.BundlePath = actualBundlePath
 	} else {
 		signOpts.NewBundleFormat = false
@@ -279,7 +282,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	}
 
 	signOpts.OutputSignature = tmpSignaturePath
-	if feature.IsEnabled(feature.BundleSignature) {
+	if bundleEnabled {
 		signOpts.BundlePath = tmpBundlePath
 	}
 
@@ -309,10 +312,18 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	if feature.IsEnabled(feature.BundleSignature) {
+	if bundleEnabled {
 		err = os.Rename(tmpBundlePath, actualBundlePath)
 		if err != nil {
 			return fmt.Errorf("failed to move bundle after signing: %w", err)
+		}
+	}
+
+	if opts.Keyless {
+		if identity, issuer, ierr := utils.ReadKeylessIdentityFromBundle(actualBundlePath); ierr == nil {
+			l.Info("signed package keyless", "identity", identity, "issuer", issuer)
+		} else {
+			l.Debug("could not read keyless identity from bundle", "error", ierr)
 		}
 	}
 
@@ -335,20 +346,21 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
+	hasKey := opts.Key != ""
+	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
+	hasCert := opts.CertVerify.Cert != ""
+	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
+
 	// Handle the case where the package is not signed
 	if !p.IsSigned() {
-		// Note: add future logic for verification material here
-		if opts.Key != "" {
-			return errors.New("a key was provided but the package is not signed")
+		if hasVerificationMaterial {
+			return errors.New("verification material was provided but the package is not signed")
 		}
-
 		return errors.New("package is not signed - verification cannot be performed")
 	}
 
-	// Validate that we have required verification material
-	// Note: this will later be replaced when verification enhancements are made
-	if opts.Key == "" {
-		return errors.New("package is signed but no verification material was provided (Public Key, etc.)")
+	if !hasVerificationMaterial {
+		return errors.New("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer, or --certificate)")
 	}
 
 	// Check for bundle format signature (preferred)
@@ -371,6 +383,13 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 			return fmt.Errorf("signature not found: neither bundle nor legacy signature exists")
 		}
 		return fmt.Errorf("error checking legacy signature: %w", err)
+	}
+
+	// Legacy signatures don't carry a certificate chain, so keyless identity
+	// verification has nothing to match against. Fail fast with a clear message
+	// rather than letting cosign emit a generic key/cert/bundle error.
+	if hasKeylessIdentity {
+		return errors.New("keyless verification requires bundle-format signatures, but this package has only a legacy .sig. Ask the publisher to re-sign with bundle format, or verify with --key")
 	}
 
 	// Legacy signature found

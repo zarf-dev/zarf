@@ -358,6 +358,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
 	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagKeyless        = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."

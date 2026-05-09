@@ -1826,6 +1826,7 @@ type packageSignOptions struct {
 	ociConcurrency     int
 	retries            int
 	verify             bool
+	keyless            bool
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1851,6 +1852,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
+	cmd.Flags().BoolVar(&o.keyless, "keyless", false, lang.CmdPackageSignFlagKeyless)
 
 	mergeCosignSignFlags(cmd, &o.cosign)
 
@@ -1873,7 +1875,6 @@ func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 	for _, name := range []string{
 		"bundle", "output-signature", "output-certificate",
 		"b64", "rfc3161-timestamp", "issue-certificate",
-		"signing-config", "use-signing-config", "trusted-root",
 	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
@@ -1882,6 +1883,10 @@ func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 
 	opts.TlogUpload = false
 	if f := fs.Lookup("tlog-upload"); f != nil {
+		setFlagDefault(f, "false")
+	}
+	opts.UseSigningConfig = false
+	if f := fs.Lookup("use-signing-config"); f != nil {
 		setFlagDefault(f, "false")
 	}
 }
@@ -1900,8 +1905,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	packageSource := args[0]
 
-	if o.cosign.Key == "" {
-		return errors.New("--signing-key is required")
+	if !o.keyless && o.cosign.Key == "" {
+		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
 	}
 
 	// Determine output destination
@@ -1994,13 +1999,24 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Sign the package
-	l.Info("signing package with provided key")
+	if o.keyless {
+		l.Info("signing package via Sigstore keyless flow")
+	} else {
+		l.Info("signing package with provided key")
+	}
 
 	signOpts := utils.DefaultSignBlobOptions()
 	signOpts.SignBlobOptions = o.cosign
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
+	signOpts.Keyless = o.keyless
+
+	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
+	// the signature is unverifiable past expiry. Default --tlog-upload=true for
+	// keyless unless the user explicitly opted out.
+	if o.keyless && !cmd.Flags().Changed("tlog-upload") {
+		signOpts.TlogUpload = true
+	}
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {

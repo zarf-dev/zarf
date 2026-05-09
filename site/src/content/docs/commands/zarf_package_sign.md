@@ -50,6 +50,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --identity-token string            identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.
       --insecure-skip-verify             skip verifying fulcio published to the SCT (this should only be used for testing).
   -k, --key string                       Public key to verify the existing signature before re-signing (optional)
+      --keyless                          Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)
       --new-bundle-format                output bundle in new format that contains all verification material (default true)
       --oci-concurrency int              Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --oidc-client-id string            OIDC client ID for application (default "sigstore")
@@ -63,6 +64,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --rekor-url string                 address of rekor STL server (default "https://rekor.sigstore.dev")
       --retries int                      Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --signing-algorithm string         signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
+      --signing-config string            path to a signing config file. Must provide --bundle, which will output verification material in the new format
       --signing-key string               Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string          Password for encrypted private key
       --sk                               whether to use a hardware security key
@@ -72,6 +74,8 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --timestamp-client-key string      path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server
       --timestamp-server-name string     SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server
       --timestamp-server-url string      url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr
+      --trusted-root string              optional path to a TrustedRoot JSON file to verify a signature after signing
+      --use-signing-config               whether to use a TUF-provided signing config for the service URLs. Must provide --bundle, which will output verification material in the new format
       --verify                           Verify the Zarf package signature
   -y, --yes                              skip confirmation prompts for non-destructive operations
 ```

@@ -122,6 +122,10 @@ func TestPackageSigning(t *testing.T) {
 			"--certificate-chain",
 			"--sk",
 			"--slot",
+			"--keyless",
+			"--signing-config",
+			"--use-signing-config",
+			"--trusted-root",
 		} {
 			require.Contains(t, stdOut, flag, "expected %q in `package sign --help`", flag)
 		}
@@ -136,8 +140,21 @@ func TestPackageSigning(t *testing.T) {
 
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", "--help")
 		require.NoError(t, err, stdOut, stdErr)
-		for _, hidden := range []string{"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate", "--signing-config", "--use-signing-config"} {
+		for _, hidden := range []string{"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate"} {
 			require.NotContains(t, stdOut, hidden, "expected %q to be hidden in `package sign --help`", hidden)
 		}
+	})
+
+	t.Run("--keyless lifts the --signing-key requirement", func(t *testing.T) {
+		// Without --signing-key and without --keyless: should error with the guard message.
+		_, stdErr, err := e2e.Zarf(t, "package", "sign", "nonexistent.tar.zst")
+		require.Error(t, err)
+		require.Contains(t, stdErr, "--signing-key is required")
+
+		// With --keyless: guard is lifted. The command will fail later for unrelated
+		// reasons (no package, no OIDC), but not on the --signing-key check.
+		_, stdErr, err = e2e.Zarf(t, "package", "sign", "nonexistent.tar.zst", "--keyless")
+		require.Error(t, err)
+		require.NotContains(t, stdErr, "--signing-key is required")
 	})
 }

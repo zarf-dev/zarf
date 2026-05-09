@@ -797,7 +797,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "a key was provided but the package is not signed")
+		require.Contains(t, err.Error(), "verification material was provided but the package is not signed")
 	})
 
 	t.Run("verification fails with empty dirPath", func(t *testing.T) {
@@ -872,7 +872,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts.Key = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.EqualError(t, err, "package is signed but no verification material was provided (Public Key, etc.)")
+		require.EqualError(t, err, "package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer, or --certificate)")
 	})
 
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {

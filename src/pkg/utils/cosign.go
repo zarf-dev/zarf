@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
@@ -48,6 +49,11 @@ type SignBlobOptions struct {
 	Password  string
 	PassFunc  cosign.PassFunc
 	Overwrite bool
+	// Keyless gates zarf-specific sign-side guards on top of cosign's behavior.
+	// When true, --signing-key is no longer required and ShouldSign returns true
+	// even without explicit Key/IDToken/Sk material — cosign resolves identity
+	// via Fulcio/OIDC at sign time.
+	Keyless bool
 }
 
 // VerifyBlobOptions wraps cosign's VerifyBlobOptions with zarf-specific fields.
@@ -57,9 +63,9 @@ type VerifyBlobOptions struct {
 	Timeout time.Duration
 }
 
-// ShouldSign returns true if any signing key material is configured.
+// ShouldSign returns true if any signing key material is configured or keyless is requested.
 func (opts SignBlobOptions) ShouldSign() bool {
-	return opts.Key != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use
+	return opts.Key != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use || opts.Keyless
 }
 
 // CheckOverwrite errors if any output file exists and Overwrite is false.
@@ -79,10 +85,14 @@ func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
 }
 
 // DefaultSignBlobOptions returns SignBlobOptions seeded with zarf defaults.
-// Divergence: TlogUpload defaults to false (cosign default true) for airgap.
+// Divergences from cosign defaults (air-gap):
+//   - TlogUpload=false (cosign default true)
+//   - UseSigningConfig=false (cosign default true) — required because cosign rejects
+//     UseSigningConfig=true combined with TlogUpload=false.
 func DefaultSignBlobOptions() SignBlobOptions {
 	var opts SignBlobOptions
 	opts.TlogUpload = false
+	opts.UseSigningConfig = false
 	opts.Base64Output = true
 	opts.NewBundleFormat = true
 	opts.SecurityKey.Slot = "signature"
@@ -157,6 +167,17 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	}
 
 	if err := opts.CheckOverwrite(ctx); err != nil {
+		return nil, err
+	}
+
+	// Empty output-path params suppress cosign's deprecation warnings; zarf manages
+	// OutputSignature internally and the warnings would fire on every sign.
+	if err := signcommon.LoadTrustedMaterialAndSigningConfig(ctx, &ko,
+		opts.UseSigningConfig, opts.SigningConfigPath,
+		opts.Rekor.URL, opts.Fulcio.URL, opts.OIDC.Issuer, opts.TSAServerURL, opts.TrustedRootPath,
+		opts.TlogUpload, opts.NewBundleFormat, opts.BundlePath, opts.Key, opts.IssueCertificate,
+		"", "", "", "", "", "",
+	); err != nil {
 		return nil, err
 	}
 
