@@ -1746,13 +1746,17 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
+	publishSignOpts := utils.DefaultSignBlobOptions()
+	publishSignOpts.Key = o.signingKeyPath
+	publishSignOpts.Password = o.signingKeyPassword
+	publishSignOpts.Overwrite = true
+
 	publishPackageOpts := packager.PublishPackageOptions{
-		OCIConcurrency:     o.ociConcurrency,
-		SigningKeyPath:     o.signingKeyPath,
-		SigningKeyPassword: o.signingKeyPassword,
-		Retries:            o.retries,
-		RemoteOptions:      defaultRemoteOptions(),
-		Tag:                o.tag,
+		OCIConcurrency:  o.ociConcurrency,
+		SignBlobOptions: publishSignOpts,
+		Retries:         o.retries,
+		RemoteOptions:   defaultRemoteOptions(),
+		Tag:             o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
@@ -1934,31 +1938,34 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// If output is OCI (either default or user-specified), delegate to publish workflow
-	if helpers.IsOCIURL(outputDest) {
-		l.Info("signing and publishing package to OCI registry", "source", packageSource, "destination", outputDest)
-
-		// Create publish options from sign options
-		publishOpts := &packagePublishOptions{
-			signingKeyPath:     o.signingKeyPath,
-			signingKeyPassword: o.signingKeyPassword,
-			ociConcurrency:     o.ociConcurrency,
-			retries:            o.retries,
-			publicKeyPath:      o.publicKeyPath,
-			verify:             o.verify,
-		}
-
-		// Call publish with source and destination repository
-		return publishOpts.run(cmd, []string{packageSource, outputDest})
-	}
-
-	// For local file output, use existing sign logic
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Load the package - do not verify
+	// Pull from OCI to a local temp dir before loading
+	if helpers.IsOCIURL(packageSource) {
+		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if removeErr := os.RemoveAll(tmpdir); removeErr != nil {
+				l.Warn("failed to remove temp dir", "error", removeErr)
+			}
+		}()
+		packageSource, err = packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
+			VerificationStrategy: layout.VerifyNever,
+			Architecture:         config.GetArch(),
+			OCIConcurrency:       o.ociConcurrency,
+			RemoteOptions:        defaultRemoteOptions(),
+			CachePath:            cachePath,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to pull package: %w", err)
+		}
+	}
+
 	loadOpts := packager.LoadOptions{
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -2022,12 +2029,30 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		signOpts.TlogUpload = true
 	}
 
+	if helpers.IsOCIURL(outputDest) {
+		parts := strings.Split(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix), "/")
+		dstRef := registry.Reference{
+			Registry:   parts[0],
+			Repository: strings.Join(parts[1:], "/"),
+		}
+		if err := dstRef.ValidateRegistry(); err != nil {
+			return fmt.Errorf("invalid destination registry: %w", err)
+		}
+		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
+		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+			OCIConcurrency:  o.ociConcurrency,
+			SignBlobOptions: signOpts,
+			Retries:         o.retries,
+			RemoteOptions:   defaultRemoteOptions(),
+		})
+		return err
+	}
+
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	// Archive to local directory
 	l.Info("archiving signed package to local directory", "directory", outputDest)
 	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
 	if err != nil {
