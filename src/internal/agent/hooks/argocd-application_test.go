@@ -14,6 +14,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -33,12 +35,15 @@ func TestArgoAppWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	s := &state.State{GitServer: state.GitServerInfo{
-		Address:      "https://git-server.com",
-		PushUsername: "a-push-user",
-	}}
-	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
+	s := &state.State{
+		GitServer: state.GitServerInfo{
+			Address:      "https://git-server.com",
+			PushUsername: "a-push-user",
+		},
+		RegistryInfo: state.RegistryInfo{
+			Address: "127.0.0.1:31999",
+		},
+	}
 
 	tests := []admissionTest{
 		{
@@ -112,6 +117,121 @@ func TestArgoAppWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
+			name: "should not re-mutate on create if url already points to zarf registry",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://127.0.0.1:31999/stefanprodan/charts/podinfo"},
+					Sources: []ApplicationSource{
+						{RepoURL: "oci://127.0.0.1:31999/dhpup/oci-edge"},
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/0/repoURL",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated for OCI repo",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://ghcr.io/stefanprodan/charts/podinfo"},
+					Sources: []ApplicationSource{
+						{
+							RepoURL: "oci://registry-1.docker.io/dhpup/oci-edge",
+						},
+						{
+							RepoURL: "https://diff-git-server.com/almonds",
+						},
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/0/repoURL",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/1/repoURL",
+					"https://git-server.com/a-push-user/almonds-640159520",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated for OCI repo with internal service registry",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://ghcr.io/stefanprodan/charts/podinfo"},
+					Sources: []ApplicationSource{
+						{
+							RepoURL: "oci://ghcr.io/stefanprodan/manifests/podinfo",
+						},
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/0/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/manifests/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should return internal server error on bad git URL",
 			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
 				Spec: ApplicationSpec{
@@ -121,11 +241,159 @@ func TestArgoAppWebhook(t *testing.T) {
 			code:        http.StatusInternalServerError,
 			errContains: AgentErrTransformGitURL,
 		},
+		{
+			name: "should not mutate already patched cluster DNS url",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Update, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo"},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should mutate cluster IP to DNS",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Update, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://10.11.12.13:5000/stefanprodan/charts/podinfo"},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
+			if tt.svc != nil {
+				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
+		})
+	}
+}
+
+func TestArgoAppWebhookOCIWithNoGitServer(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := &state.State{
+		RegistryInfo: state.RegistryInfo{
+			Address: "127.0.0.1:31999",
+		},
+	}
+
+	tests := []admissionTest{
+		{
+			name: "should mutate OCI sources when git server is not configured",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "oci://ghcr.io/stefanprodan/charts/podinfo"},
+					Sources: []ApplicationSource{
+						{RepoURL: "oci://registry-1.docker.io/dhpup/oci-edge"},
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/source/repoURL",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sources/0/repoURL",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should skip git sources when git server is not configured",
+			admissionReq: createArgoAppAdmissionRequest(t, v1.Create, &Application{
+				Spec: ApplicationSpec{
+					Source: &ApplicationSource{RepoURL: "https://github.com/org/repo"},
+				},
+			}),
+			// No patches expected
+			code: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c))
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
 		})
