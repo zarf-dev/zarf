@@ -359,6 +359,14 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
 	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
 	CmdPackageSignFlagKeyless        = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
+	CmdPackageSignFlagIdentityToken  = "Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing"
+	CmdPackageSignFlagFulcioURL      = "Fulcio certificate authority URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagFulcioAuthFlow = "Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials"
+	CmdPackageSignFlagOIDCIssuer     = "OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments."
+	CmdPackageSignFlagOIDCClientID   = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
+	CmdPackageSignFlagRekorURL       = "Rekor transparency log URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagTlogUpload     = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (required for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
+	CmdPackageSignFlagYes            = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
@@ -369,7 +377,13 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.p
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 `
-	CmdPackageVerifyFlagKey = "Public key for signature verification"
+	CmdPackageVerifyFlagKey                         = "Public key for signature verification"
+	CmdPackageVerifyFlagCertificateIdentity         = "Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
+	CmdPackageVerifyFlagCertificateIdentityRegexp   = "Regex variant of --certificate-identity"
+	CmdPackageVerifyFlagCertificateOIDCIssuer       = "Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com"
+	CmdPackageVerifyFlagCertificateOIDCIssuerRegexp = "Regex variant of --certificate-oidc-issuer"
+	CmdPackageVerifyFlagTrustedRoot                 = "Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted."
+	CmdPackageVerifyFlagInsecureIgnoreTlog          = "Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry)."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

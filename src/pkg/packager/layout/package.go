@@ -22,7 +22,6 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/internal/split"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
-	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -238,12 +237,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Signature)
 	}
 
-	// Keyless requires bundle format — the cert chain is the only verification material.
-	bundleEnabled := feature.IsEnabled(feature.BundleSignature) || opts.Keyless
-
-	if bundleEnabled && !slices.Contains(p.Pkg.Build.ProvenanceFiles, Bundle) {
-		p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
-	}
+	p.Pkg.Build.ProvenanceFiles = append(p.Pkg.Build.ProvenanceFiles, Bundle)
 
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
@@ -270,21 +264,15 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	actualSignaturePath := filepath.Join(p.dirPath, Signature)
 	actualBundlePath := filepath.Join(p.dirPath, Bundle)
 	signOpts.OutputSignature = actualSignaturePath
-	if bundleEnabled {
-		signOpts.BundlePath = actualBundlePath
-	} else {
-		signOpts.NewBundleFormat = false
-		signOpts.BundlePath = ""
-	}
+	signOpts.BundlePath = actualBundlePath
+
 	err = signOpts.CheckOverwrite(ctx)
 	if err != nil {
 		return err
 	}
 
 	signOpts.OutputSignature = tmpSignaturePath
-	if bundleEnabled {
-		signOpts.BundlePath = tmpBundlePath
-	}
+	signOpts.BundlePath = tmpBundlePath
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
@@ -312,11 +300,9 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
-	if bundleEnabled {
-		err = os.Rename(tmpBundlePath, actualBundlePath)
-		if err != nil {
-			return fmt.Errorf("failed to move bundle after signing: %w", err)
-		}
+	err = os.Rename(tmpBundlePath, actualBundlePath)
+	if err != nil {
+		return fmt.Errorf("failed to move bundle after signing: %w", err)
 	}
 
 	if opts.Keyless {
