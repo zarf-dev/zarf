@@ -39,7 +39,6 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
       --oci-concurrency int                 Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --rekor-url string                    address of rekor STL server (default "https://rekor.sigstore.dev")
       --signature-digest-algorithm string   digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
-      --trusted-root string                 Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.
 ```
 
 ### Options inherited from parent commands

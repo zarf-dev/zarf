@@ -2114,6 +2114,10 @@ func hideAndOverrideVerify(fs *pflag.FlagSet, opts *options.VerifyBlobOptions) {
 		"insecure-ignore-sct",
 		// MaxWorkers is on VerifyCommand (image verify) — not consumed by VerifyBlobCmd
 		"max-workers",
+		// TrustedRoot only matters for keyless cert validation / Rekor inclusion / TSA timestamps —
+		// all blocked in Stage 2 by the --key gate, no keyless flow, no TSA wiring. Help text also
+		// references the hidden --new-bundle-format flag.
+		"trusted-root",
 		// Keyless verify identity — blocked by the --key guard
 		"certificate-identity", "certificate-identity-regexp",
 		"certificate-oidc-issuer", "certificate-oidc-issuer-regexp",

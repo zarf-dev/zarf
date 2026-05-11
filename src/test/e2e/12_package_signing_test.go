@@ -94,7 +94,6 @@ func TestPackageSigning(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
 		for _, flag := range []string{
-			"--trusted-root",
 			"--insecure-ignore-tlog",
 			"--rekor-url",
 		} {
@@ -111,7 +110,7 @@ func TestPackageSigning(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 		for _, hidden := range []string{
 			"bundle", "signature", "rfc3161-timestamp", "new-bundle-format",
-			"insecure-ignore-sct", "max-workers",
+			"insecure-ignore-sct", "max-workers", "trusted-root",
 			"certificate-identity", "certificate-oidc-issuer",
 			"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
 			"certificate-github-workflow-name", "certificate-github-workflow-repository",
