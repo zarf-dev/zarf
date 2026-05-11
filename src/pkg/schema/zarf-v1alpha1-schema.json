@@ -333,10 +333,12 @@
         },
         "differentialPackageVersion": {
           "description": "Version of a previously built package used as the basis for creating this differential package.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "flavor": {
           "description": "The flavor of Zarf used to build this package.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "migrations": {
@@ -415,6 +417,7 @@
         },
         "name": {
           "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repo.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {
@@ -478,6 +481,7 @@
         },
         "version": {
           "description": "The version of the chart to deploy; for git-based charts this is also the tag of the git repo by default (when not using the '@' syntax for 'repos').",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         }
       },
@@ -1138,6 +1142,7 @@
         },
         "name": {
           "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "namespace": {
@@ -1239,6 +1244,7 @@
         },
         "version": {
           "description": "Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).",
+          "pattern": "^[^/\\\\]*$",
           "type": "string"
         },
         "yolo": {
