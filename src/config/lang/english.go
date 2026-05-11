@@ -369,6 +369,8 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.p
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 `
+	CmdPackageVerifyFlagKey = "Public key for signature verification"
+
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
 # Pull a package matching the current architecture

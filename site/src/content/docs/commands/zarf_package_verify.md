@@ -33,12 +33,9 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 ### Options
 
 ```
-  -h, --help                                help for verify
-      --insecure-ignore-tlog                ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default true)
-  -k, --key string                          path to the public key file, KMS URI or Kubernetes Secret
-      --oci-concurrency int                 Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --rekor-url string                    address of rekor STL server (default "https://rekor.sigstore.dev")
-      --signature-digest-algorithm string   digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")
+  -h, --help                  help for verify
+  -k, --key string            Public key for signature verification
+      --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
 ```
 
 ### Options inherited from parent commands
