@@ -87,17 +87,13 @@ func TestPackageSigning(t *testing.T) {
 		require.Contains(t, stdErr, "a key was provided but the package is not signed")
 	})
 
-	// Confirms cosign-aligned flag surface is bound on verify. Round-trip keyless verify
-	// against real Sigstore fixtures lands in Stage 3 alongside trusted-root embedding.
-	t.Run("Cosign-aligned verify flags are accepted", func(t *testing.T) {
+	// Exposes only the cosign flags whose underlying flow is wired through.
+	// Keyless, hardware-key, TSA, and cert-based flags are hidden until later stages
+	// wire them.
+	t.Run("visible cosign flags on verify", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
 		for _, flag := range []string{
-			"--certificate-identity",
-			"--certificate-oidc-issuer",
-			"--certificate-identity-regexp",
-			"--certificate-oidc-issuer-regexp",
-			"--certificate-github-workflow-trigger",
 			"--trusted-root",
 			"--insecure-ignore-tlog",
 			"--insecure-ignore-sct",
@@ -105,39 +101,42 @@ func TestPackageSigning(t *testing.T) {
 		} {
 			require.Contains(t, stdOut, flag, "expected %q in `package verify --help`", flag)
 		}
-		// airgap-safe defaults must remain enabled.
-		require.Contains(t, stdOut, "--insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default true)")
-		require.Contains(t, stdOut, "--insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log (default true)")
+		// Airgap-safe defaults must remain enabled. Match by trailing "(default true)" on the
+		// flag line rather than full column-aligned strings (cobra recomputes alignment as the
+		// visible flag set changes).
+		require.Regexp(t, `--insecure-ignore-tlog[^\n]*\(default true\)`, stdOut)
+		require.Regexp(t, `--insecure-ignore-sct[^\n]*\(default true\)`, stdOut)
 	})
 
-	t.Run("Cosign-aligned sign flags are accepted", func(t *testing.T) {
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "sign", "--help")
-		require.NoError(t, err, stdOut, stdErr)
-		for _, flag := range []string{
-			"--fulcio-url",
-			"--rekor-url",
-			"--oidc-issuer",
-			"--identity-token",
-			"--certificate",
-			"--certificate-chain",
-			"--sk",
-			"--slot",
-		} {
-			require.Contains(t, stdOut, flag, "expected %q in `package sign --help`", flag)
-		}
-	})
-
-	t.Run("Hidden flags do not appear in help", func(t *testing.T) {
+	t.Run("hidden verify flags", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
-		for _, hidden := range []string{"--bundle", "--signature", "--rfc3161-timestamp"} {
-			require.NotContains(t, stdOut, hidden+" string", "expected %q to be hidden in `package verify --help`", hidden)
+		for _, hidden := range []string{
+			"--bundle ", "--signature ", "--rfc3161-timestamp",
+			"--certificate-identity", "--certificate-oidc-issuer",
+			"--certificate-github-workflow",
+			"--certificate ", "--certificate-chain", "--ca-roots", "--ca-intermediates",
+			"--sk ", "--slot ",
+			"--timestamp-certificate-chain", "--use-signed-timestamps",
+			"--sct ", "--private-infrastructure", "--experimental-oci11",
+		} {
+			require.NotContains(t, stdOut, hidden, "expected %q hidden from `package verify --help`", hidden)
 		}
+	})
 
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", "--help")
+	t.Run("hidden sign flags", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "sign", "--help")
 		require.NoError(t, err, stdOut, stdErr)
-		for _, hidden := range []string{"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate", "--signing-config", "--use-signing-config"} {
-			require.NotContains(t, stdOut, hidden, "expected %q to be hidden in `package sign --help`", hidden)
+		for _, hidden := range []string{
+			"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate",
+			"--signing-config", "--use-signing-config", "--trusted-root",
+			"--fulcio-url", "--identity-token", "--oidc-issuer", "--oidc-client-id",
+			"--fulcio-auth-flow", "--insecure-skip-verify",
+			"--sk ", "--slot ",
+			"--timestamp-client", "--timestamp-server",
+			"--certificate ", "--certificate-chain",
+		} {
+			require.NotContains(t, stdOut, hidden, "expected %q hidden from `package sign --help`", hidden)
 		}
 	})
 }

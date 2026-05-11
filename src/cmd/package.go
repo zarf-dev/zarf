@@ -1869,11 +1869,28 @@ func mergeCosignSignFlags(cmd *cobra.Command, opts *options.SignBlobOptions) {
 	cmd.Flags().AddFlagSet(side.Flags())
 }
 
+// hideAndOverrideSign hides cosign flags whose underlying flow is not yet wired.
 func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 	for _, name := range []string{
+		// zarf manages bundle/signature output internally
 		"bundle", "output-signature", "output-certificate",
+		// Deprecated upstream
 		"b64", "rfc3161-timestamp", "issue-certificate",
+		// Trust-material wiring (LoadTrustedMaterialAndSigningConfig) lands later
 		"signing-config", "use-signing-config", "trusted-root",
+		// Keyless sign requires lifting the --signing-key guard
+		"fulcio-url", "identity-token", "fulcio-auth-flow", "insecure-skip-verify",
+		"oidc-issuer", "oidc-client-id", "oidc-redirect-url",
+		"oidc-disable-ambient-providers", "oidc-provider", "oidc-client-secret-file",
+		// Hardware-key signing also blocked by --signing-key guard
+		"sk", "slot",
+		// TSA flow not wired
+		"timestamp-client-cacert", "timestamp-client-cert", "timestamp-client-key",
+		"timestamp-server-name", "timestamp-server-url",
+		// Cert-based signing blocked by --signing-key guard
+		"certificate", "certificate-chain",
+		// Only meaningful for keyless prompts
+		"yes",
 	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
@@ -2058,8 +2075,30 @@ func mergeCosignVerifyFlags(cmd *cobra.Command, opts *options.VerifyBlobOptions)
 	cmd.Flags().AddFlagSet(side.Flags())
 }
 
+// hideAndOverrideVerify hides cosign flags whose underlying flow is not yet wired.
 func hideAndOverrideVerify(fs *pflag.FlagSet, opts *options.VerifyBlobOptions) {
-	for _, name := range []string{"bundle", "signature", "rfc3161-timestamp"} {
+	for _, name := range []string{
+		// zarf provides bundle/signature from the package archive
+		"bundle", "signature",
+		// Deprecated upstream
+		"rfc3161-timestamp",
+		// Keyless verify identity — blocked by the --key guard
+		"certificate-identity", "certificate-identity-regexp",
+		"certificate-oidc-issuer", "certificate-oidc-issuer-regexp",
+		"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
+		"certificate-github-workflow-name", "certificate-github-workflow-repository",
+		"certificate-github-workflow-ref",
+		// Cert-based verify — blocked by the --key guard
+		"certificate", "certificate-chain", "ca-roots", "ca-intermediates",
+		// Hardware-key verify — blocked by the --key guard
+		"sk", "slot",
+		// TSA verify not wired
+		"timestamp-certificate-chain", "use-signed-timestamps",
+		// SCT material for keyless cert validation
+		"sct",
+		// Advanced/experimental — outside zarf's Stage 2 surface
+		"private-infrastructure", "experimental-oci11",
+	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
 		}

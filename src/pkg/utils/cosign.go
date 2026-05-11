@@ -47,6 +47,9 @@ type SignBlobOptions struct {
 	Password  string
 	PassFunc  cosign.PassFunc
 	Overwrite bool
+
+	// Deprecated: use Key (promoted from the embedded SignBlobOptions). Removed in v1.0.
+	KeyRef string
 }
 
 // VerifyBlobOptions wraps cosign's VerifyBlobOptions with zarf-specific fields.
@@ -54,11 +57,18 @@ type VerifyBlobOptions struct {
 	options.VerifyBlobOptions
 
 	Timeout time.Duration
+
+	// Deprecated: use Key (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	KeyRef string
+	// Deprecated: use Signature (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	SigRef string
 }
 
 // ShouldSign returns true if any signing key material is configured.
+// KeyRef is included for backward compatibility; it's synced to Key in
+// CosignSignBlobWithOptions.
 func (opts SignBlobOptions) ShouldSign() bool {
-	return opts.Key != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use
+	return opts.Key != "" || opts.KeyRef != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use
 }
 
 // CheckOverwrite errors if any output file exists and Overwrite is false.
@@ -106,6 +116,13 @@ func DefaultVerifyBlobOptions() VerifyBlobOptions {
 // Mirrors cmd/cosign/cli/signblob.go (v3.0.6) SignBlob().RunE.
 func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBlobOptions) ([]byte, error) {
 	l := logger.From(ctx)
+
+	if opts.KeyRef != "" {
+		l.Warn("SignBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		if opts.Key == "" {
+			opts.Key = opts.KeyRef
+		}
+	}
 
 	rootOpts := &options.RootOptions{
 		Verbose: opts.Verbose,
@@ -188,6 +205,19 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
 func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
 	l := logger.From(ctx)
+
+	if opts.KeyRef != "" {
+		l.Warn("VerifyBlobOptions.KeyRef is deprecated, use Key (removed in v1.0)")
+		if opts.Key == "" {
+			opts.Key = opts.KeyRef
+		}
+	}
+	if opts.SigRef != "" {
+		l.Warn("VerifyBlobOptions.SigRef is deprecated, use Signature (removed in v1.0)")
+		if opts.Signature == "" {
+			opts.Signature = opts.SigRef
+		}
+	}
 
 	hashAlgorithm, err := opts.SignatureDigest.HashAlgorithm()
 	if err != nil {
