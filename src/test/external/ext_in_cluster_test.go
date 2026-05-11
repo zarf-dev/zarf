@@ -107,7 +107,7 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	t := suite.T()
 	tmpdir := t.TempDir()
-	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom", "--features", "values=true")
 	suite.NoError(err)
 	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, inClusterMirrorCredentialArgs...)
@@ -137,6 +137,8 @@ func (suite *ExtInClusterTestSuite) Test_0_Mirror() {
 	fmt.Println(string(regBody))
 	suite.Equal(200, respReg.StatusCode)
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "stefanprodan/charts/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "dhpup/oci-edge", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want (TODO VERIFY NAME AND PORT)
 

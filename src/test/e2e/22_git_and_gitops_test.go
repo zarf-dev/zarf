@@ -192,14 +192,24 @@ func waitFluxPodInfoDeployment(t *testing.T) {
 func waitArgoDeployment(t *testing.T) {
 	// Deploy the argocd example and verify that it works
 	tmpdir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/argocd", "-o", tmpdir, "--skip-sbom")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/argocd", "-o", tmpdir, "--skip-sbom", "--features", "values=true")
 	require.NoError(t, err, stdOut, stdErr)
 	packageName := fmt.Sprintf("zarf-package-argocd-%s.tar.zst", e2e.Arch)
 	path := filepath.Join(tmpdir, packageName)
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--components=argocd-apps", "--confirm", "--features", "values=true")
 	require.NoError(t, err, stdOut, stdErr)
 
 	expectedMutatedRepoURL := fmt.Sprintf("%s/%s/podinfo-1646971829.git", state.ZarfInClusterGitServiceURL, state.ZarfGitPushUser)
+
+	ctx := logger.WithContext(context.Background(), test.GetLogger(t))
+	c, err := cluster.NewWithWait(ctx)
+	require.NoError(t, err)
+	s, err := c.LoadState(ctx)
+	require.NoError(t, err, "Failed to load Zarf state")
+	registryAddress, _, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	require.NoError(t, err)
+	expectedMutatedHelmOCIURL := fmt.Sprintf("oci://%s/stefanprodan/charts/podinfo", registryAddress)
+	expectedMutatedManifestOCIURL := fmt.Sprintf("oci://%s/dhpup/oci-edge", registryAddress)
 
 	// Tests the mutation of the private repository Secret for ArgoCD.
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-github-podinfo", "-n", "argocd", "-o", "jsonpath={.data.url}")
@@ -213,6 +223,32 @@ func waitArgoDeployment(t *testing.T) {
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "podinfo", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
 	require.NoError(t, err, stdOut, stdErr)
 	require.Equal(t, expectedMutatedRepoURL, stdOut)
+
+	// Tests the mutation of the private repository Secret for ArgoCD for Helm OCI.
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-oci-helm", "-n", "argocd", "-o", "jsonpath={.data.url}")
+	require.NoError(t, err, stdOut, stdErr)
+
+	expectedMutatedPrivateRepoURLSecret, err = base64.StdEncoding.DecodeString(stdOut)
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedHelmOCIURL, string(expectedMutatedPrivateRepoURLSecret))
+
+	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD for Helm OCI.
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "oci-helm", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedHelmOCIURL, stdOut)
+
+	// Tests the mutation of the private repository Secret for ArgoCD for OCI Manifests.
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "argocd-repo-oci-manifests", "-n", "argocd", "-o", "jsonpath={.data.url}")
+	require.NoError(t, err, stdOut, stdErr)
+
+	expectedMutatedPrivateRepoURLSecret, err = base64.StdEncoding.DecodeString(stdOut)
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedManifestOCIURL, string(expectedMutatedPrivateRepoURLSecret))
+
+	// Tests the mutation of the repoURL for Application CRD source(s) for ArgoCD for OCI Manifests.
+	stdOut, stdErr, err = e2e.Kubectl(t, "get", "application", "oci-manifests", "-n", "argocd", "-o", "jsonpath={.spec.sources[0].repoURL}")
+	require.NoError(t, err, stdOut, stdErr)
+	require.Equal(t, expectedMutatedManifestOCIURL, stdOut)
 
 	// Remove the argocd example when deployment completes
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "argocd", "--confirm")

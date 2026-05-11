@@ -213,7 +213,7 @@ type ZarfMetadata struct {
 	// Additional information about this package.
 	Description string `json:"description,omitempty"`
 	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
-	Version string `json:"version,omitempty"`
+	Version string `json:"version,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Link to package information when online.
 	URL string `json:"url,omitempty"`
 	// An image URL to embed in this package (Reserved for future use in Zarf UI).
@@ -260,11 +260,11 @@ type ZarfBuildData struct {
 	// Whether this package was created with differential components.
 	Differential bool `json:"differential,omitempty"`
 	// Version of a previously built package used as the basis for creating this differential package.
-	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty"`
+	DifferentialPackageVersion string `json:"differentialPackageVersion,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// List of components that were not included in this package due to differential packaging.
 	DifferentialMissing []string `json:"differentialMissing,omitempty"`
 	// The flavor of Zarf used to build this package.
-	Flavor string `json:"flavor,omitempty"`
+	Flavor string `json:"flavor,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
 	// Requirements for specific package operations.

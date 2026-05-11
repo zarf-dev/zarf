@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -190,7 +189,10 @@ func parseRegistryOverrides(overrides []string) ([]images.RegistryOverride, erro
 
 func (o *packageCreateOptions) run(ctx context.Context, args []string) error {
 	l := logger.From(ctx)
-	basePath := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	var isCleanPathRegex = regexp.MustCompile(`^[a-zA-Z0-9\_\-\/\.\~\\:]+$`)
 	if !isCleanPathRegex.MatchString(config.CommonOptions.CachePath) {
@@ -332,8 +334,8 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		o.setVariables,
 		strings.ToUpper,
 	)
-	// Merge values
-	maps.Copy(o.setValues, v.GetStringMapString(VPkgDeploySetValues))
+	// Merge values; CLI --set-values overrides viper config, matching --set-variables.
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
@@ -735,6 +737,8 @@ type packageInspectValuesFilesOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
+	setValues               map[string]string
 	outputWriter            io.Writer
 	ociConcurrency          int
 	publicKeyPath           string
@@ -769,6 +773,8 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
@@ -798,6 +804,12 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -824,6 +836,7 @@ func (o *packageInspectValuesFilesOptions) run(ctx context.Context, args []strin
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables:  o.setVariables,
+		Values:        values,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
 		RemoteOptions: defaultRemoteOptions(),
@@ -851,6 +864,8 @@ type packageInspectManifestsOptions struct {
 	components              string
 	kubeVersion             string
 	setVariables            map[string]string
+	valuesFiles             []string
+	setValues               map[string]string
 	outputWriter            io.Writer
 	ociConcurrency          int
 	publicKeyPath           string
@@ -884,6 +899,8 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set", v.GetStringMapString(VPkgDeploySet), "Alias for --set-variables")
 	_ = cmd.Flags().MarkDeprecated("set", "use --set-variables instead")
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
+	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
+	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
 	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 	if errSig != nil {
 		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
@@ -913,6 +930,12 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	// Merge SetVariables and config variables.
 	o.setVariables = helpers.TransformAndMergeMap(v.GetStringMapString(VPkgDeploySet), o.setVariables, strings.ToUpper)
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
+
+	values, err := parseValues(ctx, o.valuesFiles, o.setValues)
+	if err != nil {
+		return err
+	}
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -939,6 +962,7 @@ func (o *packageInspectManifestsOptions) run(ctx context.Context, args []string)
 
 	resourceOpts := packager.InspectPackageResourcesOptions{
 		SetVariables:  o.setVariables,
+		Values:        values,
 		KubeVersion:   o.kubeVersion,
 		IsInteractive: true,
 		RemoteOptions: defaultRemoteOptions(),
@@ -1871,10 +1895,32 @@ func mergeCosignSignFlags(cmd *cobra.Command, opts *options.SignBlobOptions) {
 	cmd.Flags().AddFlagSet(side.Flags())
 }
 
+// hideAndOverrideSign hides cosign flags whose underlying flow is not yet wired.
 func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 	for _, name := range []string{
-		"bundle", "output-signature", "output-certificate",
+		// zarf manages bundle/signature output internally
+		"bundle", "output-signature", "output-certificate", "new-bundle-format",
+		// Deprecated upstream
 		"b64", "rfc3161-timestamp", "issue-certificate",
+		// Trust-material wiring (LoadTrustedMaterialAndSigningConfig) lands later
+		"signing-config", "use-signing-config", "trusted-root",
+		// Keyless sign requires lifting the --signing-key guard
+		"fulcio-url", "identity-token", "fulcio-auth-flow", "insecure-skip-verify",
+		"oidc-issuer", "oidc-client-id", "oidc-redirect-url",
+		"oidc-disable-ambient-providers", "oidc-provider", "oidc-client-secret-file",
+		// Hardware-key signing also blocked by --signing-key guard
+		"sk", "slot",
+		// TSA flow not wired
+		"timestamp-client-cacert", "timestamp-client-cert", "timestamp-client-key",
+		"timestamp-server-name", "timestamp-server-url",
+		// Cert-based signing blocked by --signing-key guard
+		"certificate", "certificate-chain",
+		// Only meaningful for keyless prompts
+		"yes",
+		// Rekor flag is inert without --tlog-upload (hidden, cosign-deprecated)
+		"rekor-url",
+		// SigningAlgorithm is only consumed by cosign's signerFromNewKey (keyless ephemeral key path); ignored for pre-existing keys
+		"signing-algorithm",
 	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
@@ -2074,8 +2120,38 @@ func mergeCosignVerifyFlags(cmd *cobra.Command, opts *options.VerifyBlobOptions)
 	cmd.Flags().AddFlagSet(side.Flags())
 }
 
+// hideAndOverrideVerify hides cosign flags whose underlying flow is not yet wired.
 func hideAndOverrideVerify(fs *pflag.FlagSet, opts *options.VerifyBlobOptions) {
-	for _, name := range []string{"bundle", "signature", "rfc3161-timestamp"} {
+	for _, name := range []string{
+		// zarf provides bundle/signature from the package archive
+		"bundle", "signature", "new-bundle-format",
+		// Deprecated upstream
+		"rfc3161-timestamp",
+		// SCT validation only applies to Fulcio certs (keyless); inert for key-based bundles
+		"insecure-ignore-sct",
+		// MaxWorkers is on VerifyCommand (image verify) — not consumed by VerifyBlobCmd
+		"max-workers",
+		// TrustedRoot only matters for keyless cert validation / Rekor inclusion / TSA timestamps —
+		// all blocked in Stage 2 by the --key gate, no keyless flow, no TSA wiring. Help text also
+		// references the hidden --new-bundle-format flag.
+		"trusted-root",
+		// Keyless verify identity — blocked by the --key guard
+		"certificate-identity", "certificate-identity-regexp",
+		"certificate-oidc-issuer", "certificate-oidc-issuer-regexp",
+		"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
+		"certificate-github-workflow-name", "certificate-github-workflow-repository",
+		"certificate-github-workflow-ref",
+		// Cert-based verify — blocked by the --key guard
+		"certificate", "certificate-chain", "ca-roots", "ca-intermediates",
+		// Hardware-key verify — blocked by the --key guard
+		"sk", "slot",
+		// TSA verify not wired
+		"timestamp-certificate-chain", "use-signed-timestamps",
+		// SCT material for keyless cert validation
+		"sct",
+		// Advanced/experimental — outside zarf's Stage 2 surface
+		"private-infrastructure", "experimental-oci11",
+	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
 		}

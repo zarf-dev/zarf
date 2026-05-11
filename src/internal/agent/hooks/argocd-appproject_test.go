@@ -14,6 +14,8 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -33,12 +35,15 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	s := &state.State{GitServer: state.GitServerInfo{
-		Address:      "https://git-server.com",
-		PushUsername: "a-push-user",
-	}}
-	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+	s := &state.State{
+		GitServer: state.GitServerInfo{
+			Address:      "https://git-server.com",
+			PushUsername: "a-push-user",
+		},
+		RegistryInfo: state.RegistryInfo{
+			Address: "127.0.0.1:31999",
+		},
+	}
 
 	tests := []admissionTest{
 		{
@@ -70,6 +75,77 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 			code: http.StatusOK,
 		},
 		{
+			name: "should be mutated for OCI repo",
+			admissionReq: createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
+				Spec: AppProjectSpec{
+					SourceRepos: []string{
+						"oci://ghcr.io/stefanprodan/charts/podinfo",
+						"oci://registry-1.docker.io/dhpup/oci-edge",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/0",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/1",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			name: "should be mutated for OCI repo with internal service registry",
+			admissionReq: createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
+				Spec: AppProjectSpec{
+					SourceRepos: []string{
+						"oci://ghcr.io/stefanprodan/charts/podinfo",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/0",
+					"oci://zarf-docker-registry.zarf.svc.cluster.local:5000/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			svc: &corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: corev1.SchemeGroupVersion.String(),
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "zarf-docker-registry",
+					Namespace: "zarf",
+				},
+				Spec: corev1.ServiceSpec{
+					Type: corev1.ServiceTypeNodePort,
+					Ports: []corev1.ServicePort{
+						{
+							NodePort: 31999,
+							Port:     5000,
+						},
+					},
+					ClusterIP: "10.11.12.13",
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
 			name: "should ignore unknown git URL",
 			admissionReq: createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
 				Spec: AppProjectSpec{
@@ -90,9 +166,112 @@ func TestArgoAppProjectWebhook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+			if tt.svc != nil {
+				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
+				require.NoError(t, err)
+			}
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
 		})
 	}
+}
+
+// TestArgoAppProjectWebhookRegistryOnly verifies behaviour when only the Zarf registry is configured
+// and no git server is present (OCI-only deployment).
+func TestArgoAppProjectWebhookRegistryOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := &state.State{
+		// GitServer intentionally not configured (OCI-only scenario).
+		RegistryInfo: state.RegistryInfo{
+			Address:      "127.0.0.1:31999",
+			PullUsername: "registry-pull-user",
+			PullPassword: "registry-pull-password",
+		},
+	}
+
+	tests := []admissionTest{
+		{
+			name: "OCI sourceRepos should be mutated when only registry is configured",
+			admissionReq: createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
+				Spec: AppProjectSpec{
+					SourceRepos: []string{
+						"oci://ghcr.io/stefanprodan/charts/podinfo",
+						"oci://registry-1.docker.io/dhpup/oci-edge",
+					},
+				},
+			}),
+			patch: []operations.PatchOperation{
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/0",
+					"oci://127.0.0.1:31999/stefanprodan/charts/podinfo",
+				),
+				operations.ReplacePatchOperation(
+					"/spec/sourceRepos/1",
+					"oci://127.0.0.1:31999/dhpup/oci-edge",
+				),
+				operations.ReplacePatchOperation(
+					"/metadata/labels",
+					map[string]string{
+						"zarf-agent": "patched",
+					},
+				),
+			},
+			code: http.StatusOK,
+		},
+		{
+			// Git sourceRepos must not be mutated when there is no git server configured,
+			// regardless of whether a registry is present.
+			name: "git sourceRepos should be skipped when only registry is configured",
+			admissionReq: createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
+				Spec: AppProjectSpec{
+					SourceRepos: []string{
+						"https://some-git-server.com/cashews",
+					},
+				},
+			}),
+			patch: nil,
+			code:  http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := createTestClientWithZarfState(ctx, t, s)
+			handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
+			verifyAdmission(t, rr, tt)
+		})
+	}
+}
+
+// TestArgoAppProjectWebhookGitOnly verifies that OCI sourceRepos are not mutated when there is
+// no registry configured (git-only deployment).
+func TestArgoAppProjectWebhookGitOnly(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	s := &state.State{
+		GitServer: state.GitServerInfo{
+			Address:      "https://git-server.com",
+			PushUsername: "a-push-user",
+		},
+		// RegistryInfo intentionally not configured (git-only scenario).
+	}
+
+	admissionReq := createArgoAppProjectAdmissionRequest(t, v1.Create, &AppProject{
+		Spec: AppProjectSpec{
+			SourceRepos: []string{
+				"oci://ghcr.io/stefanprodan/charts/podinfo",
+			},
+		},
+	})
+
+	c := createTestClientWithZarfState(ctx, t, s)
+	handler := admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c))
+	rr := sendAdmissionRequest(t, admissionReq, handler)
+	verifyAdmission(t, rr, admissionTest{patch: nil, code: http.StatusOK})
 }

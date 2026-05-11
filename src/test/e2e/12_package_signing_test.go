@@ -87,27 +87,20 @@ func TestPackageSigning(t *testing.T) {
 		require.Contains(t, stdErr, "a key was provided but the package is not signed")
 	})
 
-	// Confirms cosign-aligned flag surface is bound on verify. Round-trip keyless verify
-	// against real Sigstore fixtures lands in Stage 3 alongside trusted-root embedding.
-	t.Run("Cosign-aligned verify flags are accepted", func(t *testing.T) {
+	// Exposes only the cosign flags whose underlying flow is wired through.
+	// Keyless, hardware-key, TSA, and cert-based flags are hidden until later stages
+	// wire them.
+	t.Run("visible cosign flags on verify", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
 		for _, flag := range []string{
-			"--certificate-identity",
-			"--certificate-oidc-issuer",
-			"--certificate-identity-regexp",
-			"--certificate-oidc-issuer-regexp",
-			"--certificate-github-workflow-trigger",
-			"--trusted-root",
 			"--insecure-ignore-tlog",
-			"--insecure-ignore-sct",
 			"--rekor-url",
 		} {
 			require.Contains(t, stdOut, flag, "expected %q in `package verify --help`", flag)
 		}
-		// airgap-safe defaults must remain enabled.
-		require.Contains(t, stdOut, "--insecure-ignore-tlog                            ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default true)")
-		require.Contains(t, stdOut, "--insecure-ignore-sct                             when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log (default true)")
+		// Air-gap-safe default must remain enabled.
+		require.Regexp(t, `--insecure-ignore-tlog[^\n]*\(default true\)`, stdOut)
 	})
 
 	t.Run("Cosign-aligned sign flags are accepted", func(t *testing.T) {
@@ -131,17 +124,43 @@ func TestPackageSigning(t *testing.T) {
 		}
 	})
 
-	t.Run("Hidden flags do not appear in help", func(t *testing.T) {
+	t.Run("hidden verify flags", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
-		for _, hidden := range []string{"--bundle", "--signature", "--rfc3161-timestamp"} {
-			require.NotContains(t, stdOut, hidden+" string", "expected %q to be hidden in `package verify --help`", hidden)
+		for _, hidden := range []string{
+			"bundle", "signature", "rfc3161-timestamp", "new-bundle-format",
+			"insecure-ignore-sct", "max-workers", "trusted-root",
+			"certificate-identity", "certificate-oidc-issuer",
+			"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
+			"certificate-github-workflow-name", "certificate-github-workflow-repository",
+			"certificate-github-workflow-ref",
+			"certificate", "certificate-chain", "ca-roots", "ca-intermediates",
+			"sk", "slot",
+			"timestamp-certificate-chain", "use-signed-timestamps",
+			"sct", "private-infrastructure", "experimental-oci11",
+		} {
+			require.NotRegexp(t, `(?m)^\s+--`+hidden+`( |$)`, stdOut,
+				"expected --%s hidden from `package verify --help`", hidden)
 		}
+	})
 
-		stdOut, stdErr, err = e2e.Zarf(t, "package", "sign", "--help")
+	t.Run("hidden sign flags", func(t *testing.T) {
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "sign", "--help")
 		require.NoError(t, err, stdOut, stdErr)
-		for _, hidden := range []string{"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate"} {
-			require.NotContains(t, stdOut, hidden, "expected %q to be hidden in `package sign --help`", hidden)
+		for _, hidden := range []string{
+			"bundle", "output-signature", "output-certificate", "issue-certificate",
+			"new-bundle-format",
+			"rekor-url", "signing-algorithm",
+			"signing-config", "use-signing-config", "trusted-root",
+			"fulcio-url", "identity-token", "oidc-issuer", "oidc-client-id",
+			"fulcio-auth-flow", "insecure-skip-verify",
+			"sk", "slot",
+			"timestamp-client-cacert", "timestamp-client-cert", "timestamp-client-key",
+			"timestamp-server-name", "timestamp-server-url",
+			"certificate", "certificate-chain",
+		} {
+			require.NotRegexp(t, `(?m)^\s+--`+hidden+`( |$)`, stdOut,
+				"expected --%s hidden from `package sign --help`", hidden)
 		}
 	})
 
