@@ -34,11 +34,8 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 
 ```
   -h, --help                                help for verify
-      --insecure-ignore-sct                 when set, verification will not check that a certificate contains an embedded SCT, a proof of inclusion in a certificate transparency log (default true)
       --insecure-ignore-tlog                ignore transparency log verification, to be used when an artifact signature has not been uploaded to the transparency log. Artifacts cannot be publicly verified when not included in a log (default true)
   -k, --key string                          path to the public key file, KMS URI or Kubernetes Secret
-      --max-workers int                     the amount of maximum workers for parallel executions (default 10)
-      --new-bundle-format                   expect the signature/attestation to be packaged in a Sigstore bundle (default true)
       --oci-concurrency int                 Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
       --rekor-url string                    address of rekor STL server (default "https://rekor.sigstore.dev")
       --signature-digest-algorithm string   digest algorithm to use when processing a signature (sha224|sha256|sha384|sha512) (default "sha256")

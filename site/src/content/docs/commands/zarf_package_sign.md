@@ -42,18 +42,15 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 ### Options
 
 ```
-  -h, --help                       help for sign
-  -k, --key string                 Public key to verify the existing signature before re-signing (optional)
-      --new-bundle-format          output bundle in new format that contains all verification material (default true)
-      --oci-concurrency int        Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-  -o, --output string              Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
-      --overwrite                  Overwrite an existing signature if the package is already signed
-      --rekor-url string           address of rekor STL server (default "https://rekor.sigstore.dev")
-      --retries int                Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --signing-algorithm string   signing algorithm to use for signing/hashing (allowed ecdsa-sha2-256-nistp256, ecdsa-sha2-384-nistp384, ecdsa-sha2-512-nistp521, rsa-sign-pkcs1-2048-sha256, rsa-sign-pkcs1-3072-sha256, rsa-sign-pkcs1-4096-sha256) (default "ecdsa-sha2-256-nistp256")
-      --signing-key string         Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
-      --signing-key-pass string    Password for encrypted private key
-      --verify                     Verify the Zarf package signature
+  -h, --help                      help for sign
+  -k, --key string                Public key to verify the existing signature before re-signing (optional)
+      --oci-concurrency int       Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string             Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
+      --overwrite                 Overwrite an existing signature if the package is already signed
+      --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --signing-key string        Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
+      --signing-key-pass string   Password for encrypted private key
+      --verify                    Verify the Zarf package signature
 ```
 
 ### Options inherited from parent commands

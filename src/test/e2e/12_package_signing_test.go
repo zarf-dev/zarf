@@ -96,31 +96,33 @@ func TestPackageSigning(t *testing.T) {
 		for _, flag := range []string{
 			"--trusted-root",
 			"--insecure-ignore-tlog",
-			"--insecure-ignore-sct",
 			"--rekor-url",
 		} {
 			require.Contains(t, stdOut, flag, "expected %q in `package verify --help`", flag)
 		}
-		// Airgap-safe defaults must remain enabled. Match by trailing "(default true)" on the
-		// flag line rather than full column-aligned strings (cobra recomputes alignment as the
-		// visible flag set changes).
+		// Air-gap-safe default must remain enabled.
 		require.Regexp(t, `--insecure-ignore-tlog[^\n]*\(default true\)`, stdOut)
-		require.Regexp(t, `--insecure-ignore-sct[^\n]*\(default true\)`, stdOut)
 	})
 
+	// Hidden-flag assertions match flag-entry lines specifically (leading indent +
+	// flag name) so substrings inside other flags' description text don't false-match.
 	t.Run("hidden verify flags", func(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "verify", "--help")
 		require.NoError(t, err, stdOut, stdErr)
 		for _, hidden := range []string{
-			"--bundle ", "--signature ", "--rfc3161-timestamp",
-			"--certificate-identity", "--certificate-oidc-issuer",
-			"--certificate-github-workflow",
-			"--certificate ", "--certificate-chain", "--ca-roots", "--ca-intermediates",
-			"--sk ", "--slot ",
-			"--timestamp-certificate-chain", "--use-signed-timestamps",
-			"--sct ", "--private-infrastructure", "--experimental-oci11",
+			"bundle", "signature", "rfc3161-timestamp", "new-bundle-format",
+			"insecure-ignore-sct", "max-workers",
+			"certificate-identity", "certificate-oidc-issuer",
+			"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
+			"certificate-github-workflow-name", "certificate-github-workflow-repository",
+			"certificate-github-workflow-ref",
+			"certificate", "certificate-chain", "ca-roots", "ca-intermediates",
+			"sk", "slot",
+			"timestamp-certificate-chain", "use-signed-timestamps",
+			"sct", "private-infrastructure", "experimental-oci11",
 		} {
-			require.NotContains(t, stdOut, hidden, "expected %q hidden from `package verify --help`", hidden)
+			require.NotRegexp(t, `(?m)^\s+--`+hidden+`( |$)`, stdOut,
+				"expected --%s hidden from `package verify --help`", hidden)
 		}
 	})
 
@@ -128,15 +130,19 @@ func TestPackageSigning(t *testing.T) {
 		stdOut, stdErr, err := e2e.Zarf(t, "package", "sign", "--help")
 		require.NoError(t, err, stdOut, stdErr)
 		for _, hidden := range []string{
-			"--bundle ", "--output-signature", "--output-certificate", "--issue-certificate",
-			"--signing-config", "--use-signing-config", "--trusted-root",
-			"--fulcio-url", "--identity-token", "--oidc-issuer", "--oidc-client-id",
-			"--fulcio-auth-flow", "--insecure-skip-verify",
-			"--sk ", "--slot ",
-			"--timestamp-client", "--timestamp-server",
-			"--certificate ", "--certificate-chain",
+			"bundle", "output-signature", "output-certificate", "issue-certificate",
+			"new-bundle-format",
+			"rekor-url", "signing-algorithm",
+			"signing-config", "use-signing-config", "trusted-root",
+			"fulcio-url", "identity-token", "oidc-issuer", "oidc-client-id",
+			"fulcio-auth-flow", "insecure-skip-verify",
+			"sk", "slot",
+			"timestamp-client-cacert", "timestamp-client-cert", "timestamp-client-key",
+			"timestamp-server-name", "timestamp-server-url",
+			"certificate", "certificate-chain",
 		} {
-			require.NotContains(t, stdOut, hidden, "expected %q hidden from `package sign --help`", hidden)
+			require.NotRegexp(t, `(?m)^\s+--`+hidden+`( |$)`, stdOut,
+				"expected --%s hidden from `package sign --help`", hidden)
 		}
 	})
 }

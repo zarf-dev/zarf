@@ -1897,7 +1897,7 @@ func mergeCosignSignFlags(cmd *cobra.Command, opts *options.SignBlobOptions) {
 func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 	for _, name := range []string{
 		// zarf manages bundle/signature output internally
-		"bundle", "output-signature", "output-certificate",
+		"bundle", "output-signature", "output-certificate", "new-bundle-format",
 		// Deprecated upstream
 		"b64", "rfc3161-timestamp", "issue-certificate",
 		// Trust-material wiring (LoadTrustedMaterialAndSigningConfig) lands later
@@ -1915,6 +1915,10 @@ func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
 		"certificate", "certificate-chain",
 		// Only meaningful for keyless prompts
 		"yes",
+		// Rekor flag is inert without --tlog-upload (hidden, cosign-deprecated)
+		"rekor-url",
+		// SigningAlgorithm is only consumed by cosign's signerFromNewKey (keyless ephemeral key path); ignored for pre-existing keys
+		"signing-algorithm",
 	} {
 		if f := fs.Lookup(name); f != nil {
 			f.Hidden = true
@@ -2103,9 +2107,13 @@ func mergeCosignVerifyFlags(cmd *cobra.Command, opts *options.VerifyBlobOptions)
 func hideAndOverrideVerify(fs *pflag.FlagSet, opts *options.VerifyBlobOptions) {
 	for _, name := range []string{
 		// zarf provides bundle/signature from the package archive
-		"bundle", "signature",
+		"bundle", "signature", "new-bundle-format",
 		// Deprecated upstream
 		"rfc3161-timestamp",
+		// SCT validation only applies to Fulcio certs (keyless); inert for key-based bundles
+		"insecure-ignore-sct",
+		// MaxWorkers is on VerifyCommand (image verify) — not consumed by VerifyBlobCmd
+		"max-workers",
 		// Keyless verify identity — blocked by the --key guard
 		"certificate-identity", "certificate-identity-regexp",
 		"certificate-oidc-issuer", "certificate-oidc-issuer-regexp",
