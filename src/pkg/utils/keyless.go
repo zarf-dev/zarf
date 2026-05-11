@@ -30,8 +30,14 @@ func ReadKeylessIdentityFromBundle(bundlePath string) (identity, issuer string, 
 		return "", "", err
 	}
 
+	// Sigstore bundle VerificationMaterial is a oneof: newer keyless bundles use
+	// "certificate" (single Fulcio cert), legacy/chain variants use
+	// "x509CertificateChain.certificates[]". Try both.
 	var b struct {
 		VerificationMaterial struct {
+			Certificate struct {
+				RawBytes string `json:"rawBytes"`
+			} `json:"certificate"`
 			X509CertificateChain struct {
 				Certificates []struct {
 					RawBytes string `json:"rawBytes"`
@@ -43,12 +49,15 @@ func ReadKeylessIdentityFromBundle(bundlePath string) (identity, issuer string, 
 		return "", "", fmt.Errorf("parsing bundle JSON: %w", err)
 	}
 
-	certs := b.VerificationMaterial.X509CertificateChain.Certificates
-	if len(certs) == 0 {
+	rawBytes := b.VerificationMaterial.Certificate.RawBytes
+	if rawBytes == "" && len(b.VerificationMaterial.X509CertificateChain.Certificates) > 0 {
+		rawBytes = b.VerificationMaterial.X509CertificateChain.Certificates[0].RawBytes
+	}
+	if rawBytes == "" {
 		return "", "", errors.New("bundle contains no certificate")
 	}
 
-	der, err := base64.StdEncoding.DecodeString(certs[0].RawBytes)
+	der, err := base64.StdEncoding.DecodeString(rawBytes)
 	if err != nil {
 		return "", "", fmt.Errorf("decoding cert: %w", err)
 	}

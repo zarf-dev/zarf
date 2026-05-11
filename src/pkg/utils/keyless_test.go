@@ -24,15 +24,32 @@ import (
 
 func writeBundleFixture(t *testing.T, certDER []byte) string {
 	t.Helper()
-	bundle := map[string]any{
-		"verificationMaterial": map[string]any{
+	return writeBundleFixtureWithShape(t, certDER, "x509CertificateChain")
+}
+
+// shape: "x509CertificateChain" (chain variant) or "certificate" (singular Fulcio cert).
+func writeBundleFixtureWithShape(t *testing.T, certDER []byte, shape string) string {
+	t.Helper()
+	var verificationMaterial map[string]any
+	switch shape {
+	case "certificate":
+		verificationMaterial = map[string]any{
+			"certificate": map[string]any{
+				"rawBytes": base64.StdEncoding.EncodeToString(certDER),
+			},
+		}
+	case "x509CertificateChain":
+		verificationMaterial = map[string]any{
 			"x509CertificateChain": map[string]any{
 				"certificates": []map[string]any{
 					{"rawBytes": base64.StdEncoding.EncodeToString(certDER)},
 				},
 			},
-		},
+		}
+	default:
+		t.Fatalf("unknown bundle shape: %s", shape)
 	}
+	bundle := map[string]any{"verificationMaterial": verificationMaterial}
 	data, err := json.Marshal(bundle)
 	require.NoError(t, err)
 	path := filepath.Join(t.TempDir(), "zarf.bundle.sig")
@@ -91,6 +108,25 @@ func TestReadKeylessIdentityFromBundle(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, ghaURI.String(), identity)
 		require.Equal(t, "https://token.actions.githubusercontent.com", issuer)
+	})
+
+	t.Run("singular certificate variant (newer keyless bundle)", func(t *testing.T) {
+		t.Parallel()
+		issuerVal, err := asn1.Marshal("https://github.com/login/oauth")
+		require.NoError(t, err)
+		der := makeCert(t, &x509.Certificate{
+			Subject:        pkix.Name{CommonName: "ephemeral"},
+			EmailAddresses: []string{"signer@example.com"},
+			ExtraExtensions: []pkix.Extension{
+				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
+			},
+		})
+		path := writeBundleFixtureWithShape(t, der, "certificate")
+
+		identity, issuer, err := ReadKeylessIdentityFromBundle(path)
+		require.NoError(t, err)
+		require.Equal(t, "signer@example.com", identity)
+		require.Equal(t, "https://github.com/login/oauth", issuer)
 	})
 
 	t.Run("V2 takes precedence over legacy when both are present", func(t *testing.T) {
