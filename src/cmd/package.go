@@ -22,9 +22,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
-	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
 
@@ -1842,7 +1840,7 @@ func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageSignOptions struct {
-	cosign             options.SignBlobOptions
+	signingKeyPath     string
 	signingKeyPassword string
 	publicKeyPath      string
 	overwrite          bool
@@ -1865,9 +1863,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
-	// Zarf's pre-existing flags must register first so they win the name collisions
-	// (--key, --output) when cosign's AddFlags is folded in below via AddFlagSet.
-	cmd.Flags().StringVar(&o.cosign.Key, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
+	cmd.Flags().StringVar(&o.signingKeyPath, "signing-key", v.GetString(VPkgSignSigningKey), lang.CmdPackageSignFlagSigningKey)
 	cmd.Flags().StringVar(&o.signingKeyPassword, "signing-key-pass", v.GetString(VPkgSignSigningKeyPassword), lang.CmdPackageSignFlagSigningKeyPass)
 	cmd.Flags().StringVarP(&o.output, "output", "o", v.GetString(VPkgSignOutput), lang.CmdPackageSignFlagOutput)
 	cmd.Flags().BoolVar(&o.overwrite, "overwrite", v.GetBool(VPkgSignOverwrite), lang.CmdPackageSignFlagOverwrite)
@@ -1876,68 +1872,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 
-	mergeCosignSignFlags(cmd, &o.cosign)
-
 	return cmd
-}
-
-// mergeCosignSignFlags binds cosign's SignBlobOptions onto a throwaway command,
-// hides flags whose support is deferred or are deprecated upstream, applies
-// zarf's air-gap default overrides, and folds the result into cmd via AddFlagSet.
-// AddFlagSet skips flag names already registered, so zarf's pre-existing --key
-// and --output retain their semantics.
-func mergeCosignSignFlags(cmd *cobra.Command, opts *options.SignBlobOptions) {
-	side := &cobra.Command{}
-	opts.AddFlags(side)
-	hideAndOverrideSign(side.Flags(), opts)
-	cmd.Flags().AddFlagSet(side.Flags())
-}
-
-// hideAndOverrideSign hides cosign flags whose underlying flow is not yet wired.
-func hideAndOverrideSign(fs *pflag.FlagSet, opts *options.SignBlobOptions) {
-	for _, name := range []string{
-		// zarf manages bundle/signature output internally
-		"bundle", "output-signature", "output-certificate", "new-bundle-format",
-		// Deprecated upstream
-		"b64", "rfc3161-timestamp", "issue-certificate",
-		// Trust-material wiring (LoadTrustedMaterialAndSigningConfig) lands later
-		"signing-config", "use-signing-config", "trusted-root",
-		// Keyless sign requires lifting the --signing-key guard
-		"fulcio-url", "identity-token", "fulcio-auth-flow", "insecure-skip-verify",
-		"oidc-issuer", "oidc-client-id", "oidc-redirect-url",
-		"oidc-disable-ambient-providers", "oidc-provider", "oidc-client-secret-file",
-		// Hardware-key signing also blocked by --signing-key guard
-		"sk", "slot",
-		// TSA flow not wired
-		"timestamp-client-cacert", "timestamp-client-cert", "timestamp-client-key",
-		"timestamp-server-name", "timestamp-server-url",
-		// Cert-based signing blocked by --signing-key guard
-		"certificate", "certificate-chain",
-		// Only meaningful for keyless prompts
-		"yes",
-		// Rekor flag is inert without --tlog-upload (hidden, cosign-deprecated)
-		"rekor-url",
-		// SigningAlgorithm is only consumed by cosign's signerFromNewKey (keyless ephemeral key path); ignored for pre-existing keys
-		"signing-algorithm",
-	} {
-		if f := fs.Lookup(name); f != nil {
-			f.Hidden = true
-		}
-	}
-
-	opts.TlogUpload = false
-	if f := fs.Lookup("tlog-upload"); f != nil {
-		setFlagDefault(f, "false")
-	}
-}
-
-// setFlagDefault updates both the runtime value and the help-rendered default of a flag.
-// Panics on invalid value because callers pass static literals validated by flag type.
-func setFlagDefault(f *pflag.Flag, value string) {
-	f.DefValue = value
-	if err := f.Value.Set(value); err != nil {
-		panic(fmt.Sprintf("setting flag %q default to %q: %v", f.Name, value, err))
-	}
 }
 
 func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
@@ -1945,7 +1880,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	packageSource := args[0]
 
-	if o.cosign.Key == "" {
+	if o.signingKeyPath == "" {
 		return errors.New("--signing-key is required")
 	}
 
@@ -1984,7 +1919,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 		// Create publish options from sign options
 		publishOpts := &packagePublishOptions{
-			signingKeyPath:     o.cosign.Key,
+			signingKeyPath:     o.signingKeyPath,
 			signingKeyPassword: o.signingKeyPassword,
 			ociConcurrency:     o.ociConcurrency,
 			retries:            o.retries,
@@ -2043,7 +1978,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	l.Info("signing package with provided key")
 
 	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.SignBlobOptions = o.cosign
+	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
 
@@ -2064,7 +1999,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 }
 
 type packageVerifyOptions struct {
-	cosign         options.VerifyBlobOptions
+	publicKeyPath  string
 	ociConcurrency int
 }
 
@@ -2081,72 +2016,10 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 		RunE:    o.run,
 	}
 
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	mergeCosignVerifyFlags(cmd, &o.cosign)
-
-	// Re-add zarf's existing -k shorthand on cosign's --key (verify semantic matches).
-	if f := cmd.Flags().Lookup("key"); f != nil {
-		f.Shorthand = "k"
-		if v.IsSet(VPkgPublicKey) {
-			setFlagDefault(f, v.GetString(VPkgPublicKey))
-		}
-	}
-
 	return cmd
-}
-
-func mergeCosignVerifyFlags(cmd *cobra.Command, opts *options.VerifyBlobOptions) {
-	side := &cobra.Command{}
-	opts.AddFlags(side)
-	hideAndOverrideVerify(side.Flags(), opts)
-	cmd.Flags().AddFlagSet(side.Flags())
-}
-
-// hideAndOverrideVerify hides cosign flags whose underlying flow is not yet wired.
-func hideAndOverrideVerify(fs *pflag.FlagSet, opts *options.VerifyBlobOptions) {
-	for _, name := range []string{
-		// zarf provides bundle/signature from the package archive
-		"bundle", "signature", "new-bundle-format",
-		// Deprecated upstream
-		"rfc3161-timestamp",
-		// SCT validation only applies to Fulcio certs (keyless); inert for key-based bundles
-		"insecure-ignore-sct",
-		// MaxWorkers is on VerifyCommand (image verify) — not consumed by VerifyBlobCmd
-		"max-workers",
-		// TrustedRoot only matters for keyless cert validation / Rekor inclusion / TSA timestamps —
-		// all blocked in Stage 2 by the --key gate, no keyless flow, no TSA wiring. Help text also
-		// references the hidden --new-bundle-format flag.
-		"trusted-root",
-		// Keyless verify identity — blocked by the --key guard
-		"certificate-identity", "certificate-identity-regexp",
-		"certificate-oidc-issuer", "certificate-oidc-issuer-regexp",
-		"certificate-github-workflow-trigger", "certificate-github-workflow-sha",
-		"certificate-github-workflow-name", "certificate-github-workflow-repository",
-		"certificate-github-workflow-ref",
-		// Cert-based verify — blocked by the --key guard
-		"certificate", "certificate-chain", "ca-roots", "ca-intermediates",
-		// Hardware-key verify — blocked by the --key guard
-		"sk", "slot",
-		// TSA verify not wired
-		"timestamp-certificate-chain", "use-signed-timestamps",
-		// SCT material for keyless cert validation
-		"sct",
-		// Advanced/experimental — outside zarf's Stage 2 surface
-		"private-infrastructure", "experimental-oci11",
-	} {
-		if f := fs.Lookup(name); f != nil {
-			f.Hidden = true
-		}
-	}
-
-	opts.CommonVerifyOptions.IgnoreTlog = true
-	opts.CertVerify.IgnoreSCT = true
-	for _, name := range []string{"insecure-ignore-tlog", "insecure-ignore-sct"} {
-		if f := fs.Lookup(name); f != nil {
-			setFlagDefault(f, "true")
-		}
-	}
 }
 
 func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
@@ -2164,11 +2037,8 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	// Load the package with verification enabled
 	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
-	verifyOpts := utils.DefaultVerifyBlobOptions()
-	verifyOpts.VerifyBlobOptions = o.cosign
-
 	loadOpts := packager.LoadOptions{
-		VerifyBlobOptions:    &verifyOpts,
+		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
