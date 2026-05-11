@@ -20,7 +20,7 @@
     "@astrojs/starlight": "^0.37.3",
     "@fontsource/source-code-pro": "^5.0.17",
     "astro": "^5.18.1",
-    "mermaid": "^10.9.4",
+    "mermaid": "^10.9.6",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.33.3",
     "typescript": "^5.4.3"
