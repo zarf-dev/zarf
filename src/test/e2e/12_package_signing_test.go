@@ -84,6 +84,6 @@ func TestPackageSigning(t *testing.T) {
 		// try to verify with key but package is not signed (should fail)
 		_, stdErr, err = e2e.Zarf(t, "package", "verify", testPath, "--key", filepath.Join("src", "test", "packages", "zarf-test.pub"))
 		require.Error(t, err)
-		require.Contains(t, stdErr, "a key was provided but the package is not signed")
+		require.Contains(t, stdErr, "verification material was provided but the package is not signed")
 	})
 }
