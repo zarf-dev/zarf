@@ -19,35 +19,35 @@ components:
   - name: k3s
     optional: true
     import:
-      paths:
-        - k3s/k3s-amd64.yaml
-        - k3s/k3s-arm64.yaml
+      local:
+        - path: k3s/k3s-amd64.yaml
+        - path: k3s/k3s-arm64.yaml
 
   - name: zarf-injector
     import:
-      paths:
-        - registry/zarf-injector.yaml
+      local:
+        - path: registry/zarf-injector.yaml
 
   - name: zarf-seed-registry
     import:
-      paths:
-        - registry/zarf-seed-registry.yaml
+      local:
+        - path: registry/zarf-seed-registry.yaml
     images:
       - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
       - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
 
   - name: zarf-registry
     import:
-      paths:
-        - registry/zarf-registry.yaml
+      local:
+        - path: registry/zarf-registry.yaml
     images:
       - name: "[[ .registry.image ]]:[[ .registry.tag ]]"
       - name: "[[ .proxy.image ]]:[[ .proxy.tag ]]"
 
   - name: zarf-agent
     import:
-      paths:
-        - agent/zarf-agent.yaml
+      local:
+        - path: agent/zarf-agent.yaml
     images:
       - name: "[[ .agent.image ]]:[[ .agent.tag ]]"
         source: [[ if eq .agent.tag "local" ]]daemon[[ else ]]registry[[ end ]]
@@ -64,7 +64,7 @@ components:
   - name: git-server
     optional: true
     import:
-      paths:
-        - git-server/gitea.yaml
+      local:
+        - path: git-server/gitea.yaml
     images:
       - name: "[[ .gitea.image ]]"
