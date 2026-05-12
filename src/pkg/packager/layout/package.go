@@ -227,9 +227,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	signed := true
 	p.Pkg.Build.Signed = &signed
 
-	// Save original provenance files and version requirements for rollback
+	// Save original fields for rollback
 	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
 	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
+	originalSignature := p.Pkg.Build.Signature
 
 	// Keyless signatures require bundle format — the cert chain cannot be stored in the
 	// legacy .sig file. For key-based signing, respect the BundleSignature feature flag.
@@ -250,23 +251,36 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		})
 	}
 
-	// Marshal package with signed:true
+	// Set signature metadata before marshalling so it is included in the signed zarf.yaml.
+	// Identity and issuer are intentionally omitted: they are only knowable after the Fulcio
+	// OIDC exchange at sign time, and are stored in the Sigstore bundle provenance file.
+	sigMeta := &v1alpha1.ZarfSignatureMetadata{
+		TlogUploaded: opts.TlogUpload,
+	}
+	if opts.Keyless {
+		sigMeta.Method = "keyless"
+	} else {
+		sigMeta.Method = "key"
+	}
+	p.Pkg.Build.Signature = sigMeta
+
+	// Marshal package with signed:true and signature metadata
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
-		// Rollback
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
 	// Write to temporary file
 	err = os.WriteFile(tmpZarfYAMLPath, b, helpers.ReadWriteUser)
 	if err != nil {
-		// Rollback
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -296,10 +310,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
 	_, err = utils.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
 	if err != nil {
-		// Rollback in-memory state
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 

@@ -267,6 +267,8 @@ type ZarfBuildData struct {
 	Flavor string `json:"flavor,omitempty" jsonschema:"pattern=^[^/\\\\]*$"`
 	// Whether this package was signed
 	Signed *bool `json:"signed,omitempty"`
+	// Metadata about the signature applied to this package, populated after signing.
+	Signature *ZarfSignatureMetadata `json:"signature,omitempty"`
 	// Requirements for specific package operations.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
 	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
@@ -289,4 +291,15 @@ type VersionRequirement struct {
 	Version string `json:"version"`
 	// Explanation for why this version is required
 	Reason string `json:"reason,omitempty"`
+}
+
+// ZarfSignatureMetadata records how a package was signed.
+// Populated by SignPackage and included in the signed zarf.yaml.
+// Fields are limited to values known before signing begins; identity and issuer
+// (available only after the Fulcio OIDC exchange) are stored in the Sigstore bundle.
+type ZarfSignatureMetadata struct {
+	// Method is the signing method used.
+	Method string `json:"method" jsonschema:"enum=keyless,enum=key"`
+	// TlogUploaded indicates whether the signature was uploaded to the Rekor transparency log.
+	TlogUploaded bool `json:"tlogUploaded"`
 }
