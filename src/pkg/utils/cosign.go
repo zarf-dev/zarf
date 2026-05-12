@@ -267,6 +267,12 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		"bundlePath", opts.BundlePath,
 		"offline", opts.CommonVerifyOptions.Offline)
 
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
+		defer cancel()
+	}
+
 	if err := cmd.Exec(ctx, blobPath); err != nil {
 		return err
 	}
