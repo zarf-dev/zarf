@@ -362,6 +362,10 @@
           "description": "Any registry domains that were overridden on package create when pulling images.",
           "type": "object"
         },
+        "signature": {
+          "$ref": "#/$defs/ZarfSignatureMetadata",
+          "description": "Metadata about the signature applied to this package, populated after signing."
+        },
         "signed": {
           "description": "Whether this package was signed",
           "type": "boolean"
@@ -1254,6 +1258,32 @@
       },
       "required": [
         "name"
+      ],
+      "type": "object"
+    },
+    "ZarfSignatureMetadata": {
+      "additionalProperties": false,
+      "description": "ZarfSignatureMetadata records how a package was signed.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "method": {
+          "description": "Method is the signing method used.",
+          "enum": [
+            "keyless",
+            "key"
+          ],
+          "type": "string"
+        },
+        "tlogUploaded": {
+          "description": "TlogUploaded indicates whether the signature was uploaded to the Rekor transparency log.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "method",
+        "tlogUploaded"
       ],
       "type": "object"
     },
