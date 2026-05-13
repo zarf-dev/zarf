@@ -94,14 +94,20 @@ func PushIndex(ctx context.Context, t *testing.T, repo *remote.Repository, child
 	return desc
 }
 
+// PushSinglePlatformImageWithLayer pushes a single platform image with a defined layer
+func PushSinglePlatformImageWithLayer(ctx context.Context, t *testing.T, repo *remote.Repository, arch string, layer ocispec.Descriptor) ocispec.Descriptor {
+	t.Helper()
+	configJSON := fmt.Sprintf(`{"architecture":%q}`, arch)
+	config := PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(configJSON))
+	return PushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
+}
+
 // PushSinglePlatformImage creates a config blob, a random layer, and a manifest that references
 // both. The config embeds arch so distinct architectures produce distinct config blobs.
 func PushSinglePlatformImage(ctx context.Context, t *testing.T, repo *remote.Repository, arch string) ocispec.Descriptor {
 	t.Helper()
 	layer := PushBlob(ctx, t, repo, ocispec.MediaTypeImageLayer, RandomBytes(t, 64))
-	configJSON := fmt.Sprintf(`{"architecture":%q}`, arch)
-	config := PushBlob(ctx, t, repo, ocispec.MediaTypeImageConfig, []byte(configJSON))
-	return PushManifest(ctx, t, repo, config, []ocispec.Descriptor{layer})
+	return PushSinglePlatformImageWithLayer(ctx, t, repo, arch, layer)
 }
 
 // PushImage pushes a single-manifest image and tags it; returns the manifest digest.

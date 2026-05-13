@@ -18,6 +18,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -244,43 +245,45 @@ func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (i
 }
 
 // inspectIndex walks an OCI image index (recursing into nested indexes) and returns the total
-// byte size of every referenced blob and one "arch[/variant]" string per leaf manifest.
+// byte size of every uniquely-referenced blob and one "arch[/variant]" string per leaf manifest.
 func inspectIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, []string, error) {
+	return walkIndex(ctx, fetcher, indexDesc, indexBytes, map[digest.Digest]struct{}{})
+}
+
+func walkIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte, seen map[digest.Digest]struct{}) (int64, []string, error) {
+	if _, ok := seen[indexDesc.Digest]; ok {
+		return 0, nil, nil
+	}
+	seen[indexDesc.Digest] = struct{}{}
 	var idx ocispec.Index
 	if err := json.Unmarshal(indexBytes, &idx); err != nil {
 		return 0, nil, fmt.Errorf("unable to unmarshal index: %w", err)
 	}
-	childSize, platforms, err := sumManifestsSize(ctx, fetcher, idx.Manifests)
-	if err != nil {
-		return 0, nil, err
-	}
-	return indexDesc.Size + childSize, platforms, nil
-}
-
-// sumManifestsSize walks each descriptor (recursing into nested indexes) and totals up the byte
-// size of every referenced blob plus one "arch[/variant]" string per leaf manifest.
-func sumManifestsSize(ctx context.Context, fetcher content.Fetcher, manifests []ocispec.Descriptor) (int64, []string, error) {
-	var totalSize int64
+	totalSize := indexDesc.Size
 	var platforms []string
-	for _, child := range manifests {
+	for _, child := range idx.Manifests {
+		if _, ok := seen[child.Digest]; ok {
+			continue
+		}
 		switch {
 		case IsIndex(child.MediaType):
 			b, err := content.FetchAll(ctx, fetcher, child)
 			if err != nil {
 				return 0, nil, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
 			}
-			size, childPlatforms, err := inspectIndex(ctx, fetcher, child, b)
+			size, childPlatforms, err := walkIndex(ctx, fetcher, child, b, seen)
 			if err != nil {
 				return 0, nil, err
 			}
 			totalSize += size
 			platforms = append(platforms, childPlatforms...)
 		case IsManifest(child.MediaType):
+			seen[child.Digest] = struct{}{}
 			b, err := content.FetchAll(ctx, fetcher, child)
 			if err != nil {
 				return 0, nil, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
 			}
-			size, err := getSizeOfManifest(child, b)
+			size, err := uniqueManifestSize(child, b, seen)
 			if err != nil {
 				return 0, nil, err
 			}
@@ -289,8 +292,32 @@ func sumManifestsSize(ctx context.Context, fetcher content.Fetcher, manifests []
 				platforms = append(platforms, s)
 			}
 		default:
+			seen[child.Digest] = struct{}{}
 			totalSize += child.Size
 		}
 	}
 	return totalSize, platforms, nil
+}
+
+// uniqueManifestSize returns manifestDesc.Size plus the size of any config/layer blobs whose
+// digests have not yet been seen. The seen set is mutated to include every newly-counted digest.
+// The manifest's own digest must already be in seen.
+func uniqueManifestSize(manifestDesc ocispec.Descriptor, manifestBytes []byte, seen map[digest.Digest]struct{}) (int64, error) {
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal manifest %s: %w", manifestDesc.Digest, err)
+	}
+	total := manifestDesc.Size
+	if _, ok := seen[manifest.Config.Digest]; !ok {
+		seen[manifest.Config.Digest] = struct{}{}
+		total += manifest.Config.Size
+	}
+	for _, layer := range manifest.Layers {
+		if _, ok := seen[layer.Digest]; ok {
+			continue
+		}
+		seen[layer.Digest] = struct{}{}
+		total += layer.Size
+	}
+	return total, nil
 }
