@@ -95,6 +95,12 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 	// Pods do not have a metadata.name at the time of admission if from a deployment so we don't log the name
 	l.Info("using the Zarf registry URL to mutate the Pod", "registry", registryURL)
 
+	// Check if namespace wants mutate-if-exists behavior
+	useMutateIfExists, skipResult := checkNamespaceMutationBehavior(ctx, cluster, r.Namespace)
+	if skipResult != nil {
+		return skipResult, nil
+	}
+
 	var patches []operations.PatchOperation
 
 	// Add the zarf secret to the podspec
@@ -113,6 +119,17 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		if err != nil {
 			return nil, err
 		}
+		// Check if image exists if mutate-if-exists is enabled
+		if useMutateIfExists {
+			exists, checkErr := imageExistsInRegistry(ctx, cluster, replacement, &state.RegistryInfo)
+			if checkErr != nil {
+				return nil, fmt.Errorf("registry check failed for %s: %w", replacement, checkErr)
+			}
+			if !exists {
+				l.Info("image not found in registry, skipping mutation", "original", container.Image, "transformed", replacement)
+				continue
+			}
+		}
 		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
 	}
@@ -123,6 +140,17 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			return nil, err
+		}
+		// Check if image exists if mutate-if-exists is enabled
+		if useMutateIfExists {
+			exists, checkErr := imageExistsInRegistry(ctx, cluster, replacement, &state.RegistryInfo)
+			if checkErr != nil {
+				return nil, fmt.Errorf("registry check failed for %s: %w", replacement, checkErr)
+			}
+			if !exists {
+				l.Info("image not found in registry, skipping mutation", "original", container.Image, "transformed", replacement)
+				continue
+			}
 		}
 		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
@@ -138,6 +166,17 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 			replacement, err := transform.ImageTransformHost(registryURL, volume.Image.Reference)
 			if err != nil {
 				return nil, fmt.Errorf("failed to transform volume %q (index %d) image reference %q: %w", volume.Name, idx, volume.Image.Reference, err)
+			}
+			// Check if image exists if mutate-if-exists is enabled
+			if useMutateIfExists {
+				exists, checkErr := imageExistsInRegistry(ctx, cluster, replacement, &state.RegistryInfo)
+				if checkErr != nil {
+					return nil, fmt.Errorf("registry check failed for volume %q image %s: %w", volume.Name, replacement, checkErr)
+				}
+				if !exists {
+					l.Info("volume image not found in registry, skipping mutation", "volume", volume.Name, "original", volume.Image.Reference, "transformed", replacement)
+					continue
+				}
 			}
 			updatedAnnotations[getVolumeAnnotationKey(ctx, volume.Name)] = volume.Image.Reference
 			patches = append(patches, operations.ReplacePatchOperation(path, replacement))
@@ -183,6 +222,12 @@ func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, clus
 	// Pods do not have a metadata.name at the time of admission if from a deployment so we don't log the name
 	l.Info("using the Zarf registry URL to mutate the Pod", "registry", registryURL)
 
+	// Check if namespace wants mutate-if-exists behavior
+	useMutateIfExists, skipResult := checkNamespaceMutationBehavior(ctx, cluster, r.Namespace)
+	if skipResult != nil {
+		return skipResult, nil
+	}
+
 	updatedAnnotations := pod.Annotations
 	if updatedAnnotations == nil {
 		updatedAnnotations = make(map[string]string)
@@ -196,6 +241,17 @@ func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, clus
 		replacement, err := transform.ImageTransformHost(registryURL, container.Image)
 		if err != nil {
 			return nil, err
+		}
+		// Check if image exists if mutate-if-exists is enabled
+		if useMutateIfExists {
+			exists, checkErr := imageExistsInRegistry(ctx, cluster, replacement, &state.RegistryInfo)
+			if checkErr != nil {
+				return nil, fmt.Errorf("registry check failed for %s: %w", replacement, checkErr)
+			}
+			if !exists {
+				l.Info("ephemeral container image not found in registry, skipping mutation", "original", container.Image, "transformed", replacement)
+				continue
+			}
 		}
 		updatedAnnotations[getImageAnnotationKey(ctx, container.Name)] = container.Image
 		patches = append(patches, operations.ReplacePatchOperation(path, replacement))
