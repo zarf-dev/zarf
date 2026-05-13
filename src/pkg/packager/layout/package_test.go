@@ -872,7 +872,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts.Key = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.EqualError(t, err, "package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer, or --certificate)")
+		require.EqualError(t, err, "package was signed with a key; provide --key to verify")
 	})
 
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {

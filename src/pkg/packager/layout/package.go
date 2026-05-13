@@ -386,6 +386,21 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return errors.New("package is not signed - verification cannot be performed")
 	}
 
+	// Early validation using build.signature: fail fast with a method-specific message
+	// before cosign emits a generic error. Nil for packages predating this field.
+	if sig := p.Pkg.Build.Signature; sig != nil {
+		switch sig.Method {
+		case "keyless":
+			if !hasKeylessIdentity && !hasCert {
+				return errors.New("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify")
+			}
+		case "key":
+			if !hasKey && !hasCert {
+				return errors.New("package was signed with a key; provide --key to verify")
+			}
+		}
+	}
+
 	if !hasVerificationMaterial {
 		return errors.New("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer, or --certificate)")
 	}
