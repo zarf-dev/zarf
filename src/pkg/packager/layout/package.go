@@ -352,17 +352,17 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
+	// Sync the deprecated KeyRef alias before computing hasKey so callers using
+	// only KeyRef are not rejected for missing material. CosignVerifyBlobWithOptions
+	// emits the deprecation warning when invoked.
+	if opts.Key == "" && opts.KeyRef != "" { //nolint:staticcheck // intentional read of deprecated alias for migration sync
+		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
+	}
+
 	hasKey := opts.Key != ""
 	hasKeylessIdentity := opts.CertVerify.CertIdentity != "" || opts.CertVerify.CertIdentityRegexp != ""
 	hasCert := opts.CertVerify.Cert != ""
 	hasVerificationMaterial := hasKey || hasKeylessIdentity || hasCert
-	// Sync the deprecated KeyRef alias before the gate so a caller using only the
-	// old field name isn't rejected for missing material. CosignVerifyBlobWithOptions
-	// emits the deprecation warning when invoked. Touching the deprecated field is
-	// the only way to perform the migration sync from this package.
-	if opts.Key == "" && opts.KeyRef != "" { //nolint:staticcheck // intentional read of deprecated alias for migration sync
-		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
-	}
 
 	// Handle the case where the package is not signed
 	if !p.IsSigned() {

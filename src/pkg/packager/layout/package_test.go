@@ -981,6 +981,37 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
 		require.NoError(t, err, "verification should succeed with legacy signature format")
 	})
+
+	t.Run("deprecated KeyRef alias resolves before hasKey is computed", func(t *testing.T) {
+		t.Parallel()
+
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+
+		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
+		require.NoError(t, err)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{},
+		}
+
+		signOpts := signing.DefaultSignBlobOptions()
+		signOpts.Key = "./testdata/cosign.key"
+		signOpts.Password = "test"
+
+		err = pkgLayout.SignPackage(ctx, signOpts)
+		require.NoError(t, err)
+
+		// Use only the deprecated KeyRef alias with Key intentionally left empty.
+		// Without the ordering fix, hasKey was computed before the KeyRef→Key sync,
+		// causing verification to fail with "package was signed with a key; provide --key to verify".
+		verifyOpts := signing.DefaultVerifyBlobOptions()
+		verifyOpts.KeyRef = "./testdata/cosign.pub" //nolint:staticcheck
+
+		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
+		require.NoError(t, err)
+	})
 }
 
 // TestSignPackageBundleSignatureEnabled tests signing behavior when the BundleSignature
