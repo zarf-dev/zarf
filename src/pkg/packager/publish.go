@@ -12,6 +12,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -107,8 +108,8 @@ func PublishFromOCI(ctx context.Context, src registry.Reference, dst registry.Re
 type PublishPackageOptions struct {
 	// OCIConcurrency configures the amount of layers to push in parallel
 	OCIConcurrency int
-	// SignBlobOptions holds all signing configuration. Use utils.DefaultSignBlobOptions() as a base.
-	SignBlobOptions utils.SignBlobOptions
+	// SignBlobOptions holds all signing configuration. Use signing.DefaultSignBlobOptions() as a base.
+	SignBlobOptions signing.SignBlobOptions
 	// Retries specifies the number of retries to use
 	Retries int
 	types.RemoteOptions

@@ -16,12 +16,12 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
-func verifyOptsFromKey(keyPath string) *utils.VerifyBlobOptions {
-	opts := utils.DefaultVerifyBlobOptions()
+func verifyOptsFromKey(keyPath string) *signing.VerifyBlobOptions {
+	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = keyPath
 	return &opts
 }
@@ -242,7 +242,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -267,7 +267,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
@@ -285,7 +285,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -300,7 +300,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -315,7 +315,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -340,7 +340,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 		opts.Overwrite = true
@@ -372,7 +372,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		// Empty options - no signing key material configured
-		opts := utils.SignBlobOptions{}
+		opts := signing.SignBlobOptions{}
 
 		// Should skip signing without error
 		err = pkgLayout.SignPackage(ctx, opts)
@@ -393,7 +393,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -414,7 +414,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 		opts.OutputSignature = "/some/custom/path.sig"
@@ -443,7 +443,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		// Wrong password should cause signing to fail
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 
@@ -472,7 +472,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		}
 
 		// Empty options - should skip signing
-		opts := utils.SignBlobOptions{}
+		opts := signing.SignBlobOptions{}
 
 		err = pkgLayout.SignPackage(ctx, opts)
 		require.NoError(t, err)
@@ -510,7 +510,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Sign the package
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -547,14 +547,14 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setupFunc      func(t *testing.T) (*PackageLayout, utils.SignBlobOptions)
+		setupFunc      func(t *testing.T) (*PackageLayout, signing.SignBlobOptions)
 		expectedErr    string
 		expectSigned   bool
 		expectSignFile bool
 	}{
 		{
 			name: "package with existing false Signed value gets updated on success",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, signing.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -569,7 +569,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 					},
 				}
 
-				opts := utils.DefaultSignBlobOptions()
+				opts := signing.DefaultSignBlobOptions()
 				opts.Key = "./testdata/cosign.key"
 				opts.Password = "test"
 
@@ -581,7 +581,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "package with existing true Signed value gets overwritten",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, signing.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -596,7 +596,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 					},
 				}
 
-				opts := utils.DefaultSignBlobOptions()
+				opts := signing.DefaultSignBlobOptions()
 				opts.Key = "./testdata/cosign.key"
 				opts.Password = "test"
 
@@ -608,7 +608,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "sign with different password-protected key",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, signing.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("test content"), 0o644))
@@ -618,7 +618,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 					Pkg:     v1alpha1.ZarfPackage{},
 				}
 
-				opts := utils.DefaultSignBlobOptions()
+				opts := signing.DefaultSignBlobOptions()
 				opts.Key = "./testdata/cosign.key"
 				opts.Password = "test"
 
@@ -630,7 +630,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "passFunc returns error",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, signing.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -643,7 +643,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				passFunc := cosign.PassFunc(func(_ bool) ([]byte, error) {
 					return nil, os.ErrPermission
 				})
-				opts := utils.DefaultSignBlobOptions()
+				opts := signing.DefaultSignBlobOptions()
 				opts.Key = "./testdata/cosign.key"
 				opts.PassFunc = passFunc
 
@@ -655,7 +655,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 		},
 		{
 			name: "empty package metadata still signs",
-			setupFunc: func(t *testing.T) (*PackageLayout, utils.SignBlobOptions) {
+			setupFunc: func(t *testing.T) (*PackageLayout, signing.SignBlobOptions) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
@@ -668,7 +668,7 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 					},
 				}
 
-				opts := utils.DefaultSignBlobOptions()
+				opts := signing.DefaultSignBlobOptions()
 				opts.Key = "./testdata/cosign.key"
 				opts.Password = "test"
 
@@ -734,7 +734,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign the package (legacy only, bundle feature disabled by default)
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -743,7 +743,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.FileExists(t, legacySignaturePath, "legacy signature should exist")
 
 		// Verify the signature (should use legacy format)
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -764,7 +764,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign with the test key
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -772,7 +772,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to verify with a different (non-existent) key - should fail
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/nonexistent.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -792,7 +792,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -806,7 +806,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -819,7 +819,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err := pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -838,7 +838,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -860,7 +860,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign the package
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -868,7 +868,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to verify without providing a key
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -889,7 +889,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign the package
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -906,7 +906,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Try to verify with corrupted signature(s)
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -927,7 +927,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign the package
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -939,7 +939,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verification should fail because content doesn't match signature
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -962,7 +962,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		}
 
 		// Sign the package
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -975,7 +975,7 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verification should work with legacy signature (fallback path)
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -1009,7 +1009,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -1046,7 +1046,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		err = os.WriteFile(yamlPath, b, 0o644)
 		require.NoError(t, err)
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -1078,7 +1078,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -1086,7 +1086,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		require.NoError(t, err)
 		require.FileExists(t, bundlePath)
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -1107,7 +1107,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 			Pkg:     v1alpha1.ZarfPackage{},
 		}
 
-		signOpts := utils.DefaultSignBlobOptions()
+		signOpts := signing.DefaultSignBlobOptions()
 		signOpts.Key = "./testdata/cosign.key"
 		signOpts.Password = "test"
 
@@ -1120,7 +1120,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		err = os.Remove(bundlePath)
 		require.NoError(t, err)
 
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = "./testdata/cosign.pub"
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
@@ -1311,7 +1311,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 				Pkg:     pkg,
 			}
 
-			signOpts := utils.DefaultSignBlobOptions()
+			signOpts := signing.DefaultSignBlobOptions()
 			signOpts.Key = "./testdata/cosign.key"
 			signOpts.Password = "test"
 
@@ -1667,7 +1667,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 			},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "test"
 
@@ -1695,7 +1695,7 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 			},
 		}
 
-		opts := utils.DefaultSignBlobOptions()
+		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
 		opts.Password = "wrongpassword"
 

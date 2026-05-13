@@ -37,6 +37,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -1746,7 +1747,7 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
-	publishSignOpts := utils.DefaultSignBlobOptions()
+	publishSignOpts := signing.DefaultSignBlobOptions()
 	publishSignOpts.Key = o.signingKeyPath
 	publishSignOpts.Password = o.signingKeyPassword
 	publishSignOpts.Overwrite = true
@@ -1862,7 +1863,7 @@ type packageSignOptions struct {
 	oidcClientID   string
 	rekorURL       string
 	tlogUpload     bool
-	yes            bool
+	confirm        bool
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1895,7 +1896,9 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", "sigstore", lang.CmdPackageSignFlagOIDCClientID)
 	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", "https://rekor.sigstore.dev", lang.CmdPackageSignFlagRekorURL)
 	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", false, lang.CmdPackageSignFlagTlogUpload)
-	cmd.Flags().BoolVar(&o.yes, "yes", false, lang.CmdPackageSignFlagYes)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
+
+	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
 	return cmd
 }
@@ -2008,7 +2011,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		l.Info("signing package with provided key")
 	}
 
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
@@ -2020,7 +2023,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts.OIDC.ClientID = o.oidcClientID
 	signOpts.Rekor.URL = o.rekorURL
 	signOpts.TlogUpload = o.tlogUpload
-	signOpts.SkipConfirmation = o.yes
+	signOpts.SkipConfirmation = o.confirm
 
 	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
 	// the signature is unverifiable past expiry. Default --tlog-upload=true for
@@ -2116,7 +2119,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	// Load the package with verification enabled
 	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
-	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts := signing.DefaultVerifyBlobOptions()
 	verifyOpts.Key = o.publicKeyPath
 	verifyOpts.CertVerify.CertIdentity = o.certificateIdentity
 	verifyOpts.CertVerify.CertIdentityRegexp = o.certificateIdentityRegexp
@@ -2240,8 +2243,8 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 	return layout.VerifyIfPossible
 }
 
-func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
-	opts := utils.DefaultVerifyBlobOptions()
+func verifyBlobOptionsFromKeyPath(keyPath string) *signing.VerifyBlobOptions {
+	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = keyPath
 	return &opts
 }

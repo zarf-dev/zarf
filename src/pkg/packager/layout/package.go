@@ -25,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
@@ -42,7 +43,7 @@ type PackageLayoutOptions struct {
 	VerificationStrategy VerificationStrategy
 	IsPartial            bool
 	Filter               filters.ComponentFilterStrategy
-	VerifyBlobOptions    *utils.VerifyBlobOptions
+	VerifyBlobOptions    *signing.VerifyBlobOptions
 }
 
 // VerificationStrategy describes a strategy for determining whether to verify a package.
@@ -114,13 +115,13 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := utils.DefaultVerifyBlobOptions()
+		defaults := signing.DefaultVerifyBlobOptions()
 		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
 
 	if opts.VerificationStrategy < VerifyNever {
-		verifyOptions := utils.DefaultVerifyBlobOptions()
+		verifyOptions := signing.DefaultVerifyBlobOptions()
 		if opts.VerifyBlobOptions != nil {
 			verifyOptions = *opts.VerifyBlobOptions
 		}
@@ -166,7 +167,7 @@ func (p *PackageLayout) ContainsSBOM() bool {
 // SignPackage signs the zarf package using cosign with the provided options.
 // If the options do not indicate signing should be performed (no key material configured),
 // this is a no-op and returns nil.
-func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOptions) (err error) {
+func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error) {
 	// Note: This function:
 	// 1. Updates Pkg.Build.Signed = true in memory
 	// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
@@ -308,7 +309,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
-	_, err = utils.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
+	_, err = signing.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
 	if err != nil {
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
@@ -339,11 +340,13 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 		}
 	}
 
-	if opts.Keyless {
-		if identity, issuer, ierr := utils.ReadKeylessIdentityFromBundle(actualBundlePath); ierr == nil {
-			l.Info("signed package keyless", "identity", identity, "issuer", issuer)
+	if bundleEnabled {
+		if info, bundleErr := signing.ReadBundleInfo(actualBundlePath); bundleErr == nil {
+			if info.Identity != "" {
+				l.Info("signed package keyless", "identity", info.Identity, "issuer", info.Issuer)
+			}
 		} else {
-			l.Debug("could not read keyless identity from bundle", "error", ierr)
+			l.Debug("could not read bundle info after signing", "error", bundleErr)
 		}
 	}
 
@@ -352,7 +355,7 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts utils.SignBlobOpti
 }
 
 // VerifyPackageSignature verifies the package signature
-func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.VerifyBlobOptions) error {
+func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing.VerifyBlobOptions) error {
 	l := logger.From(ctx)
 	l.Debug("verifying package signature")
 
@@ -386,10 +389,15 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return errors.New("package is not signed - verification cannot be performed")
 	}
 
-	// Early validation using build.signature: fail fast with a method-specific message
-	// before cosign emits a generic error. Nil for packages predating this field.
-	if sig := p.Pkg.Build.Signature; sig != nil {
-		switch sig.Method {
+	// Check for bundle format signature (preferred). Parse it once for both method
+	// detection (fast-fail below) and the verify path.
+	bundlePath := filepath.Join(p.dirPath, Bundle)
+	bundleInfo, bundleErr := signing.ReadBundleInfo(bundlePath)
+	hasBundleInfo := bundleErr == nil
+
+	// Early validation: fail fast with a method-specific message before cosign emits a generic error.
+	if hasBundleInfo {
+		switch bundleInfo.Method {
 		case "keyless":
 			if !hasKeylessIdentity && !hasCert {
 				return errors.New("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify")
@@ -405,26 +413,23 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return errors.New("package is signed but no verification material was provided (--key, --certificate-identity + --certificate-oidc-issuer, or --certificate)")
 	}
 
-	// Check for bundle format signature (preferred)
-	bundlePath := filepath.Join(p.dirPath, Bundle)
-	_, err := os.Stat(bundlePath)
-	if err == nil {
+	if hasBundleInfo {
 		opts.BundlePath = bundlePath
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-		return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+		return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 	}
-	if !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("error checking bundle signature: %w", err)
+	if !errors.Is(bundleErr, os.ErrNotExist) {
+		return fmt.Errorf("error checking bundle signature: %w", bundleErr)
 	}
 
 	// Bundle doesn't exist, check for legacy signature format
 	signaturePath := filepath.Join(p.dirPath, Signature)
-	_, err = os.Stat(signaturePath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+	_, sigStatErr := os.Stat(signaturePath)
+	if sigStatErr != nil {
+		if errors.Is(sigStatErr, os.ErrNotExist) {
 			return fmt.Errorf("signature not found: neither bundle nor legacy signature exists")
 		}
-		return fmt.Errorf("error checking legacy signature: %w", err)
+		return fmt.Errorf("error checking legacy signature: %w", sigStatErr)
 	}
 
 	// Legacy signatures don't carry a certificate chain, so keyless identity
@@ -435,12 +440,12 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 	}
 
 	// Legacy signature found
-	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package with the --features='bundle-signature=true' flag.")
+	l.Warn("bundle format signature not found: legacy signature is being deprecated.")
 	opts.Signature = signaturePath
 
 	opts.CommonVerifyOptions.NewBundleFormat = false
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
-	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
+	return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
 
 // IsSigned returns true if the package is signed.

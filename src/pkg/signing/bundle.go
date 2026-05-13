@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic utility functions.
-package utils
+package signing
 
 import (
 	"crypto/x509"
@@ -50,25 +49,45 @@ func extractIdentityFromCert(cert *x509.Certificate) (identity, issuer string) {
 	return identity, issuer
 }
 
+// BundleInfo contains parsed metadata from a Sigstore bundle file.
+type BundleInfo struct {
+	// Method is "keyless" for Fulcio-issued certificate bundles, "key" for public-key bundles.
+	Method   string
+	Identity string // cert SAN — empty for key-based signatures
+	Issuer   string // OIDC issuer — empty for key-based signatures
+}
+
+// ReadBundleInfo parses a Sigstore bundle file and returns its signing metadata.
+func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
+	b, err := bundle.LoadJSONFromPath(bundlePath)
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
+	}
+	vc, err := b.VerificationContent()
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("reading verification content: %w", err)
+	}
+	switch v := vc.(type) {
+	case *bundle.Certificate:
+		identity, issuer := extractIdentityFromCert(v.Certificate())
+		return BundleInfo{Method: "keyless", Identity: identity, Issuer: issuer}, nil
+	case *bundle.PublicKey:
+		return BundleInfo{Method: "key"}, nil
+	default:
+		return BundleInfo{}, fmt.Errorf("unrecognised verification content type %T", vc)
+	}
+}
+
 // ReadKeylessIdentityFromBundle parses a Sigstore bundle file and returns the
 // signer identity (cert SAN) and OIDC issuer claim. Returns an error if the
 // bundle does not contain a certificate (i.e. is not a keyless signature).
 func ReadKeylessIdentityFromBundle(bundlePath string) (identity, issuer string, err error) {
-	b, err := bundle.LoadJSONFromPath(bundlePath)
+	info, err := ReadBundleInfo(bundlePath)
 	if err != nil {
-		return "", "", fmt.Errorf("loading bundle: %w", err)
+		return "", "", err
 	}
-
-	vc, err := b.VerificationContent()
-	if err != nil {
-		return "", "", fmt.Errorf("reading verification content: %w", err)
-	}
-
-	certHolder, ok := vc.(*bundle.Certificate)
-	if !ok {
+	if info.Method != "keyless" {
 		return "", "", errors.New("bundle does not contain a certificate (not a keyless signature)")
 	}
-
-	identity, issuer = extractIdentityFromCert(certHolder.Certificate())
-	return identity, issuer, nil
+	return info.Identity, info.Issuer, nil
 }

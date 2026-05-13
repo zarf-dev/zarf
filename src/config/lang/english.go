@@ -366,7 +366,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOIDCClientID   = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
 	CmdPackageSignFlagRekorURL       = "Rekor transparency log URL. Override for private Sigstore deployments."
 	CmdPackageSignFlagTlogUpload     = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (required for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
-	CmdPackageSignFlagYes            = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log."
+	CmdPackageSignFlagConfirm        = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."

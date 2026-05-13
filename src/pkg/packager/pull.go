@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/types"
 
@@ -39,7 +40,7 @@ type PullOptions struct {
 	// Deprecated: Use VerifyBlobOptions instead. PublicKeyPath validates the create-time signage of a package.
 	PublicKeyPath string
 	// VerifyBlobOptions configures package signature verification.
-	VerifyBlobOptions *utils.VerifyBlobOptions
+	VerifyBlobOptions *signing.VerifyBlobOptions
 	// OCIConcurrency is the number of layers pulled in parallel
 	OCIConcurrency int
 	// CachePath is used to cache layers from OCI package pulls
@@ -80,7 +81,7 @@ func Pull(ctx context.Context, source, destination string, opts PullOptions) (_ 
 	// Only applies when VerifyBlobOptions is not already set,
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
-		defaults := utils.DefaultVerifyBlobOptions()
+		defaults := signing.DefaultVerifyBlobOptions()
 		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
@@ -118,7 +119,7 @@ type pullOCIOptions struct {
 	Filter            filters.ComponentFilterStrategy
 	OCIConcurrency    int
 	CachePath         string
-	VerifyBlobOptions *utils.VerifyBlobOptions
+	VerifyBlobOptions *signing.VerifyBlobOptions
 	Connected         bool
 	types.RemoteOptions
 	layout.VerificationStrategy

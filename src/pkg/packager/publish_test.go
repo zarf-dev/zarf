@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -36,7 +36,7 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
-	verifyOpts := utils.DefaultVerifyBlobOptions()
+	verifyOpts := signing.DefaultVerifyBlobOptions()
 	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
@@ -221,7 +221,7 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
 	signOpts.Password = "password"
 

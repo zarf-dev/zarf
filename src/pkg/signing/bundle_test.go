@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package utils
+package signing
 
 import (
 	"crypto/ecdsa"
@@ -165,6 +165,47 @@ func TestExtractIdentityFromCert(t *testing.T) {
 
 		identity, _ := extractIdentityFromCert(cert)
 		require.Equal(t, "host.example.com", identity)
+	})
+}
+
+func TestReadBundleInfo(t *testing.T) {
+	t.Parallel()
+
+	t.Run("certificate bundle returns keyless method with identity and issuer", func(t *testing.T) {
+		t.Parallel()
+		issuerVal, err := asn1.Marshal("https://github.com/login/oauth")
+		require.NoError(t, err)
+		cert := makeCert(t, &x509.Certificate{
+			Subject:        pkix.Name{CommonName: "ephemeral"},
+			EmailAddresses: []string{"signer@example.com"},
+			ExtraExtensions: []pkix.Extension{
+				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
+			},
+		})
+		path := writeBundleFixture(t, cert, "certificate")
+
+		info, err := ReadBundleInfo(path)
+		require.NoError(t, err)
+		require.Equal(t, "keyless", info.Method)
+		require.Equal(t, "signer@example.com", info.Identity)
+		require.Equal(t, "https://github.com/login/oauth", info.Issuer)
+	})
+
+	t.Run("key-based bundle returns key method with empty identity and issuer", func(t *testing.T) {
+		t.Parallel()
+		path := writeKeyBasedBundleFixture(t)
+
+		info, err := ReadBundleInfo(path)
+		require.NoError(t, err)
+		require.Equal(t, "key", info.Method)
+		require.Empty(t, info.Identity)
+		require.Empty(t, info.Issuer)
+	})
+
+	t.Run("missing bundle file errors", func(t *testing.T) {
+		t.Parallel()
+		_, err := ReadBundleInfo(filepath.Join(t.TempDir(), "nonexistent.json"))
+		require.Error(t, err)
 	})
 }
 

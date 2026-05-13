@@ -17,7 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
@@ -69,7 +69,7 @@ func TestLoadPackage(t *testing.T) {
 		tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
 
 		keyPath := filepath.Join("layout", "testdata", "cosign.pub")
-		verifyOpts := utils.DefaultVerifyBlobOptions()
+		verifyOpts := signing.DefaultVerifyBlobOptions()
 		verifyOpts.Key = keyPath
 
 		// VerifyNever should skip verification entirely and succeed
