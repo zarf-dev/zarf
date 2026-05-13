@@ -231,7 +231,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	// Save original fields for rollback
 	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
 	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
-	originalSignature := p.Pkg.Build.Signature
 
 	// Keyless signatures require bundle format — the cert chain cannot be stored in the
 	// legacy .sig file. For key-based signing, respect the BundleSignature feature flag.
@@ -252,26 +251,12 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		})
 	}
 
-	// Set signature metadata before marshalling so it is included in the signed zarf.yaml.
-	// Identity and issuer are intentionally omitted: they are only knowable after the Fulcio
-	// OIDC exchange at sign time, and are stored in the Sigstore bundle provenance file.
-	sigMeta := &v1alpha1.ZarfSignatureMetadata{
-		TlogUploaded: opts.TlogUpload,
-	}
-	if opts.Keyless {
-		sigMeta.Method = "keyless"
-	} else {
-		sigMeta.Method = "key"
-	}
-	p.Pkg.Build.Signature = sigMeta
-
-	// Marshal package with signed:true and signature metadata
+	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
-		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
@@ -281,7 +266,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
-		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -314,7 +298,6 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		p.Pkg.Build.Signed = originalSigned
 		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
 		p.Pkg.Build.VersionRequirements = originalVersionRequirements
-		p.Pkg.Build.Signature = originalSignature
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
