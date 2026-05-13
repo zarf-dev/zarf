@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-EMBED_PATH="${REPO_ROOT}/src/pkg/utils/embedded_trusted_root.json"
+EMBED_PATH="${REPO_ROOT}/src/pkg/signing/embedded_trusted_root.json"
 ZARF_BIN="${REPO_ROOT}/build/zarf"
 
 if [ ! -x "${ZARF_BIN}" ]; then
