@@ -121,6 +121,24 @@ const (
 	VPkgSignOutput             = "package.sign.output"
 	VPkgSignOverwrite          = "package.sign.overwrite"
 
+	// Package sign keyless config keys
+
+	VPkgSignFulcioURL      = "package.sign.fulcio_url"
+	VPkgSignFulcioAuthFlow = "package.sign.fulcio_auth_flow"
+	VPkgSignOIDCIssuer     = "package.sign.oidc_issuer"
+	VPkgSignOIDCClientID   = "package.sign.oidc_client_id"
+	VPkgSignRekorURL       = "package.sign.rekor_url"
+	VPkgSignTlogUpload     = "package.sign.tlog_upload"
+
+	// Package verify keyless config keys
+
+	VPkgVerifyCertIdentity         = "package.verify.certificate_identity"
+	VPkgVerifyCertIdentityRegexp   = "package.verify.certificate_identity_regexp"
+	VPkgVerifyCertOIDCIssuer       = "package.verify.certificate_oidc_issuer"
+	VPkgVerifyCertOIDCIssuerRegexp = "package.verify.certificate_oidc_issuer_regexp"
+	VPkgVerifyTrustedRoot          = "package.verify.trusted_root"
+	VPkgVerifyInsecureIgnoreTlog   = "package.verify.insecure_ignore_tlog"
+
 	// Package pull config keys
 
 	VPkgPullOutputDir = "package.pull.output_directory"
@@ -251,6 +269,16 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Package sign keyless opts that are non-zero values
+	v.SetDefault(VPkgSignFulcioURL, "https://fulcio.sigstore.dev")
+	v.SetDefault(VPkgSignFulcioAuthFlow, "normal")
+	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
+	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
+	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
+
+	// Package verify opts that are non-zero values
+	v.SetDefault(VPkgVerifyInsecureIgnoreTlog, true)
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
