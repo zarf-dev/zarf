@@ -17,20 +17,19 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
 const annotationPrefix = "zarf.dev"
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster)
+			return mutatePod(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster)
+			return mutatePod(ctx, r, cluster, mode)
 		},
 	}
 }
@@ -67,11 +66,19 @@ func getAnnotationKey(ctx context.Context, image string) string {
 	return key
 }
 
-func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 	pod, err := parsePod(r.Object.Raw)
 	if err != nil {
 		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	if !operations.ShouldMutate(pod.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
 	}
 
 	if r.SubResource != "" {

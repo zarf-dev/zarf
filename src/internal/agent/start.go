@@ -17,6 +17,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/hooks"
 	agentHttp "github.com/zarf-dev/zarf/src/internal/agent/http"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
@@ -34,15 +35,16 @@ const (
 // StartWebhook launches the Zarf agent mutating webhook in the cluster.
 func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	// Routers
+	mode := operations.ModeFromEnv()
 	admissionHandler := admission.NewHandler()
-	podsMutation := hooks.NewPodMutationHook(ctx, cluster)
-	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, cluster)
-	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, cluster)
-	argocdApplicationSetMutation := hooks.NewApplicationSetMutationHook(ctx, cluster)
-	argocdAppProjectMutation := hooks.NewAppProjectMutationHook(ctx, cluster)
-	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, cluster)
-	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, cluster)
-	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, cluster)
+	podsMutation := hooks.NewPodMutationHook(ctx, cluster, mode)
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, cluster, mode)
+	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, cluster, mode)
+	argocdApplicationSetMutation := hooks.NewApplicationSetMutationHook(ctx, cluster, mode)
+	argocdAppProjectMutation := hooks.NewAppProjectMutationHook(ctx, cluster, mode)
+	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, cluster, mode)
+	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, cluster, mode)
+	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, cluster, mode)
 
 	// Routers
 	mux := http.NewServeMux()

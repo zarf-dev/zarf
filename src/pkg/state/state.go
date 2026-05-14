@@ -152,8 +152,11 @@ type State struct {
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
-	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
-	InjectorInfo         InjectorInfo `json:"injectorInfo"`
+	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
+	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
+	// FIXME: make ignore, skip and mutate an ENUM
+	AgentMutationMode string       `json:"agentMutationMode,omitempty"`
+	InjectorInfo      InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -475,6 +478,8 @@ type MergeOptions struct {
 	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
+	AgentMutationMode string
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -533,6 +538,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 			newState.AgentTLS = agentTLS
 			newState.AgentTLSUserProvided = false
+		}
+		if opts.AgentMutationMode != "" {
+			newState.AgentMutationMode = opts.AgentMutationMode
 		}
 	}
 

@@ -35,28 +35,37 @@ type RepoCreds struct {
 }
 
 // NewRepositorySecretMutationHook creates a new instance of the ArgoCD repository secret mutation hook.
-func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateRepositorySecret(ctx, r, cluster)
+			return mutateRepositorySecret(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateRepositorySecret(ctx, r, cluster)
+			return mutateRepositorySecret(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateRepositorySecret mutates the git URL in the ArgoCD repository secret to point to the repository URL defined in the ZarfState.
-func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
-	s, err := cluster.LoadState(ctx)
+
+	secret := corev1.Secret{}
+	if err := json.Unmarshal(r.Object.Raw, &secret); err != nil {
+		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
 	if err != nil {
 		return nil, err
 	}
+	if !operations.ShouldMutate(secret.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+	}
 
-	secret := corev1.Secret{}
-	if err = json.Unmarshal(r.Object.Raw, &secret); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	s, err := cluster.LoadState(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	url, exists := secret.Data["url"]

@@ -41,3 +41,5 @@ resources:
 affinity: {}
 tolerations: []
 nodeSelector: {}
+
+mutationMode: "###ZARF_AGENT_MUTATION_MODE###"

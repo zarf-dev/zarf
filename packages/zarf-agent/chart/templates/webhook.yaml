@@ -11,12 +11,14 @@ webhooks:
           values:
             # Ensure we don't mess with kube-system
             - "kube-system"
-        # Allow ignoring whole namespaces
+        # FIXME: this needs an e2e test
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -57,12 +59,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -100,12 +103,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -144,12 +148,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -188,12 +193,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -230,12 +236,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -272,12 +279,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label
@@ -319,12 +327,13 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        # Allow ignoring whole namespaces
+        {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
           values:
             - "skip"
             - "ignore"
+        {{- end }}
     objectSelector:
       matchExpressions:
         # Always ignore specific resources if requested by annotation/label

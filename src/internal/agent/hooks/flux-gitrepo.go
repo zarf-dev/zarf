@@ -22,21 +22,34 @@ import (
 )
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
+			return mutateGitRepo(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
+			return mutateGitRepo(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var patches []operations.PatchOperation
+
+	repo := flux.GitRepository{}
+	if err := json.Unmarshal(r.Object.Raw, &repo); err != nil {
+		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	if !operations.ShouldMutate(repo.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+	}
 
 	s, err := cluster.LoadState(ctx)
 	if err != nil {
@@ -45,11 +58,6 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	if !s.GitServer.IsConfigured() {
 		l.Debug("no Zarf git server configured, skipping Flux GitRepository mutation")
 		return &operations.Result{Allowed: true}, nil
-	}
-
-	repo := flux.GitRepository{}
-	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",

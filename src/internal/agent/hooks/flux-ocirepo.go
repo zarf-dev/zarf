@@ -31,19 +31,19 @@ const (
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
-func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateOCIRepo(ctx, r, cluster)
+			return mutateOCIRepo(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateOCIRepo(ctx, r, cluster)
+			return mutateOCIRepo(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
-func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var (
 		patches            []operations.PatchOperation
@@ -57,6 +57,14 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	src := &flux.OCIRepository{}
 	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	if !operations.ShouldMutate(src.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
 	}
 
 	if src.Spec.Reference == nil {

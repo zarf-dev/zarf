@@ -13,8 +13,10 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -27,6 +29,19 @@ const (
 	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
 	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
 )
+
+// getNamespaceLabels returns the labels of the namespace with the given name. If name is empty,
+// a nil map is returned so callers can fall back to resource-only label checks.
+func getNamespaceLabels(ctx context.Context, c *cluster.Cluster, name string) (map[string]string, error) {
+	if name == "" {
+		return nil, nil
+	}
+	ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get namespace %s: %w", name, err)
+	}
+	return ns.Labels, nil
+}
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {

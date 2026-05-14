@@ -56,6 +56,7 @@ type initOptions struct {
 	agentTLSCAPath          string
 	agentTLSCertPath        string
 	agentTLSKeyPath         string
+	agentMutationMode       string
 }
 
 func newInitCommand() *cobra.Command {
@@ -116,6 +117,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentMutationMode, "agent-mutation-mode", "opt-in", `Whether the Zarf agent mutates resources by default ("opt-out") or only when explicitly labeled ("opt-in")`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -251,6 +253,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
+		AgentMutationMode:      o.agentMutationMode,
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -448,6 +451,10 @@ func (o *initOptions) validateInitFlags() error {
 			return fmt.Errorf("invalid registry mode %q, must be %q, %q, or %q", o.registryInfo.RegistryMode,
 				state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal)
 		}
+	}
+
+	if o.agentMutationMode != "opt-in" && o.agentMutationMode != "opt-out" {
+		return fmt.Errorf("invalid agent mutation mode %q, must be %q or %q", o.agentMutationMode, "opt-in", "opt-out")
 	}
 
 	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {

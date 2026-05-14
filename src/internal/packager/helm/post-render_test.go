@@ -448,7 +448,11 @@ func TestAgentMutatedKindsMatchesWebhook(t *testing.T) {
 	require.NoError(t, err)
 
 	// Strip Helm template directives so the manifest can be parsed as plain YAML.
-	cleaned := regexp.MustCompile(`{{[^}]*}}`).ReplaceAllString(string(data), "placeholder")
+	// First remove entire lines that are Helm control flow (if/end/else/range/with),
+	// then replace remaining inline expressions with a placeholder.
+	// FIXME: this is ugly
+	cleaned := regexp.MustCompile(`(?m)^\s*{{-?\s*(if|end|else|range|with)\b[^}]*}}\s*\n`).ReplaceAllString(string(data), "")
+	cleaned = regexp.MustCompile(`{{[^}]*}}`).ReplaceAllString(cleaned, "placeholder")
 
 	// Only parse the rules — decoding the full MutatingWebhookConfiguration would
 	// fail on the templated caBundle placeholder which is not valid base64.

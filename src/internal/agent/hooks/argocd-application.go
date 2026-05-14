@@ -47,28 +47,37 @@ type ApplicationSource struct {
 }
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
-func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplication(ctx, r, cluster)
+			return mutateApplication(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplication(ctx, r, cluster)
+			return mutateApplication(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateApplication mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
-	s, err := cluster.LoadState(ctx)
+
+	app := Application{}
+	if err := json.Unmarshal(r.Object.Raw, &app); err != nil {
+		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
 	if err != nil {
 		return nil, err
 	}
+	if !operations.ShouldMutate(app.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+	}
 
-	app := Application{}
-	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	s, err := cluster.LoadState(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	var urls []string

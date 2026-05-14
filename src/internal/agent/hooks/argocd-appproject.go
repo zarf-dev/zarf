@@ -35,28 +35,37 @@ type AppProjectSpec struct {
 }
 
 // NewAppProjectMutationHook creates a new mutation hook for ArgoCD AppProjects.
-func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateAppProject(ctx, r, cluster)
+			return mutateAppProject(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateAppProject(ctx, r, cluster)
+			return mutateAppProject(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateAppProject mutates the sourceRepos in ArgoCD AppProject to point to the Zarf git server.
-func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
-	s, err := cluster.LoadState(ctx)
+
+	proj := AppProject{}
+	if err := json.Unmarshal(r.Object.Raw, &proj); err != nil {
+		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
 	if err != nil {
 		return nil, err
 	}
+	if !operations.ShouldMutate(proj.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+	}
 
-	proj := AppProject{}
-	if err = json.Unmarshal(r.Object.Raw, &proj); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+	s, err := cluster.LoadState(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	requiresGit, requiresRegistry := classifyURLSchemes(proj.Spec.SourceRepos)

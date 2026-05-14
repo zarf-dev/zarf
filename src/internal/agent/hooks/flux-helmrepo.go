@@ -23,19 +23,19 @@ import (
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
-func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
+func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateHelmRepo(ctx, r, cluster)
+			return mutateHelmRepo(ctx, r, cluster, mode)
 		},
 		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateHelmRepo(ctx, r, cluster)
+			return mutateHelmRepo(ctx, r, cluster, mode)
 		},
 	}
 }
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 
 	src := &flux.HelmRepository{}
@@ -47,6 +47,14 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 	if strings.ToLower(src.Spec.Type) != "oci" {
 		l.Warn("skipping HelmRepository mutation because the type is not OCI", "type", src.Spec.Type)
 		return &operations.Result{Allowed: true}, nil
+	}
+
+	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	if !operations.ShouldMutate(src.Labels, nsLabels, mode) {
+		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
 	}
 
 	zarfState, err := cluster.LoadState(ctx)
