@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.76.0](https://github.com/zarf-dev/zarf/compare/v0.75.1...v0.76.0) (2026-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sign:** align signing and verification flags to cosign ([#4880](https://github.com/zarf-dev/zarf/issues/4880))
+
+### Features
+
+* add OCI support for Argo CD sources ([#4354](https://github.com/zarf-dev/zarf/issues/4354)) ([6b54e0a](https://github.com/zarf-dev/zarf/commit/6b54e0a40d3c75c0da5600fc116a6e2ecc611fdf))
+* implement import logic for Zarf Values ([#4427](https://github.com/zarf-dev/zarf/issues/4427)) ([fde1211](https://github.com/zarf-dev/zarf/commit/fde1211e7ae2ec29dbc5c304d910949de3f5ba29))
+* **sign:** align signing and verification flags to cosign ([#4880](https://github.com/zarf-dev/zarf/issues/4880)) ([04fb929](https://github.com/zarf-dev/zarf/commit/04fb9291bc958c7f0e2847f3a347873eab38bd94))
+* **values:** package inspect values feature support ([#4867](https://github.com/zarf-dev/zarf/issues/4867)) ([2a3ef1b](https://github.com/zarf-dev/zarf/commit/2a3ef1b07f73e6c28c5351c256fa69663a0aa683))
+* verify dynamic path fields in package config are clean ([#4883](https://github.com/zarf-dev/zarf/issues/4883)) ([579ec27](https://github.com/zarf-dev/zarf/commit/579ec276acdad294cc78f2149e341f497f7a1dac))
+
+
+### Bug Fixes
+
+* add cluster timeout cluster.New in dev deploy ([#4882](https://github.com/zarf-dev/zarf/issues/4882)) ([fe7fc39](https://github.com/zarf-dev/zarf/commit/fe7fc39eebba1eab0a0f9d3dbb77a4089f78569c))
+* **deploy:** scope installedCharts by namespace override ([#4873](https://github.com/zarf-dev/zarf/issues/4873)) ([6c6ee8c](https://github.com/zarf-dev/zarf/commit/6c6ee8c5ca2702ada5d9ea9eebae3b968dca3da9))
+* **init:** skip namespace agent labels when agent is disabled ([#4851](https://github.com/zarf-dev/zarf/issues/4851)) ([8ed2439](https://github.com/zarf-dev/zarf/commit/8ed2439272fa7bd5631b1d01b65f7eb96568614e))
+* **variables:** file variable substitution alignment ([#4866](https://github.com/zarf-dev/zarf/issues/4866)) ([a16872c](https://github.com/zarf-dev/zarf/commit/a16872cd3d81496cabf831a897b4b60bd1509a72))
+
 ## [0.75.1](https://github.com/zarf-dev/zarf/compare/v0.75.0...v0.75.1) (2026-04-30)
 
 
