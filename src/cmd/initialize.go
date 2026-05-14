@@ -117,7 +117,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
-
+	// FIXME: some consideration for cluster-wide, zarf-managed, and opt-in for a better name
 	cmd.Flags().StringVar(&o.agentMutationMode, "agent-mutation-mode", "opt-out", `Whether the Zarf agent mutates resources by default ("opt-out") or only when they or their namespace are labeled with "zarf.dev/agent: mutate" ("opt-in")`)
 
 	// Flags that control how a deployment proceeds
