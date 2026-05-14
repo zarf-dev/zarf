@@ -76,7 +76,8 @@ func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 		labels = make(map[string]string)
 	}
 	labels[state.ZarfManagedByLabel] = "zarf"
-	// FIXME: we probably only want this when not in connected mode in opt in mode
-	labels[AgentLabel] = "mutate"
+	if _, exists := labels[AgentLabel]; !exists {
+		labels[AgentLabel] = "mutate"
+	}
 	return labels
 }
