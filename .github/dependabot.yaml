@@ -3,6 +3,7 @@ updates:
   - package-ecosystem: gomod
     directories:
       - "/"
+    vendor: true
     schedule:
       interval: daily
     cooldown:

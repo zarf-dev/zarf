@@ -21,4 +21,5 @@ jobs:
       - name: Test go mod
         run: |
           go mod tidy
-          git diff --exit-code go.mod go.sum
+          go mod vendor
+          git diff --exit-code go.mod go.sum vendor/
