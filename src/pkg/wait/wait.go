@@ -358,7 +358,7 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 		ErrOut: io.Discard,
 	}
 	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.ForCondition = forCondition
+	flags.ForCondition = []string{forCondition}
 	if labelSelector != "" {
 		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
 	}
