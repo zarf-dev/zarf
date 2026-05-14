@@ -57,6 +57,7 @@ require (
 	k8s.io/client-go v0.36.0
 	k8s.io/klog/v2 v2.140.0
 	k8s.io/kubectl v0.36.0
+	k8s.io/streaming v0.36.0
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/cli-utils v0.37.2
 	sigs.k8s.io/kustomize/api v0.21.1
@@ -246,7 +247,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	helm.sh/helm/v3 v3.19.2 // indirect
 	k8s.io/component-base v0.36.0 // indirect
-	k8s.io/streaming v0.36.0 // indirect
 	modernc.org/gc/v3 v3.1.1 // indirect
 	modernc.org/strutil v1.2.1 // indirect
 	modernc.org/token v1.1.0 // indirect
