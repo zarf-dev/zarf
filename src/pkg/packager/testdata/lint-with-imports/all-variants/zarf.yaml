@@ -13,8 +13,7 @@ components:
       flavor: second-flavor
     images:
       - image-in-second-flavor-component:1.0.0
-  - name: duplicate
-    only:
-      flavor: third-flavor
-    images:
-      - image-in-third-flavor-component:1.0.0
+
+  - name: import-test
+    import:
+      path: linted-import

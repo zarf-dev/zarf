@@ -84,7 +84,7 @@ func TestLintPackageWithImports(t *testing.T) {
 				{
 					YqPath:      ".components.[2].images.[0]",
 					Description: "Image not pinned with digest",
-					Item:        "image-in-third-flavor-component:1.0.0",
+					Item:        "busybox:0.0.1",
 					Severity:    lint.SevWarn,
 				},
 			},

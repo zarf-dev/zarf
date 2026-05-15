@@ -7,6 +7,8 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -69,7 +71,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage, opts ValidateOpts) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
 	}
-	uniqueComponentNames := make(map[string]bool)
+	uniqueComponentNames := make(map[string][]v1alpha1.ZarfComponentOnlyTarget)
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
 	if pkg.Metadata.YOLO {
@@ -89,11 +91,21 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage, opts ValidateOpts) error {
 		}
 	}
 	for _, component := range pkg.Components {
+		var duplicateOnly bool
 		// ensure component name is unique
-		if _, ok := uniqueComponentNames[component.Name]; ok && !opts.SkipComponentNameUniquenessValidation {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+		if _, ok := uniqueComponentNames[component.Name]; ok {
+			// only check if only block is duplicated if we're skipping name uniqueness checks
+			if opts.SkipComponentNameUniquenessValidation {
+				duplicateOnly = slices.ContainsFunc(uniqueComponentNames[component.Name], func(o v1alpha1.ZarfComponentOnlyTarget) bool {
+					return reflect.DeepEqual(o, component.Only)
+				})
+			}
+			if !opts.SkipComponentNameUniquenessValidation || duplicateOnly {
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+			}
 		}
-		uniqueComponentNames[component.Name] = true
+
+		uniqueComponentNames[component.Name] = append(uniqueComponentNames[component.Name], component.Only)
 		if component.IsRequired() {
 			if component.Default {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))

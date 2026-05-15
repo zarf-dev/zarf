@@ -260,7 +260,7 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 }
 
 func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string, allVariants bool) bool {
-	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch || allVariants
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor || allVariants
 	return satisfiesArch && satisfiesFlavor
 }

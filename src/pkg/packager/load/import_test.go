@@ -151,7 +151,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
 	resolved, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{})
+		"", "", []string{}, "", false, false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
 }
@@ -246,7 +246,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
