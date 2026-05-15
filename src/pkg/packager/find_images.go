@@ -133,9 +133,8 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 	return findImages(ctx, pkg, packagePath, opts)
 }
 
-// FilterImagesFoundInArchives recieves imageScans and discovers if any of its elements are duplicated by
-// images provided in imageArchives parsed out of the package located at packagePath.  If duplciates are found, they
-// are removed from the final []DefinitionImageResult.ComponentImageScans.
+// filterImagesFoundInArchives merges scan results with each component's imageArchives.
+// An image present in both surfaces only on the archive side
 func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, imageScans []ComponentImageScan) (_ []DefinitionImageResult, err error) {
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
