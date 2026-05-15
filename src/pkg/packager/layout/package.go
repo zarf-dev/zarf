@@ -234,7 +234,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 
 	// Keyless signatures require bundle format — the cert chain cannot be stored in the
 	// legacy .sig file. For key-based signing, respect the BundleSignature feature flag.
-	bundleEnabled := feature.IsEnabled(feature.BundleSignature) || opts.Keyless
+	if opts.Keyless && !feature.IsEnabled(feature.BundleSignature) {
+		return fmt.Errorf("keyless signing requires the %q feature flag", feature.BundleSignature)
+	}
+	bundleEnabled := feature.IsEnabled(feature.BundleSignature)
 
 	// Append signature files to the provenance files list.
 	// These are created after checksum generation and cannot be in checksums.txt.
@@ -381,11 +384,11 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 	// Early validation: fail fast with a method-specific message before cosign emits a generic error.
 	if hasBundleInfo {
 		switch bundleInfo.Method {
-		case "keyless":
+		case signing.SigningMethodKeyless:
 			if !hasKeylessIdentity && !hasCert {
 				return errors.New("package was signed with keyless method; provide --certificate-identity + --certificate-oidc-issuer to verify")
 			}
-		case "key":
+		case signing.SigningMethodKey:
 			if !hasKey && !hasCert {
 				return errors.New("package was signed with a key; provide --key to verify")
 			}

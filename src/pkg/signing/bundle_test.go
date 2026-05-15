@@ -13,12 +13,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/sigstore/sigstore-go/pkg/fulcio/certificate"
 	"github.com/stretchr/testify/require"
 )
 
@@ -102,72 +102,6 @@ func writeKeyBasedBundleFixture(t *testing.T) string {
 	return path
 }
 
-func TestExtractIdentityFromCert(t *testing.T) {
-	t.Parallel()
-
-	t.Run("email SAN with V2 issuer OID", func(t *testing.T) {
-		t.Parallel()
-		issuerVal, err := asn1.Marshal("https://oauth2.sigstore.dev/auth")
-		require.NoError(t, err)
-		cert := makeCert(t, &x509.Certificate{
-			Subject:        pkix.Name{CommonName: "ephemeral"},
-			EmailAddresses: []string{"signer@example.com"},
-			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
-			},
-		})
-
-		identity, issuer := extractIdentityFromCert(cert)
-		require.Equal(t, "signer@example.com", identity)
-		require.Equal(t, "https://oauth2.sigstore.dev/auth", issuer)
-	})
-
-	t.Run("URI SAN with legacy issuer OID", func(t *testing.T) {
-		t.Parallel()
-		ghaURI, err := url.Parse("https://github.com/example/repo/.github/workflows/release.yml@refs/heads/main")
-		require.NoError(t, err)
-		cert := makeCert(t, &x509.Certificate{
-			Subject: pkix.Name{CommonName: "ephemeral"},
-			URIs:    []*url.URL{ghaURI},
-			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDLegacy, Value: []byte("https://token.actions.githubusercontent.com")},
-			},
-		})
-
-		identity, issuer := extractIdentityFromCert(cert)
-		require.Equal(t, ghaURI.String(), identity)
-		require.Equal(t, "https://token.actions.githubusercontent.com", issuer)
-	})
-
-	t.Run("V2 OID takes precedence over legacy when both present", func(t *testing.T) {
-		t.Parallel()
-		v2Val, err := asn1.Marshal("https://v2-issuer.example.com")
-		require.NoError(t, err)
-		cert := makeCert(t, &x509.Certificate{
-			Subject:        pkix.Name{CommonName: "ephemeral"},
-			EmailAddresses: []string{"signer@example.com"},
-			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDLegacy, Value: []byte("https://legacy.example.com")},
-				{Id: sigstoreIssuerOIDV2, Value: v2Val},
-			},
-		})
-
-		_, issuer := extractIdentityFromCert(cert)
-		require.Equal(t, "https://v2-issuer.example.com", issuer)
-	})
-
-	t.Run("DNS SAN used when no email or URI", func(t *testing.T) {
-		t.Parallel()
-		cert := makeCert(t, &x509.Certificate{
-			Subject:  pkix.Name{CommonName: "ephemeral"},
-			DNSNames: []string{"host.example.com"},
-		})
-
-		identity, _ := extractIdentityFromCert(cert)
-		require.Equal(t, "host.example.com", identity)
-	})
-}
-
 func TestReadBundleInfo(t *testing.T) {
 	t.Parallel()
 
@@ -179,14 +113,14 @@ func TestReadBundleInfo(t *testing.T) {
 			Subject:        pkix.Name{CommonName: "ephemeral"},
 			EmailAddresses: []string{"signer@example.com"},
 			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
+				{Id: certificate.OIDIssuerV2, Value: issuerVal},
 			},
 		})
 		path := writeBundleFixture(t, cert, "certificate")
 
 		info, err := ReadBundleInfo(path)
 		require.NoError(t, err)
-		require.Equal(t, "keyless", info.Method)
+		require.Equal(t, SigningMethodKeyless, info.Method)
 		require.Equal(t, "signer@example.com", info.Identity)
 		require.Equal(t, "https://github.com/login/oauth", info.Issuer)
 	})
@@ -197,7 +131,7 @@ func TestReadBundleInfo(t *testing.T) {
 
 		info, err := ReadBundleInfo(path)
 		require.NoError(t, err)
-		require.Equal(t, "key", info.Method)
+		require.Equal(t, SigningMethodKey, info.Method)
 		require.Empty(t, info.Identity)
 		require.Empty(t, info.Issuer)
 	})
@@ -206,62 +140,5 @@ func TestReadBundleInfo(t *testing.T) {
 		t.Parallel()
 		_, err := ReadBundleInfo(filepath.Join(t.TempDir(), "nonexistent.json"))
 		require.Error(t, err)
-	})
-}
-
-func TestReadKeylessIdentityFromBundle(t *testing.T) {
-	t.Parallel()
-
-	t.Run("x509CertificateChain bundle returns identity and issuer", func(t *testing.T) {
-		t.Parallel()
-		issuerVal, err := asn1.Marshal("https://token.actions.githubusercontent.com")
-		require.NoError(t, err)
-		ghaURI, err := url.Parse("https://github.com/example/repo/.github/workflows/release.yml@refs/heads/main")
-		require.NoError(t, err)
-		cert := makeCert(t, &x509.Certificate{
-			Subject: pkix.Name{CommonName: "ephemeral"},
-			URIs:    []*url.URL{ghaURI},
-			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
-			},
-		})
-		path := writeBundleFixture(t, cert, "x509CertificateChain")
-
-		identity, issuer, err := ReadKeylessIdentityFromBundle(path)
-		require.NoError(t, err)
-		require.Equal(t, ghaURI.String(), identity)
-		require.Equal(t, "https://token.actions.githubusercontent.com", issuer)
-	})
-
-	t.Run("certificate bundle returns identity and issuer", func(t *testing.T) {
-		t.Parallel()
-		issuerVal, err := asn1.Marshal("https://github.com/login/oauth")
-		require.NoError(t, err)
-		cert := makeCert(t, &x509.Certificate{
-			Subject:        pkix.Name{CommonName: "ephemeral"},
-			EmailAddresses: []string{"signer@example.com"},
-			ExtraExtensions: []pkix.Extension{
-				{Id: sigstoreIssuerOIDV2, Value: issuerVal},
-			},
-		})
-		path := writeBundleFixture(t, cert, "certificate")
-
-		identity, issuer, err := ReadKeylessIdentityFromBundle(path)
-		require.NoError(t, err)
-		require.Equal(t, "signer@example.com", identity)
-		require.Equal(t, "https://github.com/login/oauth", issuer)
-	})
-
-	t.Run("missing bundle file errors", func(t *testing.T) {
-		t.Parallel()
-		_, _, err := ReadKeylessIdentityFromBundle(filepath.Join(t.TempDir(), "nonexistent.json"))
-		require.Error(t, err)
-	})
-
-	t.Run("key-based bundle errors", func(t *testing.T) {
-		t.Parallel()
-		path := writeKeyBasedBundleFixture(t)
-		_, _, err := ReadKeylessIdentityFromBundle(path)
-		require.ErrorContains(t, err, "not a keyless signature")
 	})
 }
