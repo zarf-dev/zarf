@@ -367,6 +367,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagRekorURL       = "Rekor transparency log URL. Override for private Sigstore deployments."
 	CmdPackageSignFlagTlogUpload     = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (required for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
 	CmdPackageSignFlagConfirm        = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
+	CmdPackageSignFlagTSAServerURL   = "RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."

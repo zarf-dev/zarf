@@ -1864,6 +1864,7 @@ type packageSignOptions struct {
 	rekorURL       string
 	tlogUpload     bool
 	confirm        bool
+	tsaServerURL   string
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1890,13 +1891,14 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().BoolVar(&o.keyless, "keyless", false, lang.CmdPackageSignFlagKeyless)
 	cmd.Flags().StringVar(&o.identityToken, "identity-token", "", lang.CmdPackageSignFlagIdentityToken)
-	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", v.GetString(VPkgSignFulcioURL), lang.CmdPackageSignFlagFulcioURL)
-	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", v.GetString(VPkgSignFulcioAuthFlow), lang.CmdPackageSignFlagFulcioAuthFlow)
-	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", v.GetString(VPkgSignOIDCIssuer), lang.CmdPackageSignFlagOIDCIssuer)
-	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", v.GetString(VPkgSignOIDCClientID), lang.CmdPackageSignFlagOIDCClientID)
-	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", v.GetString(VPkgSignRekorURL), lang.CmdPackageSignFlagRekorURL)
-	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", v.GetBool(VPkgSignTlogUpload), lang.CmdPackageSignFlagTlogUpload)
+	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", "https://fulcio.sigstore.dev", lang.CmdPackageSignFlagFulcioURL)
+	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", "normal", lang.CmdPackageSignFlagFulcioAuthFlow)
+	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth", lang.CmdPackageSignFlagOIDCIssuer)
+	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", "sigstore", lang.CmdPackageSignFlagOIDCClientID)
+	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", "https://rekor.sigstore.dev", lang.CmdPackageSignFlagRekorURL)
+	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", false, lang.CmdPackageSignFlagTlogUpload)
 	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
+	cmd.Flags().StringVar(&o.tsaServerURL, "tsa-server-url", "", lang.CmdPackageSignFlagTSAServerURL)
 
 	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
 
@@ -2024,6 +2026,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	signOpts.Rekor.URL = o.rekorURL
 	signOpts.TlogUpload = o.tlogUpload
 	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
 
 	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
 	// the signature is unverifiable past expiry. Default --tlog-upload=true for
@@ -2094,12 +2097,12 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 
-	cmd.Flags().StringVar(&o.certificateIdentity, "certificate-identity", v.GetString(VPkgVerifyCertIdentity), lang.CmdPackageVerifyFlagCertificateIdentity)
-	cmd.Flags().StringVar(&o.certificateIdentityRegexp, "certificate-identity-regexp", v.GetString(VPkgVerifyCertIdentityRegexp), lang.CmdPackageVerifyFlagCertificateIdentityRegexp)
-	cmd.Flags().StringVar(&o.certificateOIDCIssuer, "certificate-oidc-issuer", v.GetString(VPkgVerifyCertOIDCIssuer), lang.CmdPackageVerifyFlagCertificateOIDCIssuer)
-	cmd.Flags().StringVar(&o.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp", v.GetString(VPkgVerifyCertOIDCIssuerRegexp), lang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
-	cmd.Flags().StringVar(&o.trustedRoot, "trusted-root", v.GetString(VPkgVerifyTrustedRoot), lang.CmdPackageVerifyFlagTrustedRoot)
-	cmd.Flags().BoolVar(&o.insecureIgnoreTlog, "insecure-ignore-tlog", v.GetBool(VPkgVerifyInsecureIgnoreTlog), lang.CmdPackageVerifyFlagInsecureIgnoreTlog)
+	cmd.Flags().StringVar(&o.certificateIdentity, "certificate-identity", "", lang.CmdPackageVerifyFlagCertificateIdentity)
+	cmd.Flags().StringVar(&o.certificateIdentityRegexp, "certificate-identity-regexp", "", lang.CmdPackageVerifyFlagCertificateIdentityRegexp)
+	cmd.Flags().StringVar(&o.certificateOIDCIssuer, "certificate-oidc-issuer", "", lang.CmdPackageVerifyFlagCertificateOIDCIssuer)
+	cmd.Flags().StringVar(&o.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp", "", lang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
+	cmd.Flags().StringVar(&o.trustedRoot, "trusted-root", "", lang.CmdPackageVerifyFlagTrustedRoot)
+	cmd.Flags().BoolVar(&o.insecureIgnoreTlog, "insecure-ignore-tlog", true, lang.CmdPackageVerifyFlagInsecureIgnoreTlog)
 
 	return cmd
 }
