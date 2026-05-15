@@ -221,7 +221,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 
 	// Sign the package with the provided options
 	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
@@ -303,7 +303,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 
 	// Sign the package with the provided options
 	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)

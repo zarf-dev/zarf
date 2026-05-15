@@ -115,7 +115,7 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	// ensuring the new API takes precedence over the deprecated field.
 	if opts.VerifyBlobOptions == nil && opts.PublicKeyPath != "" {
 		defaults := utils.DefaultVerifyBlobOptions()
-		defaults.KeyRef = opts.PublicKeyPath
+		defaults.Key = opts.PublicKeyPath
 		opts.VerifyBlobOptions = &defaults
 	}
 
@@ -335,10 +335,18 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 		return fmt.Errorf("invalid package layout: %s is not a directory", p.dirPath)
 	}
 
+	// Sync the deprecated KeyRef alias before the gate so a caller using only the
+	// old field name isn't rejected for missing material. CosignVerifyBlobWithOptions
+	// emits the deprecation warning when invoked. Touching the deprecated field is
+	// the only way to perform the migration sync from this package.
+	if opts.Key == "" && opts.KeyRef != "" { //nolint:staticcheck // intentional read of deprecated alias for migration sync
+		opts.Key = opts.KeyRef //nolint:staticcheck // intentional read of deprecated alias for migration sync
+	}
+
 	// Handle the case where the package is not signed
 	if !p.IsSigned() {
 		// Note: add future logic for verification material here
-		if opts.KeyRef != "" {
+		if opts.Key != "" {
 			return errors.New("a key was provided but the package is not signed")
 		}
 
@@ -347,7 +355,7 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 
 	// Validate that we have required verification material
 	// Note: this will later be replaced when verification enhancements are made
-	if opts.KeyRef == "" {
+	if opts.Key == "" {
 		return errors.New("package is signed but no verification material was provided (Public Key, etc.)")
 	}
 
@@ -375,9 +383,9 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts utils.V
 
 	// Legacy signature found
 	l.Warn("bundle format signature not found: legacy signature is being deprecated. consider resigning this zarf package with the --features='bundle-signature=true' flag.")
-	opts.SigRef = signaturePath
+	opts.Signature = signaturePath
 
-	opts.NewBundleFormat = false
+	opts.CommonVerifyOptions.NewBundleFormat = false
 	ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 	return utils.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 }
@@ -725,5 +733,47 @@ func validatePackageIntegrity(pkgLayout *PackageLayout, isPartial bool) error {
 		return fmt.Errorf("package contains additional files not present in the checksum %s", strings.Join(filePaths, ", "))
 	}
 
+	return validatePackagePaths(pkgLayout.Pkg)
+}
+
+// validatePackagePaths checks that package config fields used as filesystem
+// path components do not contain path traversal sequences or separators.
+func validatePackagePaths(pkg v1alpha1.ZarfPackage) error {
+	if !isCleanPath(pkg.Metadata.Name) {
+		return fmt.Errorf("package metadata name %q would result in an invalid path", pkg.Metadata.Name)
+	}
+	if !isCleanPath(pkg.Metadata.Version) {
+		return fmt.Errorf("package metadata version %q would result in an invalid path", pkg.Metadata.Version)
+	}
+	if !isCleanPath(pkg.Build.Flavor) {
+		return fmt.Errorf("package build flavor %q would result in an invalid path", pkg.Build.Flavor)
+	}
+	if !isCleanPath(pkg.Build.DifferentialPackageVersion) {
+		return fmt.Errorf("package build differential package version %q would result in an invalid path", pkg.Build.DifferentialPackageVersion)
+	}
+	for _, comp := range pkg.Components {
+		if !isCleanPath(comp.Name) {
+			return fmt.Errorf("component name %q would result in an invalid path", comp.Name)
+		}
+		for _, chart := range comp.Charts {
+			if !isCleanPath(chart.Name) {
+				return fmt.Errorf("chart name %q in component %q would result in an invalid path", chart.Name, comp.Name)
+			}
+			if !isCleanPath(chart.Version) {
+				return fmt.Errorf("chart version %q in component %q would result in an invalid path", chart.Version, comp.Name)
+			}
+		}
+		for _, manifest := range comp.Manifests {
+			if !isCleanPath(manifest.Name) {
+				return fmt.Errorf("manifest name %q in component %q would result in an invalid path", manifest.Name, comp.Name)
+			}
+		}
+	}
 	return nil
+}
+
+// isCleanPath returns true if s is safe to embed in a file path:
+// it must not be ".." and must not contain path separators.
+func isCleanPath(s string) bool {
+	return s != ".." && !strings.ContainsAny(s, `/\`)
 }

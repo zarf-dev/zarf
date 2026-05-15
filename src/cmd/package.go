@@ -1978,7 +1978,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	l.Info("signing package with provided key")
 
 	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = o.signingKeyPath
+	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
 
@@ -2147,6 +2147,6 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 
 func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
 	opts := utils.DefaultVerifyBlobOptions()
-	opts.KeyRef = keyPath
+	opts.Key = keyPath
 	return &opts
 }

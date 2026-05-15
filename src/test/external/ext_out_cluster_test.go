@@ -46,6 +46,32 @@ var outClusterCredentialArgs = []string{
 	"--registry-push-password=" + commonPassword,
 	fmt.Sprintf("--registry-url=%s:%s/test", registryHost, registryPort)}
 
+// Additional values needed for Argo CD in this test.
+// It uses 'curloptResolve' to force-map 'gitea.localhost' for test environments
+// where the system's libcurl/RFC 6761 implementation would otherwise ignore
+const gitConfig = `
+extraObjects:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: git-config-localhost-resolve
+    data:
+      gitconfig: |
+        [http]
+            curloptResolve = gitea.localhost:3000:172.31.0.99
+
+repoServer:
+  volumes:
+    - name: gitconfig-volume
+      configMap:
+        name: git-config-localhost-resolve
+
+  volumeMounts:
+    - name: gitconfig-volume
+      mountPath: /etc/gitconfig
+      subPath: gitconfig
+`
+
 type ExtOutClusterTestSuite struct {
 	suite.Suite
 	*require.Assertions
@@ -110,7 +136,7 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	// Use Zarf to mirror a package to the services (do this as test 0 so that the registry is unpolluted)
 	t := suite.T()
 	tmpdir := t.TempDir()
-	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom")
+	err := exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", tmpdir, "--skip-sbom", "--features", "values=true")
 	suite.NoError(err)
 	mirrorArgs := []string{"package", "mirror-resources", filepath.Join(tmpdir, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
 	mirrorArgs = append(mirrorArgs, outClusterCredentialArgs...)
@@ -126,6 +152,8 @@ func (suite *ExtOutClusterTestSuite) Test_0_Mirror() {
 	fmt.Println(string(regBody))
 	suite.Equal(200, respReg.StatusCode)
 	suite.Contains(string(regBody), "stefanprodan/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "stefanprodan/charts/podinfo", "registry did not contain the expected image")
+	suite.Contains(string(regBody), "dhpup/oci-edge", "registry did not contain the expected image")
 
 	// Check that the git server contains the repos we want
 	gitRepoURL := fmt.Sprintf("http://%s:%s@%s:3000/api/v1/repos/search", giteaUser, commonPassword, giteaHost)
@@ -154,9 +182,21 @@ func (suite *ExtOutClusterTestSuite) Test_2_DeployGitOps() {
 	err := exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err, "unable to deploy flux example package")
 
-	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom")
+	err = exec.CmdWithPrint(zarfBinPath, "package", "create", "../../../examples/argocd", "-o", temp, "--skip-sbom", "--features=values=true")
 	suite.NoError(err)
-	deployArgs = []string{"package", "deploy", filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())), "--confirm"}
+
+	testValuesPath := filepath.Join(temp, "test-values.yaml")
+	err = os.WriteFile(testValuesPath, []byte(gitConfig), 0600)
+	suite.NoError(err)
+
+	deployArgs = []string{
+		"package", "deploy",
+		filepath.Join(temp, fmt.Sprintf("zarf-package-argocd-%s.tar.zst", config.GetArch())),
+		"--confirm",
+		"--values", testValuesPath,
+		"--features", "values=true",
+	}
+
 	err = exec.CmdWithPrint(zarfBinPath, deployArgs...)
 	suite.NoError(err)
 }

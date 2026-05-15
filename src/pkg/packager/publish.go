@@ -143,7 +143,7 @@ func PublishPackage(ctx context.Context, pkgLayout *layout.PackageLayout, dst re
 
 	// Sign the package with the provided options
 	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 	// Publish never re-writes the tarball content - overwrite explicitly
 	signOpts.Overwrite = true

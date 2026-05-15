@@ -70,7 +70,7 @@ func TestLoadPackage(t *testing.T) {
 
 		keyPath := filepath.Join("layout", "testdata", "cosign.pub")
 		verifyOpts := utils.DefaultVerifyBlobOptions()
-		verifyOpts.KeyRef = keyPath
+		verifyOpts.Key = keyPath
 
 		// VerifyNever should skip verification entirely and succeed
 		opt := LoadOptions{

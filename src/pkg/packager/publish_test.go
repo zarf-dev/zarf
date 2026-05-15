@@ -37,7 +37,7 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 	t.Helper()
 
 	verifyOpts := utils.DefaultVerifyBlobOptions()
-	verifyOpts.KeyRef = publicKeyPath
+	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
