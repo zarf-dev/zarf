@@ -201,13 +201,15 @@ Without this unique hash, images from different registries with the same path—
 
 Additionally, when Git repositories are pushed to the Zarf Git server their name is appended with a CRC32 hash to prevent similar collisions.
 
-#### Excluding Resources from `zarf-agent`
+#### Agent Mutation Rules
 
-Resources can be excluded at the namespace or resources level by adding the `zarf.dev/agent: ignore` label.
+By default the Zarf agent mutates all applicable resources in the cluster. Resources can be excluded by adding the label `zarf.dev/agent: ignore` to the resource or its namespace.
+
+The agent can be changed to use an opt-in model through the `zarf init` flag `agent-mutation-mode=opt-in`. Resources will only be mutated if they are labeled with `zarf.dev/agent: mutate` or are in a namespace with the same label. The resource label always takes priority so a resource labeled with `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will still get mutated. All namespaces deployed by Zarf automatically get labeled `zarf.dev/agent: mutate` unless they have a pre-existing  `zarf.dev/agent` label.
 
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 
-Additionally, when adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
+When adopting resources, ensure that the namespaces specified are dedicated to Zarf, or add the `zarf.dev/agent: ignore` label to any non-Zarf managed resources in those namespaces (and ensure that updates to those resources do not strip that label) otherwise [ImagePullBackOff](https://kubernetes.io/docs/concepts/containers/images/#imagepullbackoff) errors may occur.
 
 The Agent does not need to create any secrets in the cluster. Instead, during `zarf init` and `zarf package deploy`, secrets are automatically created in a [Helm Postrender Hook](https://helm.sh/docs/topics/advanced/#post-rendering) for any namespaces Zarf sees. If you have resources managed by [Flux](https://fluxcd.io/) that are not in a namespace managed by Zarf, you can either create the secrets manually or include a manifest to create the namespace in your package and let Zarf create the secrets for you.
 
