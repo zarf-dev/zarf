@@ -105,6 +105,12 @@ func TestResolveImports(t *testing.T) {
 			path:             "./testdata/import/archives",
 			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
 		},
+		{
+			name:             "all variants are included",
+			path:             "./testdata/import/all-variants",
+			expectedChecksum: "30c3897f07ca4434723651e1477e96f9a10d36c2be978e8323cb49287221bc61",
+			allVariants:      true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -116,7 +122,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, tc.allVariants, types.RemoteOptions{})
+			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", tc.allVariants, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
