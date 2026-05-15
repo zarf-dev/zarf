@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -24,25 +23,16 @@ import (
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
-func NewHelmRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateHelmRepo(ctx, r, cluster, mode)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateHelmRepo(ctx, r, cluster, mode)
-		},
-	}
+func NewHelmRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, src *flux.HelmRepository) (*operations.Result, error) {
+		return mutateHelmRepo(ctx, r, c, src)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 // mutateHelmRepo mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
+func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, src *flux.HelmRepository) (*operations.Result, error) {
 	l := logger.From(ctx)
-
-	src := &flux.HelmRepository{}
-	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
-	}
 
 	// If we see a type of helm repo other than OCI we should flag a warning and return
 	if strings.ToLower(src.Spec.Type) != "oci" {
@@ -50,21 +40,13 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 		return &operations.Result{Allowed: true}, nil
 	}
 
-	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	if !operations.ShouldMutate(src.Labels, nsLabels, mode) {
-		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
-	}
-
-	zarfState, err := cluster.LoadState(ctx)
+	zarfState, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +104,7 @@ func mutateHelmRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluste
 
 	useMTLS := zarfState.RegistryInfo.ShouldUseMTLS()
 	if useMTLS {
-		_, err = cluster.GetRegistryClientMTLSCert(ctx)
+		_, err = c.GetRegistryClientMTLSCert(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find registry client mTLS secret: %w", err)
 		}

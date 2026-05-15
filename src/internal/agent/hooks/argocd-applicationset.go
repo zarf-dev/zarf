@@ -6,10 +6,8 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -47,35 +45,18 @@ type GitGenerator struct {
 }
 
 // NewApplicationSetMutationHook creates a new instance of the ArgoCD ApplicationSet mutation hook.
-func NewApplicationSetMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplicationSet(ctx, r, cluster, mode)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplicationSet(ctx, r, cluster, mode)
-		},
-	}
+func NewApplicationSetMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, appSet *ApplicationSet) (*operations.Result, error) {
+		return mutateApplicationSet(ctx, r, c, appSet)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
-// mutateApplication mutates the git repository urls to point to the repository URL defined in the ZarfState.
-func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
+// mutateApplicationSet mutates the git repository urls to point to the repository URL defined in the ZarfState.
+func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, appSet *ApplicationSet) (*operations.Result, error) {
 	l := logger.From(ctx)
 
-	appSet := ApplicationSet{}
-	if err := json.Unmarshal(r.Object.Raw, &appSet); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
-	}
-
-	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	if !operations.ShouldMutate(appSet.Labels, nsLabels, mode) {
-		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
-	}
-
-	s, err := cluster.LoadState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +75,7 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}

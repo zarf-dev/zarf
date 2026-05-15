@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -23,36 +22,19 @@ import (
 )
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster, mode)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster, mode)
-		},
-	}
+func NewGitRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, repo *flux.GitRepository) (*operations.Result, error) {
+		return mutateGitRepo(ctx, r, c, repo)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
+// mutateGitRepo mutates the git repository url to point to the repository URL defined in the ZarfState.
+func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, repo *flux.GitRepository) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var patches []operations.PatchOperation
 
-	repo := flux.GitRepository{}
-	if err := json.Unmarshal(r.Object.Raw, &repo); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
-	}
-
-	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	if !operations.ShouldMutate(repo.Labels, nsLabels, mode) {
-		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
-	}
-
-	s, err := cluster.LoadState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

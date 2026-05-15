@@ -24,15 +24,11 @@ import (
 const annotationPrefix = "zarf.dev"
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster, mode)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster, mode)
-		},
-	}
+func NewPodMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, pod *corev1.Pod) (*operations.Result, error) {
+		return mutatePod(ctx, r, c, pod)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 func parsePod(object []byte) (*corev1.Pod, error) {
@@ -67,23 +63,11 @@ func getAnnotationKey(ctx context.Context, image string) string {
 	return key
 }
 
-func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
+func mutatePod(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	l := logger.From(ctx)
-	pod, err := parsePod(r.Object.Raw)
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
-	}
-
-	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	if !operations.ShouldMutate(pod.Labels, nsLabels, mode) {
-		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
-	}
 
 	if r.SubResource != "" {
-		return mutatePodSubresource(ctx, r, cluster)
+		return mutatePodSubresource(ctx, r, c)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
@@ -94,7 +78,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		}, nil
 	}
 
-	state, err := cluster.LoadState(ctx)
+	state, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}

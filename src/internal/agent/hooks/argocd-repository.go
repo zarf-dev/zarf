@@ -7,11 +7,9 @@ package hooks
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -35,35 +33,18 @@ type RepoCreds struct {
 }
 
 // NewRepositorySecretMutationHook creates a new instance of the ArgoCD repository secret mutation hook.
-func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateRepositorySecret(ctx, r, cluster, mode)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateRepositorySecret(ctx, r, cluster, mode)
-		},
-	}
+func NewRepositorySecretMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, secret *corev1.Secret) (*operations.Result, error) {
+		return mutateRepositorySecret(ctx, r, c, secret)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 // mutateRepositorySecret mutates the git URL in the ArgoCD repository secret to point to the repository URL defined in the ZarfState.
-func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
+func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, secret *corev1.Secret) (*operations.Result, error) {
 	l := logger.From(ctx)
 
-	secret := corev1.Secret{}
-	if err := json.Unmarshal(r.Object.Raw, &secret); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
-	}
-
-	nsLabels, err := getNamespaceLabels(ctx, cluster, r.Namespace)
-	if err != nil {
-		return nil, err
-	}
-	if !operations.ShouldMutate(secret.Labels, nsLabels, mode) {
-		return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
-	}
-
-	s, err := cluster.LoadState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +70,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 		"operation", r.Operation)
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +83,7 @@ func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster
 	useMTLS := s.RegistryInfo.ShouldUseMTLS()
 	var certs pki.GeneratedPKI
 	if useMTLS && isOCIURL {
-		certs, err = cluster.GetRegistryClientMTLSCert(ctx)
+		certs, err = c.GetRegistryClientMTLSCert(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find registry client mTLS secret: %w", err)
 		}
