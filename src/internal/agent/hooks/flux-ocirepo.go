@@ -20,6 +20,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
@@ -31,7 +32,7 @@ const (
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
-func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
+func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateOCIRepo(ctx, r, cluster, mode)
@@ -43,7 +44,7 @@ func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster,
 }
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
-func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
+func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var (
 		patches            []operations.PatchOperation

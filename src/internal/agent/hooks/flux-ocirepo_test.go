@@ -605,7 +605,7 @@ func TestFluxOCIMutationWebhook(t *testing.T) {
 			// t.Parallel()
 			s := &state.State{RegistryInfo: tt.registryInfo}
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c, operations.MutationModeOptOut))
+			handler := admission.NewHandler().Serve(ctx, NewOCIRepositoryMutationHook(ctx, c, state.MutationModeOptOut))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

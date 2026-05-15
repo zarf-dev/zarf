@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/internal/agent/http/admission"
-	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -82,10 +81,10 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 	}
 
 	hooks := map[string]http.HandlerFunc{
-		"argocd Application":       admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, operations.MutationModeOptOut)),
-		"argocd ApplicationSet":    admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(ctx, c, operations.MutationModeOptOut)),
-		"argocd AppProject":        admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c, operations.MutationModeOptOut)),
-		"argocd repository secret": admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, operations.MutationModeOptOut)),
+		"argocd Application":       admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, state.MutationModeOptOut)),
+		"argocd ApplicationSet":    admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(ctx, c, state.MutationModeOptOut)),
+		"argocd AppProject":        admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c, state.MutationModeOptOut)),
+		"argocd repository secret": admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, state.MutationModeOptOut)),
 	}
 
 	for _, tc := range cases {
@@ -101,7 +100,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 		t.Parallel()
 		raw := runtime.RawExtension{Raw: []byte(`{"spec":{"url":"https://example.com/org/repo"}}`)}
 		req := &v1.AdmissionRequest{Operation: v1.Create, Object: raw}
-		handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, operations.MutationModeOptOut))
+		handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, state.MutationModeOptOut))
 		rr := sendAdmissionRequest(t, req, handler)
 		verifyAdmission(t, rr, admissionTest{code: http.StatusOK})
 	})

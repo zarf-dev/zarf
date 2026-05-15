@@ -328,7 +328,7 @@ func TestArgoAppWebhook(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, operations.MutationModeOptOut))
+			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, state.MutationModeOptOut))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -393,7 +393,7 @@ func TestArgoAppWebhookOCIWithNoGitServer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, operations.MutationModeOptOut))
+			handler := admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, state.MutationModeOptOut))
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
 		})

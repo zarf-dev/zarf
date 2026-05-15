@@ -176,7 +176,7 @@ type InitStateOptions struct {
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode string
+	AgentMutationMode state.MutationMode
 	// InternalServices lists the state services that Zarf is deploying in this init run.
 	InternalServices state.ServiceSet
 }

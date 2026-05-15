@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -35,7 +36,7 @@ type AppProjectSpec struct {
 }
 
 // NewAppProjectMutationHook creates a new mutation hook for ArgoCD AppProjects.
-func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
+func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateAppProject(ctx, r, cluster, mode)
@@ -47,7 +48,7 @@ func NewAppProjectMutationHook(ctx context.Context, cluster *cluster.Cluster, mo
 }
 
 // mutateAppProject mutates the sourceRepos in ArgoCD AppProject to point to the Zarf git server.
-func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
+func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 
 	proj := AppProject{}

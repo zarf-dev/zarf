@@ -34,7 +34,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
-	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 )
 
 type initOptions struct {
@@ -61,7 +60,7 @@ type initOptions struct {
 }
 
 func newInitCommand() *cobra.Command {
-	o := &initOptions{agentMutationMode: mutationModeFlag(operations.MutationModeOptOut)}
+	o := &initOptions{agentMutationMode: mutationModeFlag(state.MutationModeOptOut)}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -254,7 +253,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
-		AgentMutationMode:      string(o.agentMutationMode),
+		AgentMutationMode:      state.MutationMode(o.agentMutationMode),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -464,17 +463,17 @@ func (o *initOptions) validateInitFlags() error {
 	return nil
 }
 
-type mutationModeFlag operations.MutationMode
+type mutationModeFlag state.MutationMode
 
 func (m *mutationModeFlag) String() string { return string(*m) }
 
 func (m *mutationModeFlag) Set(v string) error {
-	switch operations.MutationMode(v) {
-	case operations.MutationModeOptIn, operations.MutationModeOptOut:
+	switch state.MutationMode(v) {
+	case state.MutationModeOptIn, state.MutationModeOptOut:
 		*m = mutationModeFlag(v)
 		return nil
 	default:
-		return fmt.Errorf("must be %q or %q", operations.MutationModeOptIn, operations.MutationModeOptOut)
+		return fmt.Errorf("must be %q or %q", state.MutationModeOptIn, state.MutationModeOptOut)
 	}
 }
 

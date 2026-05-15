@@ -42,7 +42,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, operations.MutationModeOptOut))
+	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, state.MutationModeOptOut))
 
 	tests := []admissionTest{
 		{

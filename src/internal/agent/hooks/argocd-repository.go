@@ -35,7 +35,7 @@ type RepoCreds struct {
 }
 
 // NewRepositorySecretMutationHook creates a new instance of the ArgoCD repository secret mutation hook.
-func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
+func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateRepositorySecret(ctx, r, cluster, mode)
@@ -47,7 +47,7 @@ func NewRepositorySecretMutationHook(ctx context.Context, cluster *cluster.Clust
 }
 
 // mutateRepositorySecret mutates the git URL in the ArgoCD repository secret to point to the repository URL defined in the ZarfState.
-func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
+func mutateRepositorySecret(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 
 	secret := corev1.Secret{}

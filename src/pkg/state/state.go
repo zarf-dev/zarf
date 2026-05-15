@@ -16,6 +16,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
+// MutationMode controls whether the Zarf agent mutates resources by default or only on explicit opt-in.
+type MutationMode string
+
+const (
+	// MutationModeOptOut mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationModeOptOut MutationMode = "opt-out"
+	// MutationModeOptIn mutates only resources (or resources in namespaces) labeled zarf.dev/agent: mutate.
+	MutationModeOptIn MutationMode = "opt-in"
+)
+
 // Declares secrets and metadata keys and values.
 // TODO(mkcp): Remove Zarf prefix, that's the project name.
 // TODO(mkcp): Provide semantic doccomments for how these are used.
@@ -154,8 +164,7 @@ type State struct {
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
 	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
 	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	// FIXME: make ignore, skip and mutate an ENUM
-	AgentMutationMode string       `json:"agentMutationMode,omitempty"`
+	AgentMutationMode MutationMode `json:"agentMutationMode,omitempty"`
 	InjectorInfo      InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
@@ -479,7 +488,7 @@ type MergeOptions struct {
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode string
+	AgentMutationMode MutationMode
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct

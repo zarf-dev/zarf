@@ -76,7 +76,7 @@ type DeployOptions struct {
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode string
+	AgentMutationMode state.MutationMode
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides

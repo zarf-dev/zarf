@@ -13,6 +13,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	v1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -46,7 +47,7 @@ type GitGenerator struct {
 }
 
 // NewApplicationSetMutationHook creates a new instance of the ArgoCD ApplicationSet mutation hook.
-func NewApplicationSetMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
+func NewApplicationSetMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateApplicationSet(ctx, r, cluster, mode)
@@ -58,7 +59,7 @@ func NewApplicationSetMutationHook(ctx context.Context, cluster *cluster.Cluster
 }
 
 // mutateApplication mutates the git repository urls to point to the repository URL defined in the ZarfState.
-func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
+func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 
 	appSet := ApplicationSet{}

@@ -47,7 +47,7 @@ type ApplicationSource struct {
 }
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
-func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster, mode operations.MutationMode) operations.Hook {
+func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster, mode state.MutationMode) operations.Hook {
 	return operations.Hook{
 		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
 			return mutateApplication(ctx, r, cluster, mode)
@@ -59,7 +59,7 @@ func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster, m
 }
 
 // mutateApplication mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode operations.MutationMode) (*operations.Result, error) {
+func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, mode state.MutationMode) (*operations.Result, error) {
 	l := logger.From(ctx)
 
 	app := Application{}
