@@ -53,7 +53,6 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
-          # FIXME: consider pulling this from state
           env:
             - name: ZARF_AGENT_MUTATION_MODE
               value: {{ .Values.mutationMode }}

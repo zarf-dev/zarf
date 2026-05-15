@@ -34,6 +34,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/spf13/cobra"
+	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 )
 
 type initOptions struct {
@@ -56,11 +57,11 @@ type initOptions struct {
 	agentTLSCAPath          string
 	agentTLSCertPath        string
 	agentTLSKeyPath         string
-	agentMutationMode       string
+	agentMutationMode       mutationModeFlag
 }
 
 func newInitCommand() *cobra.Command {
-	o := &initOptions{}
+	o := &initOptions{agentMutationMode: mutationModeFlag(operations.MutationModeOptOut)}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -117,8 +118,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
-	// FIXME: some consideration for cluster-wide, zarf-managed, and opt-in for a better name
-	cmd.Flags().StringVar(&o.agentMutationMode, "agent-mutation-mode", "opt-out", `Whether the Zarf agent mutates resources by default ("opt-out") or only when they or their namespace are labeled with "zarf.dev/agent: mutate" ("opt-in")`)
+	cmd.Flags().Var(&o.agentMutationMode, "agent-mutation-mode", `Whether the Zarf agent mutates resources by default ("opt-out") or only when they or their namespace are labeled with "zarf.dev/agent: mutate" ("opt-in")`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -254,7 +254,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
-		AgentMutationMode:      o.agentMutationMode,
+		AgentMutationMode:      string(o.agentMutationMode),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -454,10 +454,6 @@ func (o *initOptions) validateInitFlags() error {
 		}
 	}
 
-	if o.agentMutationMode != "opt-in" && o.agentMutationMode != "opt-out" {
-		return fmt.Errorf("invalid agent mutation mode %q, must be %q or %q", o.agentMutationMode, "opt-in", "opt-out")
-	}
-
 	if o.registryInfo.RegistryMode == state.RegistryModeExternal && o.registryInfo.Address == "" {
 		return fmt.Errorf("--registry-url is required when --registry-mode=external")
 	}
@@ -467,3 +463,19 @@ func (o *initOptions) validateInitFlags() error {
 
 	return nil
 }
+
+type mutationModeFlag operations.MutationMode
+
+func (m *mutationModeFlag) String() string { return string(*m) }
+
+func (m *mutationModeFlag) Set(v string) error {
+	switch operations.MutationMode(v) {
+	case operations.MutationModeOptIn, operations.MutationModeOptOut:
+		*m = mutationModeFlag(v)
+		return nil
+	default:
+		return fmt.Errorf("must be %q or %q", operations.MutationModeOptIn, operations.MutationModeOptOut)
+	}
+}
+
+func (m *mutationModeFlag) Type() string { return "mutationMode" }

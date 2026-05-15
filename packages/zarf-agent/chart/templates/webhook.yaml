@@ -11,7 +11,6 @@ webhooks:
           values:
             # Ensure we don't mess with kube-system
             - "kube-system"
-        # FIXME: this needs an e2e test
         {{- if eq .Values.mutationMode "opt-out" }}
         - key: zarf.dev/agent
           operator: NotIn
