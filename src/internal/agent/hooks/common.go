@@ -30,12 +30,7 @@ const (
 	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
 )
 
-// getNamespaceLabels returns the labels of the namespace with the given name. If name is empty,
-// a nil map is returned so callers can fall back to resource-only label checks.
 func getNamespaceLabels(ctx context.Context, c *cluster.Cluster, name string) (map[string]string, error) {
-	if name == "" {
-		return nil, nil
-	}
 	ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get namespace %s: %w", name, err)

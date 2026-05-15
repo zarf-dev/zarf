@@ -26,6 +26,7 @@ func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod, s
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},

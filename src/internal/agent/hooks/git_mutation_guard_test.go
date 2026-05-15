@@ -39,6 +39,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 			name: "argocd Application",
 			admissionReq: &v1.AdmissionRequest{
 				Operation: v1.Create,
+				Namespace: testNamespace,
 				Object: mustRaw(&Application{
 					Spec: ApplicationSpec{Source: &ApplicationSource{RepoURL: "https://example.com/org/repo"}},
 				}),
@@ -49,6 +50,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 			name: "argocd ApplicationSet",
 			admissionReq: &v1.AdmissionRequest{
 				Operation: v1.Create,
+				Namespace: testNamespace,
 				Object: mustRaw(&ApplicationSet{
 					Spec: ApplicationSetSpec{Generators: []ApplicationSetGenerator{
 						{Git: &GitGenerator{RepoURL: "https://example.com/org/repo"}},
@@ -61,6 +63,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 			name: "argocd AppProject",
 			admissionReq: &v1.AdmissionRequest{
 				Operation: v1.Create,
+				Namespace: testNamespace,
 				Object: mustRaw(&AppProject{
 					Spec: AppProjectSpec{SourceRepos: []string{"https://example.com/org/repo"}},
 				}),
@@ -71,6 +74,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 			name: "argocd repository secret",
 			admissionReq: &v1.AdmissionRequest{
 				Operation: v1.Create,
+				Namespace: testNamespace,
 				Object: mustRaw(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "repo-creds"},
 					Data:       map[string][]byte{"url": []byte("https://example.com/org/repo")},
@@ -99,7 +103,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 	t.Run("flux GitRepository", func(t *testing.T) {
 		t.Parallel()
 		raw := runtime.RawExtension{Raw: []byte(`{"spec":{"url":"https://example.com/org/repo"}}`)}
-		req := &v1.AdmissionRequest{Operation: v1.Create, Object: raw}
+		req := &v1.AdmissionRequest{Operation: v1.Create, Namespace: testNamespace, Object: raw}
 		handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, state.MutationModeOptOut))
 		rr := sendAdmissionRequest(t, req, handler)
 		verifyAdmission(t, rr, admissionTest{code: http.StatusOK})
