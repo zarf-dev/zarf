@@ -812,12 +812,6 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("unable to filter images included in imageArchives: %w", err)
 	}
 
-	imageScanComponentNames := make(map[string]bool)
-
-	for _, scan := range definitionImageResults {
-		imageScanComponentNames[scan.ComponentName] = true
-	}
-
 	componentDefinition := "\ncomponents:\n"
 	for _, finding := range definitionImageResults {
 		if len(finding.Matches)+len(finding.PotentialMatches)+len(finding.CosignArtifacts)+len(finding.ImageArchives) > 0 {

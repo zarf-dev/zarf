@@ -96,7 +96,14 @@ type DefinitionImageResult struct {
 // imageArchives.
 // It returns []DefinitionImageResult
 func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) ([]DefinitionImageResult, error) {
-	loadOpts := load.DefinitionOptions{}
+	loadOpts := load.DefinitionOptions{
+		Flavor:           opts.Flavor,
+		SetVariables:     opts.CreateSetVariables,
+		CachePath:        opts.CachePath,
+		IsInteractive:    opts.IsInteractive,
+		SkipVersionCheck: true,
+		RemoteOptions:    opts.RemoteOptions,
+	}
 	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
@@ -372,7 +379,11 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 				} else {
 					// Otherwise, add to the list of images
 					l.Debug("imaged digest found", "digest", descriptor.Digest)
-					validMaybeImages = append(validMaybeImages, image)
+					imageReference, err := transform.ParseImageRef(image)
+					if err != nil {
+						return nil, err
+					}
+					validMaybeImages = append(validMaybeImages, imageReference.Reference)
 				}
 			}
 		}

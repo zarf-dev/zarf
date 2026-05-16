@@ -182,6 +182,7 @@ func TestFindImages(t *testing.T) {
 					Matches:       []string{},
 					PotentialMatches: []string{
 						"docker.io/percona/mongodb_exporter:0.47.1",
+						"docker.io/library/alpine:3.23",
 					},
 				},
 			},
