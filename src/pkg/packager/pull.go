@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -159,7 +160,7 @@ func pullOCI(ctx context.Context, opts pullOCIOptions) (*layout.PackageLayout, e
 		if len(layerTypes) == 0 {
 			layerTypes = zoci.GetAllLayerTypes()
 		}
-		layerTypes = helpers.RemoveMatches(layerTypes, func(lt zoci.LayerType) bool {
+		layerTypes = slices.DeleteFunc(layerTypes, func(lt zoci.LayerType) bool {
 			return lt == zoci.ImageLayers
 		})
 	}
