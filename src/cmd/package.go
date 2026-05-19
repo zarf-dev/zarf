@@ -2031,8 +2031,13 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
 	// the signature is unverifiable past expiry. Default --tlog-upload=true for
 	// keyless unless the user explicitly opted out.
-	if o.keyless && !cmd.Flags().Changed("tlog-upload") {
-		signOpts.TlogUpload = true
+	if o.keyless {
+		if !cmd.Flags().Changed("tlog-upload") {
+			signOpts.TlogUpload = true
+		}
+		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
+			l.Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
+		}
 	}
 
 	if helpers.IsOCIURL(outputDest) {
