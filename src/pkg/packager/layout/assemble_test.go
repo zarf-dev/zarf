@@ -228,8 +228,8 @@ func TestCollectVersionRequirements(t *testing.T) {
 		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
 	}
 	indexReq := v1alpha1.VersionRequirement{
-		Version: "v0.76.0",
-		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
+		Version: "v0.77.0",
+		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 	}
 
 	tests := []struct {
