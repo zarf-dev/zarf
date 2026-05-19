@@ -17,19 +17,32 @@ import (
 	"strings"
 	"time"
 
-	retry "github.com/avast/retry-go/v4"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/clock"
+
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// retryAfterDuration is returned on a 429 so the custom DelayType can use it
-// instead of stacking on top of the normal backoff.
+// retryAfterDuration is returned on a 429 so the retry loop can honor
+// the server-requested delay before the normal exponential sleep.
 type retryAfterDuration time.Duration
 
 func (d retryAfterDuration) Error() string {
 	return fmt.Sprintf("rate limited (HTTP 429), retry after %s", time.Duration(d))
+}
+
+// unrecoverableError wraps errors that must not be retried.
+type unrecoverableError struct{ err error }
+
+func (e unrecoverableError) Error() string {
+	return e.err.Error()
+}
+
+func (e unrecoverableError) Unwrap() error {
+	return e.err
 }
 
 func parseChecksum(src string) (string, string, error) {
@@ -66,40 +79,54 @@ func DownloadToFile(ctx context.Context, src, dst string) (err error) {
 	}
 
 	l := logger.From(ctx)
-	err = retry.Do(
-		func() error {
-			// Create the file
-			file, createErr := os.Create(dst)
-			if createErr != nil {
-				return retry.Unrecoverable(fmt.Errorf(lang.ErrWritingFile, dst, createErr))
-			}
-			getErr := httpGetFile(ctx, src, file)
-			closeErr := file.Close()
-			return errors.Join(getErr, closeErr)
-		},
-		retry.Attempts(uint(config.ZarfDefaultRetries)),
-		retry.Delay(config.ZarfDefaultRetryDelay),
-		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-		retry.DelayType(func(n uint, err error, rc *retry.Config) time.Duration {
-			var rlErr retryAfterDuration
-			if errors.As(err, &rlErr) {
-				return time.Duration(rlErr)
-			}
-			return retry.BackOffDelay(n, err, rc)
-		}),
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
-				l.Warn("retrying download",
-					"attempt", n+1,
-					"maxAttempts", config.ZarfDefaultRetries,
-					"url", src,
-					"error", err,
-				)
-			}
-		}),
-	)
+
+	// resetInterval is larger than the total retry window so the backoff never auto-resets
+	expDelay := wait.Backoff{
+		Duration: config.ZarfDefaultRetryDelay,
+		Factor:   2.0,
+		Steps:    config.ZarfDefaultRetries,
+		Cap:      config.ZarfDefaultRetryMaxDelay,
+	}.DelayWithReset(clock.RealClock{}, time.Hour)
+
+	// when a 429 Retry-After is seen the condition sets retryAfterOverride so
+	// the next sleep uses that duration instead of the exponential one
+	var retryAfterOverride time.Duration
+	retryDelay := wait.DelayFunc(func() time.Duration {
+		if retryAfterOverride > 0 {
+			d := retryAfterOverride
+			retryAfterOverride = 0
+			return d
+		}
+		return expDelay()
+	})
+
+	attempt := 0
+	err = retryDelay.Until(ctx, true, false, func(ctx context.Context) (bool, error) {
+		file, createErr := os.Create(dst)
+		if createErr != nil {
+			return false, fmt.Errorf(lang.ErrWritingFile, dst, createErr)
+		}
+		getErr := httpGetFile(ctx, src, file)
+		closeErr := file.Close()
+		joinedErr := errors.Join(getErr, closeErr)
+		if joinedErr == nil {
+			return true, nil
+		}
+		if unrecovErr, ok := errors.AsType[unrecoverableError](joinedErr); ok {
+			return false, unrecovErr.err
+		}
+		if rlErr, ok := errors.AsType[retryAfterDuration](joinedErr); ok {
+			retryAfterOverride = time.Duration(rlErr)
+		}
+		attempt++
+		l.Warn("retrying download",
+			"attempt", attempt,
+			"maxAttempts", config.ZarfDefaultRetries,
+			"url", src,
+			"error", joinedErr,
+		)
+		return false, nil
+	})
 	if err != nil {
 		return err
 	}
@@ -125,7 +152,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return retry.Unrecoverable(fmt.Errorf("unable to create request for %s: %w", url, err))
+		return &unrecoverableError{fmt.Errorf("unable to create request for %s: %w", url, err)}
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -142,7 +169,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 			if d := parseRetryAfter(resp.Header.Get("Retry-After")); d > 0 {
 				const maxRetryAfter = 60 * time.Second
 				if d > maxRetryAfter {
-					return retry.Unrecoverable(fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status))
+					return &unrecoverableError{fmt.Errorf("rate limited (HTTP 429) with Retry-After %s exceeding %s: %s", d, maxRetryAfter, resp.Status)}
 				}
 				return retryAfterDuration(d)
 			}
@@ -151,7 +178,7 @@ func httpGetFile(ctx context.Context, url string, destinationFile *os.File) (err
 		if resp.StatusCode >= 500 {
 			return fmt.Errorf("server error: %s", resp.Status)
 		}
-		return retry.Unrecoverable(fmt.Errorf("bad HTTP status: %s", resp.Status))
+		return &unrecoverableError{fmt.Errorf("bad HTTP status: %s", resp.Status)}
 	}
 
 	// Copy response body to file
