@@ -865,8 +865,8 @@ func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alp
 	}
 	if hasIndex {
 		reqs = append(reqs, v1alpha1.VersionRequirement{
-			Version: "v0.76.0",
-			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.76.0+ to deploy.",
+			Version: "v0.77.0",
+			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
 		})
 	}
 	return reqs
