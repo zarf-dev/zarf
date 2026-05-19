@@ -6,12 +6,11 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
@@ -32,16 +31,13 @@ func (c *Cluster) DeleteZarfNamespace(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = retry.Do(func() error {
+	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
 		_, err := c.Clientset.CoreV1().Namespaces().Get(ctx, state.ZarfNamespaceName, metav1.GetOptions{})
 		if kerrors.IsNotFound(err) {
-			return nil
+			return true, nil
 		}
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("namespace still exists")
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return false, nil
+	})
 	if err != nil {
 		return err
 	}

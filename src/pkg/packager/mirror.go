@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/avast/retry-go/v4"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -121,60 +121,64 @@ func pushComponentReposToRegistry(ctx context.Context, component v1alpha1.ZarfCo
 		if err != nil {
 			return err
 		}
-		err = retry.Do(func() error {
+		err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+			Duration: 500 * time.Millisecond,
+			Factor:   2.0,
+			Steps:    retries,
+		}, func(ctx context.Context) (bool, error) {
 			if !dns.IsServiceURL(gitInfo.Address) {
 				l.Info("pushing repository to server", "repo", repoURL, "server", gitInfo.Address)
-				err = repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword)
-				if err != nil {
-					return err
+				if pushErr := repository.Push(ctx, gitInfo.Address, gitInfo.PushUsername, gitInfo.PushPassword); pushErr != nil {
+					return false, nil
 				}
-				return nil
+				return true, nil
 			}
 
 			if c == nil {
-				return retry.Unrecoverable(errors.New("cannot push to internal Git server when cluster is nil"))
+				return false, errors.New("cannot push to internal Git server when cluster is nil")
 			}
-			namespace, name, port, err := dns.ParseServiceURL(gitInfo.Address)
-			if err != nil {
-				return retry.Unrecoverable(err)
+			namespace, name, port, parseErr := dns.ParseServiceURL(gitInfo.Address)
+			if parseErr != nil {
+				return false, parseErr
 			}
-			tunnel, err := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
-			if err != nil {
-				return err
+			tunnel, tunnelErr := c.NewTunnel(namespace, cluster.SvcResource, name, "", 0, port)
+			if tunnelErr != nil {
+				return false, nil
 			}
-			_, err = tunnel.Connect(ctx)
-			if err != nil {
-				return err
+			_, tunnelErr = tunnel.Connect(ctx)
+			if tunnelErr != nil {
+				return false, nil
 			}
 			defer tunnel.Close()
 			// tunnel is create with the default listenAddress - there will only be one endpoint until otherwise supported
 			endpoints := tunnel.HTTPEndpoints()
 			if len(endpoints) == 0 {
-				return errors.New("no tunnel endpoints found")
+				return false, nil
 			}
-			giteaClient, err := gitea.NewClient(endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
-			if err != nil {
-				return err
+			repoName, repoErr := transform.GitURLtoRepoName(repoURL)
+			if repoErr != nil {
+				return false, fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, repoErr)
 			}
-			return tunnel.Wrap(func() error {
+			giteaClient, giteaErr := gitea.NewClient(endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
+			if giteaErr != nil {
+				return false, nil
+			}
+			if wrapErr := tunnel.Wrap(func() error {
 				l.Info("pushing repository to server", "repo", repoURL, "server", endpoints[0])
-				err = repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword)
-				if err != nil {
+				if err := repository.Push(ctx, endpoints[0], gitInfo.PushUsername, gitInfo.PushPassword); err != nil {
 					return err
 				}
 				// Add the read-only user to this repo
 				// TODO: This should not be done here. Or the function name should be changed.
-				repoName, err := transform.GitURLtoRepoName(repoURL)
-				if err != nil {
-					return retry.Unrecoverable(err)
-				}
-				err = giteaClient.AddReadOnlyUserToRepository(ctx, repoName, gitInfo.PullUsername)
-				if err != nil {
+				if err := giteaClient.AddReadOnlyUserToRepository(ctx, repoName, gitInfo.PullUsername); err != nil {
 					return fmt.Errorf("unable to add the read only user to the repo %s: %w", repoName, err)
 				}
 				return nil
-			})
-		}, retry.Context(ctx), retry.Attempts(uint(retries)), retry.Delay(500*time.Millisecond))
+			}); wrapErr != nil {
+				return false, nil
+			}
+			return true, nil
+		})
 		if err != nil {
 			return fmt.Errorf("unable to push repo %s to the Git Server: %w", repoURL, err)
 		}

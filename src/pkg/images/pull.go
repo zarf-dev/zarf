@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	retry "github.com/avast/retry-go/v4"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/context/docker"
 	"github.com/docker/cli/cli/flags"
@@ -26,22 +25,23 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/moby/moby/client"
-	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/sync/errgroup"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
-
-	"github.com/defenseunicorns/pkg/helpers/v2"
-	orasCache "github.com/defenseunicorns/pkg/oci/cache"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/internal/dns"
-	"github.com/zarf-dev/zarf/src/pkg/transform"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
+
+	"github.com/defenseunicorns/pkg/helpers/v2"
+	orasCache "github.com/defenseunicorns/pkg/oci/cache"
+	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/dns"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -471,34 +471,39 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 		return fmt.Errorf("failed to create oci formatted directory: %w", err)
 	}
 	pullSrc = orasCache.New(repo, localCache)
-	var desc ocispec.Descriptor
-	err = retry.Do(
-		func() error {
-			trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
-			trackedDst.StartReporting(ctx)
-			defer trackedDst.StopReporting()
-			var copyErr error
-			desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
-			return copyErr
-		},
-		retry.Attempts(uint(config.ZarfDefaultRetries)),
-		retry.Delay(config.ZarfDefaultRetryDelay),
-		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-		retry.DelayType(retry.BackOffDelay),
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
-				l.Warn("retrying image pull",
-					"attempt", n+1,
-					"maxAttempts", config.ZarfDefaultRetries,
-					"image", imageInfo.registryOverrideRef,
-					"error", err,
-				)
-			}
-		}),
+	var (
+		desc     ocispec.Descriptor
+		lastErr  error
+		attempts int
 	)
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: config.ZarfDefaultRetryDelay,
+		Factor:   2.0,
+		Steps:    config.ZarfDefaultRetries,
+		Cap:      config.ZarfDefaultRetryMaxDelay,
+	}, func(ctx context.Context) (bool, error) {
+		trackedDst := NewTrackedTarget(dst, imageInfo.byteSize, DefaultReport(l, "image pull in progress", imageInfo.registryOverrideRef))
+		trackedDst.StartReporting(ctx)
+		defer trackedDst.StopReporting()
+		var copyErr error
+		desc, copyErr = oras.Copy(ctx, pullSrc, imageInfo.registryOverrideRef, trackedDst, imageInfo.ref, copyOpts)
+		if copyErr == nil {
+			return true, nil
+		}
+		lastErr = copyErr
+		attempts++
+		l.Warn("retrying image pull",
+			"attempt", attempts,
+			"maxAttempts", config.ZarfDefaultRetries,
+			"image", imageInfo.registryOverrideRef,
+			"error", copyErr,
+		)
+		return false, nil
+	})
 	if err != nil {
+		if lastErr != nil {
+			return fmt.Errorf("failed to copy: %w", lastErr)
+		}
 		return fmt.Errorf("failed to copy: %w", err)
 	}
 	desc = addNameAnnotationsToDesc(desc, imageInfo.ref)

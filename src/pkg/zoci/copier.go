@@ -8,10 +8,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"oras.land/oras-go/v2"
 
-	retry "github.com/avast/retry-go/v4"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
 // CopyPackage copies a zarf package from one OCI registry to another using ORAS with retry.
@@ -44,44 +44,57 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 		tag = opts.Tag
 	}
 
-	err = retry.Do(
-		func() error {
-			l.Info("copying package",
-				"src", src.Repo().Reference.String(),
-				"dst", dst.Repo().Reference.String(),
-				"ref", srcRef,
-			)
-
-			source := src.Repo()      // implements oras.ReadOnlyTarget
-			destination := dst.Repo() // implements oras.Target
-
-			// 1) Copy by digest from source → destination
-			publishedDesc, copyErr := oras.Copy(ctx, source, srcRef, destination, "", copyOpts)
-			if copyErr != nil {
-				return copyErr
-			}
-
-			// 2) Update/tag the destination index to the source tag
-			return dst.OrasRemote.UpdateIndex(ctx, tag, publishedDesc)
-		},
-		retry.Attempts(uint(opts.Retries)),
-		retry.Delay(defaultDelayTime),
-		retry.MaxDelay(defaultMaxDelayTime),
-		retry.DelayType(retry.BackOffDelay),
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			// Only log retry if retries are enabled and we're not on the last attempt
-			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
-				l.Warn("retrying package copy",
-					"attempt", n+1,
-					"maxAttempts", opts.Retries,
-					"error", err,
-				)
-			}
-		}),
+	var (
+		lastErr  error
+		attempts int
 	)
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: defaultDelayTime,
+		Factor:   2.0,
+		Steps:    opts.Retries,
+		Cap:      defaultMaxDelayTime,
+	}, func(ctx context.Context) (bool, error) {
+		l.Info("copying package",
+			"src", src.Repo().Reference.String(),
+			"dst", dst.Repo().Reference.String(),
+			"ref", srcRef,
+		)
+		defer func() {
+			if lastErr == nil {
+				return
+			}
+			l.Warn("retrying package copy",
+				"attempt", attempts,
+				"maxAttempts", opts.Retries,
+				"error", lastErr,
+			)
+		}()
+
+		source := src.Repo()      // implements oras.ReadOnlyTarget
+		destination := dst.Repo() // implements oras.Target
+
+		attempts++
+
+		// 1) Copy by digest from source → destination
+		publishedDesc, copyErr := oras.Copy(ctx, source, srcRef, destination, "", copyOpts)
+		if copyErr != nil {
+			lastErr = copyErr
+			return false, nil
+		}
+
+		// 2) Update/tag the destination index to the source tag
+		if err := dst.OrasRemote.UpdateIndex(ctx, tag, publishedDesc); err != nil {
+			lastErr = err
+			return false, nil
+		}
+
+		lastErr = nil
+		return true, nil
+	})
 	if err != nil {
+		if lastErr != nil {
+			return fmt.Errorf("copy failed after retries: %w", lastErr)
+		}
 		return fmt.Errorf("copy failed after retries: %w", err)
 	}
 

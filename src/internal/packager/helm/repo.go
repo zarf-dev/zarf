@@ -28,8 +28,8 @@ import (
 	"helm.sh/helm/v4/pkg/getter"
 	"helm.sh/helm/v4/pkg/registry"
 	repov1 "helm.sh/helm/v4/pkg/repo/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
-	retry "github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
@@ -239,31 +239,36 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		},
 	}
 
-	var saved string
-	err = retry.Do(
-		func() error {
-			var downloadErr error
-			saved, _, downloadErr = chartDownloader.DownloadToCache(chartURL, pull.Version)
-			return downloadErr
-		},
-		retry.Attempts(uint(config.ZarfDefaultRetries)),
-		retry.Delay(config.ZarfDefaultRetryDelay),
-		retry.MaxDelay(config.ZarfDefaultRetryMaxDelay),
-		retry.DelayType(retry.BackOffDelay),
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
-				l.Warn("retrying chart download",
-					"attempt", n+1,
-					"maxAttempts", config.ZarfDefaultRetries,
-					"chart", chart.Name,
-					"error", err,
-				)
-			}
-		}),
+	var (
+		saved    string
+		lastErr  error
+		attempts int
 	)
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: config.ZarfDefaultRetryDelay,
+		Factor:   2.0,
+		Steps:    config.ZarfDefaultRetries,
+		Cap:      config.ZarfDefaultRetryMaxDelay,
+	}, func(ctx context.Context) (bool, error) {
+		var downloadErr error
+		saved, _, downloadErr = chartDownloader.DownloadToCache(chartURL, pull.Version)
+		if downloadErr == nil {
+			return true, nil
+		}
+		lastErr = downloadErr
+		attempts++
+		l.Warn("retrying chart download",
+			"attempt", attempts,
+			"maxAttempts", config.ZarfDefaultRetries,
+			"chart", chart.Name,
+			"error", downloadErr,
+		)
+		return false, nil
+	})
 	if err != nil {
+		if lastErr != nil {
+			return fmt.Errorf("unable to download the helm chart: %w", lastErr)
+		}
 		return fmt.Errorf("unable to download the helm chart: %w", err)
 	}
 

@@ -17,9 +17,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -172,13 +172,17 @@ type podFilter func(pod corev1.Pod) bool
 // TODO: Test, refactor and/or remove.
 func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interface, target podLookup, include podFilter) ([]corev1.Pod, error) {
 	l := logger.From(ctx)
-	readyPods, err := retry.DoWithData(func() ([]corev1.Pod, error) {
+	var readyPods []corev1.Pod
+	err := wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: time.Second,
+		Factor:   1.0,
+	}, func(ctx context.Context) (bool, error) {
 		listOpts := metav1.ListOptions{
 			LabelSelector: target.Selector,
 		}
 		podList, err := clientset.CoreV1().Pods(target.Namespace).List(ctx, listOpts)
 		if err != nil {
-			return nil, err
+			return false, nil
 		}
 		l.Debug("found pods matching the target", "count", len(podList.Items), "target", target)
 		// Sort the pods from newest to oldest
@@ -186,7 +190,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 			return podList.Items[i].CreationTimestamp.After(podList.Items[j].CreationTimestamp.Time)
 		})
 
-		readyPods := []corev1.Pod{}
+		found := []corev1.Pod{}
 		for _, pod := range podList.Items {
 			l.Debug("testing pod", "name", pod.Name)
 
@@ -204,7 +208,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 					isRunning := initContainer.State.Running != nil
 					if initContainer.Name == target.Container && isRunning {
 						// On running match in initContainer break this loop
-						readyPods = append(readyPods, pod)
+						found = append(found, pod)
 						break
 					}
 				}
@@ -213,7 +217,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 				for _, container := range pod.Status.ContainerStatuses {
 					isRunning := container.State.Running != nil
 					if container.Name == target.Container && isRunning {
-						readyPods = append(readyPods, pod)
+						found = append(found, pod)
 						break
 					}
 				}
@@ -222,16 +226,17 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 				l.Debug(fmt.Sprintf("checking pod for %s status", corev1.PodRunning), "pod", pod.Name, "status", status)
 				// Regular status checking without a container
 				if status == corev1.PodRunning {
-					readyPods = append(readyPods, pod)
+					found = append(found, pod)
 					break
 				}
 			}
 		}
-		if len(readyPods) == 0 {
-			return nil, fmt.Errorf("no ready pods found")
+		if len(found) == 0 {
+			return false, nil
 		}
-		return readyPods, nil
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		readyPods = found
+		return true, nil
+	})
 	if err != nil {
 		return nil, err
 	}

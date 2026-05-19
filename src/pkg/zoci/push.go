@@ -14,17 +14,18 @@ import (
 	"sort"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/oci"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"oras.land/oras-go/v2"
+	"oras.land/oras-go/v2/content/file"
+
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
-	"oras.land/oras-go/v2"
-	"oras.land/oras-go/v2/content/file"
 )
 
 // OCITimestampFormat is the format used for the OCI timestamp annotation
@@ -106,63 +107,74 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		return ocispec.Descriptor{}, fmt.Errorf("invalid annotations: please include value for %q", ocispec.AnnotationTitle)
 	}
 
-	var publishedDesc ocispec.Descriptor
-	err = retry.Do(
-		func() error {
-			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
-				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
-
-			manifestConfigBytes, err := json.Marshal(pkgLayout.Pkg)
-			if err != nil {
-				return err
-			}
-			manifestConfigDesc, err := r.PushLayer(ctx, manifestConfigBytes, ZarfConfigMediaType)
-			if err != nil {
-				return err
-			}
-
-			root, packErr := r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
-			if packErr != nil {
-				return packErr
-			}
-
-			// Update the total with manifest + config for better progress (optional)
-			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
-
-			trackedRemote := images.NewTrackedTarget(
-				r.Repo(),
-				attemptTotal,
-				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
-			)
-			trackedRemote.StartReporting(ctx)
-			defer trackedRemote.StopReporting()
-
-			var copyErr error
-			publishedDesc, copyErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
-			if copyErr != nil {
-				return copyErr
-			}
-
-			return r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc)
-		},
-		retry.Attempts(uint(opts.Retries)),
-		retry.Delay(defaultDelayTime),
-		retry.MaxDelay(defaultMaxDelayTime),
-		retry.DelayType(retry.BackOffDelay), // exponential backoff
-		retry.LastErrorOnly(true),
-		retry.Context(ctx),
-		retry.OnRetry(func(n uint, err error) {
-			// Only log retry if retries are enabled and this is not the last attempt
-			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
-				l.Warn("retrying package push",
-					"attempt", n+1,
-					"maxAttempts", opts.Retries,
-					"error", err,
-				)
-			}
-		}),
+	var (
+		publishedDesc ocispec.Descriptor
+		lastErr       error
+		attempts      int
 	)
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: defaultDelayTime,
+		Factor:   2.0,
+		Steps:    opts.Retries,
+		Cap:      defaultMaxDelayTime,
+	}, func(ctx context.Context) (bool, error) {
+		l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
+			"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
+		defer func() {
+			if lastErr == nil {
+				return
+			}
+			l.Warn("retrying package push",
+				"attempt", attempts,
+				"maxAttempts", opts.Retries,
+				"error", lastErr,
+			)
+		}()
+
+		attempts++
+
+		manifestConfigBytes, pushErr := json.Marshal(pkgLayout.Pkg)
+		if pushErr != nil {
+			lastErr = pushErr
+			return false, nil
+		}
+		var manifestConfigDesc *ocispec.Descriptor
+		manifestConfigDesc, pushErr = r.PushLayer(ctx, manifestConfigBytes, ZarfConfigMediaType)
+		if pushErr != nil {
+			lastErr = pushErr
+			return false, nil
+		}
+		var root ocispec.Descriptor
+		root, pushErr = r.OrasRemote.PackAndTagManifest(ctx, src, descs, manifestConfigDesc, annotations)
+		if pushErr != nil {
+			lastErr = pushErr
+			return false, nil
+		}
+		// Update the total with manifest + config for better progress (optional)
+		attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
+		trackedRemote := images.NewTrackedTarget(
+			r.Repo(),
+			attemptTotal,
+			images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
+		)
+		trackedRemote.StartReporting(ctx)
+		defer trackedRemote.StopReporting()
+		publishedDesc, pushErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+		if pushErr != nil {
+			lastErr = err
+			return false, nil
+		}
+		if err := r.OrasRemote.UpdateIndex(ctx, r.Repo().Reference.Reference, publishedDesc); err != nil {
+			lastErr = err
+		}
+
+		lastErr = nil
+		return true, nil
+	})
 	if err != nil {
+		if lastErr != nil {
+			return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", lastErr)
+		}
 		return ocispec.Descriptor{}, fmt.Errorf("publish failed: %w", err)
 	}
 
