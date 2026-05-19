@@ -2079,6 +2079,7 @@ type packageVerifyOptions struct {
 	certificateOIDCIssuerRegexp string
 	trustedRoot                 string
 	insecureIgnoreTlog          bool
+	useSignedTimestamps         bool
 }
 
 func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
@@ -2103,6 +2104,7 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp", "", lang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
 	cmd.Flags().StringVar(&o.trustedRoot, "trusted-root", "", lang.CmdPackageVerifyFlagTrustedRoot)
 	cmd.Flags().BoolVar(&o.insecureIgnoreTlog, "insecure-ignore-tlog", true, lang.CmdPackageVerifyFlagInsecureIgnoreTlog)
+	cmd.Flags().BoolVar(&o.useSignedTimestamps, "use-signed-timestamps", false, lang.CmdPackageVerifyFlagUseSignedTimestamps)
 
 	return cmd
 }
@@ -2130,6 +2132,7 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	verifyOpts.CertVerify.CertOidcIssuerRegexp = o.certificateOIDCIssuerRegexp
 	verifyOpts.CommonVerifyOptions.TrustedRootPath = o.trustedRoot
 	verifyOpts.CommonVerifyOptions.IgnoreTlog = o.insecureIgnoreTlog
+	verifyOpts.CommonVerifyOptions.UseSignedTimestamps = o.useSignedTimestamps
 
 	// Optimally by default use the inclusion proof to establish when a signature was made.
 	// this is offline-compliant and airgap compatible given keyless signed bundle outputs.

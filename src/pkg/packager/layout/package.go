@@ -401,6 +401,10 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 
 	if hasBundleInfo {
 		opts.BundlePath = bundlePath
+		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
+		if bundleInfo.HasTSATimestamps && !opts.CommonVerifyOptions.UseSignedTimestamps {
+			opts.CommonVerifyOptions.UseSignedTimestamps = true
+		}
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)
 		return signing.CosignVerifyBlobWithOptions(ctx, ZarfYAMLPath, opts)
 	}

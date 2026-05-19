@@ -385,6 +385,7 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 	CmdPackageVerifyFlagCertificateOIDCIssuerRegexp = "Regex variant of --certificate-oidc-issuer"
 	CmdPackageVerifyFlagTrustedRoot                 = "Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted."
 	CmdPackageVerifyFlagInsecureIgnoreTlog          = "Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry)."
+	CmdPackageVerifyFlagUseSignedTimestamps         = "Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

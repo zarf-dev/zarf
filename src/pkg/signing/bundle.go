@@ -22,9 +22,10 @@ const (
 
 // BundleInfo contains parsed metadata from a Sigstore bundle file.
 type BundleInfo struct {
-	Method   SigningMethod
-	Identity string // cert SAN — empty for key-based signatures
-	Issuer   string // OIDC issuer — empty for key-based signatures
+	Method           SigningMethod
+	Identity         string // cert SAN — empty for key-based signatures
+	Issuer           string // OIDC issuer — empty for key-based signatures
+	HasTSATimestamps bool   // true if the bundle contains signed timestamps
 }
 
 // ReadBundleInfo parses a Sigstore bundle file and returns its signing metadata.
@@ -33,6 +34,12 @@ func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("loading bundle: %w", err)
 	}
+
+	timestamps, err := b.Timestamps()
+	if err != nil {
+		return BundleInfo{}, fmt.Errorf("reading bundle timestamps: %w", err)
+	}
+
 	vc, err := b.VerificationContent()
 	if err != nil {
 		return BundleInfo{}, fmt.Errorf("reading verification content: %w", err)
@@ -43,9 +50,9 @@ func ReadBundleInfo(bundlePath string) (BundleInfo, error) {
 		if err != nil {
 			return BundleInfo{}, fmt.Errorf("reading certificate identity: %w", err)
 		}
-		return BundleInfo{Method: SigningMethodKeyless, Identity: summary.SubjectAlternativeName, Issuer: summary.Extensions.Issuer}, nil
+		return BundleInfo{Method: SigningMethodKeyless, Identity: summary.SubjectAlternativeName, Issuer: summary.Extensions.Issuer, HasTSATimestamps: len(timestamps) > 0}, nil
 	case *bundle.PublicKey:
-		return BundleInfo{Method: SigningMethodKey}, nil
+		return BundleInfo{Method: SigningMethodKey, HasTSATimestamps: len(timestamps) > 0}, nil
 	default:
 		return BundleInfo{}, fmt.Errorf("unrecognised verification content type %T", vc)
 	}
