@@ -19,8 +19,15 @@ var embeddedTrustedRoot []byte
 // writeEmbeddedTrustedRoot stages the embedded TrustedRoot JSON to a tempfile so
 // cosign's VerifyBlobCmd (which only accepts file paths) can consume it.
 // Caller must invoke cleanup when done; cleanup returns the os.Remove error.
-func writeEmbeddedTrustedRoot() (string, func() error, error) {
-	f, err := os.CreateTemp("", "zarf-trusted-root-*.json")
+// Will use the os default temporary directory if empty string is supplied
+func writeEmbeddedTrustedRoot(tmpDir string) (string, func() error, error) {
+	// os.CreateTemp will use os default if tmpdir is an empty string
+	if tmpDir != "" {
+		if err := os.MkdirAll(tmpDir, 0700); err != nil {
+			return "", func() error { return nil }, fmt.Errorf("creating temp directory: %w", err)
+		}
+	}
+	f, err := os.CreateTemp(tmpDir, "zarf-trusted-root-*.json")
 	if err != nil {
 		return "", func() error { return nil }, fmt.Errorf("creating tempfile: %w", err)
 	}

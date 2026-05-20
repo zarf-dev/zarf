@@ -365,7 +365,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 	CmdPackageSignFlagOIDCIssuer        = "OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments."
 	CmdPackageSignFlagOIDCClientID      = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
 	CmdPackageSignFlagRekorURL          = "Rekor transparency log URL. Override for private Sigstore deployments."
-	CmdPackageSignFlagTlogUpload        = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (required for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
+	CmdPackageSignFlagTlogUpload        = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
 	CmdPackageSignFlagConfirm           = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
 	CmdPackageSignFlagTSAServerURL      = "RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid."
 	CmdPackageSignNoTimestampAnchorWarn = "Keyless signature has no timestamp anchor: --tlog-upload is disabled and --tsa-server-url is not set. The signature will be unverifiable after the Fulcio certificate expires (~10 minutes). Pass --tsa-server-url or remove --tlog-upload=false to retain long-term verifiability."

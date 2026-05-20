@@ -70,7 +70,7 @@ Once the prerelease artifacts are published, a Homebrew Tap PR is created. It is
 
 ### Embedded TrustedRoot
 
-Zarf binaries embed a Sigstore TrustedRoot JSON used by `zarf package verify` for keyless verification when `--trusted-root` is not supplied. The TUF-fetched copy is committed at `src/pkg/utils/embedded_trusted_root.json` and must be refreshed before each release so binaries ship with current Sigstore trust material.
+Zarf binaries embed a Sigstore TrustedRoot JSON used by `zarf package verify` for keyless verification when `--trusted-root` is not supplied. The TUF-fetched copy is committed at `src/pkg/signing/embedded_trusted_root.json` and must be refreshed before each release so binaries ship with current Sigstore trust material.
 
 ```bash
 make build

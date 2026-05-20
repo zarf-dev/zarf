@@ -16,7 +16,7 @@ func TestWriteEmbeddedTrustedRoot(t *testing.T) {
 
 	t.Run("writes valid JSON to a tempfile", func(t *testing.T) {
 		t.Parallel()
-		path, cleanup, err := writeEmbeddedTrustedRoot()
+		path, cleanup, err := writeEmbeddedTrustedRoot("")
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, cleanup()) })
 		require.NotEmpty(t, path)
@@ -33,7 +33,7 @@ func TestWriteEmbeddedTrustedRoot(t *testing.T) {
 
 	t.Run("cleanup removes the tempfile", func(t *testing.T) {
 		t.Parallel()
-		path, cleanup, err := writeEmbeddedTrustedRoot()
+		path, cleanup, err := writeEmbeddedTrustedRoot("")
 		require.NoError(t, err)
 		require.FileExists(t, path)
 
@@ -44,10 +44,10 @@ func TestWriteEmbeddedTrustedRoot(t *testing.T) {
 
 	t.Run("each call produces a distinct tempfile", func(t *testing.T) {
 		t.Parallel()
-		p1, c1, err := writeEmbeddedTrustedRoot()
+		p1, c1, err := writeEmbeddedTrustedRoot("")
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, c1()) })
-		p2, c2, err := writeEmbeddedTrustedRoot()
+		p2, c2, err := writeEmbeddedTrustedRoot("")
 		require.NoError(t, err)
 		t.Cleanup(func() { require.NoError(t, c2()) })
 		require.NotEqual(t, p1, p2)

@@ -58,7 +58,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --signing-key string        Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string   Password for encrypted private key
-      --tlog-upload               Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (required for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
+      --tlog-upload               Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
       --tsa-server-url string     RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid.
       --verify                    Verify the Zarf package signature
 ```

@@ -1948,29 +1948,6 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Pull from OCI to a local temp dir before loading
-	if helpers.IsOCIURL(packageSource) {
-		tmpdir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if removeErr := os.RemoveAll(tmpdir); removeErr != nil {
-				l.Warn("failed to remove temp dir", "error", removeErr)
-			}
-		}()
-		packageSource, err = packager.Pull(ctx, packageSource, tmpdir, packager.PullOptions{
-			VerificationStrategy: layout.VerifyNever,
-			Architecture:         config.GetArch(),
-			OCIConcurrency:       o.ociConcurrency,
-			RemoteOptions:        defaultRemoteOptions(),
-			CachePath:            cachePath,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to pull package: %w", err)
-		}
-	}
-
 	loadOpts := packager.LoadOptions{
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),

@@ -61,6 +61,7 @@ type SignBlobOptions struct {
 type VerifyBlobOptions struct {
 	options.VerifyBlobOptions
 
+	TempDir string
 	Timeout time.Duration
 
 	// Deprecated: use Key (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
@@ -253,7 +254,7 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 	// entirely so they don't pay for an unused tempfile per verify.
 	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
 	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
-		path, cleanup, prepErr := writeEmbeddedTrustedRoot()
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot(opts.TempDir)
 		if prepErr != nil {
 			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
 		}
