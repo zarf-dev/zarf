@@ -6,7 +6,6 @@ package signing
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -35,7 +34,7 @@ var nonPromptingPassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
 	if pw, ok := os.LookupEnv("COSIGN_PASSWORD"); ok {
 		return []byte(pw), nil
 	}
-	return []byte{}, nil
+	return nil, nil
 })
 
 // SignBlobOptions wraps cosign's SignBlobOptions with zarf-specific fields.
@@ -224,7 +223,7 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 
 // CosignVerifyBlobWithOptions verifies a blob via cosign's VerifyBlobCmd.
 // Mirrors cmd/cosign/cli/verify.go (v3.0.6) VerifyBlob().RunE.
-func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) (err error) {
+func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts VerifyBlobOptions) error {
 	l := logger.From(ctx)
 
 	if opts.KeyRef != "" {
@@ -245,10 +244,6 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		return err
 	}
 
-	if opts.CommonVerifyOptions.PrivateInfrastructure {
-		opts.CommonVerifyOptions.IgnoreTlog = true
-	}
-
 	// Keyless verify needs a trusted root. If the user didn't supply --trusted-root,
 	// fall back to the embedded copy. Key-based and cert-based paths skip this
 	// entirely so they don't pay for an unused tempfile per verify.
@@ -258,7 +253,11 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		if prepErr != nil {
 			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
 		}
-		defer func() { err = errors.Join(err, cleanup()) }()
+		defer func() {
+			if rmErr := cleanup(); rmErr != nil {
+				l.Debug("failed to remove embedded trusted root tempfile", "error", rmErr)
+			}
+		}()
 		trustedRootPath = path
 	}
 

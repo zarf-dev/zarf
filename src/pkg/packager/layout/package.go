@@ -168,15 +168,10 @@ func (p *PackageLayout) ContainsSBOM() bool {
 // If the options do not indicate signing should be performed (no key material configured),
 // this is a no-op and returns nil.
 func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOptions) (err error) {
-	// Note: This function:
-	// 1. Updates Pkg.Build.Signed = true in memory
-	// 2. Writes the updated zarf.yaml (with signed:true) to a temporary file
-	// 3. Signs the temporary file
-	// 4. If signing succeeds, replaces the actual zarf.yaml with the signed version
-	// 5. If signing fails, reverts the in-memory state
-	//
-	// This ensures the zarf.yaml metadata accurately reflects the signed state and the
-	// signature is valid for the zarf.yaml content that includes signed:true.
+	// This function updates in-memory state (Signed, ProvenanceFiles, VersionRequirements),
+	// writes a signed zarf.yaml to a temp file, then renames the temp files into place.
+	// A defer rolls back in-memory state on any error; disk state is restored best-effort
+	// if a rename partially succeeds before a later rename fails.
 
 	l := logger.From(ctx)
 
@@ -232,12 +227,21 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	originalProvenanceFiles := slices.Clone(p.Pkg.Build.ProvenanceFiles)
 	originalVersionRequirements := slices.Clone(p.Pkg.Build.VersionRequirements)
 
+	// Consolidated in-memory rollback — fires on any error exit via named return.
+	defer func() {
+		if err != nil {
+			p.Pkg.Build.Signed = originalSigned
+			p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
+			p.Pkg.Build.VersionRequirements = originalVersionRequirements
+		}
+	}()
+
 	// Keyless signatures require bundle format — the cert chain cannot be stored in the
 	// legacy .sig file. For key-based signing, respect the BundleSignature feature flag.
-	if opts.Keyless && !feature.IsEnabled(feature.BundleSignature) {
+	bundleEnabled := feature.IsEnabled(feature.BundleSignature)
+	if opts.Keyless && !bundleEnabled {
 		return fmt.Errorf("keyless signing requires the %q feature flag", feature.BundleSignature)
 	}
-	bundleEnabled := feature.IsEnabled(feature.BundleSignature)
 
 	// Append signature files to the provenance files list.
 	// These are created after checksum generation and cannot be in checksums.txt.
@@ -257,18 +261,11 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 	// Marshal package with signed:true
 	b, err := goyaml.Marshal(p.Pkg)
 	if err != nil {
-		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
 		return fmt.Errorf("failed to marshal package for signing: %w", err)
 	}
 
 	// Write to temporary file
-	err = os.WriteFile(tmpZarfYAMLPath, b, helpers.ReadWriteUser)
-	if err != nil {
-		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+	if err = os.WriteFile(tmpZarfYAMLPath, b, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write temp %s: %w", ZarfYAML, err)
 	}
 
@@ -296,40 +293,41 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 
 	// Perform the signing operation on the temp file
 	l.Debug("signing package", "source", tmpZarfYAMLPath, "signature", tmpSignaturePath)
-	_, err = signing.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts)
-	if err != nil {
-		p.Pkg.Build.Signed = originalSigned
-		p.Pkg.Build.ProvenanceFiles = originalProvenanceFiles
-		p.Pkg.Build.VersionRequirements = originalVersionRequirements
+	if _, err = signing.CosignSignBlobWithOptions(ctx, tmpZarfYAMLPath, signOpts); err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	// Signing succeeded - now atomically replace the actual files
-
-	// Move signed zarf.yaml from temp to actual location (atomic rename)
-	err = os.Rename(tmpZarfYAMLPath, zarfYAMLPath)
+	// Read original zarf.yaml bytes for disk rollback if a subsequent rename fails.
+	originalZarfYAMLBytes, err := os.ReadFile(zarfYAMLPath)
 	if err != nil {
-		// This is a critical error - signing succeeded but we can't update the file
-		// Keep the signed:true state as it reflects what we intended
+		return fmt.Errorf("failed to read %s before rename: %w", ZarfYAML, err)
+	}
+
+	// Atomically replace the actual files. On partial failure, restore disk state.
+	if err = os.Rename(tmpZarfYAMLPath, zarfYAMLPath); err != nil {
 		return fmt.Errorf("failed to update %s after signing: %w", ZarfYAML, err)
 	}
 
-	// Move signature from temp to actual location (atomic rename)
-	err = os.Rename(tmpSignaturePath, actualSignaturePath)
-	if err != nil {
+	if err = os.Rename(tmpSignaturePath, actualSignaturePath); err != nil {
+		if writeErr := os.WriteFile(zarfYAMLPath, originalZarfYAMLBytes, helpers.ReadWriteUser); writeErr != nil {
+			l.Warn("failed to restore original zarf.yaml after signature rename failure", "error", writeErr)
+		}
 		return fmt.Errorf("failed to move signature after signing: %w", err)
 	}
 
 	if bundleEnabled {
 		if err = os.Rename(tmpBundlePath, actualBundlePath); err != nil {
+			if writeErr := os.WriteFile(zarfYAMLPath, originalZarfYAMLBytes, helpers.ReadWriteUser); writeErr != nil {
+				l.Warn("failed to restore original zarf.yaml after bundle rename failure", "error", writeErr)
+			}
+			if rmErr := os.Remove(actualSignaturePath); rmErr != nil && !os.IsNotExist(rmErr) {
+				l.Warn("failed to remove signature file after bundle rename failure", "error", rmErr)
+			}
 			return fmt.Errorf("failed to move bundle after signing: %w", err)
 		}
-	}
-
-	if bundleEnabled {
 		if info, bundleErr := signing.ReadBundleInfo(actualBundlePath); bundleErr == nil {
 			if info.Identity != "" {
-				l.Info("signed package keyless", "identity", info.Identity, "issuer", info.Issuer)
+				l.Info("keyless signed package", "identity", info.Identity, "issuer", info.Issuer)
 			}
 		} else {
 			l.Debug("could not read bundle info after signing", "error", bundleErr)
@@ -403,7 +401,10 @@ func (p *PackageLayout) VerifyPackageSignature(ctx context.Context, opts signing
 		opts.TempDir = config.CommonOptions.TempDirectory
 		opts.BundlePath = bundlePath
 		// Auto-enable UseSignedTimestamps when the bundle contains timestamps.
+		// The bundle was signed with a TSA; using those timestamps is required to
+		// verify the signature after the short-lived Fulcio cert expires.
 		if bundleInfo.HasTSATimestamps && !opts.CommonVerifyOptions.UseSignedTimestamps {
+			l.Debug("bundle contains TSA timestamps; enabling signed-timestamp verification automatically")
 			opts.CommonVerifyOptions.UseSignedTimestamps = true
 		}
 		ZarfYAMLPath := filepath.Join(p.dirPath, ZarfYAML)

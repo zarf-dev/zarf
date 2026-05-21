@@ -1986,6 +1986,7 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 
 	if o.keyless {
 		l.Info("signing package via Sigstore keyless flow")
+		l.Debug("keyless signing endpoints", "fulcio", o.fulcioURL, "oidcIssuer", o.oidcIssuer, "rekor", o.rekorURL)
 	} else {
 		l.Info("signing package with provided key")
 	}
@@ -2018,13 +2019,9 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	if helpers.IsOCIURL(outputDest) {
-		parts := strings.Split(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix), "/")
-		dstRef := registry.Reference{
-			Registry:   parts[0],
-			Repository: strings.Join(parts[1:], "/"),
-		}
-		if err := dstRef.ValidateRegistry(); err != nil {
-			return fmt.Errorf("invalid destination registry: %w", err)
+		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
+		if err != nil {
+			return fmt.Errorf("invalid destination OCI reference: %w", err)
 		}
 		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
 		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
@@ -2087,6 +2084,13 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.trustedRoot, "trusted-root", "", lang.CmdPackageVerifyFlagTrustedRoot)
 	cmd.Flags().BoolVar(&o.insecureIgnoreTlog, "insecure-ignore-tlog", true, lang.CmdPackageVerifyFlagInsecureIgnoreTlog)
 	cmd.Flags().BoolVar(&o.useSignedTimestamps, "use-signed-timestamps", false, lang.CmdPackageVerifyFlagUseSignedTimestamps)
+
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity-regexp")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer-regexp")
+	cmd.MarkFlagsMutuallyExclusive("certificate-identity", "certificate-identity-regexp")
+	cmd.MarkFlagsMutuallyExclusive("certificate-oidc-issuer", "certificate-oidc-issuer-regexp")
 
 	return cmd
 }

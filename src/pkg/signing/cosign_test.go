@@ -24,6 +24,12 @@ func TestShouldSign_KeyRefAlias(t *testing.T) {
 		require.True(t, opts.ShouldSign())
 	})
 
+	t.Run("Keyless alone triggers signing", func(t *testing.T) {
+		opts := SignBlobOptions{}
+		opts.Keyless = true
+		require.True(t, opts.ShouldSign())
+	})
+
 	t.Run("empty options skip signing", func(t *testing.T) {
 		require.False(t, SignBlobOptions{}.ShouldSign())
 	})

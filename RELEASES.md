@@ -75,11 +75,25 @@ Zarf binaries embed a Sigstore TrustedRoot JSON used by `zarf package verify` fo
 ```bash
 make build
 hack/refresh-trusted-root.sh
-git add src/pkg/utils/embedded_trusted_root.json
+git add src/pkg/signing/embedded_trusted_root.json
 git commit -m "chore: refresh embedded trusted root"
 ```
 
 The script wraps `zarf tools trusted-root create --with-default-services`, which reaches `tuf-repo-cdn.sigstore.dev` and writes the verified TrustedRoot to the embed path. Users who run their own Sigstore infrastructure can bypass the embedded copy at runtime via `zarf package verify --trusted-root /path/to/custom.json`.
+
+After refreshing, verify the output before committing:
+
+```bash
+# Confirm the file is valid, non-empty JSON containing expected Sigstore CA entries
+jq '.certificateAuthorities | length' src/pkg/signing/embedded_trusted_root.json
+jq '.tlogs | length' src/pkg/signing/embedded_trusted_root.json
+
+# Optionally round-trip a keyless verify against the new root to confirm it functions
+zarf package verify <package.tar.zst> --trusted-root src/pkg/signing/embedded_trusted_root.json \
+  --certificate-identity <identity> --certificate-oidc-issuer <issuer>
+```
+
+If the refresh fails (network unavailable, TUF root mismatch), do not commit the file. The previous committed version remains valid until the next successful refresh.
 
 ### Manual Releases (if needed)
 
