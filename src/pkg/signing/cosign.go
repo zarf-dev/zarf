@@ -37,9 +37,24 @@ var nonPromptingPassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
 	return nil, nil
 })
 
-// SignBlobOptions wraps cosign's SignBlobOptions with zarf-specific fields.
+// SignBlobOptions holds signing configuration for zarf blob operations.
 type SignBlobOptions struct {
-	options.SignBlobOptions
+	Key              string
+	Base64Output     bool
+	OutputSignature  string
+	BundlePath       string
+	NewBundleFormat  bool
+	SkipConfirmation bool
+	TlogUpload       bool
+	TSAServerURL     string
+	// UseSigningConfig is set to false by DefaultSignBlobOptions to override
+	// cosign's default of true, which conflicts with TlogUpload=false in airgap.
+	UseSigningConfig bool
+
+	SecurityKey options.SecurityKeyOptions
+	Fulcio      options.FulcioOptions
+	Rekor       options.RekorOptions
+	OIDC        options.OIDCOptions
 
 	Verbose   bool
 	Timeout   time.Duration
@@ -52,20 +67,28 @@ type SignBlobOptions struct {
 	// via Fulcio/OIDC at sign time.
 	Keyless bool
 
-	// Deprecated: use Key (promoted from the embedded SignBlobOptions). Removed in v1.0.
+	// Deprecated: use Key. Removed in v1.0.
 	KeyRef string
 }
 
-// VerifyBlobOptions wraps cosign's VerifyBlobOptions with zarf-specific fields.
+// VerifyBlobOptions holds verification configuration for zarf blob operations.
 type VerifyBlobOptions struct {
-	options.VerifyBlobOptions
+	Key        string
+	Signature  string
+	BundlePath string
+
+	SecurityKey         options.SecurityKeyOptions
+	CertVerify          options.CertVerifyOptions
+	Rekor               options.RekorOptions
+	CommonVerifyOptions options.CommonVerifyOptions
+	SignatureDigest     options.SignatureDigestOptions
 
 	TempDir string
 	Timeout time.Duration
 
-	// Deprecated: use Key (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	// Deprecated: use Key. Removed in v1.0.
 	KeyRef string
-	// Deprecated: use Signature (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	// Deprecated: use Signature. Removed in v1.0.
 	SigRef string
 }
 
@@ -78,7 +101,7 @@ func (opts SignBlobOptions) ShouldSign() bool {
 
 // CheckOverwrite errors if any output file exists and Overwrite is false.
 func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
-	for _, path := range []string{opts.BundlePath, opts.OutputCertificate, opts.OutputSignature} {
+	for _, path := range []string{opts.BundlePath, opts.OutputSignature} {
 		if path == "" {
 			continue
 		}
@@ -144,31 +167,21 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	}
 
 	ko := options.KeyOpts{
-		KeyRef:                         opts.Key,
-		PassFunc:                       nonPromptingPassFunc,
-		Sk:                             opts.SecurityKey.Use,
-		Slot:                           opts.SecurityKey.Slot,
-		FulcioURL:                      opts.Fulcio.URL,
-		IDToken:                        opts.Fulcio.IdentityToken,
-		FulcioAuthFlow:                 opts.Fulcio.AuthFlow,
-		InsecureSkipFulcioVerify:       opts.Fulcio.InsecureSkipFulcioVerify,
-		RekorURL:                       opts.Rekor.URL,
-		OIDCIssuer:                     opts.OIDC.Issuer,
-		OIDCClientID:                   opts.OIDC.ClientID,
-		OIDCClientSecret:               oidcClientSecret,
-		OIDCRedirectURL:                opts.OIDC.RedirectURL,
-		OIDCDisableProviders:           opts.OIDC.DisableAmbientProviders,
-		BundlePath:                     opts.BundlePath,
-		NewBundleFormat:                opts.NewBundleFormat,
-		SkipConfirmation:               opts.SkipConfirmation,
-		TSAClientCACert:                opts.TSAClientCACert,
-		TSAClientCert:                  opts.TSAClientCert,
-		TSAClientKey:                   opts.TSAClientKey,
-		TSAServerName:                  opts.TSAServerName,
-		TSAServerURL:                   opts.TSAServerURL,
-		RFC3161TimestampPath:           opts.RFC3161TimestampPath,
-		IssueCertificateForExistingKey: opts.IssueCertificate,
-		SigningAlgorithm:               opts.SigningAlgorithm,
+		KeyRef:           opts.Key,
+		PassFunc:         nonPromptingPassFunc,
+		Sk:               opts.SecurityKey.Use,
+		Slot:             opts.SecurityKey.Slot,
+		FulcioURL:        opts.Fulcio.URL,
+		IDToken:          opts.Fulcio.IdentityToken,
+		FulcioAuthFlow:   opts.Fulcio.AuthFlow,
+		RekorURL:         opts.Rekor.URL,
+		OIDCIssuer:       opts.OIDC.Issuer,
+		OIDCClientID:     opts.OIDC.ClientID,
+		OIDCClientSecret: oidcClientSecret,
+		BundlePath:       opts.BundlePath,
+		NewBundleFormat:  opts.NewBundleFormat,
+		SkipConfirmation: opts.SkipConfirmation,
+		TSAServerURL:     opts.TSAServerURL,
 	}
 
 	switch {
@@ -188,9 +201,9 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	// Empty output-path params suppress cosign's deprecation warnings; zarf manages
 	// OutputSignature internally and the warnings would fire on every sign.
 	if err := signcommon.LoadTrustedMaterialAndSigningConfig(ctx, &ko,
-		opts.UseSigningConfig, opts.SigningConfigPath,
-		opts.Rekor.URL, opts.Fulcio.URL, opts.OIDC.Issuer, opts.TSAServerURL, opts.TrustedRootPath,
-		opts.TlogUpload, opts.NewBundleFormat, opts.BundlePath, opts.Key, opts.IssueCertificate,
+		opts.UseSigningConfig, "",
+		opts.Rekor.URL, opts.Fulcio.URL, opts.OIDC.Issuer, opts.TSAServerURL, "",
+		opts.TlogUpload, opts.NewBundleFormat, opts.BundlePath, opts.Key, false,
 		"", "", "", "", "", "",
 	); err != nil {
 		return nil, err
@@ -206,11 +219,11 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		rootOpts,
 		ko,
 		blobPath,
-		opts.Cert,
-		opts.CertChain,
+		"",
+		"",
 		opts.Base64Output,
 		opts.OutputSignature,
-		opts.OutputCertificate,
+		"",
 		opts.TlogUpload,
 	)
 	if err != nil {
@@ -262,14 +275,13 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 	}
 
 	ko := options.KeyOpts{
-		KeyRef:               opts.Key,
-		Sk:                   opts.SecurityKey.Use,
-		Slot:                 opts.SecurityKey.Slot,
-		RekorURL:             opts.Rekor.URL,
-		BundlePath:           opts.BundlePath,
-		RFC3161TimestampPath: opts.RFC3161TimestampPath,
-		TSACertChainPath:     opts.CommonVerifyOptions.TSACertChainPath,
-		NewBundleFormat:      opts.CommonVerifyOptions.NewBundleFormat,
+		KeyRef:           opts.Key,
+		Sk:               opts.SecurityKey.Use,
+		Slot:             opts.SecurityKey.Slot,
+		RekorURL:         opts.Rekor.URL,
+		BundlePath:       opts.BundlePath,
+		TSACertChainPath: opts.CommonVerifyOptions.TSACertChainPath,
+		NewBundleFormat:  opts.CommonVerifyOptions.NewBundleFormat,
 	}
 
 	cmd := &verify.VerifyBlobCmd{
