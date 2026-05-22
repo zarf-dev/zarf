@@ -6,6 +6,7 @@ Currently, we primarily test Zarf through a series of [end-to-end tests](https:/
 
 In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 
+# TODO: update any more dependencies
 ## Dependencies
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
@@ -16,6 +17,7 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 4. Docker Buildx
 5. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
+# TODO: DONE these have been tested on mac and linux so this section is GTG
 ## Unit Tests
 
 There are several ways to run tests depending on your specific situation, such as:
@@ -30,10 +32,11 @@ make test-unit 2>&1 | grep -E "^(ok|FAIL)\s"
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/pkg/... -v
 
-# Let's say you only want to run one test. You would run:
+# To run a single test:
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
 
+# TODO: make new unit test and test instructions
 All unit tests should pass locally before submitting a PR.
 
 ### Adding New Unit Tests
@@ -61,8 +64,8 @@ make test-e2e ARCH="[amd64|arm64]"
 # To get a single-line readable summary of all the e2e tests currently defined:
 cd src/test/e2e && go test ./main_test.go ./[01]* -failfast -v -timeout 35m 2>&1 | grep -E "^(--- FAIL|--- PASS|FAIL|ok)"
 
-# To test against a Zarf-created cluster (on Linux with sudo)
-APPLIANCE_MODE=true make test-e2e ARCH="[amd64|arm64]"
+# To test against a Zarf-created cluster (Linux only with sudo, not compatible with macOS)
+APPLIANCE_MODE=true make test-e2e ARCH="amd64"
 
 # If you already have everything built, you can run this inside this folder. This lets you customize the test run.
 go test ./src/test/... -v -failfast -count=1
@@ -156,3 +159,23 @@ The end-to-end tests are run sequentially and the naming convention is set inten
 - 22 is reserved for tests required the git-server, which is removed at the end of the test.
 - 23-98 are for the remaining tests that only require a basic Zarf cluster without the git-server.
 - 99 is reserved for the `zarf destroy` and [YOLO Mode](/ref/examples/yolo/) test.
+
+### Troubleshooting ###
+
+Potential e2e testing errors and causes:
+Docker/Buildx:
+
+`unknown flag: --load` → Buildx not installed or broken symlink
+
+Cluster:
+
+dial tcp [::1]:8080: connect: connection refused → No cluster configured or kubeconfig not set
+error loading config file: duplicate name in list → Duplicate entries in ~/.kube/config
+
+Git/1Password:
+
+error: 1Password: Could not connect to socket → 1Password closed during rebase commit signing
+
+Architecture:
+
+no compatible component named k3s found → Either wrong ARCH value or trying to run Linux-only components on macOS
