@@ -17,6 +17,11 @@ import (
 func TestAgentMutationMode(t *testing.T) {
 	t.Log("E2E: Agent mutation mode")
 
+	// Don't run this test in appliance mode
+	if e2e.ApplianceMode {
+		t.Skip("skipping test in appliance mode to avoid re-initializing k3s")
+	}
+
 	const nsName = "agent-mutation-test"
 	const podName = "alpine-unmutated"
 
