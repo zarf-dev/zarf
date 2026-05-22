@@ -6,8 +6,7 @@ Currently, we primarily test Zarf through a series of [end-to-end tests](https:/
 
 In addition, Zarf implements unit tests for specific functions where edge cases prove difficult to cover through end-to-end testing alone. Unit tests follow standard Go convention and are `*_test.go` files.
 
-# TODO: update any more dependencies
-## Dependencies
+## Dependencies # TODO: update any more dependencies
 
 To run the end-to-end tests locally, you must meet the same prerequisites as those required for building and running Zarf, which include:
 
@@ -17,8 +16,7 @@ To run the end-to-end tests locally, you must meet the same prerequisites as tho
 4. Docker Buildx
 5. Any clean K8s cluster (local or remote) or Linux with `root` if you want to use the Zarf-installed K3s cluster
 
-# TODO: DONE these have been tested on mac and linux so this section is GTG
-## Unit Tests
+## Unit Tests # TODO: DONE these have been tested on mac and linux so this section is GTG
 
 There are several ways to run tests depending on your specific situation, such as:
 
@@ -36,10 +34,9 @@ go test ./src/pkg/... -v
 go test ./src/pkg/... -v -run TestFooBarBaz
 ```
 
-# TODO: make new unit test and test instructions
 All unit tests should pass locally before submitting a PR.
 
-### Adding New Unit Tests
+### Adding New Unit Tests # TODO: make new unit test and test instructions
 
 To create a unit test, search for or create a file that ends with `_test.go` in the package of the file that requires testing, such as `auth.go` -> `auth_test.go`. Import the testing library and create test functions as necessary. Generic unit test helper functions can be found in [src/test/testutil](https://github.com/zarf-dev/zarf/tree/main/src/test/testutil).
 
