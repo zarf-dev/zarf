@@ -22,22 +22,18 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 
 	tmpdir := t.TempDir()
 
-	noTemplateSrc := filepath.Join("src", "test", "packages", "25-adopt-no-ns-template")
-	_, stdErr, err := e2e.Zarf(t, "package", "create", noTemplateSrc, "-o", tmpdir, "--skip-sbom", "--confirm")
-	require.NoError(t, err, stdErr)
-	noTemplatePkg := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-adopt-no-ns-template-%s-0.1.0.tar.zst", e2e.Arch))
-
-	withTemplateSrc := filepath.Join("src", "test", "packages", "25-adopt-ns-with-agent-ignore")
-	_, stdErr, err = e2e.Zarf(t, "package", "create", withTemplateSrc, "-o", tmpdir, "--skip-sbom", "--confirm")
-	require.NoError(t, err, stdErr)
-	withTemplatePkg := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-adopt-ns-with-agent-ignore-%s-0.1.0.tar.zst", e2e.Arch))
-
 	c, err := cluster.New(t.Context())
 	require.NoError(t, err)
 
 	t.Run("changes agent ignore label to mutate label when namespace is not explicitly defined", func(t *testing.T) {
+		t.Parallel()
+		noTemplateSrc := filepath.Join("src", "test", "packages", "25-adopt-no-ns-template")
+		_, stdErr, err := e2e.Zarf(t, "package", "create", noTemplateSrc, "-o", tmpdir, "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdErr)
+		noTemplatePkg := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-adopt-no-ns-template-%s-0.1.0.tar.zst", e2e.Arch))
+
 		const ns = "adopt-no-ns-template"
-		_, _, err := e2e.Kubectl(t, "create", "namespace", ns)
+		_, _, err = e2e.Kubectl(t, "create", "namespace", ns)
 		require.NoError(t, err)
 		_, _, err = e2e.Kubectl(t, "label", "namespace", ns, "zarf.dev/agent=ignore")
 		require.NoError(t, err)
@@ -48,7 +44,7 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		_, stdErr, err := e2e.Zarf(t, "package", "deploy", noTemplatePkg, "--confirm", "--adopt-existing-resources")
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", noTemplatePkg, "--confirm", "--adopt-existing-resources")
 		require.NoError(t, err, stdErr)
 
 		namespace, err := c.Clientset.CoreV1().Namespaces().Get(t.Context(), ns, metav1.GetOptions{})
@@ -57,8 +53,14 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 	})
 
 	t.Run("keeps agent ignore label when explicitly defined by the package", func(t *testing.T) {
+		t.Parallel()
+		withTemplateSrc := filepath.Join("src", "test", "packages", "25-adopt-ns-with-agent-ignore")
+		_, stdErr, err := e2e.Zarf(t, "package", "create", withTemplateSrc, "-o", tmpdir, "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdErr)
+		withTemplatePkg := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-adopt-ns-with-agent-ignore-%s-0.1.0.tar.zst", e2e.Arch))
+
 		const ns = "adopt-ns-with-agent-ignore"
-		_, _, err := e2e.Kubectl(t, "create", "namespace", ns)
+		_, _, err = e2e.Kubectl(t, "create", "namespace", ns)
 		require.NoError(t, err)
 		t.Cleanup(func() {
 			_, _, err := e2e.Zarf(t, "package", "remove", "adopt-ns-with-agent-ignore", "--confirm")
@@ -67,7 +69,7 @@ func TestHelmAdoptionAgentLabel(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		_, stdErr, err := e2e.Zarf(t, "package", "deploy", withTemplatePkg, "--confirm", "--adopt-existing-resources")
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", withTemplatePkg, "--confirm", "--adopt-existing-resources")
 		require.NoError(t, err, stdErr)
 
 		namespace, err := c.Clientset.CoreV1().Namespaces().Get(t.Context(), ns, metav1.GetOptions{})
