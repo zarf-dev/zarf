@@ -10,7 +10,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/state"
 )
 
-// ModeFromEnv reads ZARF_AGENT_MUTATION_MODE from the environment, defaulting to opt-in.
+// ModeFromEnv reads ZARF_AGENT_MUTATION_MODE from the environment
 func ModeFromEnv() state.MutationMode {
 	if os.Getenv("ZARF_AGENT_MUTATION_MODE") == string(state.MutationModeOptIn) {
 		return state.MutationModeOptIn
@@ -18,8 +18,7 @@ func ModeFromEnv() state.MutationMode {
 	return state.MutationModeOptOut
 }
 
-// ShouldMutate reports whether the agent should mutate a resource. The resource label takes
-// priority over the namespace label; if neither is set, the mode determines the default.
+// ShouldMutate reports whether the agent should mutate a resource, prioritizing resource labels
 func ShouldMutate(resourceLabels, nsLabels map[string]string, mode state.MutationMode) bool {
 	for _, labels := range []map[string]string{resourceLabels, nsLabels} {
 		switch labels[cluster.AgentLabel] {
