@@ -70,7 +70,7 @@ func NewZarfManagedNamespace(name string) *corev1.Namespace {
 	return namespace
 }
 
-// AdoptZarfManagedLabels adds & deletes the necessary labels that signal to Zarf it should manage a namespace
+// AdoptZarfManagedLabels adds the necessary labels that signal to Zarf it should manage a namespace
 func AdoptZarfManagedLabels(labels map[string]string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)

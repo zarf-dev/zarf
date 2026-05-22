@@ -163,8 +163,8 @@ type State struct {
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
 	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
-	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode MutationMode `json:"agentMutationMode,omitempty"`
+	// AgentMutationMode controls the conditions required for the agent to mutate resources
+	AgentMutationMode MutationMode `json:"agentMutationMode"`
 	InjectorInfo      InjectorInfo `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use

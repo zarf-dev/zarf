@@ -48,9 +48,13 @@ func withMutationGuard[T any, PT interface {
 		if err := json.Unmarshal(r.Object.Raw, obj); err != nil {
 			return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 		}
-		nsLabels, err := getNamespaceLabels(ctx, c, r.Namespace)
-		if err != nil {
-			return nil, err
+		var nsLabels map[string]string
+		if r.Namespace != "" {
+			var err error
+			nsLabels, err = getNamespaceLabels(ctx, c, r.Namespace)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if !operations.ShouldMutate(obj.GetLabels(), nsLabels, mode) {
 			return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
