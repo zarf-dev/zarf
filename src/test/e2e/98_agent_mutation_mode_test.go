@@ -37,7 +37,7 @@ func TestAgentMutationMode(t *testing.T) {
 	initPackageVersion := e2e.GetZarfVersion(t)
 	initPackageName := fmt.Sprintf("zarf-init-%s-%s.tar.zst", e2e.Arch, initPackageVersion)
 
-	_, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/49-agent-only-init", "-o", tmpdir, "--skip-sbom")
+	_, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/98-agent-only-init", "-o", tmpdir, "--skip-sbom")
 	require.NoError(t, err, stdErr)
 
 	initPackagePath := filepath.Join(tmpdir, initPackageName)
