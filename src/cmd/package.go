@@ -37,6 +37,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
@@ -1746,13 +1747,17 @@ func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
 		err = errors.Join(err, pkgLayout.Cleanup())
 	}()
 
+	publishSignOpts := signing.DefaultSignBlobOptions()
+	publishSignOpts.Key = o.signingKeyPath
+	publishSignOpts.Password = o.signingKeyPassword
+	publishSignOpts.Overwrite = true
+
 	publishPackageOpts := packager.PublishPackageOptions{
-		OCIConcurrency:     o.ociConcurrency,
-		SigningKeyPath:     o.signingKeyPath,
-		SigningKeyPassword: o.signingKeyPassword,
-		Retries:            o.retries,
-		RemoteOptions:      defaultRemoteOptions(),
-		Tag:                o.tag,
+		OCIConcurrency:  o.ociConcurrency,
+		SignBlobOptions: publishSignOpts,
+		Retries:         o.retries,
+		RemoteOptions:   defaultRemoteOptions(),
+		Tag:             o.tag,
 	}
 
 	_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, publishPackageOpts)
@@ -1848,6 +1853,18 @@ type packageSignOptions struct {
 	ociConcurrency     int
 	retries            int
 	verify             bool
+	// Keyless signing flags. Each is hand-rolled and individually opted-in;
+	// new cosign flags will not appear here automatically on dependency bumps.
+	keyless        bool
+	identityToken  string
+	fulcioURL      string
+	fulcioAuthFlow string
+	oidcIssuer     string
+	oidcClientID   string
+	rekorURL       string
+	tlogUpload     bool
+	confirm        bool
+	tsaServerURL   string
 }
 
 func newPackageSignCommand(v *viper.Viper) *cobra.Command {
@@ -1872,6 +1889,19 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 
+	cmd.Flags().BoolVar(&o.keyless, "keyless", false, lang.CmdPackageSignFlagKeyless)
+	cmd.Flags().StringVar(&o.identityToken, "identity-token", "", lang.CmdPackageSignFlagIdentityToken)
+	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", "https://fulcio.sigstore.dev", lang.CmdPackageSignFlagFulcioURL)
+	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", "normal", lang.CmdPackageSignFlagFulcioAuthFlow)
+	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth", lang.CmdPackageSignFlagOIDCIssuer)
+	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", "sigstore", lang.CmdPackageSignFlagOIDCClientID)
+	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", "https://rekor.sigstore.dev", lang.CmdPackageSignFlagRekorURL)
+	cmd.Flags().BoolVar(&o.tlogUpload, "tlog-upload", false, lang.CmdPackageSignFlagTlogUpload)
+	cmd.Flags().BoolVar(&o.confirm, "confirm", false, lang.CmdPackageSignFlagConfirm)
+	cmd.Flags().StringVar(&o.tsaServerURL, "tsa-server-url", "", lang.CmdPackageSignFlagTSAServerURL)
+
+	cmd.MarkFlagsMutuallyExclusive("keyless", "signing-key")
+
 	return cmd
 }
 
@@ -1880,8 +1910,8 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 	l := logger.From(ctx)
 	packageSource := args[0]
 
-	if o.signingKeyPath == "" {
-		return errors.New("--signing-key is required")
+	if !o.keyless && o.signingKeyPath == "" {
+		return errors.New("--signing-key is required (or pass --keyless for Sigstore keyless flow)")
 	}
 
 	// Determine output destination
@@ -1913,31 +1943,11 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// If output is OCI (either default or user-specified), delegate to publish workflow
-	if helpers.IsOCIURL(outputDest) {
-		l.Info("signing and publishing package to OCI registry", "source", packageSource, "destination", outputDest)
-
-		// Create publish options from sign options
-		publishOpts := &packagePublishOptions{
-			signingKeyPath:     o.signingKeyPath,
-			signingKeyPassword: o.signingKeyPassword,
-			ociConcurrency:     o.ociConcurrency,
-			retries:            o.retries,
-			publicKeyPath:      o.publicKeyPath,
-			verify:             o.verify,
-		}
-
-		// Call publish with source and destination repository
-		return publishOpts.run(cmd, []string{packageSource, outputDest})
-	}
-
-	// For local file output, use existing sign logic
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
 	}
 
-	// Load the package - do not verify
 	loadOpts := packager.LoadOptions{
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -1974,20 +1984,60 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Sign the package
-	l.Info("signing package with provided key")
+	if o.keyless {
+		l.Info("signing package via Sigstore keyless flow")
+		l.Debug("keyless signing endpoints", "fulcio", o.fulcioURL, "oidcIssuer", o.oidcIssuer, "rekor", o.rekorURL)
+	} else {
+		l.Info("signing package with provided key")
+	}
 
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = o.signingKeyPath
 	signOpts.Password = o.signingKeyPassword
 	signOpts.Overwrite = o.overwrite
+	signOpts.Keyless = o.keyless
+	signOpts.Fulcio.IdentityToken = o.identityToken
+	signOpts.Fulcio.URL = o.fulcioURL
+	signOpts.Fulcio.AuthFlow = o.fulcioAuthFlow
+	signOpts.OIDC.Issuer = o.oidcIssuer
+	signOpts.OIDC.ClientID = o.oidcClientID
+	signOpts.Rekor.URL = o.rekorURL
+	signOpts.TlogUpload = o.tlogUpload
+	signOpts.SkipConfirmation = o.confirm
+	signOpts.TSAServerURL = o.tsaServerURL
+
+	// Keyless certs are short-lived (~10 min). Without Rekor or a TSA timestamp
+	// the signature is unverifiable past expiry. Default --tlog-upload=true for
+	// keyless unless the user explicitly opted out.
+	if o.keyless {
+		if !cmd.Flags().Changed("tlog-upload") {
+			signOpts.TlogUpload = true
+		}
+		if !signOpts.TlogUpload && signOpts.TSAServerURL == "" {
+			l.Warn(lang.CmdPackageSignNoTimestampAnchorWarn)
+		}
+	}
+
+	if helpers.IsOCIURL(outputDest) {
+		dstRef, err := registry.ParseReference(strings.TrimPrefix(outputDest, helpers.OCIURLPrefix))
+		if err != nil {
+			return fmt.Errorf("invalid destination OCI reference: %w", err)
+		}
+		l.Info("signing and publishing package to OCI registry", "destination", outputDest)
+		_, err = packager.PublishPackage(ctx, pkgLayout, dstRef, packager.PublishPackageOptions{
+			OCIConcurrency:  o.ociConcurrency,
+			SignBlobOptions: signOpts,
+			Retries:         o.retries,
+			RemoteOptions:   defaultRemoteOptions(),
+		})
+		return err
+	}
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
 	if err != nil {
 		return fmt.Errorf("failed to sign package: %w", err)
 	}
 
-	// Archive to local directory
 	l.Info("archiving signed package to local directory", "directory", outputDest)
 	signedPath, err := pkgLayout.Archive(ctx, outputDest, 0)
 	if err != nil {
@@ -2001,6 +2051,14 @@ func (o *packageSignOptions) run(cmd *cobra.Command, args []string) error {
 type packageVerifyOptions struct {
 	publicKeyPath  string
 	ociConcurrency int
+	// Keyless verify flags. Each is hand-rolled and individually opted-in.
+	certificateIdentity         string
+	certificateIdentityRegexp   string
+	certificateOIDCIssuer       string
+	certificateOIDCIssuerRegexp string
+	trustedRoot                 string
+	insecureIgnoreTlog          bool
+	useSignedTimestamps         bool
 }
 
 func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
@@ -2018,6 +2076,21 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+
+	cmd.Flags().StringVar(&o.certificateIdentity, "certificate-identity", "", lang.CmdPackageVerifyFlagCertificateIdentity)
+	cmd.Flags().StringVar(&o.certificateIdentityRegexp, "certificate-identity-regexp", "", lang.CmdPackageVerifyFlagCertificateIdentityRegexp)
+	cmd.Flags().StringVar(&o.certificateOIDCIssuer, "certificate-oidc-issuer", "", lang.CmdPackageVerifyFlagCertificateOIDCIssuer)
+	cmd.Flags().StringVar(&o.certificateOIDCIssuerRegexp, "certificate-oidc-issuer-regexp", "", lang.CmdPackageVerifyFlagCertificateOIDCIssuerRegexp)
+	cmd.Flags().StringVar(&o.trustedRoot, "trusted-root", "", lang.CmdPackageVerifyFlagTrustedRoot)
+	cmd.Flags().BoolVar(&o.insecureIgnoreTlog, "insecure-ignore-tlog", true, lang.CmdPackageVerifyFlagInsecureIgnoreTlog)
+	cmd.Flags().BoolVar(&o.useSignedTimestamps, "use-signed-timestamps", false, lang.CmdPackageVerifyFlagUseSignedTimestamps)
+
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-identity-regexp")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer")
+	cmd.MarkFlagsMutuallyExclusive("key", "certificate-oidc-issuer-regexp")
+	cmd.MarkFlagsMutuallyExclusive("certificate-identity", "certificate-identity-regexp")
+	cmd.MarkFlagsMutuallyExclusive("certificate-oidc-issuer", "certificate-oidc-issuer-regexp")
 
 	return cmd
 }
@@ -2037,8 +2110,25 @@ func (o *packageVerifyOptions) run(cmd *cobra.Command, args []string) error {
 	// Load the package with verification enabled
 	// The verify command always uses strict verification (VerifyAlways)
 	// This will error if: signed package without key, or unsigned package with key
+	verifyOpts := signing.DefaultVerifyBlobOptions()
+	verifyOpts.Key = o.publicKeyPath
+	verifyOpts.CertVerify.CertIdentity = o.certificateIdentity
+	verifyOpts.CertVerify.CertIdentityRegexp = o.certificateIdentityRegexp
+	verifyOpts.CertVerify.CertOidcIssuer = o.certificateOIDCIssuer
+	verifyOpts.CertVerify.CertOidcIssuerRegexp = o.certificateOIDCIssuerRegexp
+	verifyOpts.CommonVerifyOptions.TrustedRootPath = o.trustedRoot
+	verifyOpts.CommonVerifyOptions.IgnoreTlog = o.insecureIgnoreTlog
+	verifyOpts.CommonVerifyOptions.UseSignedTimestamps = o.useSignedTimestamps
+
+	// Optimally by default use the inclusion proof to establish when a signature was made.
+	// this is offline-compliant and airgap compatible given keyless signed bundle outputs.
+	hasKeylessIdentity := o.certificateIdentity != "" || o.certificateIdentityRegexp != ""
+	if hasKeylessIdentity && !cmd.Flags().Changed("insecure-ignore-tlog") {
+		verifyOpts.CommonVerifyOptions.IgnoreTlog = false
+	}
+
 	loadOpts := packager.LoadOptions{
-		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerifyBlobOptions:    &verifyOpts,
 		VerificationStrategy: layout.VerifyAlways, // Always enforce strict verification
 		Filter:               filters.Empty(),
 		Architecture:         config.GetArch(),
@@ -2145,8 +2235,8 @@ func getVerificationStrategy(verify bool) layout.VerificationStrategy {
 	return layout.VerifyIfPossible
 }
 
-func verifyBlobOptionsFromKeyPath(keyPath string) *utils.VerifyBlobOptions {
-	opts := utils.DefaultVerifyBlobOptions()
+func verifyBlobOptionsFromKeyPath(keyPath string) *signing.VerifyBlobOptions {
+	opts := signing.DefaultVerifyBlobOptions()
 	opts.Key = keyPath
 	return &opts
 }

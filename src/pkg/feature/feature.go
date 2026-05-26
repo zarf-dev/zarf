@@ -247,7 +247,7 @@ func init() {
 		{
 			Name:        BundleSignature,
 			Description: "Enables Sigstore bundle format signatures. When disabled, only legacy signature format is produced.",
-			Enabled:     false,
+			Enabled:     true,
 			Since:       "v0.72.0",
 			Stage:       Alpha,
 		},

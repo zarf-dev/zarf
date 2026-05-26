@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package utils
+package signing
 
 import (
 	"testing"
@@ -21,6 +21,12 @@ func TestShouldSign_KeyRefAlias(t *testing.T) {
 	t.Run("Key alone triggers signing", func(t *testing.T) {
 		opts := SignBlobOptions{}
 		opts.Key = "/path/to/key"
+		require.True(t, opts.ShouldSign())
+	})
+
+	t.Run("Keyless alone triggers signing", func(t *testing.T) {
+		opts := SignBlobOptions{}
+		opts.Keyless = true
 		require.True(t, opts.ShouldSign())
 	})
 
