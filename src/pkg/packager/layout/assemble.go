@@ -33,6 +33,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -220,7 +221,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	// Sign the package with the provided options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
@@ -302,7 +303,7 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	// Sign the package with the provided options
-	signOpts := utils.DefaultSignBlobOptions()
+	signOpts := signing.DefaultSignBlobOptions()
 	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
