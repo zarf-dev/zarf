@@ -175,8 +175,8 @@ type InitStateOptions struct {
 	InjectorPort int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
-	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode state.MutationMode
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy state.MutationPolicy
 	// InternalServices lists the state services that Zarf is deploying in this init run.
 	InternalServices state.ServiceSet
 }
@@ -357,8 +357,8 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		s.InjectorInfo.Port = opts.InjectorPort
 	}
 
-	if opts.AgentMutationMode != "" {
-		s.AgentMutationMode = opts.AgentMutationMode
+	if opts.AgentMutationPolicy != "" {
+		s.AgentMutationPolicy = opts.AgentMutationPolicy
 	}
 
 	// Save the state back to K8s

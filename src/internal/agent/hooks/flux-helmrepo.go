@@ -23,7 +23,7 @@ import (
 )
 
 // NewHelmRepositoryMutationHook creates a new instance of the helm repo mutation hook.
-func NewHelmRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+func NewHelmRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
 	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, src *flux.HelmRepository) (*operations.Result, error) {
 		return mutateHelmRepo(ctx, r, c, src)
 	})

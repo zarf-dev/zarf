@@ -22,7 +22,7 @@ import (
 )
 
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewGitRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+func NewGitRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
 	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, repo *flux.GitRepository) (*operations.Result, error) {
 		return mutateGitRepo(ctx, r, c, repo)
 	})

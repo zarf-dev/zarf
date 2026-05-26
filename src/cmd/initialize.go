@@ -56,11 +56,11 @@ type initOptions struct {
 	agentTLSCAPath          string
 	agentTLSCertPath        string
 	agentTLSKeyPath         string
-	agentMutationMode       mutationModeFlag
+	agentMutationPolicy     mutationPolicyFlag
 }
 
 func newInitCommand() *cobra.Command {
-	o := &initOptions{agentMutationMode: mutationModeFlag(state.MutationModeOptOut)}
+	o := &initOptions{agentMutationPolicy: mutationPolicyFlag(state.MutationPolicyAll)}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -117,7 +117,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
-	cmd.Flags().Var(&o.agentMutationMode, "agent-mutation-mode", `Whether the Zarf agent mutates resources by default ("opt-out") or only when they or their namespace are labeled with "zarf.dev/agent: mutate" ("opt-in")`)
+	cmd.Flags().Var(&o.agentMutationPolicy, "agent-mutation-policy", `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -253,7 +253,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
-		AgentMutationMode:      state.MutationMode(o.agentMutationMode),
+		AgentMutationPolicy:    state.MutationPolicy(o.agentMutationPolicy),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -463,18 +463,18 @@ func (o *initOptions) validateInitFlags() error {
 	return nil
 }
 
-type mutationModeFlag state.MutationMode
+type mutationPolicyFlag state.MutationPolicy
 
-func (m *mutationModeFlag) String() string { return string(*m) }
+func (m *mutationPolicyFlag) String() string { return string(*m) }
 
-func (m *mutationModeFlag) Set(v string) error {
-	switch state.MutationMode(v) {
-	case state.MutationModeOptIn, state.MutationModeOptOut:
-		*m = mutationModeFlag(v)
+func (m *mutationPolicyFlag) Set(v string) error {
+	switch state.MutationPolicy(v) {
+	case state.MutationPolicyAll, state.MutationPolicyLabeled:
+		*m = mutationPolicyFlag(v)
 		return nil
 	default:
-		return fmt.Errorf("must be %q or %q", state.MutationModeOptIn, state.MutationModeOptOut)
+		return fmt.Errorf("must be %q or %q", state.MutationPolicyAll, state.MutationPolicyLabeled)
 	}
 }
 
-func (m *mutationModeFlag) Type() string { return "mutationMode" }
+func (m *mutationPolicyFlag) Type() string { return "mutationPolicy" }

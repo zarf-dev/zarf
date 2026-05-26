@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAgentMutationMode verifies that in opt-in mode the agent does not mutate
+// TestAgentMutationPolicy verifies that in default-ignore policy the agent does not mutate
 // pods running in namespaces that have not been labeled zarf.dev/agent=mutate.
-func TestAgentMutationMode(t *testing.T) {
-	t.Log("E2E: Agent mutation mode")
+func TestAgentMutationPolicy(t *testing.T) {
+	t.Log("E2E: Agent mutation policy")
 
 	// Don't run this test in appliance mode
 	if e2e.ApplianceMode {
@@ -42,7 +42,7 @@ func TestAgentMutationMode(t *testing.T) {
 
 	initPackagePath := filepath.Join(tmpdir, initPackageName)
 
-	_, stdErr, err = e2e.Zarf(t, "init", initPackagePath, "--agent-mutation-mode=opt-in", "--confirm")
+	_, stdErr, err = e2e.Zarf(t, "init", initPackagePath, "--agent-mutation-policy=labeled", "--confirm")
 	require.NoError(t, err, stdErr)
 
 	// Create and run a pod in the unlabeled ns

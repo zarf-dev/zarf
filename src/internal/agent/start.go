@@ -35,7 +35,7 @@ const (
 // StartWebhook launches the Zarf agent mutating webhook in the cluster.
 func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	// Routers
-	mode := operations.ModeFromEnv()
+	mode := operations.PolicyFromEnv()
 	admissionHandler := admission.NewHandler()
 	podsMutation := hooks.NewPodMutationHook(ctx, cluster, mode)
 	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, cluster, mode)

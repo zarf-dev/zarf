@@ -45,7 +45,7 @@ type GitGenerator struct {
 }
 
 // NewApplicationSetMutationHook creates a new instance of the ArgoCD ApplicationSet mutation hook.
-func NewApplicationSetMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+func NewApplicationSetMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
 	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, appSet *ApplicationSet) (*operations.Result, error) {
 		return mutateApplicationSet(ctx, r, c, appSet)
 	})

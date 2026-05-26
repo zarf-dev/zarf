@@ -16,14 +16,14 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 )
 
-// MutationMode controls whether the Zarf agent mutates resources by default or only on explicit opt-in.
-type MutationMode string
+// MutationPolicy controls the agent's default mutation behavior.
+type MutationPolicy string
 
 const (
-	// MutationModeOptOut mutates all resources unless they carry zarf.dev/agent: ignore/skip.
-	MutationModeOptOut MutationMode = "opt-out"
-	// MutationModeOptIn mutates only resources (or resources in namespaces) labeled zarf.dev/agent: mutate.
-	MutationModeOptIn MutationMode = "opt-in"
+	// MutationPolicyAll mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationPolicyAll MutationPolicy = "all"
+	// MutationPolicyLabeled mutates only resources (or namespaces) labeled zarf.dev/agent: mutate.
+	MutationPolicyLabeled MutationPolicy = "labeled"
 )
 
 // Declares secrets and metadata keys and values.
@@ -163,9 +163,9 @@ type State struct {
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
 	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
-	// AgentMutationMode controls the conditions required for the agent to mutate resources
-	AgentMutationMode MutationMode `json:"agentMutationMode"`
-	InjectorInfo      InjectorInfo `json:"injectorInfo"`
+	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
+	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -487,8 +487,8 @@ type MergeOptions struct {
 	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
-	// AgentMutationMode controls whether the agent mutates by default (opt-out) or only on explicit label (opt-in).
-	AgentMutationMode MutationMode
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy MutationPolicy
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -548,8 +548,8 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			newState.AgentTLS = agentTLS
 			newState.AgentTLSUserProvided = false
 		}
-		if opts.AgentMutationMode != "" {
-			newState.AgentMutationMode = opts.AgentMutationMode
+		if opts.AgentMutationPolicy != "" {
+			newState.AgentMutationPolicy = opts.AgentMutationPolicy
 		}
 	}
 

@@ -11,7 +11,7 @@ webhooks:
           values:
             # Ensure we don't mess with kube-system
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -50,7 +50,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -86,7 +86,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -123,7 +123,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -160,7 +160,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -195,7 +195,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -230,7 +230,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:
@@ -270,7 +270,7 @@ webhooks:
           operator: NotIn
           values:
             - "kube-system"
-        {{- if eq .Values.mutationMode "opt-out" }}
+        {{- if eq .Values.mutationPolicy "all" }}
         {{- include "zarf-agent.agentIgnoreExpr" . | nindent 8 }}
         {{- end }}
     objectSelector:

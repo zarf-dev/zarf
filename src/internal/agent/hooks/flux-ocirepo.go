@@ -31,7 +31,7 @@ const (
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
-func NewOCIRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+func NewOCIRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
 	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, src *flux.OCIRepository) (*operations.Result, error) {
 		return mutateOCIRepo(ctx, r, c, src)
 	})

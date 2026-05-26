@@ -368,7 +368,7 @@ func TestFluxHelmMutationWebhook(t *testing.T) {
 				testState = &state.State{RegistryInfo: tt.registryInfo}
 			}
 			c := createTestClientWithZarfState(ctx, t, testState)
-			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c, state.MutationModeOptOut))
+			handler := admission.NewHandler().Serve(ctx, NewHelmRepositoryMutationHook(ctx, c, state.MutationPolicyAll))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)

@@ -24,7 +24,7 @@ import (
 const annotationPrefix = "zarf.dev"
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationMode) operations.Hook {
+func NewPodMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
 	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, pod *corev1.Pod) (*operations.Result, error) {
 		return mutatePod(ctx, r, c, pod)
 	})

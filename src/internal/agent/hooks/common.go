@@ -40,7 +40,7 @@ func withMutationGuard[T any, PT interface {
 }](
 	ctx context.Context,
 	c *cluster.Cluster,
-	mode state.MutationMode,
+	mode state.MutationPolicy,
 	fn func(ctx context.Context, r *admission.AdmissionRequest, obj PT) (*operations.Result, error),
 ) operations.AdmitFunc {
 	return func(r *admission.AdmissionRequest) (*operations.Result, error) {
