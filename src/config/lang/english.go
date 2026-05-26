@@ -353,11 +353,22 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./privat
 # Sign with a cloud KMS key
 $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 `
-	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
-	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
-	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
-	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
-	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagSigningKey        = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
+	CmdPackageSignFlagSigningKeyPass    = "Password for encrypted private key"
+	CmdPackageSignFlagOutput            = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
+	CmdPackageSignFlagOverwrite         = "Overwrite an existing signature if the package is already signed"
+	CmdPackageSignFlagKey               = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagKeyless           = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
+	CmdPackageSignFlagIdentityToken     = "Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing"
+	CmdPackageSignFlagFulcioURL         = "Fulcio certificate authority URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagFulcioAuthFlow    = "Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials"
+	CmdPackageSignFlagOIDCIssuer        = "OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments."
+	CmdPackageSignFlagOIDCClientID      = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
+	CmdPackageSignFlagRekorURL          = "Rekor transparency log URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagTlogUpload        = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
+	CmdPackageSignFlagConfirm           = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
+	CmdPackageSignFlagTSAServerURL      = "RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid."
+	CmdPackageSignNoTimestampAnchorWarn = "Keyless signature has no timestamp anchor: --tlog-upload is disabled and --tsa-server-url is not set. The signature will be unverifiable after the Fulcio certificate expires (~10 minutes). Pass --tsa-server-url or remove --tlog-upload=false to retain long-term verifiability."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
@@ -368,7 +379,14 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.p
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 `
-	CmdPackageVerifyFlagKey = "Public key for signature verification"
+	CmdPackageVerifyFlagKey                         = "Public key for signature verification"
+	CmdPackageVerifyFlagCertificateIdentity         = "Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
+	CmdPackageVerifyFlagCertificateIdentityRegexp   = "Regex variant of --certificate-identity"
+	CmdPackageVerifyFlagCertificateOIDCIssuer       = "Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com"
+	CmdPackageVerifyFlagCertificateOIDCIssuerRegexp = "Regex variant of --certificate-oidc-issuer"
+	CmdPackageVerifyFlagTrustedRoot                 = "Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted."
+	CmdPackageVerifyFlagInsecureIgnoreTlog          = "Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry)."
+	CmdPackageVerifyFlagUseSignedTimestamps         = "Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `

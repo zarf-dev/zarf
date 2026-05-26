@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package utils provides generic utility functions.
-package utils
+// Package signing provides cosign-based signing and verification for Zarf packages.
+package signing
 
 import (
 	"context"
@@ -10,12 +10,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/options"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/sign"
+	"github.com/sigstore/cosign/v3/cmd/cosign/cli/signcommon"
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
-	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
@@ -35,32 +34,61 @@ var nonPromptingPassFunc = cosign.PassFunc(func(_ bool) ([]byte, error) {
 	if pw, ok := os.LookupEnv("COSIGN_PASSWORD"); ok {
 		return []byte(pw), nil
 	}
-	return []byte{}, nil
+	return nil, nil
 })
 
-// SignBlobOptions wraps cosign's SignBlobOptions with zarf-specific fields.
+// SignBlobOptions holds signing configuration for zarf blob operations.
 type SignBlobOptions struct {
-	options.SignBlobOptions
+	Key              string
+	Base64Output     bool
+	OutputSignature  string
+	BundlePath       string
+	NewBundleFormat  bool
+	SkipConfirmation bool
+	TlogUpload       bool
+	TSAServerURL     string
+	// UseSigningConfig is set to false by DefaultSignBlobOptions to override
+	// cosign's default of true, which conflicts with TlogUpload=false in airgap.
+	UseSigningConfig bool
+
+	SecurityKey options.SecurityKeyOptions
+	Fulcio      options.FulcioOptions
+	Rekor       options.RekorOptions
+	OIDC        options.OIDCOptions
 
 	Verbose   bool
 	Timeout   time.Duration
 	Password  string
 	PassFunc  cosign.PassFunc
 	Overwrite bool
+	// Keyless gates zarf-specific sign-side guards on top of cosign's behavior.
+	// When true, --signing-key is no longer required and ShouldSign returns true
+	// even without explicit Key/IDToken/Sk material — cosign resolves identity
+	// via Fulcio/OIDC at sign time.
+	Keyless bool
 
-	// Deprecated: use Key (promoted from the embedded SignBlobOptions). Removed in v1.0.
+	// Deprecated: use Key. Removed in v1.0.
 	KeyRef string
 }
 
-// VerifyBlobOptions wraps cosign's VerifyBlobOptions with zarf-specific fields.
+// VerifyBlobOptions holds verification configuration for zarf blob operations.
 type VerifyBlobOptions struct {
-	options.VerifyBlobOptions
+	Key        string
+	Signature  string
+	BundlePath string
 
+	SecurityKey         options.SecurityKeyOptions
+	CertVerify          options.CertVerifyOptions
+	Rekor               options.RekorOptions
+	CommonVerifyOptions options.CommonVerifyOptions
+	SignatureDigest     options.SignatureDigestOptions
+
+	TempDir string
 	Timeout time.Duration
 
-	// Deprecated: use Key (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	// Deprecated: use Key. Removed in v1.0.
 	KeyRef string
-	// Deprecated: use Signature (promoted from the embedded VerifyBlobOptions). Removed in v1.0.
+	// Deprecated: use Signature. Removed in v1.0.
 	SigRef string
 }
 
@@ -68,12 +96,12 @@ type VerifyBlobOptions struct {
 // KeyRef is included for backward compatibility; it's synced to Key in
 // CosignSignBlobWithOptions.
 func (opts SignBlobOptions) ShouldSign() bool {
-	return opts.Key != "" || opts.KeyRef != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use
+	return opts.Key != "" || opts.KeyRef != "" || opts.Fulcio.IdentityToken != "" || opts.SecurityKey.Use || opts.Keyless
 }
 
 // CheckOverwrite errors if any output file exists and Overwrite is false.
 func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
-	for _, path := range []string{opts.BundlePath, opts.OutputCertificate, opts.OutputSignature} {
+	for _, path := range []string{opts.BundlePath, opts.OutputSignature} {
 		if path == "" {
 			continue
 		}
@@ -88,10 +116,14 @@ func (opts SignBlobOptions) CheckOverwrite(ctx context.Context) error {
 }
 
 // DefaultSignBlobOptions returns SignBlobOptions seeded with zarf defaults.
-// Divergence: TlogUpload defaults to false (cosign default true) for airgap.
+// Divergences from cosign defaults (air-gap):
+//   - TlogUpload=false (cosign default true)
+//   - UseSigningConfig=false (cosign default true) — required because cosign rejects
+//     UseSigningConfig=true combined with TlogUpload=false.
 func DefaultSignBlobOptions() SignBlobOptions {
 	var opts SignBlobOptions
 	opts.TlogUpload = false
+	opts.UseSigningConfig = false
 	opts.Base64Output = true
 	opts.NewBundleFormat = true
 	opts.SecurityKey.Slot = "signature"
@@ -135,31 +167,21 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 	}
 
 	ko := options.KeyOpts{
-		KeyRef:                         opts.Key,
-		PassFunc:                       nonPromptingPassFunc,
-		Sk:                             opts.SecurityKey.Use,
-		Slot:                           opts.SecurityKey.Slot,
-		FulcioURL:                      opts.Fulcio.URL,
-		IDToken:                        opts.Fulcio.IdentityToken,
-		FulcioAuthFlow:                 opts.Fulcio.AuthFlow,
-		InsecureSkipFulcioVerify:       opts.Fulcio.InsecureSkipFulcioVerify,
-		RekorURL:                       opts.Rekor.URL,
-		OIDCIssuer:                     opts.OIDC.Issuer,
-		OIDCClientID:                   opts.OIDC.ClientID,
-		OIDCClientSecret:               oidcClientSecret,
-		OIDCRedirectURL:                opts.OIDC.RedirectURL,
-		OIDCDisableProviders:           opts.OIDC.DisableAmbientProviders,
-		BundlePath:                     opts.BundlePath,
-		NewBundleFormat:                opts.NewBundleFormat,
-		SkipConfirmation:               opts.SkipConfirmation,
-		TSAClientCACert:                opts.TSAClientCACert,
-		TSAClientCert:                  opts.TSAClientCert,
-		TSAClientKey:                   opts.TSAClientKey,
-		TSAServerName:                  opts.TSAServerName,
-		TSAServerURL:                   opts.TSAServerURL,
-		RFC3161TimestampPath:           opts.RFC3161TimestampPath,
-		IssueCertificateForExistingKey: opts.IssueCertificate,
-		SigningAlgorithm:               opts.SigningAlgorithm,
+		KeyRef:           opts.Key,
+		PassFunc:         nonPromptingPassFunc,
+		Sk:               opts.SecurityKey.Use,
+		Slot:             opts.SecurityKey.Slot,
+		FulcioURL:        opts.Fulcio.URL,
+		IDToken:          opts.Fulcio.IdentityToken,
+		FulcioAuthFlow:   opts.Fulcio.AuthFlow,
+		RekorURL:         opts.Rekor.URL,
+		OIDCIssuer:       opts.OIDC.Issuer,
+		OIDCClientID:     opts.OIDC.ClientID,
+		OIDCClientSecret: oidcClientSecret,
+		BundlePath:       opts.BundlePath,
+		NewBundleFormat:  opts.NewBundleFormat,
+		SkipConfirmation: opts.SkipConfirmation,
+		TSAServerURL:     opts.TSAServerURL,
 	}
 
 	switch {
@@ -176,6 +198,17 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		return nil, err
 	}
 
+	// Empty output-path params suppress cosign's deprecation warnings; zarf manages
+	// OutputSignature internally and the warnings would fire on every sign.
+	if err := signcommon.LoadTrustedMaterialAndSigningConfig(ctx, &ko,
+		opts.UseSigningConfig, "",
+		opts.Rekor.URL, opts.Fulcio.URL, opts.OIDC.Issuer, opts.TSAServerURL, "",
+		opts.TlogUpload, opts.NewBundleFormat, opts.BundlePath, opts.Key, false,
+		"", "", "", "", "", "",
+	); err != nil {
+		return nil, err
+	}
+
 	l.Debug("signing blob with cosign",
 		"key", opts.Key,
 		"sk", opts.SecurityKey.Use,
@@ -186,11 +219,11 @@ func CosignSignBlobWithOptions(ctx context.Context, blobPath string, opts SignBl
 		rootOpts,
 		ko,
 		blobPath,
-		opts.Cert,
-		opts.CertChain,
+		"",
+		"",
 		opts.Base64Output,
 		opts.OutputSignature,
-		opts.OutputCertificate,
+		"",
 		opts.TlogUpload,
 	)
 	if err != nil {
@@ -224,19 +257,31 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		return err
 	}
 
-	if opts.CommonVerifyOptions.PrivateInfrastructure {
-		opts.CommonVerifyOptions.IgnoreTlog = true
+	// Keyless verify needs a trusted root. If the user didn't supply --trusted-root,
+	// fall back to the embedded copy. Key-based and cert-based paths skip this
+	// entirely so they don't pay for an unused tempfile per verify.
+	trustedRootPath := opts.CommonVerifyOptions.TrustedRootPath
+	if trustedRootPath == "" && opts.Key == "" && opts.CertVerify.Cert == "" {
+		path, cleanup, prepErr := writeEmbeddedTrustedRoot(opts.TempDir)
+		if prepErr != nil {
+			return fmt.Errorf("preparing embedded trusted root: %w", prepErr)
+		}
+		defer func() {
+			if rmErr := cleanup(); rmErr != nil {
+				l.Debug("failed to remove embedded trusted root tempfile", "error", rmErr)
+			}
+		}()
+		trustedRootPath = path
 	}
 
 	ko := options.KeyOpts{
-		KeyRef:               opts.Key,
-		Sk:                   opts.SecurityKey.Use,
-		Slot:                 opts.SecurityKey.Slot,
-		RekorURL:             opts.Rekor.URL,
-		BundlePath:           opts.BundlePath,
-		RFC3161TimestampPath: opts.RFC3161TimestampPath,
-		TSACertChainPath:     opts.CommonVerifyOptions.TSACertChainPath,
-		NewBundleFormat:      opts.CommonVerifyOptions.NewBundleFormat,
+		KeyRef:           opts.Key,
+		Sk:               opts.SecurityKey.Use,
+		Slot:             opts.SecurityKey.Slot,
+		RekorURL:         opts.Rekor.URL,
+		BundlePath:       opts.BundlePath,
+		TSACertChainPath: opts.CommonVerifyOptions.TSACertChainPath,
+		NewBundleFormat:  opts.CommonVerifyOptions.NewBundleFormat,
 	}
 
 	cmd := &verify.VerifyBlobCmd{
@@ -257,7 +302,7 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 		Offline:                      opts.CommonVerifyOptions.Offline,
 		IgnoreTlog:                   opts.CommonVerifyOptions.IgnoreTlog,
 		UseSignedTimestamps:          opts.CommonVerifyOptions.UseSignedTimestamps,
-		TrustedRootPath:              opts.CommonVerifyOptions.TrustedRootPath,
+		TrustedRootPath:              trustedRootPath,
 		HashAlgorithm:                hashAlgorithm,
 	}
 
@@ -279,50 +324,4 @@ func CosignVerifyBlobWithOptions(ctx context.Context, blobPath string, opts Veri
 
 	l.Debug("blob signature verified successfully")
 	return nil
-}
-
-// GetCosignArtifacts returns signatures and attestations for the given image.
-func GetCosignArtifacts(image string) ([]string, error) {
-	var nameOpts []name.Option
-
-	ref, err := name.ParseReference(image, nameOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	var remoteOpts []ociremote.Option
-	simg, _ := ociremote.SignedEntity(ref, remoteOpts...) //nolint:errcheck
-	if simg == nil {
-		return nil, nil
-	}
-
-	sigRef, _ := ociremote.SignatureTag(ref, remoteOpts...)   //nolint:errcheck
-	attRef, _ := ociremote.AttestationTag(ref, remoteOpts...) //nolint:errcheck
-
-	ss, err := simg.Signatures()
-	if err != nil {
-		return nil, err
-	}
-	ssLayers, err := ss.Layers()
-	if err != nil {
-		return nil, err
-	}
-
-	var cosignArtifactList = make([]string, 0)
-	if 0 < len(ssLayers) {
-		cosignArtifactList = append(cosignArtifactList, sigRef.String())
-	}
-
-	atts, err := simg.Attestations()
-	if err != nil {
-		return nil, err
-	}
-	aLayers, err := atts.Layers()
-	if err != nil {
-		return nil, err
-	}
-	if 0 < len(aLayers) {
-		cosignArtifactList = append(cosignArtifactList, attRef.String())
-	}
-	return cosignArtifactList, nil
 }

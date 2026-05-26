@@ -42,14 +42,24 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 ### Options
 
 ```
+      --confirm                   Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
+      --fulcio-auth-flow string   Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials (default "normal")
+      --fulcio-url string         Fulcio certificate authority URL. Override for private Sigstore deployments. (default "https://fulcio.sigstore.dev")
   -h, --help                      help for sign
+      --identity-token string     Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing
   -k, --key string                Public key to verify the existing signature before re-signing (optional)
+      --keyless                   Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)
       --oci-concurrency int       Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --oidc-client-id string     OIDC client ID used when requesting an identity token. Override for private Sigstore deployments. (default "sigstore")
+      --oidc-issuer string        OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments. (default "https://oauth2.sigstore.dev/auth")
   -o, --output string             Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources
       --overwrite                 Overwrite an existing signature if the package is already signed
+      --rekor-url string          Rekor transparency log URL. Override for private Sigstore deployments. (default "https://rekor.sigstore.dev")
       --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --signing-key string        Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)
       --signing-key-pass string   Password for encrypted private key
+      --tlog-upload               Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window).
+      --tsa-server-url string     RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid.
       --verify                    Verify the Zarf package signature
 ```
 
@@ -57,7 +67,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
