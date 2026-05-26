@@ -129,7 +129,11 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 		SkipVersionCheck: true,
 		RemoteOptions:    defaultRemoteOptions(),
 	}
-	pkg, err := load.PackageDefinition(ctx, setBaseDirectory(args), loadOpts)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	pkg, err := load.PackageDefinition(ctx, basePath, loadOpts)
 	if err != nil {
 		return err
 	}
@@ -187,8 +191,7 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -209,7 +212,11 @@ func (o *devInspectManifestsOptions) run(ctx context.Context, args []string) err
 		IsInteractive:      true,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
-	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	resources, err := packager.InspectDefinitionResources(ctx, basePath, opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -281,8 +288,7 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
 		return err
@@ -303,7 +309,11 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 		IsInteractive:      true,
 		RemoteOptions:      defaultRemoteOptions(),
 	}
-	resources, err := packager.InspectDefinitionResources(ctx, setBaseDirectory(args), opts)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+	resources, err := packager.InspectDefinitionResources(ctx, basePath, opts)
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
 		PrintFindings(ctx, lintErr)
@@ -385,7 +395,10 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	basePath := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	v := getViper()
 	o.createSetPkgTmpl = helpers.TransformAndMergeMap(
@@ -729,7 +742,10 @@ func newDevFindImagesCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	basePath := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 
 	v := getViper()
 
@@ -737,8 +753,7 @@ func (o *devFindImagesOptions) run(cmd *cobra.Command, args []string) error {
 		v.GetStringMapString(VPkgCreateSet), o.createSetPkgTmpl, strings.ToUpper)
 	o.deploySetVariables = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgDeploySet), o.deploySetVariables, strings.ToUpper)
-	o.setValues = helpers.TransformAndMergeMap(
-		v.GetStringMapString(VPkgDeploySetValues), o.setValues, func(s string) string { return s })
+	o.setValues = mergeMap(v.GetStringMapString(VPkgDeploySetValues), o.setValues)
 
 	cachePath, err := getCachePath(ctx)
 	if err != nil {
@@ -880,7 +895,10 @@ func newDevLintCommand(v *viper.Viper) *cobra.Command {
 
 func (o *devLintOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	basePath := setBaseDirectory(args)
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
 	v := getViper()
 	o.setPkgTmpl = helpers.TransformAndMergeMap(
 		v.GetStringMapString(VPkgCreateSet), o.setPkgTmpl, strings.ToUpper)
