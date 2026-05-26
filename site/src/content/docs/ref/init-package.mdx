@@ -203,9 +203,12 @@ Additionally, when Git repositories are pushed to the Zarf Git server their name
 
 #### Agent Mutation Rules
 
-By default the Zarf agent mutates all applicable resources in the cluster. Resources can be excluded by adding the label `zarf.dev/agent: ignore` to the resource or its namespace.
+The agent's mutation behavior is controlled by the `--agent-mutation-policy` flag on `zarf init`. It accepts two values:
 
-The agent can be changed to use an opt-in model through the `zarf init` flag `agent-mutation-mode=opt-in`. Resources will then only be mutated if they are labeled with `zarf.dev/agent: mutate` or are in a namespace with the same label. The resource label always takes priority so a resource labeled with `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will be mutated. All namespaces deployed by Zarf automatically get labeled `zarf.dev/agent: mutate` unless they have a pre-existing  `zarf.dev/agent` label.
+- **`all`** (default) — the agent mutates all applicable resources. To exclude a resource, add the label `zarf.dev/agent: ignore` to it or its namespace.
+- **`labeled`** — the agent only mutates resources (or resources in namespaces) labeled `zarf.dev/agent: mutate`. All namespaces deployed by Zarf are automatically labeled `zarf.dev/agent: mutate` unless they already carry a `zarf.dev/agent` label.
+
+In both policies, a label on the resource always takes priority over a label on its namespace. A resource labeled `zarf.dev/agent: mutate` in a namespace labeled `zarf.dev/agent: ignore` will be mutated, and vice versa.
 
 Zarf will refuse to adopt the Kubernetes [initial namespaces](https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces) (`default`, `kube-*`, etc...). This is because these namespaces are critical to the operation of the cluster and should not be managed by Zarf.
 
