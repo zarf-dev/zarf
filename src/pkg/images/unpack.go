@@ -36,7 +36,7 @@ const (
 	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
 )
 
-// GetManifestsFromArchive take an image archive and returns a list of image descriptiors
+// GetManifestsFromArchive take an image archive and returns a list of image descriptors
 func GetManifestsFromArchive(ctx context.Context, imageArchive string) (_ []ocispec.Descriptor, err error) {
 	// Create a temporary directory for extraction
 	extractionDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)

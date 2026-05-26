@@ -96,10 +96,14 @@ type DefinitionImageResult struct {
 // imageArchives.
 // It returns []DefinitionImageResult
 func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImagesOptions) ([]DefinitionImageResult, error) {
+	cachePath, err := utils.ResolveCachePath(opts.CachePath)
+	if err != nil {
+		return nil, err
+	}
 	loadOpts := load.DefinitionOptions{
 		Flavor:           opts.Flavor,
 		SetVariables:     opts.CreateSetVariables,
-		CachePath:        opts.CachePath,
+		CachePath:        cachePath,
 		IsInteractive:    opts.IsInteractive,
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
@@ -174,7 +178,7 @@ func filterImagesFoundInArchives(ctx context.Context, pkg v1alpha1.ZarfPackage, 
 			}
 			archiveImages, err := images.FindImagesInOCIManifests(imageManifests)
 			if err != nil {
-				return nil, fmt.Errorf("failed to unpack image archive %s: %w", archive.Path, err)
+				return nil, fmt.Errorf("failed to find images in archive %s: %w", archive.Path, err)
 			}
 			imageArchive := v1alpha1.ImageArchive{
 				Images: archiveImages,
