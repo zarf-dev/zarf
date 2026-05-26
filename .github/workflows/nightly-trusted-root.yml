@@ -1,0 +1,40 @@
+name: Daily Trusted Root Update Check
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # Every day at 0700 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-trusted-root:
+    if: ${{ github.repository == 'zarf-dev/zarf' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Download latest Zarf binary
+        run: |
+          set -euo pipefail
+          gh release download --repo zarf-dev/zarf --pattern "zarf_*_Linux_amd64" --dir /tmp
+          mv /tmp/zarf_*_Linux_amd64 /tmp/zarf
+          chmod +x /tmp/zarf
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fetch current Sigstore trusted root
+        run: |
+          /tmp/zarf tools trusted-root create --with-default-services --out /tmp/current_trusted_root.json
+          jq --indent 2 . /tmp/current_trusted_root.json > /tmp/current_trusted_root_formatted.json
+
+      - name: Diff against embedded trusted root
+        run: diff src/pkg/signing/embedded_trusted_root.json /tmp/current_trusted_root_formatted.json
+
+      - name: Notify Slack on change detected
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
