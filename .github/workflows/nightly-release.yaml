@@ -86,7 +86,7 @@ jobs:
           CLI_VERSION=$CLI_VERSION make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: dummy
@@ -122,6 +122,15 @@ jobs:
         run: |
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$CLI_VERSION
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$CLI_VERSION
+
+      - name: Sign Init Packages
+        run: |
+          build/zarf package sign build/zarf-init-amd64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
+          build/zarf package sign build/zarf-init-arm64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
@@ -210,7 +219,7 @@ jobs:
           echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v4) >> $GITHUB_ENV
 
       - name: Run GoReleaser (Nightly)
-        uses: goreleaser/goreleaser-action@1a80836c5c9d9e5755a25cb59ec6f45a3b5f41a8 # v7.2.1
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser-pro
           version: "v2.15.4"

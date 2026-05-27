@@ -35,7 +35,7 @@ jobs:
           CLI_VERSION=$GITHUB_REF_NAME make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: dummy
@@ -68,6 +68,15 @@ jobs:
         run: |
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$GITHUB_REF_NAME
+
+      - name: Sign Init Packages
+        run: |
+          build/zarf package sign build/zarf-init-amd64-$GITHUB_REF_NAME.tar.zst \
+            --keyless \
+            --confirm
+          build/zarf package sign build/zarf-init-arm64-$GITHUB_REF_NAME.tar.zst \
+            --keyless \
+            --confirm
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
@@ -163,7 +172,7 @@ jobs:
 
       - name: Get Brew tap repo token
         id: brew-tap-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3 # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_ID }}
           private-key: ${{ secrets.HOMEBREW_TAP_WORKFLOW_GITHUB_APP_SECRET }}
@@ -172,7 +181,7 @@ jobs:
 
       # Create the GitHub release notes, upload artifact backups to S3, publish homebrew recipe
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@1a80836c5c9d9e5755a25cb59ec6f45a3b5f41a8 # v7.2.1
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser
           version: "v2.15.4"

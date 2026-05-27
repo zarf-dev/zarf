@@ -358,7 +358,7 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 		ErrOut: io.Discard,
 	}
 	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.ForCondition = forCondition
+	flags.ForCondition = []string{forCondition}
 	if labelSelector != "" {
 		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
 	}
@@ -370,11 +370,11 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 	opts.DynamicClient = dynamicClient
 
 	waitInterval := time.Second
-	// Give a smaller timeout, so that we can occasionally check context, given that opts.RunWait does not accept context
+	// Give a smaller timeout per attempt so the poll loop can retry when a resource does not yet exist
 	flags.Timeout = time.Second * 10
-	// We wrap opts.RunWait here because it errors immediately when waiting for a condition of a resource that does not yet exist
+	// We wrap opts.RunWaitContext here because it errors immediately when waiting for a condition of a resource that does not yet exist
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
-		err = opts.RunWait()
+		err = opts.RunWaitContext(ctx)
 		if err == nil {
 			return true, nil
 		}
