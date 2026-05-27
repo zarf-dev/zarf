@@ -76,6 +76,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
       --git-url string                  External git server url to use for this Zarf cluster
   -h, --help                            help for init
+      --injector-image string           Image to use for the injector pod instead of auto-selecting one from the cluster
       --injector-port int               The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
   -k, --key string                      Path to public key file for validating signed packages
       --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
