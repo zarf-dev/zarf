@@ -47,7 +47,7 @@ Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3
 **Init package and migration:**
 
 - **Replace variables in the init package with values** ([#4328](https://github.com/zarf-dev/zarf/issues/4328)): Dogfooding the values feature by migrating the Zarf init package away from legacy variable templating. Care will be taken to avoid collisions with Go templates intended for downstream systems.
-- **Expose init configuration as Zarf variables** ([#1725](https://github.com/zarf-dev/zarf/issues/1725)): Converting init-time flags like `-nodeport` and `-storage-class` to standard Zarf variables so they can be set via `-set` and through the package deploy path. Backwards compatibility with existing flags will be maintained.
+- **Expose init configuration as Zarf Values** ([#1725](https://github.com/zarf-dev/zarf/issues/1725)): Converting init-time flags like `--nodeport` and `--storage-class` to standard Zarf values so they can be set via `--set` and through the package deploy path. Backwards compatibility with existing flags will be maintained.
 
 **Documentation:**
 
