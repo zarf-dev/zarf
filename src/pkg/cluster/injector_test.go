@@ -109,12 +109,13 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		_, _, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
 			InjectorNodePort: 0,
 			RegistryNodePort: 31999,
 		})
 
 		require.NoError(t, err)
+		require.Equal(t, "ubuntu:latest", selectedImage)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
