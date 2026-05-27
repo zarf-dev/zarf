@@ -89,7 +89,7 @@ func newInitCommand() *cobra.Command {
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
-	cmd.Flags().StringVar(&o.injectorImage, "injector-image", "", "Image to use for the injector pod instead of auto-selecting one from the cluster")
+	cmd.Flags().StringVar(&o.injectorImage, "injector-image", "", "Image to use for the injector pod(s); if empty auto-selected from the cluster")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
