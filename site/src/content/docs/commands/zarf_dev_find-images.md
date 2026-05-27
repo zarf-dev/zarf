@@ -8,7 +8,7 @@ tableOfContents: false
 
 ## zarf dev find-images
 
-Evaluates components in a Zarf file to identify images specified in their helm charts and manifests
+Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
 
 ### Synopsis
 

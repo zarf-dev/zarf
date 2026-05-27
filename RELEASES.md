@@ -95,6 +95,26 @@ zarf package verify <package.tar.zst> --trusted-root src/pkg/signing/embedded_tr
 
 If the refresh fails (network unavailable, TUF root mismatch), do not commit the file. The previous committed version remains valid until the next successful refresh.
 
+### Verifying the Init Package
+
+The init package is signed with keyless Sigstore signing during the release workflow. Consumers can verify offline using the embedded TrustedRoot:
+
+**Tagged release:**
+```bash
+zarf package verify zarf-init-amd64-vX.Y.Z.tar.zst \
+  --certificate-identity-regexp "https://github.com/zarf-dev/zarf/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+**Nightly build:**
+```bash
+zarf package verify zarf-init-amd64-vX.Y.Z-nightly.tar.zst \
+  --certificate-identity-regexp "https://github.com/zarf-dev/zarf/.github/workflows/nightly-release.yaml@refs/heads/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+The `--certificate-identity-regexp` pins the identity to the specific release workflow and ref type, preventing acceptance of packages signed by an unrelated workflow. The embedded TrustedRoot (refreshed before each release) validates the Fulcio certificate chain without network access.
+
 ### Manual Releases (if needed)
 
 For cases where you need to manually create a release (e.g., release candidates):
