@@ -42,4 +42,4 @@ affinity: {}
 tolerations: []
 nodeSelector: {}
 
-mutationPolicy: "###ZARF_AGENT_MUTATION_TARGET###"
+mutationPolicy: "###ZARF_AGENT_MUTATION_POLICY###"
