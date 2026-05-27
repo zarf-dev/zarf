@@ -63,8 +63,12 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	coreDNSImage, _, err := e2e.Kubectl(t, "get", "deployment", "coredns", "-n", "kube-system", "-o", "jsonpath={.spec.template.spec.containers[0].image}")
+	require.NoError(t, err)
+	require.NotEmpty(t, coreDNSImage)
+
 	// run `zarf init`
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--injector-image", coreDNSImage, "--confirm")
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
