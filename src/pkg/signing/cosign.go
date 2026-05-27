@@ -131,7 +131,6 @@ func DefaultSignBlobOptions() SignBlobOptions {
 	opts.NewBundleFormat = true
 	opts.SecurityKey.Slot = "signature"
 	opts.OIDC.ClientID = "sigstore"
-	opts.Fulcio.AuthFlow = "normal"
 	opts.Timeout = CosignDefaultTimeout
 	return opts
 }
