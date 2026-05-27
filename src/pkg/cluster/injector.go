@@ -41,10 +41,12 @@ var zarfImageRegex = regexp.MustCompile(`(?m)^(127\.0\.0\.1|\[::1\]):`)
 
 // ZarfInjectorOptions represents the options used by injector pod
 type ZarfInjectorOptions struct {
-	// - RegistryNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	// RegistryNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	RegistryNodePort uint16
-	// - InjectorNodePort, with using uint16 allows for only the valid ports, this includes 0 as it will allow Kubernetes to choose the node port for us
+	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
+	// InjectorImage overrides automatic image selection when non-empty
+	InjectorImage string
 }
 
 // StartInjection initializes a Zarf injection into the cluster
@@ -82,9 +84,13 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
-	if err != nil {
-		return 0, err
+	injectorImage := opts.InjectorImage
+	var injectorNodeName string
+	if injectorImage == "" {
+		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)

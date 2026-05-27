@@ -73,6 +73,7 @@ type DeployOptions struct {
 	ArtifactServer state.ArtifactServerInfo
 	StorageClass   string
 	InjectorPort   int
+	InjectorImage  string
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
 
@@ -382,10 +383,14 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 	if isSeedRegistry {
 		switch d.s.RegistryInfo.RegistryMode {
 		case state.RegistryModeProxy:
-			var err error
-			d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
-			if err != nil {
-				return nil, err
+			if opts.InjectorImage != "" {
+				d.s.InjectorInfo.Image = opts.InjectorImage
+			} else {
+				var err error
+				d.s.InjectorInfo.Image, err = d.c.GetInjectorDaemonsetImage(ctx)
+				if err != nil {
+					return nil, err
+				}
 			}
 
 			payloadCMs, shasum, err := d.c.CreateInjectorConfigMaps(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name)
@@ -398,6 +403,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
+				InjectorImage:    opts.InjectorImage,
 			})
 			if err != nil {
 				return nil, err
