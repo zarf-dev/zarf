@@ -111,6 +111,48 @@ Verifying package signature...
 Deploying package...
 ```
 
+## Keyless Signing (No Private Key Required)
+
+In CI/CD pipelines or when you want to avoid managing a private key entirely, Zarf supports **keyless signing** using Sigstore's Fulcio certificate authority. Instead of a key pair, your OIDC identity (e.g., a GitHub Actions workflow) becomes the proof of who signed the package.
+
+### Sign Without a Key
+
+Run the following interactively — it opens a browser for OIDC login:
+
+```bash
+zarf package sign zarf-package-wordpress-amd64-26.0.0.tar.zst --keyless --confirm
+```
+
+In GitHub Actions, cosign automatically detects the OIDC environment. Ensure the job has `id-token: write` permission and use the same command — no `--identity-token` flag needed:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+```
+
+### Verify a Keyless-Signed Package
+
+Instead of a public key, provide the expected OIDC identity of the signer:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --certificate-identity "your-email@example.com" \
+  --certificate-oidc-issuer "https://accounts.google.com"
+```
+
+For packages signed in GitHub Actions, use `--certificate-identity-regexp` to match the workflow path:
+
+```bash
+zarf package verify zarf-package-wordpress-amd64-26.0.0.tar.zst \
+  --certificate-identity-regexp "https://github.com/my-org/my-repo/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Verification works offline by default — Zarf embeds the Sigstore TrustedRoot in the binary so no network access to Sigstore infrastructure is required.
+
+For full details on keyless signing, transparency log options, and airgap verification, see the [Package Signing Reference](/ref/package-signing/#keyless-signing).
+
 ## Next Steps
 
 Now that you understand the basics of package signing, you can:
