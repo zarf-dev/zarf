@@ -18,9 +18,11 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
@@ -119,7 +121,8 @@ func ShouldUsePlainHTTP(ctx context.Context, registryURL string, client *auth.Cl
 	return true, nil
 }
 
-func isManifest(mediaType string) bool {
+// IsManifest reports whether the media type represents an OCI manifest.
+func IsManifest(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageManifest, DockerMediaTypeManifest:
 		return true
@@ -127,12 +130,26 @@ func isManifest(mediaType string) bool {
 	return false
 }
 
-func isIndex(mediaType string) bool {
+// IsIndex reports whether the media type represents an OCI image index.
+func IsIndex(mediaType string) bool {
 	switch mediaType {
 	case ocispec.MediaTypeImageIndex, DockerMediaTypeManifestList:
 		return true
 	}
 	return false
+}
+
+func getManifestsFromOCILayout(imageDir string) ([]ocispec.Descriptor, error) {
+	// Read the index.json from the source to get the manifest descriptors of each image
+	srcIdx, err := getIndexFromOCILayout(imageDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source index.json: %w", err)
+	}
+
+	if len(srcIdx.Manifests) == 0 {
+		return nil, errors.New("no manifests found in index.json")
+	}
+	return srcIdx.Manifests, nil
 }
 
 func getIndexFromOCILayout(dir string) (ocispec.Index, error) {
@@ -214,12 +231,106 @@ func WithPushAuth(ri state.RegistryInfo) crane.Option {
 	return WithBasicAuth(ri.PushUsername, ri.PushPassword)
 }
 
-func getSizeOfImage(manifestDesc ocispec.Descriptor, manifest ocispec.Manifest) int64 {
-	var totalSize int64
-	totalSize += manifestDesc.Size
+// formatPlatform renders an ocispec.Platform as "arch[/variant]". Empty input returns "".
+func formatPlatform(p *ocispec.Platform) string {
+	if p == nil || p.Architecture == "" {
+		return ""
+	}
+	s := p.Architecture
+	if p.Variant != "" {
+		s += "/" + p.Variant
+	}
+	return s
+}
+
+// getSizeOfManifest returns the total byte size of a manifest plus its config and layers.
+func getSizeOfManifest(manifestDesc ocispec.Descriptor, manifestBytes []byte) (int64, error) {
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal manifest %s: %w", manifestDesc.Digest, err)
+	}
+	totalSize := manifestDesc.Size
 	for _, layer := range manifest.Layers {
 		totalSize += layer.Size
 	}
 	totalSize += manifest.Config.Size
-	return totalSize
+	return totalSize, nil
+}
+
+// inspectIndex walks an OCI image index (recursing into nested indexes) and returns the total
+// byte size of every uniquely-referenced blob and one "arch[/variant]" string per leaf manifest.
+func inspectIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte) (int64, []string, error) {
+	return walkIndex(ctx, fetcher, indexDesc, indexBytes, map[digest.Digest]struct{}{})
+}
+
+func walkIndex(ctx context.Context, fetcher content.Fetcher, indexDesc ocispec.Descriptor, indexBytes []byte, seen map[digest.Digest]struct{}) (int64, []string, error) {
+	if _, ok := seen[indexDesc.Digest]; ok {
+		return 0, nil, nil
+	}
+	seen[indexDesc.Digest] = struct{}{}
+	var idx ocispec.Index
+	if err := json.Unmarshal(indexBytes, &idx); err != nil {
+		return 0, nil, fmt.Errorf("unable to unmarshal index: %w", err)
+	}
+	totalSize := indexDesc.Size
+	var platforms []string
+	for _, child := range idx.Manifests {
+		if _, ok := seen[child.Digest]; ok {
+			continue
+		}
+		switch {
+		case IsIndex(child.MediaType):
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return 0, nil, fmt.Errorf("failed to fetch nested index %s: %w", child.Digest, err)
+			}
+			size, childPlatforms, err := walkIndex(ctx, fetcher, child, b, seen)
+			if err != nil {
+				return 0, nil, err
+			}
+			totalSize += size
+			platforms = append(platforms, childPlatforms...)
+		case IsManifest(child.MediaType):
+			seen[child.Digest] = struct{}{}
+			b, err := content.FetchAll(ctx, fetcher, child)
+			if err != nil {
+				return 0, nil, fmt.Errorf("failed to fetch child manifest %s: %w", child.Digest, err)
+			}
+			size, err := uniqueManifestSize(child, b, seen)
+			if err != nil {
+				return 0, nil, err
+			}
+			totalSize += size
+			if s := formatPlatform(child.Platform); s != "" {
+				platforms = append(platforms, s)
+			}
+		default:
+			seen[child.Digest] = struct{}{}
+			totalSize += child.Size
+		}
+	}
+	return totalSize, platforms, nil
+}
+
+// uniqueManifestSize returns manifestDesc.Size plus the size of any config/layer blobs whose
+// digests have not yet been seen. The seen set is mutated to include every newly-counted digest.
+// The manifest's own digest must already be in seen.
+func uniqueManifestSize(manifestDesc ocispec.Descriptor, manifestBytes []byte, seen map[digest.Digest]struct{}) (int64, error) {
+	var manifest ocispec.Manifest
+	if err := json.Unmarshal(manifestBytes, &manifest); err != nil {
+		return 0, fmt.Errorf("unable to unmarshal manifest %s: %w", manifestDesc.Digest, err)
+	}
+	total := manifestDesc.Size
+	if _, ok := seen[manifest.Config.Digest]; !ok {
+		seen[manifest.Config.Digest] = struct{}{}
+		total += manifest.Config.Size
+	}
+	for _, layer := range manifest.Layers {
+		if _, ok := seen[layer.Digest]; ok {
+			continue
+		}
+		seen[layer.Digest] = struct{}{}
+		total += layer.Size
+	}
+	return total, nil
 }
