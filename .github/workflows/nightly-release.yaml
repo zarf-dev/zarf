@@ -123,6 +123,15 @@ jobs:
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$CLI_VERSION
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$CLI_VERSION
 
+      - name: Sign Init Packages
+        run: |
+          build/zarf package sign build/zarf-init-amd64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
+          build/zarf package sign build/zarf-init-arm64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
+
       - name: Publish Init Package as OCI and Skeleton
         run: |
           CLI_VERSION=$CLI_VERSION make publish-init-package ARCH=amd64 REPOSITORY_URL=ghcr.io/zarf-dev/packages
