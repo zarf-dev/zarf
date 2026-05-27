@@ -16,6 +16,9 @@ import (
 	"github.com/sigstore/cosign/v3/cmd/cosign/cli/verify"
 	"github.com/sigstore/cosign/v3/pkg/cosign"
 
+	// Register ambient OIDC credential providers (GitHub Actions, GCP, SPIFFE, etc.)
+	_ "github.com/sigstore/cosign/v3/pkg/providers/all"
+
 	// Register the provider-specific plugins
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
