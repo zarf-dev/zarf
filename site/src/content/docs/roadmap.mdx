@@ -30,7 +30,7 @@ Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3
 
 **Operator and deployer experience:**
 
-- **Granular value overrides via `--set-values`** ([#4224](https://github.com/zarf-dev/zarf/issues/4224)): Adding a `--set-values` flag so operators can override individual value keys at deploy time using dot-notation (e.g. `-set-values=.registry.image=my-image`), providing Helm-style granularity without requiring a full values file.
+- **Granular value overrides via `--set-values`** ([#4224](https://github.com/zarf-dev/zarf/issues/4224)): Adding a `--set-values` flag so operators can override individual value keys at deploy time using dot-notation (e.g. `--set-values=.registry.image=my-image`), providing Helm-style granularity without requiring a full values file.
 - **Helm chart full-values passthrough** ([#4630](https://github.com/zarf-dev/zarf/issues/4630)): Improving the experience for package creators who want to allow deployers to override arbitrary Helm chart values without having to define explicit `sourcePath`/`targetPath` mappings for every key.
 - **Early validation of undefined values** ([#4693](https://github.com/zarf-dev/zarf/issues/4693)): Zarf should detect missing required values before a deployment begins, rather than failing mid-deploy after components have already been applied.
 
