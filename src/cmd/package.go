@@ -1892,7 +1892,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.keyless, "keyless", false, lang.CmdPackageSignFlagKeyless)
 	cmd.Flags().StringVar(&o.identityToken, "identity-token", "", lang.CmdPackageSignFlagIdentityToken)
 	cmd.Flags().StringVar(&o.fulcioURL, "fulcio-url", "https://fulcio.sigstore.dev", lang.CmdPackageSignFlagFulcioURL)
-	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", "normal", lang.CmdPackageSignFlagFulcioAuthFlow)
+	cmd.Flags().StringVar(&o.fulcioAuthFlow, "fulcio-auth-flow", "", lang.CmdPackageSignFlagFulcioAuthFlow)
 	cmd.Flags().StringVar(&o.oidcIssuer, "oidc-issuer", "https://oauth2.sigstore.dev/auth", lang.CmdPackageSignFlagOIDCIssuer)
 	cmd.Flags().StringVar(&o.oidcClientID, "oidc-client-id", "sigstore", lang.CmdPackageSignFlagOIDCClientID)
 	cmd.Flags().StringVar(&o.rekorURL, "rekor-url", "https://rekor.sigstore.dev", lang.CmdPackageSignFlagRekorURL)
