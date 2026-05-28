@@ -78,8 +78,18 @@ const (
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
-	VPkgPublicKey      = "package.public_key"
-	VPkgVerify         = "package.verify"
+
+	// Package verification config keys (top-level; shared across verify, deploy, pull, and other load commands)
+
+	VPkgVerify                      = "package.verify"
+	VPkgPublicKey                   = "package.public_key"
+	VPkgCertificateIdentity         = "package.certificate_identity"
+	VPkgCertificateIdentityRegexp   = "package.certificate_identity_regexp"
+	VPkgCertificateOIDCIssuer       = "package.certificate_oidc_issuer"
+	VPkgCertificateOIDCIssuerRegexp = "package.certificate_oidc_issuer_regexp"
+	VPkgTrustedRoot                 = "package.trusted_root"
+	VPkgInsecureIgnoreTlog          = "package.insecure_ignore_tlog"
+	VPkgUseSignedTimestamps         = "package.use_signed_timestamps"
 
 	// Package create config keys
 
@@ -130,16 +140,6 @@ const (
 	VPkgSignTlogUpload         = "package.sign.tlog_upload"
 	VPkgSignConfirm            = "package.sign.confirm"
 	VPkgSignTSAServerURL       = "package.sign.tsa_server_url"
-
-	// Package verification config keys (top-level; shared across verify, deploy, pull, and other load commands)
-
-	VPkgCertificateIdentity         = "package.certificate_identity"
-	VPkgCertificateIdentityRegexp   = "package.certificate_identity_regexp"
-	VPkgCertificateOIDCIssuer       = "package.certificate_oidc_issuer"
-	VPkgCertificateOIDCIssuerRegexp = "package.certificate_oidc_issuer_regexp"
-	VPkgTrustedRoot                 = "package.trusted_root"
-	VPkgInsecureIgnoreTlog          = "package.insecure_ignore_tlog"
-	VPkgUseSignedTimestamps         = "package.use_signed_timestamps"
 
 	// Package pull config keys
 
