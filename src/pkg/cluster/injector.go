@@ -45,8 +45,6 @@ type ZarfInjectorOptions struct {
 	RegistryNodePort uint16
 	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
-	// InjectorImage overrides automatic image selection when non-empty
-	InjectorImage string
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -85,13 +83,9 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 			corev1.ResourceCPU:    resource.MustParse("1"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		})
-	injectorImage := opts.InjectorImage
-	var injectorNodeName string
-	if injectorImage == "" {
-		injectorImage, injectorNodeName, err = c.getInjectorImageAndNode(ctx, resReq, architecture)
-		if err != nil {
-			return "", 0, err
-		}
+	injectorImage, injectorNodeName, err := c.getInjectorImageAndNode(ctx, resReq, architecture)
+	if err != nil {
+		return "", 0, err
 	}
 
 	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)

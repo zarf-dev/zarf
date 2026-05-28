@@ -44,7 +44,6 @@ type initOptions struct {
 	registryInfo            state.RegistryInfo
 	artifactServer          state.ArtifactServerInfo
 	injectorPort            int
-	injectorImage           string
 	adoptExistingResources  bool
 	forceConflicts          bool
 	timeout                 time.Duration
@@ -89,7 +88,6 @@ func newInitCommand() *cobra.Command {
 		fmt.Sprintf("How to access the registry (valid values: %s, %s, %s). Proxy mode is an alpha feature", state.RegistryModeNodePort, state.RegistryModeProxy, state.RegistryModeExternal))
 	cmd.Flags().IntVar(&o.injectorPort, "injector-port", v.GetInt(InjectorPort),
 		"The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode")
-	cmd.Flags().StringVar(&o.injectorImage, "injector-image", "", "Image to use for the injector pod(s); if empty auto-selected from the cluster")
 
 	// Flags for using an external Git server
 	cmd.Flags().StringVar(&o.gitServer.Address, "git-url", v.GetString(VInitGitURL), lang.CmdInitFlagGitURL)
@@ -140,7 +138,6 @@ func newInitCommand() *cobra.Command {
 
 	// If an external registry is used then don't allow users to configure the internal registry / injector
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-port")
-	cmd.MarkFlagsMutuallyExclusive("registry-url", "injector-image")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-port")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "nodeport")
 	cmd.MarkFlagsMutuallyExclusive("registry-url", "registry-secret")
@@ -251,7 +248,6 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		SetVariables:           o.setVariables,
 		StorageClass:           o.storageClass,
 		InjectorPort:           o.injectorPort,
-		InjectorImage:          o.injectorImage,
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,

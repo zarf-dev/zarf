@@ -37,7 +37,7 @@ func TestZarfInit(t *testing.T) {
 
 	if runtime.GOOS == "linux" {
 		// Build init package with different arch than the cluster arch.
-		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--skip-sbom", "--confirm")
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/20-mismatched-arch-init", "--architecture", mismatchedArch, "--confirm")
 		require.NoError(t, err, stdOut, stdErr)
 
 		// Check that `zarf init` returns an error because of the mismatched architectures.
@@ -63,16 +63,8 @@ func TestZarfInit(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// If we already have the cluster available test the injector image flow, otherwise, pass in no image
-	injectorImage := ""
-	if !e2e.ApplianceMode {
-		injectorImage, _, err = e2e.Kubectl(t, "get", "deployment", "coredns", "-n", "kube-system", "-o", "jsonpath={.spec.template.spec.containers[0].image}")
-		require.NoError(t, err)
-		require.NotEmpty(t, injectorImage)
-	}
-
 	// run `zarf init`
-	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--injector-image", injectorImage, "--confirm")
+	_, _, err = e2e.Zarf(t, "init", "--components="+initComponents, "--nodeport", "31337", "--injector-port", "31888", "--confirm")
 	require.NoError(t, err)
 
 	// Verify that any state secrets were not included in the log
@@ -96,11 +88,8 @@ func TestZarfInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, stdOut, "31337")
 
-	// Verify that we save the injector port and image
+	// Verify that we save the injector port
 	require.Equal(t, 31888, s.InjectorInfo.Port)
-	if !e2e.ApplianceMode {
-		require.Equal(t, injectorImage, s.InjectorInfo.Image)
-	}
 
 	// Check that the registry is running with the correct scale down policy
 	stdOut, _, err = e2e.Kubectl(t, "get", "hpa", "-n", "zarf", "zarf-docker-registry", "-o=jsonpath='{.spec.behavior.scaleDown.selectPolicy}'")
