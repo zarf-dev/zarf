@@ -79,8 +79,7 @@ const (
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
 	VPkgPublicKey      = "package.public_key"
-	// TODO: this may expand to a full strategy enum (e.g. "never"/"always"/"if-signed") in a future release
-	VPkgEnforceVerification = "package.enforce_verification"
+	VPkgVerify         = "package.verify"
 
 	// Package create config keys
 
