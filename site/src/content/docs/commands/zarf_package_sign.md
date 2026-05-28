@@ -43,7 +43,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
 
 ```
       --confirm                   Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes).
-      --fulcio-auth-flow string   Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials (default "normal")
+      --fulcio-auth-flow string   Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials
       --fulcio-url string         Fulcio certificate authority URL. Override for private Sigstore deployments. (default "https://fulcio.sigstore.dev")
   -h, --help                      help for sign
       --identity-token string     Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing
