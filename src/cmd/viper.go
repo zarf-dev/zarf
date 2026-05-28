@@ -138,7 +138,6 @@ const (
 	VPkgSignOIDCClientID       = "package.sign.oidc_client_id"
 	VPkgSignRekorURL           = "package.sign.rekor_url"
 	VPkgSignTlogUpload         = "package.sign.tlog_upload"
-	VPkgSignConfirm            = "package.sign.confirm"
 	VPkgSignTSAServerURL       = "package.sign.tsa_server_url"
 
 	// Package pull config keys
@@ -277,9 +276,6 @@ func setDefaults() {
 	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
 	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
 	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
-
-	// Package verify defaults
-	v.SetDefault(VPkgInsecureIgnoreTlog, true)
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)

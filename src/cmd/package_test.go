@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -604,4 +605,71 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newTestViper returns a viper instance configured the same way as initViper
+// but without reading any config file, suitable for unit tests.
+func newTestViper() *viper.Viper {
+	v := viper.New()
+	v.SetEnvPrefix("zarf")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	setDefaults()
+	return v
+}
+
+func TestSignConfirmNotViperBound(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("confirm")
+	require.NotNil(t, f)
+	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
+}
+
+func TestSignTlogUploadNotDefaulted(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgSignTlogUpload has no SetDefault, so IsSet must be false when no env/config
+	// is present. If it were true, the keyless safety guard (which checks IsSet) would
+	// always treat the user as having explicitly opted out.
+	require.False(t, v.IsSet(VPkgSignTlogUpload),
+		"VPkgSignTlogUpload must not have a viper default; the keyless safety guard relies on IsSet() being false when the user has not configured the key")
+}
+
+func TestSignTlogUploadEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_SIGN_TLOG_UPLOAD", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the guard treats it as an explicit opt-out.
+	require.True(t, v.IsSet(VPkgSignTlogUpload))
+	require.False(t, v.GetBool(VPkgSignTlogUpload))
+
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("tlog-upload")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgInsecureIgnoreTlog has no SetDefault (removed so that IsSet works correctly
+	// for the keyless guard). The flag must still default to true for air-gap compat.
+	require.False(t, v.IsSet(VPkgInsecureIgnoreTlog),
+		"VPkgInsecureIgnoreTlog must not have a viper default; the keyless guard relies on IsSet() being false when the user has not configured the key")
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "true", f.DefValue, "flag must still default to true for air-gap compat when no config is provided")
+}
+
+func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_INSECURE_IGNORE_TLOG", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the keyless guard treats it as explicit.
+	require.True(t, v.IsSet(VPkgInsecureIgnoreTlog))
+	require.False(t, v.GetBool(VPkgInsecureIgnoreTlog))
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
 }
