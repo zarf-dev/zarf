@@ -70,15 +70,36 @@ func mutateApplicationSet(ctx context.Context, r *v1.AdmissionRequest, cluster *
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	l.Info("using the Zarf git server URL to mutate the ArgoCD ApplicationSet",
+	var urls []string
+	for _, generator := range appSet.Spec.Generators {
+		if generator.Git != nil && generator.Git.RepoURL != "" {
+			urls = append(urls, generator.Git.RepoURL)
+		}
+	}
+	requiresGit, requiresRegistry := classifyURLSchemes(urls)
+
+	if !anyZarfServiceUsable(requiresGit, requiresRegistry, s) {
+		l.Debug("no Zarf services configured for source URL schemes, skipping ArgoCD ApplicationSet mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
+
+	// Get the registry service info if this is a NodePort service to use the internal kube-dns
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("mutating the ArgoCD ApplicationSet",
 		"name", appSet.Name,
-		"git-server", s.GitServer.Address)
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address,
+		"registry", registryAddress)
 
 	patches := make([]operations.PatchOperation, 0)
 
 	for genIdx, generator := range appSet.Spec.Generators {
 		if generator.Git != nil && generator.Git.RepoURL != "" {
-			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, s.GitServer)
+			patchedURL, err := getPatchedRepoURL(ctx, generator.Git.RepoURL, registryAddress, clusterIP, s.GitServer)
 			if err != nil {
 				return nil, err
 			}

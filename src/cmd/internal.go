@@ -177,11 +177,11 @@ func (o *internalGenCliDocsOptions) run(_ *cobra.Command, _ []string) error {
 	if err := os.RemoveAll("./site/src/content/docs/commands"); err != nil {
 		return err
 	}
-	if err := os.Mkdir("./site/src/content/docs/commands", 0775); err != nil {
+	if err := os.Mkdir("./site/src/content/docs/commands", 0o775); err != nil {
 		return err
 	}
 
-	var prependTitle = func(s string) string {
+	prependTitle := func(s string) string {
 		fmt.Println(s)
 
 		name := filepath.Base(s)
@@ -203,7 +203,7 @@ tableOfContents: false
 `, title, title)
 	}
 
-	var linkHandler = func(link string) string {
+	linkHandler := func(link string) string {
 		return "/commands/" + link[:len(link)-3] + "/"
 	}
 
@@ -377,7 +377,7 @@ func (o *internalUpdateGiteaPVCOptions) run(cmd *cobra.Command, _ []string) erro
 	if err != nil {
 		logger.From(ctx).Warn("Unable to update the existing Gitea persistent volume claim", "error", err.Error())
 	}
-	fmt.Print(helmShouldCreate)
+	fmt.Printf("%v", helmShouldCreate)
 	return nil
 }
 

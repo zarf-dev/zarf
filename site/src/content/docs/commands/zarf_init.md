@@ -61,6 +61,9 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 ```
       --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --agent-tls-ca string             Path to a PEM-encoded CA certificate for the Zarf agent
+      --agent-tls-cert string           Path to a PEM-encoded TLS certificate for the Zarf agent
+      --agent-tls-key string            Path to a PEM-encoded TLS private key for the Zarf agent
       --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
       --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
       --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
@@ -95,7 +98,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")

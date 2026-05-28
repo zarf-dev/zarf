@@ -25,6 +25,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
       --adopt-existing-resources       Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --components string              Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
   -c, --confirm                        Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --connected                      Deploy without pushing images/repos; label resources to bypass the Zarf agent
       --force-conflicts                Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
   -h, --help                           help for deploy
   -k, --key string                     Path to public key file for validating signed packages
@@ -43,7 +44,7 @@ zarf package deploy [ PACKAGE_SOURCE ] [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")

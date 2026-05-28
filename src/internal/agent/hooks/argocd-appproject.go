@@ -59,14 +59,28 @@ func mutateAppProject(ctx context.Context, r *v1.AdmissionRequest, cluster *clus
 		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
-	l.Info("using the Zarf git server URL to mutate the ArgoCD AppProject",
+	requiresGit, requiresRegistry := classifyURLSchemes(proj.Spec.SourceRepos)
+
+	if !anyZarfServiceUsable(requiresGit, requiresRegistry, s) {
+		l.Debug("no Zarf services configured for source URL schemes, skipping ArgoCD AppProject mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
+
+	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	l.Info("mutating the ArgoCD AppProject",
 		"name", proj.Name,
-		"git-server", s.GitServer.Address)
+		"operation", r.Operation,
+		"gitServer", s.GitServer.Address,
+		"registry", registryAddress)
 
 	patches := make([]operations.PatchOperation, 0)
 
 	for idx, repo := range proj.Spec.SourceRepos {
-		patchedURL, err := getPatchedRepoURL(ctx, repo, s.GitServer)
+		patchedURL, err := getPatchedRepoURL(ctx, repo, registryAddress, clusterIP, s.GitServer)
 		// The AppProject can also include source repositories like '*' (as in the default project),
 		// which results in an error because '*' cannot be found in Git
 		// For this reason, we will ignore these entries and only patch the Git repositories that are found

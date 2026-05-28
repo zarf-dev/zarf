@@ -75,7 +75,7 @@ func CopyPackage(ctx context.Context, src *Remote, dst *Remote, opts PublishOpti
 			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
 				l.Warn("retrying package copy",
 					"attempt", n+1,
-					"max_attempts", opts.Retries,
+					"maxAttempts", opts.Retries,
 					"error", err,
 				)
 			}

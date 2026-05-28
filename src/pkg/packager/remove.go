@@ -12,7 +12,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/requirements"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
@@ -133,7 +132,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 					}
 
 					// remove the helm chart from the installed charts slice.
-					depComp.InstalledCharts = helpers.RemoveMatches(depComp.InstalledCharts, func(t state.InstalledChart) bool {
+					depComp.InstalledCharts = slices.DeleteFunc(depComp.InstalledCharts, func(t state.InstalledChart) bool {
 						return t.ChartName == chart.ChartName
 					})
 
@@ -156,7 +155,7 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 
 			// remove the component from deploy components slice.
 			if opts.Cluster != nil {
-				depPkg.DeployedComponents = helpers.RemoveMatches(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
+				depPkg.DeployedComponents = slices.DeleteFunc(depPkg.DeployedComponents, func(t state.DeployedComponent) bool {
 					return t.Name == depComp.Name
 				})
 				err = opts.Cluster.UpdateDeployedPackage(ctx, *depPkg)

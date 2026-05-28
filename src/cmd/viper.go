@@ -71,6 +71,10 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
+	VInitAgentTLSCA   = "init.agent.tls_ca"
+	VInitAgentTLSCert = "init.agent.tls_cert"
+	VInitAgentTLSKey  = "init.agent.tls_key"
+
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
@@ -125,9 +129,14 @@ const (
 
 	VPkgRemoveSetValues = "package.remove.set_values"
 
+	// Package deploy config keys
+
+	VPkgDeployConnected = "package.deploy.connected"
+
 	// Dev deploy config keys
 
-	VDevDeployNoYolo = "dev.deploy.no_yolo"
+	VDevDeployNoYolo    = "dev.deploy.no_yolo"
+	VDevDeployConnected = "dev.deploy.connected"
 )
 
 var (
@@ -242,6 +251,9 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Dev deploy defaults
+	v.SetDefault(VDevDeployConnected, true)
 }
 
 // GetStringSlice returns a string slice from viper

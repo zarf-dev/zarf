@@ -19,35 +19,28 @@ import (
 )
 
 func main() {
-	if err := writeSchema("v1alpha1"); err != nil {
+	if err := writeSchema("v1alpha1", "zarf-v1alpha1-schema.json", &v1alpha1.ZarfPackage{}); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if err := writeSchema("v1beta1"); err != nil {
+	if err := writeSchema("v1beta1", "zarf-v1beta1-schema.json", &v1beta1.Package{}); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	if err := writeSchema("v1beta1", "zarf-v1beta1-component-schema.json", &v1beta1.ComponentConfig{}); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
 }
 
-func writeSchema(apiVersion string) error {
-	var schema []byte
-	var err error
-	switch apiVersion {
-	case "v1alpha1":
-		schema, err = generateSchema("v1alpha1", &v1alpha1.ZarfPackage{})
-	case "v1beta1":
-		schema, err = generateSchema("v1beta1", &v1beta1.ZarfPackage{})
-	default:
-		return fmt.Errorf("unknown API version: %s", apiVersion)
-	}
+func writeSchema(apiVersion, filename string, rootType any) error {
+	schema, err := generateSchema(apiVersion, rootType)
 	if err != nil {
-		return fmt.Errorf("error generating %s schema: %w", apiVersion, err)
+		return fmt.Errorf("error generating %s schema: %w", filename, err)
 	}
 
-	// Add trailing newline to match linter expectations
 	schema = append(schema, '\n')
 
-	filename := fmt.Sprintf("zarf-%s-schema.json", apiVersion)
 	if err := os.WriteFile(filename, schema, 0644); err != nil {
 		return fmt.Errorf("error writing schema file: %w", err)
 	}

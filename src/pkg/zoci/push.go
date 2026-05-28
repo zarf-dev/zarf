@@ -156,7 +156,7 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			if opts.Retries > 1 && n+1 < uint(opts.Retries) {
 				l.Warn("retrying package push",
 					"attempt", n+1,
-					"max_attempts", opts.Retries,
+					"maxAttempts", opts.Retries,
 					"error", err,
 				)
 			}

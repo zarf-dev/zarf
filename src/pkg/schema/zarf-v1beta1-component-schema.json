@@ -1,0 +1,998 @@
+{
+  "$defs": {
+    "Chart": {
+      "additionalProperties": false,
+      "description": "Chart defines a helm chart to be deployed.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "git": {
+          "$ref": "#/$defs/GitSource",
+          "description": "The Git repository where the chart is stored."
+        },
+        "helmRepository": {
+          "$ref": "#/$defs/HelmRepositorySource",
+          "description": "The Helm repository where the chart is stored."
+        },
+        "local": {
+          "$ref": "#/$defs/LocalSource",
+          "description": "The local path where the chart is stored."
+        },
+        "name": {
+          "description": "The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.",
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace to deploy the chart to.",
+          "type": "string"
+        },
+        "oci": {
+          "$ref": "#/$defs/OCISource",
+          "description": "The OCI registry where the chart is stored."
+        },
+        "releaseName": {
+          "description": "The name of the Helm release to create (defaults to the Zarf name of the chart).",
+          "type": "string"
+        },
+        "serverSideApply": {
+          "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
+        },
+        "skipSchemaValidation": {
+          "description": "Skip validation of the chart's values against its JSON schema. Defaults to false.",
+          "type": "boolean"
+        },
+        "skipWait": {
+          "description": "Whether to skip waiting for chart resources to be ready before continuing.",
+          "type": "boolean"
+        },
+        "values": {
+          "description": "List of value sources mapped to their Helm override targets.",
+          "items": {
+            "$ref": "#/$defs/ChartValue"
+          },
+          "type": "array"
+        },
+        "valuesFiles": {
+          "description": "List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ChartValue": {
+      "additionalProperties": false,
+      "description": "ChartValue maps a values source path to a Helm chart target path.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "sourcePath": {
+          "description": "The source path for the value.",
+          "type": "string"
+        },
+        "targetPath": {
+          "description": "The target path within the Helm chart values.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sourcePath",
+        "targetPath"
+      ],
+      "type": "object"
+    },
+    "Component": {
+      "additionalProperties": false,
+      "description": "Component is the primary functional grouping of assets to deploy by Zarf.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/ComponentActions",
+          "description": "Custom commands to run at various stages of a package lifecycle."
+        },
+        "charts": {
+          "description": "Helm charts to install during package deploy.",
+          "items": {
+            "$ref": "#/$defs/Chart"
+          },
+          "type": "array"
+        },
+        "description": {
+          "description": "Message to include during package deploy describing the purpose of this component.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Files or folders to place on disk during package deployment.",
+          "items": {
+            "$ref": "#/$defs/File"
+          },
+          "type": "array"
+        },
+        "imageArchives": {
+          "description": "List of tar archives of images to include in the package.",
+          "items": {
+            "$ref": "#/$defs/ImageArchive"
+          },
+          "type": "array"
+        },
+        "images": {
+          "description": "List of OCI images to include in the package.",
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": "array"
+        },
+        "import": {
+          "$ref": "#/$defs/ComponentImport",
+          "description": "Import a component from another Zarf component config."
+        },
+        "manifests": {
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy.",
+          "items": {
+            "$ref": "#/$defs/Manifest"
+          },
+          "type": "array"
+        },
+        "name": {
+          "description": "The name of the component.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "optional": {
+          "description": "Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.",
+          "type": "boolean"
+        },
+        "repositories": {
+          "description": "List of git repositories to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "service": {
+          "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
+          "enum": [
+            "registry",
+            "seed-registry",
+            "injector",
+            "agent",
+            "git-server"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ComponentTarget",
+          "description": "Filter when this component is included in package creation or deployment."
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ComponentAction": {
+      "additionalProperties": false,
+      "description": "ComponentAction represents a single action to run during a Zarf package operation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cmd": {
+          "description": "The command to run. Must specify either cmd or wait for the action to do anything.",
+          "type": "string"
+        },
+        "description": {
+          "description": "Description of the action to be displayed during package execution instead of the command.",
+          "type": "string"
+        },
+        "dir": {
+          "description": "The working directory to run the command in (default is CWD).",
+          "type": "string"
+        },
+        "enableValues": {
+          "description": "EnableValues enables go-template processing on the cmd field.",
+          "type": "boolean"
+        },
+        "env": {
+          "description": "Additional environment variables to set for the command.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxTotalSeconds": {
+          "description": "Timeout in seconds for the command (default 0, no timeout for cmd actions and 300, 5 minutes for wait actions).",
+          "type": "integer"
+        },
+        "retries": {
+          "description": "Retry the command if it fails up to a given number of times (default 0).",
+          "type": "integer"
+        },
+        "setValues": {
+          "description": "An array of values to set with the output of the command.",
+          "items": {
+            "$ref": "#/$defs/SetValue"
+          },
+          "type": "array"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell",
+          "description": "Indicates a preference for a shell for the provided cmd."
+        },
+        "silent": {
+          "description": "Hide the output of the command during package deployment (default false).",
+          "type": "boolean"
+        },
+        "wait": {
+          "$ref": "#/$defs/ComponentActionWait",
+          "description": "Wait for a condition to be met before continuing."
+        }
+      },
+      "type": "object"
+    },
+    "ComponentActionDefaults": {
+      "additionalProperties": false,
+      "description": "ComponentActionDefaults sets the default configs for child actions.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "dir": {
+          "description": "Working directory for commands (default CWD).",
+          "type": "string"
+        },
+        "env": {
+          "description": "Additional environment variables for commands.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "maxTotalSeconds": {
+          "description": "Default timeout in seconds for commands (default 0, no timeout).",
+          "type": "integer"
+        },
+        "retries": {
+          "description": "Retry commands a given number of times if they fail (default 0).",
+          "type": "integer"
+        },
+        "shell": {
+          "$ref": "#/$defs/Shell",
+          "description": "Indicates a preference for a shell for the provided cmd to be executed in on supported operating systems."
+        },
+        "silent": {
+          "description": "Hide the output of commands during execution (default false).",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "ComponentActionSet": {
+      "additionalProperties": false,
+      "description": "ComponentActionSet is a set of actions to run during a Zarf package operation.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "before": {
+          "description": "Actions to run at the start of an operation.",
+          "items": {
+            "$ref": "#/$defs/ComponentAction"
+          },
+          "type": "array"
+        },
+        "defaults": {
+          "$ref": "#/$defs/ComponentActionDefaults",
+          "description": "Default configuration for all actions in this set."
+        },
+        "onFailure": {
+          "description": "Actions to run if any operation in this set fails.",
+          "items": {
+            "$ref": "#/$defs/ComponentAction"
+          },
+          "type": "array"
+        },
+        "onSuccess": {
+          "description": "Actions to run at the end of an operation if it succeeds.",
+          "items": {
+            "$ref": "#/$defs/ComponentAction"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ComponentActionWait": {
+      "additionalProperties": false,
+      "description": "ComponentActionWait specifies a condition to wait for before continuing.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "cluster": {
+          "$ref": "#/$defs/ComponentActionWaitCluster",
+          "description": "Wait for a condition to be met in the cluster before continuing. Only one of cluster or network can be specified."
+        },
+        "network": {
+          "$ref": "#/$defs/ComponentActionWaitNetwork",
+          "description": "Wait for a condition to be met on the network before continuing. Only one of cluster or network can be specified."
+        }
+      },
+      "type": "object"
+    },
+    "ComponentActionWaitCluster": {
+      "additionalProperties": false,
+      "description": "ComponentActionWaitCluster specifies a cluster-level condition to wait for.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "condition": {
+          "description": "The condition or jsonpath state to wait for; defaults to kstatus readiness checks.",
+          "examples": [
+            "Available"
+          ],
+          "type": "string"
+        },
+        "kind": {
+          "description": "The kind of resource to wait for.",
+          "examples": [
+            "Pod",
+            "Deployment"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the resource or selector to wait for.",
+          "examples": [
+            "podinfo",
+            "app=podinfo"
+          ],
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace of the resource to wait for.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "type": "object"
+    },
+    "ComponentActionWaitNetwork": {
+      "additionalProperties": false,
+      "description": "ComponentActionWaitNetwork specifies a network-level condition to wait for.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "address": {
+          "description": "The address to wait for.",
+          "examples": [
+            "localhost:8080",
+            "1.1.1.1"
+          ],
+          "type": "string"
+        },
+        "code": {
+          "description": "The HTTP status code to wait for if using http or https.",
+          "examples": [
+            200,
+            404
+          ],
+          "type": "integer"
+        },
+        "protocol": {
+          "description": "The protocol to wait for.",
+          "enum": [
+            "tcp",
+            "http",
+            "https"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol",
+        "address"
+      ],
+      "type": "object"
+    },
+    "ComponentActions": {
+      "additionalProperties": false,
+      "description": "ComponentActions are ActionSets that map to different Zarf package operations.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "onCreate": {
+          "$ref": "#/$defs/ComponentActionSet",
+          "description": "Actions to run during package creation."
+        },
+        "onDeploy": {
+          "$ref": "#/$defs/ComponentActionSet",
+          "description": "Actions to run during package deployment."
+        },
+        "onRemove": {
+          "$ref": "#/$defs/ComponentActionSet",
+          "description": "Actions to run during package removal."
+        }
+      },
+      "type": "object"
+    },
+    "ComponentImport": {
+      "additionalProperties": false,
+      "description": "ComponentImport is a reference to imported Zarf component configs.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "local": {
+          "description": "Local file path references to component config files to import.",
+          "items": {
+            "$ref": "#/$defs/ComponentImportLocal"
+          },
+          "type": "array"
+        },
+        "remote": {
+          "description": "OCI URL references to remote component config files to import; pulled at create time.",
+          "items": {
+            "$ref": "#/$defs/ComponentImportRemote"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "ComponentImportLocal": {
+      "additionalProperties": false,
+      "description": "ComponentImportLocal is a local file path reference to a component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "path": {
+          "description": "The local file path to the component config.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "ComponentImportRemote": {
+      "additionalProperties": false,
+      "description": "ComponentImportRemote is a remote OCI URL reference to a component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "url": {
+          "description": "The OCI URL of the remote component config.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "ComponentMetadata": {
+      "additionalProperties": false,
+      "description": "ComponentMetadata holds metadata about a component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations contains arbitrary metadata about the component config.",
+          "type": "object"
+        },
+        "description": {
+          "description": "Additional information about this component config.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name to identify this component config.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "version": {
+          "description": "Generic string to track the component config version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ComponentPublishData": {
+      "additionalProperties": false,
+      "description": "ComponentPublishData is written during publish to track details of the component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "migrations": {
+          "description": "Any migrations that have been run on this component config.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "versionRequirements": {
+          "description": "Requirements for specific package operations.",
+          "items": {
+            "$ref": "#/$defs/VersionRequirement"
+          },
+          "type": "array"
+        },
+        "zarfVersion": {
+          "description": "The version of Zarf used to build this component config.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "zarfVersion"
+      ],
+      "type": "object"
+    },
+    "ComponentTarget": {
+      "additionalProperties": false,
+      "description": "ComponentTarget filters a component to only apply for a given local OS, architecture, or flavor.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "architecture": {
+          "description": "Only include component for the given package architecture.",
+          "enum": [
+            "amd64",
+            "arm64"
+          ],
+          "type": "string"
+        },
+        "flavor": {
+          "description": "Only include this component when a matching '--flavor' is specified on 'zarf package create'.",
+          "type": "string"
+        },
+        "os": {
+          "description": "Only deploy component to specified OS.",
+          "enum": [
+            "linux",
+            "darwin",
+            "windows"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "File": {
+      "additionalProperties": false,
+      "description": "File defines a file to deploy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "checksum": {
+          "description": "Optional checksum of the file in the format \u003calgorithm\u003e:\u003cchecksum\u003e (e.g. sha256:abc123). Defaults to sha256 if no algorithm is specified.",
+          "type": "string"
+        },
+        "destination": {
+          "description": "The absolute or relative path where the file or folder should be copied to during package deploy.",
+          "type": "string"
+        },
+        "enableValues": {
+          "description": "EnableValues enables go-template processing on this file during deploy.",
+          "type": "boolean"
+        },
+        "executable": {
+          "description": "Determines if the file should be made executable during package deploy.",
+          "type": "boolean"
+        },
+        "extractPath": {
+          "description": "Local folder or file to be extracted from a 'source' archive.",
+          "type": "string"
+        },
+        "source": {
+          "description": "Local folder or file path or remote URL to pull into the package.",
+          "type": "string"
+        },
+        "symlinks": {
+          "description": "List of symlinks to create during package deploy.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "source",
+        "destination"
+      ],
+      "type": "object"
+    },
+    "GitSource": {
+      "additionalProperties": false,
+      "description": "GitSource represents a Helm chart stored in a Git repository.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "path": {
+          "description": "The subdirectory containing the chart within a Git repo.",
+          "type": "string"
+        },
+        "url": {
+          "description": "The URL of the Git repository where the Helm chart is stored.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "type": "object"
+    },
+    "HelmRepositorySource": {
+      "additionalProperties": false,
+      "description": "HelmRepositorySource represents a Helm chart stored in a Helm repository.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The name of a chart within a Helm repository.",
+          "type": "string"
+        },
+        "url": {
+          "description": "The URL of the chart repository where the Helm chart is stored.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the chart in the Helm repository.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ],
+      "type": "object"
+    },
+    "Image": {
+      "additionalProperties": false,
+      "description": "Image defines an OCI image to include in the package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "name": {
+          "description": "The image reference.",
+          "type": "string"
+        },
+        "source": {
+          "description": "The source to pull the image from. Defaults to \"registry\".",
+          "enum": [
+            "registry",
+            "daemon"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ImageArchive": {
+      "additionalProperties": false,
+      "description": "ImageArchive defines a tar archive of images to include in the package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "images": {
+          "description": "The list of images contained in the archive.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "description": "The path to the tar archive.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "images"
+      ],
+      "type": "object"
+    },
+    "KustomizeManifest": {
+      "additionalProperties": false,
+      "description": "KustomizeManifest defines kustomization settings for a manifest.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "allowAnyDirectory": {
+          "description": "Allow traversing directory above the current directory if needed for kustomization.",
+          "type": "boolean"
+        },
+        "enablePlugins": {
+          "description": "Enable kustomize plugins when building manifests.",
+          "type": "boolean"
+        },
+        "files": {
+          "description": "List of local kustomization paths or remote URLs to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "LocalSource": {
+      "additionalProperties": false,
+      "description": "LocalSource represents a Helm chart stored locally.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "path": {
+          "description": "The path to a local chart's folder or .tgz archive.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "Manifest": {
+      "additionalProperties": false,
+      "description": "Manifest defines raw manifests Zarf will deploy as a helm chart.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "enableValues": {
+          "description": "EnableValues enables go-template processing on these manifests during deploy.",
+          "type": "boolean"
+        },
+        "files": {
+          "description": "List of local K8s YAML files or remote URLs to deploy (in order).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kustomize": {
+          "$ref": "#/$defs/KustomizeManifest",
+          "description": "Kustomize settings for this manifest."
+        },
+        "name": {
+          "description": "A name to give this collection of manifests; this will become the name of the dynamically-created helm chart.",
+          "maxLength": 40,
+          "type": "string"
+        },
+        "namespace": {
+          "description": "The namespace to deploy the manifests to.",
+          "type": "string"
+        },
+        "serverSideApply": {
+          "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to \"auto\" when omitted.",
+          "enum": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "type": "string"
+        },
+        "skipWait": {
+          "description": "Whether to skip waiting for manifest resources to be ready before continuing.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "OCISource": {
+      "additionalProperties": false,
+      "description": "OCISource represents a Helm chart stored in an OCI registry.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "url": {
+          "description": "The URL of the OCI registry where the Helm chart is stored.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the chart in the OCI registry.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ],
+      "type": "object"
+    },
+    "SetValue": {
+      "additionalProperties": false,
+      "description": "SetValue declares a value that can be set during a package deploy.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "key": {
+          "description": "Key represents which value to assign to.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Type declares the kind of data being stored in the value.",
+          "type": "string"
+        },
+        "value": {
+          "description": "Value is the current value at the key."
+        }
+      },
+      "type": "object"
+    },
+    "Shell": {
+      "additionalProperties": false,
+      "description": "Shell represents the desired shell to use for a given command.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "darwin": {
+          "description": "Darwin (macOS) shell preference.",
+          "examples": [
+            "sh",
+            "bash",
+            "zsh"
+          ],
+          "type": "string"
+        },
+        "linux": {
+          "description": "Linux shell preference.",
+          "examples": [
+            "sh",
+            "bash",
+            "zsh"
+          ],
+          "type": "string"
+        },
+        "windows": {
+          "description": "Windows shell preference.",
+          "examples": [
+            "powershell",
+            "cmd",
+            "pwsh"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Values": {
+      "additionalProperties": false,
+      "description": "Values defines values files and schema for templating and overriding Helm values.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "files": {
+          "description": "List of values file paths to include.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "schema": {
+          "description": "Path to a JSON schema file for validating values.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "VersionRequirement": {
+      "additionalProperties": false,
+      "description": "VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "reason": {
+          "description": "The reason this version is required.",
+          "type": "string"
+        },
+        "version": {
+          "description": "The minimum version of Zarf required.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "reason"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/zarf-dev/zarf/src/api/v1beta1/component-config",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "ComponentConfig is the top-level structure of a Zarf component config file.",
+  "patternProperties": {
+    "^x-": {}
+  },
+  "properties": {
+    "apiVersion": {
+      "description": "The API version of the component config.",
+      "enum": [
+        "zarf.dev/v1beta1"
+      ],
+      "type": "string"
+    },
+    "component": {
+      "$ref": "#/$defs/Component",
+      "description": "The single component this config defines."
+    },
+    "kind": {
+      "default": "ZarfComponentConfig",
+      "description": "The kind of component config.",
+      "enum": [
+        "ZarfComponentConfig"
+      ],
+      "type": "string"
+    },
+    "metadata": {
+      "$ref": "#/$defs/ComponentMetadata",
+      "description": "Component metadata."
+    },
+    "publishData": {
+      "$ref": "#/$defs/ComponentPublishData",
+      "description": "Zarf-generated publish data for the component config."
+    },
+    "values": {
+      "$ref": "#/$defs/Values",
+      "description": "Values imports Zarf values files for templating and overriding Helm values."
+    }
+  },
+  "required": [
+    "apiVersion",
+    "kind",
+    "metadata",
+    "component"
+  ],
+  "type": "object"
+}

@@ -67,6 +67,26 @@ release:
   mode: append
   extra_files:
     - glob: ./build/zarf-init-*
+  footer: |
+    ## Verifying Init Packages
+
+    The init packages in this release are signed with keyless Sigstore signing. Verify with:
+
+    **amd64:**
+    ```bash
+    zarf package verify zarf-init-amd64-{{ .Tag }}.tar.zst \
+      --certificate-identity "https://github.com/zarf-dev/zarf/.github/workflows/release.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+    ```
+
+    **arm64:**
+    ```bash
+    zarf package verify zarf-init-arm64-{{ .Tag }}.tar.zst \
+      --certificate-identity "https://github.com/zarf-dev/zarf/.github/workflows/release.yml@refs/tags/{{ .Tag }}" \
+      --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+    ```
+
+    See [RELEASES.md](https://github.com/zarf-dev/zarf/blob/{{ .Tag }}/RELEASES.md#verifying-the-init-package) for details.
 
 # Update the 'generic' brew formula and create a versioned brew formula for artifacts from this release
 brews:

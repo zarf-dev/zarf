@@ -44,3 +44,16 @@ func TestApplianceRemove(t *testing.T) {
 	_, _, err = e2e.Kubectl(t, "get", "nodes")
 	require.Error(t, err)
 }
+
+func TestDestroy(t *testing.T) {
+	t.Log("E2E: Destroy")
+
+	// Don't run this test in appliance mode
+	if e2e.ApplianceMode {
+		return
+	}
+
+	// Destroy the cluster to test Zarf cleaning up after itself
+	stdOut, stdErr, err := e2e.Zarf(t, "destroy", "--confirm", "--remove-components")
+	require.NoError(t, err, stdOut, stdErr)
+}

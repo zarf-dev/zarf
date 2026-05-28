@@ -34,6 +34,7 @@ func newToolsCommand() *cobra.Command {
 	cmd.AddCommand(newDownloadInitCommand())
 	cmd.AddCommand(newGenPKICommand())
 	cmd.AddCommand(newGenKeyCommand())
+	cmd.AddCommand(newTrustedRootCommand())
 
 	return cmd
 }

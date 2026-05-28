@@ -256,7 +256,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 			if config.ZarfDefaultRetries > 1 && n+1 < uint(config.ZarfDefaultRetries) {
 				l.Warn("retrying chart download",
 					"attempt", n+1,
-					"max_attempts", config.ZarfDefaultRetries,
+					"maxAttempts", config.ZarfDefaultRetries,
 					"chart", chart.Name,
 					"error", err,
 				)

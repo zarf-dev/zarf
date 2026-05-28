@@ -9,48 +9,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestZarfPackageIsInitPackage(t *testing.T) {
+func TestPackageHasImages(t *testing.T) {
 	t.Parallel()
 
-	pkg := ZarfPackage{
-		Kind: ZarfInitConfig,
-	}
-	require.True(t, pkg.IsInitConfig())
-	pkg = ZarfPackage{
-		Kind: ZarfPackageConfig,
-	}
-	require.False(t, pkg.IsInitConfig())
-}
-
-func TestZarfPackageHasImages(t *testing.T) {
-	t.Parallel()
-
-	pkg := ZarfPackage{
-		Components: []ZarfComponent{
+	pkg := Package{
+		Components: []Component{
 			{
 				Name: "without images",
 			},
 		},
 	}
 	require.False(t, pkg.HasImages())
-	pkg = ZarfPackage{
-		Components: []ZarfComponent{
+	pkg = Package{
+		Components: []Component{
 			{
 				Name:   "with images",
-				Images: []ZarfImage{{Name: "docker.io/library/alpine:latest"}},
+				Images: []Image{{Name: "docker.io/library/alpine:latest"}},
 			},
 		},
 	}
 	require.True(t, pkg.HasImages())
 }
 
-func TestZarfPackageIsSBOMable(t *testing.T) {
+func TestPackageIsSBOMable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name          string
-		images        []ZarfImage
-		files         []ZarfFile
+		images        []Image
+		files         []File
 		imageArchives []ImageArchive
 		expected      bool
 	}{
@@ -60,12 +47,12 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 		},
 		{
 			name:     "only images",
-			images:   []ZarfImage{{Name: "alpine"}},
+			images:   []Image{{Name: "alpine"}},
 			expected: true,
 		},
 		{
 			name:     "only files",
-			files:    []ZarfFile{{}},
+			files:    []File{{}},
 			expected: true,
 		},
 		{
@@ -75,8 +62,8 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 		},
 		{
 			name:          "all three set",
-			images:        []ZarfImage{{Name: "alpine"}},
-			files:         []ZarfFile{{}},
+			images:        []Image{{Name: "alpine"}},
+			files:         []File{{}},
 			imageArchives: []ImageArchive{{Path: "archive.tar", Images: []string{"img"}}},
 			expected:      true,
 		},
@@ -85,8 +72,8 @@ func TestZarfPackageIsSBOMable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			pkg := ZarfPackage{
-				Components: []ZarfComponent{
+			pkg := Package{
+				Components: []Component{
 					{
 						Name:          "test-component",
 						Images:        tt.images,

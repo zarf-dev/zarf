@@ -1,0 +1,6 @@
+# associated chart: demo-helm
+customField: fromPackage
+image:
+  pullPolicy: IfNotPresent
+port: "9999"
+---

@@ -78,6 +78,26 @@ func TestCheckForExpiredCert1(t *testing.T) {
 	}
 }
 
+func TestGeneratePKIWithOptions(t *testing.T) {
+	originalNow := now
+	defer func() { now = originalNow }()
+
+	creationTime := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	now = func() time.Time { return creationTime }
+
+	duration := 10 * 365 * 24 * time.Hour // ~10 years
+	pki, err := GeneratePKIWithOptions("test.example.com", GenerateOptions{Duration: duration})
+	require.NoError(t, err)
+	require.NotEmpty(t, pki.CA)
+	require.NotEmpty(t, pki.Cert)
+	require.NotEmpty(t, pki.Key)
+
+	cert, err := ParseCertFromPEM(pki.Cert)
+	require.NoError(t, err)
+	expectedExpiry := creationTime.Add(duration)
+	require.Equal(t, expectedExpiry, cert.NotAfter)
+}
+
 func TestGetRemainingCertLifePercentage(t *testing.T) {
 	// Reset time function after tests
 	originalNow := now

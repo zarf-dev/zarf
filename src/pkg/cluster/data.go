@@ -197,7 +197,7 @@ func waitForPodsAndContainers(ctx context.Context, clientset kubernetes.Interfac
 
 			// Handle container targeting
 			if target.Container != "" {
-				l.Debug("testing container", "name", target.Container, "source-pod", pod.Name)
+				l.Debug("testing container", "name", target.Container, "sourcePod", pod.Name)
 
 				// Check the status of initContainers for a running match
 				for _, initContainer := range pod.Status.InitContainerStatuses {

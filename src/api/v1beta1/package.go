@@ -1,74 +1,67 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-// Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf
+// Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf.
 package v1beta1
 
-import (
-	"fmt"
-	"regexp"
-)
+import "github.com/zarf-dev/zarf/src/api/v1alpha1"
 
-// VariableType represents a type of a Zarf package variable
-type VariableType string
+// PackageKind is an enum of the different kinds of Zarf packages.
+type PackageKind string
 
 const (
-	// RawVariableType is the default type for a Zarf package variable
-	RawVariableType VariableType = "raw"
-	// FileVariableType is a type for a Zarf package variable that loads its contents from a file
-	FileVariableType VariableType = "file"
-)
-
-// ZarfPackageKind is an enum of the different kinds of Zarf packages.
-type ZarfPackageKind string
-
-const (
-	// ZarfInitConfig is the kind of Zarf package used during `zarf init`.
-	ZarfInitConfig ZarfPackageKind = "ZarfInitConfig"
-	// ZarfPackageConfig is the default kind of Zarf package, primarily used during `zarf package`.
-	ZarfPackageConfig ZarfPackageKind = "ZarfPackageConfig"
-	// APIVersion the api version of this package.
+	// ZarfPackageConfig is the default kind of Zarf package.
+	ZarfPackageConfig PackageKind = "ZarfPackageConfig"
+	// ZarfComponentConfig is the kind of a Zarf component config file.
+	ZarfComponentConfig PackageKind = "ZarfComponentConfig"
+	// APIVersion is the api version of this package.
 	APIVersion string = "zarf.dev/v1beta1"
 )
 
-// ZarfPackage the top-level structure of a Zarf config file.
-type ZarfPackage struct {
+// Package is the top-level structure of a Zarf package definition.
+type Package struct {
 	// The API version of the Zarf package.
-	APIVersion string `json:"apiVersion,omitempty" jsonschema:"enum=zarf.dev/v1beta1"`
+	APIVersion string `json:"apiVersion" jsonschema:"enum=zarf.dev/v1beta1"`
 	// The kind of Zarf package.
-	Kind ZarfPackageKind `json:"kind" jsonschema:"enum=ZarfInitConfig,enum=ZarfPackageConfig,default=ZarfPackageConfig"`
+	Kind PackageKind `json:"kind" jsonschema:"enum=ZarfPackageConfig"`
 	// Package metadata.
-	Metadata ZarfMetadata `json:"metadata,omitempty"`
+	Metadata PackageMetadata `json:"metadata,omitempty"`
 	// Zarf-generated package build data.
-	Build ZarfBuildData `json:"build,omitempty"`
+	Build BuildData `json:"build,omitempty"`
 	// List of components to deploy in this package.
-	Components []ZarfComponent `json:"components"`
-	// Constant template values applied on deploy for K8s resources.
-	Constants []Constant `json:"constants,omitempty"`
-	// Variable template values applied on deploy for K8s resources.
-	Variables []InteractiveVariable `json:"variables,omitempty"`
-	// Values imports Zarf values files for templating.
-	Values ZarfValues `json:"values,omitempty"`
-	// Documentation files.
+	Components []Component `json:"components" jsonschema:"minItems=1"`
+	// Values imports Zarf values files for templating and overriding Helm values.
+	Values Values `json:"values,omitempty"`
+	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
+	// Variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	variables []v1alpha1.InteractiveVariable
+	// Constants removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	constants []v1alpha1.Constant
 }
 
-// IsInitConfig returns whether a Zarf package is an init config.
-func (pkg ZarfPackage) IsInitConfig() bool {
-	return pkg.Kind == ZarfInitConfig
+// GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
+func (pkg Package) GetDeprecatedVariables() []v1alpha1.InteractiveVariable {
+	return pkg.variables
 }
 
-// AllowsNamespaceOverride returns whether the package allows the namespace to be overridden
-func (pkg ZarfPackage) AllowsNamespaceOverride() bool {
-	if pkg.Metadata.AllowNamespaceOverride != nil {
-		return *pkg.Metadata.AllowNamespaceOverride
-	}
-	// defaulting to allowing package namespace to be overridden
-	return true
+// SetDeprecatedVariables sets the v1alpha1 variables carried as a backwards-compatibility shim.
+func (pkg *Package) SetDeprecatedVariables(variables []v1alpha1.InteractiveVariable) {
+	pkg.variables = variables
+}
+
+// GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
+func (pkg Package) GetDeprecatedConstants() []v1alpha1.Constant {
+	return pkg.constants
+}
+
+// SetDeprecatedConstants sets the v1alpha1 constants carried as a backwards-compatibility shim.
+func (pkg *Package) SetDeprecatedConstants(constants []v1alpha1.Constant) {
+	pkg.constants = constants
 }
 
 // HasImages returns true if one of the components contains an image.
-func (pkg ZarfPackage) HasImages() bool {
+func (pkg Package) HasImages() bool {
 	for _, component := range pkg.Components {
 		if len(component.Images) > 0 {
 			return true
@@ -78,7 +71,7 @@ func (pkg ZarfPackage) HasImages() bool {
 }
 
 // IsSBOMAble checks if a package has contents that an SBOM can be created on (i.e. images, files, or image archives).
-func (pkg ZarfPackage) IsSBOMAble() bool {
+func (pkg Package) IsSBOMAble() bool {
 	for _, c := range pkg.Components {
 		if len(c.Images) > 0 || len(c.Files) > 0 || len(c.ImageArchives) > 0 {
 			return true
@@ -87,67 +80,13 @@ func (pkg ZarfPackage) IsSBOMAble() bool {
 	return false
 }
 
-// Variable represents a variable that has a value set programmatically
-type Variable struct {
-	// The name to be used for the variable
-	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
-	// Whether to mark this variable as sensitive to not print it in the log
-	Sensitive bool `json:"sensitive,omitempty"`
-	// Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_VAR_.
-	AutoIndent bool `json:"autoIndent,omitempty"`
-	// An optional regex pattern that a variable value must match before a package deployment can continue.
-	Pattern string `json:"pattern,omitempty"`
-	// Changes the handling of a variable to load contents differently (i.e. from a file rather than as a raw variable - templated files should be kept below 1 MiB)
-	Type VariableType `json:"type,omitempty" jsonschema:"enum=raw,enum=file"`
-}
-
-// InteractiveVariable is a variable that can be used to prompt a user for more information
-type InteractiveVariable struct {
-	Variable `json:",inline"`
-	// A description of the variable to be used when prompting the user a value
-	Description string `json:"description,omitempty"`
-	// The default value to use for the variable
-	Default string `json:"default,omitempty"`
-	// Whether to prompt the user for input for this variable
-	Prompt bool `json:"prompt,omitempty"`
-}
-
-// Constant are constants that can be used to dynamically template K8s resources or run in actions.
-type Constant struct {
-	// The name to be used for the constant
-	Name string `json:"name" jsonschema:"pattern=^[A-Z0-9_]+$"`
-	// The value to set for the constant during deploy
-	Value string `json:"value"`
-	// A description of the constant to explain its purpose on package create or deploy confirmation prompts
-	Description string `json:"description,omitempty"`
-	// Whether to automatically indent the variable's value (if multiline) when templating. Based on the number of chars before the start of ###ZARF_CONST_.
-	AutoIndent bool `json:"autoIndent,omitempty"`
-	// An optional regex pattern that a constant value must match before a package can be created.
-	Pattern string `json:"pattern,omitempty"`
-}
-
-// SetVariable tracks internal variables that have been set during this run of Zarf
-type SetVariable struct {
-	Variable `json:",inline"`
-	// The value the variable is currently set with
-	Value string `json:"value"`
-}
-
-// Validate runs all validation checks on a package constant.
-func (c Constant) Validate() error {
-	if !regexp.MustCompile(c.Pattern).MatchString(c.Value) {
-		return fmt.Errorf("provided value for constant %s does not match pattern %s", c.Name, c.Pattern)
-	}
-	return nil
-}
-
-// ZarfMetadata lists information about the current ZarfPackage.
-type ZarfMetadata struct {
+// PackageMetadata holds information about the package.
+type PackageMetadata struct {
 	// Name to identify this Zarf package.
 	Name string `json:"name" jsonschema:"pattern=^[a-z0-9][a-z0-9\\-]*$"`
 	// Additional information about this Zarf package.
 	Description string `json:"description,omitempty"`
-	// Generic string set by a package author to track the package version (Note: ZarfInitConfigs will always be versioned to the CLIVersion they were created with).
+	// Generic string set by a package author to track the package version.
 	Version string `json:"version,omitempty"`
 	// Disable compression of this package.
 	Uncompressed bool `json:"uncompressed,omitempty"`
@@ -155,14 +94,14 @@ type ZarfMetadata struct {
 	Architecture string `json:"architecture,omitempty" jsonschema:"example=arm64,example=amd64"`
 	// Annotations are key-value pairs that can be used to store metadata about the package.
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// Whether to allow namespace overrides for this package.
-	AllowNamespaceOverride *bool `json:"allowNamespaceOverride,omitempty"`
+	// Prevent namespace overrides for this package.
+	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
 }
 
-// ZarfBuildData is written during the packager.Create() operation to track details of the created package.
-type ZarfBuildData struct {
+// BuildData is written during package create to track details of the created package.
+type BuildData struct {
 	// The machine name that created this package.
-	Terminal string `json:"terminal,omitempty"`
+	Hostname string `json:"hostname,omitempty"`
 	// The username who created this package.
 	User string `json:"user,omitempty"`
 	// The architecture this package was created on.
@@ -183,15 +122,12 @@ type ZarfBuildData struct {
 	Flavor string `json:"flavor,omitempty"`
 	// Whether this package was signed.
 	Signed *bool `json:"signed,omitempty"`
-	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
-	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
-	// The API version defined in the package definition used to build the package.
-	APIVersion string `json:"apiVersion,omitempty"`
 	// Requirements for specific Zarf versions needed to deploy this package.
 	VersionRequirements []VersionRequirement `json:"versionRequirements,omitempty"`
-	// ProvenanceFiles lists files present in the package that are not included in checksums.txt.
-	// These are files added after checksum generation (e.g., signature files).
+	// ProvenanceFiles lists files present in the package that are not included in checksums.txt. These are files added after checksum generation (e.g., signature files).
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
+	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
+	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.
@@ -202,8 +138,8 @@ type VersionRequirement struct {
 	Reason string `json:"reason"`
 }
 
-// ZarfValues defines values files and schema for templating and overriding Helm values.
-type ZarfValues struct {
+// Values defines values files and schema for templating and overriding Helm values.
+type Values struct {
 	// List of values file paths to include.
 	Files []string `json:"files,omitempty"`
 	// Path to a JSON schema file for validating values.
