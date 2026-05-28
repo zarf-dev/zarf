@@ -19,6 +19,10 @@
           "description": "Whether this package was created with differential components.",
           "type": "boolean"
         },
+        "differentialPackageVersion": {
+          "description": "Version of a previously built package used as the basis for creating this differential package.",
+          "type": "string"
+        },
         "flavor": {
           "description": "The flavor of Zarf used to build this package.",
           "type": "string"
@@ -34,12 +38,23 @@
           },
           "type": "array"
         },
+        "provenanceFiles": {
+          "description": "ProvenanceFiles lists files present in the package that are not included in checksums.txt. These are files added after checksum generation (e.g., signature files).",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "registryOverrides": {
           "additionalProperties": {
             "type": "string"
           },
           "description": "Any registry domains that were overridden on package create when pulling images.",
           "type": "object"
+        },
+        "signed": {
+          "description": "Whether this package was signed.",
+          "type": "boolean"
         },
         "timestamp": {
           "description": "The timestamp when this package was created.",
