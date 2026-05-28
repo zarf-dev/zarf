@@ -79,7 +79,8 @@ const (
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
 	VPkgPublicKey      = "package.public_key"
-	VPkgVerify         = "package.verify"
+	// TODO: this may expand to a full strategy enum (e.g. "never"/"always"/"if-signed") in a future release
+	VPkgEnforceVerification = "package.enforce_verification"
 
 	// Package create config keys
 
@@ -120,6 +121,26 @@ const (
 	VPkgSignSigningKeyPassword = "package.sign.signing_key_password"
 	VPkgSignOutput             = "package.sign.output"
 	VPkgSignOverwrite          = "package.sign.overwrite"
+	VPkgSignKeyless            = "package.sign.keyless"
+	VPkgSignIdentityToken      = "package.sign.identity_token"
+	VPkgSignFulcioURL          = "package.sign.fulcio_url"
+	VPkgSignFulcioAuthFlow     = "package.sign.fulcio_auth_flow"
+	VPkgSignOIDCIssuer         = "package.sign.oidc_issuer"
+	VPkgSignOIDCClientID       = "package.sign.oidc_client_id"
+	VPkgSignRekorURL           = "package.sign.rekor_url"
+	VPkgSignTlogUpload         = "package.sign.tlog_upload"
+	VPkgSignConfirm            = "package.sign.confirm"
+	VPkgSignTSAServerURL       = "package.sign.tsa_server_url"
+
+	// Package verification config keys (top-level; shared across verify, deploy, pull, and other load commands)
+
+	VPkgCertificateIdentity         = "package.certificate_identity"
+	VPkgCertificateIdentityRegexp   = "package.certificate_identity_regexp"
+	VPkgCertificateOIDCIssuer       = "package.certificate_oidc_issuer"
+	VPkgCertificateOIDCIssuerRegexp = "package.certificate_oidc_issuer_regexp"
+	VPkgTrustedRoot                 = "package.trusted_root"
+	VPkgInsecureIgnoreTlog          = "package.insecure_ignore_tlog"
+	VPkgUseSignedTimestamps         = "package.use_signed_timestamps"
 
 	// Package pull config keys
 
@@ -251,6 +272,15 @@ func setDefaults() {
 
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
+
+	// Package sign keyless defaults
+	v.SetDefault(VPkgSignFulcioURL, "https://fulcio.sigstore.dev")
+	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
+	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
+	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
+
+	// Package verify defaults
+	v.SetDefault(VPkgInsecureIgnoreTlog, true)
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
