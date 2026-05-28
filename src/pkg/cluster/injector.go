@@ -305,7 +305,12 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 		podsByNode[pod.Spec.NodeName] = append(podsByNode[pod.Spec.NodeName], pod)
 	}
 
-	// Evaluate nodes one by one, return early when suitable
+	type nodeFallback struct {
+		image string
+		node  string
+	}
+	var fallback *nodeFallback
+
 	for _, node := range nodeList.Items {
 		if hasBlockingTaints(node.Spec.Taints) {
 			l.Debug("skipping node: blocking taints", "node", node.Name)
@@ -383,18 +388,23 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			continue
 		}
 
-		candidateImage := candidateNoCreds
-		if candidateImage == "" {
-			candidateImage = candidateFallback
+		if candidateNoCreds != "" {
+			l.Debug("selected image for injector", "node", node.Name, "image", candidateNoCreds)
+			return candidateNoCreds, node.Name, nil
 		}
-		if candidateImage != "" {
-			l.Debug("selected image for injector", "node", node.Name, "image", candidateImage)
-			return candidateImage, node.Name, nil
+		if candidateFallback != "" && fallback == nil {
+			l.Debug("found fallback image, continuing search for image without pull credentials", "node", node.Name, "image", candidateFallback)
+			fallback = &nodeFallback{image: candidateFallback, node: node.Name}
+			continue
 		}
 
 		l.Debug("no suitable image found on node", "node", node.Name)
 	}
 
+	if fallback != nil {
+		l.Debug("selected fallback image for injector", "node", fallback.node, "image", fallback.image)
+		return fallback.image, fallback.node, nil
+	}
 	return "", "", fmt.Errorf("no suitable injector image or node exists")
 }
 
