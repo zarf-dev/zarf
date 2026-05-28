@@ -6,7 +6,6 @@ package cluster
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/avast/retry-go/v4"
 	"github.com/google/go-containerregistry/pkg/crane"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -409,10 +407,14 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 	l := logger.From(ctx)
 
 	var injectorImage string
-	err := retry.Do(func() error {
+	err := wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: 5 * time.Second,
+		Factor:   1.0,
+		Steps:    15,
+	}, func(ctx context.Context) (bool, error) {
 		nodes, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return err
+			return false, nil
 		}
 
 		// Track images across all nodes
@@ -449,12 +451,12 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 				}
 			}
 			injectorImage = latestPause.name
-			return nil
+			return true, nil
 		}
 
 		// Fallback to smallest image if no valid pause images
 		if len(allImages) == 0 {
-			return errors.New("no suitable image found on any node")
+			return false, nil
 		}
 
 		// Find the smallest image by size
@@ -466,11 +468,11 @@ func (c *Cluster) GetInjectorDaemonsetImage(ctx context.Context) (string, error)
 		}
 
 		if len(smallestImage.Names) == 0 {
-			return errors.New("selected image has no names")
+			return false, nil
 		}
 		injectorImage = smallestImage.Names[0]
-		return nil
-	}, retry.Attempts(15), retry.Delay(5*time.Second), retry.Context(ctx), retry.DelayType(retry.FixedDelay))
+		return true, nil
+	})
 	if err != nil {
 		return "", err
 	}
@@ -638,7 +640,11 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 	if opts.InjectorNodePort != 0 {
 		portConfiguration.WithNodePort(int32(opts.InjectorNodePort))
 	}
-	err := retry.Do(func() error {
+	err := wait.ExponentialBackoffWithContext(timeoutCtx, wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   1.0,
+		Steps:    10,
+	}, func(ctx context.Context) (bool, error) {
 		svcAc := v1ac.Service("zarf-injector", state.ZarfNamespaceName).
 			WithSpec(v1ac.ServiceSpec().
 				WithType(corev1.ServiceTypeNodePort).
@@ -653,20 +659,19 @@ func (c *Cluster) createInjectorNodeportService(ctx context.Context, pkgName str
 		var err error
 		svc, err = c.Clientset.CoreV1().Services(*svcAc.Namespace).Apply(ctx, svcAc, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 		if err != nil {
-			return err
+			return false, nil
 		}
 
 		assignedNodePort := int(svc.Spec.Ports[0].NodePort)
 		if assignedNodePort == int(opts.RegistryNodePort) {
 			l.Info("injector service NodePort conflicts with registry NodePort, recreating service", "conflictingPort", assignedNodePort)
-			deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{})
-			if deleteErr != nil {
-				return deleteErr
+			if deleteErr := c.Clientset.CoreV1().Services(state.ZarfNamespaceName).Delete(ctx, "zarf-injector", metav1.DeleteOptions{}); deleteErr != nil {
+				return false, deleteErr
 			}
-			return fmt.Errorf("nodePort conflict with registry port %d", opts.RegistryNodePort)
+			return false, nil
 		}
-		return nil
-	}, retry.Attempts(10), retry.Delay(500*time.Millisecond), retry.Context(timeoutCtx))
+		return true, nil
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the injector nodeport service: %w", err)
 	}

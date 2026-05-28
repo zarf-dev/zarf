@@ -13,16 +13,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 	"k8s.io/streaming/pkg/httpstream"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/internal/dns"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -398,13 +399,19 @@ func (tunnel *Tunnel) Wrap(function func() error) error {
 
 // Connect will establish a tunnel to the specified target.
 func (tunnel *Tunnel) Connect(ctx context.Context) ([]string, error) {
-	urls, err := retry.DoWithData(func() ([]string, error) {
-		urls, err := tunnel.establish(ctx)
+	var urls []string
+	err := wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: 100 * time.Millisecond,
+		Factor:   2.0,
+		Steps:    6,
+	}, func(ctx context.Context) (bool, error) {
+		result, err := tunnel.establish(ctx)
 		if err != nil {
-			return []string{}, err
+			return false, nil
 		}
-		return urls, nil
-	}, retry.Context(ctx), retry.Attempts(6))
+		urls = result
+		return true, nil
+	})
 	if err != nil {
 		return []string{}, err
 	}

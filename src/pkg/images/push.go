@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content/oci"
 	"oras.land/oras-go/v2/registry"
@@ -26,6 +25,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/pki"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const defaultRetries = 3
@@ -76,48 +76,63 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		return fmt.Errorf("failed to instantiate oci directory: %w", err)
 	}
 
-	err = retry.Do(func() error {
+	attempt := 0
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: 500 * time.Millisecond,
+		Factor:   1.0,
+		Steps:    cfg.Retries,
+	}, func(ctx context.Context) (bool, error) {
+		if attempt > 0 {
+			if cfg.Retries > 2 && attempt == cfg.Retries-1 {
+				cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
+			}
+			l.Debug("retrying component image(s) push", "responseTimeout", cfg.ResponseHeaderTimeout)
+		}
+		attempt++
+
 		// reset concurrency to user-provided value on each component retry
 		ociConcurrency := cfg.OCIConcurrency
 		var registryRef registry.Reference
 		// Include tunnel connection in retry loop in case the port forward breaks, for example, a registry pod could spin down / restart
 		var tunnel *cluster.Tunnel
 		if cfg.Cluster != nil {
-			var err error
+			var regErr error
 			var registryURL string
-			registryURL, tunnel, err = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, registryInfo)
-			if err != nil {
-				return err
+			registryURL, tunnel, regErr = cfg.Cluster.ConnectToZarfRegistryEndpoint(ctx, registryInfo)
+			if regErr != nil {
+				return false, nil
 			}
-			registryRef, err = parseRegistryReference(registryURL)
-			if err != nil {
-				return fmt.Errorf("failed to get reference from registry from internal registry: %w", err)
+			registryRef, regErr = parseRegistryReference(registryURL)
+			if regErr != nil {
+				return false, nil
 			}
 			if tunnel != nil {
 				defer tunnel.Close()
 			}
 		} else {
-			registryRef, err = parseRegistryReference(registryInfo.Address)
-			if err != nil {
-				return fmt.Errorf("failed to get reference from registry address: %w", err)
+			var regErr error
+			registryRef, regErr = parseRegistryReference(registryInfo.Address)
+			if regErr != nil {
+				return false, nil
 			}
 		}
 
 		var transport http.RoundTripper
-		var certs pki.GeneratedPKI
 		if cfg.Cluster != nil && registryInfo.ShouldUseMTLS() {
-			certs, err = cfg.Cluster.GetRegistryClientMTLSCert(ctx)
-			if err != nil {
-				return err
+			certs, regErr := cfg.Cluster.GetRegistryClientMTLSCert(ctx)
+			if regErr != nil {
+				return false, nil
 			}
-			transport, err = pki.TransportWithKey(certs)
-			if err != nil {
-				return err
+			var tErr error
+			transport, tErr = pki.TransportWithKey(certs)
+			if tErr != nil {
+				return false, nil
 			}
 		} else {
-			transport, err = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
-			if err != nil {
-				return err
+			var tErr error
+			transport, tErr = orasTransport(cfg.InsecureSkipTLSVerify, cfg.ResponseHeaderTimeout)
+			if tErr != nil {
+				return false, nil
 			}
 		}
 
@@ -134,10 +149,10 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 
 		plainHTTP := cfg.PlainHTTP
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
-			var err error
-			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
-			if err != nil {
-				return err
+			var httpErr error
+			plainHTTP, httpErr = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			if httpErr != nil {
+				return false, nil
 			}
 		}
 
@@ -146,8 +161,9 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 				PlainHTTP: plainHTTP,
 				Client:    client,
 			}
-			remoteRepo.Reference, err = registry.ParseReference(dstName)
-			if err != nil {
+			var regErr error
+			remoteRepo.Reference, regErr = registry.ParseReference(dstName)
+			if regErr != nil {
 				return fmt.Errorf("failed to parse ref %s: %w", dstName, err)
 			}
 			if tunnel != nil {
@@ -157,6 +173,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			}
 			return copyImage(ctx, src, remoteRepo, srcName, dstName, ociConcurrency)
 		}
+
 		pushed := []string{}
 		// Delete the images that were already successfully pushed so that they aren't attempted on the next retry
 		defer func() {
@@ -168,23 +185,29 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			l.Info("pushing image", "name", img)
 			// If this is not a no checksum image push it for use with the Zarf agent
 			if !cfg.NoChecksum {
-				offlineNameCRC, err := transform.ImageTransformHost(registryRef.String(), img)
-				if err != nil {
-					return err
+				offlineNameCRC, tErr := transform.ImageTransformHost(registryRef.String(), img)
+				if tErr != nil {
+					return false, nil
 				}
-
-				err = retry.Do(
-					func() error { return pushImage(img, offlineNameCRC) },
-					retry.OnRetry(func(_ uint, err error) {
+				innerAttempt := 0
+				var lastPushErr error
+				if waitErr := wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+					Duration: 500 * time.Millisecond,
+					Factor:   1.0,
+					Steps:    2,
+				}, func(ctx context.Context) (bool, error) {
+					if innerAttempt > 0 {
 						ociConcurrency = 1
-						l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
-					}),
-					retry.Context(ctx),
-					retry.Attempts(2),
-					retry.Delay(500*time.Millisecond),
-				)
-				if err != nil {
-					return err
+						l.Debug("retrying image push", "error", lastPushErr, "concurrency", ociConcurrency)
+					}
+					innerAttempt++
+					lastPushErr = pushImage(img, offlineNameCRC)
+					if lastPushErr != nil {
+						return false, nil
+					}
+					return true, nil
+				}); waitErr != nil {
+					return false, nil
 				}
 			}
 
@@ -192,32 +215,33 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 			// (this may result in collisions but this is acceptable for this use case)
 			offlineName, err := transform.ImageTransformHostWithoutChecksum(registryRef.String(), img)
 			if err != nil {
-				return err
+				return false, nil
 			}
-
-			err = retry.Do(
-				func() error { return pushImage(img, offlineName) },
-				retry.OnRetry(func(_ uint, err error) {
+			innerAttempt := 0
+			var lastPushErr error
+			if waitErr := wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+				Duration: 500 * time.Millisecond,
+				Factor:   1.0,
+				Steps:    2,
+			}, func(ctx context.Context) (bool, error) {
+				if innerAttempt > 0 {
 					ociConcurrency = 1
-					l.Debug("retrying image push", "error", err, "concurrency", ociConcurrency)
-				}),
-				retry.Context(ctx),
-				retry.Attempts(2),
-				retry.Delay(500*time.Millisecond),
-			)
-			if err != nil {
-				return err
+					l.Debug("retrying image push", "error", lastPushErr, "concurrency", ociConcurrency)
+				}
+				innerAttempt++
+				lastPushErr = pushImage(img, offlineName)
+				if lastPushErr != nil {
+					return false, nil
+				}
+				return true, nil
+			}); waitErr != nil {
+				return false, nil
 			}
 
 			pushed = append(pushed, img)
 		}
-		return nil
-	}, retry.Context(ctx), retry.Attempts(uint(cfg.Retries)), retry.Delay(500*time.Millisecond), retry.OnRetry(func(attempt uint, _ error) {
-		if uint(cfg.Retries) > 2 && attempt == uint(cfg.Retries)-2 {
-			cfg.ResponseHeaderTimeout = 60 * time.Second // this should really never happen
-		}
-		l.Debug("retrying component image(s) push", "responseTimeout", cfg.ResponseHeaderTimeout)
-	}))
+		return true, nil
+	})
 	if err != nil {
 		return err
 	}

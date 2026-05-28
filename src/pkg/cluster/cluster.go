@@ -12,7 +12,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -22,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
@@ -76,25 +76,29 @@ func NewWithWait(ctx context.Context) (*Cluster, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = retry.Do(func() error {
+	err = wait.ExponentialBackoffWithContext(ctx, wait.Backoff{
+		Duration: time.Second,
+		Factor:   1.0,
+	}, func(ctx context.Context) (bool, error) {
 		nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return err
+			return false, err
 		}
 		if len(nodeList.Items) < 1 {
-			return fmt.Errorf("cluster does not have any nodes")
+			return false, fmt.Errorf("cluster does not have any nodes")
 		}
+
 		pods, err := c.Clientset.CoreV1().Pods(corev1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			return err
+			return false, nil
 		}
 		for _, pod := range pods.Items {
 			if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodRunning {
-				return nil
+				return true, nil
 			}
 		}
-		return fmt.Errorf("no pods are in succeeded or running state")
-	}, retry.Context(ctx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+		return false, nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -242,13 +246,16 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 		// The default SA is required for pods to start properly.
 		saCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
-		err = retry.Do(func() error {
-			_, err := c.Clientset.CoreV1().ServiceAccounts(state.ZarfNamespaceName).Get(saCtx, "default", metav1.GetOptions{})
+		err = wait.ExponentialBackoffWithContext(saCtx, wait.Backoff{
+			Duration: time.Second,
+			Factor:   1.0,
+		}, func(ctx context.Context) (bool, error) {
+			_, err := c.Clientset.CoreV1().ServiceAccounts(state.ZarfNamespaceName).Get(ctx, "default", metav1.GetOptions{})
 			if err != nil {
-				return err
+				return false, nil
 			}
-			return nil
-		}, retry.Context(saCtx), retry.Attempts(0), retry.DelayType(retry.FixedDelay), retry.Delay(time.Second))
+			return true, nil
+		})
 		if err != nil {
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
