@@ -9,8 +9,10 @@ import (
 	"testing"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/images"
 )
 
 func TestGetChecksum(t *testing.T) {
@@ -214,6 +216,151 @@ func TestValidateImageArchivesNoDuplicates(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func TestCollectVersionRequirements(t *testing.T) {
+	t.Parallel()
+
+	imageArchivesReq := v1alpha1.VersionRequirement{
+		Version: "v0.68.0",
+		Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+	}
+	indexReq := v1alpha1.VersionRequirement{
+		Version: "v0.77.0",
+		Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+	}
+
+	tests := []struct {
+		name     string
+		pkg      v1alpha1.ZarfPackage
+		hasIndex bool
+		expected []v1alpha1.VersionRequirement
+	}{
+		{
+			name:     "no requirements for a plain package",
+			pkg:      v1alpha1.ZarfPackage{},
+			expected: nil,
+		},
+		{
+			name: "image archives trigger v0.68.0",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name: "c1",
+						ImageArchives: []v1alpha1.ImageArchive{
+							{Path: "/tmp/archive.tar", Images: []string{"nginx:1.21"}},
+						},
+					},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+		},
+		{
+			name:     "preserved index triggers v0.76.0",
+			pkg:      v1alpha1.ZarfPackage{},
+			hasIndex: true,
+			expected: []v1alpha1.VersionRequirement{indexReq},
+		},
+		{
+			name: "image archives and preserved index trigger both",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:          "c1",
+						ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}},
+					},
+				},
+			},
+			hasIndex: true,
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq, indexReq},
+		},
+		{
+			name: "image archives requirement is only emitted once across components",
+			pkg: v1alpha1.ZarfPackage{
+				Components: []v1alpha1.ZarfComponent{
+					{Name: "c1", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/a.tar", Images: []string{"x:y"}}}},
+					{Name: "c2", ImageArchives: []v1alpha1.ImageArchive{{Path: "/tmp/b.tar", Images: []string{"p:q"}}}},
+				},
+			},
+			expected: []v1alpha1.VersionRequirement{imageArchivesReq},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tt.expected, collectVersionRequirements(tt.pkg, tt.hasIndex))
+		})
+	}
+}
+
+func TestImageLayoutHasIndex(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		indexJSON   string
+		writeFile   bool
+		expected    bool
+		errContains string
+	}{
+		{
+			name:      "missing index.json returns false",
+			writeFile: false,
+			expected:  false,
+		},
+		{
+			name:      "empty manifests returns false",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[]}`,
+			expected:  false,
+		},
+		{
+			name:      "only image manifests returns false",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + ocispec.MediaTypeImageManifest + `","digest":"sha256:abc","size":1}]}`,
+			expected:  false,
+		},
+		{
+			name:      "OCI image index returns true",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + ocispec.MediaTypeImageIndex + `","digest":"sha256:abc","size":1}]}`,
+			expected:  true,
+		},
+		{
+			name:      "docker manifest list returns true",
+			writeFile: true,
+			indexJSON: `{"schemaVersion":2,"manifests":[{"mediaType":"` + images.DockerMediaTypeManifestList + `","digest":"sha256:abc","size":1}]}`,
+			expected:  true,
+		},
+		{
+			name:        "malformed JSON returns error",
+			writeFile:   true,
+			indexJSON:   `{not valid json`,
+			expected:    false,
+			errContains: "failed to parse",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			dir := t.TempDir()
+			if tt.writeFile {
+				err := os.WriteFile(filepath.Join(dir, IndexJSON), []byte(tt.indexJSON), 0o600)
+				require.NoError(t, err)
+			}
+
+			got, err := imageLayoutHasIndex(dir)
+			if tt.errContains != "" {
+				require.ErrorContains(t, err, tt.errContains)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, got)
 		})
 	}
 }

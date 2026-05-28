@@ -22,7 +22,9 @@ zarf package inspect manifests [ PACKAGE ] [flags]
   -k, --key string                     Path to public key file for validating signed packages
       --kube-version string            Override the default helm template KubeVersion when performing a package chart template
       --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --set-values stringToString      Specify deployment package values to set on the command line (key.path=value). (default [])
       --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -v, --values strings                 [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
       --verify                         Verify the Zarf package signature
 ```
 
@@ -30,7 +32,7 @@ zarf package inspect manifests [ PACKAGE ] [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")

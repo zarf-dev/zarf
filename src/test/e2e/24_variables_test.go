@@ -89,6 +89,12 @@ func TestVariables(t *testing.T) {
 	// MODIFIED_TERRAFORM_SHASUM should have been templated
 	require.Contains(t, string(kubectlOut), "1e1fd84376096dcaa78479e22398d9f0ab238656199e49767be71f245f8db4e8")
 
+	// Regression coverage for #4863: a ###ZARF_VAR_*### token as the sole entry under an
+	// otherwise-empty YAML mapping must substitute into the parent map, not at the document root.
+	extraOut, _, err := e2e.Kubectl(t, "-n", "nginx", "get", "configmap", "nginx-extra", "-o", "jsonpath={.data.extra-key}")
+	require.NoError(t, err, "unable to get nginx-extra configmap")
+	require.Equal(t, "extra-value", string(extraOut))
+
 	// Remove the variables example
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", path, "--confirm")
 	require.NoError(t, err, stdOut, stdErr)

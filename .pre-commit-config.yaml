@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: cef0300fd0fc4d2a87a85fa2093c6b283ea36f4b  # v5.0.0
     hooks:
       - id: check-added-large-files
         args: ["--maxkb=1024"]
@@ -21,7 +21,7 @@ repos:
         args: [--markdown-linebreak-ext=md]
         exclude: site/src/content/docs/commands/.*
   - repo: https://github.com/sirosen/texthooks
-    rev: 0.6.4
+    rev: 72a68994497c827ced727b7c6b2567cfc5a96cb2  # 0.6.4
     hooks:
       - id: fix-smartquotes
   - repo: local
@@ -36,11 +36,11 @@ repos:
         name: goimports
         entry: golangci-lint fmt
         types: [go]
-        language: golang
+        language: system
         pass_filenames: false
       - id: lint
         name: golangci-lint go lint
         entry: golangci-lint run
         types: [go]
-        language: golang
+        language: system
         pass_filenames: false

@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
@@ -33,6 +35,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/actions"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
@@ -111,7 +114,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
@@ -152,11 +155,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
-			sbomImageList = append(sbomImageList, manifest.Image)
-		}
+	for _, pulled := range manifests {
+		sbomImageList = append(sbomImageList, pulled.Image)
 
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
@@ -202,7 +202,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -220,8 +223,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	// Sign the package with the provided options
-	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
@@ -243,6 +246,11 @@ type AssembleSkeletonOptions struct {
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
 func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
+
+	// Creating skeletons packages with the values feature is not yet supported
+	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" {
+		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
+	}
 
 	buildPath, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -276,7 +284,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -297,8 +308,8 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 
 	// Sign the package with the provided options
-	signOpts := utils.DefaultSignBlobOptions()
-	signOpts.KeyRef = opts.SigningKeyPath
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = opts.SigningKeyPath
 	signOpts.Password = opts.SigningKeyPassword
 
 	err = pkgLayout.SignPackage(ctx, signOpts)
@@ -606,7 +617,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 	for chartIdx, chart := range component.Charts {
 		if chart.LocalPath != "" {
-			rel := filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ChartsComponentDir), fmt.Sprintf("%s-%d", chart.Name, chartIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			file := chart.LocalPath
@@ -625,7 +636,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				continue
 			}
 
-			rel := fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx)
+			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx))
 			component.Charts[chartIdx].ValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {
@@ -642,7 +653,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			continue
 		}
 
-		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 		src := file.Source
@@ -699,7 +710,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 
 	for dataIdx, data := range component.DataInjections {
-		rel := filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path))
+		rel := filepath.ToSlash(filepath.Join(string(DataComponentDir), strconv.Itoa(dataIdx), filepath.Base(data.Target.Path)))
 		dst := filepath.Join(compBuildPath, rel)
 
 		src := data.Source
@@ -721,7 +732,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
@@ -780,7 +791,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) (v1alpha1.ZarfPackage, error) {
 	now := time.Now()
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.
@@ -813,17 +824,15 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	var versionRequirements []v1alpha1.VersionRequirement
-	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
-			break
+	hasIndex := false
+	if buildPath != "" {
+		var err error
+		hasIndex, err = imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	pkg.Build.VersionRequirements = versionRequirements
+	pkg.Build.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -841,7 +850,27 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Signature files are appended by SignPackage() if signing occurs.
 	pkg.Build.ProvenanceFiles = []string{Checksums}
 
-	return pkg
+	return pkg, nil
+}
+
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
+	var reqs []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			reqs = append(reqs, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	if hasIndex {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.77.0",
+			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+		})
+	}
+	return reqs
 }
 
 func getChecksum(dirPath string) (string, string, error) {
@@ -1075,4 +1104,25 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	return nil
+}
+
+func imageLayoutHasIndex(imageDir string) (bool, error) {
+	idxPath := filepath.Join(imageDir, IndexJSON)
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read %s: %w", idxPath, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", idxPath, err)
+	}
+	for _, m := range idx.Manifests {
+		if images.IsIndex(m.MediaType) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

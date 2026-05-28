@@ -86,7 +86,7 @@ jobs:
           CLI_VERSION=$CLI_VERSION make build-cli-linux-arm
 
       - name: "Zarf Agent: Login to GHCR"
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
           registry: ghcr.io
           username: dummy
@@ -102,7 +102,7 @@ jobs:
           echo ZARF_AGENT_IMAGE_DIGEST=$(docker buildx imagetools inspect ghcr.io/zarf-dev/zarf/agent:$CLI_VERSION --format '{{ json . }}' | jq -r .manifest.digest) >> $GITHUB_ENV
 
       - name: Auth with AWS
-        uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+        uses: aws-actions/configure-aws-credentials@d979d5b3a71173a29b74b5b88418bfda9437d885 # v6.1.1
         with:
           role-to-assume: ${{ secrets.AWS_KMS_ROLE_ARN }}
           role-session-name: ${{ github.job || github.event.client_payload.pull_request.head.sha || github.sha }}
@@ -122,6 +122,15 @@ jobs:
         run: |
           make release-init-package ARCH=amd64 AGENT_IMAGE_TAG=$CLI_VERSION
           make release-init-package ARCH=arm64 AGENT_IMAGE_TAG=$CLI_VERSION
+
+      - name: Sign Init Packages
+        run: |
+          build/zarf package sign build/zarf-init-amd64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
+          build/zarf package sign build/zarf-init-arm64-$CLI_VERSION.tar.zst \
+            --keyless \
+            --confirm
 
       - name: Publish Init Package as OCI and Skeleton
         run: |
@@ -210,10 +219,10 @@ jobs:
           echo HELM_VERSION=$(go list -f '{{.Version}}' -m helm.sh/helm/v4) >> $GITHUB_ENV
 
       - name: Run GoReleaser (Nightly)
-        uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
+        uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7.2.2
         with:
           distribution: goreleaser-pro
-          version: "~> v2"
+          version: "v2.15.4"
           args: release --clean --verbose --nightly -f .goreleaser-pro.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

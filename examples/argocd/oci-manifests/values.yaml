@@ -1,0 +1,16 @@
+---
+applications:
+  - name: oci-manifests
+    namespace: argocd
+    finalizers:
+      - resources-finalizer.argocd.argoproj.io
+    project: default
+    sources:
+      - repoURL: oci://registry-1.docker.io/dhpup/oci-edge
+        path: .
+        targetRevision: 1.0.6
+    syncPolicy:
+      automated: { }
+    destination:
+      namespace: oci-manifests
+      server: https://kubernetes.default.svc

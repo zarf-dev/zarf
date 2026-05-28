@@ -358,7 +358,7 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 		ErrOut: io.Discard,
 	}
 	flags := cmdwait.NewWaitFlags(configFlags, streams)
-	flags.ForCondition = forCondition
+	flags.ForCondition = []string{forCondition}
 	if labelSelector != "" {
 		flags.ResourceBuilderFlags.LabelSelector = &labelSelector
 	}
@@ -370,11 +370,11 @@ func waitForResourceCondition(ctx context.Context, dynamicClient dynamic.Interfa
 	opts.DynamicClient = dynamicClient
 
 	waitInterval := time.Second
-	// Give a smaller timeout, so that we can occasionally check context, given that opts.RunWait does not accept context
+	// Give a smaller timeout per attempt so the poll loop can retry when a resource does not yet exist
 	flags.Timeout = time.Second * 10
-	// We wrap opts.RunWait here because it errors immediately when waiting for a condition of a resource that does not yet exist
+	// We wrap opts.RunWaitContext here because it errors immediately when waiting for a condition of a resource that does not yet exist
 	err = wait.PollUntilContextTimeout(ctx, waitInterval, time.Until(deadline), true, func(_ context.Context) (bool, error) {
-		err = opts.RunWait()
+		err = opts.RunWaitContext(ctx)
 		if err == nil {
 			return true, nil
 		}
@@ -445,7 +445,7 @@ func forNetwork(ctx context.Context, protocol string, address string, condition 
 
 					// If the status code is not in the 2xx range, try again.
 					if resp.StatusCode < 200 || resp.StatusCode > 299 {
-						l.Debug("did not receive 2xx status code", "response_code", resp.StatusCode)
+						l.Debug("did not receive 2xx status code", "responseCode", resp.StatusCode)
 						continue
 					}
 

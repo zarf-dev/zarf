@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kiwix-serve
-  namespace: kiwix
+  name: file-server
+  namespace: data-injection
   labels:
-    app: kiwix-serve
+    app: file-server
 spec:
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: kiwix-serve
+      app: file-server
   template:
     metadata:
       labels:
-        app: kiwix-serve
+        app: file-server
     spec:
-      # Kiwix can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
+      # The main container can hot-load files from the filesystem, but if your application cannot, this example shows how you can use an initContainer to bootstrap the injected files.
       # It's necessary to include the ###ZARF_DATA_INJECTION_MARKER### somewhere in the podspec, otherwise data injections will not occur.
       initContainers:
         - name: data-loader
-          image: alpine:3.18
+          image: ghcr.io/static-web-server/static-web-server:2.32.1-alpine
           command:
             [
               "sh",
@@ -39,13 +39,13 @@ spec:
             - mountPath: /data
               name: data
       containers:
-        - name: kiwix-serve
-          image: "ghcr.io/kiwix/kiwix-serve:3.5.0-2"
+        - name: file-server
+          image: "ghcr.io/static-web-server/static-web-server:2.32.1-alpine"
           command:
             [
               "sh",
               "-c",
-              "ls -la /data && kiwix-serve -v /data/*.zim",
+              "ls -la /data && exec static-web-server --root /data --port 80 --log-level error",
             ]
           ports:
             - name: http
@@ -53,19 +53,19 @@ spec:
               protocol: TCP
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: "16Mi"
+              cpu: "50m"
             limits:
-              memory: "512Mi"
-              cpu: "500m"
+              memory: "64Mi"
+              cpu: "100m"
           volumeMounts:
             - name: data
               mountPath: /data
           readinessProbe:
             httpGet:
-              path: /
+              path: /hello.txt
               port: 80
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: kiwix-data
+            claimName: injected-data

@@ -20,7 +20,7 @@ Collection of additional tools to make airgap easier
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -44,6 +44,7 @@ Collection of additional tools to make airgap easier
 * [zarf tools monitor](/commands/zarf_tools_monitor/)	 - Launches a terminal UI to monitor the connected cluster using K9s.
 * [zarf tools registry](/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
 * [zarf tools sbom](/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools trusted-root](/commands/zarf_tools_trusted-root/)	 - Tools for working with Sigstore trusted roots
 * [zarf tools update-creds](/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
 * [zarf tools wait-for](/commands/zarf_tools_wait-for/)	 - Waits for a given Kubernetes resource to be ready
 * [zarf tools yq](/commands/zarf_tools_yq/)	 - yq is a lightweight and portable command-line data file processor.

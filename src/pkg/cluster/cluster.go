@@ -23,12 +23,14 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1ac "k8s.io/client-go/applyconfigurations/core/v1"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/cli-utils/pkg/kstatus/watcher"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 const (
@@ -147,14 +149,11 @@ func WatcherForConfig(cfg *rest.Config) (watcher.StatusWatcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpClient, err := rest.HTTPClientFor(cfg)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	restMapper, err := apiutil.NewDynamicRESTMapper(cfg, httpClient)
-	if err != nil {
-		return nil, err
-	}
+	restMapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoveryClient))
 	sw := watcher.NewDefaultStatusWatcher(dynamicClient, restMapper)
 	return sw, nil
 }
@@ -173,6 +172,10 @@ type InitStateOptions struct {
 	StorageClass string
 	// InjectorPort is the port that the injector will be exposed through
 	InjectorPort int
+	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
+	AgentTLS *pki.GeneratedPKI
+	// InternalServices lists the state services that Zarf is deploying in this init run.
+	InternalServices state.ServiceSet
 }
 
 // InitState takes initOptions and hydrates a cluster's state from InitStateOptions.
@@ -228,34 +231,9 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			l.Debug("Detected K8s distro", "name", s.Distro)
 		}
 
-		// Setup zarf agent PKI
-		agentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
-		if err != nil {
-			return nil, err
-		}
-		s.AgentTLS = agentTLS
-
-		namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
-		}
-		// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
-		for _, namespace := range namespaceList.Items {
-			if namespace.Name == "zarf" {
-				continue
-			}
-			l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
-
-			if namespace.Labels == nil {
-				// Ensure label map exists to avoid nil panic
-				namespace.Labels = make(map[string]string)
-			}
-			// This label will tell the Zarf Agent to ignore this namespace.
-			namespace.Labels[AgentLabel] = "ignore"
-			namespaceCopy := namespace
-			_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
-			if err != nil {
-				return nil, fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+		if opts.InternalServices.Has(state.AgentKey) {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
 			}
 		}
 
@@ -275,18 +253,45 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 			return nil, fmt.Errorf("unable get default Zarf service account: %w", err)
 		}
 
-		err = opts.GitServer.FillInEmptyValues()
-		if err != nil {
-			return nil, err
+		// Populate git/registry/artifact state for each service that is either
+		// deployed by Zarf (InternalServices) or pointed at an external endpoint.
+		if opts.InternalServices.Has(state.GitKey) || opts.GitServer.Address != "" {
+			if err := opts.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+			s.GitServer = opts.GitServer
 		}
-		s.GitServer = opts.GitServer
-		err = opts.RegistryInfo.FillInEmptyValues(ipFamily)
-		if err != nil {
-			return nil, err
+		if opts.InternalServices.Has(state.RegistryKey) || opts.RegistryInfo.Address != "" {
+			if err := opts.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+			s.RegistryInfo = opts.RegistryInfo
 		}
-		s.RegistryInfo = opts.RegistryInfo
-		opts.ArtifactServer.FillInEmptyValues()
-		s.ArtifactServer = opts.ArtifactServer
+		if opts.InternalServices.Has(state.ArtifactKey) || opts.ArtifactServer.Address != "" {
+			opts.ArtifactServer.FillInEmptyValues()
+			s.ArtifactServer = opts.ArtifactServer
+		}
+	} else {
+		// Re-init: fill defaults only for internal services that weren't configured
+		// on a prior init. External services are managed via `zarf tools update-creds`.
+		if opts.InternalServices.Has(state.GitKey) && !s.GitServer.IsConfigured() {
+			if err := s.GitServer.FillInEmptyValues(); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.ArtifactKey) && !s.ArtifactServer.IsConfigured() {
+			s.ArtifactServer.FillInEmptyValues()
+		}
+		if opts.InternalServices.Has(state.RegistryKey) && !s.RegistryInfo.IsConfigured() {
+			if err := s.RegistryInfo.FillInEmptyValues(ipFamily); err != nil {
+				return nil, err
+			}
+		}
+		if opts.InternalServices.Has(state.AgentKey) && !s.AgentIsConfigured() {
+			if err := c.initAgent(ctx, s, opts.AgentTLS); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	s.IPFamily = ipFamily
@@ -355,6 +360,47 @@ func (c *Cluster) InitState(ctx context.Context, opts InitStateOptions) (*state.
 	}
 
 	return s, nil
+}
+
+func (c *Cluster) initAgent(ctx context.Context, s *state.State, agentTLS *pki.GeneratedPKI) error {
+	if agentTLS != nil {
+		s.AgentTLS = *agentTLS
+		s.AgentTLSUserProvided = true
+	} else {
+		generatedAgentTLS, err := pki.GeneratePKI(state.ZarfAgentHost)
+		if err != nil {
+			return err
+		}
+		s.AgentTLS = generatedAgentTLS
+		s.AgentTLSUserProvided = false
+	}
+	return c.ignoreExistingNamespacesForAgent(ctx)
+}
+
+func (c *Cluster) ignoreExistingNamespacesForAgent(ctx context.Context) error {
+	l := logger.From(ctx)
+	namespaceList, err := c.Clientset.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to get the Kubernetes namespaces: %w", err)
+	}
+	// Mark existing namespaces as ignored for the zarf agent to prevent mutating resources we don't own.
+	for _, namespace := range namespaceList.Items {
+		if namespace.Name == "zarf" {
+			continue
+		}
+		l.Debug("marking namespace as ignored by Zarf Agent", "name", namespace.Name)
+
+		if namespace.Labels == nil {
+			namespace.Labels = make(map[string]string)
+		}
+		namespace.Labels[AgentLabel] = "ignore"
+		namespaceCopy := namespace
+		_, err := c.Clientset.CoreV1().Namespaces().Update(ctx, &namespaceCopy, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("unable to mark the namespace %s as ignored by Zarf Agent: %w", namespace.Name, err)
+		}
+	}
+	return nil
 }
 
 // GetRegistryClientMTLSCert retrieves the client cert for interacting with the internal Zarf registry while in registry proxy mode.

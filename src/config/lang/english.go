@@ -292,6 +292,7 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 
 	CmdPackageDeployFlagConfirm                = "Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes."
 	CmdPackageDeployFlagAdoptExistingResources = "Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover."
+	CmdPackageDeployFlagConnected              = "Deploy without pushing images/repos; label resources to bypass the Zarf agent"
 	CmdPackageDeployFlagForceConflicts         = "Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources."
 	CmdPackageDeployFlagSetVariables           = "Specify deployment variables to set on the command line (KEY=value)"
 	CmdPackageDeployFlagSetValues              = "Specify deployment package values to set on the command line (key.path=value)."
@@ -352,11 +353,22 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key ./privat
 # Sign with a cloud KMS key
 $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms://alias/my-signing-key
 `
-	CmdPackageSignFlagSigningKey     = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
-	CmdPackageSignFlagSigningKeyPass = "Password for encrypted private key"
-	CmdPackageSignFlagOutput         = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
-	CmdPackageSignFlagOverwrite      = "Overwrite an existing signature if the package is already signed"
-	CmdPackageSignFlagKey            = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagSigningKey        = "Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider (awskms://, gcpkms://, azurekms://, hashivault://)"
+	CmdPackageSignFlagSigningKeyPass    = "Password for encrypted private key"
+	CmdPackageSignFlagOutput            = "Output destination for the signed package. Can be a local directory or an OCI registry URL (oci://). Default: same directory as source package for files, current directory for OCI sources"
+	CmdPackageSignFlagOverwrite         = "Overwrite an existing signature if the package is already signed"
+	CmdPackageSignFlagKey               = "Public key to verify the existing signature before re-signing (optional)"
+	CmdPackageSignFlagKeyless           = "Sign without a private key using Sigstore's keyless flow (Fulcio/OIDC)"
+	CmdPackageSignFlagIdentityToken     = "Pre-acquired OIDC identity token (or path to a file containing one) for non-interactive keyless signing"
+	CmdPackageSignFlagFulcioURL         = "Fulcio certificate authority URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagFulcioAuthFlow    = "Fulcio OAuth flow: normal (browser), device (device code), token, client_credentials"
+	CmdPackageSignFlagOIDCIssuer        = "OIDC issuer URL used to obtain an identity token for keyless signing. Override for private Sigstore deployments."
+	CmdPackageSignFlagOIDCClientID      = "OIDC client ID used when requesting an identity token. Override for private Sigstore deployments."
+	CmdPackageSignFlagRekorURL          = "Rekor transparency log URL. Override for private Sigstore deployments."
+	CmdPackageSignFlagTlogUpload        = "Upload the signature to the Rekor transparency log. Auto-enabled when --keyless is set (allows for keyless signatures to remain verifiable past the ~10 minute Fulcio certificate validity window)."
+	CmdPackageSignFlagConfirm           = "Skip the interactive confirmation prompt before uploading to the Rekor transparency log (equivalent to cosign --yes)."
+	CmdPackageSignFlagTSAServerURL      = "RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid."
+	CmdPackageSignNoTimestampAnchorWarn = "Keyless signature has no timestamp anchor: --tlog-upload is disabled and --tsa-server-url is not set. The signature will be unverifiable after the Fulcio certificate expires (~10 minutes). Pass --tsa-server-url or remove --tlog-upload=false to retain long-term verifiability."
 
 	CmdPackageVerifyShort   = "Verify the signature and integrity of a Zarf package"
 	CmdPackageVerifyLong    = "Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails."
@@ -367,7 +379,14 @@ $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.p
 # Verify an unsigned package (checksums only)
 $ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
 `
-	CmdPackageVerifyFlagKey = "Public key for signature verification"
+	CmdPackageVerifyFlagKey                         = "Public key for signature verification"
+	CmdPackageVerifyFlagCertificateIdentity         = "Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main"
+	CmdPackageVerifyFlagCertificateIdentityRegexp   = "Regex variant of --certificate-identity"
+	CmdPackageVerifyFlagCertificateOIDCIssuer       = "Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com"
+	CmdPackageVerifyFlagCertificateOIDCIssuerRegexp = "Regex variant of --certificate-oidc-issuer"
+	CmdPackageVerifyFlagTrustedRoot                 = "Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted."
+	CmdPackageVerifyFlagInsecureIgnoreTlog          = "Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry)."
+	CmdPackageVerifyFlagUseSignedTimestamps         = "Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used."
 
 	CmdPackagePullShort   = "Pulls a Zarf package from a remote registry and save to the local file system"
 	CmdPackagePullExample = `
@@ -389,9 +408,10 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	// zarf dev (prepare is an alias for dev)
 	CmdDevShort = "Commands useful for developing packages"
 
-	CmdDevDeployShort      = "Creates and deploys a Zarf package from a given directory"
-	CmdDevDeployLong       = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
-	CmdDevDeployFlagNoYolo = "Disable the YOLO mode default override and create / deploy the package as-defined"
+	CmdDevDeployShort         = "Creates and deploys a Zarf package from a given directory"
+	CmdDevDeployLong          = "Creates and deploys a Zarf package from a given directory, setting options like YOLO mode for faster iteration."
+	CmdDevDeployFlagConnected = "Create and deploy without images and repositories; label resources to bypass the Zarf agent"
+	CmdDevDeployFlagNoYolo    = "Disable the YOLO mode default override and create / deploy the package as-defined"
 
 	CmdDevGenerateShort   = "Creates a zarf.yaml automatically from a given remote (git) Helm chart"
 	CmdDevGenerateExample = "zarf dev generate podinfo --url https://github.com/stefanprodan/podinfo.git --version 6.4.0 --gitPath charts/podinfo --output-directory ./podinfo"
@@ -403,7 +423,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton`
 	CmdDevSha256sumShort         = "Generates a SHA256SUM for the given file"
 	CmdDevSha256sumRemoteWarning = "This is a remote source. If a published checksum is available you should use that rather than calculating it directly from the remote link."
 
-	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests"
+	CmdDevFindImagesShort = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests."
 	CmdDevFindImagesLong  = "Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.\n\n" +
 		"Components that have repos that host helm charts can be processed by providing the --repo-chart-path."
 
@@ -616,6 +636,14 @@ zarf tools yq e '.a.b = "cool"' -i file.yaml
 	CmdToolsGenKeyPromptExists         = "File %s already exists. Overwrite? "
 	CmdToolsGenKeyErrUnableGetPassword = "unable to get password for private key: %w"
 	CmdToolsGenKeyErrPasswordsNotMatch = "passwords do not match"
+
+	CmdToolsTrustedRootShort       = "Tools for working with Sigstore trusted roots"
+	CmdToolsTrustedRootCreateShort = "Create a Sigstore trusted root"
+	CmdToolsTrustedRootCreateLong  = "Create a Sigstore protobuf trusted root, either by retrieving the public Sigstore root via TUF or by composing one from provided verification material.\n\n" +
+		"Use --with-default-services to retrieve the public-good Sigstore trusted root. " +
+		"Combine with --fulcio/--rekor/--ctfe/--tsa to extend or override defaults, " +
+		"or provide only service flags to compose a trusted root for private Sigstore infrastructure.\n\n" +
+		"Respects the TUF_MIRROR, TUF_ROOT, and TUF_ROOT_JSON environment variables for custom TUF configurations."
 
 	CmdToolsSbomShort = "Generates a Software Bill of Materials (SBOM) for the given package"
 

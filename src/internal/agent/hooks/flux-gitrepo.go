@@ -21,9 +21,6 @@ import (
 	v1 "k8s.io/api/admission/v1"
 )
 
-// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
-const AgentErrTransformGitURL = "unable to transform the git url"
-
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
 func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
 	return operations.Hook{
@@ -45,6 +42,10 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	if err != nil {
 		return nil, err
 	}
+	if !s.GitServer.IsConfigured() {
+		l.Debug("no Zarf git server configured, skipping Flux GitRepository mutation")
+		return &operations.Result{Allowed: true}, nil
+	}
 
 	repo := flux.GitRepository{}
 	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
@@ -54,7 +55,7 @@ func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",
 		"name", repo.Name,
 		"operation", r.Operation,
-		"git-server", s.GitServer.Address)
+		"gitServer", s.GitServer.Address)
 
 	// Skip mutation if the URL already points to the Zarf git server to prevent double-hashing
 	// on resource recreation (e.g. Helm rollback, GitOps reconciliation).

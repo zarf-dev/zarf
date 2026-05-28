@@ -11,12 +11,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory" // used for docker test registry
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
+
+// SetupInMemoryRegistryDynamic starts an in-memory registry on an auto-allocated port.
+func SetupInMemoryRegistryDynamic(ctx context.Context, t *testing.T) string {
+	t.Helper()
+	port, err := helpers.GetAvailablePort()
+	require.NoError(t, err)
+	return SetupInMemoryRegistry(ctx, t, port)
+}
 
 // SetupInMemoryRegistry sets up an in-memory registry on localhost and returns the address.
 func SetupInMemoryRegistry(ctx context.Context, t *testing.T, port int) string {

@@ -11,14 +11,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/defenseunicorns/pkg/oci"
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
+	"github.com/zarf-dev/zarf/src/pkg/signing"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"github.com/zarf-dev/zarf/src/types"
@@ -37,8 +36,8 @@ func defaultTestRemoteOptions() types.RemoteOptions {
 func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, architecture string, publicKeyPath string, cachePath string) *layout.PackageLayout {
 	t.Helper()
 
-	verifyOpts := utils.DefaultVerifyBlobOptions()
-	verifyOpts.KeyRef = publicKeyPath
+	verifyOpts := signing.DefaultVerifyBlobOptions()
+	verifyOpts.Key = publicKeyPath
 
 	// Generate tmpdir and pull published package from local registry
 	pullOCIOpts := pullOCIOptions{
@@ -56,22 +55,16 @@ func pullFromRemote(ctx context.Context, t *testing.T, packageRef string, archit
 }
 
 func createRegistry(ctx context.Context, t *testing.T) registry.Reference {
-	// Setup destination registry
-	dstPort, err := helpers.GetAvailablePort()
-	require.NoError(t, err)
-	dstRegistryURL := testutil.SetupInMemoryRegistry(ctx, t, dstPort)
-	dstRegistryRef := registry.Reference{
-		Registry:   dstRegistryURL,
+	return registry.Reference{
+		Registry:   testutil.SetupInMemoryRegistryDynamic(ctx, t),
 		Repository: "my-namespace",
 	}
-
-	return dstRegistryRef
 }
 
 func TestPublishError(t *testing.T) {
 	ctx := context.Background()
 
-	registryURL := testutil.SetupInMemoryRegistry(ctx, t, 5000)
+	registryURL := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	defaultRef := registry.Reference{
 		Registry:   registryURL,
 		Repository: "my-namespace",
@@ -228,6 +221,10 @@ func TestPublishSkeleton(t *testing.T) {
 }
 
 func TestPublishPackage(t *testing.T) {
+	signOpts := signing.DefaultSignBlobOptions()
+	signOpts.Key = filepath.Join("testdata", "publish", "cosign.key")
+	signOpts.Password = "password"
+
 	tt := []struct {
 		name          string
 		path          string
@@ -247,9 +244,8 @@ func TestPublishPackage(t *testing.T) {
 			name: "Sign and publish package",
 			path: filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst"),
 			opts: PublishPackageOptions{
-				RemoteOptions:      defaultTestRemoteOptions(),
-				SigningKeyPath:     filepath.Join("testdata", "publish", "cosign.key"),
-				SigningKeyPassword: "password",
+				RemoteOptions:   defaultTestRemoteOptions(),
+				SignBlobOptions: signOpts,
 			},
 			publicKeyPath: filepath.Join("testdata", "publish", "cosign.pub"),
 			expectedTag:   "0.0.1",
@@ -286,7 +282,7 @@ func TestPublishPackage(t *testing.T) {
 			//build data changes when signed
 			layoutActual.Pkg.Build = v1alpha1.ZarfBuildData{}
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
-			if tc.opts.SigningKeyPath != "" {
+			if tc.opts.SignBlobOptions.Key != "" {
 				require.FileExists(t, filepath.Join(layoutActual.DirPath(), layout.Signature))
 			}
 		})
@@ -468,6 +464,54 @@ func TestPublishCopySHA(t *testing.T) {
 			require.Equal(t, layoutExpected.Pkg, layoutActual.Pkg, "Uploaded package is not identical to downloaded package")
 		})
 	}
+}
+
+func TestPullOCIConnectedExcludesImages(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	registryRef := createRegistry(ctx, t)
+
+	tarPath := filepath.Join("testdata", "load-package", "compressed", "zarf-package-test-amd64-0.0.1.tar.zst")
+	layoutExpected, err := layout.LoadFromTar(ctx, tarPath, layout.PackageLayoutOptions{Filter: filters.Empty()})
+	require.NoError(t, err)
+
+	packageRef, err := PublishPackage(ctx, layoutExpected, registryRef, PublishPackageOptions{
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+
+	// Pull with Connected=true — image layers should be excluded
+	pkgLayout, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     true,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayout.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayout.GetImageDirPath())
+	require.ErrorIs(t, err, os.ErrNotExist, "images directory should not exist when pulled with Connected=true")
+
+	// Pull without Connected — image layers should be present
+	pkgLayoutFull, err := pullOCI(ctx, pullOCIOptions{
+		Source:        packageRef.String(),
+		Architecture:  "amd64",
+		Filter:        filters.Empty(),
+		CachePath:     t.TempDir(),
+		Connected:     false,
+		RemoteOptions: defaultTestRemoteOptions(),
+	})
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, pkgLayoutFull.Cleanup())
+	}()
+
+	_, err = os.Stat(pkgLayoutFull.GetImageDirPath())
+	require.NoError(t, err, "images directory should exist when pulled without Connected")
 }
 
 func TestPublishCopyTag(t *testing.T) {

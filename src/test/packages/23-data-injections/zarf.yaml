@@ -1,39 +1,30 @@
 kind: ZarfPackageConfig
 metadata:
-  name: kiwix
-  description: Demo Zarf data injection with Kiwix (https://www.kiwix.org/en/)
+  name: data-injection
+  description: E2E test for Zarf data injection into a running pod
   # (optional) Some large datasets may already be compressed making Zarf compression less efficient
   uncompressed: true
-  version: 3.5.0
+  version: 1.0.0
 
 components:
-  - name: kiwix-serve
+  - name: file-server
     required: true
     manifests:
-      - name: kiwix-serve
-        namespace: kiwix
+      - name: file-server
+        namespace: data-injection
         files:
           - manifests/persistence.yaml
           - manifests/deployment.yaml
           - manifests/service.yaml
     images:
-      - ghcr.io/kiwix/kiwix-serve:3.5.0-2
-      - alpine:3.18
+      - ghcr.io/static-web-server/static-web-server:2.32.1-alpine
     # Add new data into the cluster, these will keep trying up until their timeout
     dataInjections:
       # Injection in the data directory using the data-loader init container
-      - source: zim-data
+      - source: injected-data
         target:
-          namespace: kiwix
-          selector: app=kiwix-serve
+          namespace: data-injection
+          selector: app=file-server
           container: data-loader
           path: /data
         compress: true
-    actions:
-      onCreate:
-        before:
-          # Download a .zim file of a DevOps Stack Exchange snapshot into the data directory for use with Kiwix
-          - cmd: curl https://zarf-remote.s3.us-east-2.amazonaws.com/testdata/devops.stackexchange.com_en_all_2023-05.zim -o zim-data/devops.stackexchange.com_en_all_2023-05.zim
-          # Below are some more examples of *.zim files of available content:
-          # https://library.kiwix.org/?lang=eng
-          # NOTE: If `zarf package create`ing regularly you should mirror content to a web host you control to be a friendly neighbor

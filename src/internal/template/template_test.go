@@ -422,6 +422,41 @@ func TestApply(t *testing.T) {
 	}
 }
 
+// TestFuncMap_UnsafeSprigFunctionsRemoved pins the set of sprig functions
+// deliberately stripped from the template engine. Re-adding any of these
+// reintroduces a host-side-effect or exfiltration channel that Zarf packages
+// (including untrusted ones) must not reach.
+func TestFuncMap_UnsafeSprigFunctionsRemoved(t *testing.T) {
+	m := funcMap()
+	for _, name := range []string{"env", "expandenv", "getHostByName"} {
+		_, present := m[name]
+		require.False(t, present, "sprig function %q must not be registered in funcMap", name)
+	}
+}
+
+// TestApply_UnsafeSprigFunctionsRejected verifies that templates invoking the
+// stripped functions fail at parse time rather than silently skipping or
+// executing. This is the end-to-end regression guard for the funcMap stripping.
+func TestApply_UnsafeSprigFunctionsRejected(t *testing.T) {
+	tests := []struct {
+		name string
+		tmpl string
+	}{
+		{name: "env", tmpl: `{{ env "PATH" }}`},
+		{name: "expandenv", tmpl: `{{ expandenv "$PATH" }}`},
+		{name: "getHostByName", tmpl: `{{ getHostByName "localhost" }}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			_, err := Apply(ctx, tt.tmpl, Objects{})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.name)
+			require.Contains(t, err.Error(), "not defined")
+		})
+	}
+}
+
 func TestApplyToFile(t *testing.T) {
 	tests := []struct {
 		name     string
