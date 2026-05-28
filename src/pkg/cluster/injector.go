@@ -311,7 +311,7 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 
 		availCPU := node.Status.Allocatable.Cpu().DeepCopy()
 		availMem := node.Status.Allocatable.Memory().DeepCopy()
-		var candidateImage string
+		var candidateNoCreds, candidateFallback string
 
 		for _, pod := range podsByNode[node.Name] {
 			podReqs := componenthelpers.AggregateContainerRequests(&pod, componenthelpers.PodResourcesOptions{})
@@ -322,20 +322,39 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 				availMem.Sub(*memReq)
 			}
 
-			// Collect candidate images (containers, init, ephemeral)
+			noCreds := len(pod.Spec.ImagePullSecrets) == 0
+			// Collect candidate images (containers, init, ephemeral), preferring pods without imagePullSecrets
 			for _, ctn := range pod.Spec.Containers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.InitContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 			for _, ctn := range pod.Spec.EphemeralContainers {
-				if candidateImage == "" && !zarfImageRegex.MatchString(ctn.Image) {
-					candidateImage = ctn.Image
+				if zarfImageRegex.MatchString(ctn.Image) {
+					continue
+				}
+				if candidateFallback == "" {
+					candidateFallback = ctn.Image
+				}
+				if noCreds && candidateNoCreds == "" {
+					candidateNoCreds = ctn.Image
 				}
 			}
 		}
@@ -357,6 +376,10 @@ func (c *Cluster) getInjectorImageAndNode(ctx context.Context, resReq *v1ac.Reso
 			continue
 		}
 
+		candidateImage := candidateNoCreds
+		if candidateImage == "" {
+			candidateImage = candidateFallback
+		}
 		if candidateImage != "" {
 			l.Debug("selected image for injector", "node", node.Name, "image", candidateImage)
 			return candidateImage, node.Name, nil
