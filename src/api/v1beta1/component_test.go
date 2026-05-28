@@ -14,21 +14,21 @@ func TestGetImages(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		component ZarfComponent
+		component Component
 		expected  []string
 	}{
 		{
 			name: "no images",
-			component: ZarfComponent{
+			component: Component{
 				Name: "test-component",
 			},
 			expected: []string{},
 		},
 		{
 			name: "only Images field",
-			component: ZarfComponent{
+			component: Component{
 				Name: "test-component",
-				Images: []ZarfImage{
+				Images: []Image{
 					{Name: "docker.io/library/nginx:latest"},
 					{Name: "ghcr.io/zarf-dev/zarf:v0.32.6"},
 				},
@@ -40,7 +40,7 @@ func TestGetImages(t *testing.T) {
 		},
 		{
 			name: "only ImageArchives with images",
-			component: ZarfComponent{
+			component: Component{
 				Name: "test-component",
 				ImageArchives: []ImageArchive{
 					{
@@ -59,9 +59,9 @@ func TestGetImages(t *testing.T) {
 		},
 		{
 			name: "both Images and ImageArchives",
-			component: ZarfComponent{
+			component: Component{
 				Name: "test-component",
-				Images: []ZarfImage{
+				Images: []Image{
 					{Name: "docker.io/library/nginx:latest"},
 				},
 				ImageArchives: []ImageArchive{

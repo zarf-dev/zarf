@@ -1,73 +1,5 @@
 {
   "$defs": {
-    "BuildData": {
-      "additionalProperties": false,
-      "description": "BuildData is written during package create to track details of the created package.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "aggregateChecksum": {
-          "description": "Checksum of a checksums.txt file that contains checksums all the layers within the package.",
-          "type": "string"
-        },
-        "architecture": {
-          "description": "The architecture this package was created on.",
-          "type": "string"
-        },
-        "differential": {
-          "description": "Whether this package was created with differential components.",
-          "type": "boolean"
-        },
-        "flavor": {
-          "description": "The flavor of Zarf used to build this package.",
-          "type": "string"
-        },
-        "hostname": {
-          "description": "The machine name that created this package.",
-          "type": "string"
-        },
-        "migrations": {
-          "description": "Any migrations that have been run on this package.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "registryOverrides": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Any registry domains that were overridden on package create when pulling images.",
-          "type": "object"
-        },
-        "timestamp": {
-          "description": "The timestamp when this package was created.",
-          "type": "string"
-        },
-        "user": {
-          "description": "The username who created this package.",
-          "type": "string"
-        },
-        "version": {
-          "description": "The version of Zarf used to build this package.",
-          "type": "string"
-        },
-        "versionRequirements": {
-          "description": "Requirements for specific Zarf versions needed to deploy this package.",
-          "items": {
-            "$ref": "#/$defs/VersionRequirement"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "architecture",
-        "timestamp",
-        "version"
-      ],
-      "type": "object"
-    },
     "Chart": {
       "additionalProperties": false,
       "description": "Chart defines a helm chart to be deployed.",
@@ -563,6 +495,70 @@
       ],
       "type": "object"
     },
+    "ComponentMetadata": {
+      "additionalProperties": false,
+      "description": "ComponentMetadata holds metadata about a component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "annotations": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations contains arbitrary metadata about the component config.",
+          "type": "object"
+        },
+        "description": {
+          "description": "Additional information about this component config.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name to identify this component config.",
+          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
+          "type": "string"
+        },
+        "version": {
+          "description": "Generic string to track the component config version.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "ComponentPublishData": {
+      "additionalProperties": false,
+      "description": "ComponentPublishData is written during publish to track details of the component config.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "migrations": {
+          "description": "Any migrations that have been run on this component config.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "versionRequirements": {
+          "description": "Requirements for specific package operations.",
+          "items": {
+            "$ref": "#/$defs/VersionRequirement"
+          },
+          "type": "array"
+        },
+        "zarfVersion": {
+          "description": "The version of Zarf used to build this component config.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "zarfVersion"
+      ],
+      "type": "object"
+    },
     "ComponentTarget": {
       "additionalProperties": false,
       "description": "ComponentTarget filters a component to only apply for a given local OS, architecture, or flavor.",
@@ -850,55 +846,6 @@
       ],
       "type": "object"
     },
-    "PackageMetadata": {
-      "additionalProperties": false,
-      "description": "PackageMetadata holds information about the package.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "annotations": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Annotations are key-value pairs that can be used to store metadata about the package.",
-          "type": "object"
-        },
-        "architecture": {
-          "description": "The target cluster architecture for this package.",
-          "examples": [
-            "arm64",
-            "amd64"
-          ],
-          "type": "string"
-        },
-        "description": {
-          "description": "Additional information about this Zarf package.",
-          "type": "string"
-        },
-        "name": {
-          "description": "Name to identify this Zarf package.",
-          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "preventNamespaceOverride": {
-          "description": "Prevent namespace overrides for this package.",
-          "type": "boolean"
-        },
-        "uncompressed": {
-          "description": "Disable compression of this package.",
-          "type": "boolean"
-        },
-        "version": {
-          "description": "Generic string set by a package author to track the package version.",
-          "type": "string"
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "type": "object"
-    },
     "SetValue": {
       "additionalProperties": false,
       "description": "SetValue declares a value that can be set during a package deploy.",
@@ -1001,50 +948,40 @@
       "type": "object"
     }
   },
-  "$id": "https://github.com/zarf-dev/zarf/src/api/v1beta1/package",
+  "$id": "https://github.com/zarf-dev/zarf/src/api/v1beta1/component-config",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Package is the top-level structure of a Zarf package definition.",
+  "description": "ComponentConfig is the top-level structure of a Zarf component config file.",
   "patternProperties": {
     "^x-": {}
   },
   "properties": {
     "apiVersion": {
-      "description": "The API version of the Zarf package.",
+      "description": "The API version of the component config.",
       "enum": [
         "zarf.dev/v1beta1"
       ],
       "type": "string"
     },
-    "build": {
-      "$ref": "#/$defs/BuildData",
-      "description": "Zarf-generated package build data."
-    },
-    "components": {
-      "description": "List of components to deploy in this package.",
-      "items": {
-        "$ref": "#/$defs/Component"
-      },
-      "minItems": 1,
-      "type": "array"
-    },
-    "documentation": {
-      "additionalProperties": {
-        "type": "string"
-      },
-      "description": "Documentation files included in the package.",
-      "type": "object"
+    "component": {
+      "$ref": "#/$defs/Component",
+      "description": "The single component this config defines."
     },
     "kind": {
-      "description": "The kind of Zarf package.",
+      "default": "ZarfComponentConfig",
+      "description": "The kind of component config.",
       "enum": [
-        "ZarfPackageConfig"
+        "ZarfComponentConfig"
       ],
       "type": "string"
     },
     "metadata": {
-      "$ref": "#/$defs/PackageMetadata",
-      "description": "Package metadata."
+      "$ref": "#/$defs/ComponentMetadata",
+      "description": "Component metadata."
+    },
+    "publishData": {
+      "$ref": "#/$defs/ComponentPublishData",
+      "description": "Zarf-generated publish data for the component config."
     },
     "values": {
       "$ref": "#/$defs/Values",
@@ -1054,7 +991,8 @@
   "required": [
     "apiVersion",
     "kind",
-    "components"
+    "metadata",
+    "component"
   ],
   "type": "object"
 }
