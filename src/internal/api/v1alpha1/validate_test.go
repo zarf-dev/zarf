@@ -299,7 +299,7 @@ func TestValidateChart(t *testing.T) {
 			partialMatch: true,
 		},
 		{
-			name:         "missing releaseName fallsback to name",
+			name:         "missing releaseName falls back to name",
 			chart:        v1alpha1.ZarfChart{Name: "chart3", Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: nil,
 		},
