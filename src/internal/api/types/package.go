@@ -3,37 +3,41 @@
 
 // Package types holds the internal generic representation of a Zarf package used for lossless conversions between API versions.
 // This type is never exposed publicly. Each API version converts to/from this type, giving N conversion functions instead of N².
+// The shape mirrors the latest schema (v1beta1) with extra fields appended where earlier versions carry data that does not survive
+// untouched on the latest schema.
 package types
 
-import (
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import "github.com/zarf-dev/zarf/src/api/v1alpha1"
 
-// ZarfPackage is the internal superset representation used for conversions between API versions.
-type ZarfPackage struct {
+// Package is the internal superset representation used for conversions between API versions.
+type Package struct {
 	APIVersion    string
 	Kind          string
-	Metadata      ZarfMetadata
-	Build         ZarfBuildData
-	Components    []ZarfComponent
-	Constants     []Constant
-	Variables     []InteractiveVariable
-	Values        ZarfValues
+	Metadata      PackageMetadata
+	Build         BuildData
+	Components    []Component
+	Values        Values
 	Documentation map[string]string
+
+	// v1alpha1-only fields preserved for lossless round-trip.
+	Variables []v1alpha1.InteractiveVariable
+	Constants []v1alpha1.Constant
 }
 
-// ZarfMetadata is a superset of all metadata fields across API versions.
-type ZarfMetadata struct {
-	Name                   string
-	Description            string
-	Version                string
-	Uncompressed           bool
-	Architecture           string
-	Annotations            map[string]string
-	AllowNamespaceOverride *bool
+// PackageMetadata is the superset of metadata fields across API versions.
+type PackageMetadata struct {
+	Name         string
+	Description  string
+	Version      string
+	Uncompressed bool
+	Architecture string
+	Annotations  map[string]string
+	// PreventNamespaceOverride is the v1beta1 form. v1alpha1 stores AllowNamespaceOverride *bool;
+	// only one of these should be populated by the converter.
+	PreventNamespaceOverride bool
+	AllowNamespaceOverride   *bool
 
-	// v1alpha1-only fields
+	// v1alpha1-only metadata fields. v1beta1 migrates these to Annotations.
 	URL           string
 	Image         string
 	YOLO          bool
@@ -41,13 +45,14 @@ type ZarfMetadata struct {
 	Documentation string
 	Source        string
 	Vendor        string
-	// AggregateChecksum lives in metadata in v1alpha1, build in v1beta1
+	// AggregateChecksum lives in Metadata on v1alpha1 and in Build on v1beta1.
 	AggregateChecksum string
 }
 
-// ZarfBuildData is a superset of all build fields across API versions.
-type ZarfBuildData struct {
-	Terminal                   string
+// BuildData is the superset of build fields across API versions.
+type BuildData struct {
+	// Hostname is the v1beta1 name (v1alpha1: Terminal).
+	Hostname                   string
 	User                       string
 	Architecture               string
 	Timestamp                  string
@@ -61,9 +66,10 @@ type ZarfBuildData struct {
 	VersionRequirements        []VersionRequirement
 	ProvenanceFiles            []string
 	AggregateChecksum          string
-	APIVersion                 string
+	// APIVersion tracks the apiVersion of the package definition used to build the package.
+	APIVersion string
 
-	// v1alpha1-only
+	// v1alpha1-only build fields.
 	DifferentialMissing []string
 }
 
@@ -73,298 +79,237 @@ type VersionRequirement struct {
 	Reason  string
 }
 
-// Constant represents a template constant.
-type Constant struct {
-	Name        string
-	Value       string
-	Description string
-	AutoIndent  bool
-	Pattern     string
+// Values defines values files and schema.
+type Values struct {
+	Files  []string
+	Schema string
 }
 
-// Variable represents a variable.
-type Variable struct {
-	Name       string
-	Sensitive  bool
-	AutoIndent bool
-	Pattern    string
-	Type       string
+// Component is the superset of component fields across API versions.
+type Component struct {
+	Name          string
+	Description   string
+	Optional      bool
+	Target        ComponentTarget
+	Import        ComponentImport
+	Service       string
+	Manifests     []Manifest
+	Charts        []Chart
+	Files         []File
+	Images        []Image
+	ImageArchives []ImageArchive
+	Repositories  []string
+	Actions       ComponentActions
+
+	// v1alpha1-only fields preserved for lossless round-trip.
+	Default        bool
+	Required       *bool
+	Group          string
+	DataInjections []v1alpha1.ZarfDataInjection
+	HealthChecks   []v1alpha1.NamespacedObjectKindReference
+	Distros        []string
 }
 
-// InteractiveVariable is a variable that can prompt the user.
-type InteractiveVariable struct {
-	Variable
-	Description string
-	Default     string
-	Prompt      bool
+// ComponentTarget filters a component to a target OS/arch/flavor.
+type ComponentTarget struct {
+	OS           string
+	Architecture string
+	Flavor       string
 }
 
-// SetVariable tracks a variable that has been set.
-type SetVariable struct {
-	Variable
-	Value string
+// ComponentImport carries imports from any API version.
+type ComponentImport struct {
+	// v1beta1 form: separate lists of local and remote component config references.
+	Local  []ComponentImportLocal
+	Remote []ComponentImportRemote
+
+	// v1alpha1-only single-import fields.
+	Name string
+	Path string
+	URL  string
 }
 
-// SetValue declares a value that can be set during deploy.
+// ComponentImportLocal references a local component config file.
+type ComponentImportLocal struct {
+	Path string
+}
+
+// ComponentImportRemote references a remote (OCI) component config.
+type ComponentImportRemote struct {
+	URL string
+}
+
+// KustomizeManifest holds kustomization settings for a manifest.
+type KustomizeManifest struct {
+	Files             []string
+	AllowAnyDirectory bool
+	EnablePlugins     bool
+}
+
+// Manifest is the superset of manifest fields across API versions.
+type Manifest struct {
+	Name            string
+	Namespace       string
+	Files           []string
+	Kustomize       *KustomizeManifest
+	SkipWait        bool
+	ServerSideApply string
+	EnableValues    bool
+
+	// v1alpha1-only round-trip fields.
+	Template *bool
+}
+
+// Chart is the superset of chart fields across API versions.
+type Chart struct {
+	Name                 string
+	Namespace            string
+	ReleaseName          string
+	ValuesFiles          []string
+	Values               []ChartValue
+	SkipSchemaValidation bool
+	ServerSideApply      string
+	SkipWait             bool
+
+	// v1beta1 structured sources.
+	HelmRepository *HelmRepositorySource
+	Git            *GitSource
+	Local          *LocalSource
+	OCI            *OCISource
+
+	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
+	URL              string
+	RepoName         string
+	GitPath          string
+	LocalPath        string
+	Version          string
+	SchemaValidation *bool
+	Variables        []v1alpha1.ZarfChartVariable
+}
+
+// ChartValue maps a source path to a target path.
+type ChartValue struct {
+	SourcePath string
+	TargetPath string
+}
+
+// HelmRepositorySource represents a chart stored in a Helm repository.
+type HelmRepositorySource struct {
+	Name    string
+	URL     string
+	Version string
+}
+
+// GitSource represents a chart stored in a Git repository.
+type GitSource struct {
+	URL  string
+	Path string
+}
+
+// LocalSource represents a chart stored locally.
+type LocalSource struct {
+	Path string
+}
+
+// OCISource represents a chart stored in an OCI registry.
+type OCISource struct {
+	URL     string
+	Version string
+}
+
+// File is the superset of file fields across API versions.
+type File struct {
+	Source       string
+	Checksum     string
+	Destination  string
+	Executable   bool
+	Symlinks     []string
+	ExtractPath  string
+	EnableValues bool
+}
+
+// Image represents an OCI image in the package.
+type Image struct {
+	Name   string
+	Source string
+}
+
+// ImageArchive defines a tar archive of images to include in the package.
+type ImageArchive struct {
+	Path   string
+	Images []string
+}
+
+// ComponentActions are ActionSets mapped to package lifecycle operations.
+type ComponentActions struct {
+	OnCreate ComponentActionSet
+	OnDeploy ComponentActionSet
+	OnRemove ComponentActionSet
+}
+
+// ComponentActionSet is a set of actions for one lifecycle operation.
+type ComponentActionSet struct {
+	Defaults  ComponentActionDefaults
+	Before    []ComponentAction
+	OnSuccess []ComponentAction
+	OnFailure []ComponentAction
+}
+
+// ComponentActionDefaults sets defaults for child actions.
+type ComponentActionDefaults struct {
+	Silent          bool
+	MaxTotalSeconds int32
+	Retries         int32
+	Dir             string
+	Env             []string
+	Shell           Shell
+}
+
+// ComponentAction is the superset of action fields across API versions.
+type ComponentAction struct {
+	Silent          *bool
+	MaxTotalSeconds *int32
+	Retries         *int32
+	Dir             *string
+	Env             []string
+	Cmd             string
+	Shell           *Shell
+	SetValues       []SetValue
+	Description     string
+	Wait            *ComponentActionWait
+	EnableValues    bool
+
+	// v1alpha1-only round-trip fields.
+	SetVariables          []v1alpha1.Variable
+	DeprecatedSetVariable string
+}
+
+// SetValue declares a value that can be set during a deploy.
 type SetValue struct {
 	Key   string
 	Value any
 	Type  string
 }
 
-// ZarfValues defines values files and schema.
-type ZarfValues struct {
-	Files  []string
-	Schema string
+// ComponentActionWait specifies a condition to wait for before continuing.
+type ComponentActionWait struct {
+	Cluster *ComponentActionWaitCluster
+	Network *ComponentActionWaitNetwork
 }
 
-// ZarfComponent is the internal superset of component fields.
-type ZarfComponent struct {
-	Name          string
-	Description   string
-	Only          ZarfComponentOnlyTarget
-	Import        ZarfComponentImport
-	Manifests     []ZarfManifest
-	Charts        []ZarfChart
-	Files         []ZarfFile
-	Images        []ZarfImage
-	ImageArchives []ImageArchive
-	Repos         []string
-	Actions       ZarfComponentActions
-	Features      ZarfComponentFeatures
-
-	// v1alpha1-only fields preserved for lossless conversion
-	Default        bool
-	Required       *bool
-	Optional       *bool
-	Group          string
-	DataInjections []v1alpha1.ZarfDataInjection
-	HealthChecks   []v1alpha1.NamespacedObjectKindReference
-	// v1alpha1 chart variables are dropped (no shim needed, per proposal)
-}
-
-// ZarfComponentOnlyTarget filters a component.
-type ZarfComponentOnlyTarget struct {
-	LocalOS string
-	Cluster ZarfComponentOnlyCluster
-	Flavor  string
-}
-
-// ZarfComponentOnlyCluster represents architecture and distro filters.
-type ZarfComponentOnlyCluster struct {
-	Architecture string
-	Distros      []string
-}
-
-// ZarfComponentImport defines an imported component.
-type ZarfComponentImport struct {
-	// v1alpha1-only
-	Name string
-	Path string
-	URL  string
-}
-
-// ZarfFile defines a file to deploy.
-type ZarfFile struct {
-	Source      string
-	Shasum      string
-	Target      string
-	Executable  bool
-	Symlinks    []string
-	ExtractPath string
-	Template    *bool
-}
-
-// ImageSource represents where an image is pulled from.
-type ImageSource string
-
-const (
-	// ImageSourceRegistry pulls from an OCI registry.
-	ImageSourceRegistry ImageSource = "registry"
-	// ImageSourceDaemon pulls from the local Docker daemon.
-	ImageSourceDaemon ImageSource = "daemon"
-)
-
-// ZarfImage represents an OCI image.
-type ZarfImage struct {
-	Name   string
-	Source ImageSource
-}
-
-// GetSource returns the image source, defaulting to ImageSourceRegistry.
-func (img ZarfImage) GetSource() ImageSource {
-	if img.Source == "" {
-		return ImageSourceRegistry
-	}
-	return img.Source
-}
-
-// ImageArchive defines a tar archive of images.
-type ImageArchive struct {
-	Path   string
-	Images []string
-}
-
-// ZarfChart is the internal superset of chart fields.
-type ZarfChart struct {
-	Name             string
-	Namespace        string
-	ReleaseName      string
-	ValuesFiles      []string
-	Values           []ZarfChartValue
-	SchemaValidation *bool
-	ServerSideApply  string
-	Wait             *bool
-
-	// v1beta1 structured sources
-	HelmRepo HelmRepoSource
-	Git      GitRepoSource
-	Local    LocalRepoSource
-	OCI      OCISource
-
-	// v1alpha1 flat fields (used during conversion to populate structured sources)
-	URL       string
-	RepoName  string
-	GitPath   string
-	LocalPath string
-	Version   string
-	NoWait    bool
-}
-
-// ZarfChartValue maps a source path to a target path.
-type ZarfChartValue struct {
-	SourcePath string
-	TargetPath string
-}
-
-// HelmRepoSource represents a Helm chart in a repository.
-type HelmRepoSource struct {
-	Name    string
-	URL     string
-	Version string
-}
-
-// GitRepoSource represents a Helm chart in a Git repo.
-type GitRepoSource struct {
-	URL  string
-	Path string
-}
-
-// LocalRepoSource represents a local Helm chart.
-type LocalRepoSource struct {
-	Path string
-}
-
-// OCISource represents a Helm chart in an OCI registry.
-type OCISource struct {
-	URL     string
-	Version string
-}
-
-// ZarfManifest defines raw manifests deployed as a Helm chart.
-type ZarfManifest struct {
-	Name                       string
-	Namespace                  string
-	Files                      []string
-	KustomizeAllowAnyDirectory bool
-	Kustomizations             []string
-	ServerSideApply            string
-	Template                   *bool
-	Wait                       *bool
-	NoWait                     bool
-
-	// v1alpha1-only
-	EnableKustomizePlugins bool
-}
-
-// ZarfComponentFeatures defines CLI features for a component.
-type ZarfComponentFeatures struct {
-	IsRegistry bool
-	Injector   *Injector
-	IsAgent    bool
-}
-
-// Injector defines the Zarf injector configuration.
-type Injector struct {
-	Enabled bool
-	Values  *InjectorValues
-}
-
-// InjectorValues defines configurable values for the injector.
-type InjectorValues struct {
-	Tolerations string
-}
-
-// ZarfComponentActions are action sets mapped to lifecycle operations.
-type ZarfComponentActions struct {
-	OnCreate ZarfComponentActionSet
-	OnDeploy ZarfComponentActionSet
-	OnRemove ZarfComponentActionSet
-}
-
-// ZarfComponentActionSet is a set of actions for a lifecycle operation.
-type ZarfComponentActionSet struct {
-	Defaults  ZarfComponentActionDefaults
-	Before    []ZarfComponentAction
-	After     []ZarfComponentAction
-	OnSuccess []ZarfComponentAction // v1alpha1-only, merged into After for v1beta1
-	OnFailure []ZarfComponentAction
-}
-
-// ZarfComponentActionDefaults sets default configs for child actions.
-type ZarfComponentActionDefaults struct {
-	Mute    bool
-	Timeout *metav1.Duration
-	Retries int
-	Dir     string
-	Env     []string
-	Shell   Shell
-
-	// v1alpha1 fields
-	MaxTotalSeconds int
-	MaxRetries      int
-}
-
-// ZarfComponentAction represents a single action.
-type ZarfComponentAction struct {
-	Mute         *bool
-	Timeout      *metav1.Duration
-	Retries      int
-	Dir          *string
-	Env          []string
-	Cmd          string
-	Shell        *Shell
-	SetVariables []Variable
-	SetValues    []SetValue
-	Description  string
-	Wait         *ZarfComponentActionWait
-	Template     *bool
-
-	// v1alpha1 fields
-	MaxTotalSeconds       *int
-	MaxRetries            *int
-	DeprecatedSetVariable string
-}
-
-// ZarfComponentActionWait specifies a wait condition.
-type ZarfComponentActionWait struct {
-	Cluster *ZarfComponentActionWaitCluster
-	Network *ZarfComponentActionWaitNetwork
-}
-
-// ZarfComponentActionWaitCluster specifies a cluster wait condition.
-type ZarfComponentActionWaitCluster struct {
+// ComponentActionWaitCluster specifies a cluster-level wait condition.
+type ComponentActionWaitCluster struct {
 	Kind      string
 	Name      string
 	Namespace string
 	Condition string
 }
 
-// ZarfComponentActionWaitNetwork specifies a network wait condition.
-type ZarfComponentActionWaitNetwork struct {
+// ComponentActionWaitNetwork specifies a network-level wait condition.
+type ComponentActionWaitNetwork struct {
 	Protocol string
 	Address  string
-	Code     int
+	Code     int32
 }
 
 // Shell represents shell preferences per OS.

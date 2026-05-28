@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
+// Package v1alpha1 contains functions for converting between the public v1alpha1 Zarf package and the internal generic representation.
 package v1alpha1
 
 import (
@@ -9,15 +10,14 @@ import (
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
-func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.ZarfPackage {
-	g := types.ZarfPackage{
+func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
+	g := types.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
-		Metadata: types.ZarfMetadata{
+		Metadata: types.PackageMetadata{
 			Name:                   pkg.Metadata.Name,
 			Description:            pkg.Metadata.Description,
 			Version:                pkg.Metadata.Version,
@@ -34,8 +34,8 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.ZarfPackage {
 			Vendor:                 pkg.Metadata.Vendor,
 			AggregateChecksum:      pkg.Metadata.AggregateChecksum,
 		},
-		Build: types.ZarfBuildData{
-			Terminal:                   pkg.Build.Terminal,
+		Build: types.BuildData{
+			Hostname:                   pkg.Build.Terminal,
 			User:                       pkg.Build.User,
 			Architecture:               pkg.Build.Architecture,
 			Timestamp:                  pkg.Build.Timestamp,
@@ -46,15 +46,16 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.ZarfPackage {
 			DifferentialPackageVersion: pkg.Build.DifferentialPackageVersion,
 			Flavor:                     pkg.Build.Flavor,
 			Signed:                     pkg.Build.Signed,
-			APIVersion:                 pkg.Build.APIVersion,
 			DifferentialMissing:        pkg.Build.DifferentialMissing,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 		},
-		Values: types.ZarfValues{
+		Values: types.Values{
 			Files:  pkg.Values.Files,
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
+		Variables:     append([]v1alpha1.InteractiveVariable(nil), pkg.Variables...),
+		Constants:     append([]v1alpha1.Constant(nil), pkg.Constants...),
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -64,40 +65,15 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.ZarfPackage {
 		})
 	}
 
-	for _, c := range pkg.Constants {
-		g.Constants = append(g.Constants, types.Constant{
-			Name:        c.Name,
-			Value:       c.Value,
-			Description: c.Description,
-			AutoIndent:  c.AutoIndent,
-			Pattern:     c.Pattern,
-		})
-	}
-
-	for _, v := range pkg.Variables {
-		g.Variables = append(g.Variables, types.InteractiveVariable{
-			Variable: types.Variable{
-				Name:       v.Name,
-				Sensitive:  v.Sensitive,
-				AutoIndent: v.AutoIndent,
-				Pattern:    v.Pattern,
-				Type:       string(v.Type),
-			},
-			Description: v.Description,
-			Default:     v.Default,
-			Prompt:      v.Prompt,
-		})
-	}
-
 	for _, c := range pkg.Components {
-		g.Components = append(g.Components, convertV1Alpha1Component(c))
+		g.Components = append(g.Components, componentToGeneric(c))
 	}
 
 	return g
 }
 
-func convertV1Alpha1Component(c v1alpha1.ZarfComponent) types.ZarfComponent {
-	gc := types.ZarfComponent{
+func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
+	gc := types.Component{
 		Name:           c.Name,
 		Description:    c.Description,
 		Default:        c.Default,
@@ -105,72 +81,43 @@ func convertV1Alpha1Component(c v1alpha1.ZarfComponent) types.ZarfComponent {
 		Group:          c.DeprecatedGroup,
 		DataInjections: c.DataInjections,
 		HealthChecks:   c.HealthChecks,
-		Repos:          c.Repos,
-		Features:       inferFeaturesFromName(c.Name),
-		Only: types.ZarfComponentOnlyTarget{
-			LocalOS: c.Only.LocalOS,
-			Cluster: types.ZarfComponentOnlyCluster{
-				Architecture: c.Only.Cluster.Architecture,
-				Distros:      c.Only.Cluster.Distros,
-			},
-			Flavor: c.Only.Flavor,
+		Repositories:   c.Repos,
+		Target: types.ComponentTarget{
+			OS:           c.Only.LocalOS,
+			Architecture: c.Only.Cluster.Architecture,
+			Flavor:       c.Only.Flavor,
 		},
-		Import: types.ZarfComponentImport{
+		Distros: c.Only.Cluster.Distros,
+		Import: types.ComponentImport{
 			Name: c.Import.Name,
 			Path: c.Import.Path,
 			URL:  c.Import.URL,
 		},
-		Actions: convertV1Alpha1Actions(c.Actions),
+		Actions: actionsToGeneric(c.Actions),
 	}
 
 	for _, m := range c.Manifests {
-		gc.Manifests = append(gc.Manifests, types.ZarfManifest{
-			Name:                       m.Name,
-			Namespace:                  m.Namespace,
-			Files:                      m.Files,
-			KustomizeAllowAnyDirectory: m.KustomizeAllowAnyDirectory,
-			Kustomizations:             m.Kustomizations,
-			ServerSideApply:            m.ServerSideApply,
-			Template:                   m.Template,
-			NoWait:                     m.NoWait,
-			EnableKustomizePlugins:     m.EnableKustomizePlugins,
-		})
+		gc.Manifests = append(gc.Manifests, manifestToGeneric(m))
 	}
 
 	for _, ch := range c.Charts {
-		gc.Charts = append(gc.Charts, types.ZarfChart{
-			Name:             ch.Name,
-			Namespace:        ch.Namespace,
-			ReleaseName:      ch.ReleaseName,
-			ValuesFiles:      ch.ValuesFiles,
-			SchemaValidation: ch.SchemaValidation,
-			ServerSideApply:  ch.ServerSideApply,
-			NoWait:           ch.NoWait,
-			URL:              ch.URL,
-			RepoName:         ch.RepoName,
-			GitPath:          ch.GitPath,
-			LocalPath:        ch.LocalPath,
-			Version:          ch.Version,
-			Values:           convertV1Alpha1ChartValues(ch.Values),
-		})
+		gc.Charts = append(gc.Charts, chartToGeneric(ch))
 	}
 
 	for _, f := range c.Files {
-		gc.Files = append(gc.Files, types.ZarfFile{
-			Source:      f.Source,
-			Shasum:      f.Shasum,
-			Target:      f.Target,
-			Executable:  f.Executable,
-			Symlinks:    f.Symlinks,
-			ExtractPath: f.ExtractPath,
-			Template:    f.Template,
+		gc.Files = append(gc.Files, types.File{
+			Source:       f.Source,
+			Checksum:     f.Shasum,
+			Destination:  f.Target,
+			Executable:   f.Executable,
+			Symlinks:     f.Symlinks,
+			ExtractPath:  f.ExtractPath,
+			EnableValues: derefBool(f.Template),
 		})
 	}
 
 	for _, img := range c.Images {
-		gc.Images = append(gc.Images, types.ZarfImage{
-			Name: img,
-		})
+		gc.Images = append(gc.Images, types.Image{Name: img})
 	}
 
 	for _, ia := range c.ImageArchives {
@@ -183,10 +130,51 @@ func convertV1Alpha1Component(c v1alpha1.ZarfComponent) types.ZarfComponent {
 	return gc
 }
 
-func convertV1Alpha1ChartValues(vals []v1alpha1.ZarfChartValue) []types.ZarfChartValue {
-	var out []types.ZarfChartValue
+func manifestToGeneric(m v1alpha1.ZarfManifest) types.Manifest {
+	gm := types.Manifest{
+		Name:            m.Name,
+		Namespace:       m.Namespace,
+		Files:           m.Files,
+		SkipWait:        m.NoWait,
+		ServerSideApply: m.ServerSideApply,
+		EnableValues:    derefBool(m.Template),
+		Template:        m.Template,
+	}
+	if len(m.Kustomizations) > 0 || m.KustomizeAllowAnyDirectory || m.EnableKustomizePlugins {
+		gm.Kustomize = &types.KustomizeManifest{
+			Files:             m.Kustomizations,
+			AllowAnyDirectory: m.KustomizeAllowAnyDirectory,
+			EnablePlugins:     m.EnableKustomizePlugins,
+		}
+	}
+	return gm
+}
+
+func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
+	gc := types.Chart{
+		Name:                 ch.Name,
+		Namespace:            ch.Namespace,
+		ReleaseName:          ch.ReleaseName,
+		ValuesFiles:          ch.ValuesFiles,
+		SkipSchemaValidation: ch.SchemaValidation != nil && !*ch.SchemaValidation,
+		ServerSideApply:      ch.ServerSideApply,
+		SkipWait:             ch.NoWait,
+		URL:                  ch.URL,
+		RepoName:             ch.RepoName,
+		GitPath:              ch.GitPath,
+		LocalPath:            ch.LocalPath,
+		Version:              ch.Version,
+		SchemaValidation:     ch.SchemaValidation,
+		Variables:            ch.Variables,
+		Values:               chartValuesToGeneric(ch.Values),
+	}
+	return gc
+}
+
+func chartValuesToGeneric(vals []v1alpha1.ZarfChartValue) []types.ChartValue {
+	var out []types.ChartValue
 	for _, v := range vals {
-		out = append(out, types.ZarfChartValue{
+		out = append(out, types.ChartValue{
 			SourcePath: v.SourcePath,
 			TargetPath: v.TargetPath,
 		})
@@ -194,66 +182,67 @@ func convertV1Alpha1ChartValues(vals []v1alpha1.ZarfChartValue) []types.ZarfChar
 	return out
 }
 
-func convertV1Alpha1Actions(a v1alpha1.ZarfComponentActions) types.ZarfComponentActions {
-	return types.ZarfComponentActions{
-		OnCreate: convertV1Alpha1ActionSet(a.OnCreate),
-		OnDeploy: convertV1Alpha1ActionSet(a.OnDeploy),
-		OnRemove: convertV1Alpha1ActionSet(a.OnRemove),
+func actionsToGeneric(a v1alpha1.ZarfComponentActions) types.ComponentActions {
+	return types.ComponentActions{
+		OnCreate: actionSetToGeneric(a.OnCreate),
+		OnDeploy: actionSetToGeneric(a.OnDeploy),
+		OnRemove: actionSetToGeneric(a.OnRemove),
 	}
 }
 
-func convertV1Alpha1ActionSet(s v1alpha1.ZarfComponentActionSet) types.ZarfComponentActionSet {
-	return types.ZarfComponentActionSet{
-		Defaults: types.ZarfComponentActionDefaults{
-			Mute:            s.Defaults.Mute,
-			MaxTotalSeconds: s.Defaults.MaxTotalSeconds,
-			MaxRetries:      s.Defaults.MaxRetries,
-			Dir:             s.Defaults.Dir,
-			Env:             s.Defaults.Env,
-			Shell: types.Shell{
-				Windows: s.Defaults.Shell.Windows,
-				Linux:   s.Defaults.Shell.Linux,
-				Darwin:  s.Defaults.Shell.Darwin,
-			},
+func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) types.ComponentActionSet {
+	defaults := types.ComponentActionDefaults{
+		Silent:          s.Defaults.Mute,
+		MaxTotalSeconds: clampToInt32(s.Defaults.MaxTotalSeconds),
+		Retries:         clampToInt32(s.Defaults.MaxRetries),
+		Dir:             s.Defaults.Dir,
+		Env:             s.Defaults.Env,
+		Shell: types.Shell{
+			Windows: s.Defaults.Shell.Windows,
+			Linux:   s.Defaults.Shell.Linux,
+			Darwin:  s.Defaults.Shell.Darwin,
 		},
-		Before:    convertV1Alpha1ActionSlice(s.Before),
-		After:     convertV1Alpha1ActionSlice(s.After),
-		OnSuccess: convertV1Alpha1ActionSlice(s.OnSuccess),
-		OnFailure: convertV1Alpha1ActionSlice(s.OnFailure),
+	}
+
+	onSuccess := actionSliceToGeneric(s.After)
+	onSuccess = append(onSuccess, actionSliceToGeneric(s.OnSuccess)...)
+
+	return types.ComponentActionSet{
+		Defaults:  defaults,
+		Before:    actionSliceToGeneric(s.Before),
+		OnSuccess: onSuccess,
+		OnFailure: actionSliceToGeneric(s.OnFailure),
 	}
 }
 
-func convertV1Alpha1ActionSlice(actions []v1alpha1.ZarfComponentAction) []types.ZarfComponentAction {
-	var out []types.ZarfComponentAction
+func actionSliceToGeneric(actions []v1alpha1.ZarfComponentAction) []types.ComponentAction {
+	var out []types.ComponentAction
 	for _, a := range actions {
-		out = append(out, convertV1Alpha1Action(a))
+		out = append(out, actionToGeneric(a))
 	}
 	return out
 }
 
-func convertV1Alpha1Action(a v1alpha1.ZarfComponentAction) types.ZarfComponentAction {
-	ga := types.ZarfComponentAction{
-		Mute:                  a.Mute,
-		Retries:               derefIntOr(a.MaxRetries, 0),
+func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
+	ga := types.ComponentAction{
+		Silent:                a.Mute,
 		Dir:                   a.Dir,
 		Env:                   a.Env,
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
-		Wait:                  convertV1Alpha1Wait(a.Wait),
-		Template:              a.Template,
-		MaxTotalSeconds:       a.MaxTotalSeconds,
-		MaxRetries:            a.MaxRetries,
+		Wait:                  waitToGeneric(a.Wait),
+		EnableValues:          derefBool(a.Template),
+		SetVariables:          a.SetVariables,
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
 
-	for _, v := range a.SetVariables {
-		ga.SetVariables = append(ga.SetVariables, types.Variable{
-			Name:       v.Name,
-			Sensitive:  v.Sensitive,
-			AutoIndent: v.AutoIndent,
-			Pattern:    v.Pattern,
-			Type:       string(v.Type),
-		})
+	if a.MaxTotalSeconds != nil {
+		v := clampToInt32(*a.MaxTotalSeconds)
+		ga.MaxTotalSeconds = &v
+	}
+	if a.MaxRetries != nil {
+		v := clampToInt32(*a.MaxRetries)
+		ga.Retries = &v
 	}
 
 	for _, sv := range a.SetValues {
@@ -275,13 +264,13 @@ func convertV1Alpha1Action(a v1alpha1.ZarfComponentAction) types.ZarfComponentAc
 	return ga
 }
 
-func convertV1Alpha1Wait(w *v1alpha1.ZarfComponentActionWait) *types.ZarfComponentActionWait {
+func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *types.ComponentActionWait {
 	if w == nil {
 		return nil
 	}
-	gw := &types.ZarfComponentActionWait{}
+	gw := &types.ComponentActionWait{}
 	if w.Cluster != nil {
-		gw.Cluster = &types.ZarfComponentActionWaitCluster{
+		gw.Cluster = &types.ComponentActionWaitCluster{
 			Kind:      w.Cluster.Kind,
 			Name:      w.Cluster.Name,
 			Namespace: w.Cluster.Namespace,
@@ -289,87 +278,40 @@ func convertV1Alpha1Wait(w *v1alpha1.ZarfComponentActionWait) *types.ZarfCompone
 		}
 	}
 	if w.Network != nil {
-		gw.Network = &types.ZarfComponentActionWaitNetwork{
+		gw.Network = &types.ComponentActionWaitNetwork{
 			Protocol: w.Network.Protocol,
 			Address:  w.Network.Address,
-			Code:     w.Network.Code,
+			Code:     clampToInt32(w.Network.Code),
 		}
 	}
 	return gw
 }
 
-// inferFeaturesFromName infers v1beta1-style Features from v1alpha1 component names.
-// v1alpha1 has no Features field; these well-known component names encode the same semantics.
-func inferFeaturesFromName(name string) types.ZarfComponentFeatures {
-	switch name {
-	case "zarf-registry", "zarf-injector":
-		return types.ZarfComponentFeatures{IsRegistry: true}
-	case "zarf-seed-registry":
-		return types.ZarfComponentFeatures{
-			IsRegistry: true,
-			Injector:   &types.Injector{Enabled: true},
-		}
-	case "zarf-agent":
-		return types.ZarfComponentFeatures{IsAgent: true}
-	default:
-		return types.ZarfComponentFeatures{}
-	}
-}
-
-func derefIntOr(p *int, def int) int {
-	if p != nil {
-		return *p
-	}
-	return def
-}
-
 // ConvertFromGeneric converts the internal generic representation to a v1alpha1 ZarfPackage.
-func ConvertFromGeneric(g types.ZarfPackage) v1alpha1.ZarfPackage {
+func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 	pkg := v1alpha1.ZarfPackage{
-		APIVersion: v1alpha1.APIVersion,
-		Kind:       v1alpha1.ZarfPackageKind(g.Kind),
-		Metadata:   convertGenericToV1Alpha1Metadata(g.Metadata, g.Build),
-		Build:      convertGenericToV1Alpha1Build(g.Build),
-		Values: v1alpha1.ZarfValues{
-			Files:  g.Values.Files,
-			Schema: g.Values.Schema,
-		},
+		APIVersion:    v1alpha1.APIVersion,
+		Kind:          v1alpha1.ZarfPackageKind(g.Kind),
+		Metadata:      metadataFromGeneric(g.Metadata, g.Build),
+		Build:         buildFromGeneric(g.Build),
+		Values:        v1alpha1.ZarfValues{Files: g.Values.Files, Schema: g.Values.Schema},
 		Documentation: g.Documentation,
+		Variables:     append([]v1alpha1.InteractiveVariable(nil), g.Variables...),
+		Constants:     append([]v1alpha1.Constant(nil), g.Constants...),
 	}
 
-	for _, c := range g.Constants {
-		pkg.Constants = append(pkg.Constants, v1alpha1.Constant{
-			Name:        c.Name,
-			Value:       c.Value,
-			Description: c.Description,
-			AutoIndent:  c.AutoIndent,
-			Pattern:     c.Pattern,
-		})
-	}
-
-	for _, v := range g.Variables {
-		pkg.Variables = append(pkg.Variables, v1alpha1.InteractiveVariable{
-			Variable: v1alpha1.Variable{
-				Name:       v.Name,
-				Sensitive:  v.Sensitive,
-				AutoIndent: v.AutoIndent,
-				Pattern:    v.Pattern,
-				Type:       v1alpha1.VariableType(v.Type),
-			},
-			Description: v.Description,
-			Default:     v.Default,
-			Prompt:      v.Prompt,
-		})
+	if pkg.Kind == "" {
+		pkg.Kind = v1alpha1.ZarfPackageConfig
 	}
 
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, convertGenericToV1Alpha1Component(c))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
 
 	return pkg
 }
 
-func convertGenericToV1Alpha1Metadata(m types.ZarfMetadata, b types.ZarfBuildData) v1alpha1.ZarfMetadata {
+func metadataFromGeneric(m types.PackageMetadata, b types.BuildData) v1alpha1.ZarfMetadata {
 	meta := v1alpha1.ZarfMetadata{
 		Name:                   m.Name,
 		Description:            m.Description,
@@ -386,10 +328,17 @@ func convertGenericToV1Alpha1Metadata(m types.ZarfMetadata, b types.ZarfBuildDat
 		Vendor:                 m.Vendor,
 	}
 
-	// AggregateChecksum: prefer metadata (v1alpha1 native location), fall back to build (v1beta1 location).
-	if m.AggregateChecksum != "" {
+	// If we only have the v1beta1 form of namespace override, project it back to v1alpha1.
+	if meta.AllowNamespaceOverride == nil {
+		allow := !m.PreventNamespaceOverride
+		meta.AllowNamespaceOverride = &allow
+	}
+
+	// AggregateChecksum: prefer the v1alpha1 native location, fall back to build (v1beta1 location).
+	switch {
+	case m.AggregateChecksum != "":
 		meta.AggregateChecksum = m.AggregateChecksum
-	} else if b.AggregateChecksum != "" {
+	case b.AggregateChecksum != "":
 		meta.AggregateChecksum = b.AggregateChecksum
 	}
 
@@ -422,9 +371,9 @@ func convertGenericToV1Alpha1Metadata(m types.ZarfMetadata, b types.ZarfBuildDat
 	return meta
 }
 
-func convertGenericToV1Alpha1Build(b types.ZarfBuildData) v1alpha1.ZarfBuildData {
+func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 	out := v1alpha1.ZarfBuildData{
-		Terminal:                   b.Terminal,
+		Terminal:                   b.Hostname,
 		User:                       b.User,
 		Architecture:               b.Architecture,
 		Timestamp:                  b.Timestamp,
@@ -436,7 +385,6 @@ func convertGenericToV1Alpha1Build(b types.ZarfBuildData) v1alpha1.ZarfBuildData
 		DifferentialMissing:        b.DifferentialMissing,
 		Flavor:                     b.Flavor,
 		Signed:                     b.Signed,
-		APIVersion:                 b.APIVersion,
 		ProvenanceFiles:            b.ProvenanceFiles,
 	}
 
@@ -450,137 +398,148 @@ func convertGenericToV1Alpha1Build(b types.ZarfBuildData) v1alpha1.ZarfBuildData
 	return out
 }
 
-func convertGenericToV1Alpha1Component(c types.ZarfComponent) v1alpha1.ZarfComponent {
-	gc := v1alpha1.ZarfComponent{
+func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
+	ac := v1alpha1.ZarfComponent{
 		Name:            c.Name,
 		Description:     c.Description,
 		Default:         c.Default,
-		Required:        convertOptionalToRequired(c.Optional, c.Required),
+		Required:        requiredFromGeneric(c.Optional, c.Required),
 		DeprecatedGroup: c.Group,
 		DataInjections:  c.DataInjections,
 		HealthChecks:    c.HealthChecks,
-		Repos:           c.Repos,
+		Repos:           c.Repositories,
 		Only: v1alpha1.ZarfComponentOnlyTarget{
-			LocalOS: c.Only.LocalOS,
+			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
-				Architecture: c.Only.Cluster.Architecture,
-				Distros:      c.Only.Cluster.Distros,
+				Architecture: c.Target.Architecture,
+				Distros:      c.Distros,
 			},
-			Flavor: c.Only.Flavor,
+			Flavor: c.Target.Flavor,
 		},
 		Import: v1alpha1.ZarfComponentImport{
 			Name: c.Import.Name,
 			Path: c.Import.Path,
 			URL:  c.Import.URL,
 		},
-		Actions: convertGenericToV1Alpha1Actions(c.Actions),
+		Actions: actionsFromGeneric(c.Actions),
+	}
+
+	// If the v1alpha1 single-path import fields are empty but the v1beta1 lists have one entry, project it back.
+	if ac.Import.Path == "" && len(c.Import.Local) > 0 {
+		ac.Import.Path = c.Import.Local[0].Path
+	}
+	if ac.Import.URL == "" && len(c.Import.Remote) > 0 {
+		ac.Import.URL = c.Import.Remote[0].URL
 	}
 
 	for _, m := range c.Manifests {
-		gc.Manifests = append(gc.Manifests, convertGenericToV1Alpha1Manifest(m))
+		ac.Manifests = append(ac.Manifests, manifestFromGeneric(m))
 	}
 
 	for _, ch := range c.Charts {
-		gc.Charts = append(gc.Charts, convertGenericToV1Alpha1Chart(ch))
+		ac.Charts = append(ac.Charts, chartFromGeneric(ch))
 	}
 
 	for _, f := range c.Files {
-		gc.Files = append(gc.Files, v1alpha1.ZarfFile{
+		af := v1alpha1.ZarfFile{
 			Source:      f.Source,
-			Shasum:      f.Shasum,
-			Target:      f.Target,
+			Shasum:      f.Checksum,
+			Target:      f.Destination,
 			Executable:  f.Executable,
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
-			Template:    f.Template,
-		})
+		}
+		if f.EnableValues {
+			t := true
+			af.Template = &t
+		}
+		ac.Files = append(ac.Files, af)
 	}
 
 	for _, img := range c.Images {
-		gc.Images = append(gc.Images, img.Name)
+		ac.Images = append(ac.Images, img.Name)
 	}
 
 	for _, ia := range c.ImageArchives {
-		gc.ImageArchives = append(gc.ImageArchives, v1alpha1.ImageArchive{
+		ac.ImageArchives = append(ac.ImageArchives, v1alpha1.ImageArchive{
 			Path:   ia.Path,
 			Images: ia.Images,
 		})
 	}
 
-	return gc
+	return ac
 }
 
-// convertOptionalToRequired maps back from the generic superset to v1alpha1 Required.
-// If the original Required is preserved (from a v1alpha1 origin), use it directly.
-// If only Optional is set (from a v1beta1 origin), invert it.
-func convertOptionalToRequired(optional *bool, required *bool) *bool {
+// requiredFromGeneric maps the v1beta1 Optional and v1alpha1 Required back to v1alpha1 Required.
+// Prefers preserved v1alpha1 Required; otherwise inverts Optional.
+func requiredFromGeneric(optional bool, required *bool) *bool {
 	if required != nil {
 		return required
 	}
-	if optional == nil {
-		return nil
-	}
-	inverted := !*optional
-	return &inverted
+	v := !optional
+	return &v
 }
 
-func convertGenericToV1Alpha1Manifest(m types.ZarfManifest) v1alpha1.ZarfManifest {
+func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
 	am := v1alpha1.ZarfManifest{
-		Name:                       m.Name,
-		Namespace:                  m.Namespace,
-		Files:                      m.Files,
-		KustomizeAllowAnyDirectory: m.KustomizeAllowAnyDirectory,
-		Kustomizations:             m.Kustomizations,
-		ServerSideApply:            m.ServerSideApply,
-		Template:                   m.Template,
-		NoWait:                     m.NoWait,
-		EnableKustomizePlugins:     m.EnableKustomizePlugins,
+		Name:            m.Name,
+		Namespace:       m.Namespace,
+		Files:           m.Files,
+		ServerSideApply: m.ServerSideApply,
+		NoWait:          m.SkipWait,
+		Template:        m.Template,
 	}
-
-	// Invert Wait → NoWait if Wait was explicitly set and NoWait wasn't already.
-	if !am.NoWait && m.Wait != nil {
-		am.NoWait = !*m.Wait
+	if m.Kustomize != nil {
+		am.Kustomizations = m.Kustomize.Files
+		am.KustomizeAllowAnyDirectory = m.Kustomize.AllowAnyDirectory
+		am.EnableKustomizePlugins = m.Kustomize.EnablePlugins
 	}
-
+	if am.Template == nil && m.EnableValues {
+		t := true
+		am.Template = &t
+	}
 	return am
 }
 
-func convertGenericToV1Alpha1Chart(ch types.ZarfChart) v1alpha1.ZarfChart {
+func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
-		Name:             ch.Name,
-		Namespace:        ch.Namespace,
-		ReleaseName:      ch.ReleaseName,
-		ValuesFiles:      ch.ValuesFiles,
-		SchemaValidation: ch.SchemaValidation,
-		ServerSideApply:  ch.ServerSideApply,
-		NoWait:           ch.NoWait,
-		URL:              ch.URL,
-		RepoName:         ch.RepoName,
-		GitPath:          ch.GitPath,
-		LocalPath:        ch.LocalPath,
-		Version:          ch.Version,
+		Name:            ch.Name,
+		Namespace:       ch.Namespace,
+		ReleaseName:     ch.ReleaseName,
+		ValuesFiles:     ch.ValuesFiles,
+		ServerSideApply: ch.ServerSideApply,
+		NoWait:          ch.SkipWait,
+		URL:             ch.URL,
+		RepoName:        ch.RepoName,
+		GitPath:         ch.GitPath,
+		LocalPath:       ch.LocalPath,
+		Version:         ch.Version,
+		Variables:       ch.Variables,
 	}
 
-	// Invert Wait → NoWait if Wait was explicitly set and NoWait wasn't already.
-	if !ac.NoWait && ch.Wait != nil {
-		ac.NoWait = !*ch.Wait
+	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
+	if ch.SchemaValidation != nil {
+		ac.SchemaValidation = ch.SchemaValidation
+	} else if ch.SkipSchemaValidation {
+		f := false
+		ac.SchemaValidation = &f
 	}
 
-	// If flat fields are empty but structured sources are populated, convert back to flat.
+	// If flat fields are empty but structured sources are populated, project them onto the flat fields.
 	if ac.URL == "" && ac.LocalPath == "" {
 		switch {
-		case ch.HelmRepo.URL != "":
-			ac.URL = ch.HelmRepo.URL
-			ac.RepoName = ch.HelmRepo.Name
+		case ch.HelmRepository != nil && ch.HelmRepository.URL != "":
+			ac.URL = ch.HelmRepository.URL
+			ac.RepoName = ch.HelmRepository.Name
 			if ac.Version == "" {
-				ac.Version = ch.HelmRepo.Version
+				ac.Version = ch.HelmRepository.Version
 			}
-		case ch.OCI.URL != "":
+		case ch.OCI != nil && ch.OCI.URL != "":
 			ac.URL = ch.OCI.URL
 			if ac.Version == "" {
 				ac.Version = ch.OCI.Version
 			}
-		case ch.Git.URL != "":
+		case ch.Git != nil && ch.Git.URL != "":
 			gitURL := ch.Git.URL
 			if idx := strings.LastIndex(gitURL, "@"); idx > 0 {
 				if ac.Version == "" {
@@ -590,7 +549,7 @@ func convertGenericToV1Alpha1Chart(ch types.ZarfChart) v1alpha1.ZarfChart {
 			}
 			ac.URL = gitURL
 			ac.GitPath = ch.Git.Path
-		case ch.Local.Path != "":
+		case ch.Local != nil && ch.Local.Path != "":
 			ac.LocalPath = ch.Local.Path
 		}
 	}
@@ -605,105 +564,71 @@ func convertGenericToV1Alpha1Chart(ch types.ZarfChart) v1alpha1.ZarfChart {
 	return ac
 }
 
-func convertGenericToV1Alpha1Actions(a types.ZarfComponentActions) v1alpha1.ZarfComponentActions {
+func actionsFromGeneric(a types.ComponentActions) v1alpha1.ZarfComponentActions {
 	return v1alpha1.ZarfComponentActions{
-		OnCreate: convertGenericToV1Alpha1ActionSet(a.OnCreate),
-		OnDeploy: convertGenericToV1Alpha1ActionSet(a.OnDeploy),
-		OnRemove: convertGenericToV1Alpha1ActionSet(a.OnRemove),
+		OnCreate: actionSetFromGeneric(a.OnCreate),
+		OnDeploy: actionSetFromGeneric(a.OnDeploy),
+		OnRemove: actionSetFromGeneric(a.OnRemove),
 	}
 }
 
-func convertGenericToV1Alpha1ActionSet(s types.ZarfComponentActionSet) v1alpha1.ZarfComponentActionSet {
-	return v1alpha1.ZarfComponentActionSet{
-		Defaults: v1alpha1.ZarfComponentActionDefaults{
-			Mute:            s.Defaults.Mute,
-			MaxTotalSeconds: convertMaxTotalSeconds(s.Defaults.MaxTotalSeconds, s.Defaults.Timeout),
-			MaxRetries:      convertMaxRetries(s.Defaults.MaxRetries, s.Defaults.Retries),
-			Dir:             s.Defaults.Dir,
-			Env:             s.Defaults.Env,
-			Shell: v1alpha1.Shell{
-				Windows: s.Defaults.Shell.Windows,
-				Linux:   s.Defaults.Shell.Linux,
-				Darwin:  s.Defaults.Shell.Darwin,
-			},
+func actionSetFromGeneric(s types.ComponentActionSet) v1alpha1.ZarfComponentActionSet {
+	defaults := v1alpha1.ZarfComponentActionDefaults{
+		Mute:            s.Defaults.Silent,
+		MaxTotalSeconds: int(s.Defaults.MaxTotalSeconds),
+		MaxRetries:      int(s.Defaults.Retries),
+		Dir:             s.Defaults.Dir,
+		Env:             s.Defaults.Env,
+		Shell: v1alpha1.Shell{
+			Windows: s.Defaults.Shell.Windows,
+			Linux:   s.Defaults.Shell.Linux,
+			Darwin:  s.Defaults.Shell.Darwin,
 		},
-		Before:    convertGenericToV1Alpha1ActionSlice(s.Before),
-		After:     convertGenericToV1Alpha1ActionSlice(s.After),
-		OnSuccess: convertGenericToV1Alpha1ActionSlice(s.OnSuccess),
-		OnFailure: convertGenericToV1Alpha1ActionSlice(s.OnFailure),
+	}
+
+	return v1alpha1.ZarfComponentActionSet{
+		Defaults:  defaults,
+		Before:    actionSliceFromGeneric(s.Before),
+		OnSuccess: actionSliceFromGeneric(s.OnSuccess),
+		OnFailure: actionSliceFromGeneric(s.OnFailure),
 	}
 }
 
-// convertMaxTotalSeconds returns the v1alpha1 MaxTotalSeconds value.
-// Prefers the preserved v1alpha1 value; falls back to converting the Duration.
-func convertMaxTotalSeconds(v1alpha1Val int, timeout *metav1.Duration) int {
-	if v1alpha1Val > 0 {
-		return v1alpha1Val
-	}
-	if timeout != nil {
-		secs := timeout.Duration.Seconds()
-		if secs > math.MaxInt32 {
-			return math.MaxInt32
-		}
-		return int(secs)
-	}
-	return 0
-}
-
-// convertMaxRetries returns the v1alpha1 MaxRetries value.
-// Prefers the preserved v1alpha1 value; falls back to the generic Retries.
-func convertMaxRetries(v1alpha1Val int, retries int) int {
-	if v1alpha1Val > 0 {
-		return v1alpha1Val
-	}
-	return retries
-}
-
-func convertGenericToV1Alpha1ActionSlice(actions []types.ZarfComponentAction) []v1alpha1.ZarfComponentAction {
+func actionSliceFromGeneric(actions []types.ComponentAction) []v1alpha1.ZarfComponentAction {
 	var out []v1alpha1.ZarfComponentAction
 	for _, a := range actions {
-		out = append(out, convertGenericToV1Alpha1Action(a))
+		out = append(out, actionFromGeneric(a))
 	}
 	return out
 }
 
-func convertGenericToV1Alpha1Action(a types.ZarfComponentAction) v1alpha1.ZarfComponentAction {
-	ga := v1alpha1.ZarfComponentAction{
-		Mute:                  a.Mute,
-		MaxTotalSeconds:       a.MaxTotalSeconds,
-		MaxRetries:            a.MaxRetries,
+func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
+	aa := v1alpha1.ZarfComponentAction{
+		Mute:                  a.Silent,
 		Dir:                   a.Dir,
 		Env:                   a.Env,
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
-		Wait:                  convertGenericToV1Alpha1Wait(a.Wait),
-		Template:              a.Template,
+		Wait:                  waitFromGeneric(a.Wait),
+		SetVariables:          a.SetVariables,
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
 
-	// If preserved v1alpha1 MaxTotalSeconds is nil but we have a Duration, convert it.
-	if ga.MaxTotalSeconds == nil && a.Timeout != nil {
-		secs := int(a.Timeout.Duration.Seconds())
-		ga.MaxTotalSeconds = &secs
+	if a.MaxTotalSeconds != nil {
+		v := int(*a.MaxTotalSeconds)
+		aa.MaxTotalSeconds = &v
 	}
-
-	// If preserved v1alpha1 MaxRetries is nil but we have Retries, convert it.
-	if ga.MaxRetries == nil && a.Retries > 0 {
-		ga.MaxRetries = &a.Retries
+	if a.Retries != nil {
+		v := int(*a.Retries)
+		aa.MaxRetries = &v
 	}
-
-	for _, v := range a.SetVariables {
-		ga.SetVariables = append(ga.SetVariables, v1alpha1.Variable{
-			Name:       v.Name,
-			Sensitive:  v.Sensitive,
-			AutoIndent: v.AutoIndent,
-			Pattern:    v.Pattern,
-			Type:       v1alpha1.VariableType(v.Type),
-		})
+	if a.EnableValues {
+		t := true
+		aa.Template = &t
 	}
 
 	for _, sv := range a.SetValues {
-		ga.SetValues = append(ga.SetValues, v1alpha1.SetValue{
+		aa.SetValues = append(aa.SetValues, v1alpha1.SetValue{
 			Key:   sv.Key,
 			Value: sv.Value,
 			Type:  v1alpha1.SetValueType(sv.Type),
@@ -711,17 +636,17 @@ func convertGenericToV1Alpha1Action(a types.ZarfComponentAction) v1alpha1.ZarfCo
 	}
 
 	if a.Shell != nil {
-		ga.Shell = &v1alpha1.Shell{
+		aa.Shell = &v1alpha1.Shell{
 			Windows: a.Shell.Windows,
 			Linux:   a.Shell.Linux,
 			Darwin:  a.Shell.Darwin,
 		}
 	}
 
-	return ga
+	return aa
 }
 
-func convertGenericToV1Alpha1Wait(w *types.ZarfComponentActionWait) *v1alpha1.ZarfComponentActionWait {
+func waitFromGeneric(w *types.ComponentActionWait) *v1alpha1.ZarfComponentActionWait {
 	if w == nil {
 		return nil
 	}
@@ -738,8 +663,25 @@ func convertGenericToV1Alpha1Wait(w *types.ZarfComponentActionWait) *v1alpha1.Za
 		aw.Network = &v1alpha1.ZarfComponentActionWaitNetwork{
 			Protocol: w.Network.Protocol,
 			Address:  w.Network.Address,
-			Code:     w.Network.Code,
+			Code:     int(w.Network.Code),
 		}
 	}
 	return aw
+}
+
+func clampToInt32(v int) int32 {
+	if v > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if v < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(v)
+}
+
+func derefBool(p *bool) bool {
+	if p == nil {
+		return false
+	}
+	return *p
 }
