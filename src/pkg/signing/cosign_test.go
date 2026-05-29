@@ -9,6 +9,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestDefaultSignBlobOptions_EmptyAuthFlow guards against re-introducing a
+// non-empty AuthFlow default. cosign's GetOAuthFlow treats any non-empty
+// AuthFlow as an explicit override, which bypasses ambient OIDC provider
+// detection (GitHub Actions, GCP, SPIFFE, etc.) entirely. Keep this empty.
+func TestDefaultSignBlobOptions_EmptyAuthFlow(t *testing.T) {
+	t.Parallel()
+	opts := DefaultSignBlobOptions()
+	require.Empty(t, opts.Fulcio.AuthFlow)
+}
+
 func TestShouldSign_KeyRefAlias(t *testing.T) {
 	t.Parallel()
 

@@ -395,13 +395,14 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			d.s.InjectorInfo.PayLoadConfigMapAmount = len(payloadCMs)
 			d.s.InjectorInfo.PayLoadShaSum = shasum
 		case state.RegistryModeNodePort:
-			seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
+			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
 			})
 			if err != nil {
 				return nil, err
 			}
+			d.s.InjectorInfo.Image = seedImage
 			d.s.InjectorInfo.Port = seedPort
 		}
 		// Save the injector updates to state
