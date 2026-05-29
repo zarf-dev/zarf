@@ -13,26 +13,7 @@ type Component struct {
 	Description string `json:"description,omitempty"`
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
 	Optional bool `json:"optional,omitempty"`
-	// Filter when this component is included in package creation or deployment.
-	Target ComponentTarget `json:"target,omitempty"`
-	// Import a component from another Zarf component config.
-	Import ComponentImport `json:"import,omitempty"`
-	// The Zarf CLI service this component provides, such as the registry, injector, or agent.
-	Service Service `json:"service,omitempty" jsonschema:"enum=registry,enum=seed-registry,enum=injector,enum=agent,enum=git-server"`
-	// Kubernetes manifests to be included in a generated Helm chart on package deploy.
-	Manifests []Manifest `json:"manifests,omitempty"`
-	// Helm charts to install during package deploy.
-	Charts []Chart `json:"charts,omitempty"`
-	// Files or folders to place on disk during package deployment.
-	Files []File `json:"files,omitempty"`
-	// List of OCI images to include in the package.
-	Images []Image `json:"images,omitempty"`
-	// List of tar archives of images to include in the package.
-	ImageArchives []ImageArchive `json:"imageArchives,omitempty"`
-	// List of git repositories to include in the package.
-	Repositories []string `json:"repositories,omitempty"`
-	// Custom commands to run at various stages of a package lifecycle.
-	Actions ComponentActions `json:"actions,omitempty"`
+	ComponentSpec
 	// Data injections removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	dataInjections []v1alpha1.ZarfDataInjection
 }

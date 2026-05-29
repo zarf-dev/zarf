@@ -28,9 +28,11 @@ func TestGetImages(t *testing.T) {
 			name: "only Images field",
 			component: Component{
 				Name: "test-component",
-				Images: []Image{
-					{Name: "docker.io/library/nginx:latest"},
-					{Name: "ghcr.io/zarf-dev/zarf:v0.32.6"},
+				ComponentSpec: ComponentSpec{
+					Images: []Image{
+						{Name: "docker.io/library/nginx:latest"},
+						{Name: "ghcr.io/zarf-dev/zarf:v0.32.6"},
+					},
 				},
 			},
 			expected: []string{
@@ -42,12 +44,14 @@ func TestGetImages(t *testing.T) {
 			name: "only ImageArchives with images",
 			component: Component{
 				Name: "test-component",
-				ImageArchives: []ImageArchive{
-					{
-						Path: "/tmp/images.tar",
-						Images: []string{
-							"docker.io/library/redis:latest",
-							"docker.io/library/postgres:14",
+				ComponentSpec: ComponentSpec{
+					ImageArchives: []ImageArchive{
+						{
+							Path: "/tmp/images.tar",
+							Images: []string{
+								"docker.io/library/redis:latest",
+								"docker.io/library/postgres:14",
+							},
 						},
 					},
 				},
@@ -61,21 +65,23 @@ func TestGetImages(t *testing.T) {
 			name: "both Images and ImageArchives",
 			component: Component{
 				Name: "test-component",
-				Images: []Image{
-					{Name: "docker.io/library/nginx:latest"},
-				},
-				ImageArchives: []ImageArchive{
-					{
-						Path: "/tmp/images1.tar",
-						Images: []string{
-							"docker.io/library/redis:latest",
-						},
+				ComponentSpec: ComponentSpec{
+					Images: []Image{
+						{Name: "docker.io/library/nginx:latest"},
 					},
-					{
-						Path: "/tmp/images2.tar",
-						Images: []string{
-							"docker.io/library/postgres:14",
-							"ghcr.io/zarf-dev/zarf:v0.32.6",
+					ImageArchives: []ImageArchive{
+						{
+							Path: "/tmp/images1.tar",
+							Images: []string{
+								"docker.io/library/redis:latest",
+							},
+						},
+						{
+							Path: "/tmp/images2.tar",
+							Images: []string{
+								"docker.io/library/postgres:14",
+								"ghcr.io/zarf-dev/zarf:v0.32.6",
+							},
 						},
 					},
 				},

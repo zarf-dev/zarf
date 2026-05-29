@@ -23,8 +23,8 @@ func TestPackageHasImages(t *testing.T) {
 	pkg = Package{
 		Components: []Component{
 			{
-				Name:   "with images",
-				Images: []Image{{Name: "docker.io/library/alpine:latest"}},
+				Name:          "with images",
+				ComponentSpec: ComponentSpec{Images: []Image{{Name: "docker.io/library/alpine:latest"}}},
 			},
 		},
 	}
@@ -75,10 +75,12 @@ func TestPackageIsSBOMable(t *testing.T) {
 			pkg := Package{
 				Components: []Component{
 					{
-						Name:          "test-component",
-						Images:        tt.images,
-						Files:         tt.files,
-						ImageArchives: tt.imageArchives,
+						Name: "test-component",
+						ComponentSpec: ComponentSpec{
+							Images:        tt.images,
+							Files:         tt.files,
+							ImageArchives: tt.imageArchives,
+						},
 					},
 				},
 			}
