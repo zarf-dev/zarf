@@ -690,20 +690,22 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 				Name:        "my-component",
 				Description: "test component",
 				Optional:    true,
-				Target: v1beta1.ComponentTarget{
-					OS:           "linux",
-					Architecture: "amd64",
-					Flavor:       "vanilla",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Target: v1beta1.ComponentTarget{
+						OS:           "linux",
+						Architecture: "amd64",
+						Flavor:       "vanilla",
+					},
+					Import: v1beta1.ComponentImport{
+						Local:  []v1beta1.ComponentImportLocal{{Path: "./path"}},
+						Remote: []v1beta1.ComponentImportRemote{{URL: "oci://example.com/pkg"}},
+					},
+					Images: []v1beta1.Image{
+						{Name: "nginx:latest"},
+						{Name: "redis:7", Source: "daemon"},
+					},
+					Repositories: []string{"https://github.com/example/repo"},
 				},
-				Import: v1beta1.ComponentImport{
-					Local:  []v1beta1.ComponentImportLocal{{Path: "./path"}},
-					Remote: []v1beta1.ComponentImportRemote{{URL: "oci://example.com/pkg"}},
-				},
-				Images: []v1beta1.Image{
-					{Name: "nginx:latest"},
-					{Name: "redis:7", Source: "daemon"},
-				},
-				Repositories: []string{"https://github.com/example/repo"},
 			},
 		},
 	}
@@ -820,8 +822,8 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 				Kind: v1beta1.ZarfPackageConfig,
 				Components: []v1beta1.Component{
 					{
-						Name:   "chart-comp",
-						Charts: []v1beta1.Chart{tt.chart},
+						Name:          "chart-comp",
+						ComponentSpec: v1beta1.ComponentSpec{Charts: []v1beta1.Chart{tt.chart}},
 					},
 				},
 			}
@@ -840,13 +842,15 @@ func TestV1Beta1PkgToV1Alpha1_ManifestSkipWaitInversion(t *testing.T) {
 		Components: []v1beta1.Component{
 			{
 				Name: "manifest-comp",
-				Manifests: []v1beta1.Manifest{
-					{
-						Name:     "skip-wait",
-						SkipWait: true,
-					},
-					{
-						Name: "default-wait",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Manifests: []v1beta1.Manifest{
+						{
+							Name:     "skip-wait",
+							SkipWait: true,
+						},
+						{
+							Name: "default-wait",
+						},
 					},
 				},
 			},
@@ -877,32 +881,34 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 		Components: []v1beta1.Component{
 			{
 				Name: "action-comp",
-				Actions: v1beta1.ComponentActions{
-					OnDeploy: v1beta1.ComponentActionSet{
-						Defaults: v1beta1.ComponentActionDefaults{
-							Silent:          true,
-							MaxTotalSeconds: maxSecDef,
-							Retries:         retriesDef,
-							Dir:             "/work",
-							Env:             []string{"FOO=bar"},
-							Shell: v1beta1.Shell{
-								Linux: "bash",
+				ComponentSpec: v1beta1.ComponentSpec{
+					Actions: v1beta1.ComponentActions{
+						OnDeploy: v1beta1.ComponentActionSet{
+							Defaults: v1beta1.ComponentActionDefaults{
+								Silent:          true,
+								MaxTotalSeconds: maxSecDef,
+								Retries:         retriesDef,
+								Dir:             "/work",
+								Env:             []string{"FOO=bar"},
+								Shell: v1beta1.Shell{
+									Linux: "bash",
+								},
 							},
-						},
-						Before: []v1beta1.ComponentAction{
-							{
-								Cmd:             "echo before",
-								Silent:          &mute,
-								MaxTotalSeconds: &maxSec,
-								Retries:         &retries,
-								Dir:             &dir,
+							Before: []v1beta1.ComponentAction{
+								{
+									Cmd:             "echo before",
+									Silent:          &mute,
+									MaxTotalSeconds: &maxSec,
+									Retries:         &retries,
+									Dir:             &dir,
+								},
 							},
-						},
-						OnSuccess: []v1beta1.ComponentAction{
-							{Cmd: "echo after"},
-						},
-						OnFailure: []v1beta1.ComponentAction{
-							{Cmd: "echo failure"},
+							OnSuccess: []v1beta1.ComponentAction{
+								{Cmd: "echo after"},
+							},
+							OnFailure: []v1beta1.ComponentAction{
+								{Cmd: "echo failure"},
+							},
 						},
 					},
 				},

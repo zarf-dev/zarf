@@ -391,18 +391,20 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 
 func componentFromGeneric(c types.Component) v1beta1.Component {
 	bc := v1beta1.Component{
-		Name:         c.Name,
-		Description:  c.Description,
-		Optional:     optionalFromGeneric(c.Optional, c.Required),
-		Repositories: c.Repositories,
-		Target: v1beta1.ComponentTarget{
-			OS:           c.Target.OS,
-			Architecture: c.Target.Architecture,
-			Flavor:       c.Target.Flavor,
+		Name:        c.Name,
+		Description: c.Description,
+		Optional:    optionalFromGeneric(c.Optional, c.Required),
+		ComponentSpec: v1beta1.ComponentSpec{
+			Repositories: c.Repositories,
+			Target: v1beta1.ComponentTarget{
+				OS:           c.Target.OS,
+				Architecture: c.Target.Architecture,
+				Flavor:       c.Target.Flavor,
+			},
+			Import:  importFromGeneric(c.Import),
+			Service: serviceFromGeneric(c),
+			Actions: actionsFromGeneric(c.Actions),
 		},
-		Import:  importFromGeneric(c.Import),
-		Service: serviceFromGeneric(c),
-		Actions: actionsFromGeneric(c.Actions),
 	}
 
 	for _, m := range c.Manifests {
