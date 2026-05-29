@@ -614,7 +614,7 @@ func newTestViper() *viper.Viper {
 	v.SetEnvPrefix("zarf")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
-	setDefaults()
+	setDefaults(v)
 	return v
 }
 

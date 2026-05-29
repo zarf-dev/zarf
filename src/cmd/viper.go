@@ -181,7 +181,7 @@ func initViper() *viper.Viper {
 	v.AutomaticEnv()
 
 	// Set default values for viper
-	setDefaults()
+	setDefaults(v)
 
 	// skip config file setup for version command
 	if isVersionCmd() {
@@ -255,7 +255,7 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	return nil
 }
 
-func setDefaults() {
+func setDefaults(v *viper.Viper) {
 	// Root defaults that are non-zero values
 	v.SetDefault(VLogLevel, "info")
 	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
