@@ -66,8 +66,8 @@ type BuildData struct {
 	VersionRequirements        []VersionRequirement
 	ProvenanceFiles            []string
 	AggregateChecksum          string
-	// APIVersion tracks the apiVersion of the package definition used to build the package.
-	APIVersion string
+	// OriginalAPIVersion tracks the apiVersion the package was read from before any conversion.
+	OriginalAPIVersion string
 
 	// v1alpha1-only build fields.
 	DifferentialMissing []string

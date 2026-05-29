@@ -583,6 +583,18 @@ func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
 	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion())
 }
 
+func TestV1Alpha1PkgToV1Beta1_OriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+	}
+
+	result := V1Alpha1PkgToV1Beta1(pkg)
+
+	require.Equal(t, v1alpha1.APIVersion, result.Build.OriginalAPIVersion())
+}
+
 // --- v1beta1 → v1alpha1 tests ---
 
 func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
@@ -986,6 +998,33 @@ func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 	require.Len(t, result.Constants, 1)
 	require.Equal(t, "MY_CONST", result.Constants[0].Name)
 	require.Equal(t, "const-val", result.Constants[0].Value)
+}
+
+func TestV1Beta1PkgToV1Alpha1_OriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+	pkg := v1beta1.Package{
+		APIVersion: v1beta1.APIVersion,
+		Kind:       v1beta1.ZarfPackageConfig,
+	}
+
+	result := V1Beta1PkgToV1Alpha1(pkg)
+
+	require.Equal(t, v1beta1.APIVersion, result.Build.OriginalAPIVersion())
+}
+
+func TestOriginalAPIVersion_SurvivesRoundTrip(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		APIVersion: v1alpha1.APIVersion,
+		Kind:       v1alpha1.ZarfPackageConfig,
+	}
+
+	beta := V1Alpha1PkgToV1Beta1(pkg)
+	require.Equal(t, v1alpha1.APIVersion, beta.Build.OriginalAPIVersion())
+
+	// Converting back must preserve the true original, not report v1beta1.
+	result := V1Beta1PkgToV1Alpha1(beta)
+	require.Equal(t, v1alpha1.APIVersion, result.Build.OriginalAPIVersion())
 }
 
 func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {

@@ -13,6 +13,11 @@ import (
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
 func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
+	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
+	originalAPIVersion := pkg.Build.OriginalAPIVersion()
+	if originalAPIVersion == "" {
+		originalAPIVersion = pkg.APIVersion
+	}
 	g := types.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
@@ -47,6 +52,7 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 			Signed:                     pkg.Build.Signed,
 			DifferentialMissing:        pkg.Build.DifferentialMissing,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
+			OriginalAPIVersion:         originalAPIVersion,
 		},
 		Values: types.Values{
 			Files:  pkg.Values.Files,
@@ -393,6 +399,8 @@ func buildFromGeneric(b types.BuildData) v1alpha1.ZarfBuildData {
 			Reason:  vr.Reason,
 		})
 	}
+
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	return out
 }

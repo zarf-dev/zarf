@@ -14,6 +14,11 @@ import (
 
 // ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
 func ConvertToGeneric(pkg v1beta1.Package) types.Package {
+	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
+	originalAPIVersion := pkg.Build.OriginalAPIVersion()
+	if originalAPIVersion == "" {
+		originalAPIVersion = pkg.APIVersion
+	}
 	g := types.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
@@ -40,6 +45,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Signed:                     pkg.Build.Signed,
 			ProvenanceFiles:            pkg.Build.ProvenanceFiles,
 			AggregateChecksum:          pkg.Build.AggregateChecksum,
+			OriginalAPIVersion:         originalAPIVersion,
 		},
 		Values: types.Values{
 			Files:  pkg.Values.Files,
@@ -385,6 +391,8 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 			Reason:  vr.Reason,
 		})
 	}
+
+	out.SetOriginalAPIVersion(b.OriginalAPIVersion)
 
 	return out
 }
