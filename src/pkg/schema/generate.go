@@ -31,6 +31,15 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	combined, err := genSchemas()
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	if err := writeSchemaFile("zarf.schema.json", combined); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }
 
 func writeSchema(apiVersion, filename string, rootType any) error {
@@ -38,7 +47,10 @@ func writeSchema(apiVersion, filename string, rootType any) error {
 	if err != nil {
 		return fmt.Errorf("error generating %s schema: %w", filename, err)
 	}
+	return writeSchemaFile(filename, schema)
+}
 
+func writeSchemaFile(filename string, schema []byte) error {
 	schema = append(schema, '\n')
 
 	if err := os.WriteFile(filename, schema, 0644); err != nil {
@@ -46,6 +58,77 @@ func writeSchema(apiVersion, filename string, rootType any) error {
 	}
 	fmt.Printf("Successfully generated %s\n", filename)
 	return nil
+}
+
+// genSchemas builds a single schema that validates either a v1alpha1 or a
+// v1beta1 package, selecting which version to apply based on the apiVersion field.
+func genSchemas() ([]byte, error) {
+	originalDir, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get current directory: %w", err)
+	}
+	defer os.Chdir(originalDir)
+
+	// AddGoComments breaks if called with an absolute path, so we move to the
+	// directory of this source file and reflect using relative package paths.
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return nil, errors.New("unable to get the current filename")
+	}
+	if err := os.Chdir(filepath.Dir(filename)); err != nil {
+		return nil, fmt.Errorf("unable to change to schema directory: %w", err)
+	}
+
+	schemaV1Alpha1, err := reflectInlined("v1alpha1", &v1alpha1.ZarfPackage{})
+	if err != nil {
+		return nil, err
+	}
+	schemaV1Beta1, err := reflectInlined("v1beta1", &v1beta1.Package{})
+	if err != nil {
+		return nil, err
+	}
+
+	schema := &jsonschema.Schema{
+		If: &jsonschema.Schema{
+			Properties: jsonschema.NewProperties(),
+		},
+		Then: schemaV1Alpha1,
+		Else: &jsonschema.Schema{
+			If: &jsonschema.Schema{
+				Properties: jsonschema.NewProperties(),
+			},
+			Then: schemaV1Beta1,
+		},
+		Version: jsonschema.Version,
+	}
+
+	schema.If.Properties.Set("apiVersion", &jsonschema.Schema{
+		Type: "string",
+		Enum: []any{v1alpha1.APIVersion},
+	})
+	schema.Else.If.Properties.Set("apiVersion", &jsonschema.Schema{
+		Type: "string",
+		Enum: []any{v1beta1.APIVersion},
+	})
+
+	return marshalSchema(schema)
+}
+
+// reflectInlined reflects rootType with all types inlined so the resulting
+// schema can be embedded directly into a branch of the combined schema.
+func reflectInlined(apiVersion string, rootType any) (*jsonschema.Schema, error) {
+	reflector := jsonschema.Reflector{DoNotReference: true, ExpandedStruct: true}
+
+	typePackagePath := filepath.Join("..", "..", "api", apiVersion)
+	modulePath := fmt.Sprintf("github.com/zarf-dev/zarf/src/api/%s", apiVersion)
+	if err := reflector.AddGoComments(modulePath, typePackagePath); err != nil {
+		return nil, fmt.Errorf("unable to add Go comments to %s schema: %w", apiVersion, err)
+	}
+
+	schema := reflector.Reflect(rootType)
+	// Drop the per-branch $schema so only the combined schema declares the dialect.
+	schema.Version = ""
+	return schema, nil
 }
 
 func generateSchema(apiVersion string, rootType any) ([]byte, error) {
@@ -77,6 +160,12 @@ func generateSchema(apiVersion string, rootType any) ([]byte, error) {
 
 	schema := reflector.Reflect(rootType)
 
+	return marshalSchema(schema)
+}
+
+// marshalSchema renders the schema to indented JSON, enriching every object
+// that has properties with the "x-" YAML extension allowance.
+func marshalSchema(schema *jsonschema.Schema) ([]byte, error) {
 	schemaData, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal schema: %w", err)
