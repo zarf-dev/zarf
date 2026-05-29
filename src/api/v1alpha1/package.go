@@ -281,6 +281,9 @@ type ZarfValues struct {
 	Files []string `json:"files,omitempty"`
 	// Schema declares a path to a .schema.json file that validates the contents of Files.
 	Schema string `json:"schema,omitempty"`
+	// ImportedSchemas holds schema paths collected from imported child packages during import
+	// resolution. This field is not marshaled and exists only to carry schemas to AssemblePackage.
+	ImportedSchemas []string `json:"-" yaml:"-"`
 }
 
 // VersionRequirement specifies minimum version requirements for the package

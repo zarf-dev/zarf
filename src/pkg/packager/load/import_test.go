@@ -123,6 +123,9 @@ func TestResolveImports(t *testing.T) {
 			expectedPkg, err := pkgcfg.Parse(ctx, b)
 
 			require.NoError(t, err)
+			// ImportedSchemas is a transient field not present in expected.yaml; clear it before
+			// structural comparison so the check focuses on package content, not carry state.
+			resolvedPkg.Values.ImportedSchemas = nil
 			require.Equal(t, expectedPkg, resolvedPkg)
 			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
 			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
@@ -256,6 +259,53 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			merged, err := value.ParseFiles(ctx, absPaths, value.ParseFilesOptions{})
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, merged)
+		})
+	}
+}
+
+func TestResolveImportsSchemaCollection(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	testCases := []struct {
+		name            string
+		path            string
+		expectedSchemas []string
+	}{
+		{
+			name:            "child schema is collected when parent has no schema",
+			path:            "./testdata/import/values/schema-parent-empty",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+		},
+		{
+			name:            "child schema is collected when parent also has a schema",
+			path:            "./testdata/import/values/schema-parent-wins",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+		},
+		{
+			name: "schemas are collected transitively through 3-level deep imports",
+			path: "./testdata/import/values/schema-deep",
+			// middle's own schema comes first; bottom's schema (from middle's imports) comes second
+			expectedSchemas: []string{
+				"middle/middle-values.schema.json",
+				"middle/bottom/bottom-values.schema.json",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
+			require.NoError(t, err)
+			pkg, err := pkgcfg.Parse(ctx, b)
+			require.NoError(t, err)
+
+			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			require.NoError(t, err)
+
+			require.Equal(t, tc.expectedSchemas, resolved.Values.ImportedSchemas)
 		})
 	}
 }

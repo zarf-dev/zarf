@@ -180,11 +180,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	// Copy schema file if specified
-	if pkg.Values.Schema != "" {
-		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
-			return nil, err
-		}
+	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, pkg.Values.ImportedSchemas, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
@@ -1031,36 +1028,95 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 	return nil
 }
 
-// copyValuesSchema validates and copies a values schema file to the build directory.
-// It validates the schema is valid JSON Schema, checks for path traversal, and copies
-// the file to the package root.
-func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+// mergeAndWriteValuesSchema merges imported child schemas with the parent schema (parent wins)
+// and writes the result to buildPath/values.schema.json. If only a parent schema exists with
+// no imports, it is validated and copied as-is. If only child schemas exist, they are merged
+// and written. If neither exists, the function is a no-op.
+//
+// Schemas containing "$ref" pointers are rejected when merging is required because references
+// may point to files unavailable after assembly. The parent schema may still use "$ref" when
+// no child schemas are present (it is copied verbatim in that case).
+func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importedSchemas []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
-	l.Debug("copying values schema file to package", "schema", schema)
 
-	// Resolve the schema source path from package root
-	schemaSrc := schema
-	if !filepath.IsAbs(schemaSrc) {
-		schemaSrc = filepath.Join(packagePath, schema)
+	if parentSchema == "" && len(importedSchemas) == 0 {
+		return nil
 	}
 
-	// Validate the schema is valid JSON Schema
-	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
-		return fmt.Errorf("values schema validation failed: %w", err)
+	// No child schemas — validate and copy the parent schema file verbatim (original behavior).
+	if len(importedSchemas) == 0 {
+		src := parentSchema
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, parentSchema)
+		}
+		if err := value.ValidateSchemaFile(src); err != nil {
+			return fmt.Errorf("values schema validation failed: %w", err)
+		}
+		dst := filepath.Join(buildPath, ValuesSchema)
+		l.Debug("copying values schema file", "src", src, "dst", dst)
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy values schema file %s: %w", parentSchema, err)
+		}
+		return os.Chmod(dst, helpers.ReadWriteUser)
 	}
 
-	// Copy schema file to package root
-	schemaDst := filepath.Join(buildPath, ValuesSchema)
-	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
-	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
-		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
+	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
+
+	// Load a schema file as a raw map, rejecting any "$ref" pointers.
+	loadSchema := func(relPath, label string) (map[string]any, error) {
+		src := relPath
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, relPath)
+		}
+		if err := value.ValidateSchemaFile(src); err != nil {
+			return nil, fmt.Errorf("%s schema validation failed: %w", label, err)
+		}
+		b, err := os.ReadFile(src)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s schema: %w", label, err)
+		}
+		var s map[string]any
+		if err := json.Unmarshal(b, &s); err != nil {
+			return nil, fmt.Errorf("parsing %s schema: %w", label, err)
+		}
+		if err := value.CheckNoRefs(s); err != nil {
+			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)
+		}
+		return s, nil
 	}
 
-	// Set appropriate file permissions
-	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
-		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	// Merge child schemas left-to-right; among children the earlier one wins.
+	var merged map[string]any
+	for _, schemaRelPath := range importedSchemas {
+		child, err := loadSchema(schemaRelPath, "imported")
+		if err != nil {
+			return err
+		}
+		if merged == nil {
+			merged = child
+		} else {
+			merged = value.MergeSchemas(merged, child)
+		}
 	}
 
+	// Load the parent schema and merge it on top — parent wins over all children.
+	if parentSchema != "" {
+		parent, err := loadSchema(parentSchema, "parent")
+		if err != nil {
+			return err
+		}
+		merged = value.MergeSchemas(parent, merged)
+	}
+
+	dst := filepath.Join(buildPath, ValuesSchema)
+	l.Debug("writing merged values schema", "dst", dst)
+	b, err := json.MarshalIndent(merged, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal merged values schema: %w", err)
+	}
+	if err := os.WriteFile(dst, b, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to write merged values schema: %w", err)
+	}
 	return nil
 }
 

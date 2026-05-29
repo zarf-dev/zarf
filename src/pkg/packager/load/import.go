@@ -62,6 +62,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	)
 
 	var valuesFiles []string
+	var importedSchemas []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -191,6 +192,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		for _, v := range importedPkg.Values.Files {
 			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
 		}
+		if importedPkg.Values.Schema != "" {
+			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, importPath))
+		}
+		for _, s := range importedPkg.Values.ImportedSchemas {
+			importedSchemas = append(importedSchemas, makePathRelativeTo(s, importPath))
+		}
 	}
 
 	valuesFiles = append(valuesFiles, pkg.Values.Files...)
@@ -207,6 +214,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 	}
 	pkg.Components = components
+	pkg.Values.ImportedSchemas = importedSchemas
 
 	varMap := map[string]bool{}
 	pkg.Variables = nil
