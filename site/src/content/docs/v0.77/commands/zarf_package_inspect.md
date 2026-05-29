@@ -1,0 +1,44 @@
+---
+title: zarf package inspect
+description: Zarf CLI command reference for <code>zarf package inspect</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_inspect
+---
+
+## zarf package inspect
+
+Commands for gathering information from a built package
+
+```
+zarf package inspect [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for inspect
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
+* [zarf package inspect definition](/v0.77/commands/zarf_package_inspect_definition/)	 - Displays the 'zarf.yaml' definition for the specified package
+* [zarf package inspect documentation](/v0.77/commands/zarf_package_inspect_documentation/)	 - Extract documentation files from the package
+* [zarf package inspect images](/v0.77/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
+* [zarf package inspect manifests](/v0.77/commands/zarf_package_inspect_manifests/)	 - Template and output all manifests and charts in a package
+* [zarf package inspect sbom](/v0.77/commands/zarf_package_inspect_sbom/)	 - Output the package SBOM (Software Bill Of Materials) to the specified directory
+* [zarf package inspect values-files](/v0.77/commands/zarf_package_inspect_values-files/)	 - Creates, templates, and outputs the values-files to be sent to each chart

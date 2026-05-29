@@ -1,0 +1,58 @@
+---
+title: zarf package deploy
+description: Zarf CLI command reference for <code>zarf package deploy</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_deploy
+---
+
+## zarf package deploy
+
+Deploys a Zarf package from a local file or URL (runs offline)
+
+### Synopsis
+
+Unpacks resources and dependencies from a Zarf package archive and deploys them onto the target system.
+Kubernetes clusters are accessed via credentials in your current kubecontext defined in '~/.kube/config'
+
+```
+zarf package deploy [ PACKAGE_SOURCE ] [flags]
+```
+
+### Options
+
+```
+      --adopt-existing-resources       Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --components string              Comma-separated list of components to deploy.  Adding this flag will skip the prompts for selected components.  Globbing component names with '*' and deselecting 'default' components with a leading '-' are also supported.
+  -c, --confirm                        Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --connected                      Deploy without pushing images/repos; label resources to bypass the Zarf agent
+      --force-conflicts                Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
+  -h, --help                           help for deploy
+  -k, --key string                     Path to public key file for validating signed packages
+  -n, --namespace string               [Alpha] Override the namespace for package deployment. Requires the package to have only one distinct namespace defined.
+      --oci-concurrency int            Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --retries int                    Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --set-values stringToString      Specify deployment package values to set on the command line (key.path=value). (default [])
+      --set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+      --shasum string                  Shasum of the package to deploy. Required if deploying a remote https package.
+      --timeout duration               Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+  -v, --values strings                 [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --verify                         Verify the Zarf package signature
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages

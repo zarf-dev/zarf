@@ -1,5 +1,6 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightVersions from "starlight-versions";
 import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import remarkGemoji from "remark-gemoji";
@@ -25,6 +26,11 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
+      plugins: [
+        starlightVersions({
+          versions: [{ slug: "v0.77" }],
+        }),
+      ],
       head: [
         {
           tag: "script",
@@ -62,33 +68,31 @@ export default defineConfig({
         },
         {
           label: "Start Here",
-          autogenerate: {
-            directory: "getting-started",
-          },
+          items: [{ autogenerate: { directory: "getting-started" } }],
         },
         {
           label: "CLI Commands",
-          autogenerate: { directory: "commands" },
+          items: [{ autogenerate: { directory: "commands" } }],
           collapsed: true,
         },
         {
           label: "Best Practices",
-          autogenerate: { directory: "best-practices" },
+          items: [{ autogenerate: { directory: "best-practices" } }],
           collapsed: true,
         },
         {
           label: "Reference",
-          autogenerate: { directory: "ref", collapsed: true },
+          items: [{ autogenerate: { directory: "ref", collapsed: true } }],
           collapsed: true,
         },
         {
           label: "Tutorials",
-          autogenerate: { directory: "tutorials" },
+          items: [{ autogenerate: { directory: "tutorials" } }],
           collapsed: true,
         },
         {
           label: "Schema",
-          autogenerate: { directory: "schema" },
+          items: [{ autogenerate: { directory: "schema" } }],
           collapsed: true,
         },
         {
@@ -105,7 +109,7 @@ export default defineConfig({
         },
         {
           label: "Contribute",
-          autogenerate: { directory: "contribute" },
+          items: [{ autogenerate: { directory: "contribute" } }],
           collapsed: true,
         },
       ],

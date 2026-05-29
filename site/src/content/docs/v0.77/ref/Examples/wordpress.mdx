@@ -1,0 +1,82 @@
+---
+title: wordpress
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/wordpress/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/wordpress
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/wordpress](https://github.com/zarf-dev/zarf/tree/main/examples/wordpress).
+:::
+
+This example demonstrates how to use Zarf to deploy a WordPress blog into a cluster.
+
+It is used as a part of the [Creating a Zarf Package](/v0.77/tutorials/0-creating-a-zarf-package/) and [Deploying a Zarf Package](/v0.77/tutorials/2-deploying-zarf-packages/) tutorials.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig # ZarfPackageConfig is the package kind for most normal zarf packages
+metadata:
+  name: wordpress       # specifies the name of our package and should be unique and unchanging through updates
+  version: 26.0.0       # (optional) a version we can track as we release updates or publish to a registry
+  description: |        # (optional) a human-readable description of the package that you are creating
+    A Zarf Package that deploys the WordPress blogging and content management platform
+
+variables:
+    # The unique name of the variable corresponding to the ###ZARF_VAR_### template
+  - name: WORDPRESS_USERNAME
+    # A human-readable description of the variable shown during prompting
+    description: The username that is used to login to the WordPress admin account
+    # A default value to take if --confirm is used or the user chooses the default prompt
+    default: zarf
+    # Whether to prompt for this value interactively if it is not --set on the CLI
+    prompt: true
+  - name: WORDPRESS_PASSWORD
+    description: The password that is used to login to the WordPress admin account
+    prompt: true
+    # Whether to treat this value as sensitive to keep it out of Zarf logs
+    sensitive: true
+  - name: WORDPRESS_EMAIL
+    description: The email that is used for the WordPress admin account
+    default: hello@defenseunicorns.com
+    prompt: true
+  - name: WORDPRESS_FIRST_NAME
+    description: The first name that is used for the WordPress admin account
+    default: Zarf
+    prompt: true
+  - name: WORDPRESS_LAST_NAME
+    description: The last name that is used for the WordPress admin account
+    default: The Axolotl
+    prompt: true
+  - name: WORDPRESS_BLOG_NAME
+    description: The blog name that is used for the WordPress admin account
+    default: The Zarf Blog
+    prompt: true
+
+components:
+  - name: wordpress  # specifies the name of our component and should be unique and unchanging through updates
+    description: |   # (optional) a human-readable description of the component you are defining
+      Deploys the Bitnami-packaged WordPress chart into the cluster
+    required: true   # (optional) sets the component as 'required' so that it is always deployed
+    charts:
+      - name: wordpress
+        url: oci://registry-1.docker.io/bitnamicharts/wordpress
+        version: 26.0.0
+        namespace: wordpress
+        valuesFiles:
+          - wordpress-values.yaml
+    images:
+      - docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55
+      - docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0
+      - docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4
+    manifests:
+      - name: connect-services
+        namespace: wordpress
+        files:
+          - connect-services.yaml
+
+documentation:
+  readme: readme.md
+```

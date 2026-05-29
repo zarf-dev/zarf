@@ -1,0 +1,131 @@
+---
+title: argocd
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/argocd/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/argocd
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/argocd](https://github.com/zarf-dev/zarf/tree/main/examples/argocd).
+:::
+
+This example demonstrates how to use ArgoCD with Zarf to deploy the `stefanprodan/podinfo` app using GitOps.
+
+It uses a vanilla configuration of ArgoCD with upstream containers.
+
+To learn more about how Zarf handles `git` repositories, see the [Git Repositories section](/v0.77/ref/components/#git-repositories) of the package components documentation.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: argocd
+  description: Example showcasing installing ArgoCD
+values:
+  files:
+    - values/values.yaml
+
+components:
+  - name: argocd-helm-chart
+    required: true
+    charts:
+      - name: argo-cd
+        version: 9.0.5
+        namespace: argocd
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-baseline
+        valuesFiles:
+          - baseline/values.yaml
+        # Required for 'src/test/external' to validate external git server.
+        values:
+          - sourcePath: ".extraObjects"
+            targetPath: ".extraObjects"
+          - sourcePath: ".repoServer"
+            targetPath: ".repoServer"
+    images:
+      - docker.io/library/redis:7.2.11-alpine
+      - quay.io/argoproj/argocd:v3.1.9
+      # Cosign artifacts for images - argocd-helm-chart
+      - quay.io/argoproj/argocd:sha256-9c33285c0b86a66e9cf9fcafc448e48e0ab7c4678b20b3723556bb6cce8ea0b9.sig
+      - quay.io/argoproj/argocd:sha256-9c33285c0b86a66e9cf9fcafc448e48e0ab7c4678b20b3723556bb6cce8ea0b9.att
+  - name: argocd-apps
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 2.0.4
+        namespace: podinfo
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - apps/values.yaml
+    repos:
+      - https://github.com/stefanprodan/podinfo.git
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+    actions:
+      onDeploy:
+        after:
+          # This will use a wait action to wait for the pods to be ready
+          - description: Podinfo pod to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app.kubernetes.io/name=podinfo
+                namespace: podinfo
+                condition: ready
+  - name: argocd-applicationset
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 2.0.4
+        namespace: guestbook
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - applicationset/values.yaml
+    repos:
+      - https://github.com/argoproj/argocd-example-apps.git@0d521c6e049889134f3122eb32d7ed342f43ca0d
+    images:
+      - gcr.io/google-samples/gb-frontend:v5
+    actions:
+      onDeploy:
+        after:
+          - description: Guestbook UI pod to be ready via wait action
+            wait:
+              cluster:
+                kind: pod
+                name: app=guestbook-ui
+                namespace: guestbook
+                condition: ready
+  - name: oci-helm
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.6.1
+        namespace: podinfo-oci
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - oci-helm/values.yaml
+    images:
+      - ghcr.io/stefanprodan/charts/podinfo:6.9.2
+      - ghcr.io/stefanprodan/podinfo:6.9.2
+  - name: oci-manifests
+    required: true
+    charts:
+      - name: argocd-apps
+        version: 1.6.1
+        namespace: oci-manifests
+        url: https://argoproj.github.io/argo-helm
+        releaseName: argocd-apps
+        valuesFiles:
+          - oci-manifests/values.yaml
+    images:
+      - registry-1.docker.io/dhpup/oci-edge:1.0.6
+      - ghcr.io/dhpup/guestbook:0.1.40
+
+documentation:
+  readme: readme.md
+```

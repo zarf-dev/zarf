@@ -1,0 +1,39 @@
+---
+title: zarf tools registry copy
+description: Zarf CLI command reference for <code>zarf tools registry copy</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_registry_copy
+---
+
+## zarf tools registry copy
+
+Efficiently copy a remote image from src to dst while retaining the digest value
+
+```
+zarf tools registry copy SRC DST [flags]
+```
+
+### Options
+
+```
+  -a, --all-tags     (Optional) if true, copy all tags from SRC to DST
+  -h, --help         help for copy
+  -j, --jobs int     (Optional) The maximum number of concurrent copies, defaults to GOMAXPROCS
+  -n, --no-clobber   (Optional) if true, avoid overwriting existing tags in DST
+```
+
+### Options inherited from parent commands
+
+```
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure                           Allow image references to be fetched without TLS
+      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
+```
+
+### SEE ALSO
+
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools

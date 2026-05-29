@@ -1,0 +1,57 @@
+---
+title: zarf package create
+description: Zarf CLI command reference for <code>zarf package create</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_create
+---
+
+## zarf package create
+
+Creates a Zarf package from a given directory or the current directory
+
+### Synopsis
+
+Builds an archive of resources and dependencies defined by the 'zarf.yaml' in the specified directory.
+Private registries and repositories are accessed via credentials in your local '~/.docker/config.json', '~/.git-credentials' and '~/.netrc'.
+
+```
+zarf package create [ DIRECTORY ] [flags]
+```
+
+### Options
+
+```
+  -c, --confirm                     Confirm package creation without prompting
+      --differential string         Build a package that only contains the differential changes from local resources and differing remote resources from the specified previously built package
+  -f, --flavor string               The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                        help for create
+  -m, --max-package-size int        Specify the maximum size of the package in megabytes, packages larger than this will be split into multiple parts to be loaded onto smaller media (i.e. DVDs). Use 0 to disable splitting.
+      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+  -o, --output string               Specify the output (either a directory or an oci:// URL) for the created Zarf package
+      --registry-override strings   Specify a mapping of domains to override on package create when pulling images (e.g. --registry-override docker.io=dockerio-reg.enterprise.intranet)
+  -s, --sbom                        View SBOM contents after creating the package
+      --sbom-out string             Specify an output directory for the SBOMs from the created Zarf package
+      --set stringToString          Specify package templates to set on the command line (KEY=value) (default [])
+      --signing-key string          Private key for signing packages. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string     Password to the private key used for signing packages
+      --skip-sbom                   Skip generating SBOM for this package
+      --with-build-machine-info     Include build machine information (hostname and username) in the package metadata
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages

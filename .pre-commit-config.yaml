@@ -3,7 +3,7 @@ repos:
     rev: cef0300fd0fc4d2a87a85fa2093c6b283ea36f4b  # v5.0.0
     hooks:
       - id: check-added-large-files
-        args: ["--maxkb=1024"]
+        args: ["--maxkb=2048"]
       - id: check-merge-conflict
       - id: detect-aws-credentials
         args:

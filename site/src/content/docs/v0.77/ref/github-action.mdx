@@ -1,0 +1,33 @@
+---
+title: GitHub Action
+sidebar:
+  order: 110
+tableOfContents: false
+slug: v0.77/ref/github-action
+---
+
+The [setup-zarf](https://github.com/zarf-dev/setup-zarf) Github action is an officially supported action to install any version of Zarf and it's `init` package with zero added dependencies.
+
+## Example Usage - Creating a Package
+
+```yaml
+# .github/workflows/zarf-package-create.yml
+jobs:
+  create_package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Zarf
+        uses: zarf-dev/setup-zarf@main # use action's main branch
+        with:
+          version: v0.69.0 # any valid zarf version, leave blank to use latest
+
+      - name: Create the package
+        run: zarf package create --confirm
+```
+
+More examples are located in the action's [README.md](https://github.com/zarf-dev/setup-zarf#readme)

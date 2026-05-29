@@ -1,0 +1,37 @@
+---
+title: zarf tools sbom version
+description: Zarf CLI command reference for <code>zarf tools sbom version</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_sbom_version
+---
+
+## zarf tools sbom version
+
+show version information
+
+```
+zarf tools sbom version [flags]
+```
+
+### Options
+
+```
+  -h, --help            help for version
+  -o, --output string   the format to show the results (allowable: [text json])
+```
+
+### Options inherited from parent commands
+
+```
+  -c, --config stringArray         syft configuration file(s) to use
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --profile stringArray        configuration profiles to use
+  -q, --quiet                      suppress all logging output
+  -v, --verbose count              increase verbosity (-v = info, -vv = debug)
+```
+
+### SEE ALSO
+
+* [zarf tools sbom](/v0.77/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package

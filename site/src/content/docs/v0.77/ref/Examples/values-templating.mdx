@@ -1,0 +1,146 @@
+---
+title: values-templating
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/values-templating/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/values-templating
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/values-templating](https://github.com/zarf-dev/zarf/tree/main/examples/values-templating).
+:::
+
+# \[ALPHA] Values & Templates Example
+
+This example demonstrates the pre-release alpha version of Zarf's values templating system, including support for **Sprig functions** for advanced template processing and **Helm chart value overrides**.
+
+## Features Demonstrated
+
+* **Basic templating** with `{{ .Values.* }}`, `{{ .Build.* }}`, `{{ .Metadata.* }}`, `{{ .Constants.* }}`, and `{{ .Variables.* }}`
+* **Sprig functions** for string manipulation, lists, math, encoding, and more
+* **File templating** with both simple substitution and complex transformations
+* **Dynamic configuration** using template functions for practical Kubernetes deployments
+* **Helm chart value overrides** mapping Zarf values to Helm chart values
+
+## Sprig Functions Showcased
+
+The example includes demonstrations of popular Sprig functions:
+
+* **String functions**: `upper`, `lower`, `title`, `kebabcase`, `snakecase`, `quote`
+* **List functions**: `join`, `len`, `first`, `last`, `sortAlpha`, `reverse`
+* **Default functions**: `default` for fallback values
+* **Math functions**: `add`, `mul`, `max`, `min`
+* **Encoding functions**: `b64enc`, `sha256sum`
+* **Utility functions**: `repeat`, `indent`, `trunc`, `toString`
+
+## Try It Out
+
+Deploy this example to see values and templates in action:
+
+```bash
+# Optional: Inspect the manifests and chart values-files (features="values=true" flag required until general release of values)
+zarf dev inspect manifests --features="values=true"
+zarf dev inspect values-files --features="values=true"
+
+# Create and deploy the package
+zarf package create . --confirm --features="values=true"
+zarf package deploy zarf-package-values-templating-*.tar.zst --confirm --features="values=true"
+
+# View the nginx results
+kubectl get configmap nginx-configmap -n nginx -o yaml
+zarf connect nginx
+
+# View the helm chart results
+kubectl get configmap -n helm-overrides -o yaml
+
+# Remove the package with values templating in remove actions
+# Feel free to change --set-values to whatever you want!
+zarf package remove values-templating --confirm --features="values=true" --set-values="site.name=Example,app.environment=test,site.organization=ZarfDev"
+```
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: values-templating
+  description: Example nginx package to demonstrate Zarf Values templating
+values:
+  files:
+    - values/values.yaml
+  schema: values/values.schema.json
+
+# Until Consts and Vars are fully deprecated, they'll be available in go-templates
+constants:
+  - name: EXAMPLE_CONST
+    value: "foo"
+variables:
+  - name: EXAMPLE_VAR
+    default: "bar"
+
+components:
+  - name: values-with-manifest
+    description: This component demonstrates templating manifest files by deploying an nginx page to the cluster
+    required: true
+    images:
+      # NOTE: Pkgtemplates aren't yet available with value and go-templates.
+      - "docker.io/library/nginx:1.29.2"
+    actions:
+      onRemove:
+        before:
+          - cmd: |
+              echo "============================================"
+              echo "Removing {{ .Values.site.name }}"
+              echo "Environment: {{ .Values.app.environment }}"
+              echo "Organization: {{ .Values.site.organization }}"
+              echo "============================================"
+            template: true
+    manifests:
+      - name: values-with-nginx
+        # Enables go-templating within the files.
+        template: true
+        files:
+          - nginx-deployment.yaml
+          - nginx-service.yaml
+          - nginx-configmap.yaml
+
+  - name: values-with-helm-chart
+    description: This component demonstrates helm chart value overrides using Zarf values
+    required: true
+    charts:
+      - name: example-chart
+        version: 0.1.0
+        localPath: "charts/example-chart"
+        namespace: "helm-overrides"
+        values:
+          - sourcePath: ".app.name"
+            targetPath: ".appName"
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".app.image.tag"
+            targetPath: ".image.tag"
+          - sourcePath: ".database.host"
+            targetPath: ".config.database.host"
+          # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
+          - sourcePath: ".database.host2"
+            targetPath: ".config.database.host"
+
+  - name: actions-with-templates
+    description: "This component demonstrates using template: true to enable go-template processing in actions"
+    required: true
+    actions:
+      onDeploy:
+        before:
+          # By default, templating is disabled in actions to avoid conflicts with external tools
+          # Set template: true to enable Zarf's go-template processing
+          - cmd: |
+              echo "Organization: {{ .Values.site.organization }}"
+              echo "Environment: {{ .Values.app.environment }}"
+            template: true
+          # Without template: true, go-template syntax is passed through unchanged
+          - cmd: |
+              echo "This {{ .wontBeProcessed }} stays as-is"
+
+documentation:
+  readme: readme.md
+```

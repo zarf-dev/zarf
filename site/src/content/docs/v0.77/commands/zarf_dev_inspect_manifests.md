@@ -1,0 +1,44 @@
+---
+title: zarf dev inspect manifests
+description: Zarf CLI command reference for <code>zarf dev inspect manifests</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_dev_inspect_manifests
+---
+
+## zarf dev inspect manifests
+
+Template and output all manifests and charts referenced by the package definition
+
+```
+zarf dev inspect manifests [ DIRECTORY ] [flags]
+```
+
+### Options
+
+```
+      --create-set stringToString             Specify package templates to set on the command line (KEY=value) (default [])
+      --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                                  help for manifests
+      --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
+      --set-values stringToString             Specify deployment package values to set on the command line (key.path=value). (default [])
+      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf dev inspect](/v0.77/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition

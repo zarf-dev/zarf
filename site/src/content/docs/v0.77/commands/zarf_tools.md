@@ -1,0 +1,49 @@
+---
+title: zarf tools
+description: Zarf CLI command reference for <code>zarf tools</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools
+---
+
+## zarf tools
+
+Collection of additional tools to make airgap easier
+
+### Options
+
+```
+  -h, --help   help for tools
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf](/v0.77/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
+* [zarf tools archiver](/v0.77/commands/zarf_tools_archiver/)	 - Compresses/Decompresses generic archives, including Zarf packages
+* [zarf tools clear-cache](/v0.77/commands/zarf_tools_clear-cache/)	 - Clears the configured git and image cache directory
+* [zarf tools download-init](/v0.77/commands/zarf_tools_download-init/)	 - Downloads the init package for the current Zarf version into the specified directory
+* [zarf tools gen-key](/v0.77/commands/zarf_tools_gen-key/)	 - Generates a cosign public/private keypair that can be used to sign packages
+* [zarf tools gen-pki](/v0.77/commands/zarf_tools_gen-pki/)	 - Generates a Certificate Authority and PKI chain of trust for the given host
+* [zarf tools get-creds](/v0.77/commands/zarf_tools_get-creds/)	 - Displays a table of credentials for deployed Zarf services. Pass a service key to get a single credential
+* [zarf tools helm](/v0.77/commands/zarf_tools_helm/)	 - The Helm package manager for Kubernetes.
+* [zarf tools kubectl](/v0.77/commands/zarf_tools_kubectl/)	 - kubectl controls the Kubernetes cluster manager
+* [zarf tools monitor](/v0.77/commands/zarf_tools_monitor/)	 - Launches a terminal UI to monitor the connected cluster using K9s.
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools
+* [zarf tools sbom](/v0.77/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package
+* [zarf tools trusted-root](/v0.77/commands/zarf_tools_trusted-root/)	 - Tools for working with Sigstore trusted roots
+* [zarf tools update-creds](/v0.77/commands/zarf_tools_update-creds/)	 - Updates the credentials for deployed Zarf services. Pass a service key to update credentials for a single service
+* [zarf tools wait-for](/v0.77/commands/zarf_tools_wait-for/)	 - Waits for a given Kubernetes resource to be ready
+* [zarf tools yq](/v0.77/commands/zarf_tools_yq/)	 - yq is a lightweight and portable command-line data file processor.

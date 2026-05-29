@@ -1,0 +1,57 @@
+---
+title: zarf tools registry login
+description: Zarf CLI command reference for <code>zarf tools registry login</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_registry_login
+---
+
+## zarf tools registry login
+
+Login to a container registry
+
+```
+zarf tools registry login [OPTIONS] [SERVER] [flags]
+```
+
+### Examples
+
+```
+
+  # Login interactively (prompts for server, username, password)
+  $ zarf tools registry login --interactive
+
+  # Login with username, prompt for password
+  $ zarf tools registry login --interactive --username myuser docker.io
+
+  # Login normally with all credentials
+  $ zarf tools registry login --username myuser --password mypass docker.io
+
+  # Login with password from stdin
+  $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io
+```
+
+### Options
+
+```
+  -h, --help              help for login
+      --interactive       Interactively prompt for registry server, username, and password if not provided
+  -p, --password string   Password
+      --password-stdin    Take the password from stdin
+  -u, --username string   Username
+```
+
+### Options inherited from parent commands
+
+```
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure                           Allow image references to be fetched without TLS
+      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
+```
+
+### SEE ALSO
+
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools

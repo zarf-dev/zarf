@@ -54,7 +54,7 @@ const (
 	// zarf connect
 	CmdConnectShort = "Accesses services or pods deployed in the cluster"
 	CmdConnectLong  = "Uses a k8s port-forward to connect to resources within the cluster.\n" +
-		"Two default options for this command are <REGISTRY|GIT>. These will connect to the Zarf created resources " +
+		"Two default options for this command are `<REGISTRY|GIT>`. These will connect to the Zarf created resources " +
 		"(assuming they were selected when performing the `zarf init` command).\n\n" +
 		"Packages can provide service manifests that define their own shortcut connection options. These options will be " +
 		"printed to the terminal when the package finishes deploying.\nIf you don't remember what connection shortcuts your deployed " +

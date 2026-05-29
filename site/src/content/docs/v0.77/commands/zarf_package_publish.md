@@ -1,0 +1,63 @@
+---
+title: zarf package publish
+description: Zarf CLI command reference for <code>zarf package publish</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_publish
+---
+
+## zarf package publish
+
+Publishes a Zarf package to a remote registry
+
+```
+zarf package publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY [flags]
+```
+
+### Examples
+
+```
+
+# Publish a package to a remote registry
+$ zarf package publish my-package.tar oci://my-registry.com/my-namespace
+
+# Publish a skeleton package to a remote registry
+$ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
+
+# Publish a package with a specific tag different from the package metadata.version
+$ zarf package publish my-package.tar oci://my-registry.com/my-namespace --tag v0.0.1
+
+```
+
+### Options
+
+```
+  -c, --confirm                   Confirms package publish without prompting. Skips prompt for the signing key password
+  -f, --flavor string             The flavor of components to include in the resulting package. The flavor will be appended to the package tag
+  -h, --help                      help for publish
+  -k, --key string                Path to public key file for validating signed packages
+      --oci-concurrency int       Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --retries int               Number of retries to perform for Zarf operations like git/image pushes (default 1)
+      --signing-key string        Private key for signing or re-signing packages with a new key. Accepts either a local file path or a Cosign-supported key provider
+      --signing-key-pass string   Password to the private key used for publishing packages
+  -t, --tag string                The tag to be used in the OCI reference for the package in the registry
+      --verify                    Verify the Zarf package signature
+      --with-build-machine-info   Include build machine information (hostname and username) in the package metadata
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages

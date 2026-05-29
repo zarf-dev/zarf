@@ -1,0 +1,70 @@
+---
+title: zarf tools sbom attest
+description: Zarf CLI command reference for <code>zarf tools sbom attest</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_sbom_attest
+---
+
+## zarf tools sbom attest
+
+Generate an SBOM as an attestation for the given \[SOURCE] container image
+
+### Synopsis
+
+Generate a packaged-based Software Bill Of Materials (SBOM) from a container image as the predicate of an in-toto attestation that will be uploaded to the image registry
+
+```
+zarf tools sbom attest --output [FORMAT] <IMAGE> [flags]
+```
+
+### Examples
+
+```
+  zarf tools sbom attest --output [FORMAT] alpine:latest            defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry
+
+  You can also explicitly specify the scheme to use:
+    zarf tools sbom attest docker:yourrepo/yourimage:tag            explicitly use the Docker daemon
+    zarf tools sbom attest podman:yourrepo/yourimage:tag            explicitly use the Podman daemon
+    zarf tools sbom attest registry:yourrepo/yourimage:tag          pull image directly from a registry (no container runtime required)
+    zarf tools sbom attest docker-archive:path/to/yourimage.tar     use a tarball from disk for archives created from "docker save"
+    zarf tools sbom attest oci-archive:path/to/yourimage.tar        use a tarball from disk for OCI archives (from Skopeo or otherwise)
+    zarf tools sbom attest oci-dir:path/to/yourimage                read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
+    zarf tools sbom attest singularity:path/to/yourimage.sif        read directly from a Singularity Image Format (SIF) container on disk
+
+```
+
+### Options
+
+```
+      --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript, python)
+      --exclude stringArray                       exclude paths from being scanned using a glob expression
+      --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
+  -h, --help                                      help for attest
+  -k, --key string                                the key to use for the attestation
+  -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json purls spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-json])
+      --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source)
+      --parallelism int                           number of cataloger workers to run in parallel
+      --platform string                           an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
+  -s, --scope string                              selection of layers to catalog, options=[squashed all-layers deep-squashed]
+      --select-catalogers stringArray             add, remove, and filter the catalogers to be used
+      --source-name string                        set the name of the target being analyzed
+      --source-supplier string                    the organization that supplied the component, which often may be the manufacturer, distributor, or repackager
+      --source-version string                     set the version of the target being analyzed
+```
+
+### Options inherited from parent commands
+
+```
+  -c, --config stringArray         syft configuration file(s) to use
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --profile stringArray        configuration profiles to use
+  -q, --quiet                      suppress all logging output
+  -v, --verbose count              increase verbosity (-v = info, -vv = debug)
+```
+
+### SEE ALSO
+
+* [zarf tools sbom](/v0.77/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package

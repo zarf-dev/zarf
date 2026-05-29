@@ -1,0 +1,94 @@
+---
+title: zarf tools sbom
+description: Zarf CLI command reference for <code>zarf tools sbom</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_sbom
+---
+
+## zarf tools sbom
+
+Generates a Software Bill of Materials (SBOM) for the given package
+
+### Synopsis
+
+Generate a packaged-based Software Bill Of Materials (SBOM) from container images and filesystems
+
+```
+zarf tools sbom [flags]
+```
+
+### Examples
+
+```
+  zarf tools sbom scan alpine:latest                                a summary of discovered packages
+  zarf tools sbom scan alpine:latest -o json                        show all possible cataloging details
+  zarf tools sbom scan alpine:latest -o cyclonedx                   show a CycloneDX formatted SBOM
+  zarf tools sbom scan alpine:latest -o cyclonedx-json              show a CycloneDX JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx                        show a SPDX 2.3 Tag-Value formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx@2.2                    show a SPDX 2.2 Tag-Value formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx-json                   show a SPDX 2.3 JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -o spdx-json@2.2               show a SPDX 2.2 JSON formatted SBOM
+  zarf tools sbom scan alpine:latest -vv                            show verbose debug information
+  zarf tools sbom scan alpine:latest -o template -t my_format.tmpl  show a SBOM formatted according to given template file
+
+  Supports the following image sources:
+    zarf tools sbom scan yourrepo/yourimage:tag     defaults to using images from a Docker daemon. If Docker is not present, the image is pulled directly from the registry.
+    zarf tools sbom scan path/to/a/file/or/dir      a Docker tar, OCI tar, OCI directory, SIF container, or generic filesystem directory
+
+  You can also explicitly specify the scheme to use:
+    zarf tools sbom scan docker:yourrepo/yourimage:tag            explicitly use the Docker daemon
+    zarf tools sbom scan podman:yourrepo/yourimage:tag            explicitly use the Podman daemon
+    zarf tools sbom scan registry:yourrepo/yourimage:tag          pull image directly from a registry (no container runtime required)
+    zarf tools sbom scan docker-archive:path/to/yourimage.tar     use a tarball from disk for archives created from "docker save"
+    zarf tools sbom scan oci-archive:path/to/yourimage.tar        use a tarball from disk for OCI archives (from Skopeo or otherwise)
+    zarf tools sbom scan oci-dir:path/to/yourimage                read directly from a path on disk for OCI layout directories (from Skopeo or otherwise)
+    zarf tools sbom scan singularity:path/to/yourimage.sif        read directly from a Singularity Image Format (SIF) container on disk
+    zarf tools sbom scan oci-model-registry:ai/llama3.2           scan an OCI model artifact from a registry (e.g. Docker Hub AI models)
+    zarf tools sbom scan dir:path/to/yourproject                  read directly from a path on disk (any directory)
+    zarf tools sbom scan file:path/to/yourproject/file            read directly from a path on disk (any single file)
+
+```
+
+### Options
+
+```
+      --base-path string                          base directory for scanning, no links will be followed above this directory, and all paths will be reported relative to this directory
+  -c, --config stringArray                        syft configuration file(s) to use
+      --enrich stringArray                        enable package data enrichment from local and online sources (options: all, golang, java, javascript, python)
+      --exclude stringArray                       exclude paths from being scanned using a glob expression
+      --file string                               file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
+      --from stringArray                          specify the source behavior to use (e.g. docker, registry, oci-dir, ...)
+  -h, --help                                      help for sbom
+  -o, --output stringArray                        report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json purls spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
+      --override-default-catalogers stringArray   set the base set of catalogers to use (defaults to 'image' or 'directory' depending on the scan source)
+      --parallelism int                           number of cataloger workers to run in parallel
+      --platform string                           an optional platform specifier for container image sources (e.g. 'linux/arm64', 'linux/arm64/v8', 'arm64', 'linux')
+      --profile stringArray                       configuration profiles to use
+  -q, --quiet                                     suppress all logging output
+  -s, --scope string                              selection of layers to catalog, options=[squashed all-layers deep-squashed]
+      --select-catalogers stringArray             add, remove, and filter the catalogers to be used
+      --source-name string                        set the name of the target being analyzed
+      --source-supplier string                    the organization that supplied the component, which often may be the manufacturer, distributor, or repackager
+      --source-version string                     set the version of the target being analyzed
+  -t, --template string                           specify the path to a Go template file
+  -v, --verbose count                             increase verbosity (-v = info, -vv = debug)
+```
+
+### Options inherited from parent commands
+
+```
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+```
+
+### SEE ALSO
+
+* [zarf tools](/v0.77/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
+* [zarf tools sbom attest](/v0.77/commands/zarf_tools_sbom_attest/)	 - Generate an SBOM as an attestation for the given \[SOURCE] container image
+* [zarf tools sbom cataloger](/v0.77/commands/zarf_tools_sbom_cataloger/)	 - Show available catalogers and configuration
+* [zarf tools sbom config](/v0.77/commands/zarf_tools_sbom_config/)	 - show the syft configuration
+* [zarf tools sbom convert](/v0.77/commands/zarf_tools_sbom_convert/)	 - Convert between SBOM formats
+* [zarf tools sbom login](/v0.77/commands/zarf_tools_sbom_login/)	 - Log in to a registry
+* [zarf tools sbom scan](/v0.77/commands/zarf_tools_sbom_scan/)	 - Generate an SBOM
+* [zarf tools sbom version](/v0.77/commands/zarf_tools_sbom_version/)	 - show version information

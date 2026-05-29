@@ -17,6 +17,9 @@
   "ignores": [
     "**/node_modules/**",
     "src/content/docs/commands/*.md",
-    "site/src/content/docs/commands/*.md"
+    "site/src/content/docs/commands/*.md",
+    // Archived documentation versions are generated snapshots, not authored content.
+    "src/content/docs/v[0-9]*/**",
+    "site/src/content/docs/v[0-9]*/**"
   ]
 }

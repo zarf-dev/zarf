@@ -1,0 +1,52 @@
+---
+title: zarf tools sbom convert
+description: Zarf CLI command reference for <code>zarf tools sbom convert</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_sbom_convert
+---
+
+## zarf tools sbom convert
+
+Convert between SBOM formats
+
+### Synopsis
+
+\[Experimental] Convert SBOM files to, and from, SPDX, CycloneDX and Syft's format. For more info about data loss between formats see https://github.com/anchore/syft/wiki/format-conversion
+
+```
+zarf tools sbom convert [SOURCE-SBOM] -o [FORMAT] [flags]
+```
+
+### Examples
+
+```
+  zarf tools sbom convert img.zarf tools sbom.json -o spdx-json                      convert a zarf tools sbom SBOM to spdx-json, output goes to stdout
+  zarf tools sbom convert img.zarf tools sbom.json -o cyclonedx-json=img.cdx.json    convert a zarf tools sbom SBOM to CycloneDX, output is written to the file "img.cdx.json"
+  zarf tools sbom convert - -o spdx-json                                  convert an SBOM from STDIN to spdx-json
+
+```
+
+### Options
+
+```
+      --file string          file to write the default report output to (default is STDOUT) (DEPRECATED: use: --output FORMAT=PATH)
+  -h, --help                 help for convert
+  -o, --output stringArray   report output format (<format>=<file> to output to a file), formats=[cyclonedx-json cyclonedx-xml github-json purls spdx-json spdx-tag-value syft-json syft-table syft-text template] (default [syft-table])
+  -t, --template string      specify the path to a Go template file
+```
+
+### Options inherited from parent commands
+
+```
+  -c, --config stringArray         syft configuration file(s) to use
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --profile stringArray        configuration profiles to use
+  -q, --quiet                      suppress all logging output
+  -v, --verbose count              increase verbosity (-v = info, -vv = debug)
+```
+
+### SEE ALSO
+
+* [zarf tools sbom](/v0.77/commands/zarf_tools_sbom/)	 - Generates a Software Bill of Materials (SBOM) for the given package

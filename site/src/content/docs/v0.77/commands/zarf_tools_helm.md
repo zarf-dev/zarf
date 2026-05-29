@@ -1,0 +1,107 @@
+---
+title: zarf tools helm
+description: Zarf CLI command reference for <code>zarf tools helm</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_helm
+---
+
+## zarf tools helm
+
+The Helm package manager for Kubernetes.
+
+### Synopsis
+
+The Kubernetes package manager
+
+Common actions for Helm:
+
+* helm search:    search for charts
+* helm pull:      download a chart to your local directory to view
+* helm install:   upload the chart to Kubernetes
+* helm list:      list releases of charts
+
+Environment variables:
+
+| Name                               | Description                                                                                                |
+|------------------------------------|------------------------------------------------------------------------------------------------------------|
+| $HELM\_CACHE\_HOME                   | set an alternative location for storing cached files.                                                      |
+| $HELM\_CONFIG\_HOME                  | set an alternative location for storing Helm configuration.                                                |
+| $HELM\_DATA\_HOME                    | set an alternative location for storing Helm data.                                                         |
+| $HELM\_DEBUG                        | indicate whether or not Helm is running in Debug mode                                                      |
+| $HELM\_DRIVER                       | set the backend storage driver. Values are: configmap, secret, memory, sql.                                |
+| $HELM\_DRIVER\_SQL\_CONNECTION\_STRING | set the connection string the SQL storage driver should use.                                               |
+| $HELM\_MAX\_HISTORY                  | set the maximum number of helm release history.                                                            |
+| $HELM\_NAMESPACE                    | set the namespace used for the helm operations.                                                            |
+| $HELM\_NO\_PLUGINS                   | disable plugins. Set HELM\_NO\_PLUGINS=1 to disable plugins.                                                 |
+| $HELM\_PLUGINS                      | set the path to the plugins directory                                                                      |
+| $HELM\_REGISTRY\_CONFIG              | set the path to the registry config file.                                                                  |
+| $HELM\_REPOSITORY\_CACHE             | set the path to the repository cache directory                                                             |
+| $HELM\_REPOSITORY\_CONFIG            | set the path to the repositories file.                                                                     |
+| $KUBECONFIG                        | set an alternative Kubernetes configuration file (default "~/.kube/config")                                |
+| $HELM\_KUBEAPISERVER                | set the Kubernetes API Server Endpoint for authentication                                                  |
+| $HELM\_KUBECAFILE                   | set the Kubernetes certificate authority file.                                                             |
+| $HELM\_KUBEASGROUPS                 | set the Groups to use for impersonation using a comma-separated list.                                      |
+| $HELM\_KUBEASUSER                   | set the Username to impersonate for the operation.                                                         |
+| $HELM\_KUBECONTEXT                  | set the name of the kubeconfig context.                                                                    |
+| $HELM\_KUBETOKEN                    | set the Bearer KubeToken used for authentication.                                                          |
+| $HELM\_KUBEINSECURE\_SKIP\_TLS\_VERIFY | indicate if the Kubernetes API server's certificate validation should be skipped (insecure)                |
+| $HELM\_KUBETLS\_SERVER\_NAME          | set the server name used to validate the Kubernetes API server certificate                                 |
+| $HELM\_BURST\_LIMIT                  | set the default burst limit in the case the server contains many CRDs (default 100, -1 to disable)         |
+| $HELM\_QPS                          | set the Queries Per Second in cases where a high number of calls exceed the option for higher burst values |
+| $HELM\_COLOR                        | set color output mode. Allowed values: never, always, auto (default: never)                                |
+| $NO\_COLOR                          | set to any non-empty value to disable all colored output (overrides $HELM\_COLOR)                           |
+
+Helm stores cache, configuration, and data based on the following configuration order:
+
+* If a HELM\_\*\_HOME environment variable is set, it will be used
+* Otherwise, on systems supporting the XDG base directory specification, the XDG variables will be used
+* When no other location is set a default location will be used based on the operating system
+
+By default, the default directories depend on the Operating System. The defaults are listed below:
+
+| Operating System | Cache Path                | Configuration Path             | Data Path               |
+|------------------|---------------------------|--------------------------------|-------------------------|
+| Linux            | $HOME/.cache/helm         | $HOME/.config/helm             | $HOME/.local/share/helm |
+| macOS            | $HOME/Library/Caches/helm | $HOME/Library/Preferences/helm | $HOME/Library/helm      |
+| Windows          | %TEMP%\helm               | %APPDATA%\helm                 | %APPDATA%\helm          |
+
+```
+zarf tools helm [flags]
+```
+
+### Options
+
+```
+      --burst-limit int                 client-side default throttling limit (default 100)
+      --color string                    use colored output (never, auto, always)
+      --colour string                   use colored output (never, auto, always)
+      --content-cache string            path to the directory containing cached content (e.g. charts)
+      --debug                           enable verbose output
+  -h, --help                            help for helm
+      --kube-apiserver string           the address and the port for the Kubernetes API server
+      --kube-as-group stringArray       group to impersonate for the operation, this flag can be repeated to specify multiple groups.
+      --kube-as-user string             username to impersonate for the operation
+      --kube-ca-file string             the certificate authority file for the Kubernetes API server connection
+      --kube-context string             name of the kubeconfig context to use
+      --kube-insecure-skip-tls-verify   if true, the Kubernetes API server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+      --kube-tls-server-name string     server name to use for Kubernetes API server certificate validation. If it is not provided, the hostname used to contact the server is used
+      --kube-token string               bearer token used for authentication
+      --kubeconfig string               path to the kubeconfig file
+  -n, --namespace string                namespace scope for this request
+      --qps float32                     queries per second used when communicating with the Kubernetes API, not including bursting
+      --registry-config string          path to the registry config file
+      --repository-cache string         path to the directory containing cached repository indexes
+      --repository-config string        path to the file containing repository names and URLs
+```
+
+### Options inherited from parent commands
+
+```
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+```
+
+### SEE ALSO
+
+* [zarf tools](/v0.77/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier

@@ -1,0 +1,40 @@
+---
+title: zarf tools download-init
+description: Zarf CLI command reference for <code>zarf tools download-init</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_download-init
+---
+
+## zarf tools download-init
+
+Downloads the init package for the current Zarf version into the specified directory
+
+```
+zarf tools download-init [flags]
+```
+
+### Options
+
+```
+  -h, --help                      help for download-init
+  -o, --output-directory string   Specify a directory to place the init package in.
+  -v, --version string            Specify version to download (defaults to current CLI version)
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf tools](/v0.77/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier

@@ -1,0 +1,40 @@
+---
+title: zarf dev patch-git
+description: Zarf CLI command reference for <code>zarf dev patch-git</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_dev_patch-git
+---
+
+## zarf dev patch-git
+
+Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
+This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
+
+```
+zarf dev patch-git HOST FILE [flags]
+```
+
+### Options
+
+```
+      --git-account string   User or organization name for the git account that the repos are created under. (default "zarf-git-user")
+  -h, --help                 help for patch-git
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf dev](/v0.77/commands/zarf_dev/)	 - Commands useful for developing packages

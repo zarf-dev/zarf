@@ -1,0 +1,126 @@
+---
+title: Zarf 2026 Roadmap
+slug: v0.77/roadmap
+---
+
+## Introduction
+
+This roadmap reflects the work the Zarf maintainers are actively planning and prioritizing as the project moves toward v1.0.0. It is organized by theme rather than strict timeline, though the ordering generally reflects sequencing and dependencies across areas of work.
+
+As always, this is a living document. Community feedback, proposals, and contributions shape how and when items progress. If you have thoughts on any of these areas, we welcome participation in [community meetings](https://zoom-lfx.platform.linuxfoundation.org/meeting/97461829237?password=add48ad5-fc07-4951-96d2-531b72d2a5dc) or through the [Zarf Enhancement Proposals](https://github.com/zarf-dev/proposals) process.
+
+## Development Story
+
+### Schema Evolution (v1beta1)
+
+The next version of the Zarf schema is a foundational milestone on the path to v1.0.0. This work encompasses meaningful structural improvements alongside the deprecations and removals needed to reach a stable, supportable baseline.
+
+Tracked under [#3433](https://github.com/zarf-dev/zarf/issues/3433)
+
+Key changes include:
+
+* **New import structures**: Implement a new zarf.yaml file structure, with ZarfPackageConfig and ZarfComponentConfig as the top-level kinds. More details in [proposals/pull/52](https://github.com/zarf-dev/proposals/pull/52/changes).
+* **Go templating replaces package templates**: Package template variable substitution will be replaced with Go templating and decoupled from the `create` step.
+* **Breaking changes and deprecations**: A full list of changes is tracked in [proposals/pull/52](https://github.com/zarf-dev/proposals/pull/52/changes).
+
+These changes are necessary to reduce accumulated technical debt and provide a schema that can reasonably guarantee backwards compatibility once v1.0.0 ships.
+
+### Values
+
+Zarf Values and Go templating ([#3946](https://github.com/zarf-dev/zarf/issues/3946)) represent a major shift in how packages are parameterized and configured.  Note that this work replaces the legacy `###ZARF_VAR_*###` variable syntax with a structured, Go-template-based values system.
+
+**Operator and deployer experience:**
+
+* **Granular value overrides via `--set-values`** ([#4224](https://github.com/zarf-dev/zarf/issues/4224)): Adding a `--set-values` flag so operators can override individual value keys at deploy time using dot-notation (e.g. `--set-values=.registry.image=my-image`), providing Helm-style granularity without requiring a full values file.
+* **Early validation of undefined values** ([#4693](https://github.com/zarf-dev/zarf/issues/4693)): Zarf should detect missing required values before a deployment begins, rather than failing mid-deploy after components have already been applied.
+
+**Package creator experience:**
+
+* **Zarf builtins in template context** ([#4226](https://github.com/zarf-dev/zarf/issues/4226)): Adding a dedicated key (e.g. `.Zarf`) to the Go template context for Zarf-managed builtins like registry credentials and cluster state, rather than mixing them into the `.Variables` map.
+* **Static (non-overridable) values** ([#4878](https://github.com/zarf-dev/zarf/issues/4878)): Allowing package creators to declare values that are locked at create time and cannot be overridden by deployers. Useful for baked-in image references and security-sensitive configuration.
+
+**Schema and composability:**
+
+* **Merge values schema during component import** ([#4877](https://github.com/zarf-dev/zarf/issues/4877)): When a parent package imports a child component, the child's `values-schema.json` should be merged into the parent's schema (with the parent winning on conflicts), mirroring how `values.yaml` files are already merged.
+* **Skeleton package support** ([#4869](https://github.com/zarf-dev/zarf/issues/4869)): Ensuring skeleton packages correctly copy and resolve values files and schemas, so that packages importing skeletons can use the values feature end-to-end.
+
+**Init package and migration:**
+
+* **Replace variables in the init package with values** ([#4328](https://github.com/zarf-dev/zarf/issues/4328)): Dogfooding the values feature by migrating the Zarf init package away from legacy variable templating. Care will be taken to avoid collisions with Go templates intended for downstream systems.
+* **Expose init configuration as Zarf Values** ([#1725](https://github.com/zarf-dev/zarf/issues/1725)): Converting init-time flags like `--nodeport` and `--storage-class` to standard Zarf values so they can be set via `--set` and through the package deploy path. Backwards compatibility with existing flags will be maintained.
+
+**Documentation:**
+
+* **Clarify values, variables, and value files** ([#4745](https://github.com/zarf-dev/zarf/issues/4745)): The current documentation around values, variables, value files, and Helm chart configuration is a source of significant confusion for new users. This work will produce clearer, more consistent documentation covering where and how templating applies across manifests, charts, actions, and config files.
+
+### Tooling: `zarf tools wait-for`
+
+Two changes are in progress for `zarf tools wait-for`:
+
+* The legacy `zarf tools wait-for` command was deprecated in favor of `zarf tools wait-for resource` and `zarf tools wait-for network`. It will be removed in v1.0.0 ([#4550](https://github.com/zarf-dev/zarf/issues/4550)).
+* `zarf tools wait-for resource` now waits for readiness by default, rather than resource existence ([#4077](https://github.com/zarf-dev/zarf/issues/4077)). This behavior will also be reflected when `.cluster.wait` actions are run in v1beta1 packages.
+
+### Package Signing
+
+Package signing enhancements ([#4289](https://github.com/zarf-dev/zarf/issues/4289)) cover the full lifecycle of trust for Zarf packages:
+
+* **Keyless signing support**: Enabling [sigstore](https://www.sigstore.dev/) compatible keyless workflows for environments that can support them.
+* **Signed Zarf init package**: Ensuring the `init` package itself ships with verifiable provenance.
+* **Documentation**: Making signing and verification workflows accessible and well-documented for operators in airgapped environments.
+
+This work is particularly important for environments where supply chain integrity requirements are strict, and where offline verification must be possible without reliance on external certificate authorities.
+
+### Dependencies
+
+Two parallel tracks address the health and sustainability of Zarf's dependency tree:
+
+* **Vendoring** ([proposals/0010](https://github.com/zarf-dev/proposals/tree/main/0010-vendor-dependencies)): Moving to a vendored dependency model for reproducibility and airgap-friendliness.
+* **Dependency audit** ([#4895](https://github.com/zarf-dev/zarf/issues/4895)): Once vendoring is complete, a structured audit will identify and remove dependencies to reduce or minimize use.
+
+### Website and Documentation
+
+Several documentation gaps are being addressed ahead of v1.0.0:
+
+* **Versioned docs** ([#4056](https://github.com/zarf-dev/zarf/issues/4056)): The Zarf website will support versioned documentation to help users on older releases.
+* **SDK deprecation policy** ([#4482](https://github.com/zarf-dev/zarf/issues/4482)): Establishing a clear policy for how SDK-level interfaces are deprecated and removed.
+* **Threat model** ([#4813](https://github.com/zarf-dev/zarf/issues/4813)): Documenting Zarf's security architecture to inform both implementation and security review. This includes trust boundaries, sensitive data flows, threat scenarios, and mitigations.
+* **RBAC requirements** ([#4722](https://github.com/zarf-dev/zarf/issues/4722)): Documenting the Kubernetes RBAC permissions Zarf requires and why.
+
+### End User Experience
+
+A set of improvements targeting the experience of operators deploying and managing packages:
+
+* **Agent mutation selection** ([#4419](https://github.com/zarf-dev/zarf/issues/4419)): Giving users more control over which resources the Zarf agent mutates during deployment.
+* **Connected mode** ([#4580](https://github.com/zarf-dev/zarf/issues/4580)): A `--connected` flag for `zarf package deploy` that allows the same package to be deployed in connected environments without mirroring images or repositories. This also paves the way for removing the `yolo` construct from the v1beta1 schema.
+* **Git fallback** ([#2772](https://github.com/zarf-dev/zarf/issues/2772)): Improve integrations with Go Git libraries so the fallback shell out to host `git` can be removed.
+* **Package state collisions and conflicts** ([#3629](https://github.com/zarf-dev/zarf/issues/3629)): Better detection and handling of conflicting state when multiple packages interact with overlapping resources.
+
+### Security
+
+Targeted security improvements:
+
+* **Proxy registry mode** ([proposals/0033](https://github.com/zarf-dev/proposals/tree/main/0033-registry-proxy)): A registry proxy mode to support more flexible and secure image distribution patterns.
+* **Gitea encryption** ([#4499](https://github.com/zarf-dev/zarf/issues/4499)): Enabling encryption for data at rest in the Gitea component.
+* **Pod security settings** ([#2757](https://github.com/zarf-dev/zarf/issues/2757)): Hardening the security context configuration for pods managed by Zarf's built-in infrastructure. This is a good first issue for contributors new to the project.
+
+***
+
+## Community, Contribution & Ecosystem
+
+Throughout this work, the Zarf team remains committed to open governance and community participation:
+
+* Bi-weekly community [meetups](https://zoom-lfx.platform.linuxfoundation.org/meeting/97461829237?password=add48ad5-fc07-4951-96d2-531b72d2a5dc) to showcase demos and field feature proposals.
+* [Zarf Enhancement Proposals](https://github.com/zarf-dev/proposals) as the primary process for aligning contributors and consumers on significant changes.
+* Continued engagement with the OpenSSF Incubation process and secure software practices.
+* Ongoing response to critical bug fixes and security vulnerabilities.
+
+***
+
+## Feature Stability Guidance
+
+Our feature lifecycle is defined as follows:
+
+* **Alpha**: Experimental, subject to change or removal.
+* **Beta**: Functionally complete but still evolving; documented with known caveats.
+* **Stable**: Guaranteed backwards compatibility, robust documentation and testing.
+* **Deprecated**: Marked for removal, with alternatives documented.

@@ -1,0 +1,43 @@
+---
+title: zarf tools registry version
+description: Zarf CLI command reference for <code>zarf tools registry version</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_registry_version
+---
+
+## zarf tools registry version
+
+Print the version
+
+### Synopsis
+
+The version string is completely dependent on how the binary was built, so you should not depend on the version format. It may change without notice.
+
+This could be an arbitrary string, if specified via -ldflags.
+This could also be the go module version, if built with go modules (often "(devel)").
+
+```
+zarf tools registry version [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for version
+```
+
+### Options inherited from parent commands
+
+```
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure                           Allow image references to be fetched without TLS
+      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
+```
+
+### SEE ALSO
+
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools

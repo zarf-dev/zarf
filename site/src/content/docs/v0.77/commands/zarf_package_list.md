@@ -1,0 +1,39 @@
+---
+title: zarf package list
+description: Zarf CLI command reference for <code>zarf package list</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_list
+---
+
+## zarf package list
+
+Lists out all of the packages that have been deployed to the cluster (runs offline)
+
+```
+zarf package list [flags]
+```
+
+### Options
+
+```
+  -h, --help                         help for list
+  -o, --output-format outputFormat   Prints the output in the specified format. Valid options: table, json, yaml (default table)
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages

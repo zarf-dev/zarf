@@ -1,0 +1,94 @@
+---
+title: package-flavors
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/package-flavors/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/package-flavors
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/package-flavors](https://github.com/zarf-dev/zarf/tree/main/examples/package-flavors).
+:::
+
+This example demonstrates how to define variants of packages within the same package definition.  This can be combined with [Composable Packages](/v0.77/ref/examples/composable-packages/) to build up packages and include the necessary [merge overrides](/v0.77/ref/components/#merge-strategies) for each variant.
+
+Given package flavors are built by specifying the `--flavor` flag on `zarf package create`.  This will include any components that match that flavor or that do not specify a flavor.  If a component specifies a flavor and the package is built without that flavor, the component will be excluded from the package.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: package-flavors
+  description: Simple example to show how to use the `only.flavor` key to build package variants.
+  version: 1.0.0
+
+components:
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Rocky Linux"
+    only:
+      flavor: rocky-road
+    images:
+      - rockylinux:9-minimal
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "rockylinux:9-minimal"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Oracle Linux"
+    only:
+      flavor: oracle-cookie-crunch
+    images:
+      - oraclelinux:9-slim
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "oraclelinux:9-slim"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to Alma Linux"
+    only:
+      flavor: vanilla-alma-nd
+    images:
+      - almalinux:9-minimal
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "almalinux:9-minimal"
+            setVariables:
+              - name: IMAGE
+
+  - name: image
+    required: true
+    description: "Sets the Enterprise Linux flavor to OpenSUSE"
+    only:
+      flavor: strawberry-suse
+    images:
+      - opensuse/leap:15
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "opensuse/leap:15"
+            setVariables:
+              - name: IMAGE
+
+  - name: pod
+    description: "The pod that runs the specified flavor of Enterprise Linux"
+    required: true
+    manifests:
+      - name: enterprise-linux
+        namespace: enterprise-linux
+        files:
+          - pod.yaml
+
+documentation:
+  readme: readme.md
+```

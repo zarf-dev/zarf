@@ -1,0 +1,94 @@
+---
+title: Developing Packages
+sidebar:
+  order: 50
+tableOfContents:
+  maxHeadingLevel: 3
+slug: v0.77/ref/dev
+---
+
+## Schema Validation
+
+Zarf uses the [Zarf package schema](https://github.com/zarf-dev/zarf/blob/main/zarf.schema.json) to define its configuration files. This schema is used to describe package configuration options and enable the validation of configuration files prior to their use in building a Zarf Package.
+
+### `zarf dev lint`
+
+The [`zarf dev lint`](/v0.77/commands/zarf_dev_lint) command is used to validate a `zarf.yaml` file against the Zarf schema. This command is useful for ensuring that a `zarf.yaml` file is correctly formatted and adheres to the Zarf schema.
+
+```bash
+zarf dev lint <dir>
+```
+
+### VSCode
+
+1. Open VS Code.
+2. Install the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) by RedHat.
+3. Open the VS Code command palette by typing `CTRL/CMD + SHIFT + P`.
+4. Type `Preferences: Open User Settings (JSON)`into the search bar to open the `settings.json` file.
+5. Add the below code to the settings.json config, or modify the existing `yaml.schemas` object to include the Zarf schema.
+
+```json
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/zarf-dev/zarf/main/zarf.schema.json": "zarf.yaml"
+  }
+```
+
+:::note
+When successfully installed, the `yaml.schema` line will match the color of the other lines within the settings.
+:::
+
+#### Specifying Zarf's Schema Version
+
+To ensure consistent validation of the Zarf schema version in a `zarf.yaml` file, it can be beneficial to lock it to a specific version. This can be achieved by appending the following statement to the **first line** of any given `zarf.yaml` file:
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/zarf-dev/zarf/<VERSION>/zarf.schema.json
+```
+
+In the above example, `<VERSION>` should be replaced with the specific [Zarf release](https://github.com/zarf-dev/zarf/releases).
+
+![yaml schema](https://user-images.githubusercontent.com/92826525/226490465-1e6a56f7-41c4-45bf-923b-5242fa4ab64e.png)
+
+## `zarf dev deploy`
+
+:::caution
+The `zarf dev deploy` command is meant to be used in **development** environments / workflows. It is **not** meant to be used in **production** environments / workflows.
+:::
+
+The `dev deploy` command combines the lifecycle of `package create` and `package deploy` into a single command. This command will:
+
+* Not result in a re-usable tarball / OCI artifact
+* Not have any interactive prompts
+* Not require `zarf init` to be run (by default, but *is required* if `--no-yolo` is not set)
+* Be able to create+deploy a package in either YOLO mode (default) or prod mode (exposed via `--no-yolo` flag)
+* Only build + deploy components that *will* be deployed (contrasting with `package create` which builds *all* components regardless of whether they will be deployed)
+
+```bash
+# Create and deploy dos-games in yolo mode
+$ zarf dev deploy examples/dos-games
+```
+
+```bash
+# If deploying a package in prod mode, `zarf init` must be run first
+$ zarf init --confirm
+# Create and deploy dos-games in prod mode
+$ zarf dev deploy examples/dos-games --no-yolo
+```
+
+## `zarf dev find-images`
+
+Evaluates components in a `zarf.yaml` to identify images specified in their helm charts and manifests.
+
+Components that have `git` repositories that host helm charts can be processed by providing the `--repo-chart-path`.
+
+```bash
+$ zarf dev find-images examples/wordpress
+
+components:
+
+  - name: wordpress
+    images:
+      - docker.io/bitnamilegacy/apache-exporter:1.0.10-debian-12-r55
+      - docker.io/bitnamilegacy/mariadb:12.0.2-debian-12-r0
+      - docker.io/bitnamilegacy/wordpress:6.8.2-debian-12-r4
+```

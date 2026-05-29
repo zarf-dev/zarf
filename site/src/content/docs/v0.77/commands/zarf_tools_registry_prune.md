@@ -1,0 +1,38 @@
+---
+title: zarf tools registry prune
+description: Zarf CLI command reference for <code>zarf tools registry prune</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_registry_prune
+---
+
+## zarf tools registry prune
+
+Prunes images from the registry that are not currently being used by any Zarf packages.
+
+```
+zarf tools registry prune [flags]
+```
+
+### Options
+
+```
+  -c, --confirm          Confirm the image prune action to prevent accidental deletions
+  -h, --help             help for prune
+      --ignore-missing   Ignore missing image manifests and continue pruning
+      --insecure         Allow image references to be fetched without TLS
+```
+
+### Options inherited from parent commands
+
+```
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
+```
+
+### SEE ALSO
+
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools

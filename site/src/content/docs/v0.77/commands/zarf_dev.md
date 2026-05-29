@@ -1,0 +1,43 @@
+---
+title: zarf dev
+description: Zarf CLI command reference for <code>zarf dev</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_dev
+---
+
+## zarf dev
+
+Commands useful for developing packages
+
+### Options
+
+```
+  -h, --help   help for dev
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf](/v0.77/commands/zarf/)	 - The Airgap Native Packager Manager for Kubernetes
+* [zarf dev deploy](/v0.77/commands/zarf_dev_deploy/)	 - Creates and deploys a Zarf package from a given directory
+* [zarf dev find-images](/v0.77/commands/zarf_dev_find-images/)	 - Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
+* [zarf dev generate](/v0.77/commands/zarf_dev_generate/)	 - Creates a zarf.yaml automatically from a given remote (git) Helm chart
+* [zarf dev generate-config](/v0.77/commands/zarf_dev_generate-config/)	 - Generates a config file for Zarf
+* [zarf dev inspect](/v0.77/commands/zarf_dev_inspect/)	 - Commands to gather information about a Zarf package using its package definition
+* [zarf dev lint](/v0.77/commands/zarf_dev_lint/)	 - Lints the given package for valid schema and recommended practices
+* [zarf dev patch-git](/v0.77/commands/zarf_dev_patch-git/)	 - Converts all .git URLs to the specified Zarf HOST and with the Zarf URL pattern in a given FILE.  NOTE:
+  This should only be used for manifests that are not mutated by the Zarf Agent Mutating Webhook.
+* [zarf dev sha256sum](/v0.77/commands/zarf_dev_sha256sum/)	 - Generates a SHA256SUM for the given file

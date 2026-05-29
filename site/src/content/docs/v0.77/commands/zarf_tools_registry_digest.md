@@ -1,0 +1,50 @@
+---
+title: zarf tools registry digest
+description: Zarf CLI command reference for <code>zarf tools registry digest</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_registry_digest
+---
+
+## zarf tools registry digest
+
+Get the digest of an image
+
+```
+zarf tools registry digest IMAGE [flags]
+```
+
+### Examples
+
+```
+
+# Return an image digest for an internal repo in Zarf
+$ zarf tools registry digest 127.0.0.1:31999/stefanprodan/podinfo:6.4.0
+
+# Return an image digest from a repo hosted at reg.example.com
+$ zarf tools registry digest reg.example.com/stefanprodan/podinfo:6.4.0
+
+```
+
+### Options
+
+```
+      --full-ref         (Optional) if true, print the full image reference by digest
+  -h, --help             help for digest
+      --tarball string   (Optional) path to tarball containing the image
+```
+
+### Options inherited from parent commands
+
+```
+      --allow-nondistributable-artifacts   Allow pushing non-distributable (foreign) layers
+      --features stringToString            Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure                           Allow image references to be fetched without TLS
+      --insecure-skip-tls-verify           Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --plain-http                         Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --platform string                    Specifies the platform in the form os/arch[/variant][:osversion] (e.g. linux/amd64). (default "all")
+  -v, --verbose                            Enable debug logs
+```
+
+### SEE ALSO
+
+* [zarf tools registry](/v0.77/commands/zarf_tools_registry/)	 - Tools for working with container registries using go-containertools

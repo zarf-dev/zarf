@@ -1,0 +1,112 @@
+---
+title: variables
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/variables/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/variables
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/variables](https://github.com/zarf-dev/zarf/tree/main/examples/variables).
+:::
+
+This example demonstrates how to define `variables` and `constants` in your package that will be templated across the manifests and charts your package uses during `zarf package deploy` with `###ZARF_VAR_*###` and `###ZARF_CONST_*###`, and also shows how package configuration templates can be used in the `zarf.yaml` during `zarf package create` with `###ZARF_PKG_TMPL_*###`.
+
+With these variables and templating features, you can define values in the `zarf.yaml` file without having to set them manually in every manifest and chart, and can prompt the deploy user for certain information you may want to make dynamic on `zarf package deploy`.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: variables
+  description: Example nginx package to demonstrate Zarf variables
+
+# Constants are defined on package create and do not change on deploy
+# This demonstrates setting the nginx version to bake into the package using a package variable (PKG_TMPL)
+# NOTE: package templates (PKG_TMPL) only apply to zarf.yaml files so defining this here turns into ###ZARF_CONST_NGINX_VERSION### on deploy
+# ALSO NOTE: the PKG_TMPL is surrounded by quotes ("") inside of the zarf.yaml, while this is not required for deploy-time variables, PKG_TMPLs will be removed as comments without them
+constants:
+  - name: NGINX_VERSION
+    value: "###ZARF_PKG_TMPL_NGINX_VERSION###"
+    pattern: "^[\\w\\-\\.]+$"
+
+# Demonstrates injecting custom variables into a K8s resource
+variables:
+  # OPTIONAL_FOOTER injects a configurable footer into the site but has an empty default with no description and will not prompt the user interactively
+  - name: OPTIONAL_FOOTER
+    autoIndent: true
+  # STYLE sets the CSS styles for the site with a default and does not prompt the user for them (note the autoIndent key and that it is multi-line)
+  - name: STYLE
+    default: |
+      body { font-family: sans-serif; color: white; background: #0a0e2e; }
+      pre { color: white; background: black; }
+    autoIndent: true
+  # SITE_NAME sets the name of the site and will ask the user interactively if it is not set on the CLI or in the config file
+  - name: SITE_NAME
+    description: The name of the site you are deploying (i.e. Lula Website)
+    prompt: true
+    pattern: "^[\\w\\s\\-\\.]+$"
+  # ORGANIZATION sets the organization to Defense Unicorns as a default but prompts the user if they would like to override it
+  - name: ORGANIZATION
+    description: The organization providing the site
+    default: Defense Unicorns
+    prompt: true
+    pattern: "^[\\w\\s\\-\\.]+$"
+  # SECRET sets the environment in the modified-config file and sets `sensitive` so that it will not be saved in the log
+  - name: SECRET
+    default: sample-secret
+    sensitive: true
+  # MODIFIED_CONFIG sets a filepath for a config file to be used as the contents of a template
+  - name: MODIFIED_CONFIG
+    default: modified-config.json
+    autoIndent: true
+    sensitive: true
+    type: file
+  # EXTRA_DATA demonstrates a multi-line variable substituted as the sole entry under a YAML
+  # mapping key (see nginx-extra-configmap.yaml). Also serves as regression coverage for #4863.
+  - name: EXTRA_DATA
+    default: |
+      extra-key: extra-value
+
+components:
+  # The following component templates the provided config file with the defined ENVIRONMENT
+  # NOTE: this component does not actually execute this file in this example
+  - name: variables-with-config
+    description: Change a value in a regular file with a Zarf variable. Set ENVIRONMENT variable to modify the file.
+    required: true
+    files:
+      - source: simple-config.json
+        target: modified-config.json
+    actions:
+      onDeploy:
+        after:
+          # This command uses Zarf to return the SHASUM of the config file (`type: file` variables will return the filepath instead of the contents when used in actions due to constraints on env var size)
+          - cmd: ./zarf prepare sha256sum ${ZARF_VAR_MODIFIED_CONFIG}
+            # `mute` is set to exclude the command output from being shown (since we are treating it as sensitive below)
+            mute: true
+            setVariables:
+              - name: MODIFIED_CONFIG_SHASUM
+                # `sensitive` is set to exclude the command output from the logs
+                sensitive: true
+                # `pattern` here will ensure that we get a properly formatted sha256 sum back from the zarf prepare command
+                pattern: "^[\\da-f]{64}$"
+
+  # The following component deploys nginx to the cluster using the defined variables
+  - name: variables-with-nginx
+    description: "This component deploys nginx version ###ZARF_PKG_TMPL_NGINX_VERSION### to the cluster"
+    required: true
+    images:
+      # This sets the nginx image tag to the same PKG_TMPL used for the constant above to keep the zarf.yaml and nginx-deployment.yaml in sync
+      - "nginx:###ZARF_PKG_TMPL_NGINX_VERSION###"
+    manifests:
+      - name: variables-with-nginx
+        files:
+          - nginx-configmap.yaml
+          - nginx-extra-configmap.yaml
+          - nginx-deployment.yaml
+          - nginx-service.yaml
+
+documentation:
+  readme: readme.md
+```

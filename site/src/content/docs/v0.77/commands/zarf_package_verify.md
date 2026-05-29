@@ -1,0 +1,63 @@
+---
+title: zarf package verify
+description: Zarf CLI command reference for <code>zarf package verify</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_package_verify
+---
+
+## zarf package verify
+
+Verify the signature and integrity of a Zarf package
+
+### Synopsis
+
+Verify the cryptographic signature (if signed) and checksum integrity of a Zarf package. Returns exit code 0 if valid, non-zero if verification fails.
+
+```
+zarf package verify PACKAGE_SOURCE [flags]
+```
+
+### Examples
+
+```
+
+# Verify a signed package
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst --key ./public-key.pub
+
+# Verify an unsigned package (checksums only)
+$ zarf package verify zarf-package-demo-amd64-1.0.0.tar.zst
+
+```
+
+### Options
+
+```
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+  -h, --help                                    help for verify
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Public key for signature verification
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf package](/v0.77/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages

@@ -1,0 +1,97 @@
+{
+  "sidebar": [
+    {
+      "label": "Overview",
+      "link": "/"
+    },
+    {
+      "label": "Start Here",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "getting-started"
+          }
+        }
+      ]
+    },
+    {
+      "label": "CLI Commands",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "commands"
+          }
+        }
+      ],
+      "collapsed": true
+    },
+    {
+      "label": "Best Practices",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "best-practices"
+          }
+        }
+      ],
+      "collapsed": true
+    },
+    {
+      "label": "Reference",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "ref",
+            "collapsed": true
+          }
+        }
+      ],
+      "collapsed": true
+    },
+    {
+      "label": "Tutorials",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "tutorials"
+          }
+        }
+      ],
+      "collapsed": true
+    },
+    {
+      "label": "Schema",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "schema"
+          }
+        }
+      ],
+      "collapsed": true
+    },
+    {
+      "label": "FAQ",
+      "link": "/faq"
+    },
+    {
+      "label": "Roadmap",
+      "link": "/roadmap"
+    },
+    {
+      "label": "Support",
+      "link": "/support"
+    },
+    {
+      "label": "Contribute",
+      "items": [
+        {
+          "autogenerate": {
+            "directory": "contribute"
+          }
+        }
+      ],
+      "collapsed": true
+    }
+  ]
+}

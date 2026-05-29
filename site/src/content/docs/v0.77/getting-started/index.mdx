@@ -1,0 +1,61 @@
+---
+title: Getting Started
+tableOfContents: false
+slug: v0.77/getting-started
+---
+
+import { Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+## Quick Start
+
+1. [Install Zarf](/v0.77/getting-started/install)
+
+2. Install a Kubernetes cluster (e.g. [`kind`](https://kind.sigs.k8s.io/))
+
+3. <Tabs>
+     <TabItem label="Interactive">
+       ```bash
+       # Startup a fresh kind cluster
+       kind delete cluster && kind create cluster
+
+       zarf init
+       # (Select 'Y' to download the default init package)
+       # (Select 'Y' to confirm deployment)
+       # (Select optional components as desired)
+
+       # Now you are ready to deploy any Zarf Package, try out our Retro Arcade!!
+       zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 --key=https://zarf.dev/cosign.pub
+       # (Select 'Y' to confirm deployment)
+       ```
+     </TabItem>
+
+     <TabItem label="Non-interactive">
+       ```bash
+       # Startup a fresh kind cluster
+       kind delete cluster && kind create cluster
+
+       # Download the default init package and deploy it
+       zarf tools download-init
+       zarf init --confirm
+
+       # Deploy the DOS Games package
+       zarf package deploy oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 \
+          --key=https://zarf.dev/cosign.pub \
+          --confirm
+       ```
+     </TabItem>
+   </Tabs>
+
+4. Join us on the [Kubernetes Slack](https://kubernetes.slack.com) in the [*#zarf*](https://kubernetes.slack.com/archives/C03B6BJAUJ3) channel!
+
+## Where to Next?
+
+<LinkCard title="Understanding the Basics" href="/getting-started/understanding" />
+
+<CardGrid>
+  <LinkCard title="Create a Package" href="/ref/create/" />
+
+  <LinkCard title="View tutorials" href="/tutorials" />
+</CardGrid>
+
+<LinkCard title="Discover CLI commands (zarf --help)" href="/commands/zarf" />

@@ -1,0 +1,64 @@
+---
+title: composable-packages
+editURL: https://github.com/zarf-dev/zarf/edit/main/examples/composable-packages/readme.md
+description: ""
+tableOfContents: false
+slug: v0.77/ref/examples/composable-packages
+---
+
+:::note
+To view the full example, as well as its dependencies, please visit [examples/composable-packages](https://github.com/zarf-dev/zarf/tree/main/examples/composable-packages).
+:::
+
+As you can see in the example, the `import` key can be combined with other keys to merge components together.  This can be done as many components deep as you wish and in the end will generate one main `zarf.yaml` file with all of the defined resources included.
+
+This is useful if you want to slightly tweak a given component while maintaining a common core.
+
+## zarf.yaml
+
+```yaml
+kind: ZarfPackageConfig
+metadata:
+  name: composable-packages
+  description: Demo Zarf package composability
+
+components:
+  - name: local-games-path
+    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
+    required: true
+    # group: ""         # the initial value overrides the child component
+    # default: false    # the initial value overrides the child component
+    description: "Example of a local composed package with a unique description for this component"
+    import:
+      # The local relative path to the folder containing this component's package definition
+      path: ../dos-games
+      # Example optional custom name to point to in the imported package (default is to use this component's name)
+      name: baseline
+    # 'name'd Zarf primitives will merge the arrays together on import:
+    # - 'manifests' of the same name will merge namespace, files and kustomizations
+    # - 'charts' of the same name will merge namespace, releaseName and valuesFiles
+    # Zarf primitives without matching 'name's will be appended to the end of the primitive's list for that component.
+    manifests:
+      - name: multi-games
+        files:
+          - quake-service.yaml
+
+  - name: oci-games-url
+    # The component logic keys ('required', 'group', and 'default') always override those of the imported package
+    # required: false   # the initial value overrides the child component
+    # group: ""         # the initial value overrides the child component
+    # default: false    # the initial value overrides the child component
+    import:
+      # The URL to the skeleton package containing this component's package definition
+      url: oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0
+      # Example optional custom name to point to in the imported package (default is to use this component's name)
+      name: baseline
+    # Un'name'd Zarf primitives will be appended to the end of the primitive's list for that component.
+    actions:
+      onDeploy:
+        before:
+          - cmd: ./zarf tools kubectl get -n dos-games deployment -o jsonpath={.items[0].metadata.creationTimestamp}
+
+documentation:
+  readme: readme.md
+```

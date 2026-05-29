@@ -1,0 +1,55 @@
+---
+title: zarf dev find-images
+description: Zarf CLI command reference for <code>zarf dev find-images</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_dev_find-images
+---
+
+## zarf dev find-images
+
+Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
+
+### Synopsis
+
+Evaluates components in a Zarf file to identify images specified in their helm charts and manifests.
+
+Components that have repos that host helm charts can be processed by providing the --repo-chart-path.
+
+```
+zarf dev find-images [ DIRECTORY ] [flags]
+```
+
+### Options
+
+```
+      --create-set stringToString             Specify package templates to set on the command line (KEY=value). Note, if using a config file, this will be set by [package.create.set]. (default [])
+      --deploy-set-variables stringToString   Specify deployment variables to set on the command line (KEY=value) (default [])
+  -f, --flavor string                         The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
+  -h, --help                                  help for find-images
+      --kube-version string                   Override the default helm template KubeVersion when performing a package chart template
+      --registry-url string                   Override the ###ZARF_REGISTRY### value (default "127.0.0.1:31999")
+  -p, --repo-chart-path string                If git repos hold helm charts, often found with gitops tools, specify the chart path, e.g. "/" or "/chart"
+      --set-values stringToString             Specify deployment package values to set on the command line (key.path=value). (default [])
+      --skip-cosign                           Skip searching for cosign artifacts related to discovered images
+  -u, --update                                Update the images in the zarf.yaml file if needed. Formatting such as comments and newlines may change.
+      --values strings                        [alpha] Values files to use for templating and Helm overrides. Multiple files can be passed in as a comma separated list, and the flag can be provided multiple times.
+      --why string                            Prints the source manifest for the specified image
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf dev](/v0.77/commands/zarf_dev/)	 - Commands useful for developing packages

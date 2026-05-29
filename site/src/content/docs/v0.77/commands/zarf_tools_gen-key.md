@@ -1,0 +1,38 @@
+---
+title: zarf tools gen-key
+description: Zarf CLI command reference for <code>zarf tools gen-key</code>.
+tableOfContents: false
+slug: v0.77/commands/zarf_tools_gen-key
+---
+
+## zarf tools gen-key
+
+Generates a cosign public/private keypair that can be used to sign packages
+
+```
+zarf tools gen-key [flags]
+```
+
+### Options
+
+```
+  -h, --help   help for gen-key
+```
+
+### Options inherited from parent commands
+
+```
+  -a, --architecture string        Architecture for OCI images and Zarf packages
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
+  -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
+      --no-color                   Disable terminal color codes in logging and stdout prints.
+      --plain-http                 Force the connections over HTTP instead of HTTPS. This flag should only be used if you have a specific reason and accept the reduced security posture.
+      --tmpdir string              Specify the temporary directory to use for intermediate files
+      --zarf-cache string          Specify the location of the Zarf cache directory (default "~/.zarf-cache")
+```
+
+### SEE ALSO
+
+* [zarf tools](/v0.77/commands/zarf_tools/)	 - Collection of additional tools to make airgap easier
