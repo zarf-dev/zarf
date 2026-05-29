@@ -2,3 +2,9 @@
 # K3s uses a non-standard kubelet root path.
 csi:
   kubeletRootDir: "/var/lib/rancher/k3s/agent/kubelet"
+
+preUpgradeChecker:
+  upgradeVersionCheck: false
+
+global:
+  imageRegistry: "127.0.0.1:31999"

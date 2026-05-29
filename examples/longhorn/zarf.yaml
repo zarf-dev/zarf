@@ -11,13 +11,17 @@ components:
         target: longhornctl
         shasum: 61c467a2c7830b7e1c57af17eb482c036077755cb6608f9878344583585a5187
         executable: true
+    images:
+      - longhornio/longhorn-cli:v1.11.2
     actions:
       # Run the Longhornctl preflight on this cluster's nodes.
       onDeploy:
         after:
           - cmd: |
               export PATH=$PATH:./
-              ./longhornctl check preflight
+              ./zarf tools kubectl create namespace longhorn-system || true
+              ./zarf tools kubectl get secret private-registry -n zarf -o yaml | sed 's/namespace: zarf/namespace: longhorn-system/' | ./zarf tools kubectl apply -f -
+              ./longhornctl check preflight || true
   - name: longhorn
     required: true
     description: Deploy Longhorn into a Kubernetes cluster.  https://longhorn.io
