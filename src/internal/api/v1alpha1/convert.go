@@ -5,7 +5,6 @@
 package v1alpha1
 
 import (
-	"math"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -193,8 +192,8 @@ func actionsToGeneric(a v1alpha1.ZarfComponentActions) types.ComponentActions {
 func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) types.ComponentActionSet {
 	defaults := types.ComponentActionDefaults{
 		Silent:          s.Defaults.Mute,
-		MaxTotalSeconds: clampToInt32(s.Defaults.MaxTotalSeconds),
-		Retries:         clampToInt32(s.Defaults.MaxRetries),
+		MaxTotalSeconds: int32(s.Defaults.MaxTotalSeconds),
+		Retries:         int32(s.Defaults.MaxRetries),
 		Dir:             s.Defaults.Dir,
 		Env:             s.Defaults.Env,
 		Shell: types.Shell{
@@ -237,11 +236,11 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
 	}
 
 	if a.MaxTotalSeconds != nil {
-		v := clampToInt32(*a.MaxTotalSeconds)
+		v := int32(*a.MaxTotalSeconds)
 		ga.MaxTotalSeconds = &v
 	}
 	if a.MaxRetries != nil {
-		v := clampToInt32(*a.MaxRetries)
+		v := int32(*a.MaxRetries)
 		ga.Retries = &v
 	}
 
@@ -281,7 +280,7 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *types.ComponentActionWa
 		gw.Network = &types.ComponentActionWaitNetwork{
 			Protocol: w.Network.Protocol,
 			Address:  w.Network.Address,
-			Code:     clampToInt32(w.Network.Code),
+			Code:     int32(w.Network.Code),
 		}
 	}
 	return gw
@@ -667,16 +666,6 @@ func waitFromGeneric(w *types.ComponentActionWait) *v1alpha1.ZarfComponentAction
 		}
 	}
 	return aw
-}
-
-func clampToInt32(v int) int32 {
-	if v > math.MaxInt32 {
-		return math.MaxInt32
-	}
-	if v < math.MinInt32 {
-		return math.MinInt32
-	}
-	return int32(v)
 }
 
 func derefBool(p *bool) bool {
