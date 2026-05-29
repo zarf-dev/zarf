@@ -225,7 +225,7 @@ test-upgrade: ## Run the Zarf CLI E2E tests for an external registry and cluster
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
+	go test -failfast -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg="./src/.." $$(go list ./... | grep -v '^github.com/zarf-dev/zarf/src/test')
 
 .PHONY: test-unit-quick
 test-unit-quick: ## Run unit tests without the race detector or coverage
