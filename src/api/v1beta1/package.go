@@ -128,6 +128,18 @@ type BuildData struct {
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
 	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	// originalAPIVersion records the apiVersion the package was read from before any conversion.
+	originalAPIVersion string
+}
+
+// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+func (b BuildData) OriginalAPIVersion() string {
+	return b.originalAPIVersion
+}
+
+// SetOriginalAPIVersion records the apiVersion the package was read from before any conversion.
+func (b *BuildData) SetOriginalAPIVersion(apiVersion string) {
+	b.originalAPIVersion = apiVersion
 }
 
 // VersionRequirement specifies a minimum Zarf version needed and the reason for the requirement.
