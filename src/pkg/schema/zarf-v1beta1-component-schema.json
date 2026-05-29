@@ -94,97 +94,6 @@
       ],
       "type": "object"
     },
-    "Component": {
-      "additionalProperties": false,
-      "description": "Component is the primary functional grouping of assets to deploy by Zarf.",
-      "patternProperties": {
-        "^x-": {}
-      },
-      "properties": {
-        "actions": {
-          "$ref": "#/$defs/ComponentActions",
-          "description": "Custom commands to run at various stages of a package lifecycle."
-        },
-        "charts": {
-          "description": "Helm charts to install during package deploy.",
-          "items": {
-            "$ref": "#/$defs/Chart"
-          },
-          "type": "array"
-        },
-        "description": {
-          "description": "Message to include during package deploy describing the purpose of this component.",
-          "type": "string"
-        },
-        "files": {
-          "description": "Files or folders to place on disk during package deployment.",
-          "items": {
-            "$ref": "#/$defs/File"
-          },
-          "type": "array"
-        },
-        "imageArchives": {
-          "description": "List of tar archives of images to include in the package.",
-          "items": {
-            "$ref": "#/$defs/ImageArchive"
-          },
-          "type": "array"
-        },
-        "images": {
-          "description": "List of OCI images to include in the package.",
-          "items": {
-            "$ref": "#/$defs/Image"
-          },
-          "type": "array"
-        },
-        "import": {
-          "$ref": "#/$defs/ComponentImport",
-          "description": "Import a component from another Zarf component config."
-        },
-        "manifests": {
-          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy.",
-          "items": {
-            "$ref": "#/$defs/Manifest"
-          },
-          "type": "array"
-        },
-        "name": {
-          "description": "The name of the component.",
-          "pattern": "^[a-z0-9][a-z0-9\\-]*$",
-          "type": "string"
-        },
-        "optional": {
-          "description": "Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.",
-          "type": "boolean"
-        },
-        "repositories": {
-          "description": "List of git repositories to include in the package.",
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "service": {
-          "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
-          "enum": [
-            "registry",
-            "seed-registry",
-            "injector",
-            "agent",
-            "git-server"
-          ],
-          "type": "string"
-        },
-        "target": {
-          "$ref": "#/$defs/ComponentTarget",
-          "description": "Filter when this component is included in package creation or deployment."
-        }
-      },
-      "required": [
-        "name"
-      ],
-      "type": "object"
-    },
     "ComponentAction": {
       "additionalProperties": false,
       "description": "ComponentAction represents a single action to run during a Zarf package operation.",
@@ -557,6 +466,81 @@
       "required": [
         "zarfVersion"
       ],
+      "type": "object"
+    },
+    "ComponentSpec": {
+      "additionalProperties": false,
+      "description": "ComponentSpec is a reduced component definition used in component configs.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "actions": {
+          "$ref": "#/$defs/ComponentActions",
+          "description": "Custom commands to run at various stages of a package lifecycle."
+        },
+        "charts": {
+          "description": "Helm charts to install during package deploy.",
+          "items": {
+            "$ref": "#/$defs/Chart"
+          },
+          "type": "array"
+        },
+        "files": {
+          "description": "Files or folders to place on disk during package deployment.",
+          "items": {
+            "$ref": "#/$defs/File"
+          },
+          "type": "array"
+        },
+        "imageArchives": {
+          "description": "List of tar archives of images to include in the package.",
+          "items": {
+            "$ref": "#/$defs/ImageArchive"
+          },
+          "type": "array"
+        },
+        "images": {
+          "description": "List of OCI images to include in the package.",
+          "items": {
+            "$ref": "#/$defs/Image"
+          },
+          "type": "array"
+        },
+        "import": {
+          "$ref": "#/$defs/ComponentImport",
+          "description": "Import a component from another Zarf component config."
+        },
+        "manifests": {
+          "description": "Kubernetes manifests to be included in a generated Helm chart on package deploy.",
+          "items": {
+            "$ref": "#/$defs/Manifest"
+          },
+          "type": "array"
+        },
+        "repositories": {
+          "description": "List of git repositories to include in the package.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "service": {
+          "description": "The Zarf CLI service this component provides, such as the registry, injector, or agent.",
+          "enum": [
+            "registry",
+            "seed-registry",
+            "injector",
+            "agent",
+            "git-server"
+          ],
+          "type": "string"
+        },
+        "target": {
+          "$ref": "#/$defs/ComponentTarget",
+          "description": "Filter when this component is included in package creation or deployment."
+        }
+      },
       "type": "object"
     },
     "ComponentTarget": {
@@ -964,7 +948,7 @@
       "type": "string"
     },
     "component": {
-      "$ref": "#/$defs/Component",
+      "$ref": "#/$defs/ComponentSpec",
       "description": "The single component this config defines."
     },
     "kind": {
