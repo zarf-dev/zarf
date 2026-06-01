@@ -8,8 +8,8 @@
 // their own. For each version we check the tag out into a throwaway git
 // worktree, take only its *data* (the committed `src/content/docs`, the repo's
 // `examples/`, and `zarf.schema.json`), overlay the current toolchain on top
-// (astro config, components, build scripts, lockfile) and reuse the current
-// `node_modules`.
+// (astro config, content collection config, components, build scripts,
+// lockfile) and reuse the current `node_modules`.
 //
 // Versions are discovered from GitHub Releases, deduplicated to the newest
 // patch per minor, and floored at MIN_VERSION.
@@ -32,6 +32,7 @@ const MIN_VERSION = "v0.76";
 // today's config, components, and build scripts rather than the tag's own.
 const overlayFiles = [
   "astro.config.ts",
+  "src/content.config.ts",
   "package.json",
   "package-lock.json",
   "tsconfig.json",
@@ -114,6 +115,10 @@ async function discoverVersions() {
 // ---------------------------------------------------------------------------
 
 async function overlayToolchain(worktreeSite) {
+  // Drop the tag's own content collection config. It's toolchain, not data, and
+  // pre-Astro-6 tags keep it at the legacy `src/content/config.ts` path, which
+  // Astro 6 rejects. The current config is overlaid via `overlayFiles`.
+  await fs.rm(path.join(worktreeSite, "src/content/config.ts"), { force: true });
   for (const file of overlayFiles) {
     await fs.copyFile(path.join(siteDir, file), path.join(worktreeSite, file));
   }
