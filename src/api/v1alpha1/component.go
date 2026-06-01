@@ -56,6 +56,12 @@ type ZarfComponent struct {
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+
+	// Grants this component access to credential fields (passwords, tokens) within {{ .State }}
+	// during template processing. Without this, accessing .State.Registry.PushPassword etc.
+	// causes a template error. Only set this when the component genuinely requires credentials
+	// in its manifests, files, or actions.
+	SensitiveStateAccess bool `json:"sensitiveStateAccess,omitempty" jsonschema:"description=Grants access to credential fields within .State during Go template processing"`
 }
 
 // ImageArchive points to an archived file containing an OCI layout

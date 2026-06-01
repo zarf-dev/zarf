@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -1155,5 +1156,114 @@ func TestFromTOML_Errors(t *testing.T) {
 			require.True(t, ok, "expected Error key in result map")
 			require.Contains(t, errMsg, "toml:")
 		})
+	}
+}
+
+func testState() *state.State {
+	return &state.State{
+		Distro:       "k3s",
+		StorageClass: "standard",
+		IPFamily:     state.IPFamilyIPv4,
+		RegistryInfo: state.RegistryInfo{
+			Address:      "registry.example.com",
+			Port:         5000,
+			PushUsername: "push-user",
+			PushPassword: "push-secret",
+			PullUsername: "pull-user",
+			PullPassword: "pull-secret",
+			Secret:       "registry-secret",
+		},
+		GitServer: state.GitServerInfo{
+			Address:      "git.example.com",
+			PushUsername: "git-push-user",
+			PushPassword: "git-push-secret",
+			PullUsername: "git-pull-user",
+			PullPassword: "git-pull-secret",
+		},
+		ArtifactServer: state.ArtifactServerInfo{
+			Address:      "artifact.example.com",
+			PushUsername: "artifact-user",
+			PushToken:    "artifact-token",
+		},
+		InjectorInfo: state.InjectorInfo{
+			Image: "injector:latest",
+			Port:  5001,
+		},
+	}
+}
+
+func TestWithState_NilState(t *testing.T) {
+	t.Parallel()
+	objs := NewObjects(value.Values{})
+	result := objs.WithState(nil, false)
+	require.NotContains(t, result, objectKeyState)
+}
+
+func TestWithState_NonSensitiveFields(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs := NewObjects(value.Values{}).WithState(s, false)
+
+	require.Contains(t, objs, objectKeyState)
+
+	// Non-sensitive fields render correctly
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Distro }}`:                s.Distro,
+		`{{ .State.StorageClass }}`:          s.StorageClass,
+		`{{ .State.IPFamily }}`:              string(s.IPFamily),
+		`{{ .State.Registry.Address }}`:      s.RegistryInfo.Address,
+		`{{ .State.Registry.PushUsername }}`: s.RegistryInfo.PushUsername,
+		`{{ .State.Registry.PullUsername }}`: s.RegistryInfo.PullUsername,
+		`{{ .State.Git.Address }}`:           s.GitServer.Address,
+		`{{ .State.Git.PushUsername }}`:      s.GitServer.PushUsername,
+		`{{ .State.Git.PullUsername }}`:      s.GitServer.PullUsername,
+		`{{ .State.Artifact.Address }}`:      s.ArtifactServer.Address,
+		`{{ .State.Artifact.PushUsername }}`: s.ArtifactServer.PushUsername,
+		`{{ .State.Injector.Image }}`:        s.InjectorInfo.Image,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render without error", tmpl)
+		require.Equal(t, expected, out, "template %q rendered unexpected value", tmpl)
+	}
+}
+
+func TestWithState_SensitiveFieldsBlockedWithoutOptIn(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs := NewObjects(value.Values{}).WithState(s, false)
+
+	// Sensitive fields must not be accessible — missingkey=error causes a template failure
+	for _, tmpl := range []string{
+		`{{ .State.Registry.PushPassword }}`,
+		`{{ .State.Registry.PullPassword }}`,
+		`{{ .State.Registry.Secret }}`,
+		`{{ .State.Git.PushPassword }}`,
+		`{{ .State.Git.PullPassword }}`,
+		`{{ .State.Artifact.PushToken }}`,
+	} {
+		_, err := Apply(ctx, tmpl, objs)
+		require.Error(t, err, "template %q should fail without sensitiveStateAccess", tmpl)
+	}
+}
+
+func TestWithState_SensitiveFieldsAvailableWithOptIn(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs := NewObjects(value.Values{}).WithState(s, true)
+
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Registry.PushPassword }}`: s.RegistryInfo.PushPassword,
+		`{{ .State.Registry.PullPassword }}`: s.RegistryInfo.PullPassword,
+		`{{ .State.Registry.Secret }}`:       s.RegistryInfo.Secret,
+		`{{ .State.Git.PushPassword }}`:      s.GitServer.PushPassword,
+		`{{ .State.Git.PullPassword }}`:      s.GitServer.PullPassword,
+		`{{ .State.Artifact.PushToken }}`:    s.ArtifactServer.PushToken,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render with sensitiveStateAccess=true", tmpl)
+		require.Equal(t, expected, out, "template %q rendered unexpected value", tmpl)
 	}
 }
