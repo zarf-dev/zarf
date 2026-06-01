@@ -1,5 +1,13 @@
 ---
-const json = await import("../assets/zarf.schema.json");
+interface Props {
+  path: string;
+}
+const { path } = Astro.props;
+const schemas = import.meta.glob<{ default: Record<string, any> }>("../assets/*.json");
+const loader = schemas[`../assets/${path}`];
+if (!loader) throw new Error(`Schema not found: ${path}`);
+const mod = await loader();
+const json = mod.default;
 const defs = json["$defs"] as Record<string, any>;
 
 // BFS walk from root properties to produce natural reading order.
