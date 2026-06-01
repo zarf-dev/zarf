@@ -30,6 +30,11 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
+      // FIXME: potentially not needed
+      // We render our own wrap-style heading anchors via rehype-autolink-headings
+      // and SchemaReference.astro (.heading-link); disable Starlight's built-in
+      // heading links (added by default in 0.38) to avoid duplicate anchors.
+      markdown: { headingLinks: false },
       head: [
         {
           tag: "script",
@@ -68,33 +73,31 @@ export default defineConfig({
         },
         {
           label: "Start Here",
-          autogenerate: {
-            directory: "getting-started",
-          },
+          items: [{ autogenerate: { directory: "getting-started" } }],
         },
         {
           label: "CLI Commands",
-          autogenerate: { directory: "commands" },
+          items: [{ autogenerate: { directory: "commands" } }],
           collapsed: true,
         },
         {
           label: "Best Practices",
-          autogenerate: { directory: "best-practices" },
+          items: [{ autogenerate: { directory: "best-practices" } }],
           collapsed: true,
         },
         {
           label: "Reference",
-          autogenerate: { directory: "ref", collapsed: true },
+          items: [{ autogenerate: { directory: "ref", collapsed: true } }],
           collapsed: true,
         },
         {
           label: "Tutorials",
-          autogenerate: { directory: "tutorials" },
+          items: [{ autogenerate: { directory: "tutorials" } }],
           collapsed: true,
         },
         {
           label: "Schema",
-          autogenerate: { directory: "schema" },
+          items: [{ autogenerate: { directory: "schema" } }],
           collapsed: true,
         },
         {
@@ -111,7 +114,7 @@ export default defineConfig({
         },
         {
           label: "Contribute",
-          autogenerate: { directory: "contribute" },
+          items: [{ autogenerate: { directory: "contribute" } }],
           collapsed: true,
         },
       ],

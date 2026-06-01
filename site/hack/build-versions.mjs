@@ -61,7 +61,7 @@ function cmpMinorDesc(a, b) {
   return bMaj - aMaj || bMin - aMin;
 }
 
-// True when `minor` (e.g. "v0.76") is >= the configured floor.
+// True when `minor` is >= the configured floor.
 function aboveFloor(minor) {
   const [maj = 0, min = 0] = parseSemver(minor);
   const [fMaj = 0, fMin = 0] = parseSemver(MIN_VERSION);
@@ -78,7 +78,6 @@ function toVersion(tag) {
 // `/<slug>/` subpath. Returns { archived: [{ ref, label, slug }] } sorted
 // newest-first.
 async function discoverVersions() {
-  // Offline / pinned escape hatch: ZARF_DOCS_VERSIONS="v0.77.0,v0.76.0".
   let tags;
   if (process.env.ZARF_DOCS_VERSIONS) {
     tags = process.env.ZARF_DOCS_VERSIONS.split(",").map((t) => t.trim()).filter(Boolean);
