@@ -6,16 +6,23 @@
 //
 // Crucially, archived versions are rendered with the CURRENT toolchain, never
 // their own. For each version we check the tag out into a throwaway git
-// worktree, take only its *data* (the committed `src/content/docs`, the repo's
-// `examples/`, and `zarf.schema.json`), overlay the current toolchain on top
-// (astro config, content collection config, components, build scripts,
-// lockfile) and reuse the current `node_modules`.
+// worktree, then replace its `site/` wholesale with the current checkout's,
+// preserving only the tag's *data* (the paths in `dataPaths`). The tag's
+// repo-level data — `examples/` and `zarf.schema.json` — is left in place at the
+// worktree root and consumed by `prebuild`. The current `node_modules` is reused.
+//
+// The toolchain is an *exclusion* list, not an inclusion list: everything under
+// `site/` is current unless it's explicitly version data. This way a new or
+// renamed toolchain file can never be silently mistaken for a version's data
+// (e.g. the pre-Astro-6 `src/content/config.ts` rename, which would otherwise
+// linger from the tag and break the build).
 //
 // Versions are discovered from GitHub Releases, deduplicated to the newest
 // patch per minor, and floored at MIN_VERSION.
 
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -28,17 +35,14 @@ const REPO = "zarf-dev/zarf";
 // Inclusive floor: archived versions older than this minor are not built.
 const MIN_VERSION = "v0.76";
 
-// Current toolchain copied onto each version's worktree so archived builds use
-// today's config, components, and build scripts rather than the tag's own.
-const overlayFiles = [
-  "astro.config.ts",
-  "src/content.config.ts",
-  "package.json",
-  "package-lock.json",
-  "tsconfig.json",
-  "versions.json",
-];
-const overlayDirs = ["src/components", "src/styles", "hack"];
+// Paths under `site/` that hold an archived version's *data* and are kept from
+// the tag's worktree. Everything else under `site/` is toolchain, replaced with
+// the current checkout.
+const dataPaths = ["src/content/docs"];
+
+// Top-level `site/` entries never copied from the current checkout: installed
+// deps and build artifacts. `node_modules` is symlinked separately.
+const overlaySkip = new Set(["node_modules", "dist", ".astro"]);
 
 function git(args, opts = {}) {
   return execFileSync("git", args, { cwd: repoDir, stdio: "inherit", ...opts });
@@ -114,17 +118,31 @@ async function discoverVersions() {
 // Build steps
 // ---------------------------------------------------------------------------
 
+// Replace the worktree's `site/` with the current checkout's, keeping only the
+// tag's data.
 async function overlayToolchain(worktreeSite) {
-  // Drop the tag's own content collection config. It's toolchain, not data, and
-  // pre-Astro-6 tags keep it at the legacy `src/content/config.ts` path, which
-  // Astro 6 rejects. The current config is overlaid via `overlayFiles`.
-  await fs.rm(path.join(worktreeSite, "src/content/config.ts"), { force: true });
-  for (const file of overlayFiles) {
-    await fs.copyFile(path.join(siteDir, file), path.join(worktreeSite, file));
-  }
-  for (const dir of overlayDirs) {
-    await fs.rm(path.join(worktreeSite, dir), { recursive: true, force: true });
-    await fs.cp(path.join(siteDir, dir), path.join(worktreeSite, dir), { recursive: true });
+  const skipAbs = [...overlaySkip].map((d) => path.join(siteDir, d));
+  const dataAbs = dataPaths.map((d) => path.join(siteDir, d));
+  const under = (p, root) => p === root || p.startsWith(root + path.sep);
+
+  // Preserve the tag's data across the wholesale replacement of `site/`.
+  const stash = await fs.mkdtemp(path.join(os.tmpdir(), "zarf-docs-data-"));
+  try {
+    for (const rel of dataPaths) {
+      await fs.cp(path.join(worktreeSite, rel), path.join(stash, rel), { recursive: true });
+    }
+    await fs.rm(worktreeSite, { recursive: true, force: true });
+    await fs.cp(siteDir, worktreeSite, {
+      recursive: true,
+      // Skip installed deps, build artifacts, and the current checkout's data —
+      // the latter is restored from the tag below.
+      filter: (src) => !skipAbs.some((s) => under(src, s)) && !dataAbs.some((d) => under(src, d)),
+    });
+    for (const rel of dataPaths) {
+      await fs.cp(path.join(stash, rel), path.join(worktreeSite, rel), { recursive: true });
+    }
+  } finally {
+    await fs.rm(stash, { recursive: true, force: true });
   }
   // Reuse the current install — never resolve the tag's own dependencies.
   await fs.symlink(path.join(siteDir, "node_modules"), path.join(worktreeSite, "node_modules"), "dir");
