@@ -171,7 +171,7 @@ async function buildVersion({ ref, slug }) {
     // prebuild regenerates this tag's schema and examples from its own data,
     // using the overlaid (current) scripts.
     npm(["run", "prebuild"], worktreeSite);
-    npm(["exec", "astro", "build"], worktreeSite, { DOCS_BASE: `/${slug}` });
+    npm(["exec", "--", "astro", "build", "--base", `/${slug}`], worktreeSite);
     await rewriteVersionLinks(path.join(worktreeSite, "dist"), slug);
     await fs.cp(path.join(worktreeSite, "dist"), path.join(distDir, slug), { recursive: true });
   } finally {

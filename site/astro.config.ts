@@ -4,13 +4,10 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import remarkGemoji from "remark-gemoji";
 
-// Set by hack/build-versions.mjs for archived version builds (e.g. "/v0-76").
-// Unset for the current ("Latest") build, which is served from the site root.
-const base = process.env.DOCS_BASE || undefined;
-
 // https://astro.build/config
 export default defineConfig({
-  base,
+  // `base` is left at its default ("/") for the current ("Latest") build.
+  // hack/build-versions.mjs passes `--base /<slug>` per archived version build.
   redirects: {
     "/docs/zarf-overview": "/",
   },
