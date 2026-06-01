@@ -1,0 +1,201 @@
+// Builds the documentation site for the current checkout plus a window of
+// archived releases, using a content-snapshot strategy.
+//
+// The current docs (this checkout) are built at the site root as "Latest".
+// Each archived version is built from its release tag into a `/<slug>/` subpath.
+//
+// Crucially, archived versions are rendered with the CURRENT toolchain, never
+// their own. For each version we check the tag out into a throwaway git
+// worktree, take only its *data* (the committed `src/content/docs`, the repo's
+// `examples/`, and `zarf.schema.json`), overlay the current toolchain on top
+// (astro config, components, build scripts, lockfile) and reuse the current
+// `node_modules`.
+//
+// Versions are discovered from GitHub Releases, deduplicated to the newest
+// patch per minor, and floored at MIN_VERSION.
+
+import { execFileSync } from "node:child_process";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const siteDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoDir = path.resolve(siteDir, "..");
+const distDir = path.join(siteDir, "dist");
+const worktreeRoot = path.join(repoDir, ".docs-version-builds");
+
+const REPO = "zarf-dev/zarf";
+// Inclusive floor: archived versions older than this minor are not built.
+const MIN_VERSION = "v0.76";
+
+// Current toolchain copied onto each version's worktree so archived builds use
+// today's config, components, and build scripts rather than the tag's own.
+const overlayFiles = [
+  "astro.config.ts",
+  "package.json",
+  "package-lock.json",
+  "tsconfig.json",
+  "versions.json",
+];
+const overlayDirs = ["src/components", "src/styles", "hack"];
+
+function git(args, opts = {}) {
+  return execFileSync("git", args, { cwd: repoDir, stdio: "inherit", ...opts });
+}
+
+function npm(args, cwd, env) {
+  execFileSync("npm", args, { cwd, stdio: "inherit", env: { ...process.env, ...env } });
+}
+
+// ---------------------------------------------------------------------------
+// Version discovery
+// ---------------------------------------------------------------------------
+
+const parseSemver = (tag) => tag.replace(/^v/, "").split(".").map(Number);
+const minorKey = (tag) => tag.replace(/\.\d+$/, "");
+const slugOf = (minor) => minor.replace(/\./g, "-");
+
+function cmpMinorDesc(a, b) {
+  const [aMaj = 0, aMin = 0] = parseSemver(a);
+  const [bMaj = 0, bMin = 0] = parseSemver(b);
+  return bMaj - aMaj || bMin - aMin;
+}
+
+// True when `minor` (e.g. "v0.76") is >= the configured floor.
+function aboveFloor(minor) {
+  const [maj = 0, min = 0] = parseSemver(minor);
+  const [fMaj = 0, fMin = 0] = parseSemver(MIN_VERSION);
+  return maj > fMaj || (maj === fMaj && min >= fMin);
+}
+
+// Returns { ref, label, slug } for a full tag like "v0.76.3".
+function toVersion(tag) {
+  const minor = minorKey(tag);
+  return { ref: tag, label: minor, slug: slugOf(minor) };
+}
+
+// Discover the latest release plus every archived minor down to MIN_VERSION.
+// Returns { archived: [{ ref, label, slug }] } sorted newest-first. The latest
+// minor is omitted — it's served at the root by the current checkout.
+async function discoverVersions() {
+  // Offline / pinned escape hatch: ZARF_DOCS_VERSIONS="v0.77.0,v0.76.0".
+  let tags;
+  if (process.env.ZARF_DOCS_VERSIONS) {
+    tags = process.env.ZARF_DOCS_VERSIONS.split(",").map((t) => t.trim()).filter(Boolean);
+  } else {
+    const headers = { Accept: "application/vnd.github+json" };
+    if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
+    if (!res.ok) {
+      throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
+    }
+    const releases = await res.json();
+    tags = releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
+  }
+
+  // Keep only the newest patch per minor.
+  const newestByMinor = new Map();
+  for (const tag of tags) {
+    if (!/^v?\d+\.\d+\.\d+$/.test(tag)) continue;
+    const minor = minorKey(tag);
+    const current = newestByMinor.get(minor);
+    if (!current || parseSemver(tag)[2] > parseSemver(current)[2]) {
+      newestByMinor.set(minor, tag);
+    }
+  }
+
+  const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
+  // Drop the latest minor (root) and anything below the floor.
+  const archived = minorsDesc.slice(1).filter(aboveFloor).map((m) => toVersion(newestByMinor.get(m)));
+  return { latest: minorsDesc[0], archived };
+}
+
+// ---------------------------------------------------------------------------
+// Build steps
+// ---------------------------------------------------------------------------
+
+async function overlayToolchain(worktreeSite) {
+  for (const file of overlayFiles) {
+    await fs.copyFile(path.join(siteDir, file), path.join(worktreeSite, file));
+  }
+  for (const dir of overlayDirs) {
+    await fs.rm(path.join(worktreeSite, dir), { recursive: true, force: true });
+    await fs.cp(path.join(siteDir, dir), path.join(worktreeSite, dir), { recursive: true });
+  }
+  // Reuse the current install — never resolve the tag's own dependencies.
+  await fs.symlink(path.join(siteDir, "node_modules"), path.join(worktreeSite, "node_modules"), "dir");
+}
+
+async function rewriteVersionLinks(dir, slug) {
+  // Prefix root-absolute links that aren't already under /<slug>/ and aren't
+  // protocol-relative (//host). Scoped to href=/src= attribute values, since
+  // Astro's `base` doesn't rewrite links hardcoded in Markdown bodies.
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(`(\\s(?:href|src)=")/(?!${escaped}/)(?!/)`, "g");
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const p = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await rewriteVersionLinks(p, slug);
+    } else if (entry.name.endsWith(".html")) {
+      const html = await fs.readFile(p, "utf8");
+      await fs.writeFile(p, html.replace(re, `$1/${slug}/`));
+    }
+  }
+}
+
+async function buildVersion({ ref, slug }) {
+  const worktree = path.join(worktreeRoot, slug);
+  const worktreeSite = path.join(worktree, "site");
+
+  console.log(`\n=== Building ${slug} from ${ref} ===`);
+  // CI often uses a shallow clone without tag commits; fetch the tag's commit.
+  try {
+    git(["fetch", "--depth=1", "origin", "tag", ref, "--no-tags"]);
+  } catch {
+    console.warn(`git fetch of tag ${ref} failed; assuming it is already present`);
+  }
+  git(["worktree", "add", "--detach", worktree, ref]);
+  try {
+    await overlayToolchain(worktreeSite);
+    // prebuild regenerates this tag's schema and examples from its own data,
+    // using the overlaid (current) scripts.
+    npm(["run", "prebuild"], worktreeSite);
+    npm(["exec", "astro", "build"], worktreeSite, { DOCS_BASE: `/${slug}` });
+    await rewriteVersionLinks(path.join(worktreeSite, "dist"), slug);
+    await fs.cp(path.join(worktreeSite, "dist"), path.join(distDir, slug), { recursive: true });
+  } finally {
+    git(["worktree", "remove", "--force", worktree]);
+  }
+}
+
+async function main() {
+  const { latest, archived } = await discoverVersions();
+  console.log(`Latest (root): ${latest ?? "(unknown)"}`);
+  console.log(`Archived (>= ${MIN_VERSION}): ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
+
+  // The version switcher reads this manifest; write it before any build so the
+  // root and every archived build render the same set of options.
+  await fs.writeFile(
+    path.join(siteDir, "versions.json"),
+    JSON.stringify({ versions: archived.map(({ ref, label, slug }) => ({ ref, label, slug })) }, null, 2) + "\n",
+  );
+
+  // Build the current docs at the root. `astro check` is skipped here (it runs
+  // in PR CI via `npm run build`); the deploy only needs the build output.
+  await fs.rm(distDir, { recursive: true, force: true });
+  npm(["run", "prebuild"], siteDir);
+  npm(["exec", "astro", "build"], siteDir);
+
+  if (archived.length > 0) {
+    await fs.rm(worktreeRoot, { recursive: true, force: true });
+    for (const version of archived) {
+      await buildVersion(version);
+    }
+    await fs.rm(worktreeRoot, { recursive: true, force: true });
+  }
+
+  console.log("\nVersioned documentation build complete.");
+}
+
+await main();

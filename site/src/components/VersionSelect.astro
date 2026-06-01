@@ -1,0 +1,43 @@
+---
+import Select from "@astrojs/starlight/components/Select.astro";
+import versions from "../../versions.json";
+
+// import.meta.env.BASE_URL is "/" for the current build and "/<slug>" (with or
+// without a trailing slash) for an archived build (set via DOCS_BASE in
+// hack/build-versions.mjs), so normalize before comparing.
+const withSlash = (s: string) => (s.endsWith("/") ? s : `${s}/`);
+const currentBase = withSlash(import.meta.env.BASE_URL);
+
+const options = [
+  { label: "Latest", value: "/" },
+  ...versions.versions.map((v) => ({ label: v.label, value: `/${v.slug}/` })),
+].map((o) => ({ ...o, selected: withSlash(o.value) === currentBase }));
+---
+
+{
+  options.length > 1 && (
+    <starlight-version-select>
+      <Select
+        icon="open-book"
+        label="Select documentation version"
+        options={options}
+        width="7em"
+      />
+    </starlight-version-select>
+  )
+}
+
+<script>
+  class StarlightVersionSelect extends HTMLElement {
+    constructor() {
+      super();
+      // Versions don't share a page tree, so navigate to the selected version's root.
+      this.querySelector("select")?.addEventListener("change", (e) => {
+        if (e.currentTarget instanceof HTMLSelectElement) {
+          window.location.href = e.currentTarget.value;
+        }
+      });
+    }
+  }
+  customElements.define("starlight-version-select", StarlightVersionSelect);
+</script>

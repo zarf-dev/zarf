@@ -1,5 +1,6 @@
 .DS_Store
 .direnv/
+.docs-version-builds/
 .idea/
 .scratch/
 .tool-versions
