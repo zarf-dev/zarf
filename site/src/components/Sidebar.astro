@@ -1,0 +1,8 @@
+---
+import type { Props } from "@astrojs/starlight/props";
+import Default from "@astrojs/starlight/components/Sidebar.astro";
+import VersionSelect from "./VersionSelect.astro";
+---
+
+<VersionSelect />
+<Default {...Astro.props}><slot /></Default>

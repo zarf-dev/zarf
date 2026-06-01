@@ -4,8 +4,13 @@ import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import remarkGemoji from "remark-gemoji";
 
+// Set by hack/build-versions.mjs when building an archived version (e.g. "/v0.77").
+// Unset for the current ("Latest") build, which is served from the site root.
+const base = process.env.DOCS_BASE || undefined;
+
 // https://astro.build/config
 export default defineConfig({
+  base,
   redirects: {
     "/docs/zarf-overview": "/",
   },
@@ -37,6 +42,7 @@ export default defineConfig({
       ],
       components: {
         SkipLink: "./src/components/SkipLink.astro",
+        Sidebar: "./src/components/Sidebar.astro",
       },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/zarf-dev/zarf' },

@@ -29,6 +29,8 @@ __debug_bin
 !**/testdata/**
 coverage.out
 dist
+# Throwaway git worktrees created by site/hack/build-versions.mjs
+.docs-version-builds
 CLAUDE.local.md
 
 src/cmd/testdata/inspect-values-files/chart-remote/zarf.yaml

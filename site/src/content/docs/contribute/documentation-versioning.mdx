@@ -1,0 +1,56 @@
+---
+title: Documentation Versioning
+description: How the Zarf documentation site serves multiple versions from git tags.
+---
+
+The documentation site serves multiple versions without duplicating any content in the
+repository. The docs in this checkout are always the **Latest** version, served from the site
+root. Each archived version is built directly from its release **git tag** and served from a
+`/<slug>/` subpath. A version switcher in the sidebar links between them.
+
+This is a tag-based strategy: the only source of truth for an archived version is its git tag, so
+there are no copied files to maintain.
+
+## How a build works
+
+`npm run build:versions` (`site/hack/build-versions.mjs`) drives the whole site, and is what
+Netlify runs:
+
+1. Builds the current docs at the root (`Latest`).
+2. For each entry in [`site/versions.json`](https://github.com/zarf-dev/zarf/blob/main/site/versions.json):
+   checks the tag out into a throwaway git worktree, overlays the current versioning bits (Astro
+   config, switcher, manifest), and builds it with Astro's `base` set to `/<slug>`.
+3. Rewrites the absolute links that `base` can't reach — links hardcoded in Markdown bodies such
+   as `/commands/...` — so they resolve under the version subpath.
+
+Because each version is built from its own tag with that tag's content and toolchain, authoring
+the current docs has no special constraints.
+
+## Publishing a new version
+
+When you want to start serving a released version, add it to `site/versions.json` (newest first):
+
+```json
+{
+  "versions": [
+    { "slug": "v0.78", "label": "v0.78", "ref": "v0.78.0" },
+    { "slug": "v0.77", "label": "v0.77", "ref": "v0.77.0" }
+  ]
+}
+```
+
+- `slug` — the URL subpath, e.g. `/v0.78/`.
+- `label` — what the version switcher shows.
+- `ref` — the git tag to build from.
+
+The next deploy builds and publishes that version. To stop serving a version, remove its entry.
+
+## Local preview
+
+```sh
+cd site
+npm run build:versions   # builds Latest + every version in versions.json
+npm run preview
+```
+
+Building versions requires the release tags to be available locally (`git fetch --tags`).
