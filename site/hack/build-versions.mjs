@@ -4,11 +4,10 @@
 // The current docs (this checkout) are built at the site root as "Latest".
 // Each archived version is built from its release tag into a `/<slug>/` subpath.
 //
-// Crucially, archived versions are rendered with the CURRENT toolchain, never
+// archived versions are rendered with the current toolchain, never
 // their own. For each version we check the tag out into a throwaway git
-// worktree, then replace its `site/` wholesale with the current checkout's,
-// preserving only the tag's *data* (the paths in `dataPaths`). The tag's
-// repo-level data — `examples/` and `zarf.schema.json` — is left in place at the
+// worktree, then replace its `site/` wholesale with the tag's docs.
+// The tag's repo-level data — `examples/` and `zarf.schema.json` — is left in place at the
 // worktree root and consumed by `prebuild`. The current `node_modules` is reused.
 //
 // The toolchain is an *exclusion* list, not an inclusion list: everything under
@@ -38,7 +37,7 @@ const MIN_VERSION = "v0.76";
 // Paths under `site/` that hold an archived version's *data* and are kept from
 // the tag's worktree. Everything else under `site/` is toolchain, replaced with
 // the current checkout.
-const dataPaths = ["src/content/docs"];
+const docsPaths = ["src/content/docs"];
 
 // Top-level `site/` entries never copied from the current checkout: installed
 // deps and build artifacts. `node_modules` is symlinked separately.
@@ -122,13 +121,13 @@ async function discoverVersions() {
 // tag's data.
 async function overlayToolchain(worktreeSite) {
   const skipAbs = [...overlaySkip].map((d) => path.join(siteDir, d));
-  const dataAbs = dataPaths.map((d) => path.join(siteDir, d));
+  const dataAbs = docsPaths.map((d) => path.join(siteDir, d));
   const under = (p, root) => p === root || p.startsWith(root + path.sep);
 
   // Preserve the tag's data across the wholesale replacement of `site/`.
   const stash = await fs.mkdtemp(path.join(os.tmpdir(), "zarf-docs-data-"));
   try {
-    for (const rel of dataPaths) {
+    for (const rel of docsPaths) {
       await fs.cp(path.join(worktreeSite, rel), path.join(stash, rel), { recursive: true });
     }
     await fs.rm(worktreeSite, { recursive: true, force: true });
@@ -138,7 +137,7 @@ async function overlayToolchain(worktreeSite) {
       // the latter is restored from the tag below.
       filter: (src) => !skipAbs.some((s) => under(src, s)) && !dataAbs.some((d) => under(src, d)),
     });
-    for (const rel of dataPaths) {
+    for (const rel of docsPaths) {
       await fs.cp(path.join(stash, rel), path.join(worktreeSite, rel), { recursive: true });
     }
   } finally {
