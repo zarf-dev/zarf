@@ -16,6 +16,8 @@ type Component struct {
 	ComponentSpec
 	// Data injections removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	dataInjections []v1alpha1.ZarfDataInjection
+	// group removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	group string
 }
 
 // GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
@@ -26,6 +28,16 @@ func (c Component) GetDeprecatedDataInjections() []v1alpha1.ZarfDataInjection {
 // SetDeprecatedDataInjections sets the v1alpha1 data injections carried as a backwards-compatibility shim.
 func (c *Component) SetDeprecatedDataInjections(dataInjections []v1alpha1.ZarfDataInjection) {
 	c.dataInjections = dataInjections
+}
+
+// GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
+func (c Component) GetDeprecatedGroup() string {
+	return c.group
+}
+
+// SetDeprecatedGroup sets the v1alpha1 group carried as a backwards-compatibility shim.
+func (c *Component) SetDeprecatedGroup(group string) {
+	c.group = group
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.

@@ -96,6 +96,18 @@ type PackageMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Prevent namespace overrides for this package.
 	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
+	// yolo removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	yolo bool
+}
+
+// GetDeprecatedYOLO returns the v1alpha1 YOLO field carried as a backwards-compatibility shim.
+func (m PackageMetadata) GetDeprecatedYOLO() bool {
+	return m.yolo
+}
+
+// SetDeprecatedYOLO sets the v1alpha1 YOLO field carried as a backwards-compatibility shim.
+func (m *PackageMetadata) SetDeprecatedYOLO(yolo bool) {
+	m.yolo = yolo
 }
 
 // BuildData is written during package create to track details of the created package.
