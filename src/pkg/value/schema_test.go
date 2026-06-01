@@ -65,7 +65,8 @@ func TestMergeSchemas(t *testing.T) {
 			},
 		}
 		result := MergeSchemas(parent, child)
-		props := result["properties"].(map[string]any)
+		props, ok := result["properties"].(map[string]any)
+		require.True(t, ok, "properties should be a map")
 		assert.Contains(t, props, "extra")
 	})
 
@@ -81,8 +82,10 @@ func TestMergeSchemas(t *testing.T) {
 			},
 		}
 		result := MergeSchemas(parent, child)
-		props := result["properties"].(map[string]any)
-		image := props["image"].(map[string]any)
+		props, ok := result["properties"].(map[string]any)
+		require.True(t, ok, "properties should be a map")
+		image, ok := props["image"].(map[string]any)
+		require.True(t, ok, "image should be a map")
 		assert.Equal(t, "parent description", image["description"])
 	})
 
@@ -90,7 +93,8 @@ func TestMergeSchemas(t *testing.T) {
 		parent := map[string]any{"required": []any{"tag"}}
 		child := map[string]any{"required": []any{"registry"}}
 		result := MergeSchemas(parent, child)
-		req := result["required"].([]any)
+		req, ok := result["required"].([]any)
+		require.True(t, ok, "required should be a slice")
 		assert.ElementsMatch(t, []any{"tag", "registry"}, req)
 	})
 
@@ -98,7 +102,8 @@ func TestMergeSchemas(t *testing.T) {
 		parent := map[string]any{"required": []any{"name", "tag"}}
 		child := map[string]any{"required": []any{"name", "registry"}}
 		result := MergeSchemas(parent, child)
-		req := result["required"].([]any)
+		req, ok := result["required"].([]any)
+		require.True(t, ok, "required should be a slice")
 		assert.ElementsMatch(t, []any{"name", "tag", "registry"}, req)
 	})
 
@@ -106,7 +111,8 @@ func TestMergeSchemas(t *testing.T) {
 		parent := map[string]any{"type": "object"}
 		child := map[string]any{"required": []any{"registry"}}
 		result := MergeSchemas(parent, child)
-		req := result["required"].([]any)
+		req, ok := result["required"].([]any)
+		require.True(t, ok, "required should be a slice")
 		assert.ElementsMatch(t, []any{"registry"}, req)
 	})
 
@@ -136,18 +142,24 @@ func TestMergeSchemas(t *testing.T) {
 		}
 		result := MergeSchemas(parent, child)
 
-		req := result["required"].([]any)
+		req, ok := result["required"].([]any)
+		require.True(t, ok, "required should be a slice")
 		assert.ElementsMatch(t, []any{"registry"}, req)
 
-		props := result["properties"].(map[string]any)
-		registry := props["registry"].(map[string]any)
+		props, ok := result["properties"].(map[string]any)
+		require.True(t, ok, "properties should be a map")
+		registry, ok := props["registry"].(map[string]any)
+		require.True(t, ok, "registry should be a map")
 
-		regReq := registry["required"].([]any)
+		regReq, ok := registry["required"].([]any)
+		require.True(t, ok, "registry.required should be a slice")
 		assert.ElementsMatch(t, []any{"image"}, regReq)
 
-		regProps := registry["properties"].(map[string]any)
+		regProps, ok := registry["properties"].(map[string]any)
+		require.True(t, ok, "registry.properties should be a map")
 
-		image := regProps["image"].(map[string]any)
+		image, ok := regProps["image"].(map[string]any)
+		require.True(t, ok, "image should be a map")
 		assert.Equal(t, "parent description", image["description"])
 
 		assert.Contains(t, regProps, "tag")

@@ -1033,9 +1033,8 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 // no imports, it is validated and copied as-is. If only child schemas exist, they are merged
 // and written. If neither exists, the function is a no-op.
 //
-// Schemas containing "$ref" pointers are rejected when merging is required because references
-// may point to files unavailable after assembly. The parent schema may still use "$ref" when
-// no child schemas are present (it is copied verbatim in that case).
+// Schemas containing "$ref" pointers are rejected in all cases because references may point
+// to files unavailable after assembly.
 func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importedSchemas []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
 
@@ -1043,7 +1042,7 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		return nil
 	}
 
-	// No child schemas — validate and copy the parent schema file verbatim (original behavior).
+	// No child schemas — validate, check for $ref, then copy the parent schema file verbatim.
 	if len(importedSchemas) == 0 {
 		src := parentSchema
 		if !filepath.IsAbs(src) {
@@ -1051,6 +1050,17 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		}
 		if err := value.ValidateSchemaFile(src); err != nil {
 			return fmt.Errorf("values schema validation failed: %w", err)
+		}
+		b, err := os.ReadFile(src)
+		if err != nil {
+			return fmt.Errorf("reading parent schema: %w", err)
+		}
+		var s map[string]any
+		if err := json.Unmarshal(b, &s); err != nil {
+			return fmt.Errorf("parsing parent schema: %w", err)
+		}
+		if err := value.CheckNoRefs(s); err != nil {
+			return fmt.Errorf("parent schema %s: %w", parentSchema, err)
 		}
 		dst := filepath.Join(buildPath, ValuesSchema)
 		l.Debug("copying values schema file", "src", src, "dst", dst)

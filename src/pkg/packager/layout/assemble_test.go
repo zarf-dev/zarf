@@ -4,6 +4,7 @@
 package layout
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -361,6 +362,117 @@ func TestImageLayoutHasIndex(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestMergeAndWriteValuesSchema(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	testdataDir := filepath.Join("testdata", "schema-merge")
+
+	t.Run("no-op when neither parent nor children are provided", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesSchema(ctx, "", nil, testdataDir, buildPath)
+		require.NoError(t, err)
+		_, err = os.Stat(filepath.Join(buildPath, ValuesSchema))
+		require.ErrorIs(t, err, os.ErrNotExist, "no schema file should be written when there is nothing to merge")
+	})
+
+	t.Run("copies parent verbatim when no child schemas are present", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", nil, testdataDir, buildPath)
+		require.NoError(t, err)
+		written, err := os.ReadFile(filepath.Join(buildPath, ValuesSchema))
+		require.NoError(t, err)
+		original, err := os.ReadFile(filepath.Join(testdataDir, "parent-with-required.schema.json"))
+		require.NoError(t, err)
+		require.Equal(t, string(original), string(written), "verbatim copy should match source file exactly")
+	})
+
+	t.Run("rejects parent schema containing $ref even with no children", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesSchema(ctx, "child-with-ref.schema.json", nil, testdataDir, buildPath)
+		require.ErrorContains(t, err, "$ref")
+	})
+
+	t.Run("rejects child schema containing $ref", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-with-ref.schema.json"}, testdataDir, buildPath)
+		require.ErrorContains(t, err, "$ref")
+	})
+
+	mergeTests := []struct {
+		name           string
+		parentSchema   string
+		expectedSchema string
+	}{
+		{
+			name:         "parent and child required arrays are unioned — parent entries first",
+			parentSchema: "parent-with-required.schema.json",
+			// parent required: ["namespace"], child required: ["appName","replicas"]
+			// union (parent-first): ["namespace","appName","replicas"]
+			// parent replicas.maximum:5 wins over child's 10
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["namespace","appName","replicas"],
+				"properties": {
+					"namespace": {"type":"string","minLength":1},
+					"replicas":  {"type":"integer","minimum":1,"maximum":5},
+					"appName":   {"type":"string","minLength":1},
+					"enabled":   {"type":"boolean"}
+				}
+			}`,
+		},
+		{
+			name:         "child required survives when parent declares no required array",
+			parentSchema: "parent-no-required.schema.json",
+			// parent has no required; child required: ["appName","replicas"] preserved as-is
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["appName","replicas"],
+				"properties": {
+					"namespace": {"type":"string","minLength":1},
+					"replicas":  {"type":"integer","minimum":1,"maximum":5},
+					"appName":   {"type":"string","minLength":1},
+					"enabled":   {"type":"boolean"}
+				}
+			}`,
+		},
+		{
+			name:         "overlapping required entries are deduplicated with parent ordering preserved",
+			parentSchema: "parent-overlapping-required.schema.json",
+			// parent required: ["appName","namespace"], child required: ["appName","replicas"]
+			// dedup union (parent-first): ["appName","namespace","replicas"]
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["appName","namespace","replicas"],
+				"properties": {
+					"namespace": {"type":"string","minLength":1},
+					"replicas":  {"type":"integer","minimum":1,"maximum":5},
+					"appName":   {"type":"string","minLength":1},
+					"enabled":   {"type":"boolean"}
+				}
+			}`,
+		},
+	}
+
+	for _, tt := range mergeTests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			buildPath := t.TempDir()
+			err := mergeAndWriteValuesSchema(ctx, tt.parentSchema, []string{"child.schema.json"}, testdataDir, buildPath)
+			require.NoError(t, err)
+			written, err := os.ReadFile(filepath.Join(buildPath, ValuesSchema))
+			require.NoError(t, err)
+			require.JSONEq(t, tt.expectedSchema, string(written))
 		})
 	}
 }

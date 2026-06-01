@@ -1,0 +1,16 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-values-schema-merge
+  description: Test package that imports a component with a values schema and merges it with a parent schema
+
+values:
+  files:
+    - values/values.yaml
+  schema: values.schema.json
+
+components:
+  - name: test-component
+    required: true
+    import:
+      path: ../schema-valid
+      name: test-component
