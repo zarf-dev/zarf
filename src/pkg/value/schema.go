@@ -4,7 +4,6 @@
 package value
 
 import (
-	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -50,17 +49,32 @@ func checkNoRefsInValue(key string, val any) error {
 	return nil
 }
 
+// copyMap returns a deep copy of a map[string]any containing only the types produced
+// by json.Unmarshal: map[string]any, []any, and scalar primitives.
+func copyMap(m map[string]any) map[string]any {
+	out := make(map[string]any, len(m))
+	for k, v := range m {
+		switch val := v.(type) {
+		case map[string]any:
+			out[k] = copyMap(val)
+		case []any:
+			cp := make([]any, len(val))
+			copy(cp, val)
+			out[k] = cp
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
 // MergeSchemas merges child into parent with parent-wins semantics and returns a new map.
 // Neither parent nor child is modified. Rules:
 //   - "properties": recursively merged; parent wins on same key
 //   - "required": union of both arrays, deduplicated
 //   - all other keys: parent wins (child value used only when key absent from parent)
 func MergeSchemas(parent, child map[string]any) map[string]any {
-	// Deep-copy parent via JSON round-trip so the caller's map is never mutated.
-	b, _ := json.Marshal(parent)
-	var result map[string]any
-	_ = json.Unmarshal(b, &result)
-
+	result := copyMap(parent)
 	for key, childVal := range child {
 		switch key {
 		case "properties":
@@ -111,8 +125,8 @@ func mergeRequired(parentVal, childVal any) any {
 	}
 
 	ps, cs := toSlice(parentVal), toSlice(childVal)
-	seen := make(map[string]struct{}, len(ps)+len(cs))
-	merged := make([]any, 0, len(ps)+len(cs))
+	seen := make(map[string]struct{})
+	var merged []any
 
 	for _, src := range [][]any{ps, cs} {
 		for _, item := range src {
