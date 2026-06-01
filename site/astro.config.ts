@@ -27,10 +27,10 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
-      // FIXME: potentially not needed
-      // We render our own wrap-style heading anchors via rehype-autolink-headings
-      // and SchemaReference.astro (.heading-link); disable Starlight's built-in
-      // heading links (added by default in 0.38) to avoid duplicate anchors.
+      // We render our own wrap-style heading anchors (rehype-autolink-headings
+      // behavior:"wrap", plus SchemaReference.astro — both .heading-link).
+      // Disable Starlight's default heading links, else every heading is also
+      // wrapped in .sl-heading-wrapper with a duplicate .sl-anchor-link.
       markdown: { headingLinks: false },
       head: [
         {
