@@ -74,9 +74,9 @@ function toVersion(tag) {
   return { ref: tag, label: minor, slug: slugOf(minor) };
 }
 
-// Discover the latest release plus every archived minor down to MIN_VERSION.
-// Returns { archived: [{ ref, label, slug }] } sorted newest-first. The latest
-// minor is omitted — it's served at the root by the current checkout.
+// Discover every released minor down to MIN_VERSION, each pinned to its own
+// `/<slug>/` subpath. Returns { archived: [{ ref, label, slug }] } sorted
+// newest-first.
 async function discoverVersions() {
   // Offline / pinned escape hatch: ZARF_DOCS_VERSIONS="v0.77.0,v0.76.0".
   let tags;
@@ -105,8 +105,8 @@ async function discoverVersions() {
   }
 
   const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
-  // Drop the latest minor (root) and anything below the floor.
-  const archived = minorsDesc.slice(1).filter(aboveFloor).map((m) => toVersion(newestByMinor.get(m)));
+  // Every released minor down to the floor gets a pinned subpath, newest included.
+  const archived = minorsDesc.filter(aboveFloor).map((m) => toVersion(newestByMinor.get(m)));
   return { latest: minorsDesc[0], archived };
 }
 
@@ -171,8 +171,8 @@ async function buildVersion({ ref, slug }) {
 
 async function main() {
   const { latest, archived } = await discoverVersions();
-  console.log(`Latest (root): ${latest ?? "(unknown)"}`);
-  console.log(`Archived (>= ${MIN_VERSION}): ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
+  console.log(`Latest (root, tracks current checkout): ${latest ?? "(unknown)"}`);
+  console.log(`Pinned versions (>= ${MIN_VERSION}): ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
 
   // The version switcher reads this manifest; write it before any build so the
   // root and every archived build render the same set of options.
