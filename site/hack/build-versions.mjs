@@ -76,19 +76,14 @@ function toVersion(tag) {
 // `/<slug>/` subpath. Returns { archived: [{ ref, label, slug }] } sorted
 // newest-first.
 async function discoverVersions() {
-  let tags;
-  if (process.env.ZARF_DOCS_VERSIONS) {
-    tags = process.env.ZARF_DOCS_VERSIONS.split(",").map((t) => t.trim()).filter(Boolean);
-  } else {
-    const headers = { Accept: "application/vnd.github+json" };
-    if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
-    if (!res.ok) {
-      throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
-    }
-    const releases = await res.json();
-    tags = releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
+  const headers = { Accept: "application/vnd.github+json" };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=100`, { headers });
+  if (!res.ok) {
+    throw new Error(`GitHub API returned ${res.status} ${res.statusText} for ${REPO} releases`);
   }
+  const releases = await res.json();
+  const tags = releases.filter((r) => !r.prerelease && !r.draft).map((r) => r.tag_name);
 
   // Keep only the newest patch per minor.
   const newestByMinor = new Map();
