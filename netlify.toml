@@ -1,6 +1,6 @@
 [build]
   base = "site/"
-  command = "npm run build"
+  command = "npm run build:versions"
   publish = "dist/"
 
 [build.environment]
