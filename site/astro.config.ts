@@ -42,7 +42,7 @@ export default defineConfig({
       ],
       components: {
         SkipLink: "./src/components/SkipLink.astro",
-        Sidebar: "./src/components/Sidebar.astro",
+        ThemeSelect: "./src/components/ThemeSelect.astro",
       },
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/zarf-dev/zarf' },

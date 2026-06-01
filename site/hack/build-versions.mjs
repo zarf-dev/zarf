@@ -27,7 +27,7 @@ const overlay = [
   "astro.config.ts",
   "versions.json",
   "src/components/SkipLink.astro",
-  "src/components/Sidebar.astro",
+  "src/components/ThemeSelect.astro",
   "src/components/VersionSelect.astro",
 ];
 
