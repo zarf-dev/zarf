@@ -11,7 +11,7 @@ const includesElement = (key: string) => {
   }
 };
 
-const json = await import("../assets/zarf.schema.json");
+const json = await import("../assets/zarf-v1alpha1-schema.json");
 
 // @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
 const itemSchema = json["$defs"][item];
