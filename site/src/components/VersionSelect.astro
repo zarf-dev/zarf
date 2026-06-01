@@ -16,7 +16,7 @@ const options = [
 
 {
   options.length > 1 && (
-    <starlight-version-select>
+    <starlight-version-select data-current-base={currentBase}>
       <Select
         icon="open-book"
         label="Select documentation version"
@@ -31,11 +31,29 @@ const options = [
   class StarlightVersionSelect extends HTMLElement {
     constructor() {
       super();
-      // Versions don't share a page tree, so navigate to the selected version's root.
-      this.querySelector("select")?.addEventListener("change", (e) => {
-        if (e.currentTarget instanceof HTMLSelectElement) {
-          window.location.href = e.currentTarget.value;
-        }
+      const select = this.querySelector<HTMLSelectElement>("select");
+      if (!select) return;
+      // The base of the page being viewed: "/" for Latest, "/<slug>/" for an archive.
+      const currentBase = this.dataset.currentBase || "/";
+
+      select.addEventListener("change", () => {
+        const targetBase = select.value;
+        // Path within the current version, stripped of its base prefix.
+        const { pathname, search, hash } = window.location;
+        const sub = pathname.startsWith(currentBase)
+          ? pathname.slice(currentBase.length)
+          : pathname.replace(/^\//, "");
+        const targetPath = `${targetBase}${sub}`;
+
+        // Stay on the same page if it exists in the target version; otherwise
+        // fall back to that version's home so a switch never lands on a 404.
+        fetch(targetPath, { method: "HEAD" })
+          .then((res) => {
+            window.location.href = res.ok ? `${targetPath}${search}${hash}` : targetBase;
+          })
+          .catch(() => {
+            window.location.href = targetBase;
+          });
       });
     }
   }
