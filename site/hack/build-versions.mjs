@@ -10,12 +10,6 @@
 // The tag's repo-level data — `examples/` and `zarf.schema.json` — is left in place at the
 // worktree root and consumed by `prebuild`. The current `node_modules` is reused.
 //
-// The toolchain is an *exclusion* list, not an inclusion list: everything under
-// `site/` is current unless it's explicitly version data. This way a new or
-// renamed toolchain file can never be silently mistaken for a version's data
-// (e.g. the pre-Astro-6 `src/content/config.ts` rename, which would otherwise
-// linger from the tag and break the build).
-//
 // Versions are discovered from GitHub Releases, deduplicated to the newest
 // patch per minor, and floored at MIN_VERSION.
 
