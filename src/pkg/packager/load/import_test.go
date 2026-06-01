@@ -4,6 +4,7 @@
 package load
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -263,33 +264,58 @@ func TestResolveImportsValueMerge(t *testing.T) {
 	}
 }
 
-func TestResolveImportsSchemaCollection(t *testing.T) {
+func TestResolveImportsSchemaMerge(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name            string
-		path            string
-		expectedSchemas []string
+		name           string
+		path           string
+		expectedSchema string
 	}{
 		{
-			name:            "child schema is collected when parent has no schema",
-			path:            "./testdata/import/values/schema-parent-empty",
-			expectedSchemas: []string{"import/child-values.schema.json"},
+			name: "child schema is used as-is when parent declares no schema",
+			path: "./testdata/import/values/schema-parent-empty",
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["appName"],
+				"properties": {
+					"appName":  {"type": "string", "minLength": 1},
+					"replicas": {"type": "integer", "minimum": 1}
+				}
+			}`,
 		},
 		{
-			name:            "child schema is collected when parent also has a schema",
-			path:            "./testdata/import/values/schema-parent-wins",
-			expectedSchemas: []string{"import/child-values.schema.json"},
+			name: "parent schema wins over child on conflicting keys; required arrays are unioned",
+			path: "./testdata/import/values/schema-parent-wins",
+			// parent required: ["namespace"], child required: ["appName"] → merged: ["namespace","appName"]
+			// parent replicas.maximum: 5 wins over child's 10
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["namespace", "appName"],
+				"properties": {
+					"namespace": {"type": "string", "minLength": 1},
+					"appName":   {"type": "string", "minLength": 1},
+					"replicas":  {"type": "integer", "minimum": 1, "maximum": 5}
+				}
+			}`,
 		},
 		{
-			name: "schemas are collected transitively through 3-level deep imports",
+			name: "schemas accumulate transitively; earlier import wins on conflicts",
 			path: "./testdata/import/values/schema-deep",
-			// middle's own schema comes first; bottom's schema (from middle's imports) comes second
-			expectedSchemas: []string{
-				"middle/middle-values.schema.json",
-				"middle/bottom/bottom-values.schema.json",
-			},
+			// middle collected before bottom; middle wins on "shared" property conflict
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["tier", "region"],
+				"properties": {
+					"tier":   {"type": "string"},
+					"shared": {"type": "string", "description": "middle wins"},
+					"region": {"type": "string"}
+				}
+			}`,
 		},
 	}
 
@@ -305,7 +331,31 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
-			require.Equal(t, tc.expectedSchemas, resolved.Values.ImportedSchemas)
+			// Mirror mergeAndWriteValuesSchema: merge imported schemas left-to-right
+			// (earlier entry wins), then merge the parent schema on top.
+			var merged map[string]any
+			for _, schemaRelPath := range resolved.Values.ImportedSchemas {
+				b, err := os.ReadFile(filepath.Join(tc.path, schemaRelPath))
+				require.NoError(t, err)
+				var s map[string]any
+				require.NoError(t, json.Unmarshal(b, &s))
+				if merged == nil {
+					merged = s
+				} else {
+					merged = value.MergeSchemas(merged, s)
+				}
+			}
+			if resolved.Values.Schema != "" {
+				b, err := os.ReadFile(filepath.Join(tc.path, resolved.Values.Schema))
+				require.NoError(t, err)
+				var parent map[string]any
+				require.NoError(t, json.Unmarshal(b, &parent))
+				merged = value.MergeSchemas(parent, merged)
+			}
+
+			actual, err := json.Marshal(merged)
+			require.NoError(t, err)
+			require.JSONEq(t, tc.expectedSchema, string(actual))
 		})
 	}
 }

@@ -407,15 +407,17 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 	})
 
 	mergeTests := []struct {
-		name           string
-		parentSchema   string
-		expectedSchema string
+		name            string
+		parentSchema    string
+		importedSchemas []string
+		expectedSchema  string
 	}{
 		{
-			name:         "parent and child required arrays are unioned — parent entries first",
-			parentSchema: "parent-with-required.schema.json",
+			name:            "parent and child required arrays are merged — parent entries first",
+			parentSchema:    "parent-with-required.schema.json",
+			importedSchemas: []string{"child.schema.json"},
 			// parent required: ["namespace"], child required: ["appName","replicas"]
-			// union (parent-first): ["namespace","appName","replicas"]
+			// merged (parent-first): ["namespace","appName","replicas"]
 			// parent replicas.maximum:5 wins over child's 10
 			expectedSchema: `{
 				"$schema": "http://json-schema.org/draft-07/schema#",
@@ -430,8 +432,9 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 			}`,
 		},
 		{
-			name:         "child required survives when parent declares no required array",
-			parentSchema: "parent-no-required.schema.json",
+			name:            "child required survives when parent declares no required array",
+			parentSchema:    "parent-no-required.schema.json",
+			importedSchemas: []string{"child.schema.json"},
 			// parent has no required; child required: ["appName","replicas"] preserved as-is
 			expectedSchema: `{
 				"$schema": "http://json-schema.org/draft-07/schema#",
@@ -446,10 +449,11 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 			}`,
 		},
 		{
-			name:         "overlapping required entries are deduplicated with parent ordering preserved",
-			parentSchema: "parent-overlapping-required.schema.json",
+			name:            "overlapping required entries are deduplicated with parent ordering preserved",
+			parentSchema:    "parent-overlapping-required.schema.json",
+			importedSchemas: []string{"child.schema.json"},
 			// parent required: ["appName","namespace"], child required: ["appName","replicas"]
-			// dedup union (parent-first): ["appName","namespace","replicas"]
+			// dedup (parent-first): ["appName","namespace","replicas"]
 			expectedSchema: `{
 				"$schema": "http://json-schema.org/draft-07/schema#",
 				"type": "object",
@@ -462,13 +466,53 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 				}
 			}`,
 		},
+		{
+			name:            "first sibling wins on property conflicts when no parent is present",
+			importedSchemas: []string{"child.schema.json", "child2.schema.json"},
+			// child required: ["appName","replicas"], child2 required: ["version"]
+			// child replicas.maximum:10 wins over child2's 20 (conflict: child wins)
+			// child enabled has no description; child2 adds description — no conflict, description is inherited
+			// version property comes from child2 only
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["appName","replicas","version"],
+				"properties": {
+					"appName":  {"type":"string","minLength":1},
+					"replicas": {"type":"integer","minimum":1,"maximum":10},
+					"enabled":  {"type":"boolean","description":"child2"},
+					"version":  {"type":"string","pattern":"^v[0-9]+"}
+				}
+			}`,
+		},
+		{
+			name:            "parent wins over all siblings; sibling-only properties are still included",
+			parentSchema:    "parent-with-required.schema.json",
+			importedSchemas: []string{"child.schema.json", "child2.schema.json"},
+			// children merged first: replicas.maximum:10 (child wins child2)
+			// parent merged on top: replicas.maximum:5 (parent wins children)
+			// required: parent ["namespace"] + child ["appName","replicas"] + child2 ["version"]
+			// enabled.description inherited from child2 (no conflict with parent or child1)
+			expectedSchema: `{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type": "object",
+				"required": ["namespace","appName","replicas","version"],
+				"properties": {
+					"namespace": {"type":"string","minLength":1},
+					"replicas":  {"type":"integer","minimum":1,"maximum":5},
+					"appName":   {"type":"string","minLength":1},
+					"enabled":   {"type":"boolean","description":"child2"},
+					"version":   {"type":"string","pattern":"^v[0-9]+"}
+				}
+			}`,
+		},
 	}
 
 	for _, tt := range mergeTests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			buildPath := t.TempDir()
-			err := mergeAndWriteValuesSchema(ctx, tt.parentSchema, []string{"child.schema.json"}, testdataDir, buildPath)
+			err := mergeAndWriteValuesSchema(ctx, tt.parentSchema, tt.importedSchemas, testdataDir, buildPath)
 			require.NoError(t, err)
 			written, err := os.ReadFile(filepath.Join(buildPath, ValuesSchema))
 			require.NoError(t, err)

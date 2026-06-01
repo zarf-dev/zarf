@@ -1042,44 +1042,13 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		return nil
 	}
 
-	// No child schemas — validate, check for $ref, then copy the parent schema file verbatim.
-	if len(importedSchemas) == 0 {
-		src := parentSchema
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, parentSchema)
-		}
-		if err := value.ValidateSchemaFile(src); err != nil {
-			return fmt.Errorf("values schema validation failed: %w", err)
-		}
-		b, err := os.ReadFile(src)
-		if err != nil {
-			return fmt.Errorf("reading parent schema: %w", err)
-		}
-		var s map[string]any
-		if err := json.Unmarshal(b, &s); err != nil {
-			return fmt.Errorf("parsing parent schema: %w", err)
-		}
-		if err := value.CheckNoRefs(s); err != nil {
-			return fmt.Errorf("parent schema %s: %w", parentSchema, err)
-		}
-		dst := filepath.Join(buildPath, ValuesSchema)
-		l.Debug("copying values schema file", "src", src, "dst", dst)
-		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
-			return fmt.Errorf("failed to copy values schema file %s: %w", parentSchema, err)
-		}
-		return os.Chmod(dst, helpers.ReadWriteUser)
-	}
-
-	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
-
-	// Load a schema file as a raw map, rejecting any "$ref" pointers.
+	// loadSchema reads a schema file, rejects any "$ref" pointers before handing the
+	// document to gojsonschema, then validates the schema structure. CheckNoRefs runs
+	// first so that gojsonschema never attempts to resolve external URIs.
 	loadSchema := func(relPath, label string) (map[string]any, error) {
 		src := relPath
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(packagePath, relPath)
-		}
-		if err := value.ValidateSchemaFile(src); err != nil {
-			return nil, fmt.Errorf("%s schema validation failed: %w", label, err)
 		}
 		b, err := os.ReadFile(src)
 		if err != nil {
@@ -1092,8 +1061,30 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if err := value.CheckNoRefs(s); err != nil {
 			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)
 		}
+		if err := value.ValidateSchemaDocument(s); err != nil {
+			return nil, fmt.Errorf("%s schema validation failed: %w", label, err)
+		}
 		return s, nil
 	}
+
+	// No child schemas — check for $ref, validate, then copy the parent schema file verbatim.
+	if len(importedSchemas) == 0 {
+		src := parentSchema
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, parentSchema)
+		}
+		if _, err := loadSchema(parentSchema, "parent"); err != nil {
+			return err
+		}
+		dst := filepath.Join(buildPath, ValuesSchema)
+		l.Debug("copying values schema file", "src", src, "dst", dst)
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy values schema file %s: %w", parentSchema, err)
+		}
+		return os.Chmod(dst, helpers.ReadWriteUser)
+	}
+
+	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
 
 	// Merge child schemas left-to-right; among children the earlier one wins.
 	var merged map[string]any

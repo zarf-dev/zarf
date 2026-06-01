@@ -3,57 +3,77 @@
 
 package value
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"maps"
+	"slices"
+)
 
 // CheckNoRefs returns an error if the schema object contains any "$ref" pointers.
-// Schemas with "$ref" cannot be safely merged because references may point to files
-// that are unavailable after package assembly.
+// "$ref" is not supported because referenced files are not bundled into the assembled
+// package and cannot be resolved after assembly. Flatten the schema into a single
+// self-contained file before use.
 func CheckNoRefs(schema map[string]any) error {
 	return checkNoRefsInObject(schema)
 }
 
+var blockedRefKeywords = []string{"$ref", "$dynamicRef", "$recursiveRef"}
+
 func checkNoRefsInObject(node map[string]any) error {
-	if _, hasRef := node["$ref"]; hasRef {
-		return fmt.Errorf("schema contains a \"$ref\" pointer which is not supported in imported schemas; flatten the schema before importing")
+	for _, kw := range blockedRefKeywords {
+		if _, has := node[kw]; has {
+			return fmt.Errorf("schema contains a %q pointer; flatten the schema into a single self-contained file", kw)
+		}
 	}
-	for key, val := range node {
-		switch v := val.(type) {
-		case map[string]any:
-			if err := checkNoRefsInObject(v); err != nil {
-				return fmt.Errorf("%s: %w", key, err)
-			}
-		case []any:
-			for i, item := range v {
-				if m, ok := item.(map[string]any); ok {
-					if err := checkNoRefsInObject(m); err != nil {
-						return fmt.Errorf("%s[%d]: %w", key, i, err)
-					}
-				}
+	for _, key := range slices.Sorted(maps.Keys(node)) {
+		if err := checkNoRefsInValue(key, node[key]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkNoRefsInValue(key string, val any) error {
+	switch v := val.(type) {
+	case map[string]any:
+		if err := checkNoRefsInObject(v); err != nil {
+			return fmt.Errorf("%s: %w", key, err)
+		}
+	case []any:
+		for i, item := range v {
+			if err := checkNoRefsInValue(fmt.Sprintf("%s[%d]", key, i), item); err != nil {
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-// MergeSchemas merges child into parent with parent-wins semantics. The parent map is
-// modified in place and returned. Rules:
+// MergeSchemas merges child into parent with parent-wins semantics and returns a new map.
+// Neither parent nor child is modified. Rules:
 //   - "properties": recursively merged; parent wins on same key
 //   - "required": union of both arrays, deduplicated
 //   - all other keys: parent wins (child value used only when key absent from parent)
 func MergeSchemas(parent, child map[string]any) map[string]any {
+	// Deep-copy parent via JSON round-trip so the caller's map is never mutated.
+	b, _ := json.Marshal(parent)
+	var result map[string]any
+	_ = json.Unmarshal(b, &result)
+
 	for key, childVal := range child {
 		switch key {
 		case "properties":
-			parent["properties"] = mergeProperties(parent["properties"], childVal)
+			result["properties"] = mergeProperties(result["properties"], childVal)
 		case "required":
-			parent["required"] = mergeRequired(parent["required"], childVal)
+			result["required"] = mergeRequired(result["required"], childVal)
 		default:
-			if _, exists := parent[key]; !exists {
-				parent[key] = childVal
+			if _, exists := result[key]; !exists {
+				result[key] = childVal
 			}
 		}
 	}
-	return parent
+	return result
 }
 
 func mergeProperties(parentVal, childVal any) any {
@@ -82,33 +102,26 @@ func mergeProperties(parentVal, childVal any) any {
 }
 
 func mergeRequired(parentVal, childVal any) any {
-	toStrings := func(v any) []string {
+	toSlice := func(v any) []any {
 		s, ok := v.([]any)
 		if !ok {
 			return nil
 		}
-		result := make([]string, 0, len(s))
-		for _, item := range s {
+		return s
+	}
+
+	ps, cs := toSlice(parentVal), toSlice(childVal)
+	seen := make(map[string]struct{}, len(ps)+len(cs))
+	merged := make([]any, 0, len(ps)+len(cs))
+
+	for _, src := range [][]any{ps, cs} {
+		for _, item := range src {
 			if str, ok := item.(string); ok {
-				result = append(result, str)
+				if _, exists := seen[str]; !exists {
+					seen[str] = struct{}{}
+					merged = append(merged, str)
+				}
 			}
-		}
-		return result
-	}
-
-	seen := map[string]bool{}
-	merged := []any{}
-
-	for _, item := range toStrings(parentVal) {
-		if !seen[item] {
-			seen[item] = true
-			merged = append(merged, item)
-		}
-	}
-	for _, item := range toStrings(childVal) {
-		if !seen[item] {
-			seen[item] = true
-			merged = append(merged, item)
 		}
 	}
 	if len(merged) == 0 {

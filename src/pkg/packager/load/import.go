@@ -214,7 +214,15 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 	}
 	pkg.Components = components
-	pkg.Values.ImportedSchemas = importedSchemas
+	schemasMap := map[string]bool{}
+	pkg.Values.ImportedSchemas = nil
+	for _, s := range importedSchemas {
+		norm := filepath.ToSlash(filepath.Clean(s))
+		if !schemasMap[norm] {
+			pkg.Values.ImportedSchemas = append(pkg.Values.ImportedSchemas, norm)
+			schemasMap[norm] = true
+		}
+	}
 
 	varMap := map[string]bool{}
 	pkg.Variables = nil
