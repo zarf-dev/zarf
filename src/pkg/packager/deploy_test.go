@@ -11,6 +11,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/healthchecks"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -112,6 +113,6 @@ func TestVerifyPackageIsDeployableSkipsAgentCertCheckWhenAgentIsNotConfigured(t 
 	require.NoError(t, c.SaveState(ctx, &state.State{}))
 
 	d := deployer{c: c}
-	err = d.verifyPackageIsDeployable(ctx, v1alpha1.ZarfPackage{})
+	err = d.verifyPackageIsDeployable(ctx, &layout.PackageLayout{})
 	require.NoError(t, err)
 }

@@ -6,11 +6,11 @@ package images
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -23,17 +23,18 @@ import (
 	"oras.land/oras-go/v2/content/oci"
 )
 
-// ImageWithManifest represents an image reference and its associated OCI manifest.
-type ImageWithManifest struct {
-	Image    transform.Image
-	Manifest ocispec.Manifest
+// PulledImage describes an image that landed in the destination OCI layout.
+type PulledImage struct {
+	Image transform.Image
 }
 
 const (
 	// This is the default docker annotation for the image name
 	dockerRefAnnotation = "io.containerd.image.name"
-	// When the Docker engine containerd image store is used only this annotation is used for sha referenced images
-	dockerContainerdImageStoreAnnotation = "containerd.io/distribution.source.docker.io"
+	// Prefix used by the Docker containerd image store to identify the registry an image
+	// was pulled from. The suffix after the prefix is the registry host (e.g. "docker.io",
+	// "ghcr.io"); the value is the repository path within that registry.
+	containerdDistributionSourcePrefix = "containerd.io/distribution.source."
 )
 
 // GetManifestsFromArchive take an image archive and returns a list of image descriptors
@@ -77,8 +78,8 @@ func FindImagesInOCIManifests(manifests []ocispec.Descriptor) ([]string, error) 
 }
 
 // Unpack extracts an image tar and loads it into an OCI layout directory.
-// It returns a list of ImageWithManifest for all images in the tar.
-func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []ImageWithManifest, err error) {
+// It returns a list of PulledImage for all images in the tar.
+func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir string, arch string) (_ []PulledImage, err error) {
 	if len(imageArchive.Images) == 0 {
 		return nil, fmt.Errorf("images must be defined")
 	}
@@ -126,7 +127,7 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		requestedImages[ref.Reference] = false
 	}
 
-	var imagesWithManifest []ImageWithManifest
+	var pulledImages []PulledImage
 	var foundImages []string
 	for _, manifestDesc := range manifests {
 		imageName := getRefFromManifest(manifestDesc)
@@ -144,31 +145,19 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 		}
 		requestedImages[manifestImg.Reference] = true
 
-		foundDesc, manifestData, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
+		foundDesc, _, err := oras.FetchBytes(ctx, srcStore, manifestDesc.Digest.String(), oras.DefaultFetchBytesOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
 		}
-		// If an image index is returned, then grab the manifest at the specific platform, and set the platform for the later oras.Copy
-		var platform *ocispec.Platform
-		if foundDesc.MediaType == ocispec.MediaTypeImageIndex {
-			platform = &ocispec.Platform{
-				Architecture: arch,
-				OS:           "linux",
-			}
-			fbOptions := oras.DefaultFetchBytesOptions
-			fbOptions.TargetPlatform = platform
-			foundDesc, manifestData, err = oras.FetchBytes(ctx, srcStore, foundDesc.Digest.String(), fbOptions)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch manifest for %s: %w", imageName, err)
-			}
-		}
-
-		var ociManifest ocispec.Manifest
-		if err := json.Unmarshal(manifestData, &ociManifest); err != nil {
-			return nil, fmt.Errorf("failed to parse OCI manifest for %s: %w", imageName, err)
-		}
 
 		logger.From(ctx).Info("pulling image from archive", "image", manifestImg.Reference, "archive", imageArchive.Path)
+		// Mirror images.Pull: an index-digest reference preserves the full index, while a tag or
+		// manifest-digest reference is filtered down to a single platform manifest by oras.Copy.
+		var platform *ocispec.Platform
+		isIndexSha := manifestImg.Digest != "" && IsIndex(foundDesc.MediaType)
+		if IsIndex(foundDesc.MediaType) && !isIndexSha {
+			platform = &ocispec.Platform{Architecture: arch, OS: "linux"}
+		}
 		copyOpts := oras.DefaultCopyOptions
 		copyOpts.WithTargetPlatform(platform)
 		desc, err := oras.Copy(ctx, srcStore, manifestDesc.Digest.String(), dstStore, manifestImg.Reference, copyOpts)
@@ -182,21 +171,18 @@ func Unpack(ctx context.Context, imageArchive v1alpha1.ImageArchive, destDir str
 			return nil, fmt.Errorf("failed to tag image: %w", err)
 		}
 
-		imagesWithManifest = append(imagesWithManifest, ImageWithManifest{
-			Image:    manifestImg,
-			Manifest: ociManifest,
-		})
+		pulledImages = append(pulledImages, PulledImage{Image: manifestImg})
 	}
 
 	explainErr := fmt.Sprintf("image references are determined by the inclusion of one of the following "+
-		"annotations in the index.json: %s, %s, %s", dockerRefAnnotation, dockerContainerdImageStoreAnnotation, ocispec.AnnotationRefName)
+		"annotations in the index.json: %s, %s.<registry>, %s", dockerRefAnnotation, containerdDistributionSourcePrefix, ocispec.AnnotationRefName)
 	for img, found := range requestedImages {
 		if !found {
 			return nil, fmt.Errorf("could not find image %s: found images %s: %s", img, foundImages, explainErr)
 		}
 	}
 
-	return imagesWithManifest, nil
+	return pulledImages, nil
 }
 
 func determineImageDirectory(dir string) (string, error) {
@@ -226,8 +212,12 @@ func getRefFromManifest(manifestDesc ocispec.Descriptor) string {
 		return ref
 	}
 
-	if repo, ok := manifestDesc.Annotations[dockerContainerdImageStoreAnnotation]; ok && repo != "" {
-		return fmt.Sprintf("%s@%s", repo, manifestDesc.Digest.String())
+	for k, v := range manifestDesc.Annotations {
+		registry, ok := strings.CutPrefix(k, containerdDistributionSourcePrefix)
+		if !ok || registry == "" || v == "" {
+			continue
+		}
+		return fmt.Sprintf("%s/%s@%s", registry, v, manifestDesc.Digest.String())
 	}
 
 	// This is the annotation oras-go uses to check for the name during oras.copy
