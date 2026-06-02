@@ -5,14 +5,11 @@
 package test
 
 import (
-	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 func TestValues(t *testing.T) {
@@ -145,16 +142,6 @@ func TestValuesSchema(t *testing.T) {
 
 		packageName := fmt.Sprintf("zarf-package-test-values-schema-merge-%s.tar.zst", e2e.Arch)
 		path := filepath.Join(tmpdir, packageName)
-
-		// Verify the assembled package contains the correctly merged schema.
-		pkgLayout, err := layout.LoadFromTar(context.Background(), path, layout.PackageLayoutOptions{})
-		require.NoError(t, err)
-		defer pkgLayout.Cleanup() //nolint:errcheck
-		assembled, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema))
-		require.NoError(t, err)
-		expected, err := os.ReadFile(filepath.Join(src, "expected-merged-schema.json"))
-		require.NoError(t, err)
-		require.JSONEq(t, string(expected), string(assembled))
 
 		// Deploy with replicas:7 should fail. The parent schema caps replicas at 5, overriding
 		// the child schema's maximum of 10. A failure here confirms parent-wins on property

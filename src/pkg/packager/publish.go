@@ -248,7 +248,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, path, createOpts)
+	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, path, defined.ImportedSchemas, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}

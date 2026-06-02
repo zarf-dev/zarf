@@ -79,7 +79,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 	vals.DeepMerge(opts.Values)
 
-	if pkgLayout.Pkg.Values.Schema != "" {
+	if pkgLayout.HasValuesSchema() {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
 		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)

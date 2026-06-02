@@ -406,6 +406,31 @@ func TestMergeAndWriteValuesSchema(t *testing.T) {
 		require.ErrorContains(t, err, "$ref")
 	})
 
+	t.Run("rejects merge when parent and child declare different dialects", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		// parent-with-required declares draft-07; child-wrong-version declares 2019-09
+		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-wrong-version.schema.json"}, testdataDir, buildPath)
+		require.ErrorContains(t, err, "different dialects")
+		require.ErrorContains(t, err, "draft-07")
+		require.ErrorContains(t, err, "2019-09")
+	})
+
+	t.Run("allows merge when child omits dialect", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		// child-no-dialect has no $schema; absence is treated as compatible with any version
+		err := mergeAndWriteValuesSchema(ctx, "parent-with-required.schema.json", []string{"child-no-dialect.schema.json"}, testdataDir, buildPath)
+		require.NoError(t, err)
+	})
+
+	t.Run("allows merge when both schemas omit dialect", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesSchema(ctx, "", []string{"child-no-dialect.schema.json", "child-no-dialect.schema.json"}, testdataDir, buildPath)
+		require.NoError(t, err)
+	})
+
 	mergeTests := []struct {
 		name            string
 		parentSchema    string

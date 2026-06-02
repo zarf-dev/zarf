@@ -241,11 +241,11 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
-	// Creating skeletons packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" {
+	// Creating skeleton packages with the values feature is not yet supported
+	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" || len(importedSchemas) > 0 {
 		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
 	}
 
@@ -1096,6 +1096,9 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if merged == nil {
 			merged = child
 		} else {
+			if err := checkCompatibleDialect(merged, child, schemaRelPath); err != nil {
+				return err
+			}
 			merged = value.MergeSchemas(merged, child)
 		}
 	}
@@ -1104,6 +1107,9 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 	if parentSchema != "" {
 		parent, err := loadSchema(parentSchema, "parent")
 		if err != nil {
+			return err
+		}
+		if err := checkCompatibleDialect(parent, merged, "imported schemas"); err != nil {
 			return err
 		}
 		merged = value.MergeSchemas(parent, merged)
@@ -1117,6 +1123,24 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 	}
 	if err := os.WriteFile(dst, b, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values schema: %w", err)
+	}
+	return nil
+}
+
+// schemaDialect extracts the "$schema" dialect URI from a schema map, returning "" if absent or not a string
+func schemaDialect(s map[string]any) string {
+	if v, ok := s["$schema"].(string); ok {
+		return v
+	}
+	return ""
+}
+
+// checkCompatibleDialect errors when both schemas explicitly declare a "$schema" dialect that differ
+func checkCompatibleDialect(accumulated, incoming map[string]any, incomingLabel string) error {
+	a := schemaDialect(accumulated)
+	b := schemaDialect(incoming)
+	if a != "" && b != "" && a != b {
+		return fmt.Errorf("cannot merge schemas with different dialects: accumulated schema uses %q but %s declares %q", a, incomingLabel, b)
 	}
 	return nil
 }

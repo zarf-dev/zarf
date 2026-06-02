@@ -27,7 +27,7 @@ func TestAssembleSkeleton(t *testing.T) {
 	require.NoError(t, err)
 
 	opt := layout.AssembleSkeletonOptions{}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", opt)
+	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, "./testdata/zarf-skeleton-package", defined.ImportedSchemas, opt)
 	require.NoError(t, err)
 
 	b, err := os.ReadFile(filepath.Join(pkgLayout.DirPath(), "checksums.txt"))
@@ -168,7 +168,7 @@ func TestCreateAbsoluteSources(t *testing.T) {
 
 			var pkgLayout *layout.PackageLayout
 			if tt.isSkeleton {
-				pkgLayout, err = layout.AssembleSkeleton(ctx, defined.Pkg, tmpdir, layout.AssembleSkeletonOptions{})
+				pkgLayout, err = layout.AssembleSkeleton(ctx, defined.Pkg, tmpdir, defined.ImportedSchemas, layout.AssembleSkeletonOptions{})
 				require.NoError(t, err)
 			} else {
 				pkgLayout, err = layout.AssemblePackage(ctx, defined.Pkg, tmpdir, nil, layout.AssembleOptions{SkipSBOM: true})

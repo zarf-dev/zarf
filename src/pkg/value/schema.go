@@ -80,7 +80,9 @@ func MergeSchemas(parent, child map[string]any) map[string]any {
 		case "properties":
 			result["properties"] = mergeProperties(result["properties"], childVal)
 		case "required":
-			result["required"] = mergeRequired(result["required"], childVal)
+			if req := mergeRequired(result["required"], childVal); len(req) > 0 {
+				result["required"] = req
+			}
 		default:
 			if _, exists := result[key]; !exists {
 				result[key] = childVal
@@ -115,7 +117,7 @@ func mergeProperties(parentVal, childVal any) any {
 	return parentProps
 }
 
-func mergeRequired(parentVal, childVal any) any {
+func mergeRequired(parentVal, childVal any) []any {
 	toSlice := func(v any) []any {
 		s, ok := v.([]any)
 		if !ok {
@@ -137,9 +139,6 @@ func mergeRequired(parentVal, childVal any) any {
 				}
 			}
 		}
-	}
-	if len(merged) == 0 {
-		return parentVal
 	}
 	return merged
 }
