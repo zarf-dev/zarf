@@ -6,12 +6,10 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -29,14 +27,6 @@ func NewPodMutationHook(ctx context.Context, c *cluster.Cluster, mode state.Muta
 		return mutatePod(ctx, r, c, pod)
 	})
 	return operations.Hook{Create: admit, Update: admit}
-}
-
-func parsePod(object []byte) (*corev1.Pod, error) {
-	var pod corev1.Pod
-	if err := json.Unmarshal(object, &pod); err != nil {
-		return nil, err
-	}
-	return &pod, nil
 }
 
 func getImageAnnotationKey(ctx context.Context, containerName string) string {
@@ -67,7 +57,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, 
 	l := logger.From(ctx)
 
 	if r.SubResource != "" {
-		return mutatePodSubresource(ctx, r, c)
+		return mutatePodSubresource(ctx, r, c, pod)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
@@ -149,22 +139,18 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, 
 }
 
 // mutatePodSubresource handles pod subresource mutation
-func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	switch res := r.SubResource; res {
 	case "ephemeralcontainers":
-		return mutateEphemeralContainers(ctx, r, cluster)
+		return mutateEphemeralContainers(ctx, cluster, pod)
 	default:
 		// this likely won't be hit as the MutatingWebhookConfiguration would need to be modified - but this can help ensure they stay synchronized
 		return nil, fmt.Errorf("attempted mutation of unsupported subresource: %s", res)
 	}
 }
 
-func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateEphemeralContainers(ctx context.Context, cluster *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	l := logger.From(ctx)
-	pod, err := parsePod(r.Object.Raw)
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
-	}
 
 	state, err := cluster.LoadState(ctx)
 	if err != nil {
