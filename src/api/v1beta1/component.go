@@ -336,8 +336,6 @@ const (
 type SetValue struct {
 	// Key represents which value to assign to.
 	Key string `json:"key,omitempty"`
-	// Value is the current value at the key.
-	Value any `json:"value,omitempty"`
 	// Type declares the kind of data being stored in the value.
 	Type SetValueType `json:"type,omitempty"`
 }
