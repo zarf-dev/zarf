@@ -56,11 +56,11 @@ type initOptions struct {
 	agentTLSCAPath          string
 	agentTLSCertPath        string
 	agentTLSKeyPath         string
-	agentMutationPolicy     mutationPolicyFlag
+	agentMutationPolicy     string
 }
 
 func newInitCommand() *cobra.Command {
-	o := &initOptions{agentMutationPolicy: mutationPolicyFlag(state.MutationPolicyAll)}
+	o := &initOptions{}
 
 	cmd := &cobra.Command{
 		Use:     "init [ PACKAGE_SOURCE ]",
@@ -117,7 +117,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
-	cmd.Flags().Var(&o.agentMutationPolicy, "agent-mutation-policy", `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
+	cmd.Flags().StringVar(&o.agentMutationPolicy, "agent-mutation-policy", v.GetString(VInitAgentMutationPolicy), `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -460,21 +460,12 @@ func (o *initOptions) validateInitFlags() error {
 		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
 	}
 
+	switch state.MutationPolicy(o.agentMutationPolicy) {
+	case state.MutationPolicyAll, state.MutationPolicyLabeled:
+	default:
+		return fmt.Errorf("invalid agent mutation policy %q, must be %q or %q", o.agentMutationPolicy,
+			state.MutationPolicyAll, state.MutationPolicyLabeled)
+	}
+
 	return nil
 }
-
-type mutationPolicyFlag state.MutationPolicy
-
-func (m *mutationPolicyFlag) String() string { return string(*m) }
-
-func (m *mutationPolicyFlag) Set(v string) error {
-	switch state.MutationPolicy(v) {
-	case state.MutationPolicyAll, state.MutationPolicyLabeled:
-		*m = mutationPolicyFlag(v)
-		return nil
-	default:
-		return fmt.Errorf("must be %q or %q", state.MutationPolicyAll, state.MutationPolicyLabeled)
-	}
-}
-
-func (m *mutationPolicyFlag) Type() string { return "mutationPolicy" }
