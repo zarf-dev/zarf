@@ -49,21 +49,28 @@ func checkNoRefsInValue(key string, val any) error {
 	return nil
 }
 
-// copyMap returns a deep copy of a map[string]any containing only the types produced
+// copyValue returns a deep copy of a value containing only the types produced
 // by json.Unmarshal: map[string]any, []any, and scalar primitives.
+func copyValue(v any) any {
+	switch val := v.(type) {
+	case map[string]any:
+		return copyMap(val)
+	case []any:
+		cp := make([]any, len(val))
+		for i, item := range val {
+			cp[i] = copyValue(item)
+		}
+		return cp
+	default:
+		return v
+	}
+}
+
+// copyMap returns a deep copy of a map[string]any.
 func copyMap(m map[string]any) map[string]any {
 	out := make(map[string]any, len(m))
 	for k, v := range m {
-		switch val := v.(type) {
-		case map[string]any:
-			out[k] = copyMap(val)
-		case []any:
-			cp := make([]any, len(val))
-			copy(cp, val)
-			out[k] = cp
-		default:
-			out[k] = v
-		}
+		out[k] = copyValue(v)
 	}
 	return out
 }
@@ -85,7 +92,7 @@ func MergeSchemas(parent, child map[string]any) map[string]any {
 			}
 		default:
 			if _, exists := result[key]; !exists {
-				result[key] = childVal
+				result[key] = copyValue(childVal)
 			}
 		}
 	}
@@ -105,7 +112,7 @@ func mergeProperties(parentVal, childVal any) any {
 
 	for key, childProp := range childProps {
 		if _, exists := parentProps[key]; !exists {
-			parentProps[key] = childProp
+			parentProps[key] = copyValue(childProp)
 		} else {
 			parentProp, parentPropIsMap := parentProps[key].(map[string]any)
 			childPropMap, childPropIsMap := childProp.(map[string]any)
