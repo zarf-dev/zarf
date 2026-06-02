@@ -100,10 +100,10 @@ type BuildData struct {
 	Hostname string `json:"hostname,omitempty"`
 	// The username who created this package.
 	User string `json:"user,omitempty"`
+	// The timestamp when this package was created.
+	Timestamp string `json:"timestamp,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
-	// The timestamp when this package was created.
-	Timestamp string `json:"timestamp"`
 	// The version of Zarf used to build this package.
 	Version string `json:"version"`
 	// Any migrations that have been run on this package.
@@ -123,7 +123,7 @@ type BuildData struct {
 	// ProvenanceFiles lists files present in the package that are not included in checksums.txt. These are files added after checksum generation (e.g., signature files).
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
-	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	AggregateChecksum string `json:"aggregateChecksum"`
 	// originalAPIVersion records the apiVersion the package was read from before any conversion.
 	originalAPIVersion string
 }
