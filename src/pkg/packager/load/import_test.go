@@ -4,7 +4,6 @@
 package load
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -116,7 +115,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -124,9 +123,6 @@ func TestResolveImports(t *testing.T) {
 			expectedPkg, err := pkgcfg.Parse(ctx, b)
 
 			require.NoError(t, err)
-			// ImportedSchemas is a transient field not present in expected.yaml; clear it before
-			// structural comparison so the check focuses on package content, not carry state.
-			resolvedPkg.Values.ImportedSchemas = nil
 			require.Equal(t, expectedPkg, resolvedPkg)
 			testutil.RequireNoBackslashInPackagePaths(t, resolvedPkg)
 			require.Equal(t, tc.expectedChecksum, testutil.ChecksumZarfYAMLContent(t, resolvedPkg), "resolved zarf.yaml checksum drift — package would differ across build hosts")
@@ -153,7 +149,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
-	resolved, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
+	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
 		"", "", []string{}, "", false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
@@ -249,7 +245,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -264,58 +260,37 @@ func TestResolveImportsValueMerge(t *testing.T) {
 	}
 }
 
-func TestResolveImportsSchemaMerge(t *testing.T) {
+func TestResolveImportsSchemaCollection(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)
 
 	testCases := []struct {
-		name           string
-		path           string
-		expectedSchema string
+		name            string
+		path            string
+		expectedSchemas []string
+		expectedParent  string
 	}{
 		{
-			name: "child schema is used as-is when parent declares no schema",
-			path: "./testdata/import/values/schema-parent-empty",
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["appName"],
-				"properties": {
-					"appName":  {"type": "string", "minLength": 1},
-					"replicas": {"type": "integer", "minimum": 1}
-				}
-			}`,
+			name:            "child schema is collected when parent has no schema",
+			path:            "./testdata/import/values/schema-parent-empty",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedParent:  "",
 		},
 		{
-			name: "parent schema wins over child on conflicting keys; required arrays are unioned",
-			path: "./testdata/import/values/schema-parent-wins",
-			// parent required: ["namespace"], child required: ["appName"] → merged: ["namespace","appName"]
-			// parent replicas.maximum: 5 wins over child's 10
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["namespace", "appName"],
-				"properties": {
-					"namespace": {"type": "string", "minLength": 1},
-					"appName":   {"type": "string", "minLength": 1},
-					"replicas":  {"type": "integer", "minimum": 1, "maximum": 5}
-				}
-			}`,
+			name:            "child schema is collected when parent also has a schema",
+			path:            "./testdata/import/values/schema-parent-wins",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedParent:  "parent-values.schema.json",
 		},
 		{
-			name: "schemas accumulate transitively; earlier import wins on conflicts",
+			name: "schemas are collected transitively through 3-level deep imports",
 			path: "./testdata/import/values/schema-deep",
-			// middle collected before bottom; middle wins on "shared" property conflict
-			expectedSchema: `{
-				"$schema": "http://json-schema.org/draft-07/schema#",
-				"type": "object",
-				"required": ["tier", "region"],
-				"properties": {
-					"tier":   {"type": "string"},
-					"shared": {"type": "string", "description": "middle wins"},
-					"region": {"type": "string"}
-				}
-			}`,
+			// middle's own schema comes first; bottom's schema (from middle's imports) comes second
+			expectedSchemas: []string{
+				"middle/middle-values.schema.json",
+				"middle/bottom/bottom-values.schema.json",
+			},
+			expectedParent: "",
 		},
 	}
 
@@ -328,34 +303,11 @@ func TestResolveImportsSchemaMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
-			// Mirror mergeAndWriteValuesSchema: merge imported schemas left-to-right
-			// (earlier entry wins), then merge the parent schema on top.
-			var merged map[string]any
-			for _, schemaRelPath := range resolved.Values.ImportedSchemas {
-				b, err := os.ReadFile(filepath.Join(tc.path, schemaRelPath))
-				require.NoError(t, err)
-				var s map[string]any
-				require.NoError(t, json.Unmarshal(b, &s))
-				if merged == nil {
-					merged = s
-				} else {
-					merged = value.MergeSchemas(merged, s)
-				}
-			}
-			if resolved.Values.Schema != "" {
-				b, err := os.ReadFile(filepath.Join(tc.path, resolved.Values.Schema))
-				require.NoError(t, err)
-				var parent map[string]any
-				require.NoError(t, json.Unmarshal(b, &parent))
-				merged = value.MergeSchemas(parent, merged)
-			}
-
-			actual, err := json.Marshal(merged)
-			require.NoError(t, err)
-			require.JSONEq(t, tc.expectedSchema, string(actual))
+			require.Equal(t, tc.expectedSchemas, importedSchemas)
+			require.Equal(t, tc.expectedParent, resolved.Values.Schema)
 		})
 	}
 }

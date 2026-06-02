@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["namespace", "appName"],
+  "properties": {
+    "namespace": { "type": "string", "minLength": 1 },
+    "replicas":  { "type": "integer", "minimum": 1, "maximum": 5 },
+    "appName":   { "type": "string", "minLength": 1 }
+  }
+}

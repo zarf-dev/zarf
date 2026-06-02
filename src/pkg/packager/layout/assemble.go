@@ -62,7 +62,7 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
@@ -180,7 +180,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, pkg.Values.ImportedSchemas, packagePath, buildPath); err != nil {
+	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
 		return nil, err
 	}
 

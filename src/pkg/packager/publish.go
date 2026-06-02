@@ -226,7 +226,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 
 	// Load package layout
 	l.Info("loading skeleton package", "path", path)
-	pkg, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
+	defined, err := load.PackageDefinition(ctx, path, load.DefinitionOptions{
 		CachePath:          opts.CachePath,
 		Flavor:             opts.Flavor,
 		SkipVersionCheck:   opts.SkipVersionCheck,
@@ -236,7 +236,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 	if err != nil {
 		return registry.Reference{}, err
 	}
-	for _, comp := range pkg.Components {
+	for _, comp := range defined.Pkg.Components {
 		if comp.ImageArchives != nil {
 			return registry.Reference{}, fmt.Errorf("cannot publish skeleton package with image archives")
 		}
@@ -248,7 +248,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:               opts.Flavor,
 		WithBuildMachineInfo: opts.WithBuildMachineInfo,
 	}
-	pkgLayout, err := layout.AssembleSkeleton(ctx, pkg, path, createOpts)
+	pkgLayout, err := layout.AssembleSkeleton(ctx, defined.Pkg, path, createOpts)
 	if err != nil {
 		return registry.Reference{}, fmt.Errorf("unable to create skeleton: %w", err)
 	}
