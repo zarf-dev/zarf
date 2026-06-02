@@ -4,8 +4,6 @@
 // Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf.
 package v1beta1
 
-import "github.com/zarf-dev/zarf/src/api/v1alpha1"
-
 // PackageKind is an enum of the different kinds of Zarf packages.
 type PackageKind string
 
@@ -34,30 +32,21 @@ type Package struct {
 	Values Values `json:"values,omitempty"`
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
+
 	// Variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	variables []v1alpha1.InteractiveVariable
+	variables []InteractiveVariable
 	// Constants removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	constants []v1alpha1.Constant
+	constants []Constant
 }
 
 // GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
-func (pkg Package) GetDeprecatedVariables() []v1alpha1.InteractiveVariable {
+func (pkg Package) GetDeprecatedVariables() []InteractiveVariable {
 	return pkg.variables
 }
 
-// SetDeprecatedVariables sets the v1alpha1 variables carried as a backwards-compatibility shim.
-func (pkg *Package) SetDeprecatedVariables(variables []v1alpha1.InteractiveVariable) {
-	pkg.variables = variables
-}
-
 // GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
-func (pkg Package) GetDeprecatedConstants() []v1alpha1.Constant {
+func (pkg Package) GetDeprecatedConstants() []Constant {
 	return pkg.constants
-}
-
-// SetDeprecatedConstants sets the v1alpha1 constants carried as a backwards-compatibility shim.
-func (pkg *Package) SetDeprecatedConstants(constants []v1alpha1.Constant) {
-	pkg.constants = constants
 }
 
 // HasImages returns true if one of the components contains an image.
@@ -105,11 +94,6 @@ func (m PackageMetadata) GetDeprecatedYOLO() bool {
 	return m.yolo
 }
 
-// SetDeprecatedYOLO sets the v1alpha1 YOLO field carried as a backwards-compatibility shim.
-func (m *PackageMetadata) SetDeprecatedYOLO(yolo bool) {
-	m.yolo = yolo
-}
-
 // BuildData is written during package create to track details of the created package.
 type BuildData struct {
 	// The machine name that created this package.
@@ -144,8 +128,8 @@ type BuildData struct {
 	originalAPIVersion string
 }
 
-// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
-func (b BuildData) OriginalAPIVersion() string {
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+func (b BuildData) GetOriginalAPIVersion() string {
 	return b.originalAPIVersion
 }
 
