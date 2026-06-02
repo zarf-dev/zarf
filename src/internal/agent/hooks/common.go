@@ -38,12 +38,11 @@ func withMutationGuard[T any, PT interface {
 	*T
 	metav1.Object
 }](
-	ctx context.Context,
 	c *cluster.Cluster,
 	mode state.MutationPolicy,
 	fn func(ctx context.Context, r *admission.AdmissionRequest, obj PT) (*operations.Result, error),
 ) operations.AdmitFunc {
-	return func(r *admission.AdmissionRequest) (*operations.Result, error) {
+	return func(ctx context.Context, r *admission.AdmissionRequest) (*operations.Result, error) {
 		obj := PT(new(T))
 		if err := json.Unmarshal(r.Object.Raw, obj); err != nil {
 			return nil, fmt.Errorf(lang.ErrUnmarshal, err)
