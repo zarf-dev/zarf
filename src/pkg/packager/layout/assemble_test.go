@@ -366,6 +366,43 @@ func TestImageLayoutHasIndex(t *testing.T) {
 	}
 }
 
+func TestMergeAndWriteValuesFile(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("no-op when no files provided", func(t *testing.T) {
+		t.Parallel()
+		buildPath := t.TempDir()
+		err := mergeAndWriteValuesFile(ctx, nil, t.TempDir(), buildPath)
+		require.NoError(t, err)
+		_, err = os.Stat(filepath.Join(buildPath, ValuesYAML))
+		require.ErrorIs(t, err, os.ErrNotExist)
+	})
+
+	t.Run("merges multiple values files into a single output", func(t *testing.T) {
+		t.Parallel()
+		pkgDir := t.TempDir()
+		buildPath := t.TempDir()
+
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "base.yaml"), []byte("key: base\nextra: present\n"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(pkgDir, "override.yaml"), []byte("key: override\n"), 0o600))
+
+		err := mergeAndWriteValuesFile(ctx, []string{"base.yaml", "override.yaml"}, pkgDir, buildPath)
+		require.NoError(t, err)
+
+		out, err := os.ReadFile(filepath.Join(buildPath, ValuesYAML))
+		require.NoError(t, err)
+		require.Contains(t, string(out), "key: override")
+		require.Contains(t, string(out), "extra: present")
+	})
+
+	t.Run("returns error when a values file does not exist", func(t *testing.T) {
+		t.Parallel()
+		err := mergeAndWriteValuesFile(ctx, []string{"does-not-exist.yaml"}, t.TempDir(), t.TempDir())
+		require.ErrorContains(t, err, "does-not-exist.yaml")
+	})
+}
+
 func TestMergeAndWriteValuesSchema(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
