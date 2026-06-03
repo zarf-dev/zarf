@@ -1,0 +1,36 @@
+---
+import Default from "@astrojs/starlight/components/Sidebar.astro";
+import TopicsDropdown from "starlight-sidebar-topics-dropdown/TopicsDropdown.astro";
+
+// starlight-sidebar-topics scopes one sidebar per docs version; the topic
+// dropdown lists every version, so it serves as the version switcher.
+const isPageWithTopic = Astro.locals.starlightSidebarTopics?.isPageWithTopic ?? false;
+---
+
+{isPageWithTopic && (
+  <div class="version-switcher">
+    <span class="version-switcher-label">Version</span>
+    <TopicsDropdown />
+  </div>
+)}
+
+<Default><slot /></Default>
+
+<style>
+  .version-switcher {
+    margin-bottom: 1rem;
+  }
+  .version-switcher-label {
+    display: block;
+    font-size: var(--sl-text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--sl-color-gray-3);
+    margin-bottom: 0.25rem;
+  }
+  :global(.starlight-sidebar-topics-dropdown-menu) {
+    background-color: var(--sl-color-bg) !important;
+    border: 1px solid var(--sl-color-gray-5) !important;
+  }
+</style>

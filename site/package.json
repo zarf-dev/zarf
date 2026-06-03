@@ -6,10 +6,10 @@
   "scripts": {
     "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
     "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
-    "predev": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
+    "predev": "mkdir -p src/assets/schema && cp ../zarf.schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
-    "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
+    "prebuild": "mkdir -p src/assets/schema && cp ../zarf.schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
     "build": "rm -rf dist && astro check && astro build",
     "check": "npm run prebuild && astro check",
     "build:versions": "node hack/build-versions.mjs",
@@ -26,7 +26,10 @@
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
     "sharp": "^0.34.5",
-    "typescript": "^5.4.3"
+    "starlight-sidebar-topics": "^0.7.0",
+    "starlight-sidebar-topics-dropdown": "^0.6.0",
+    "typescript": "^5.4.3",
+    "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "linkinator": "^7.5.3",

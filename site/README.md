@@ -40,19 +40,32 @@ All commands are run from the root of the project, from a terminal:
 
 ## Serving Multiple Versions
 
-`npm run build:versions` builds the current
-checkout at the site root as **Latest**, then builds a window of archived
-releases, each into a `/<slug>/` subpath (e.g. `/0-76/`).
+`npm run build:versions` produces a single site where the current checkout is
+**Latest** at the root and each archived release lives under a `/<slug>/` subpath
+(e.g. `/v0-76/`). It is one Astro build, not one per version.
 
-Archived versions are rendered with the **current** toolchain, never their own:
-for each release tag we check out a throwaway git worktree, replace its
-`site/` wholesale with the latest version, and keep only the tag's docs content
-(`src/content/docs`) plus its repo-level data (`examples/`, `zarf.schema.json`).
+For each release tag, `hack/build-versions.mjs` checks out a throwaway git
+worktree and stages that tag's docs content into `src/content/docs/<slug>/`,
+regenerating its examples and schema (`src/assets/schema/<slug>.json`) from the
+tag's `examples/` and `zarf.schema.json`. Archived content therefore renders with
+the **current** toolchain and components, never its own.
+
+Two pieces make a single build serve many versions:
+
+- **Sidebars** — `starlight-sidebar-topics` gives each version its own sidebar
+  (Starlight otherwise has one global sidebar). The topic dropdown in the sidebar
+  doubles as the version switcher. See `astro.config.ts` and
+  `src/components/Sidebar.astro`.
+- **Links & embeds** — `src/plugins/remark-link-rewrite.ts` runs only on pages
+  under a version slug. It prefixes root-absolute links into known sections
+  (`/commands/…` → `/v0-76/commands/…`) and adds one `../` to relative paths that
+  escape the version subtree (shared assets, repo-root files, `examples/`),
+  compensating for the extra nesting level.
 
 Versions are discovered from GitHub Releases and reduced to the newest patch per
 minor. Only the current major and the one before it are kept — the current major
 shows its last 10 minors and the previous major its latest 3 minors.
-The set is written to `versions.json`, which the version switcher reads.
+The set is written to `versions.json`, read by `astro.config.ts` to build topics.
 
 ## 👀 Want to learn more?
 

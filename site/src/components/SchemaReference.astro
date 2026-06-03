@@ -1,5 +1,7 @@
 ---
-const json = await import("../assets/zarf.schema.json");
+import { loadSchema } from "../lib/schema";
+
+const json = await loadSchema(Astro.url.pathname);
 const defs = json["$defs"] as Record<string, any>;
 
 // BFS walk from root properties to produce natural reading order.
