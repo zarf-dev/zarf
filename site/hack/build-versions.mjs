@@ -13,8 +13,9 @@ const distDir = path.join(siteDir, "dist");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 
 const REPO = "zarf-dev/zarf";
-// Inclusive floor: archived versions older than this minor are not built.
-const MIN_VERSION = "v0.76";
+// Minors kept in the switcher: the newest major keeps a long tail, older majors a short one.
+const KEEP_CURRENT_MAJOR = 10;
+const KEEP_OLDER_MAJOR = 3;
 
 // A tag's docs content, kept from its worktree; everything else under `site/`
 // comes from the current checkout.
@@ -45,10 +46,19 @@ function cmpMinorDesc(a, b) {
   return bMaj - aMaj || bMin - aMin;
 }
 
-function aboveFloor(minor) {
-  const [maj = 0, min = 0] = parseSemver(minor);
-  const [fMaj = 0, fMin = 0] = parseSemver(MIN_VERSION);
-  return maj > fMaj || (maj === fMaj && min >= fMin);
+// Caps each major to its newest minors (KEEP_CURRENT_MAJOR for the newest major,
+// KEEP_OLDER_MAJOR for the rest). Expects `minorsDesc` sorted newest-first.
+function limitByMajor(minorsDesc) {
+  const newestMajor = minorsDesc.length ? parseSemver(minorsDesc[0])[0] : 0;
+  const keptByMajor = new Map();
+  return minorsDesc.filter((minor) => {
+    const major = parseSemver(minor)[0];
+    const cap = major === newestMajor ? KEEP_CURRENT_MAJOR : KEEP_OLDER_MAJOR;
+    const kept = keptByMajor.get(major) ?? 0;
+    if (kept >= cap) return false;
+    keptByMajor.set(major, kept + 1);
+    return true;
+  });
 }
 
 function toVersion(tag) {
@@ -56,7 +66,7 @@ function toVersion(tag) {
   return { ref: tag, label: minor, slug: slugOf(minor) };
 }
 
-// Released minors down to MIN_VERSION, newest first.
+// Released minors, newest first, capped per major.
 async function discoverVersions() {
   const headers = { Accept: "application/vnd.github+json" };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -79,7 +89,7 @@ async function discoverVersions() {
   }
 
   const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
-  const archived = minorsDesc.filter(aboveFloor).map((m) => toVersion(newestByMinor.get(m)));
+  const archived = limitByMajor(minorsDesc).map((m) => toVersion(newestByMinor.get(m)));
   return { latest: minorsDesc[0], archived };
 }
 
@@ -158,7 +168,7 @@ async function buildVersion({ ref, slug }) {
 async function main() {
   const { latest, archived } = await discoverVersions();
   console.log(`Latest (root, tracks current checkout): ${latest ?? "(unknown)"}`);
-  console.log(`Pinned versions (>= ${MIN_VERSION}): ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
+  console.log(`Pinned versions: ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
 
   // Written before any build so every build's switcher shows the same options.
   await fs.writeFile(
