@@ -5,7 +5,6 @@ import Select from "@astrojs/starlight/components/Select.astro";
 
 interface DocsVersion {
   ref: string;
-  label: string;
   slug: string;
 }
 
@@ -22,7 +21,7 @@ const currentBase = withSlash(import.meta.env.BASE_URL);
 
 const options = [
   { label: "Latest", value: "/" },
-  ...versions.map((v) => ({ label: v.label, value: `/${v.slug}/` })),
+  ...versions.map((v) => ({ label: v.ref, value: `/${v.slug}/` })),
 ].map((o) => ({ ...o, selected: withSlash(o.value) === currentBase }));
 ---
 

@@ -64,9 +64,10 @@ function limitByMajor(minorsDesc) {
   });
 }
 
+// `ref` is the full tag (e.g. v0.76.3, shown in the switcher); `slug` is the
+// minor (e.g. 0-76), keeping a version's URL stable across patches.
 function toVersion(tag) {
-  const minor = minorKey(tag);
-  return { ref: tag, label: minor, slug: slugOf(minor) };
+  return { ref: tag, slug: slugOf(minorKey(tag)) };
 }
 
 // Released minors, newest first, capped per major.
@@ -176,7 +177,7 @@ async function main() {
   // Written before any build so every build's switcher shows the same options.
   await fs.writeFile(
     path.join(siteDir, "versions.json"),
-    JSON.stringify({ versions: archived.map(({ ref, label, slug }) => ({ ref, label, slug })) }, null, 2) + "\n",
+    JSON.stringify({ versions: archived }, null, 2) + "\n",
   );
 
   // Build Latest at the root. `astro check` runs separately in CI (`npm run check`).
