@@ -29,6 +29,9 @@ jobs:
       - name: npm ci
         run: npm ci
 
+      - name: astro check
+        run: npm run check
+
       - name: run site build
         run: npm run build:versions
 

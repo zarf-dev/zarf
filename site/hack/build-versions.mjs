@@ -192,7 +192,8 @@ async function main() {
   );
 
   // Build the current docs at the root. `astro check` is skipped here (it runs
-  // in PR CI via `npm run build`); the deploy only needs the build output.
+  // as its own step in PR CI via `npm run check`); the deploy only needs the
+  // build output.
   await fs.rm(distDir, { recursive: true, force: true });
   npm(["run", "prebuild"], siteDir);
   npm(["exec", "astro", "build"], siteDir);

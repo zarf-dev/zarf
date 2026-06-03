@@ -11,6 +11,7 @@
     "start": "astro dev",
     "prebuild": "cp ../zarf.schema.json ./src/assets/zarf.schema.json && node hack/copy-examples.js",
     "build": "rm -rf dist && astro check && astro build",
+    "check": "npm run prebuild && astro check",
     "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
     "astro": "astro",
