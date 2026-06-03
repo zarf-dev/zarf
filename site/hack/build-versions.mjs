@@ -13,9 +13,10 @@ const distDir = path.join(siteDir, "dist");
 const worktreeRoot = path.join(repoDir, ".docs-version-builds");
 
 const REPO = "zarf-dev/zarf";
-// Minors kept in the switcher: the newest major keeps a long tail, older majors a short one.
+// Minors kept in the switcher, from the current major and the one before it.
+// Majors older than the previous one are dropped entirely.
 const KEEP_CURRENT_MAJOR = 10;
-const KEEP_OLDER_MAJOR = 3;
+const KEEP_PREVIOUS_MAJOR = 3;
 
 // A tag's docs content, kept from its worktree; everything else under `site/`
 // comes from the current checkout.
@@ -46,14 +47,16 @@ function cmpMinorDesc(a, b) {
   return bMaj - aMaj || bMin - aMin;
 }
 
-// Caps each major to its newest minors (KEEP_CURRENT_MAJOR for the newest major,
-// KEEP_OLDER_MAJOR for the rest). Expects `minorsDesc` sorted newest-first.
+// Keeps the newest minors of the current major and the one before it; drops
+// older majors. Expects `minorsDesc` sorted newest-first.
 function limitByMajor(minorsDesc) {
-  const newestMajor = minorsDesc.length ? parseSemver(minorsDesc[0])[0] : 0;
+  const majorsDesc = [...new Set(minorsDesc.map((m) => parseSemver(m)[0]))].sort((a, b) => b - a);
+  const [currentMajor, previousMajor] = majorsDesc;
   const keptByMajor = new Map();
   return minorsDesc.filter((minor) => {
     const major = parseSemver(minor)[0];
-    const cap = major === newestMajor ? KEEP_CURRENT_MAJOR : KEEP_OLDER_MAJOR;
+    const cap =
+      major === currentMajor ? KEEP_CURRENT_MAJOR : major === previousMajor ? KEEP_PREVIOUS_MAJOR : 0;
     const kept = keptByMajor.get(major) ?? 0;
     if (kept >= cap) return false;
     keptByMajor.set(major, kept + 1);

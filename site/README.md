@@ -50,10 +50,9 @@ for each release tag we check out a throwaway git worktree, replace its
 (`src/content/docs`) plus its repo-level data (`examples/`, `zarf.schema.json`).
 
 Versions are discovered from GitHub Releases and reduced to the newest patch per
-minor. Each major is then capped to its newest minors — the current major keeps
-`KEEP_CURRENT_MAJOR`, older majors keep `KEEP_OLDER_MAJOR` (in
-`hack/build-versions.mjs`). The set is written to `versions.json`, which the
-version switcher reads.
+minor. Only the current major and the one before it are kept — the current major
+shows its last 10 minors and the previous major its latest 3 minors.
+The set is written to `versions.json`, which the version switcher reads.
 
 ## 👀 Want to learn more?
 
