@@ -6,8 +6,7 @@ import remarkGemoji from "remark-gemoji";
 
 // https://astro.build/config
 export default defineConfig({
-  // `base` is left at its default ("/") for the current ("Latest") build.
-  // hack/build-versions.mjs passes `--base /<slug>` per archived version build.
+  // `base` stays "/" for Latest; build-versions.mjs passes `--base /<slug>` per archived build.
   redirects: {
     "/docs/zarf-overview": "/",
   },
@@ -27,11 +26,8 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Zarf",
-      // We render our own wrap-style heading anchors (rehype-autolink-headings
-      // behavior:"wrap", plus SchemaReference.astro — both .heading-link).
-      // Disable Starlight's default heading links, else every heading is also
-      // wrapped in .sl-heading-wrapper with a duplicate .sl-anchor-link.
-      // TODO: move to native starlight style in the future
+      // We render our own heading anchors (rehype-autolink-headings); disable
+      // Starlight's to avoid duplicates. TODO: switch to native Starlight links.
       markdown: { headingLinks: false },
       head: [
         {

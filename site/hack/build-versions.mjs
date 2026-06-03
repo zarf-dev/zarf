@@ -1,17 +1,5 @@
-// Builds the documentation site for the current checkout plus a window of
-// archived releases, using a content-snapshot strategy.
-//
-// The current docs (this checkout) are built at the site root as "Latest".
-// Each archived version is built from its release tag into a `/<slug>/` subpath.
-//
-// archived versions are rendered with the current toolchain, never
-// their own. For each version we check the tag out into a throwaway git
-// worktree, then replace its `site/` wholesale with the tag's docs.
-// The tag's repo-level data — `examples/` and `zarf.schema.json` — is left in place at the
-// worktree root and consumed by `prebuild`. The current `node_modules` is reused.
-//
-// Versions are discovered from GitHub Releases, deduplicated to the newest
-// patch per minor, and floored at MIN_VERSION.
+// Builds the current checkout at the site root ("Latest") and a window of
+// archived releases into `/<slug>/` subpaths. See site/README.md for the strategy.
 
 import { execFileSync } from "node:child_process";
 import { promises as fs } from "node:fs";
@@ -28,13 +16,11 @@ const REPO = "zarf-dev/zarf";
 // Inclusive floor: archived versions older than this minor are not built.
 const MIN_VERSION = "v0.76";
 
-// Paths under `site/` that hold an archived version's *data* and are kept from
-// the tag's worktree. Everything else under `site/` is toolchain, replaced with
-// the current checkout.
+// A tag's docs content, kept from its worktree; everything else under `site/`
+// comes from the current checkout.
 const docsPaths = ["src/content/docs"];
 
-// Top-level `site/` entries never copied from the current checkout: installed
-// deps and build artifacts. `node_modules` is symlinked separately.
+// Entries never copied from the current checkout (`node_modules` is symlinked).
 const overlaySkip = new Set(["node_modules", "dist", ".astro"]);
 
 function git(args, opts = {}) {
@@ -59,22 +45,18 @@ function cmpMinorDesc(a, b) {
   return bMaj - aMaj || bMin - aMin;
 }
 
-// True when `minor` is >= the configured floor.
 function aboveFloor(minor) {
   const [maj = 0, min = 0] = parseSemver(minor);
   const [fMaj = 0, fMin = 0] = parseSemver(MIN_VERSION);
   return maj > fMaj || (maj === fMaj && min >= fMin);
 }
 
-// Returns { ref, label, slug } for a full tag like "v0.76.3".
 function toVersion(tag) {
   const minor = minorKey(tag);
   return { ref: tag, label: minor, slug: slugOf(minor) };
 }
 
-// Discover every released minor down to MIN_VERSION, each pinned to its own
-// `/<slug>/` subpath. Returns { archived: [{ ref, label, slug }] } sorted
-// newest-first.
+// Released minors down to MIN_VERSION, newest first.
 async function discoverVersions() {
   const headers = { Accept: "application/vnd.github+json" };
   if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
@@ -97,7 +79,6 @@ async function discoverVersions() {
   }
 
   const minorsDesc = [...newestByMinor.keys()].sort(cmpMinorDesc);
-  // Every released minor down to the floor gets a pinned subpath, newest included.
   const archived = minorsDesc.filter(aboveFloor).map((m) => toVersion(newestByMinor.get(m)));
   return { latest: minorsDesc[0], archived };
 }
@@ -106,8 +87,7 @@ async function discoverVersions() {
 // Build steps
 // ---------------------------------------------------------------------------
 
-// Replace the worktree's `site/` with the current checkout's, keeping only the
-// tag's data.
+// Replace the worktree's `site/` with the current checkout's, keeping the tag's docs.
 async function overlayToolchain(worktreeSite) {
   const skipAbs = [...overlaySkip].map((d) => path.join(siteDir, d));
   const dataAbs = docsPaths.map((d) => path.join(siteDir, d));
@@ -122,8 +102,7 @@ async function overlayToolchain(worktreeSite) {
     await fs.rm(worktreeSite, { recursive: true, force: true });
     await fs.cp(siteDir, worktreeSite, {
       recursive: true,
-      // Skip installed deps, build artifacts, and the current checkout's data —
-      // the latter is restored from the tag below.
+      // The tag's docs are restored from the stash below, not copied here.
       filter: (src) => !skipAbs.some((s) => under(src, s)) && !dataAbs.some((d) => under(src, d)),
     });
     for (const rel of docsPaths) {
@@ -132,14 +111,12 @@ async function overlayToolchain(worktreeSite) {
   } finally {
     await fs.rm(stash, { recursive: true, force: true });
   }
-  // Reuse the current install — never resolve the tag's own dependencies.
   await fs.symlink(path.join(siteDir, "node_modules"), path.join(worktreeSite, "node_modules"), "dir");
 }
 
 async function rewriteVersionLinks(dir, slug) {
-  // Prefix root-absolute links that aren't already under /<slug>/ and aren't
-  // protocol-relative (//host). Scoped to href=/src= attribute values, since
-  // Astro's `base` doesn't rewrite links hardcoded in Markdown bodies.
+  // Astro's `base` doesn't rewrite root-absolute links hardcoded in Markdown, so
+  // prefix href/src values that aren't already under /<slug>/ or protocol-relative.
   const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(`(\\s(?:href|src)=")/(?!${escaped}/)(?!/)`, "g");
   const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -168,8 +145,7 @@ async function buildVersion({ ref, slug }) {
   git(["worktree", "add", "--detach", worktree, ref]);
   try {
     await overlayToolchain(worktreeSite);
-    // prebuild regenerates this tag's schema and examples from its own data,
-    // using the overlaid (current) scripts.
+    // Regenerate this tag's schema and examples with the overlaid (current) scripts.
     npm(["run", "prebuild"], worktreeSite);
     npm(["exec", "--", "astro", "build", "--base", `/${slug}`], worktreeSite);
     await rewriteVersionLinks(path.join(worktreeSite, "dist"), slug);
@@ -184,16 +160,13 @@ async function main() {
   console.log(`Latest (root, tracks current checkout): ${latest ?? "(unknown)"}`);
   console.log(`Pinned versions (>= ${MIN_VERSION}): ${archived.map((v) => v.ref).join(", ") || "(none)"}`);
 
-  // The version switcher reads this manifest; write it before any build so the
-  // root and every archived build render the same set of options.
+  // Written before any build so every build's switcher shows the same options.
   await fs.writeFile(
     path.join(siteDir, "versions.json"),
     JSON.stringify({ versions: archived.map(({ ref, label, slug }) => ({ ref, label, slug })) }, null, 2) + "\n",
   );
 
-  // Build the current docs at the root. `astro check` is skipped here (it runs
-  // as its own step in PR CI via `npm run check`); the deploy only needs the
-  // build output.
+  // Build Latest at the root. `astro check` runs separately in CI (`npm run check`).
   await fs.rm(distDir, { recursive: true, force: true });
   npm(["run", "prebuild"], siteDir);
   npm(["exec", "astro", "build"], siteDir);

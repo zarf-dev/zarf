@@ -36,6 +36,22 @@ All commands are run from the root of the project, from a terminal:
 | `npm run preview`         | Preview your build locally, before deploying     |
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
+| `npm run build:versions`  | Build Latest plus archived versions (see below)  |
+
+## Serving Multiple Versions
+
+`npm run build:versions` builds the current
+checkout at the site root as **Latest**, then builds a window of archived
+releases, each into a `/<slug>/` subpath (e.g. `/0-76/`).
+
+Archived versions are rendered with the **current** toolchain, never their own:
+for each release tag we check out a throwaway git worktree, replace its
+`site/` wholesale with the latest version, and keep only the tag's docs content
+(`src/content/docs`) plus its repo-level data (`examples/`, `zarf.schema.json`).
+
+Versions are discovered from GitHub Releases, reduced to the newest patch per
+minor, and floored at `MIN_VERSION` (in `hack/build-versions.mjs`). The set is
+written to `versions.json`, which the version switcher reads.
 
 ## 👀 Want to learn more?
 
