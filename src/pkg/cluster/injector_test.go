@@ -109,12 +109,13 @@ func TestInjector(t *testing.T) {
 		_, err = layout.Write(filepath.Join(tmpDir, "seed-images"), idx)
 		require.NoError(t, err)
 
-		_, err = c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
+		selectedImage, _, err := c.StartInjection(ctx, tmpDir, t.TempDir(), nil, "test", "amd64", ZarfInjectorOptions{
 			InjectorNodePort: 0,
 			RegistryNodePort: 31999,
 		})
 
 		require.NoError(t, err)
+		require.Equal(t, "ubuntu:latest", selectedImage)
 
 		podList, err := cs.CoreV1().Pods(state.ZarfNamespaceName).List(ctx, metav1.ListOptions{})
 		require.NoError(t, err)
@@ -338,6 +339,94 @@ func TestGetInjectorImageAndNode(t *testing.T) {
 
 		_, _, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
 		require.Error(t, err)
+	})
+
+	t.Run("prefers image from pod without imagePullSecrets", func(t *testing.T) {
+		nodes := []corev1.Node{{
+			ObjectMeta: metav1.ObjectMeta{Name: "good"},
+			Status: corev1.NodeStatus{
+				Allocatable: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("10Gi"),
+				},
+				NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+			},
+		}}
+		pods := []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-with-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:         "good",
+					Containers:       []corev1.Container{{Image: "private-image:latest"}},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-secret"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-without-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "good",
+					Containers: []corev1.Container{{Image: "public-image:latest"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+		}
+		c := setupCluster(t, nodes, pods)
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		require.NoError(t, err)
+		require.Equal(t, "public-image:latest", image)
+		require.Equal(t, "good", node)
+	})
+
+	t.Run("does not use fallback when a later node has a no-creds image", func(t *testing.T) {
+		nodes := []corev1.Node{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "node-creds-only"},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "node-public-image"},
+				Status: corev1.NodeStatus{
+					Allocatable: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("10Gi"),
+					},
+					NodeInfo: corev1.NodeSystemInfo{Architecture: "amd64"},
+				},
+			},
+		}
+		pods := []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-with-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:         "node-creds-only",
+					Containers:       []corev1.Container{{Image: "private-image:latest"}},
+					ImagePullSecrets: []corev1.LocalObjectReference{{Name: "my-secret"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+			{
+				ObjectMeta: metav1.ObjectMeta{Name: "pod-without-creds", Namespace: "default"},
+				Spec: corev1.PodSpec{
+					NodeName:   "node-public-image",
+					Containers: []corev1.Container{{Image: "public-image:latest"}},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			},
+		}
+		c := setupCluster(t, nodes, pods)
+
+		image, node, err := c.getInjectorImageAndNode(ctx, resReq, "amd64")
+		require.NoError(t, err)
+		require.Equal(t, "public-image:latest", image)
+		require.Equal(t, "node-public-image", node)
 	})
 
 	t.Run("allocatable reduced by running pods", func(t *testing.T) {
