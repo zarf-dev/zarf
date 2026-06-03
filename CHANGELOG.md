@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.77.0](https://github.com/zarf-dev/zarf/compare/v0.76.0...v0.77.0) (2026-05-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **signing:** resolve auth flow for CI environments ([#4939](https://github.com/zarf-dev/zarf/issues/4939))
+* allow pulling images by index sha ([#4879](https://github.com/zarf-dev/zarf/issues/4879))
+
+### Features
+
+* allow pulling images by index sha ([#4879](https://github.com/zarf-dev/zarf/issues/4879)) ([945a26d](https://github.com/zarf-dev/zarf/commit/945a26d4082648feb8a4fbbacabdb62cd7b1054c))
+* **find-images:** 4509 include archives in find image ([#4551](https://github.com/zarf-dev/zarf/issues/4551)) ([058754e](https://github.com/zarf-dev/zarf/commit/058754e94194551b911dd030acde464286de2a5a))
+* **init:** prefer injector image without imagePullSecrets ([#4935](https://github.com/zarf-dev/zarf/issues/4935)) ([e46fa25](https://github.com/zarf-dev/zarf/commit/e46fa25da2ecfd655d7a28276261eadb6f1bd1d0))
+* **release:** signed init packages ([#4934](https://github.com/zarf-dev/zarf/issues/4934)) ([158acbc](https://github.com/zarf-dev/zarf/commit/158acbcc858b9bc3be0d39ed5da937a0fd4e34ae))
+* **sign:** support for keyless signing and offline verification ([#4891](https://github.com/zarf-dev/zarf/issues/4891)) ([d0b8665](https://github.com/zarf-dev/zarf/commit/d0b8665fd16c9c90f233cabefd584447bc02fb3f))
+
+
+### Bug Fixes
+
+* **signing:** resolve auth flow for CI environments ([#4939](https://github.com/zarf-dev/zarf/issues/4939)) ([bc60685](https://github.com/zarf-dev/zarf/commit/bc60685469b1fa58f1047b4e791ce9a28689c3a4))
+
 ## [0.76.0](https://github.com/zarf-dev/zarf/compare/v0.75.1...v0.76.0) (2026-05-14)
 
 

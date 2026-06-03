@@ -4,8 +4,6 @@
 // Package v1beta1 holds the definition of the v1beta1 Zarf Package. This API is work in progress and not yet used within Zarf.
 package v1beta1
 
-import "github.com/zarf-dev/zarf/src/api/v1alpha1"
-
 // PackageKind is an enum of the different kinds of Zarf packages.
 type PackageKind string
 
@@ -34,30 +32,21 @@ type Package struct {
 	Values Values `json:"values,omitempty"`
 	// Documentation files included in the package.
 	Documentation map[string]string `json:"documentation,omitempty"`
+
 	// Variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	variables []v1alpha1.InteractiveVariable
+	variables []InteractiveVariable
 	// Constants removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	constants []v1alpha1.Constant
+	constants []Constant
 }
 
 // GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
-func (pkg Package) GetDeprecatedVariables() []v1alpha1.InteractiveVariable {
+func (pkg Package) GetDeprecatedVariables() []InteractiveVariable {
 	return pkg.variables
 }
 
-// SetDeprecatedVariables sets the v1alpha1 variables carried as a backwards-compatibility shim.
-func (pkg *Package) SetDeprecatedVariables(variables []v1alpha1.InteractiveVariable) {
-	pkg.variables = variables
-}
-
 // GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
-func (pkg Package) GetDeprecatedConstants() []v1alpha1.Constant {
+func (pkg Package) GetDeprecatedConstants() []Constant {
 	return pkg.constants
-}
-
-// SetDeprecatedConstants sets the v1alpha1 constants carried as a backwards-compatibility shim.
-func (pkg *Package) SetDeprecatedConstants(constants []v1alpha1.Constant) {
-	pkg.constants = constants
 }
 
 // HasImages returns true if one of the components contains an image.
@@ -96,6 +85,13 @@ type PackageMetadata struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Prevent namespace overrides for this package.
 	PreventNamespaceOverride bool `json:"preventNamespaceOverride,omitempty"`
+	// yolo removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	yolo bool
+}
+
+// GetDeprecatedYOLO returns the v1alpha1 YOLO field carried as a backwards-compatibility shim.
+func (m PackageMetadata) GetDeprecatedYOLO() bool {
+	return m.yolo
 }
 
 // BuildData is written during package create to track details of the created package.
@@ -104,10 +100,10 @@ type BuildData struct {
 	Hostname string `json:"hostname,omitempty"`
 	// The username who created this package.
 	User string `json:"user,omitempty"`
+	// The timestamp when this package was created.
+	Timestamp string `json:"timestamp,omitempty"`
 	// The architecture this package was created on.
 	Architecture string `json:"architecture"`
-	// The timestamp when this package was created.
-	Timestamp string `json:"timestamp"`
 	// The version of Zarf used to build this package.
 	Version string `json:"version"`
 	// Any migrations that have been run on this package.
@@ -127,13 +123,13 @@ type BuildData struct {
 	// ProvenanceFiles lists files present in the package that are not included in checksums.txt. These are files added after checksum generation (e.g., signature files).
 	ProvenanceFiles []string `json:"provenanceFiles,omitempty"`
 	// Checksum of a checksums.txt file that contains checksums all the layers within the package.
-	AggregateChecksum string `json:"aggregateChecksum,omitempty"`
+	AggregateChecksum string `json:"aggregateChecksum"`
 	// originalAPIVersion records the apiVersion the package was read from before any conversion.
 	originalAPIVersion string
 }
 
-// OriginalAPIVersion returns the apiVersion the package was read from before any conversion.
-func (b BuildData) OriginalAPIVersion() string {
+// GetOriginalAPIVersion returns the apiVersion the package was read from before any conversion.
+func (b BuildData) GetOriginalAPIVersion() string {
 	return b.originalAPIVersion
 }
 
