@@ -31,6 +31,7 @@ export default defineConfig({
       // behavior:"wrap", plus SchemaReference.astro — both .heading-link).
       // Disable Starlight's default heading links, else every heading is also
       // wrapped in .sl-heading-wrapper with a duplicate .sl-anchor-link.
+      // TODO: move to native starlight style in the future
       markdown: { headingLinks: false },
       head: [
         {
