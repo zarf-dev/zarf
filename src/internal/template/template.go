@@ -109,9 +109,7 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 
 // WithState adds Zarf runtime state to the template Objects under the "State" key.
 // Non-sensitive fields (addresses, usernames, configuration) are always included.
-// Sensitive fields (passwords, tokens) are only included when allowSensitive is true —
-// accessing them without opt-in causes a template error (missingkey=error).
-// If s is nil, the Objects map is returned unchanged.
+// Sensitive fields (passwords, tokens) are only included when allowSensitive is true
 func (o Objects) WithState(s *state.State, allowSensitive bool) Objects {
 	if s == nil {
 		return o

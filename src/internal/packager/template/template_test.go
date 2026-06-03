@@ -83,32 +83,6 @@ func TestGetSanitizedTemplateMap(t *testing.T) {
 	}
 }
 
-func TestGetZarfTemplatesRegistryUsernames(t *testing.T) {
-	t.Parallel()
-	s := &state.State{
-		RegistryInfo: state.RegistryInfo{
-			Address:      "registry.example.com",
-			Port:         5000,
-			PushUsername: "push-user",
-			PullUsername: "pull-user",
-			PushPassword: "push-secret",
-			PullPassword: "pull-secret",
-		},
-	}
-	templateMap, err := GetZarfTemplates(context.Background(), "my-component", s)
-	require.NoError(t, err)
-
-	pushUser, ok := templateMap["###ZARF_REGISTRY_AUTH_PUSH_USER###"]
-	require.True(t, ok, "expected ###ZARF_REGISTRY_AUTH_PUSH_USER### in template map")
-	require.Equal(t, "push-user", pushUser.Value)
-	require.False(t, pushUser.Sensitive, "registry push username should not be sensitive")
-
-	pullUser, ok := templateMap["###ZARF_REGISTRY_AUTH_PULL_USER###"]
-	require.True(t, ok, "expected ###ZARF_REGISTRY_AUTH_PULL_USER### in template map")
-	require.Equal(t, "pull-user", pullUser.Value)
-	require.False(t, pullUser.Sensitive, "registry pull username should not be sensitive")
-}
-
 func TestGetZarfTemplatesForIPv6SeedRegistry(t *testing.T) {
 	tests := []struct {
 		name                    string

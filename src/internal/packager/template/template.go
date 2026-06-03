@@ -56,13 +56,11 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 			"INJECTOR_SHASUM":             s.InjectorInfo.PayLoadShaSum,
 
 			// Registry info
-			"REGISTRY":                regInfo.Address,
-			"NODEPORT":                fmt.Sprintf("%d", regInfo.Port),
-			"REGISTRY_PORT":           fmt.Sprintf("%d", regInfo.Port),
-			"REGISTRY_AUTH_PUSH_USER": regInfo.PushUsername,
-			"REGISTRY_AUTH_PUSH":      regInfo.PushPassword,
-			"REGISTRY_AUTH_PULL_USER": regInfo.PullUsername,
-			"REGISTRY_AUTH_PULL":      regInfo.PullPassword,
+			"REGISTRY":           regInfo.Address,
+			"NODEPORT":           fmt.Sprintf("%d", regInfo.Port),
+			"REGISTRY_PORT":      fmt.Sprintf("%d", regInfo.Port),
+			"REGISTRY_AUTH_PUSH": regInfo.PushPassword,
+			"REGISTRY_AUTH_PULL": regInfo.PullPassword,
 
 			// Git server info
 			"GIT_PUSH":      gitInfo.PushUsername,
@@ -105,10 +103,6 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 				templateMap[strings.ToUpper(fmt.Sprintf("###ZARF_%s###", key))].Sensitive = true
 			}
 		}
-	}
-
-	if s != nil {
-		logger.From(ctx).Warn("State builtin templates (###ZARF_REGISTRY###, ###ZARF_STORAGE_CLASS###, etc.) are deprecated and will be removed in v1.0.0. Use {{ .State.Registry.Address }} and related fields instead.")
 	}
 
 	debugPrintTemplateMap(ctx, templateMap)
