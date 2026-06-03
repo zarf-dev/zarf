@@ -329,7 +329,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{})
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AllowSensitive: component.SensitiveStateAccess})
 			if err != nil {
 				return nil, err
 			}
