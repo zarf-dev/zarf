@@ -41,8 +41,8 @@ All commands are run from the root of the project, from a terminal:
 ## Serving Multiple Versions
 
 `npm run build:versions` produces a single site where the current checkout is
-**Latest** at the root and each archived release lives under a `/<slug>/` subpath
-(e.g. `/v0-76/`). It is one Astro build, not one per version.
+**Latest** at the root and each versioned release lives under a `/<slug>/` subpath
+(e.g. `/v0-76/`).
 
 For each release tag, `hack/build-versions.mjs` checks out a throwaway git
 worktree and stages that tag's docs content into `src/content/docs/<slug>/`,
@@ -50,24 +50,10 @@ regenerating its examples and schema (`src/assets/schema/<slug>.json`) from the
 tag's `examples/` and `zarf.schema.json`. Archived content therefore renders with
 the **current** toolchain and components, never its own.
 
-Two pieces make a single build serve many versions:
-
-- **Sidebars** — `starlight-sidebar-topics` gives each version its own sidebar
-  (Starlight otherwise has one global sidebar). `src/components/Sidebar.astro`
-  overrides the plugin's sidebar to render only the scoped per-version sidebar,
-  hiding the plugin's topic list. Version switching is the header
-  `VersionSelect` picker (`src/components/VersionSelect.astro`), which keeps you
-  on the same page in the chosen version when it exists.
-- **Links & embeds** — `src/plugins/remark-link-rewrite.ts` runs only on pages
-  under a version slug. It prefixes root-absolute links into known sections
-  (`/commands/…` → `/v0-76/commands/…`) and adds one `../` to relative paths that
-  escape the version subtree (shared assets, repo-root files, `examples/`),
-  compensating for the extra nesting level.
-
 Versions are discovered from GitHub Releases and reduced to the newest patch per
-minor. Only the current major and the one before it are kept — the current major
-shows its last 10 minors and the previous major its latest 3 minors.
-The set is written to `versions.json`, read by `astro.config.ts` to build topics.
+minor. Only the current major and the one before it are kept — the current major shows
+its last 10 minors and the previous major its latest 3 minors.
+The set is written to versions.json, which the version switcher reads.
 
 ## 👀 Want to learn more?
 
