@@ -7,41 +7,46 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 )
 
-// CheckNoRefs returns an error if the schema object contains any "$ref" pointers.
-// "$ref" is not supported because referenced files are not bundled into the assembled
-// package and cannot be resolved after assembly. Flatten the schema into a single
-// self-contained file before use.
-func CheckNoRefs(schema map[string]any) error {
-	return checkNoRefsInObject(schema)
+// CheckNoExternalRefs returns an error if the schema contains any external reference
+// pointers ($ref, $dynamicRef, $recursiveRef). Internal fragment references that start
+// with "#" — such as "#/definitions/Foo" or "#/$defs/Foo" — are allowed because the
+// referenced definition is part of the same document and travels with the schema during
+// merge and assembly. External references (relative file paths, HTTP URIs) are rejected
+// because the referenced files are not bundled into the assembled package.
+func CheckNoExternalRefs(schema map[string]any) error {
+	return checkNoExternalRefsInObject(schema)
 }
 
-var blockedRefKeywords = []string{"$ref", "$dynamicRef", "$recursiveRef"}
+var externalRefKeywords = []string{"$ref", "$dynamicRef", "$recursiveRef"}
 
-func checkNoRefsInObject(node map[string]any) error {
-	for _, kw := range blockedRefKeywords {
-		if _, has := node[kw]; has {
-			return fmt.Errorf("schema contains a %q pointer; flatten the schema into a single self-contained file", kw)
+func checkNoExternalRefsInObject(node map[string]any) error {
+	for _, kw := range externalRefKeywords {
+		if val, has := node[kw]; has {
+			if ref, ok := val.(string); ok && !strings.HasPrefix(ref, "#") {
+				return fmt.Errorf("schema contains an external %q pointer %q; only internal references (\"#/...\") are supported — external files are not bundled into the assembled package", kw, ref)
+			}
 		}
 	}
 	for _, key := range slices.Sorted(maps.Keys(node)) {
-		if err := checkNoRefsInValue(key, node[key]); err != nil {
+		if err := checkNoExternalRefsInValue(key, node[key]); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func checkNoRefsInValue(key string, val any) error {
+func checkNoExternalRefsInValue(key string, val any) error {
 	switch v := val.(type) {
 	case map[string]any:
-		if err := checkNoRefsInObject(v); err != nil {
+		if err := checkNoExternalRefsInObject(v); err != nil {
 			return fmt.Errorf("%s: %w", key, err)
 		}
 	case []any:
 		for i, item := range v {
-			if err := checkNoRefsInValue(fmt.Sprintf("%s[%d]", key, i), item); err != nil {
+			if err := checkNoExternalRefsInValue(fmt.Sprintf("%s[%d]", key, i), item); err != nil {
 				return err
 			}
 		}
@@ -77,15 +82,17 @@ func copyMap(m map[string]any) map[string]any {
 
 // MergeSchemas merges child into parent with parent-wins semantics and returns a new map.
 // Neither parent nor child is modified. Rules:
-//   - "properties": recursively merged; parent wins on same key
+//   - "properties", "definitions", "$defs", "patternProperties", "dependentSchemas":
+//     all are maps of string→schema and are recursively merged; parent wins on same key,
+//     child-only entries are preserved so internal $ref pointers remain valid
 //   - "required": union of both arrays, deduplicated
 //   - all other keys: parent wins (child value used only when key absent from parent)
 func MergeSchemas(parent, child map[string]any) map[string]any {
 	result := copyMap(parent)
 	for key, childVal := range child {
 		switch key {
-		case "properties":
-			result["properties"] = mergeProperties(result["properties"], childVal)
+		case "properties", "definitions", "$defs", "patternProperties", "dependentSchemas":
+			result[key] = mergeProperties(result[key], childVal)
 		case "required":
 			if req := mergeRequired(result["required"], childVal); len(req) > 0 {
 				result["required"] = req

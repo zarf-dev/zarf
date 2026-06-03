@@ -10,43 +10,63 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCheckNoRefs(t *testing.T) {
-	t.Run("no refs passes", func(t *testing.T) {
+func TestCheckNoExternalRefs(t *testing.T) {
+	t.Run("schema with no refs passes", func(t *testing.T) {
 		schema := map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{"type": "string"},
 			},
 		}
-		require.NoError(t, CheckNoRefs(schema))
+		require.NoError(t, CheckNoExternalRefs(schema))
 	})
 
-	t.Run("top-level ref is rejected", func(t *testing.T) {
-		schema := map[string]any{"$ref": "#/definitions/Foo"}
-		err := CheckNoRefs(schema)
+	t.Run("internal fragment ref passes", func(t *testing.T) {
+		schema := map[string]any{
+			"definitions": map[string]any{
+				"Name": map[string]any{"type": "string"},
+			},
+			"properties": map[string]any{
+				"name": map[string]any{"$ref": "#/definitions/Name"},
+			},
+		}
+		require.NoError(t, CheckNoExternalRefs(schema))
+	})
+
+	t.Run("external file ref is rejected", func(t *testing.T) {
+		schema := map[string]any{"$ref": "./defs/name.json"}
+		err := CheckNoExternalRefs(schema)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "$ref")
+		assert.Contains(t, err.Error(), "./defs/name.json")
 	})
 
-	t.Run("nested ref is rejected", func(t *testing.T) {
+	t.Run("nested external ref is rejected", func(t *testing.T) {
 		schema := map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"name": map[string]any{"$ref": "./defs/name.json"},
 			},
 		}
-		err := CheckNoRefs(schema)
+		err := CheckNoExternalRefs(schema)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "$ref")
 	})
 
-	t.Run("ref inside allOf slice is rejected", func(t *testing.T) {
+	t.Run("external ref inside allOf slice is rejected", func(t *testing.T) {
 		schema := map[string]any{
 			"allOf": []any{
-				map[string]any{"$ref": "#/definitions/Base"},
+				map[string]any{"$ref": "./base.json"},
 			},
 		}
-		err := CheckNoRefs(schema)
+		err := CheckNoExternalRefs(schema)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "$ref")
+	})
+
+	t.Run("HTTP URI ref is rejected", func(t *testing.T) {
+		schema := map[string]any{"$ref": "https://example.com/schemas/base.json"}
+		err := CheckNoExternalRefs(schema)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "$ref")
 	})
@@ -171,5 +191,42 @@ func TestMergeSchemas(t *testing.T) {
 		result := MergeSchemas(parent, child)
 		assert.Equal(t, "object", result["type"])
 		assert.Equal(t, false, result["additionalProperties"])
+	})
+
+	t.Run("child-only definitions entry is preserved", func(t *testing.T) {
+		parent := map[string]any{"definitions": map[string]any{}}
+		child := map[string]any{
+			"definitions": map[string]any{"Name": map[string]any{"type": "string"}},
+		}
+		result := MergeSchemas(parent, child)
+		defs, ok := result["definitions"].(map[string]any)
+		require.True(t, ok, "definitions should be a map")
+		assert.Contains(t, defs, "Name", "child-only definition should survive parent override with empty map")
+	})
+
+	t.Run("parent wins on same definition key", func(t *testing.T) {
+		parent := map[string]any{
+			"definitions": map[string]any{"Name": map[string]any{"type": "integer"}},
+		}
+		child := map[string]any{
+			"definitions": map[string]any{"Name": map[string]any{"type": "string"}},
+		}
+		result := MergeSchemas(parent, child)
+		defs, ok := result["definitions"].(map[string]any)
+		require.True(t, ok)
+		name, ok := defs["Name"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "integer", name["type"], "parent definition should win on same key")
+	})
+
+	t.Run("$defs is merged the same way as definitions", func(t *testing.T) {
+		parent := map[string]any{"$defs": map[string]any{}}
+		child := map[string]any{
+			"$defs": map[string]any{"ID": map[string]any{"type": "string"}},
+		}
+		result := MergeSchemas(parent, child)
+		defs, ok := result["$defs"].(map[string]any)
+		require.True(t, ok, "$defs should be a map")
+		assert.Contains(t, defs, "ID")
 	})
 }

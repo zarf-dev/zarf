@@ -1042,9 +1042,9 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		return nil
 	}
 
-	// loadSchema reads a schema file, rejects any "$ref" pointers before handing the
-	// document to gojsonschema, then validates the schema structure. CheckNoRefs runs
-	// first so that gojsonschema never attempts to resolve external URIs.
+	// loadSchema reads a schema file, rejects any external "$ref" pointers before handing
+	// the document to gojsonschema, then validates the schema structure. CheckNoExternalRefs
+	// runs first so that gojsonschema never attempts to resolve external URIs.
 	loadSchema := func(relPath, label string) (map[string]any, error) {
 		src := relPath
 		if !filepath.IsAbs(src) {
@@ -1058,7 +1058,7 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if err := json.Unmarshal(b, &s); err != nil {
 			return nil, fmt.Errorf("parsing %s schema: %w", label, err)
 		}
-		if err := value.CheckNoRefs(s); err != nil {
+		if err := value.CheckNoExternalRefs(s); err != nil {
 			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)
 		}
 		if err := value.ValidateSchemaDocument(s); err != nil {
@@ -1093,10 +1093,13 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if err != nil {
 			return err
 		}
+		if schemaVersion(child) == "" {
+			return fmt.Errorf("imported schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", schemaRelPath)
+		}
 		if merged == nil {
 			merged = child
 		} else {
-			if err := checkCompatibleDialect(merged, child, schemaRelPath); err != nil {
+			if err := checkCompatibleVersion(merged, child, schemaRelPath); err != nil {
 				return err
 			}
 			merged = value.MergeSchemas(merged, child)
@@ -1109,10 +1112,17 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if err != nil {
 			return err
 		}
-		if err := checkCompatibleDialect(parent, merged, "imported schemas"); err != nil {
+		if schemaVersion(parent) == "" {
+			return fmt.Errorf("parent schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", parentSchema)
+		}
+		if err := checkCompatibleVersion(parent, merged, "imported schemas"); err != nil {
 			return err
 		}
 		merged = value.MergeSchemas(parent, merged)
+	}
+
+	if err := value.ValidateSchemaDocument(merged); err != nil {
+		return fmt.Errorf("merged values schema is invalid: %w", err)
 	}
 
 	dst := filepath.Join(buildPath, ValuesSchema)
@@ -1127,20 +1137,21 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 	return nil
 }
 
-// schemaDialect extracts the "$schema" dialect URI from a schema map, returning "" if absent or not a string
-func schemaDialect(s map[string]any) string {
+// schemaVersion extracts the "$schema" version URI from a schema map, returning "" if absent or not a string.
+func schemaVersion(s map[string]any) string {
 	if v, ok := s["$schema"].(string); ok {
 		return v
 	}
 	return ""
 }
 
-// checkCompatibleDialect errors when both schemas explicitly declare a "$schema" dialect that differ
-func checkCompatibleDialect(accumulated, incoming map[string]any, incomingLabel string) error {
-	a := schemaDialect(accumulated)
-	b := schemaDialect(incoming)
-	if a != "" && b != "" && a != b {
-		return fmt.Errorf("cannot merge schemas with different dialects: accumulated schema uses %q but %s declares %q", a, incomingLabel, b)
+// checkCompatibleVersion errors when the accumulated merged schema and an incoming schema declare
+// different "$schema" versions, preventing silent cross-version merge bugs.
+func checkCompatibleVersion(accumulated, incoming map[string]any, incomingLabel string) error {
+	a := schemaVersion(accumulated)
+	b := schemaVersion(incoming)
+	if a != b {
+		return fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", a, incomingLabel, b)
 	}
 	return nil
 }
