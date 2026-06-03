@@ -7,7 +7,6 @@ package v1beta1
 import (
 	"strings"
 
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
@@ -15,7 +14,7 @@ import (
 // ConvertToGeneric converts a v1beta1 Package to the internal generic representation.
 func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
-	originalAPIVersion := pkg.Build.OriginalAPIVersion()
+	originalAPIVersion := pkg.Build.GetOriginalAPIVersion()
 	if originalAPIVersion == "" {
 		originalAPIVersion = pkg.APIVersion
 	}
@@ -52,8 +51,8 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
-		Variables:     pkg.GetDeprecatedVariables(),
-		Constants:     pkg.GetDeprecatedConstants(),
+		Variables:     deprecatedVarsToGeneric(pkg.GetDeprecatedVariables()),
+		Constants:     deprecatedConstantsToGeneric(pkg.GetDeprecatedConstants()),
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -84,7 +83,7 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 		},
 		Import:         importToGeneric(c.Import),
 		Actions:        actionsToGeneric(c.Actions),
-		DataInjections: c.GetDeprecatedDataInjections(),
+		DataInjections: deprecatedDataInjectionsToGeneric(c.GetDeprecatedDataInjections()),
 	}
 
 	for _, m := range c.Manifests {
@@ -164,7 +163,7 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
 		Version:              ch.GetDeprecatedVersion(),
-		Variables:            ch.GetDeprecatedVariables(),
+		Variables:            deprecatedChartVarsToGeneric(ch.GetDeprecatedVariables()),
 	}
 
 	if ch.HelmRepository != nil {
@@ -247,14 +246,13 @@ func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 		Description:     a.Description,
 		Wait:            waitToGeneric(a.Wait),
 		EnableValues:    a.EnableValues,
-		SetVariables:    a.GetDeprecatedSetVariables(),
+		SetVariables:    deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()),
 	}
 
 	for _, sv := range a.SetValues {
 		ga.SetValues = append(ga.SetValues, types.SetValue{
-			Key:   sv.Key,
-			Value: sv.Value,
-			Type:  string(sv.Type),
+			Key:  sv.Key,
+			Type: string(sv.Type),
 		})
 	}
 
@@ -311,9 +309,6 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 	if string(pkg.Kind) == "ZarfInitConfig" {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
-
-	pkg.SetDeprecatedVariables(g.Variables)
-	pkg.SetDeprecatedConstants(g.Constants)
 
 	for _, c := range g.Components {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c))
@@ -462,8 +457,6 @@ func componentFromGeneric(c types.Component) v1beta1.Component {
 		})
 	}
 
-	bc.SetDeprecatedDataInjections(c.DataInjections)
-
 	return bc
 }
 
@@ -590,11 +583,6 @@ func chartFromGeneric(ch types.Chart) v1beta1.Chart {
 		bc.SkipSchemaValidation = true
 	}
 
-	if ch.Version != "" {
-		bc.SetDeprecatedVersion(ch.Version)
-	}
-	bc.SetDeprecatedVariables(ch.Variables)
-
 	return bc
 }
 
@@ -660,9 +648,8 @@ func actionFromGeneric(a types.ComponentAction) v1beta1.ComponentAction {
 
 	for _, sv := range a.SetValues {
 		ba.SetValues = append(ba.SetValues, v1beta1.SetValue{
-			Key:   sv.Key,
-			Value: sv.Value,
-			Type:  v1beta1.SetValueType(sv.Type),
+			Key:  sv.Key,
+			Type: v1beta1.SetValueType(sv.Type),
 		})
 	}
 
@@ -672,14 +659,6 @@ func actionFromGeneric(a types.ComponentAction) v1beta1.ComponentAction {
 			Linux:   a.Shell.Linux,
 			Darwin:  a.Shell.Darwin,
 		}
-	}
-
-	setVariables := append([]v1alpha1.Variable(nil), a.SetVariables...)
-	if a.DeprecatedSetVariable != "" {
-		setVariables = append(setVariables, v1alpha1.Variable{Name: a.DeprecatedSetVariable})
-	}
-	if len(setVariables) > 0 {
-		ba.SetDeprecatedSetVariables(setVariables)
 	}
 
 	return ba
@@ -724,4 +703,74 @@ func isGitURL(url string) bool {
 		url = url[:idx]
 	}
 	return strings.HasSuffix(url, ".git")
+}
+
+func deprecatedVarToGeneric(v v1beta1.Variable) types.Variable {
+	return types.Variable{
+		Name:       v.Name,
+		Sensitive:  v.Sensitive,
+		AutoIndent: v.AutoIndent,
+		Pattern:    v.Pattern,
+		Type:       types.VariableType(v.Type),
+	}
+}
+
+func deprecatedVarsToGeneric(in []v1beta1.InteractiveVariable) []types.InteractiveVariable {
+	var out []types.InteractiveVariable
+	for _, v := range in {
+		out = append(out, types.InteractiveVariable{
+			Variable:    deprecatedVarToGeneric(v.Variable),
+			Description: v.Description,
+			Default:     v.Default,
+			Prompt:      v.Prompt,
+		})
+	}
+	return out
+}
+
+func deprecatedConstantsToGeneric(in []v1beta1.Constant) []types.Constant {
+	var out []types.Constant
+	for _, c := range in {
+		out = append(out, types.Constant{
+			Name:        c.Name,
+			Value:       c.Value,
+			Description: c.Description,
+			AutoIndent:  c.AutoIndent,
+			Pattern:     c.Pattern,
+		})
+	}
+	return out
+}
+
+func deprecatedChartVarsToGeneric(in []v1beta1.ZarfChartVariable) []types.ZarfChartVariable {
+	var out []types.ZarfChartVariable
+	for _, v := range in {
+		out = append(out, types.ZarfChartVariable{Name: v.Name, Description: v.Description, Path: v.Path})
+	}
+	return out
+}
+
+func deprecatedSetVarsToGeneric(in []v1beta1.Variable) []types.Variable {
+	var out []types.Variable
+	for _, v := range in {
+		out = append(out, deprecatedVarToGeneric(v))
+	}
+	return out
+}
+
+func deprecatedDataInjectionsToGeneric(in []v1beta1.ZarfDataInjection) []types.ZarfDataInjection {
+	var out []types.ZarfDataInjection
+	for _, d := range in {
+		out = append(out, types.ZarfDataInjection{
+			Source: d.Source,
+			Target: types.ZarfContainerTarget{
+				Namespace: d.Target.Namespace,
+				Selector:  d.Target.Selector,
+				Container: d.Target.Container,
+				Path:      d.Target.Path,
+			},
+			Compress: d.Compress,
+		})
+	}
+	return out
 }

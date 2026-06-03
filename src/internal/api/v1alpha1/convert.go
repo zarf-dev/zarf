@@ -59,8 +59,8 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
-		Variables:     append([]v1alpha1.InteractiveVariable(nil), pkg.Variables...),
-		Constants:     append([]v1alpha1.Constant(nil), pkg.Constants...),
+		Variables:     interactiveVarsToGeneric(pkg.Variables),
+		Constants:     constantsToGeneric(pkg.Constants),
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -84,8 +84,8 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 		Default:        c.Default,
 		Required:       c.Required,
 		Group:          c.DeprecatedGroup,
-		DataInjections: c.DataInjections,
-		HealthChecks:   c.HealthChecks,
+		DataInjections: dataInjectionsToGeneric(c.DataInjections),
+		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
 		Repositories:   c.Repos,
 		Target: types.ComponentTarget{
 			OS:           c.Only.LocalOS,
@@ -170,7 +170,7 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		LocalPath:            ch.LocalPath,
 		Version:              ch.Version,
 		SchemaValidation:     ch.SchemaValidation,
-		Variables:            ch.Variables,
+		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
 	}
 	return gc
@@ -237,7 +237,7 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
 		EnableValues:          derefBool(a.Template),
-		SetVariables:          a.SetVariables,
+		SetVariables:          varsToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
 
@@ -301,8 +301,8 @@ func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 		Build:         buildFromGeneric(g.Build),
 		Values:        v1alpha1.ZarfValues{Files: g.Values.Files, Schema: g.Values.Schema},
 		Documentation: g.Documentation,
-		Variables:     append([]v1alpha1.InteractiveVariable(nil), g.Variables...),
-		Constants:     append([]v1alpha1.Constant(nil), g.Constants...),
+		Variables:     interactiveVarsFromGeneric(g.Variables),
+		Constants:     constantsFromGeneric(g.Constants),
 	}
 
 	if pkg.Kind == "" {
@@ -412,8 +412,8 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 		Default:         c.Default,
 		Required:        requiredFromGeneric(c.Optional, c.Required),
 		DeprecatedGroup: c.Group,
-		DataInjections:  c.DataInjections,
-		HealthChecks:    c.HealthChecks,
+		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
+		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
 		Repos:           c.Repositories,
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
@@ -521,7 +521,7 @@ func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 		GitPath:         ch.GitPath,
 		LocalPath:       ch.LocalPath,
 		Version:         ch.Version,
-		Variables:       ch.Variables,
+		Variables:       chartVarsFromGeneric(ch.Variables),
 	}
 
 	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
@@ -617,7 +617,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitFromGeneric(a.Wait),
-		SetVariables:          a.SetVariables,
+		SetVariables:          varsFromGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
 
@@ -681,4 +681,170 @@ func derefBool(p *bool) bool {
 		return false
 	}
 	return *p
+}
+
+func variableToGeneric(v v1alpha1.Variable) types.Variable {
+	return types.Variable{
+		Name:       v.Name,
+		Sensitive:  v.Sensitive,
+		AutoIndent: v.AutoIndent,
+		Pattern:    v.Pattern,
+		Type:       types.VariableType(v.Type),
+	}
+}
+
+func variableFromGeneric(v types.Variable) v1alpha1.Variable {
+	return v1alpha1.Variable{
+		Name:       v.Name,
+		Sensitive:  v.Sensitive,
+		AutoIndent: v.AutoIndent,
+		Pattern:    v.Pattern,
+		Type:       v1alpha1.VariableType(v.Type),
+	}
+}
+
+func varsToGeneric(in []v1alpha1.Variable) []types.Variable {
+	var out []types.Variable
+	for _, v := range in {
+		out = append(out, variableToGeneric(v))
+	}
+	return out
+}
+
+func varsFromGeneric(in []types.Variable) []v1alpha1.Variable {
+	var out []v1alpha1.Variable
+	for _, v := range in {
+		out = append(out, variableFromGeneric(v))
+	}
+	return out
+}
+
+func interactiveVarsToGeneric(in []v1alpha1.InteractiveVariable) []types.InteractiveVariable {
+	var out []types.InteractiveVariable
+	for _, v := range in {
+		out = append(out, types.InteractiveVariable{
+			Variable:    variableToGeneric(v.Variable),
+			Description: v.Description,
+			Default:     v.Default,
+			Prompt:      v.Prompt,
+		})
+	}
+	return out
+}
+
+func interactiveVarsFromGeneric(in []types.InteractiveVariable) []v1alpha1.InteractiveVariable {
+	var out []v1alpha1.InteractiveVariable
+	for _, v := range in {
+		out = append(out, v1alpha1.InteractiveVariable{
+			Variable:    variableFromGeneric(v.Variable),
+			Description: v.Description,
+			Default:     v.Default,
+			Prompt:      v.Prompt,
+		})
+	}
+	return out
+}
+
+func constantsToGeneric(in []v1alpha1.Constant) []types.Constant {
+	var out []types.Constant
+	for _, c := range in {
+		out = append(out, types.Constant{
+			Name:        c.Name,
+			Value:       c.Value,
+			Description: c.Description,
+			AutoIndent:  c.AutoIndent,
+			Pattern:     c.Pattern,
+		})
+	}
+	return out
+}
+
+func constantsFromGeneric(in []types.Constant) []v1alpha1.Constant {
+	var out []v1alpha1.Constant
+	for _, c := range in {
+		out = append(out, v1alpha1.Constant{
+			Name:        c.Name,
+			Value:       c.Value,
+			Description: c.Description,
+			AutoIndent:  c.AutoIndent,
+			Pattern:     c.Pattern,
+		})
+	}
+	return out
+}
+
+func chartVarsToGeneric(in []v1alpha1.ZarfChartVariable) []types.ZarfChartVariable {
+	var out []types.ZarfChartVariable
+	for _, v := range in {
+		out = append(out, types.ZarfChartVariable{Name: v.Name, Description: v.Description, Path: v.Path})
+	}
+	return out
+}
+
+func chartVarsFromGeneric(in []types.ZarfChartVariable) []v1alpha1.ZarfChartVariable {
+	var out []v1alpha1.ZarfChartVariable
+	for _, v := range in {
+		out = append(out, v1alpha1.ZarfChartVariable{Name: v.Name, Description: v.Description, Path: v.Path})
+	}
+	return out
+}
+
+func dataInjectionsToGeneric(in []v1alpha1.ZarfDataInjection) []types.ZarfDataInjection {
+	var out []types.ZarfDataInjection
+	for _, d := range in {
+		out = append(out, types.ZarfDataInjection{
+			Source: d.Source,
+			Target: types.ZarfContainerTarget{
+				Namespace: d.Target.Namespace,
+				Selector:  d.Target.Selector,
+				Container: d.Target.Container,
+				Path:      d.Target.Path,
+			},
+			Compress: d.Compress,
+		})
+	}
+	return out
+}
+
+func dataInjectionsFromGeneric(in []types.ZarfDataInjection) []v1alpha1.ZarfDataInjection {
+	var out []v1alpha1.ZarfDataInjection
+	for _, d := range in {
+		out = append(out, v1alpha1.ZarfDataInjection{
+			Source: d.Source,
+			Target: v1alpha1.ZarfContainerTarget{
+				Namespace: d.Target.Namespace,
+				Selector:  d.Target.Selector,
+				Container: d.Target.Container,
+				Path:      d.Target.Path,
+			},
+			Compress: d.Compress,
+		})
+	}
+	return out
+}
+
+func healthChecksToGeneric(in []v1alpha1.NamespacedObjectKindReference) []types.NamespacedObjectKindReference {
+	var out []types.NamespacedObjectKindReference
+	for _, h := range in {
+		out = append(out, types.NamespacedObjectKindReference{
+			APIVersion: h.APIVersion,
+			Kind:       h.Kind,
+			Namespace:  h.Namespace,
+			Name:       h.Name,
+		})
+	}
+	return out
+}
+
+func healthChecksFromGeneric(in []types.NamespacedObjectKindReference) []v1alpha1.NamespacedObjectKindReference {
+	var out []v1alpha1.NamespacedObjectKindReference
+	for _, h := range in {
+		out = append(out, v1alpha1.NamespacedObjectKindReference{
+			APIVersion: h.APIVersion,
+			Kind:       h.Kind,
+			Namespace:  h.Namespace,
+			Name:       h.Name,
+		})
+	}
+	return out
 }

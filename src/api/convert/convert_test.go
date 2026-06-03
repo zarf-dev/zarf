@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
 
 func TestV1Alpha1PkgToV1Beta1_Metadata(t *testing.T) {
@@ -143,7 +144,7 @@ func TestV1Alpha1PkgToV1Beta1_VariablesAndConstantsShim(t *testing.T) {
 	require.True(t, vars[0].Sensitive)
 	require.True(t, vars[0].AutoIndent)
 	require.Equal(t, "^[a-z]+$", vars[0].Pattern)
-	require.Equal(t, v1alpha1.FileVariableType, vars[0].Type)
+	require.Equal(t, v1beta1.FileVariableType, vars[0].Type)
 	require.Equal(t, "A variable", vars[0].Description)
 	require.Equal(t, "default-val", vars[0].Default)
 	require.True(t, vars[0].Prompt)
@@ -154,6 +155,29 @@ func TestV1Alpha1PkgToV1Beta1_VariablesAndConstantsShim(t *testing.T) {
 	require.Equal(t, "const-val", consts[0].Value)
 	require.Equal(t, "A constant", consts[0].Description)
 	require.True(t, consts[0].AutoIndent)
+}
+
+func TestV1Alpha1PkgToV1Beta1_YOLOAndGroupShim(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Metadata: v1alpha1.ZarfMetadata{
+			Name: "yolo-pkg",
+			YOLO: true,
+		},
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name:            "comp",
+				DeprecatedGroup: "my-group",
+			},
+		},
+	}
+
+	result := V1Alpha1PkgToV1Beta1(pkg)
+
+	require.True(t, result.Metadata.GetDeprecatedYOLO())
+	require.Len(t, result.Components, 1)
+	require.Equal(t, "my-group", result.Components[0].GetDeprecatedGroup())
 }
 
 func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
@@ -592,7 +616,7 @@ func TestV1Alpha1PkgToV1Beta1_OriginalAPIVersion(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	require.Equal(t, v1alpha1.APIVersion, result.Build.OriginalAPIVersion())
+	require.Equal(t, v1alpha1.APIVersion, result.Build.GetOriginalAPIVersion())
 }
 
 // --- v1beta1 → v1alpha1 tests ---
@@ -963,26 +987,25 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 
 func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 	t.Parallel()
-	pkg := v1beta1.Package{
-		Kind: v1beta1.ZarfPackageConfig,
-	}
-	pkg.SetDeprecatedVariables([]v1alpha1.InteractiveVariable{
-		{
-			Variable: v1alpha1.Variable{
-				Name:       "MY_VAR",
-				Sensitive:  true,
-				AutoIndent: true,
-				Pattern:    "^[a-z]+$",
-				Type:       v1alpha1.FileVariableType,
+	pkg := v1beta1.SetDeprecatedFromGeneric(types.Package{
+		Variables: []types.InteractiveVariable{
+			{
+				Variable: types.Variable{
+					Name:       "MY_VAR",
+					Sensitive:  true,
+					AutoIndent: true,
+					Pattern:    "^[a-z]+$",
+					Type:       types.FileVariableType,
+				},
+				Description: "A variable",
+				Default:     "default-val",
+				Prompt:      true,
 			},
-			Description: "A variable",
-			Default:     "default-val",
-			Prompt:      true,
 		},
-	})
-	pkg.SetDeprecatedConstants([]v1alpha1.Constant{
-		{Name: "MY_CONST", Value: "const-val"},
-	})
+		Constants: []types.Constant{
+			{Name: "MY_CONST", Value: "const-val"},
+		},
+	}, v1beta1.Package{Kind: v1beta1.ZarfPackageConfig})
 
 	result := V1Beta1PkgToV1Alpha1(pkg)
 
@@ -1020,7 +1043,7 @@ func TestOriginalAPIVersion_SurvivesRoundTrip(t *testing.T) {
 	}
 
 	beta := V1Alpha1PkgToV1Beta1(pkg)
-	require.Equal(t, v1alpha1.APIVersion, beta.Build.OriginalAPIVersion())
+	require.Equal(t, v1alpha1.APIVersion, beta.Build.GetOriginalAPIVersion())
 
 	// Converting back must preserve the true original, not report v1beta1.
 	result := V1Beta1PkgToV1Alpha1(beta)
