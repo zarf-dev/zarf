@@ -56,3 +56,23 @@ components:
         template: true
         files:
           - processed-template-configmap.yaml
+
+  - name: test-state-public
+    required: true
+    manifests:
+      - name: test-state-configmap
+        template: true
+        files:
+          - state-configmap.yaml
+
+  - name: test-state-sensitive
+    required: true
+    sensitiveStateAccess: true
+    actions:
+      onDeploy:
+        before:
+          # Verifies the sensitive field resolves to a non-empty value without
+          # writing the credential to any cluster resource. test -n exits non-zero
+          # if the string is empty, failing the action.
+          - cmd: "test -n \"{{ .State.Registry.PushPassword }}\""
+            template: true

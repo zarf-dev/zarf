@@ -63,6 +63,16 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get processed template configmap")
 	require.Contains(t, kubectlOut, "processed=myValue")
 
+	// Verify public state fields were templated into the configmap (no sensitiveStateAccess needed)
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-state-configmap", "-o", "jsonpath='{.data.registryAddress}'")
+	require.NoError(t, err, "unable to get state configmap")
+	require.NotContains(t, kubectlOut, "{{", "registryAddress should have been templated")
+	require.NotEmpty(t, kubectlOut, "registryAddress should be non-empty")
+
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-state-configmap", "-o", "jsonpath='{.data.storageClass}'")
+	require.NoError(t, err, "unable to get state configmap")
+	require.NotContains(t, kubectlOut, "{{", "storageClass should have been templated")
+
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "override-values.yaml")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
@@ -129,5 +139,24 @@ func TestValuesSchema(t *testing.T) {
 		require.Error(t, err, "expected error for invalid override values at deploy time")
 		// Check that the error message mentions validation failure
 		require.Contains(t, stdErr, "values validation failed", "error should mention schema validation failure")
+	})
+}
+
+func TestStateTemplates(t *testing.T) {
+	t.Log("E2E: State template access controls")
+
+	t.Run("sensitive fields are blocked without sensitiveStateAccess", func(t *testing.T) {
+		src := filepath.Join("src", "test", "packages", "42-values", "state-blocked")
+		tmpdir := t.TempDir()
+
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm")
+		require.NoError(t, err, stdOut, stdErr)
+
+		packageName := fmt.Sprintf("zarf-package-test-state-blocked-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
+
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+		require.Error(t, err, "deploy should fail when accessing sensitive state without sensitiveStateAccess")
+		require.Contains(t, stdErr, "PushPassword", "error should identify the inaccessible field")
 	})
 }
