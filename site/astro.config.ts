@@ -112,6 +112,7 @@ export default defineConfig({
       ],
       components: {
         SkipLink: "./src/components/SkipLink.astro",
+        ThemeSelect: "./src/components/ThemeSelect.astro",
         Sidebar: "./src/components/Sidebar.astro",
       },
       social: [

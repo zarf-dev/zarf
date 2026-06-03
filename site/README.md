@@ -53,9 +53,11 @@ the **current** toolchain and components, never its own.
 Two pieces make a single build serve many versions:
 
 - **Sidebars** — `starlight-sidebar-topics` gives each version its own sidebar
-  (Starlight otherwise has one global sidebar). The topic dropdown in the sidebar
-  doubles as the version switcher. See `astro.config.ts` and
-  `src/components/Sidebar.astro`.
+  (Starlight otherwise has one global sidebar). `src/components/Sidebar.astro`
+  overrides the plugin's sidebar to render only the scoped per-version sidebar,
+  hiding the plugin's topic list. Version switching is the header
+  `VersionSelect` picker (`src/components/VersionSelect.astro`), which keeps you
+  on the same page in the chosen version when it exists.
 - **Links & embeds** — `src/plugins/remark-link-rewrite.ts` runs only on pages
   under a version slug. It prefixes root-absolute links into known sections
   (`/commands/…` → `/v0-76/commands/…`) and adds one `../` to relative paths that
