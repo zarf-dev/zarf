@@ -107,10 +107,22 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 	return o
 }
 
+// StateAccess bundles the runtime state with its access permissions for template rendering.
+// A zero value (nil State) is safe and causes WithState to be a no-op.
+type StateAccess struct {
+	// State is the Zarf runtime state loaded from the cluster.
+	State *state.State
+	// AllowSensitive controls whether credential fields (passwords, tokens) are included
+	// in the .State template object. Without this, accessing them causes a template error.
+	AllowSensitive bool
+}
+
 // WithState adds Zarf runtime state to the template Objects under the "State" key.
 // Non-sensitive fields (addresses, usernames, configuration) are always included.
-// Sensitive fields (passwords, tokens) are only included when allowSensitive is true
-func (o Objects) WithState(s *state.State, allowSensitive bool) Objects {
+// Sensitive fields (passwords, tokens) are only included when access.AllowSensitive is true.
+// If access.State is nil, the Objects map is returned unchanged.
+func (o Objects) WithState(access StateAccess) Objects {
+	s := access.State
 	if s == nil {
 		return o
 	}
@@ -134,7 +146,7 @@ func (o Objects) WithState(s *state.State, allowSensitive bool) Objects {
 		"PushUsername": s.ArtifactServer.PushUsername,
 	}
 
-	if allowSensitive {
+	if access.AllowSensitive {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
 		registry["PullPassword"] = s.RegistryInfo.PullPassword
 		registry["Secret"] = s.RegistryInfo.Secret

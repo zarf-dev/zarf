@@ -180,7 +180,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 							WithBuild(pkgLayout.Pkg.Build).
 							WithVariables(variableConfig.GetSetVariableMap()).
 							WithConstants(variableConfig.GetConstants()).
-							WithState(s, component.SensitiveStateAccess)
+							WithState(tmpl.StateAccess{State: s, AllowSensitive: component.SensitiveStateAccess})
 						if err := tmpl.ApplyToFile(ctx, path, path, objs); err != nil {
 							return nil, fmt.Errorf("error applying Go templates to manifest: %w", err)
 						}
@@ -321,7 +321,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, s, component.SensitiveStateAccess)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, tmpl.StateAccess{State: s, AllowSensitive: component.SensitiveStateAccess})
 			if err != nil {
 				return nil, err
 			}
@@ -332,7 +332,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, s *state.State, allowSensitive bool) (_ []Resource, err error) {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, stateAccess tmpl.StateAccess) (_ []Resource, err error) {
 	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 			objs := tmpl.NewObjects(vals).
 				WithPackage(pkg).
 				WithVariables(variableConfig.GetSetVariableMap()).
-				WithState(s, allowSensitive)
+				WithState(stateAccess)
 
 			// Create a temp file for the output
 			tmpDir, err := os.MkdirTemp("", "zarf-inspect-*")

@@ -274,7 +274,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		onDeploy := component.Actions.OnDeploy
 
 		onFailure := func() {
-			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc, d.vals, d.s, component.SensitiveStateAccess); err != nil {
+			if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnFailure, d.vc, d.vals, template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess}); err != nil {
 				l.Debug("unable to run component failure action", "error", err.Error())
 			}
 		}
@@ -311,7 +311,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 			}
 		}
 
-		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc, d.vals, d.s, component.SensitiveStateAccess); err != nil {
+		if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.OnSuccess, d.vc, d.vals, template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess}); err != nil {
 			onFailure()
 			return nil, fmt.Errorf("unable to run component success action: %w", err)
 		}
@@ -464,12 +464,12 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	d.vc.SetApplicationTemplates(applicationTemplates)
 
 	// Populate objects available to templates in before actions
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc, d.vals, d.s, component.SensitiveStateAccess); err != nil {
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.Before, d.vc, d.vals, template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess}); err != nil {
 		return nil, fmt.Errorf("unable to run component before action: %w", err)
 	}
 
 	if hasFiles {
-		if err := processComponentFiles(ctx, pkgLayout, component, d.vc, d.vals, d.s); err != nil {
+		if err := processComponentFiles(ctx, pkgLayout, component, d.vc, d.vals, template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess}); err != nil {
 			return nil, fmt.Errorf("unable to process the component files: %w", err)
 		}
 	}
@@ -539,7 +539,7 @@ func (d *deployer) deployComponent(ctx context.Context, pkgLayout *layout.Packag
 	}
 
 	// Populate objects available to templates in after actions
-	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc, d.vals, d.s, component.SensitiveStateAccess); err != nil {
+	if err := actions.Run(ctx, cwd, onDeploy.Defaults, onDeploy.After, d.vc, d.vals, template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess}); err != nil {
 		return charts, fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -665,7 +665,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 					WithBuild(pkgLayout.Pkg.Build).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants()).
-					WithState(d.s, component.SensitiveStateAccess)
+					WithState(template.StateAccess{State: d.s, AllowSensitive: component.SensitiveStateAccess})
 				if err := template.ApplyToFile(ctx, path, path, objs); err != nil {
 					return nil, err
 				}
@@ -802,7 +802,7 @@ func verifyClusterCompatibility(ctx context.Context, c *cluster.Cluster, pkgLayo
 	return nil
 }
 
-func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values, s *state.State) (err error) {
+func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, variableConfig *variables.VariableConfig, values value.Values, stateAccess template.StateAccess) (err error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Info("copying files", "count", len(component.Files))
@@ -876,7 +876,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 					WithBuild(pkgLayout.Pkg.Build).
 					WithVariables(variableConfig.GetSetVariableMap()).
 					WithConstants(variableConfig.GetConstants()).
-					WithState(s, component.SensitiveStateAccess)
+					WithState(stateAccess)
 				err = template.ApplyToFile(ctx, subFile, subFile, objs)
 				if err != nil {
 					return err

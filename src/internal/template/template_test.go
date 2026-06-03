@@ -1195,7 +1195,7 @@ func testState() *state.State {
 func TestWithState_NilState(t *testing.T) {
 	t.Parallel()
 	objs := NewObjects(value.Values{})
-	result := objs.WithState(nil, false)
+	result := objs.WithState(StateAccess{})
 	require.NotContains(t, result, objectKeyState)
 }
 
@@ -1203,7 +1203,7 @@ func TestWithState_NonSensitiveFields(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	s := testState()
-	objs := NewObjects(value.Values{}).WithState(s, false)
+	objs := NewObjects(value.Values{}).WithState(StateAccess{State: s})
 
 	require.Contains(t, objs, objectKeyState)
 
@@ -1232,7 +1232,7 @@ func TestWithState_SensitiveFieldsBlockedWithoutOptIn(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	s := testState()
-	objs := NewObjects(value.Values{}).WithState(s, false)
+	objs := NewObjects(value.Values{}).WithState(StateAccess{State: s})
 
 	// Sensitive fields must not be accessible — missingkey=error causes a template failure
 	for _, tmpl := range []string{
@@ -1252,7 +1252,7 @@ func TestWithState_SensitiveFieldsAvailableWithOptIn(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	s := testState()
-	objs := NewObjects(value.Values{}).WithState(s, true)
+	objs := NewObjects(value.Values{}).WithState(StateAccess{State: s, AllowSensitive: true})
 
 	for tmpl, expected := range map[string]string{
 		`{{ .State.Registry.PushPassword }}`: s.RegistryInfo.PushPassword,
