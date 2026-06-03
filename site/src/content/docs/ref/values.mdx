@@ -155,3 +155,45 @@ In addition to user supplied Variables, and Constants, Zarf maintains a list of 
 Because files can be deployed without a Kubernetes cluster, some built-in values such as `###ZARF_REGISTRY###` may not be available if no previous component has required access to the cluster. If you need one of these built-in values, a prior component will need to have been called that requires access to the cluster, such as `images`, `repos`, `charts`, `manifests`, or `dataInjections`.
 
 :::
+
+### Cluster State (`.State`)
+
+The `.State` object exposes Zarf cluster state in **manifests**, **files**, and **action `cmd` fields** that have `template: true` set.
+
+**Non-sensitive fields** are always available with no additional declaration:
+
+| Field | Description |
+|---|---|
+| `.State.StorageClass` | Default storage class (cf. `###ZARF_STORAGE_CLASS###`) |
+| `.State.IPFamily` | `"ipv4"`, `"ipv6"`, or `"dual"` (cf. `###ZARF_IPV6_ONLY###`) |
+| `.State.Registry.Address` | Registry URL (cf. `###ZARF_REGISTRY###`) |
+| `.State.Registry.Port` | Registry port (cf. `###ZARF_REGISTRY_PORT###`) |
+| `.State.Registry.PushUsername` | Registry push username |
+| `.State.Registry.PullUsername` | Registry pull username |
+| `.State.Registry.Mode` | `"nodeport"`, `"proxy"`, or `"external"` (cf. `###ZARF_REGISTRY_PROXY###`) |
+| `.State.Registry.MTLSEnabled` | `bool` (cf. `###ZARF_REGISTRY_MTLS_ENABLED###`) |
+| `.State.Registry.SeedAddress` | Localhost seed registry address (cf. `###ZARF_SEED_REGISTRY###`) |
+| `.State.Git.Address` | Git server URL |
+| `.State.Git.PushUsername` | Git push username (cf. `###ZARF_GIT_PUSH###`) |
+| `.State.Git.PullUsername` | Git pull username (cf. `###ZARF_GIT_PULL###`) |
+| `.State.Git.IsInternal` | `bool` |
+| `.State.Artifact.Address` | Artifact server URL |
+| `.State.Artifact.PushUsername` | Artifact push username |
+| `.State.Injector.Image` | Injector container image (cf. `###ZARF_INJECTOR_IMAGE###`) |
+| `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
+| `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
+| `.State.Injector.PayloadShaSum` | SHA sum of injector payload (cf. `###ZARF_INJECTOR_SHASUM###`) |
+
+**Sensitive fields** require a `stateAccess` declaration on the component. Accessing a sensitive field without the corresponding group causes a template error at deploy time:
+
+```yaml
+components:
+  - name: my-component
+    stateAccess:
+      - registryCredentials   # unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}
+      - gitCredentials        # unlocks .State.Git.{PushPassword,PullPassword}
+      - artifactCredentials   # unlocks .State.Artifact.PushToken
+      - agentCerts            # unlocks .State.Agent.{CA,Cert,Key} (base64-encoded)
+```
+
+See the [values-templating example](/examples/values-templating) for a working demonstration of `.State` fields in manifests and actions.

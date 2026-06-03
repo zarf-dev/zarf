@@ -57,12 +57,24 @@ type ZarfComponent struct {
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
 
-	// Grants this component access to credential fields (passwords, tokens) within {{ .State }}
-	// during template processing. Without this, accessing .State.Registry.PushPassword etc.
-	// causes a template error. Only set this when the component genuinely requires credentials
-	// in its manifests, files, or actions.
-	SensitiveStateAccess bool `json:"sensitiveStateAccess,omitempty" jsonschema:"description=Grants access to credential fields within .State during Go template processing"`
+	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
+	// Valid values: "registryCredentials", "gitCredentials", "artifactCredentials", "agentCerts".
+	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
 }
+
+// StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessArtifactCredentials unlocks .State.Artifact.PushToken.
+	StateAccessArtifactCredentials StateAccessKey = "artifactCredentials"
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
 
 // ImageArchive points to an archived file containing an OCI layout
 type ImageArchive struct {

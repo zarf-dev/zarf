@@ -67,7 +67,8 @@ components:
 
   - name: test-state-sensitive
     required: true
-    sensitiveStateAccess: true
+    stateAccess:
+      - registryCredentials
     actions:
       onDeploy:
         before:

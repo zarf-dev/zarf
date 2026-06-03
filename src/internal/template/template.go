@@ -7,11 +7,13 @@ package template
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	ttmpl "text/template"
 	"time"
@@ -107,24 +109,25 @@ func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 	return o
 }
 
-// StateAccess bundles the runtime state with its access permissions for template rendering.
+// StateAccess bundles the runtime state with the named access groups a component has declared.
 // A zero value (nil State) is safe and causes WithState to be a no-op.
 type StateAccess struct {
 	// State is the Zarf runtime state loaded from the cluster.
 	State *state.State
-	// AllowSensitive controls whether credential fields (passwords, tokens) are included
-	// in the .State template object. Without this, accessing them causes a template error.
-	AllowSensitive bool
+	// AccessKeys lists which groups of sensitive state fields the component may access.
+	// Accessing a field whose group is not listed causes a template error (missingkey=error).
+	AccessKeys []v1alpha1.StateAccessKey
 }
 
 // WithState adds Zarf runtime state to the template Objects under the "State" key.
-// Non-sensitive fields (addresses, usernames, configuration) are always included.
-// Sensitive fields (passwords, tokens) are only included when access.AllowSensitive is true.
+// Non-sensitive fields (addresses, usernames, counts) are always included.
+// Sensitive field groups are only included when the corresponding StateAccessKey is present in
+// access.AccessKeys — accessing an absent group causes a template error (missingkey=error).
 // If access.State is nil, the Objects map is returned unchanged.
-func (o Objects) WithState(access StateAccess) Objects {
+func (o Objects) WithState(access StateAccess) (Objects, error) {
 	s := access.State
 	if s == nil {
-		return o
+		return o, nil
 	}
 
 	registry := map[string]any{
@@ -134,6 +137,7 @@ func (o Objects) WithState(access StateAccess) Objects {
 		"PullUsername": s.RegistryInfo.PullUsername,
 		"Mode":         string(s.RegistryInfo.RegistryMode),
 		"MTLSEnabled":  s.RegistryInfo.ShouldUseMTLS(),
+		"SeedAddress":  state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port),
 	}
 	git := map[string]any{
 		"Address":      s.GitServer.Address,
@@ -145,29 +149,51 @@ func (o Objects) WithState(access StateAccess) Objects {
 		"Address":      s.ArtifactServer.Address,
 		"PushUsername": s.ArtifactServer.PushUsername,
 	}
+	injector := map[string]any{
+		"Image":             s.InjectorInfo.Image,
+		"Port":              s.InjectorInfo.Port,
+		"PayloadConfigMaps": s.InjectorInfo.PayLoadConfigMapAmount,
+		"PayloadShaSum":     s.InjectorInfo.PayLoadShaSum,
+	}
 
-	if access.AllowSensitive {
+	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessRegistryCredentials) {
 		registry["PushPassword"] = s.RegistryInfo.PushPassword
 		registry["PullPassword"] = s.RegistryInfo.PullPassword
 		registry["Secret"] = s.RegistryInfo.Secret
+		htpasswd, err := s.RegistryInfo.Htpasswd()
+		if err != nil {
+			return o, fmt.Errorf("generating htpasswd for .State.Registry.Htpasswd: %w", err)
+		}
+		registry["Htpasswd"] = htpasswd
+	}
+	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessGitCredentials) {
 		git["PushPassword"] = s.GitServer.PushPassword
 		git["PullPassword"] = s.GitServer.PullPassword
+	}
+	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessArtifactCredentials) {
 		artifact["PushToken"] = s.ArtifactServer.PushToken
 	}
 
-	o[objectKeyState] = map[string]any{
+	stateMap := map[string]any{
 		"Distro":       s.Distro,
 		"StorageClass": s.StorageClass,
 		"IPFamily":     string(s.IPFamily),
 		"Registry":     registry,
 		"Git":          git,
 		"Artifact":     artifact,
-		"Injector": map[string]any{
-			"Image": s.InjectorInfo.Image,
-			"Port":  s.InjectorInfo.Port,
-		},
+		"Injector":     injector,
 	}
-	return o
+
+	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessAgentCerts) {
+		stateMap["Agent"] = map[string]any{
+			"CA":   base64.StdEncoding.EncodeToString(s.AgentTLS.CA),
+			"Cert": base64.StdEncoding.EncodeToString(s.AgentTLS.Cert),
+			"Key":  base64.StdEncoding.EncodeToString(s.AgentTLS.Key),
+		}
+	}
+
+	o[objectKeyState] = stateMap
+	return o, nil
 }
 
 // Apply takes a string, fills in the templates with the given Objects, and returns a new string.

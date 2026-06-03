@@ -51,10 +51,13 @@ func runAction(ctx context.Context, basePath string, defaultCfg v1alpha1.ZarfCom
 	l := logger.From(ctx)
 	start := time.Now()
 
-	tmplObjs := template.NewObjects(values).
+	tmplObjs, err := template.NewObjects(values).
 		WithConstants(variableConfig.GetConstants()).
 		WithVariables(variableConfig.GetSetVariableMap()).
 		WithState(stateAccess)
+	if err != nil {
+		return err
+	}
 
 	if action.Wait != nil {
 		err := runWaitAction(ctx, action, variableConfig, tmplObjs)

@@ -78,5 +78,18 @@ components:
           - cmd: |
               echo "This {{ .wontBeProcessed }} stays as-is"
 
+  - name: state-templates
+    description: "Demonstrates .State fields in actions — public cluster state, no stateAccess declaration required"
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: |
+              echo "Registry:      {{ .State.Registry.Address }}"
+              echo "Storage class: {{ .State.StorageClass }}"
+              echo "IP family:     {{ .State.IPFamily }}"
+              echo "Registry mode: {{ .State.Registry.Mode }}"
+            template: true
+
 documentation:
   readme: readme.md

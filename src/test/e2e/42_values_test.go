@@ -63,7 +63,7 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get processed template configmap")
 	require.Contains(t, kubectlOut, "processed=myValue")
 
-	// Verify public state fields were templated into the configmap (no sensitiveStateAccess needed)
+	// Verify public state fields were templated into the configmap (no stateAccess declaration needed)
 	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-state-configmap", "-o", "jsonpath='{.data.registryAddress}'")
 	require.NoError(t, err, "unable to get state configmap")
 	require.NotContains(t, kubectlOut, "{{", "registryAddress should have been templated")
@@ -145,7 +145,7 @@ func TestValuesSchema(t *testing.T) {
 func TestStateTemplates(t *testing.T) {
 	t.Log("E2E: State template access controls")
 
-	t.Run("sensitive fields are blocked without sensitiveStateAccess", func(t *testing.T) {
+	t.Run("sensitive fields are blocked without stateAccess", func(t *testing.T) {
 		src := filepath.Join("src", "test", "packages", "42-values", "state-blocked")
 		tmpdir := t.TempDir()
 
@@ -156,7 +156,7 @@ func TestStateTemplates(t *testing.T) {
 		path := filepath.Join(tmpdir, packageName)
 
 		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
-		require.Error(t, err, "deploy should fail when accessing sensitive state without sensitiveStateAccess")
+		require.Error(t, err, "deploy should fail when accessing sensitive state without stateAccess")
 		require.Contains(t, stdErr, "PushPassword", "error should identify the inaccessible field")
 	})
 }
