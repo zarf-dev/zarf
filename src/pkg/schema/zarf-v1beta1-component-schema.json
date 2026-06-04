@@ -844,9 +844,6 @@
         "type": {
           "description": "Type declares the kind of data being stored in the value.",
           "type": "string"
-        },
-        "value": {
-          "description": "Value is the current value at the key."
         }
       },
       "type": "object"
