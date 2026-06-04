@@ -647,6 +647,13 @@
         "scripts": {
           "$ref": "#/$defs/DeprecatedZarfComponentScripts",
           "description": "[Deprecated] (replaced by actions) Custom commands to run before or after package deployment. This will be removed in Zarf v1.0.0."
+        },
+        "stateAccess": {
+          "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [

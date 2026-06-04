@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-state-configmap
+  namespace: default
+data:
+  registryAddress: "{{ .State.Registry.Address }}"
+  storageClass: "{{ .State.StorageClass }}"
