@@ -72,6 +72,15 @@ data:
         <pre>Repeat and Indent Example:</pre>
         <pre>{{ .Values.site.message | repeat 3 | indent 4 }}</pre>
 
+        <!-- State Template Examples -->
+        <!-- .State fields expose Zarf runtime state set during zarf init.
+             Non-sensitive fields are always available without any stateAccess declaration. -->
+        <h3>Cluster State (via .State)</h3>
+        <pre>Registry: {{ .State.Registry.Address }}</pre>
+        <pre>Storage class: {{ .State.StorageClass }}</pre>
+        <pre>IP family: {{ .State.IPFamily }}</pre>
+        <pre>IPv6 only: {{ eq .State.IPFamily "ipv6" }}</pre>
+
         {{ .Values.site.footer }}
       </body>
     </html>

@@ -56,7 +56,23 @@ type ZarfComponent struct {
 
 	// List of resources to health check after deployment
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
+
+	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
+	// Valid values: "registryCredentials", "gitCredentials", "agentCerts".
+	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
 }
+
+// StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
 
 // ImageArchive points to an archived file containing an OCI layout
 type ImageArchive struct {

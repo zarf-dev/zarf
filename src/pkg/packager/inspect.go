@@ -175,11 +175,15 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 						return nil, fmt.Errorf("error templating the manifest: %w", err)
 					}
 					if manifest.IsTemplate() {
-						objs := tmpl.NewObjects(vals).
+						objs, err := tmpl.NewObjects(vals).
 							WithPackage(pkgLayout.Pkg).
 							WithBuild(pkgLayout.Pkg.Build).
 							WithVariables(variableConfig.GetSetVariableMap()).
-							WithConstants(variableConfig.GetConstants())
+							WithConstants(variableConfig.GetConstants()).
+							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
+						if err != nil {
+							return nil, fmt.Errorf("error building state template objects: %w", err)
+						}
 						if err := tmpl.ApplyToFile(ctx, path, path, objs); err != nil {
 							return nil, fmt.Errorf("error applying Go templates to manifest: %w", err)
 						}
@@ -321,7 +325,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 			if err != nil {
 				return nil, err
 			}
@@ -332,7 +336,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 	return resources, nil
 }
 
-func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage) (_ []Resource, err error) {
+func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, packagePath string, baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, stateAccess tmpl.StateAccess) (_ []Resource, err error) {
 	if err := layout.PackageManifest(ctx, manifest, baseComponentDir, packagePath); err != nil {
 		return nil, err
 	}
@@ -357,9 +361,13 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 		var content []byte
 		if manifest.IsTemplate() {
 			// Create template objects with values, metadata, build, constants, and variables
-			objs := tmpl.NewObjects(vals).
+			objs, err := tmpl.NewObjects(vals).
 				WithPackage(pkg).
-				WithVariables(variableConfig.GetSetVariableMap())
+				WithVariables(variableConfig.GetSetVariableMap()).
+				WithState(stateAccess)
+			if err != nil {
+				return fmt.Errorf("error building state template objects: %w", err)
+			}
 
 			// Create a temp file for the output
 			tmpDir, err := os.MkdirTemp("", "zarf-inspect-*")

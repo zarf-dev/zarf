@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: test-state-blocked
+  description: Test package that verifies sensitive state fields are blocked without a stateAccess declaration
+
+components:
+  - name: test-state-blocked-component
+    required: true
+    manifests:
+      - name: blocked-configmap
+        template: true
+        files:
+          - blocked-configmap.yaml
