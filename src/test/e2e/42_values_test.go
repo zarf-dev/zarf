@@ -140,6 +140,27 @@ func TestValuesSchema(t *testing.T) {
 		// Check that the error message mentions validation failure
 		require.Contains(t, stdErr, "values validation failed", "error should mention schema validation failure")
 	})
+
+	t.Run("merged schema enforces parent constraint on imported child property", func(t *testing.T) {
+		src := filepath.Join("src", "test", "packages", "42-values", "schema-merge")
+		tmpdir := t.TempDir()
+
+		// Create should succeed: parent values (namespace, replicas:3) satisfy both schemas.
+		// The child's values.yaml (appName, version, replicas, enabled) are merged in from the import.
+		stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm", "--features=\"values=true\"")
+		require.NoError(t, err, stdOut, stdErr)
+
+		packageName := fmt.Sprintf("zarf-package-test-values-schema-merge-%s.tar.zst", e2e.Arch)
+		path := filepath.Join(tmpdir, packageName)
+
+		// Deploy with replicas:7 should fail. The parent schema caps replicas at 5, overriding
+		// the child schema's maximum of 10. A failure here confirms parent-wins on property
+		// constraints in the assembled merged schema.
+		overridePath := filepath.Join(src, "override-invalid.yaml")
+		_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--features=\"values=true\"", "--values", overridePath)
+		require.Error(t, err, "expected error: replicas:7 violates parent schema's maximum of 5")
+		require.Contains(t, stdErr, "values validation failed")
+	})
 }
 
 func TestStateTemplates(t *testing.T) {

@@ -79,7 +79,7 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	}
 	vals.DeepMerge(opts.Values)
 
-	if pkgLayout.Pkg.Values.Schema != "" {
+	if pkgLayout.HasValuesSchema() {
 		schemaPath := filepath.Join(pkgLayout.DirPath(), layout.ValuesSchema)
 		if err := vals.Validate(ctx, schemaPath, value.ValidateOptions{SkipRequired: true}); err != nil {
 			return nil, fmt.Errorf("inspect values validation failed: %w", err)
@@ -250,10 +250,11 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
+	pkg := defined.Pkg
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkg, opts.DeploySetVariables, opts.IsInteractive)
 	if err != nil {
 		return nil, err

@@ -109,16 +109,16 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
-	imageScans, err := findImages(ctx, pkg, packagePath, opts)
+	imageScans, err := findImages(ctx, defined.Pkg, packagePath, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, packagePath, imageScans)
+	return filterImagesFoundInArchives(ctx, defined.Pkg, packagePath, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -137,12 +137,12 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	return findImages(ctx, pkg, packagePath, opts)
+	return findImages(ctx, defined.Pkg, packagePath, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.

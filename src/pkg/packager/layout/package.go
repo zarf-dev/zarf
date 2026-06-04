@@ -65,6 +65,12 @@ func (p *PackageLayout) DirPath() string {
 	return p.dirPath
 }
 
+// HasValuesSchema reports whether the package layout contains an assembled values schema file (defined or through import)
+func (p *PackageLayout) HasValuesSchema() bool {
+	_, err := os.Stat(filepath.Join(p.dirPath, ValuesSchema))
+	return err == nil
+}
+
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
 	if opts.Filter == nil {
