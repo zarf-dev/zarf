@@ -10,8 +10,8 @@ type Component struct {
 	// Message to include during package deploy describing the purpose of this component.
 	Description string `json:"description,omitempty"`
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
-	Optional bool `json:"optional,omitempty"`
-	ComponentSpec
+	Optional      bool `json:"optional,omitempty"`
+	ComponentSpec `json:",inline"`
 
 	// Data injections removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	dataInjections []ZarfDataInjection
