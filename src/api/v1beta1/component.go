@@ -3,8 +3,6 @@
 
 package v1beta1
 
-import "github.com/zarf-dev/zarf/src/api/v1alpha1"
-
 // Component is the primary functional grouping of assets to deploy by Zarf.
 type Component struct {
 	// The name of the component.
@@ -14,18 +12,21 @@ type Component struct {
 	// Do not install this component unless explicitly requested. Defaults to false, meaning the component is required.
 	Optional bool `json:"optional,omitempty"`
 	ComponentSpec
+
 	// Data injections removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	dataInjections []v1alpha1.ZarfDataInjection
+	dataInjections []ZarfDataInjection
+	// group removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	group string
 }
 
 // GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
-func (c Component) GetDeprecatedDataInjections() []v1alpha1.ZarfDataInjection {
+func (c Component) GetDeprecatedDataInjections() []ZarfDataInjection {
 	return c.dataInjections
 }
 
-// SetDeprecatedDataInjections sets the v1alpha1 data injections carried as a backwards-compatibility shim.
-func (c *Component) SetDeprecatedDataInjections(dataInjections []v1alpha1.ZarfDataInjection) {
-	c.dataInjections = dataInjections
+// GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
+func (c Component) GetDeprecatedGroup() string {
+	return c.group
 }
 
 // GetImages returns all image names specified in the component, including those from ImageArchives.
@@ -159,8 +160,9 @@ type Chart struct {
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
+
 	// Chart variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	variables []v1alpha1.ZarfChartVariable
+	variables []ZarfChartVariable
 }
 
 // GetDeprecatedVersion returns the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
@@ -168,19 +170,9 @@ func (c Chart) GetDeprecatedVersion() string {
 	return c.version
 }
 
-// SetDeprecatedVersion sets the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
-func (c *Chart) SetDeprecatedVersion(version string) {
-	c.version = version
-}
-
 // GetDeprecatedVariables returns the v1alpha1 chart variables carried as a backwards-compatibility shim.
-func (c Chart) GetDeprecatedVariables() []v1alpha1.ZarfChartVariable {
+func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
 	return c.variables
-}
-
-// SetDeprecatedVariables sets the v1alpha1 chart variables carried as a backwards-compatibility shim.
-func (c *Chart) SetDeprecatedVariables(variables []v1alpha1.ZarfChartVariable) {
-	c.variables = variables
 }
 
 // ChartValue maps a values source path to a Helm chart target path.
@@ -320,17 +312,12 @@ type ComponentAction struct {
 	// EnableValues enables go-template processing on the cmd field.
 	EnableValues bool `json:"enableValues,omitempty"`
 	// setVariables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	setVariables []v1alpha1.Variable
+	setVariables []Variable
 }
 
 // GetDeprecatedSetVariables returns the v1alpha1 setVariables carried as a backwards-compatibility shim.
-func (a ComponentAction) GetDeprecatedSetVariables() []v1alpha1.Variable {
+func (a ComponentAction) GetDeprecatedSetVariables() []Variable {
 	return a.setVariables
-}
-
-// SetDeprecatedSetVariables sets the v1alpha1 setVariables carried as a backwards-compatibility shim.
-func (a *ComponentAction) SetDeprecatedSetVariables(setVariables []v1alpha1.Variable) {
-	a.setVariables = setVariables
 }
 
 // SetValueType declares the expected input back from the cmd, allowing structured data to be parsed.
@@ -349,8 +336,6 @@ const (
 type SetValue struct {
 	// Key represents which value to assign to.
 	Key string `json:"key,omitempty"`
-	// Value is the current value at the key.
-	Value any `json:"value,omitempty"`
 	// Type declares the kind of data being stored in the value.
 	Type SetValueType `json:"type,omitempty"`
 }

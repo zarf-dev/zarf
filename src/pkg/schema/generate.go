@@ -23,7 +23,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	if err := writeSchema("v1beta1", "zarf-v1beta1-schema.json", &v1beta1.Package{}); err != nil {
+	if err := writeSchema("v1beta1", "zarf-v1beta1-package-schema.json", &v1beta1.Package{}); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
