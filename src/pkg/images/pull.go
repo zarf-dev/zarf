@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,7 +39,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
-	"oras.land/oras-go/v2/registry/remote/credentials"
 )
 
 // PullOptions is the configuration for pulling images.
@@ -115,42 +113,16 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 
 	imageFetchStart := time.Now()
 	l.Info("fetching info for images", "count", imageCount, "destination", destinationDirectory)
-	storeOpts := credentials.StoreOptions{}
-	credStore, err := credentials.NewStoreFromDocker(storeOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get credentials: %w", err)
-	}
-	transport, err := orasTransport(opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout)
-	if err != nil {
-		return nil, err
-	}
-	client := &auth.Client{
-		Client: &http.Client{
-			Transport: transport,
-		},
-		Cache:      auth.NewCache(),
-		Credential: credentials.Credential(credStore),
-	}
+
 	uniqueHosts := map[string]struct{}{}
 	for _, v := range imagesWithOverride {
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
-	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
-	// When this happens concurrently a browser tab is opened for each image from that host and authenticating to one tab will not propagate creds
-	// Instead we auth synchronously with ping so the auth is cached before concurrent fetch.
-	if credStore.IsAuthConfigured() {
-		for host := range uniqueHosts {
-			registry, err := orasRemote.NewRegistry(host)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create registry: %w", err)
-			}
-			registry.Client = client
-			// we can't error here because there may be a faked registry used for the docker fallback mechanism
-			_ = registry.Ping(ctx) //nolint: errcheck
-		}
+	client, _, err := NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout, uniqueHosts)
+	if err != nil {
+		return nil, err
 	}
 
-	l.Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 	platform := &ocispec.Platform{
 		Architecture: opts.Arch,
 		// TODO: in the future we could support Windows images

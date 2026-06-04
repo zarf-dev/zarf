@@ -23,7 +23,9 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	"oras.land/oras-go/v2/content"
+	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
+	"oras.land/oras-go/v2/registry/remote/credentials"
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
@@ -185,6 +187,48 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 		return fmt.Errorf("failed to save changes to index.json: %w", err)
 	}
 	return nil
+}
+
+// NewAuthClientFromDocker creates an ORAS auth client from the default Docker credentials store.
+func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration, preAuthHosts map[string]struct{}) (_ *auth.Client, authConfigured bool, err error) {
+	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get credentials: %w", err)
+	}
+
+	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
+	if err != nil {
+		return nil, false, err
+	}
+
+	client := &auth.Client{
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Cache:      auth.NewCache(),
+		Credential: credentials.Credential(credStore),
+	}
+
+	logger.From(ctx).Debug("gathering credentials from default Docker config file", "credentialsConfigured", authConfigured)
+
+	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
+	// When this happens concurrently a browser tab is opened for each image from that host and authenticating to one tab will not propagate creds.
+	// Instead we auth synchronously with ping so the auth is cached before concurrent fetch.
+	if credStore.IsAuthConfigured() {
+		for host := range preAuthHosts {
+			if host == "" {
+				continue
+			}
+			registry, err := orasRemote.NewRegistry(host)
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to create registry: %w", err)
+			}
+			registry.Client = client
+			_ = registry.Ping(ctx) //nolint: errcheck
+		}
+	}
+
+	return client, authConfigured, nil
 }
 
 func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
