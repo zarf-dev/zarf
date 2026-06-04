@@ -356,6 +356,17 @@ func ValidateSchemaFile(schemaPath string) error {
 	return nil
 }
 
+// ValidateSchemaDocument validates that an already-parsed document is a valid JSON Schema.
+// Prefer this over ValidateSchemaFile when the document has already been read and unmarshaled,
+// as it avoids a second disk read and parse.
+func ValidateSchemaDocument(doc map[string]any) error {
+	_, err := gojsonschema.NewSchema(gojsonschema.NewGoLoader(doc))
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
+	}
+	return nil
+}
+
 // InvalidFileExtError represents an error when a file has an invalid extension
 type InvalidFileExtError struct {
 	FilePath string
