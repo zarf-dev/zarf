@@ -484,7 +484,7 @@ func serviceFromGeneric(c types.Component) v1beta1.Service {
 		return v1beta1.ServiceInjector
 	case "zarf-agent":
 		return v1beta1.ServiceAgent
-	case "zarf-gitea":
+	case "git-server":
 		return v1beta1.ServiceGitServer
 	}
 	return ""

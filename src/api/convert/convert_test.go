@@ -273,7 +273,7 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 		{name: "seed registry", compName: "zarf-seed-registry", service: v1beta1.ServiceSeedRegistry},
 		{name: "injector", compName: "zarf-injector", service: v1beta1.ServiceInjector},
 		{name: "agent", compName: "zarf-agent", service: v1beta1.ServiceAgent},
-		{name: "git server", compName: "zarf-gitea", service: v1beta1.ServiceGitServer},
+		{name: "git server", compName: "git-server", service: v1beta1.ServiceGitServer},
 		{name: "no service", compName: "my-app", service: ""},
 	}
 	for _, tt := range tests {
