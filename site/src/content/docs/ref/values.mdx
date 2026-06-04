@@ -177,8 +177,6 @@ The `.State` object exposes Zarf cluster state in **manifests**, **files**, and 
 | `.State.Git.PushUsername` | Git push username (cf. `###ZARF_GIT_PUSH###`) |
 | `.State.Git.PullUsername` | Git pull username (cf. `###ZARF_GIT_PULL###`) |
 | `.State.Git.IsInternal` | `bool` |
-| `.State.Artifact.Address` | Artifact server URL |
-| `.State.Artifact.PushUsername` | Artifact push username |
 | `.State.Injector.Image` | Injector container image (cf. `###ZARF_INJECTOR_IMAGE###`) |
 | `.State.Injector.Port` | Injector host port (cf. `###ZARF_INJECTOR_HOSTPORT###`) |
 | `.State.Injector.PayloadConfigMaps` | Number of payload ConfigMaps (cf. `###ZARF_INJECTOR_PAYLOAD_CONFIGMAPS###`) |
@@ -192,7 +190,6 @@ components:
     stateAccess:
       - registryCredentials   # unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}
       - gitCredentials        # unlocks .State.Git.{PushPassword,PullPassword}
-      - artifactCredentials   # unlocks .State.Artifact.PushToken
       - agentCerts            # unlocks .State.Agent.{CA,Cert,Key} (base64-encoded)
 ```
 

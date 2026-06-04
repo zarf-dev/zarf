@@ -1228,8 +1228,6 @@ func TestWithState_NonSensitiveFields(t *testing.T) {
 		`{{ .State.Git.Address }}`:                s.GitServer.Address,
 		`{{ .State.Git.PushUsername }}`:           s.GitServer.PushUsername,
 		`{{ .State.Git.PullUsername }}`:           s.GitServer.PullUsername,
-		`{{ .State.Artifact.Address }}`:           s.ArtifactServer.Address,
-		`{{ .State.Artifact.PushUsername }}`:      s.ArtifactServer.PushUsername,
 		`{{ .State.Injector.Image }}`:             s.InjectorInfo.Image,
 		`{{ .State.Injector.PayloadConfigMaps }}`: "3",
 		`{{ .State.Injector.PayloadShaSum }}`:     s.InjectorInfo.PayLoadShaSum,
@@ -1255,7 +1253,6 @@ func TestWithState_SensitiveFieldsBlockedWithoutOptIn(t *testing.T) {
 		`{{ .State.Registry.Htpasswd }}`,
 		`{{ .State.Git.PushPassword }}`,
 		`{{ .State.Git.PullPassword }}`,
-		`{{ .State.Artifact.PushToken }}`,
 		`{{ .State.Agent.CA }}`,
 	} {
 		_, err := Apply(ctx, tmpl, objs)
@@ -1308,29 +1305,6 @@ func TestWithState_GitCredentialsGroup(t *testing.T) {
 	// Other groups must remain blocked
 	_, err = Apply(ctx, `{{ .State.Registry.PushPassword }}`, objs)
 	require.Error(t, err, "registryCredentials should still be blocked")
-	_, err = Apply(ctx, `{{ .State.Artifact.PushToken }}`, objs)
-	require.Error(t, err, "artifactCredentials should still be blocked")
-}
-
-func TestWithState_ArtifactCredentialsGroup(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	s := testState()
-	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
-		State:      s,
-		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessArtifactCredentials},
-	})
-	require.NoError(t, err)
-
-	out, err := Apply(ctx, `{{ .State.Artifact.PushToken }}`, objs)
-	require.NoError(t, err)
-	require.Equal(t, s.ArtifactServer.PushToken, out)
-
-	// Other groups must remain blocked
-	_, err = Apply(ctx, `{{ .State.Registry.PushPassword }}`, objs)
-	require.Error(t, err, "registryCredentials should still be blocked")
-	_, err = Apply(ctx, `{{ .State.Git.PushPassword }}`, objs)
-	require.Error(t, err, "gitCredentials should still be blocked")
 }
 
 func TestWithState_AgentCertsGroup(t *testing.T) {
@@ -1402,8 +1376,8 @@ func TestWithState_MultipleGroups(t *testing.T) {
 	}
 
 	// Undeclared groups remain blocked
-	_, err = Apply(ctx, `{{ .State.Artifact.PushToken }}`, objs)
-	require.Error(t, err, "artifactCredentials should still be blocked")
+	_, err = Apply(ctx, `{{ .State.Agent.CA }}`, objs)
+	require.Error(t, err, "agentCerts should still be blocked")
 	stateMap, ok := objs[objectKeyState].(map[string]any)
 	require.True(t, ok, "state object should be map[string]any")
 	require.NotContains(t, stateMap, "Agent",

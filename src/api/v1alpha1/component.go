@@ -58,7 +58,7 @@ type ZarfComponent struct {
 	HealthChecks []NamespacedObjectKindReference `json:"healthChecks,omitempty"`
 
 	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
-	// Valid values: "registryCredentials", "gitCredentials", "artifactCredentials", "agentCerts".
+	// Valid values: "registryCredentials", "gitCredentials", "agentCerts".
 	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
 }
 
@@ -70,8 +70,6 @@ const (
 	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
 	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
 	StateAccessGitCredentials StateAccessKey = "gitCredentials"
-	// StateAccessArtifactCredentials unlocks .State.Artifact.PushToken.
-	StateAccessArtifactCredentials StateAccessKey = "artifactCredentials"
 	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
 	StateAccessAgentCerts StateAccessKey = "agentCerts"
 )

@@ -145,10 +145,6 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"PullUsername": s.GitServer.PullUsername,
 		"IsInternal":   s.GitServer.IsInternal(),
 	}
-	artifact := map[string]any{
-		"Address":      s.ArtifactServer.Address,
-		"PushUsername": s.ArtifactServer.PushUsername,
-	}
 	injector := map[string]any{
 		"Image":             s.InjectorInfo.Image,
 		"Port":              s.InjectorInfo.Port,
@@ -170,9 +166,6 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		git["PushPassword"] = s.GitServer.PushPassword
 		git["PullPassword"] = s.GitServer.PullPassword
 	}
-	if slices.Contains(access.AccessKeys, v1alpha1.StateAccessArtifactCredentials) {
-		artifact["PushToken"] = s.ArtifactServer.PushToken
-	}
 
 	stateMap := map[string]any{
 		"Distro":       s.Distro,
@@ -180,7 +173,6 @@ func (o Objects) WithState(access StateAccess) (Objects, error) {
 		"IPFamily":     string(s.IPFamily),
 		"Registry":     registry,
 		"Git":          git,
-		"Artifact":     artifact,
 		"Injector":     injector,
 	}
 
