@@ -146,7 +146,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			l.Warn("unable to clean up temporary directory", "path", tmpDir, "error", err.Error())
+		}
+	}()
 
 	for _, component := range defined.Pkg.Components {
 		for _, chart := range component.Charts {
@@ -181,7 +185,9 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 
 				_, errExtract := zarfValues.Extract(value.Path(cv.SourcePath))
 				if errExtract != nil {
-					zarfValues.Set(value.Path(cv.SourcePath), val)
+					if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
+						l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "sourcePath", cv.SourcePath)
+					}
 				}
 			}
 		}

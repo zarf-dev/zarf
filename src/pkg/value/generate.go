@@ -5,12 +5,12 @@ package value
 
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
 func GenerateJSONSchema(vals Values) map[string]any {
+	props := make(map[string]any)
 	schema := map[string]any{
 		"$schema":    "http://json-schema.org/draft-07/schema#",
 		"type":       "object",
-		"properties": make(map[string]any),
+		"properties": props,
 	}
-	props := schema["properties"].(map[string]any)
 
 	for k, v := range vals {
 		props[k] = inferSchemaType(v)
@@ -22,12 +22,15 @@ func GenerateJSONSchema(vals Values) map[string]any {
 // ReconcileJSONSchema updates structural fields in an existing schema from inferred values.
 // Non-structural fields (description/enum/required/etc.) are preserved by default.
 func ReconcileJSONSchema(existing, inferred map[string]any) map[string]any {
-	typeVal, ok := inferred["type"]
-	if ok {
+	typeVal, hasType := inferred["type"]
+	if hasType {
 		existing["type"] = typeVal
 	}
 
-	typeStr, _ := typeVal.(string)
+	typeStr, ok := typeVal.(string)
+	if !ok {
+		typeStr = ""
+	}
 	if typeStr == "object" {
 		reconcileSchemaProperties(existing, inferred)
 	}

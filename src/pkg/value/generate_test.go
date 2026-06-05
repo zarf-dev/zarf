@@ -120,25 +120,31 @@ func TestReconcileJSONSchema(t *testing.T) {
 
 		result := ReconcileJSONSchema(existing, inferred)
 
-		props := result["properties"].(map[string]any)
-		site := props["site"].(map[string]any)
+		props, ok := result["properties"].(map[string]any)
+		require.True(t, ok)
+		site, ok := props["site"].(map[string]any)
+		require.True(t, ok)
 		assert.Equal(t, "Site configuration", site["description"]) // preserved
 		assert.Equal(t, []any{"name"}, site["required"])           // preserved
 
-		siteProps := site["properties"].(map[string]any)
+		siteProps, ok := site["properties"].(map[string]any)
+		require.True(t, ok)
 		_, hasLegacy := siteProps["legacy"]
 		assert.False(t, hasLegacy) // removed (not inferred)
 
-		name := siteProps["name"].(map[string]any)
-		assert.Equal(t, "Site name", name["description"]) // preserved
-		assert.Equal(t, float64(1), name["minLength"])    // preserved
-		assert.Equal(t, "string", name["type"])           // structural sync
+		name, ok := siteProps["name"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "Site name", name["description"])   // preserved
+		assert.InDelta(t, float64(1), name["minLength"], 0) // preserved
+		assert.Equal(t, "string", name["type"])             // structural sync
 
-		features := props["features"].(map[string]any)
-		items := features["items"].(map[string]any)
+		features, ok := props["features"].(map[string]any)
+		require.True(t, ok)
+		items, ok := features["items"].(map[string]any)
+		require.True(t, ok)
 		assert.Equal(t, "number", items["type"])               // updated from inferred
 		assert.Equal(t, []any{"alpha", "beta"}, items["enum"]) // preserved
-		assert.Equal(t, float64(2), items["minLength"])        // preserved
+		assert.InDelta(t, float64(2), items["minLength"], 0)   // preserved
 
 		_, hasNewField := props["newField"]
 		assert.True(t, hasNewField) // added (inferred)
