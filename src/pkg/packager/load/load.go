@@ -33,6 +33,8 @@ type DefinitionOptions struct {
 	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
 	// value should be supplied at deploy-time and doesn't have a default set in the package values.
 	SkipRequiredValues bool
+	// SkipSchemaValidation skips schema validation for the package values entirely.
+	SkipSchemaValidation bool
 	// CachePath is used to cache layers from skeleton package pulls
 	CachePath string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
@@ -95,7 +97,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues, opts.SkipSchemaValidation)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
@@ -103,7 +105,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
 }
 
-func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
+func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool, skipSchemaValidation bool) error {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.Validate",
@@ -131,8 +133,10 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		}
 	}
 
-	if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
-		return err
+	if !skipSchemaValidation {
+		if err := validateValuesSchema(ctx, pkg, packagePath, validateValuesSchemaOptions{skipRequired: skipRequiredValues}); err != nil {
+			return err
+		}
 	}
 
 	l.Debug("done layout.Validate",

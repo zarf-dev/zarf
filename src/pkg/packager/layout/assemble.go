@@ -1051,13 +1051,9 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		if !filepath.IsAbs(src) {
 			src = filepath.Join(packagePath, relPath)
 		}
-		b, err := os.ReadFile(src)
+		s, err := value.LoadJSONSchema(src)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s schema: %w", label, err)
-		}
-		var s map[string]any
-		if err := json.Unmarshal(b, &s); err != nil {
-			return nil, fmt.Errorf("parsing %s schema: %w", label, err)
 		}
 		if err := value.CheckNoExternalRefs(s); err != nil {
 			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)

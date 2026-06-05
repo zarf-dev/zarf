@@ -4,11 +4,32 @@
 package value
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
+	"os"
 	"slices"
 	"strings"
 )
+
+// LoadJSONSchema reads a JSON schema file if present.
+func LoadJSONSchema(path string) (map[string]any, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("unable to read existing schema file: %w", err)
+	}
+
+	var schema map[string]any
+	if err := json.Unmarshal(b, &schema); err != nil {
+		return nil, fmt.Errorf("unable to parse existing schema file: %w", err)
+	}
+
+	return schema, nil
+}
 
 // CheckNoExternalRefs returns an error if the schema contains any external reference
 // pointers ($ref, $dynamicRef, $recursiveRef). Internal fragment references that start

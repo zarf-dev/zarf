@@ -4,11 +4,35 @@
 package value
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestLoadJSONSchema(t *testing.T) {
+	t.Run("missing file returns nil schema and nil error", func(t *testing.T) {
+		schema, err := LoadJSONSchema(filepath.Join("testdata", "schema", "does-not-exist.schema.json"))
+		require.NoError(t, err)
+		require.Nil(t, schema)
+	})
+
+	t.Run("invalid json returns parse error", func(t *testing.T) {
+		schema, err := LoadJSONSchema(filepath.Join("testdata", "schema", "invalid-values.yaml"))
+		require.Nil(t, schema)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "unable to parse existing schema file")
+	})
+
+	t.Run("valid json schema is loaded", func(t *testing.T) {
+		schema, err := LoadJSONSchema(filepath.Join("testdata", "schema", "simple.schema.json"))
+		require.NoError(t, err)
+		require.NotNil(t, schema)
+		require.Equal(t, "http://json-schema.org/draft-07/schema#", schema["$schema"])
+		require.Equal(t, "object", schema["type"])
+	})
+}
 
 func TestCheckNoExternalRefs(t *testing.T) {
 	t.Run("schema with no refs passes", func(t *testing.T) {

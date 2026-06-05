@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -25,6 +26,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -73,9 +75,142 @@ func newDevCommand() *cobra.Command {
 	cmd.AddCommand(newDevInspectCommand(v))
 	cmd.AddCommand(newDevFindImagesCommand(v))
 	cmd.AddCommand(newDevGenerateConfigCommand())
+	cmd.AddCommand(newDevGenerateSchemaCommand(v))
 	cmd.AddCommand(newDevLintCommand(v))
 
 	return cmd
+}
+
+type devGenerateSchemaOptions struct {
+	flavor     string
+	setPkgTmpl map[string]string
+}
+
+func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
+	o := &devGenerateSchemaOptions{}
+
+	cmd := &cobra.Command{
+		Use:   "generate-schema [ DIRECTORY ]",
+		Args:  cobra.MaximumNArgs(1),
+		Short: "Generates a JSON schema for Zarf values based on the package definition and chart defaults",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+
+	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
+	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+
+	return cmd
+}
+
+func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error {
+	l := logger.From(ctx)
+
+	basePath, err := setBaseDirectory(args)
+	if err != nil {
+		return err
+	}
+
+	cachePath, err := getCachePath(ctx)
+	if err != nil {
+		return err
+	}
+
+	loadOpts := load.DefinitionOptions{
+		Flavor:               o.flavor,
+		SetVariables:         o.setPkgTmpl,
+		IsInteractive:        true,
+		SkipVersionCheck:     true,
+		SkipSchemaValidation: true,
+		CachePath:            cachePath,
+		RemoteOptions:        defaultRemoteOptions(),
+	}
+	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	if err != nil {
+		return err
+	}
+
+	// Step 1: Merge default values.files to create initial set of default Zarf values
+	valuesPaths := make([]string, len(defined.Pkg.Values.Files))
+	for i, file := range defined.Pkg.Values.Files {
+		valuesPaths[i] = filepath.Join(basePath, file)
+	}
+	zarfValues, err := value.ParseFiles(ctx, valuesPaths, value.ParseFilesOptions{})
+	if err != nil {
+		return fmt.Errorf("unable to parse package values files: %w", err)
+	}
+
+	// Step 2: Discover source target mappings and load defaults from chart values where Zarf Value defaults aren't specified
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	for _, component := range defined.Pkg.Components {
+		for _, chart := range component.Charts {
+			chartPath := filepath.Join(tmpDir, "charts", chart.Name)
+			valuesFilePath := filepath.Join(tmpDir, "values")
+
+			err := layout.PackageChart(ctx, chart, basePath, chartPath, valuesFilePath, cachePath, defaultRemoteOptions())
+			if err != nil {
+				l.Warn("unable to package chart for schema generation", "chart", chart.Name, "error", err.Error())
+				continue
+			}
+
+			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPath, valuesFilePath, nil)
+			if err != nil {
+				l.Warn("unable to to load default values for chart", "chart", chart.Name, "error", err.Error())
+				continue
+			}
+
+			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
+
+			// Map ChartValues' Source to Target and merge into zarfValues if not already present
+			for _, cv := range chart.Values {
+				if cv.SourcePath == "" || cv.TargetPath == "" {
+					l.Warn("skipping chart value mapping - sourcePath or targetPath is empty", "chart", chart.Name)
+					continue
+				}
+				val, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
+				if err != nil {
+					l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "targetPath", cv.TargetPath)
+					continue // skip if not found in defaults
+				}
+
+				_, errExtract := zarfValues.Extract(value.Path(cv.SourcePath))
+				if errExtract != nil {
+					zarfValues.Set(value.Path(cv.SourcePath), val)
+				}
+			}
+		}
+	}
+
+	// Step 3: Generate JSON schema from the final map and save it
+	schema := value.GenerateJSONSchema(zarfValues)
+
+	outputFileName := "values.schema.json"
+	existingSchema, err := value.LoadJSONSchema(outputFileName)
+	if err != nil {
+		return err
+	}
+	if existingSchema != nil {
+		schema = value.ReconcileJSONSchema(existingSchema, schema)
+	}
+
+	b, err := json.MarshalIndent(schema, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
+	}
+
+	err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
+	if err != nil {
+		return fmt.Errorf("unable to write schema file: %w", err)
+	}
+
+	l.Info("Schema successfully generated", "filename", outputFileName)
+	return nil
 }
 
 func newDevInspectCommand(v *viper.Viper) *cobra.Command {
