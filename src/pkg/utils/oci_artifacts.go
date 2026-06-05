@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
@@ -20,6 +21,8 @@ import (
 
 // GetCosignArtifacts returns signatures and attestations for the given image.
 func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client) ([]string, error) {
+	l := logger.From(ctx)
+
 	var nameOpts []name.Option
 	if client == nil {
 		return nil, fmt.Errorf("auth client is required")
@@ -34,7 +37,9 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client) 
 	// `crane` lookup that would otherwise happen in ociremote.SignatureTag and ociremote.AttestationTag
 	digestRef, err := imageDigestRef(ctx, image, ref, client)
 	if err != nil {
-		return nil, err
+		// If we can't get the digest reference, we can't get the cosign artifacts so log the error and skip it
+		l.Debug("could not get digest reference for image", "image", image, "error", err)
+		return nil, nil
 	}
 
 	sigTag, err := ociremote.SignatureTag(digestRef)
