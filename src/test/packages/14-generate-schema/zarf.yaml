@@ -1,0 +1,24 @@
+kind: ZarfPackageConfig
+metadata:
+  name: generate-schema-test
+  description: Package fixture for zarf dev generate-schema e2e tests
+
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+
+components:
+  - name: schema-chart
+    required: true
+    charts:
+      - name: schema-chart
+        version: 0.1.0
+        releaseName: schema-chart
+        namespace: schema-test
+        localPath: chart
+        values:
+          - sourcePath: ".app.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".network.port"
+            targetPath: ".service.port"
