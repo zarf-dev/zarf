@@ -118,7 +118,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 	for _, v := range imagesWithOverride {
 		uniqueHosts[v.overridden.Host] = struct{}{}
 	}
-	client, _, err := NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout, uniqueHosts)
+	client, err := NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, opts.ResponseHeaderTimeout, uniqueHosts)
 	if err != nil {
 		return nil, err
 	}

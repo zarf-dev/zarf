@@ -419,7 +419,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 				return nil, err
 			}
 
-			cosignClient, _, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
+			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
 			if err != nil {
 				return nil, err
 			}

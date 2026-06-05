@@ -190,15 +190,15 @@ func saveIndexToOCILayout(dir string, idx ocispec.Index) error {
 }
 
 // NewAuthClientFromDocker creates an ORAS auth client from the default Docker credentials store.
-func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration, preAuthHosts map[string]struct{}) (_ *auth.Client, authConfigured bool, err error) {
+func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration, preAuthHosts map[string]struct{}) (_ *auth.Client, err error) {
 	credStore, err := credentials.NewStoreFromDocker(credentials.StoreOptions{})
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get credentials: %w", err)
+		return nil, fmt.Errorf("failed to get credentials: %w", err)
 	}
 
 	transport, err := orasTransport(insecureSkipTLSVerify, responseHeaderTimeout)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	client := &auth.Client{
@@ -209,7 +209,7 @@ func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, re
 		Credential: credentials.Credential(credStore),
 	}
 
-	logger.From(ctx).Debug("gathering credentials from default Docker config file", "credentialsConfigured", authConfigured)
+	logger.From(ctx).Debug("gathering credentials from default Docker config file", "credentialsConfigured", credStore.IsAuthConfigured())
 
 	// We ping registries to pre-authenticate as some auth mechanisms open up a browser.
 	// When this happens concurrently a browser tab is opened for each image from that host and authenticating to one tab will not propagate creds.
@@ -221,14 +221,14 @@ func NewAuthClientFromDocker(ctx context.Context, insecureSkipTLSVerify bool, re
 			}
 			registry, err := orasRemote.NewRegistry(host)
 			if err != nil {
-				return nil, false, fmt.Errorf("failed to create registry: %w", err)
+				return nil, fmt.Errorf("failed to create registry: %w", err)
 			}
 			registry.Client = client
 			_ = registry.Ping(ctx) //nolint: errcheck
 		}
 	}
 
-	return client, authConfigured, nil
+	return client, nil
 }
 
 func orasTransport(insecureSkipTLSVerify bool, responseHeaderTimeout time.Duration) (*retry.Transport, error) {
