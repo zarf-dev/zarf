@@ -227,19 +227,25 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 		}
 	}
 
+	if len(chart.TemplatedValuesFiles) == 0 {
+		return nil
+	}
+
+	// Build objs once — inputs don't vary per file and WithState may invoke bcrypt.
+	objs, err := tmpl.NewObjects(opts.vals).
+		WithPackage(opts.pkg).
+		WithBuild(opts.pkg.Build).
+		WithVariables(opts.variableConfig.GetSetVariableMap()).
+		WithConstants(opts.variableConfig.GetConstants()).
+		WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
+	if err != nil {
+		return fmt.Errorf("error building template objects: %w", err)
+	}
+
 	for idx := range chart.TemplatedValuesFiles {
 		valueFilePath := helm.StandardTemplatedValuesName(valuesDir, chart, idx)
 		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
-		}
-		objs, err := tmpl.NewObjects(opts.vals).
-			WithPackage(opts.pkg).
-			WithBuild(opts.pkg.Build).
-			WithVariables(opts.variableConfig.GetSetVariableMap()).
-			WithConstants(opts.variableConfig.GetConstants()).
-			WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
-		if err != nil {
-			return fmt.Errorf("error building template objects for values file %s: %w", valueFilePath, err)
 		}
 		if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
 			return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
@@ -462,31 +468,14 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 		return Resource{}, common.Values{}, err
 	}
 
-	valuesFilePaths, err := helpers.RecursiveFileList(valuesFilePath, nil, false)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return Resource{}, common.Values{}, fmt.Errorf("failed to list values files: %w", err)
-	}
-	for _, valueFilePath := range valuesFilePaths {
-		err := variableConfig.ReplaceTextTemplate(valueFilePath)
-		if err != nil {
-			return Resource{}, common.Values{}, fmt.Errorf("error templating the values file: %w", err)
-		}
-	}
-
-	for idx := range zarfChart.TemplatedValuesFiles {
-		valueFilePath := helm.StandardTemplatedValuesName(valuesFilePath, zarfChart, idx)
-		objs, err := tmpl.NewObjects(vals).
-			WithPackage(pkg).
-			WithBuild(pkg.Build).
-			WithVariables(variableConfig.GetSetVariableMap()).
-			WithConstants(variableConfig.GetConstants()).
-			WithState(tmpl.StateAccess{State: s, AccessKeys: stateAccess})
-		if err != nil {
-			return Resource{}, common.Values{}, fmt.Errorf("error building template objects for values file %s: %w", valueFilePath, err)
-		}
-		if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
-			return Resource{}, common.Values{}, fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
-		}
+	if err := templateValuesFiles(ctx, zarfChart, valuesFilePath, templateValuesFilesOpts{
+		variableConfig: variableConfig,
+		pkg:            pkg,
+		vals:           vals,
+		s:              s,
+		stateAccess:    stateAccess,
+	}); err != nil {
+		return Resource{}, common.Values{}, err
 	}
 
 	chart, values, err := helm.LoadChartData(zarfChart, chartPath, valuesFilePath, chartOverrides)
