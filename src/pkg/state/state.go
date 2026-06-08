@@ -17,6 +17,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
+// MutationPolicy controls the agent's default mutation behavior.
+type MutationPolicy string
+
+const (
+	// MutationPolicyAll mutates all resources unless they carry zarf.dev/agent: ignore/skip.
+	MutationPolicyAll MutationPolicy = "all"
+	// MutationPolicyLabeled mutates only resources (or namespaces) labeled zarf.dev/agent: mutate.
+	MutationPolicyLabeled MutationPolicy = "labeled"
+)
+
 // Declares secrets and metadata keys and values.
 // TODO(mkcp): Remove Zarf prefix, that's the project name.
 // TODO(mkcp): Provide semantic doccomments for how these are used.
@@ -153,8 +163,10 @@ type State struct {
 	// PKI certificate information for the agent pods Zarf manages
 	AgentTLS pki.GeneratedPKI `json:"agentTLS"`
 	// AgentTLSUserProvided indicates whether the agent TLS certs were provided by the user rather than auto-generated
-	AgentTLSUserProvided bool         `json:"agentTLSUserProvided,omitempty"`
-	InjectorInfo         InjectorInfo `json:"injectorInfo"`
+	AgentTLSUserProvided bool `json:"agentTLSUserProvided,omitempty"`
+	// AgentMutationPolicy controls the conditions required for the agent to mutate resources
+	AgentMutationPolicy MutationPolicy `json:"agentMutationPolicy"`
+	InjectorInfo        InjectorInfo   `json:"injectorInfo"`
 
 	// Information about the repository Zarf is configured to use
 	GitServer GitServerInfo `json:"gitServer"`
@@ -493,6 +505,8 @@ type MergeOptions struct {
 	Services       ServiceSet
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy MutationPolicy
 }
 
 // Merge merges init options for provided services into the provided state to create a new state struct
@@ -551,6 +565,9 @@ func Merge(oldState *State, opts MergeOptions) (*State, error) {
 			}
 			newState.AgentTLS = agentTLS
 			newState.AgentTLSUserProvided = false
+		}
+		if opts.AgentMutationPolicy != "" {
+			newState.AgentMutationPolicy = opts.AgentMutationPolicy
 		}
 	}
 

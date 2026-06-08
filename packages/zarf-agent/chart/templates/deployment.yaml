@@ -53,6 +53,9 @@ spec:
             limits:
               memory: {{ .Values.resources.limits.memory }}
               cpu: {{ .Values.resources.limits.cpu }}
+          env:
+            - name: ZARF_AGENT_MUTATION_POLICY
+              value: {{ .Values.mutationPolicy }}
           volumeMounts:
             - name: tls-certs
               mountPath: /etc/certs

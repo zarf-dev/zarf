@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 	orasRetry "oras.land/oras-go/v2/registry/remote/retry"
@@ -31,19 +31,15 @@ const (
 )
 
 // NewOCIRepositoryMutationHook creates a new instance of the oci repo mutation hook.
-func NewOCIRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateOCIRepo(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateOCIRepo(ctx, r, cluster)
-		},
-	}
+func NewOCIRepositoryMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, src *flux.OCIRepository) (*operations.Result, error) {
+		return mutateOCIRepo(ctx, r, c, src)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 // mutateOCIRepo mutates the oci repository url to point to the repository URL defined in the ZarfState.
-func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, src *flux.OCIRepository) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var (
 		patches            []operations.PatchOperation
@@ -53,11 +49,6 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		isCreate = r.Operation == v1.Create
 		isUpdate = r.Operation == v1.Update
 	)
-
-	src := &flux.OCIRepository{}
-	if err := json.Unmarshal(r.Object.Raw, &src); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
-	}
 
 	if src.Spec.Reference == nil {
 		src.Spec.Reference = &flux.OCIRepositoryRef{}
@@ -69,13 +60,13 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		l.Warn("Detected a semver OCI ref, continuing but will be unable to guarantee against collisions if multiple OCI artifacts with the same name are brought in from different registries", "ref", src.Spec.Reference.SemVer)
 	}
 
-	zarfState, err := cluster.LoadState(ctx)
+	zarfState, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, zarfState.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +123,7 @@ func mutateOCIRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster
 		var certs pki.GeneratedPKI
 		useMTLS = zarfState.RegistryInfo.ShouldUseMTLS()
 		if useMTLS {
-			certs, err = cluster.GetRegistryClientMTLSCert(ctx)
+			certs, err = c.GetRegistryClientMTLSCert(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to find registry client mTLS secret: %w", err)
 			}
