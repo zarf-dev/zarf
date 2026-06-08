@@ -180,9 +180,6 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				continue
 			}
 			fileLocation := filepath.Join(filesDir, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-			if helpers.InvalidPath(fileLocation) {
-				fileLocation = filepath.Join(filesDir, strconv.Itoa(fileIdx))
-			}
 			fileList := []string{fileLocation}
 			if helpers.IsDir(fileLocation) {
 				fileList, err = helpers.RecursiveFileList(fileLocation, nil, false)

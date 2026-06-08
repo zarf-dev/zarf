@@ -836,9 +836,6 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 		l.Info("loading file", "name", file.Target)
 
 		fileLocation := filepath.Join(filesDir, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if helpers.InvalidPath(fileLocation) {
-			fileLocation = filepath.Join(filesDir, strconv.Itoa(fileIdx))
-		}
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
