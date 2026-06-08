@@ -27,6 +27,7 @@ func createFluxGitRepoAdmissionRequest(t *testing.T, op v1.Operation, fluxGitRep
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -42,7 +43,7 @@ func TestFluxMutationWebhook(t *testing.T) {
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, state.MutationPolicyAll))
 
 	tests := []admissionTest{
 		{

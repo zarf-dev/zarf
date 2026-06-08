@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: adopt-ns-with-agent-ignore
+  version: 0.1.0
+
+components:
+  - name: test
+    required: true
+    charts:
+      - name: adopt-ns-with-agent-ignore
+        version: 0.1.0
+        namespace: adopt-ns-with-agent-ignore
+        localPath: chart

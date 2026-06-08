@@ -23,6 +23,7 @@ func createArgoAppSetAdmissionRequest(t *testing.T, op v1.Operation, argoAppSet 
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -38,7 +39,7 @@ func TestArgoAppSetWebhook(t *testing.T) {
 		PushUsername: "a-push-user",
 	}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(ctx, c, state.MutationPolicyAll))
 
 	tests := []admissionTest{
 		{

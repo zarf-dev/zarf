@@ -75,6 +75,8 @@ type DeployOptions struct {
 	InjectorPort   int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy state.MutationPolicy
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
@@ -357,14 +359,15 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 		var err error
 		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:        opts.GitServer,
-			RegistryInfo:     opts.RegistryInfo,
-			ArtifactServer:   opts.ArtifactServer,
-			ApplianceMode:    applianceMode,
-			StorageClass:     opts.StorageClass,
-			InjectorPort:     opts.InjectorPort,
-			AgentTLS:         opts.AgentTLS,
-			InternalServices: internalServicesFor(pkgLayout.Pkg.Components, opts),
+			GitServer:           opts.GitServer,
+			RegistryInfo:        opts.RegistryInfo,
+			ArtifactServer:      opts.ArtifactServer,
+			ApplianceMode:       applianceMode,
+			StorageClass:        opts.StorageClass,
+			InjectorPort:        opts.InjectorPort,
+			AgentTLS:            opts.AgentTLS,
+			AgentMutationPolicy: opts.AgentMutationPolicy,
+			InternalServices:    internalServicesFor(pkgLayout.Pkg.Components, opts),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)

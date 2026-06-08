@@ -400,6 +400,30 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			"duration", time.Since(imgCompStart))
 
 		if !opts.SkipCosign {
+			cosignHosts := map[string]struct{}{}
+			addCosignHosts := func(images []string) error {
+				for _, image := range images {
+					parsed, parseErr := transform.ParseImageRef(image)
+					if parseErr != nil {
+						return fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", image, parseErr)
+					}
+					cosignHosts[parsed.Host] = struct{}{}
+				}
+
+				return nil
+			}
+			if err := addCosignHosts(scan.Matches); err != nil {
+				return nil, err
+			}
+			if err := addCosignHosts(scan.PotentialMatches); err != nil {
+				return nil, err
+			}
+
+			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
+			if err != nil {
+				return nil, err
+			}
+
 			// Handle cosign artifact lookups
 			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
 				imgStart := time.Now()
@@ -407,7 +431,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -416,7 +440,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}

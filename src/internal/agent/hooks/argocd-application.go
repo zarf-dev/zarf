@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -47,28 +46,20 @@ type ApplicationSource struct {
 }
 
 // NewApplicationMutationHook creates a new instance of the ArgoCD Application mutation hook.
-func NewApplicationMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplication(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateApplication(ctx, r, cluster)
-		},
-	}
+func NewApplicationMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, app *Application) (*operations.Result, error) {
+		return mutateApplication(ctx, r, c, app)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 // mutateApplication mutates the repository url to point to the repository URL defined in the ZarfState.
-func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, app *Application) (*operations.Result, error) {
 	l := logger.From(ctx)
-	s, err := cluster.LoadState(ctx)
+
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	app := Application{}
-	if err = json.Unmarshal(r.Object.Raw, &app); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	var urls []string
@@ -86,7 +77,7 @@ func mutateApplication(ctx context.Context, r *v1.AdmissionRequest, cluster *clu
 	}
 
 	// Get the registry service info if this is a NodePort service to use the internal kube-dns
-	registryAddress, clusterIP, err := cluster.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
+	registryAddress, clusterIP, err := c.GetServiceInfoFromRegistryAddress(ctx, s.RegistryInfo)
 	if err != nil {
 		return nil, err
 	}

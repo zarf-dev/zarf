@@ -26,6 +26,7 @@ func createPodAdmissionRequest(t *testing.T, op v1.Operation, pod *corev1.Pod, s
 	require.NoError(t, err)
 	return &v1.AdmissionRequest{
 		Operation: op,
+		Namespace: testNamespace,
 		Object: runtime.RawExtension{
 			Raw: raw,
 		},
@@ -40,7 +41,7 @@ func TestPodMutationWebhook(t *testing.T) {
 
 	s := &state.State{RegistryInfo: state.RegistryInfo{Address: "127.0.0.1:31999"}}
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(ctx, c))
+	handler := admission.NewHandler().Serve(ctx, NewPodMutationHook(ctx, c, state.MutationPolicyAll))
 
 	tests := []admissionTest{
 		{

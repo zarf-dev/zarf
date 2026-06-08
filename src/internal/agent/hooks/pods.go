@@ -6,41 +6,27 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/config"
-	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
-
 	corev1 "k8s.io/api/core/v1"
 )
 
 const annotationPrefix = "zarf.dev"
 
 // NewPodMutationHook creates a new instance of pods mutation hook.
-func NewPodMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutatePod(ctx, r, cluster)
-		},
-	}
-}
-
-func parsePod(object []byte) (*corev1.Pod, error) {
-	var pod corev1.Pod
-	if err := json.Unmarshal(object, &pod); err != nil {
-		return nil, err
-	}
-	return &pod, nil
+func NewPodMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, pod *corev1.Pod) (*operations.Result, error) {
+		return mutatePod(ctx, r, c, pod)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
 func getImageAnnotationKey(ctx context.Context, containerName string) string {
@@ -67,15 +53,11 @@ func getAnnotationKey(ctx context.Context, image string) string {
 	return key
 }
 
-func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutatePod(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	l := logger.From(ctx)
-	pod, err := parsePod(r.Object.Raw)
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
-	}
 
 	if r.SubResource != "" {
-		return mutatePodSubresource(ctx, r, cluster)
+		return mutatePodSubresource(ctx, r, c, pod)
 	}
 
 	if pod.Labels != nil && pod.Labels["zarf-agent"] == "patched" {
@@ -86,7 +68,7 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 		}, nil
 	}
 
-	state, err := cluster.LoadState(ctx)
+	state, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -157,22 +139,18 @@ func mutatePod(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Clu
 }
 
 // mutatePodSubresource handles pod subresource mutation
-func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutatePodSubresource(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	switch res := r.SubResource; res {
 	case "ephemeralcontainers":
-		return mutateEphemeralContainers(ctx, r, cluster)
+		return mutateEphemeralContainers(ctx, cluster, pod)
 	default:
 		// this likely won't be hit as the MutatingWebhookConfiguration would need to be modified - but this can help ensure they stay synchronized
 		return nil, fmt.Errorf("attempted mutation of unsupported subresource: %s", res)
 	}
 }
 
-func mutateEphemeralContainers(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+func mutateEphemeralContainers(ctx context.Context, cluster *cluster.Cluster, pod *corev1.Pod) (*operations.Result, error) {
 	l := logger.From(ctx)
-	pod, err := parsePod(r.Object.Raw)
-	if err != nil {
-		return nil, fmt.Errorf(lang.AgentErrParsePod, err)
-	}
 
 	state, err := cluster.LoadState(ctx)
 	if err != nil {
