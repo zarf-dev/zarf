@@ -5,6 +5,7 @@ package helm
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -54,32 +55,32 @@ func TestStandardTemplatedValuesName(t *testing.T) {
 		{
 			name:        "versioned chart",
 			chart:       v1alpha1.ZarfChart{Name: "my-chart", Version: "1.2.3"},
-			destination: "/values",
+			destination: filepath.FromSlash("/values"),
 			idx:         0,
-			expected:    "/values/my-chart-1.2.3-templated-0",
+			expected:    filepath.FromSlash("/values/my-chart-1.2.3-templated-0"),
 		},
 		{
 			name:        "second templated file",
 			chart:       v1alpha1.ZarfChart{Name: "my-chart", Version: "1.2.3"},
-			destination: "/values",
+			destination: filepath.FromSlash("/values"),
 			idx:         1,
-			expected:    "/values/my-chart-1.2.3-templated-1",
+			expected:    filepath.FromSlash("/values/my-chart-1.2.3-templated-1"),
 		},
 		{
 			name:        "no collision with StandardValuesName index",
 			chart:       v1alpha1.ZarfChart{Name: "my-chart", Version: "1.2.3"},
-			destination: "/values",
+			destination: filepath.FromSlash("/values"),
 			idx:         0,
-			// StandardValuesName(0) = "/values/my-chart-1.2.3-0"
-			// StandardTemplatedValuesName(0) = "/values/my-chart-1.2.3-templated-0"
-			expected: "/values/my-chart-1.2.3-templated-0",
+			// StandardValuesName(0) = "…/my-chart-1.2.3-0"
+			// StandardTemplatedValuesName(0) = "…/my-chart-1.2.3-templated-0"
+			expected: filepath.FromSlash("/values/my-chart-1.2.3-templated-0"),
 		},
 		{
 			name:        "chart with no version",
 			chart:       v1alpha1.ZarfChart{Name: "my-chart", Version: ""},
-			destination: "/values",
+			destination: filepath.FromSlash("/values"),
 			idx:         0,
-			expected:    "/values/my-chart-templated-0",
+			expected:    filepath.FromSlash("/values/my-chart-templated-0"),
 		},
 	}
 
