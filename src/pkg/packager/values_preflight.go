@@ -74,7 +74,7 @@ func buildDefinedValues(components []v1alpha1.ZarfComponent, vals value.Values) 
 					d.setValueRoot = true
 					continue
 				}
-				if segments := pathSegments(sv.Key); len(segments) > 0 {
+				if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
 					d.setValueKeys = append(d.setValueKeys, segments)
 				}
 			}
@@ -240,15 +240,6 @@ func actionLabel(a v1alpha1.ZarfComponentAction) string {
 		return "wait"
 	}
 	return helpers.Truncate(a.Cmd, 60, false)
-}
-
-// pathSegments splits a value.Path key (e.g. ".db.host") into its segments, dropping the leading dot.
-func pathSegments(key string) []string {
-	s := strings.TrimPrefix(key, ".")
-	if s == "" {
-		return nil
-	}
-	return strings.Split(s, ".")
 }
 
 func hasPrefix(path, prefix []string) bool {
