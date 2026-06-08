@@ -84,9 +84,7 @@ func walkBranch(pipe *parse.PipeNode, list, elseList *parse.ListNode, refs *Refs
 }
 
 // indexValuesPath returns the .Values path addressed by an `index .Values ...` command when every
-// index key is a string literal, e.g. `index .Values.db "host"` -> {"db", "host"}. It returns ok=false
-// for any other command, or when an index key is not a string literal, since those resolve only at
-// execution time.
+// index key is a string literal, e.g. `index .Values.db "host"` -> {"db", "host"}.
 func indexValuesPath(cmd *parse.CommandNode) ([]string, bool) {
 	if len(cmd.Args) < 2 {
 		return nil, false
