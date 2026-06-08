@@ -66,6 +66,26 @@ func TestReferencedKeys(t *testing.T) {
 			template: "{{ .Values.a }}{{ .Values.b.c }}{{ .Variables.V }}",
 			want:     Refs{Values: [][]string{{"a"}, {"b", "c"}}},
 		},
+		{
+			name:     "index of bare Values with string literals",
+			template: `{{ index .Values "app" "name" }}`,
+			want:     Refs{Values: [][]string{{"app", "name"}}},
+		},
+		{
+			name:     "index of Values field with string literal",
+			template: `{{ index .Values.db "host" }}`,
+			want:     Refs{Values: [][]string{{"db", "host"}}},
+		},
+		{
+			name:     "dynamic index key is ignored",
+			template: "{{ index .Values .key }}",
+			want:     Refs{},
+		},
+		{
+			name:     "dot stored in a variable is ignored",
+			template: "{{ $v := .Values }}{{ $v.db.host }}",
+			want:     Refs{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
