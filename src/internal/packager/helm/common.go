@@ -91,9 +91,26 @@ func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) s
 	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }
 
-// StandardTemplatedValuesName generates a predictable full path for a templated values file for a helm chart for zarf
-func StandardTemplatedValuesName(destination string, chart v1alpha1.ZarfChart, idx int) string {
-	return fmt.Sprintf("%s-templated-%d", StandardName(destination, chart), idx)
+// ChartValuesFile represents a single values file for a Helm chart with its global sequential index.
+// Template indicates whether Go template rendering should be applied at deploy time.
+type ChartValuesFile struct {
+	Source    string
+	Template  bool
+	GlobalIdx int
+}
+
+// GetChartValuesFiles returns a flat ordered list of all values files for a chart.
+// ValuesFiles appear first (indices 0..n-1), followed by TemplatedValuesFiles (indices n..n+m-1).
+// All files share the same global sequential index space and are stored via StandardValuesName.
+func GetChartValuesFiles(chart v1alpha1.ZarfChart) []ChartValuesFile {
+	files := make([]ChartValuesFile, 0, len(chart.ValuesFiles)+len(chart.TemplatedValuesFiles))
+	for i, src := range chart.ValuesFiles {
+		files = append(files, ChartValuesFile{Source: src, Template: false, GlobalIdx: i})
+	}
+	for i, src := range chart.TemplatedValuesFiles {
+		files = append(files, ChartValuesFile{Source: src, Template: true, GlobalIdx: len(chart.ValuesFiles) + i})
+	}
+	return files
 }
 
 // loadChartFromTarball returns a helm chart from a tarball.
@@ -118,14 +135,8 @@ func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chartv2.
 func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrides map[string]any) (common.Values, error) {
 	valueOpts := &values.Options{}
 
-	for idx := range chart.ValuesFiles {
-		path := StandardValuesName(valuesPath, chart, idx)
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
-	}
-
-	for idx := range chart.TemplatedValuesFiles {
-		path := StandardTemplatedValuesName(valuesPath, chart, idx)
-		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
+	for _, f := range GetChartValuesFiles(chart) {
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, StandardValuesName(valuesPath, chart, f.GlobalIdx))
 	}
 
 	httpProvider := getter.Provider{

@@ -657,12 +657,13 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 		}
 
+		nValuesFiles := len(chart.ValuesFiles)
 		for valuesIdx, path := range chart.TemplatedValuesFiles {
 			if helpers.IsURL(path) {
 				continue
 			}
 
-			rel := filepath.ToSlash(fmt.Sprintf("%s-templated-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx))
+			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), nValuesFiles+valuesIdx))
 			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
 
 			if !filepath.IsAbs(path) {

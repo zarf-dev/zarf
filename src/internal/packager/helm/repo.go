@@ -317,30 +317,16 @@ func finalizeChartPackage(ctx context.Context, chart v1alpha1.ZarfChart, chartPa
 }
 
 func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath string) error {
-	for valuesIdx, path := range chart.ValuesFiles {
-		dst := StandardValuesName(valuesPath, chart, valuesIdx)
+	for _, f := range GetChartValuesFiles(chart) {
+		dst := StandardValuesName(valuesPath, chart, f.GlobalIdx)
 
-		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err)
+		if helpers.IsURL(f.Source) {
+			if err := utils.DownloadToFile(ctx, f.Source, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, f.Source, err)
 			}
 		} else {
-			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
-				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
-			}
-		}
-	}
-
-	for valuesIdx, path := range chart.TemplatedValuesFiles {
-		dst := StandardTemplatedValuesName(valuesPath, chart, valuesIdx)
-
-		if helpers.IsURL(path) {
-			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
-				return fmt.Errorf(lang.ErrDownloading, path, err)
-			}
-		} else {
-			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
-				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
+			if err := helpers.CreatePathAndCopy(f.Source, dst); err != nil {
+				return fmt.Errorf("unable to copy chart values file %s: %w", f.Source, err)
 			}
 		}
 	}

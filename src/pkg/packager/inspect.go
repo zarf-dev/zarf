@@ -220,14 +220,15 @@ type templateValuesFilesOpts struct {
 }
 
 func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDir string, opts templateValuesFilesOpts) error {
-	for idx := range chart.ValuesFiles {
-		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
-			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
-		}
-	}
+	chartFiles := helm.GetChartValuesFiles(chart)
 
 	if len(chart.TemplatedValuesFiles) == 0 {
+		for _, f := range chartFiles {
+			valueFilePath := helm.StandardValuesName(valuesDir, chart, f.GlobalIdx)
+			if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+				return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
+			}
+		}
 		return nil
 	}
 
@@ -242,13 +243,15 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 		return fmt.Errorf("error building template objects: %w", err)
 	}
 
-	for idx := range chart.TemplatedValuesFiles {
-		valueFilePath := helm.StandardTemplatedValuesName(valuesDir, chart, idx)
+	for _, f := range chartFiles {
+		valueFilePath := helm.StandardValuesName(valuesDir, chart, f.GlobalIdx)
 		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
-		if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
-			return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
+		if f.Template {
+			if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+				return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
+			}
 		}
 	}
 
