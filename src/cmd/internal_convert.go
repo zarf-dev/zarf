@@ -77,12 +77,25 @@ func checkRemovedFields(pkg v1alpha1.ZarfPackage) error {
 		// TODO, add link to connected docs when available
 		errs = append(errs, fmt.Errorf(".metadata.yolo is removed without replacement in v1beta1 — replace it with connected deployments"))
 	}
+	// TODO link to values docs
+	if len(pkg.Variables) > 0 {
+		errs = append(errs, fmt.Errorf(".variables is removed in v1beta1 — consider using Zarf values instead"))
+	}
+	if len(pkg.Constants) > 0 {
+		errs = append(errs, fmt.Errorf(".constants is removed in v1beta1 — consider using Zarf values instead"))
+	}
 	for _, c := range pkg.Components {
 		if c.DeprecatedGroup != "" {
 			errs = append(errs, fmt.Errorf("can't convert component %s, .components.group is removed without replacement in v1beta1 — consider using .components[x].only.flavor instead", c.Name))
 		}
+		if c.Default {
+			errs = append(errs, fmt.Errorf("can't convert component %s, .components.default is removed without replacement in v1beta1", c.Name))
+		}
 		if len(c.DataInjections) > 0 {
 			errs = append(errs, fmt.Errorf("can't convert component %s, .components.dataInjections is removed without replacement in v1beta1 — see https://docs.zarf.dev/best-practices/data-injections-migration/ for alternatives", c.Name))
+		}
+		if len(c.Only.Cluster.Distros) > 0 {
+			errs = append(errs, fmt.Errorf("can't convert component %s, .components.only.cluster.distro is removed without replacement in v1beta1", c.Name))
 		}
 		// TODO add link to example of newer import system
 		if c.Import.Name != "" {
@@ -94,6 +107,32 @@ func checkRemovedFields(pkg v1alpha1.ZarfPackage) error {
 				errs = append(errs, fmt.Errorf("can't convert chart %s in component %s, .components.charts.variables is removed without replacement in v1beta1 — consider using Zarf values instead", ch.Name, c.Name))
 			}
 		}
+		errs = append(errs, checkRemovedActionFields(c)...)
 	}
 	return errors.Join(errs...)
+}
+
+// checkRemovedActionFields reports actions using setVariable/setVariables, which are removed in v1beta1 in favor of setValues.
+func checkRemovedActionFields(c v1alpha1.ZarfComponent) []error {
+	var errs []error
+	actionSets := []struct {
+		onAny string
+		set   v1alpha1.ZarfComponentActionSet
+	}{
+		{"onCreate", c.Actions.OnCreate},
+		{"onDeploy", c.Actions.OnDeploy},
+		{"onRemove", c.Actions.OnRemove},
+	}
+	for _, as := range actionSets {
+		set := as.set
+		for _, actions := range [][]v1alpha1.ZarfComponentAction{set.Before, set.After, set.OnSuccess, set.OnFailure} {
+			for _, a := range actions {
+				if a.DeprecatedSetVariable != "" || len(a.SetVariables) > 0 {
+					errs = append(errs, fmt.Errorf("can't convert component %s, .components.actions.%s setVariable/setVariables is removed in v1beta1 — use setValues instead", c.Name, as.onAny))
+					break
+				}
+			}
+		}
+	}
+	return errs
 }
