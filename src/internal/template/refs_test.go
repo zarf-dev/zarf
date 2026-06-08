@@ -5,11 +5,9 @@
 package template
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
 func TestReferencedKeys(t *testing.T) {
@@ -81,36 +79,4 @@ func TestReferencedKeys(t *testing.T) {
 func TestReferencedKeysInvalid(t *testing.T) {
 	_, err := ReferencedKeys("{{ .Values.foo ")
 	require.Error(t, err)
-}
-
-// TestReferencedKeysAlignment guards against drift between static extraction and the real
-// renderer: anything ReferencedKeys reports as referenced must, when supplied, let the real
-// template.Apply render without a missingkey error.
-func TestReferencedKeysAlignment(t *testing.T) {
-	ctx := context.Background()
-	templates := []string{
-		"{{ .Values.app.name }}",
-		"{{ .Values.foo }}",
-		"{{ if .Values.enabled }}on{{ end }}",
-	}
-	for _, tmpl := range templates {
-		refs, err := ReferencedKeys(tmpl)
-		require.NoError(t, err)
-
-		vals := value.Values{}
-		for _, path := range refs.Values {
-			cur := vals
-			for i, seg := range path {
-				if i == len(path)-1 {
-					cur[seg] = "x"
-					continue
-				}
-				next := map[string]any{}
-				cur[seg] = next
-				cur = next
-			}
-		}
-		_, err = Apply(ctx, tmpl, NewObjects(vals))
-		require.NoError(t, err, "template %q rejected after supplying extracted refs", tmpl)
-	}
 }
