@@ -56,6 +56,7 @@ type initOptions struct {
 	agentTLSCAPath          string
 	agentTLSCertPath        string
 	agentTLSKeyPath         string
+	agentMutationPolicy     string
 }
 
 func newInitCommand() *cobra.Command {
@@ -116,6 +117,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentMutationPolicy, "agent-mutation-policy", v.GetString(VInitAgentMutationPolicy), `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -251,6 +253,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
+		AgentMutationPolicy:    state.MutationPolicy(o.agentMutationPolicy),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -455,6 +458,13 @@ func (o *initOptions) validateInitFlags() error {
 	}
 	if o.registryInfo.RegistryMode != "" && o.registryInfo.RegistryMode != state.RegistryModeExternal && o.registryInfo.Address != "" {
 		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
+	}
+
+	switch state.MutationPolicy(o.agentMutationPolicy) {
+	case state.MutationPolicyAll, state.MutationPolicyLabeled:
+	default:
+		return fmt.Errorf("invalid agent mutation policy %q, must be %q or %q", o.agentMutationPolicy,
+			state.MutationPolicyAll, state.MutationPolicyLabeled)
 	}
 
 	return nil
