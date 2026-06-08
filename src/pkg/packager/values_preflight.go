@@ -196,13 +196,6 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				}
 			}
 			for _, subFile := range fileList {
-				isText, err := helpers.IsTextFile(subFile)
-				if err != nil {
-					return nil, err
-				}
-				if !isText {
-					continue
-				}
 				content, err := os.ReadFile(subFile)
 				if err != nil {
 					return nil, err
