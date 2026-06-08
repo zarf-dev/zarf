@@ -187,7 +187,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Fail before deploying anything if a templated action, manifest, or file references a value without a key
 	if err := validateTemplateRefs(ctx, pkgLayout, vals); err != nil {
-		return DeployResult{}, fmt.Errorf("package contains template references that cannot be resolved: %w", err)
+		return DeployResult{}, fmt.Errorf("package contains values references that cannot be resolved. Values templates must be explicitly set, even if empty: %w", err)
 	}
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
