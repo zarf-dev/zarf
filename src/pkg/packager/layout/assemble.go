@@ -881,14 +881,34 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
+	var hasImageArchives, hasTemplatedValuesFiles bool
 	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			reqs = append(reqs, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
+		if !hasImageArchives && len(comp.ImageArchives) > 0 {
+			hasImageArchives = true
+		}
+		if !hasTemplatedValuesFiles {
+			for _, chart := range comp.Charts {
+				if len(chart.TemplatedValuesFiles) > 0 {
+					hasTemplatedValuesFiles = true
+					break
+				}
+			}
+		}
+		if hasImageArchives && hasTemplatedValuesFiles {
 			break
 		}
+	}
+	if hasImageArchives {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.68.0",
+			Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+		})
+	}
+	if hasTemplatedValuesFiles {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.78.0",
+			Reason:  "This package uses templatedValuesFiles which require v0.78.0+",
+		})
 	}
 	if hasIndex {
 		reqs = append(reqs, v1alpha1.VersionRequirement{
