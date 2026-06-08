@@ -34,9 +34,9 @@ func TestReferencedKeys(t *testing.T) {
 			want:     Refs{Values: [][]string{{"foo"}}},
 		},
 		{
-			name:     "variable and constant",
+			name:     "variables and constants are ignored",
 			template: "{{ .Variables.FOO }}-{{ .Constants.BAR }}",
-			want:     Refs{Variables: []string{"FOO"}, Constants: []string{"BAR"}},
+			want:     Refs{},
 		},
 		{
 			name:     "range only records the ranged path",
@@ -64,9 +64,9 @@ func TestReferencedKeys(t *testing.T) {
 			want:     Refs{},
 		},
 		{
-			name:     "multiple references",
+			name:     "multiple references ignore variables",
 			template: "{{ .Values.a }}{{ .Values.b.c }}{{ .Variables.V }}",
-			want:     Refs{Values: [][]string{{"a"}, {"b", "c"}}, Variables: []string{"V"}},
+			want:     Refs{Values: [][]string{{"a"}, {"b", "c"}}},
 		},
 	}
 	for _, tt := range tests {
@@ -74,8 +74,6 @@ func TestReferencedKeys(t *testing.T) {
 			got, err := ReferencedKeys(tt.template)
 			require.NoError(t, err)
 			require.ElementsMatch(t, tt.want.Values, got.Values)
-			require.ElementsMatch(t, tt.want.Variables, got.Variables)
-			require.ElementsMatch(t, tt.want.Constants, got.Constants)
 		})
 	}
 }

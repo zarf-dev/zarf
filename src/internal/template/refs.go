@@ -11,17 +11,14 @@ import (
 
 // Refs are the system-object references discovered in a template string. Each Values entry is
 // the slice of path segments following ".Values" (e.g. ".Values.db.host" -> {"db", "host"}).
-// Variables and Constants hold the names following ".Variables" and ".Constants".
 type Refs struct {
-	Values    [][]string
-	Variables []string
-	Constants []string
+	Values [][]string
 }
 
-// ReferencedKeys parses s as a go-template and returns the .Values, .Variables, and .Constants
-// references it makes. It does not execute the template. References whose root dot has been
-// rebound (inside range/with) are not resolved back to the system objects and are ignored, so
-// the result may undercount but never overcounts. Unparseable templates return an error.
+// ReferencedKeys parses s as a go-template and returns the .Values references it makes. It does not
+// execute the template. References whose root dot has been rebound (inside range/with) are not
+// resolved back to the system objects and are ignored, so the result may undercount but never
+// overcounts. Unparseable templates return an error.
 func ReferencedKeys(s string) (Refs, error) {
 	tmpl, err := ttmpl.New("refs").Funcs(funcMap()).Parse(s)
 	if err != nil {
@@ -81,21 +78,7 @@ func walkBranch(pipe *parse.PipeNode, list, elseList *parse.ListNode, refs *Refs
 }
 
 func recordField(ident []string, refs *Refs) {
-	if len(ident) == 0 {
-		return
-	}
-	switch ident[0] {
-	case objectKeyValues:
-		if len(ident) > 1 {
-			refs.Values = append(refs.Values, append([]string(nil), ident[1:]...))
-		}
-	case objectKeyVariables:
-		if len(ident) > 1 {
-			refs.Variables = append(refs.Variables, ident[1])
-		}
-	case objectKeyConstants:
-		if len(ident) > 1 {
-			refs.Constants = append(refs.Constants, ident[1])
-		}
+	if len(ident) > 1 && ident[0] == objectKeyValues {
+		refs.Values = append(refs.Values, append([]string(nil), ident[1:]...))
 	}
 }
