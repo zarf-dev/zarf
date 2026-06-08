@@ -6,19 +6,28 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const examplesDir = path.join(__dirname, "../../examples");
-const dstDir = path.join(__dirname, "../src/content/docs/ref/Examples");
+const repo = "https://github.com/zarf-dev/zarf";
 
-async function preflight() {
+// Generate `ref/Examples` docs from a checkout's `examples/` directory. The
+// orchestrator (build-versions.mjs) calls this per archived version with that
+// tag's examples and ref; the default args generate the current checkout's.
+export async function generateExamples({
+  examplesDir = path.join(__dirname, "../../examples"),
+  dstDir = path.join(__dirname, "../src/content/docs/ref/Examples"),
+  ref = "main",
+} = {}) {
   await fs.rm(dstDir, { recursive: true, force: true });
   await fs.mkdir(dstDir, { recursive: true });
-}
 
-async function copyExamples() {
   const dirs = await fs.readdir(examplesDir);
   const examples = [];
   for (const dir of dirs) {
-    const content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
+    let content;
+    try {
+      content = await fs.readFile(path.join(examplesDir, dir, "zarf.yaml"), "utf-8");
+    } catch {
+      continue;
+    }
     const parsed = yaml.parse(content);
     const readmeFile = parsed.documentation?.readme;
     if (!readmeFile) {
@@ -32,8 +41,7 @@ async function copyExamples() {
     }
     const readme = (await fs.readFile(readmePath, "utf-8")).trim();
     examples.push(dir);
-    const repo = "https://github.com/zarf-dev/zarf";
-    const link = new URL(`${repo}/edit/main/examples/${dir}/${readmeFile}`).toString();
+    const link = new URL(`${repo}/edit/${ref}/examples/${dir}/${readmeFile}`).toString();
     const fm = `---
 title: "${dir}"
 editURL: "${link}"
@@ -43,7 +51,7 @@ tableOfContents: false
 
 :::note
 
-To view the full example, as well as its dependencies, please visit [examples/${dir}](${repo}/tree/main/examples/${dir}).
+To view the full example, as well as its dependencies, please visit [examples/${dir}](${repo}/tree/${ref}/examples/${dir}).
 
 :::
 `;
@@ -79,12 +87,10 @@ import { LinkCard, CardGrid } from '@astrojs/starlight/components';
   await fs.writeFile(path.join(dstDir, `index.mdx`), index + "\n");
 }
 
-async function main() {
-  await preflight();
-  await copyExamples();
+// CLI entry: generate the current checkout's examples (used by prebuild/predev).
+if (import.meta.url === `file://${process.argv[1]}`) {
+  await generateExamples().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 }
-
-await main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
