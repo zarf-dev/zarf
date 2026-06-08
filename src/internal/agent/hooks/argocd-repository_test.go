@@ -667,7 +667,7 @@ func TestArgoRepoWebhook(t *testing.T) {
 				}
 			}
 			c := createTestClientWithZarfState(ctx, t, testState)
-			handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, state.MutationPolicyAll))
+			handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(c, state.MutationPolicyAll))
 			if tt.svc != nil {
 				_, err := c.Clientset.CoreV1().Services("zarf").Create(ctx, tt.svc, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -780,7 +780,7 @@ func TestArgoRepoWebhookRegistryOnly(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := createTestClientWithZarfState(ctx, t, s)
-			handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, state.MutationPolicyAll))
+			handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(c, state.MutationPolicyAll))
 			rr := sendAdmissionRequest(t, tt.admissionReq, handler)
 			verifyAdmission(t, rr, tt)
 		})
@@ -818,7 +818,7 @@ func TestArgoRepoWebhookGitOnly(t *testing.T) {
 	})
 
 	c := createTestClientWithZarfState(ctx, t, s)
-	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, state.MutationPolicyAll))
+	handler := admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(c, state.MutationPolicyAll))
 	rr := sendAdmissionRequest(t, admissionReq, handler)
 	verifyAdmission(t, rr, admissionTest{patch: nil, code: http.StatusOK})
 }

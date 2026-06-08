@@ -85,10 +85,10 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 	}
 
 	hooks := map[string]http.HandlerFunc{
-		"argocd Application":       admission.NewHandler().Serve(ctx, NewApplicationMutationHook(ctx, c, state.MutationPolicyAll)),
-		"argocd ApplicationSet":    admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(ctx, c, state.MutationPolicyAll)),
-		"argocd AppProject":        admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(ctx, c, state.MutationPolicyAll)),
-		"argocd repository secret": admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(ctx, c, state.MutationPolicyAll)),
+		"argocd Application":       admission.NewHandler().Serve(ctx, NewApplicationMutationHook(c, state.MutationPolicyAll)),
+		"argocd ApplicationSet":    admission.NewHandler().Serve(ctx, NewApplicationSetMutationHook(c, state.MutationPolicyAll)),
+		"argocd AppProject":        admission.NewHandler().Serve(ctx, NewAppProjectMutationHook(c, state.MutationPolicyAll)),
+		"argocd repository secret": admission.NewHandler().Serve(ctx, NewRepositorySecretMutationHook(c, state.MutationPolicyAll)),
 	}
 
 	for _, tc := range cases {
@@ -104,7 +104,7 @@ func TestGitMutationHooksSkipWhenUnConfigured(t *testing.T) {
 		t.Parallel()
 		raw := runtime.RawExtension{Raw: []byte(`{"spec":{"url":"https://example.com/org/repo"}}`)}
 		req := &v1.AdmissionRequest{Operation: v1.Create, Namespace: testNamespace, Object: raw}
-		handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(ctx, c, state.MutationPolicyAll))
+		handler := admission.NewHandler().Serve(ctx, NewGitRepositoryMutationHook(c, state.MutationPolicyAll))
 		rr := sendAdmissionRequest(t, req, handler)
 		verifyAdmission(t, rr, admissionTest{code: http.StatusOK})
 	})

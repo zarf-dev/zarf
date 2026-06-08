@@ -37,14 +37,14 @@ func StartWebhook(ctx context.Context, cluster *cluster.Cluster) error {
 	// Routers
 	mode := operations.PolicyFromEnv()
 	admissionHandler := admission.NewHandler()
-	podsMutation := hooks.NewPodMutationHook(ctx, cluster, mode)
-	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(ctx, cluster, mode)
-	argocdApplicationMutation := hooks.NewApplicationMutationHook(ctx, cluster, mode)
-	argocdApplicationSetMutation := hooks.NewApplicationSetMutationHook(ctx, cluster, mode)
-	argocdAppProjectMutation := hooks.NewAppProjectMutationHook(ctx, cluster, mode)
-	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(ctx, cluster, mode)
-	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(ctx, cluster, mode)
-	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(ctx, cluster, mode)
+	podsMutation := hooks.NewPodMutationHook(cluster, mode)
+	fluxGitRepositoryMutation := hooks.NewGitRepositoryMutationHook(cluster, mode)
+	argocdApplicationMutation := hooks.NewApplicationMutationHook(cluster, mode)
+	argocdApplicationSetMutation := hooks.NewApplicationSetMutationHook(cluster, mode)
+	argocdAppProjectMutation := hooks.NewAppProjectMutationHook(cluster, mode)
+	argocdRepositoryMutation := hooks.NewRepositorySecretMutationHook(cluster, mode)
+	fluxHelmRepositoryMutation := hooks.NewHelmRepositoryMutationHook(cluster, mode)
+	fluxOCIRepositoryMutation := hooks.NewOCIRepositoryMutationHook(cluster, mode)
 
 	// Routers
 	mux := http.NewServeMux()
