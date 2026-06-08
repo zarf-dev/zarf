@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
@@ -106,7 +107,8 @@ func TestValidateTemplateRefs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateTemplateRefs(t.Context(), nil, tt.components, tt.vals)
+			pkgLayout := &layout.PackageLayout{Pkg: v1alpha1.ZarfPackage{Components: tt.components}}
+			err := validateTemplateRefs(t.Context(), pkgLayout, tt.vals)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 				return

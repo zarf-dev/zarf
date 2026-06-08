@@ -21,13 +21,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/value"
 )
 
-// validateTemplateRefs ensures every go-templated .Values reference in the given components can be
-// resolved before any component is deployed. A reference is satisfiable if it resolves against the
+// validateTemplateRefs ensures every go-templated .Values reference in the package's components can
+// be resolved before any component is deployed. A reference is satisfiable if it resolves against the
 // already-known values, or if any setValues action anywhere in the package declares it. This turns
 // the late, mid-deploy missingkey errors from template.Apply into a single up-front failure so a
 // package never half-deploys.
-func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, components []v1alpha1.ZarfComponent, vals value.Values) error {
-	// FIXME: package layout should be required
+func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, vals value.Values) error {
+	if pkgLayout == nil {
+		return fmt.Errorf("pkg layout is required")
+	}
+	components := pkgLayout.Pkg.Components
 	defined := buildDefinedValues(components, vals)
 
 	var errs []error
@@ -118,9 +121,6 @@ type templateSource struct {
 // componentFileSources extracts and reads the go-templated manifest and file contents for a
 // component. Components without templated manifests or files require no extraction.
 func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) (_ []templateSource, err error) {
-	if pkgLayout == nil {
-		return nil, nil
-	}
 	hasManifests := false
 	for _, m := range component.Manifests {
 		if m.IsTemplate() {

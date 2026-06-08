@@ -188,7 +188,7 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 
 	// Fail before deploying anything if a templated action, manifest, or file references a value,
 	// variable, or constant that nothing in the package can provide.
-	if err := validateTemplateRefs(ctx, pkgLayout, pkgLayout.Pkg.Components, vals); err != nil {
+	if err := validateTemplateRefs(ctx, pkgLayout, vals); err != nil {
 		return DeployResult{}, fmt.Errorf("package contains template references that cannot be resolved: %w", err)
 	}
 
