@@ -33,6 +33,15 @@ func componentWithCmd(name, cmd string) v1alpha1.ZarfComponent {
 	}
 }
 
+func componentWithChartValue(name, sourcePath string) v1alpha1.ZarfComponent {
+	return v1alpha1.ZarfComponent{
+		Name: name,
+		Charts: []v1alpha1.ZarfChart{
+			{Name: "chart", Values: []v1alpha1.ZarfChartValue{{SourcePath: sourcePath, TargetPath: ".dst"}}},
+		},
+	}
+}
+
 func TestValidateTemplateRefs(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -106,6 +115,32 @@ func TestValidateTemplateRefs(t *testing.T) {
 					},
 				},
 			}},
+		},
+		{
+			name:       "chart value source present in map passes",
+			components: []v1alpha1.ZarfComponent{componentWithChartValue("a", ".registry.port")},
+			vals:       value.Values{"registry": map[string]any{"port": 5000}},
+		},
+		{
+			name:       "chart value source undefined fails",
+			components: []v1alpha1.ZarfComponent{componentWithChartValue("a", ".registry.port")},
+			wantErr:    "maps undefined value .registry.port",
+		},
+		{
+			name: "chart value source defined by setValues passes",
+			components: []v1alpha1.ZarfComponent{
+				componentWithChartValue("a", ".registry.port"),
+				{
+					Name: "b",
+					Actions: v1alpha1.ZarfComponentActions{
+						OnDeploy: v1alpha1.ZarfComponentActionSet{
+							Before: []v1alpha1.ZarfComponentAction{
+								{Cmd: "get", SetValues: []v1alpha1.SetValue{{Key: ".registry", Type: v1alpha1.SetValueYAML}}},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -51,6 +51,15 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		for _, src := range sources {
 			errs = append(errs, checkTemplateString(src.content, defined, src.location)...)
 		}
+
+		for _, chart := range component.Charts {
+			for _, cv := range chart.Values {
+				if !defined.hasValue(value.Path(cv.SourcePath).Segments()) {
+					errs = append(errs, fmt.Errorf("component %q chart %q: maps undefined value %s to %s",
+						component.Name, chart.Name, cv.SourcePath, cv.TargetPath))
+				}
+			}
+		}
 	}
 	return errors.Join(errs...)
 }
