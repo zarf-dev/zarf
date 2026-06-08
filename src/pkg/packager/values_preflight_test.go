@@ -4,12 +4,15 @@
 package packager
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/value"
+	"github.com/zarf-dev/zarf/src/test/testutil"
 )
 
 func tmplPtr() *bool {
@@ -114,6 +117,56 @@ func TestValidateTemplateRefs(t *testing.T) {
 				return
 			}
 			require.ErrorContains(t, err, tt.wantErr)
+		})
+	}
+}
+
+// assembleLayout assembles a real package layout from a testdata package directory so the
+// manifest/file extraction path in validateTemplateRefs can be exercised end to end.
+func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
+	t.Helper()
+	ctx := testutil.TestContext(t)
+	defined, err := load.PackageDefinition(ctx, srcDir, load.DefinitionOptions{})
+	require.NoError(t, err)
+	pkgLayout, err := layout.AssemblePackage(ctx, defined.Pkg, srcDir, nil, layout.AssembleOptions{SkipSBOM: true})
+	require.NoError(t, err)
+	return pkgLayout
+}
+
+func TestValidateTemplateRefsManifestsAndFiles(t *testing.T) {
+	// Each testdata package has a component with a templated manifest, a templated file, and a
+	// setValues action declaring `.fromAction`. Only `.Values.present` is supplied at deploy time.
+	tests := []struct {
+		name     string
+		dir      string
+		wantErrs []string
+	}{
+		{
+			name: "defined manifest and file values pass",
+			dir:  "valid",
+		},
+		{
+			name:     "undefined manifest value fails",
+			dir:      "undefined-manifest",
+			wantErrs: []string{`manifest "cm"`, ".Values.absentManifest"},
+		},
+		{
+			name:     "undefined file value fails",
+			dir:      "undefined-file",
+			wantErrs: []string{`file "data.txt"`, ".Values.absentFile"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pkgLayout := assembleLayout(t, filepath.Join("testdata", "template-refs", tt.dir))
+			err := validateTemplateRefs(testutil.TestContext(t), pkgLayout, value.Values{"present": "x"})
+			if len(tt.wantErrs) == 0 {
+				require.NoError(t, err)
+				return
+			}
+			for _, want := range tt.wantErrs {
+				require.ErrorContains(t, err, want)
+			}
 		})
 	}
 }
