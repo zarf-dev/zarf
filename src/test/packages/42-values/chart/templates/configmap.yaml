@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-values-chart-configmap
+  namespace: default
+data:
+  staticKey: {{ .Values.staticKey | quote }}
+  chartImageTag: {{ .Values.chartImageTag | quote }}

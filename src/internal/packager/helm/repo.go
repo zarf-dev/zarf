@@ -331,6 +331,20 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 		}
 	}
 
+	for valuesIdx, path := range chart.TemplatedValuesFiles {
+		dst := StandardTemplatedValuesName(valuesPath, chart, valuesIdx)
+
+		if helpers.IsURL(path) {
+			if err := utils.DownloadToFile(ctx, path, dst); err != nil {
+				return fmt.Errorf(lang.ErrDownloading, path, err)
+			}
+		} else {
+			if err := helpers.CreatePathAndCopy(path, dst); err != nil {
+				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
+			}
+		}
+	}
+
 	return nil
 }
 

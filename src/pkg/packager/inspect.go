@@ -127,7 +127,13 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 				if err != nil {
 					return nil, err
 				}
-				if err := templateValuesFiles(chart, valuesDir, variableConfig); err != nil {
+				if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
+					variableConfig: variableConfig,
+					pkg:            pkgLayout.Pkg,
+					vals:           vals,
+					s:              s,
+					stateAccess:    component.StateAccess,
+				}); err != nil {
 					return nil, err
 				}
 
@@ -205,13 +211,41 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 	return resources, nil
 }
 
-func templateValuesFiles(chart v1alpha1.ZarfChart, valuesDir string, variableConfig *variables.VariableConfig) error {
+type templateValuesFilesOpts struct {
+	variableConfig *variables.VariableConfig
+	pkg            v1alpha1.ZarfPackage
+	vals           value.Values
+	s              *state.State
+	stateAccess    []v1alpha1.StateAccessKey
+}
+
+func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDir string, opts templateValuesFilesOpts) error {
 	for idx := range chart.ValuesFiles {
 		valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-		if err := variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
 			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
 		}
 	}
+
+	for idx := range chart.TemplatedValuesFiles {
+		valueFilePath := helm.StandardTemplatedValuesName(valuesDir, chart, idx)
+		if err := opts.variableConfig.ReplaceTextTemplate(valueFilePath); err != nil {
+			return fmt.Errorf("error templating values file %s: %w", valueFilePath, err)
+		}
+		objs, err := tmpl.NewObjects(opts.vals).
+			WithPackage(opts.pkg).
+			WithBuild(opts.pkg.Build).
+			WithVariables(opts.variableConfig.GetSetVariableMap()).
+			WithConstants(opts.variableConfig.GetConstants()).
+			WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
+		if err != nil {
+			return fmt.Errorf("error building template objects for values file %s: %w", valueFilePath, err)
+		}
+		if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+			return fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
+		}
+	}
+
 	return nil
 }
 
@@ -301,7 +335,7 @@ func InspectDefinitionResources(ctx context.Context, packagePath string, opts In
 		}
 
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersion, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersion, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -411,7 +445,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 
 // getTemplatedChart returns a templated chart.yaml as a string after templating
 func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, componentName string, packagePath string,
-	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
+	baseComponentDir string, variableConfig *variables.VariableConfig, vals value.Values, pkg v1alpha1.ZarfPackage, s *state.State, stateAccess []v1alpha1.StateAccessKey, kubeVersion string, isInteractive bool, cachePath string, remoteOptions types.RemoteOptions) (Resource, common.Values, error) {
 	chartPath := filepath.Join(baseComponentDir, string(layout.ChartsComponentDir))
 	valuesFilePath := filepath.Join(baseComponentDir, string(layout.ValuesComponentDir))
 	if err := layout.PackageChart(ctx, zarfChart, packagePath, chartPath, valuesFilePath, cachePath, remoteOptions); err != nil {
@@ -436,6 +470,22 @@ func getTemplatedChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, compon
 		err := variableConfig.ReplaceTextTemplate(valueFilePath)
 		if err != nil {
 			return Resource{}, common.Values{}, fmt.Errorf("error templating the values file: %w", err)
+		}
+	}
+
+	for idx := range zarfChart.TemplatedValuesFiles {
+		valueFilePath := helm.StandardTemplatedValuesName(valuesFilePath, zarfChart, idx)
+		objs, err := tmpl.NewObjects(vals).
+			WithPackage(pkg).
+			WithBuild(pkg.Build).
+			WithVariables(variableConfig.GetSetVariableMap()).
+			WithConstants(variableConfig.GetConstants()).
+			WithState(tmpl.StateAccess{State: s, AccessKeys: stateAccess})
+		if err != nil {
+			return Resource{}, common.Values{}, fmt.Errorf("error building template objects for values file %s: %w", valueFilePath, err)
+		}
+		if err := tmpl.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+			return Resource{}, common.Values{}, fmt.Errorf("error applying Go templates to values file %s: %w", valueFilePath, err)
 		}
 	}
 

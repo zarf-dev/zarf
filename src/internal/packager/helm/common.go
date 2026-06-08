@@ -91,6 +91,11 @@ func StandardValuesName(destination string, chart v1alpha1.ZarfChart, idx int) s
 	return fmt.Sprintf("%s-%d", StandardName(destination, chart), idx)
 }
 
+// StandardTemplatedValuesName generates a predictable full path for a templated values file for a helm chart for zarf
+func StandardTemplatedValuesName(destination string, chart v1alpha1.ZarfChart, idx int) string {
+	return fmt.Sprintf("%s-templated-%d", StandardName(destination, chart), idx)
+}
+
 // loadChartFromTarball returns a helm chart from a tarball.
 func loadChartFromTarball(chart v1alpha1.ZarfChart, chartPath string) (*chartv2.Chart, error) {
 	// Get the path the temporary helm chart tarball
@@ -115,6 +120,11 @@ func parseChartValues(chart v1alpha1.ZarfChart, valuesPath string, valuesOverrid
 
 	for idx := range chart.ValuesFiles {
 		path := StandardValuesName(valuesPath, chart, idx)
+		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
+	}
+
+	for idx := range chart.TemplatedValuesFiles {
+		path := StandardTemplatedValuesName(valuesPath, chart, idx)
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, path)
 	}
 

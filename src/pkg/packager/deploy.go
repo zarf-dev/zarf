@@ -594,6 +594,25 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			}
 		}
 
+		for idx := range chart.TemplatedValuesFiles {
+			valueFilePath := helm.StandardTemplatedValuesName(valuesDir, chart, idx)
+			if err := d.vc.ReplaceTextTemplate(valueFilePath); err != nil {
+				return installedCharts, err
+			}
+			objs, err := template.NewObjects(d.vals).
+				WithPackage(pkgLayout.Pkg).
+				WithBuild(pkgLayout.Pkg.Build).
+				WithVariables(d.vc.GetSetVariableMap()).
+				WithConstants(d.vc.GetConstants()).
+				WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
+			if err != nil {
+				return installedCharts, err
+			}
+			if err := template.ApplyToFile(ctx, valueFilePath, valueFilePath, objs); err != nil {
+				return installedCharts, err
+			}
+		}
+
 		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
 			variableConfig:     d.vc,
 			values:             d.vals,

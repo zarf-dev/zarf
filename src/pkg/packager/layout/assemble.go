@@ -592,10 +592,22 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, ch
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
+
+	oldTemplatedValuesFiles := chart.TemplatedValuesFiles
+	templatedValuesFiles := []string{}
+	for _, v := range chart.TemplatedValuesFiles {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
+			v = filepath.Join(packagePath, v)
+		}
+		templatedValuesFiles = append(templatedValuesFiles, v)
+	}
+	chart.TemplatedValuesFiles = templatedValuesFiles
+
 	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, cachePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles
+	chart.TemplatedValuesFiles = oldTemplatedValuesFiles
 	return nil
 }
 
@@ -642,6 +654,22 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+			}
+		}
+
+		for valuesIdx, path := range chart.TemplatedValuesFiles {
+			if helpers.IsURL(path) {
+				continue
+			}
+
+			rel := filepath.ToSlash(fmt.Sprintf("%s-templated-%d", helm.StandardName(string(ValuesComponentDir), chart), valuesIdx))
+			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
+
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
+				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
 			}
 		}
 	}
