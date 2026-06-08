@@ -388,7 +388,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for filesIdx, file := range component.Files {
-		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(string(FilesComponentDir), ComponentFileRelPath(filesIdx, file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -543,7 +543,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string) error {
 	for fileIdx, path := range manifest.Files {
-		rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+		rel := filepath.Join(string(ManifestsComponentDir), ManifestFileName(manifest.Name, fileIdx))
 		dst := filepath.Join(compBuildPath, rel)
 
 		// Copy manifests without any processing.
@@ -564,7 +564,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 
 	for kustomizeIdx, path := range manifest.Kustomizations {
 		// Generate manifests from kustomizations and place in the package.
-		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+		kname := KustomizationFileName(manifest.Name, kustomizeIdx)
 		rel := filepath.Join(string(ManifestsComponentDir), kname)
 		dst := filepath.Join(compBuildPath, rel)
 
@@ -651,7 +651,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			continue
 		}
 
-		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target)))
+		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), ComponentFileRelPath(filesIdx, file.Target)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 		src := file.Source
@@ -730,7 +730,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)))
+			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), ManifestFileName(manifest.Name, fileIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
@@ -747,7 +747,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 		for kustomizeIdx, path := range manifest.Kustomizations {
 			// Generate manifests from kustomizations and place in the package.
-			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+			kname := KustomizationFileName(manifest.Name, kustomizeIdx)
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -158,7 +157,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				continue
 			}
 			for idx := range manifest.Files {
-				path := filepath.Join(manifestDir, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+				path := filepath.Join(manifestDir, layout.ManifestFileName(manifest.Name, idx))
 				content, err := os.ReadFile(path)
 				if err != nil {
 					return nil, err
@@ -179,7 +178,7 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			if !file.IsTemplate() {
 				continue
 			}
-			fileLocation := filepath.Join(filesDir, strconv.Itoa(fileIdx), filepath.Base(file.Target))
+			fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Target))
 			fileList := []string{fileLocation}
 			if helpers.IsDir(fileLocation) {
 				fileList, err = helpers.RecursiveFileList(fileLocation, nil, false)
