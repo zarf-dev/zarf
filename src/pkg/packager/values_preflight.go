@@ -19,17 +19,16 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
-// validateTemplateRefs ensures every go-templated reference (.Values/.Variables/.Constants) in the
-// given components can be resolved before any component is deployed. A reference is satisfiable if
-// it resolves against the already-known values/variables/constants, or if any setValues/setVariables
-// action anywhere in the package declares it. This turns the late, mid-deploy missingkey errors from
-// template.Apply into a single up-front failure so a package never half-deploys.
-func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, components []v1alpha1.ZarfComponent, vals value.Values, vc *variables.VariableConfig) error {
+// validateTemplateRefs ensures every go-templated .Values reference in the given components can be
+// resolved before any component is deployed. A reference is satisfiable if it resolves against the
+// already-known values, or if any setValues action anywhere in the package declares it. This turns
+// the late, mid-deploy missingkey errors from template.Apply into a single up-front failure so a
+// package never half-deploys.
+func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, components []v1alpha1.ZarfComponent, vals value.Values) error {
 	// FIXME: package layout should be required
-	defined := buildDefinedValues(components, vals, vc)
+	defined := buildDefinedValues(components, vals)
 
 	var errs []error
 	for _, component := range components {
@@ -54,35 +53,20 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 	return errors.Join(errs...)
 }
 
-// definedValues describes the value/variable/constant keys a package can provide at deploy time.
+// definedValues describes the value keys a package can provide at deploy time.
 type definedValues struct {
 	vals         value.Values
 	setValueKeys [][]string
 	setValueRoot bool
-	varNames     map[string]struct{}
-	constNames   map[string]struct{}
 }
 
-func buildDefinedValues(components []v1alpha1.ZarfComponent, vals value.Values, vc *variables.VariableConfig) definedValues {
-	d := definedValues{
-		vals:       vals,
-		varNames:   map[string]struct{}{},
-		constNames: map[string]struct{}{},
-	}
+func buildDefinedValues(components []v1alpha1.ZarfComponent, vals value.Values) definedValues {
+	d := definedValues{vals: vals}
 	if d.vals == nil {
 		d.vals = value.Values{}
 	}
-	for name := range vc.GetSetVariableMap() {
-		d.varNames[name] = struct{}{}
-	}
-	for _, c := range vc.GetConstants() {
-		d.constNames[c.Name] = struct{}{}
-	}
 	for _, component := range components {
 		for _, action := range onDeployActions(component) {
-			for _, sv := range action.SetVariables {
-				d.varNames[strings.ToUpper(sv.Name)] = struct{}{}
-			}
 			for _, sv := range action.SetValues {
 				if sv.Key == "." {
 					d.setValueRoot = true
@@ -120,16 +104,6 @@ func checkTemplateString(s string, defined definedValues, location string) []err
 	for _, path := range refs.Values {
 		if !defined.hasValue(path) {
 			errs = append(errs, fmt.Errorf("%s: references undefined value .Values.%s", location, strings.Join(path, ".")))
-		}
-	}
-	for _, name := range refs.Variables {
-		if _, ok := defined.varNames[name]; !ok {
-			errs = append(errs, fmt.Errorf("%s: references undefined variable .Variables.%s", location, name))
-		}
-	}
-	for _, name := range refs.Constants {
-		if _, ok := defined.constNames[name]; !ok {
-			errs = append(errs, fmt.Errorf("%s: references undefined constant .Constants.%s", location, name))
 		}
 	}
 	return errs

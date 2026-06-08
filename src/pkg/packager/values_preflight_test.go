@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/value"
-	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
 func tmplPtr() *bool {
@@ -35,7 +34,6 @@ func TestValidateTemplateRefs(t *testing.T) {
 		name       string
 		components []v1alpha1.ZarfComponent
 		vals       value.Values
-		variables  []v1alpha1.InteractiveVariable
 		wantErr    string
 	}{
 		{
@@ -87,30 +85,12 @@ func TestValidateTemplateRefs(t *testing.T) {
 			wantErr:    ".Values.app.name",
 		},
 		{
-			name:       "undefined variable fails",
+			name:       "variable references are not validated",
 			components: []v1alpha1.ZarfComponent{componentWithCmd("a", "echo {{ .Variables.FOO }}")},
-			wantErr:    ".Variables.FOO",
 		},
 		{
-			name:       "package variable passes",
-			components: []v1alpha1.ZarfComponent{componentWithCmd("a", "echo {{ .Variables.FOO }}")},
-			variables:  []v1alpha1.InteractiveVariable{{Variable: v1alpha1.Variable{Name: "FOO"}}},
-		},
-		{
-			name: "variable defined by setVariables passes",
-			components: []v1alpha1.ZarfComponent{
-				componentWithCmd("a", "echo {{ .Variables.BAR }}"),
-				{
-					Name: "b",
-					Actions: v1alpha1.ZarfComponentActions{
-						OnDeploy: v1alpha1.ZarfComponentActionSet{
-							Before: []v1alpha1.ZarfComponentAction{
-								{Cmd: "get", SetVariables: []v1alpha1.Variable{{Name: "BAR"}}},
-							},
-						},
-					},
-				},
-			},
+			name:       "constant references are not validated",
+			components: []v1alpha1.ZarfComponent{componentWithCmd("a", "echo {{ .Constants.BAR }}")},
 		},
 		{
 			name: "untemplated action is skipped",
@@ -126,10 +106,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vc := variables.New("ZARF", nil, nil)
-			require.NoError(t, vc.PopulateVariables(tt.variables, nil))
-
-			err := validateTemplateRefs(t.Context(), nil, tt.components, tt.vals, vc)
+			err := validateTemplateRefs(t.Context(), nil, tt.components, tt.vals)
 			if tt.wantErr == "" {
 				require.NoError(t, err)
 				return
