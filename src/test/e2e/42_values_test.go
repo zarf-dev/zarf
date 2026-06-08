@@ -163,6 +163,30 @@ func TestValuesSchema(t *testing.T) {
 	})
 }
 
+func TestValuesPreflight(t *testing.T) {
+	t.Log("E2E: Values preflight validation")
+
+	src := filepath.Join("src", "test", "packages", "42-values", "preflight-invalid")
+	tmpdir := t.TempDir()
+
+	// Create succeeds; the undefined reference is only detectable at deploy time.
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", src, "-o", tmpdir, "--skip-sbom", "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+
+	packageName := fmt.Sprintf("zarf-package-test-values-preflight-%s.tar.zst", e2e.Arch)
+	path := filepath.Join(tmpdir, packageName)
+
+	// Deploy must fail before any component is applied because a templated action references an
+	// undefined value that no setValues action can provide.
+	_, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm")
+	require.Error(t, err, "deploy should fail early on an undefined templated value")
+	require.Contains(t, stdErr, "doesNotExist", "error should identify the undefined value")
+
+	// The manifest in the same component must not have been applied.
+	_, _, err = e2e.Kubectl(t, "get", "configmap", "test-preflight-configmap")
+	require.Error(t, err, "configmap should not exist because deploy failed before applying manifests")
+}
+
 func TestStateTemplates(t *testing.T) {
 	t.Log("E2E: State template access controls")
 
