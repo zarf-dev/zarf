@@ -42,6 +42,19 @@ func componentWithChartValue(name, sourcePath string) v1alpha1.ZarfComponent {
 	}
 }
 
+func componentWithWait(name string, wait *v1alpha1.ZarfComponentActionWait) v1alpha1.ZarfComponent {
+	return v1alpha1.ZarfComponent{
+		Name: name,
+		Actions: v1alpha1.ZarfComponentActions{
+			OnDeploy: v1alpha1.ZarfComponentActionSet{
+				After: []v1alpha1.ZarfComponentAction{
+					{Wait: wait, Template: tmplPtr()},
+				},
+			},
+		},
+	}
+}
+
 func TestValidateTemplateRefs(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -142,6 +155,43 @@ func TestValidateTemplateRefs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "wait cluster condition references undefined value fails",
+			components: []v1alpha1.ZarfComponent{componentWithWait("a", &v1alpha1.ZarfComponentActionWait{
+				Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+					Kind: "Pod", Name: "x", Condition: "{{ .Values.missing }}",
+				},
+			})},
+			wantErr: ".Values.missing",
+		},
+		{
+			name: "wait network address references undefined value fails",
+			components: []v1alpha1.ZarfComponent{componentWithWait("a", &v1alpha1.ZarfComponentActionWait{
+				Network: &v1alpha1.ZarfComponentActionWaitNetwork{
+					Protocol: "http", Address: "{{ .Values.host }}:8080",
+				},
+			})},
+			wantErr: ".Values.host",
+		},
+		{
+			// Known under-catch (finding #2): the preflight cannot know a setValues key will hold a
+			// scalar at runtime, so the prefix match treats .db.host as satisfied even though the deploy
+			// would fail templating it. This pins the current behavior; flip it if the rule is tightened.
+			name: "scalar setValues key satisfies a deeper reference",
+			components: []v1alpha1.ZarfComponent{
+				componentWithCmd("a", "echo {{ .Values.db.host }}"),
+				{
+					Name: "b",
+					Actions: v1alpha1.ZarfComponentActions{
+						OnDeploy: v1alpha1.ZarfComponentActionSet{
+							Before: []v1alpha1.ZarfComponentAction{
+								{Cmd: "get-db", SetValues: []v1alpha1.SetValue{{Key: ".db", Type: v1alpha1.SetValueString}}},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -154,6 +204,20 @@ func TestValidateTemplateRefs(t *testing.T) {
 			require.ErrorContains(t, err, tt.wantErr)
 		})
 	}
+}
+
+// TestValidateTemplateRefsAccumulatesErrors verifies that independent undefined references across
+// components are all reported in one pass via errors.Join rather than short-circuiting on the first.
+func TestValidateTemplateRefsAccumulatesErrors(t *testing.T) {
+	components := []v1alpha1.ZarfComponent{
+		componentWithCmd("a", "echo {{ .Values.alpha }}"),
+		componentWithCmd("b", "echo {{ .Values.beta }}"),
+	}
+	pkgLayout := &layout.PackageLayout{Pkg: v1alpha1.ZarfPackage{Components: components}}
+	err := validateTemplateRefs(t.Context(), pkgLayout, nil)
+	require.Error(t, err)
+	require.ErrorContains(t, err, ".Values.alpha")
+	require.ErrorContains(t, err, ".Values.beta")
 }
 
 // assembleLayout assembles a real package layout from a testdata package directory so the
@@ -169,8 +233,8 @@ func assembleLayout(t *testing.T, srcDir string) *layout.PackageLayout {
 }
 
 func TestValidateTemplateRefsManifestsAndFiles(t *testing.T) {
-	// Each testdata package has a component with a templated manifest, a templated file, and a
-	// setValues action declaring `.fromAction`. Only `.Values.present` is supplied at deploy time.
+	// Only `.Values.present` is supplied at deploy time, so any other reference is undefined. An empty
+	// wantErrs means the package must validate clean (including the known under-catches below).
 	tests := []struct {
 		name     string
 		dir      string
@@ -189,6 +253,11 @@ func TestValidateTemplateRefsManifestsAndFiles(t *testing.T) {
 			name:     "undefined file value fails",
 			dir:      "undefined-file",
 			wantErrs: []string{`file "data.txt"`, ".Values.absentFile"},
+		},
+		{
+			name:     "undefined value inside a directory-target file fails",
+			dir:      "dir-file",
+			wantErrs: []string{`file "confdir"`, ".Values.absentInDir"},
 		},
 	}
 	for _, tt := range tests {
