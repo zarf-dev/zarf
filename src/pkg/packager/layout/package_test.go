@@ -1864,3 +1864,32 @@ func TestValidatePackagePaths(t *testing.T) {
 		})
 	}
 }
+
+func TestHasValuesSchema(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns false when schema file is absent", func(t *testing.T) {
+		t.Parallel()
+		p := &PackageLayout{dirPath: t.TempDir()}
+		require.False(t, p.HasValuesSchema())
+	})
+
+	t.Run("returns true when schema file is present", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ValuesSchema), []byte(`{}`), 0o600))
+		p := &PackageLayout{dirPath: dir}
+		require.True(t, p.HasValuesSchema())
+	})
+
+	t.Run("returns true even when Pkg.Values.Schema is empty", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, ValuesSchema), []byte(`{}`), 0o600))
+		p := &PackageLayout{
+			dirPath: dir,
+			Pkg:     v1alpha1.ZarfPackage{}, // Values.Schema is ""
+		}
+		require.True(t, p.HasValuesSchema(), "file on disk should take precedence over empty metadata field")
+	})
+}

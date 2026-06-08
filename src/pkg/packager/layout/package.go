@@ -65,6 +65,12 @@ func (p *PackageLayout) DirPath() string {
 	return p.dirPath
 }
 
+// HasValuesSchema reports whether the package layout contains an assembled values schema file (defined or through import)
+func (p *PackageLayout) HasValuesSchema() bool {
+	_, err := os.Stat(filepath.Join(p.dirPath, ValuesSchema))
+	return err == nil
+}
+
 // LoadFromTar unpacks the given archive (any compress/format) and loads it.
 func LoadFromTar(ctx context.Context, tarPath string, opts PackageLayoutOptions) (*PackageLayout, error) {
 	if opts.Filter == nil {
@@ -605,6 +611,11 @@ func (p *PackageLayout) GetComponentDir(ctx context.Context, destPath, component
 func (p *PackageLayout) GetImageDirPath() string {
 	// Use the manifest within the index.json to load the specific image we want
 	return filepath.Join(p.dirPath, ImagesDir)
+}
+
+// HasImageIndex reports whether the package layout has a multi-platform image
+func (p *PackageLayout) HasImageIndex() (bool, error) {
+	return imageLayoutHasIndex(p.GetImageDirPath())
 }
 
 // Archive creates a tarball from the package layout and returns the path to that tarball

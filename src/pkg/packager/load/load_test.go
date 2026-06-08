@@ -6,6 +6,7 @@ package load
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -153,4 +154,60 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestPackageDefinitionErrors(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	t.Run("returns error for non-existent package path", func(t *testing.T) {
+		t.Parallel()
+		_, err := PackageDefinition(ctx, filepath.Join(t.TempDir(), "does-not-exist"), DefinitionOptions{})
+		require.Error(t, err)
+	})
+
+	t.Run("returns error when zarf.yaml contains invalid YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte("this: is: not: valid: yaml: ["), 0o600))
+		_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+		require.Error(t, err)
+	})
+
+	t.Run("returns error when a component import path does not exist", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: test
+components:
+  - name: test
+    import:
+      path: ./does-not-exist
+`
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
+		_, err := PackageDefinition(ctx, dir, DefinitionOptions{})
+		require.ErrorContains(t, err, "does-not-exist")
+	})
+
+	t.Run("returns error when a required package template variable is not set", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: test
+components:
+  - name: test
+    required: true
+    actions:
+      onCreate:
+        before:
+          - cmd: "###ZARF_PKG_TMPL_MYVAR###"
+`
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o600))
+		_, err := PackageDefinition(ctx, dir, DefinitionOptions{
+			SetVariables: map[string]string{}, // non-nil triggers fillActiveTemplate; MYVAR is absent
+		})
+		require.ErrorContains(t, err, "MYVAR")
+	})
 }

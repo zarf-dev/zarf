@@ -14,6 +14,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
 // MutationPolicy controls the agent's default mutation behavior.
@@ -365,6 +366,23 @@ func (ri RegistryInfo) IsConfigured() bool {
 // ShouldUseMTLS returns true if mTLS should be used for the registry connection.
 func (ri RegistryInfo) ShouldUseMTLS() bool {
 	return ri.MTLSStrategy != "" && ri.MTLSStrategy != MTLSStrategyNone
+}
+
+// Htpasswd returns an htpasswd-formatted string for the registry's push and pull users.
+// Returns an empty string for external registries.
+func (ri RegistryInfo) Htpasswd() (string, error) {
+	if !ri.IsInternal() {
+		return "", nil
+	}
+	pushUser, err := utils.GetHtpasswdString(ri.PushUsername, ri.PushPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for push user: %w", err)
+	}
+	pullUser, err := utils.GetHtpasswdString(ri.PullUsername, ri.PullPassword)
+	if err != nil {
+		return "", fmt.Errorf("generating htpasswd for pull user: %w", err)
+	}
+	return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
 }
 
 // CheckIfRegistryAddressOrCredsChanged compares two RegistryInfo structs and returns true if the creds or address changed

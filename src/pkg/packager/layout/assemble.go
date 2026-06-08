@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,12 +23,14 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	goyaml "github.com/goccy/go-yaml"
+	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -60,7 +63,7 @@ type AssembleOptions struct {
 }
 
 // AssemblePackage takes a package definition and returns a package layout with all the resources collected
-func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleOptions) (*PackageLayout, error) {
+func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleOptions) (*PackageLayout, error) {
 	l := logger.From(ctx)
 	l.Info("assembling package", "path", packagePath)
 
@@ -112,7 +115,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 
 	componentImages := []transform.Image{}
-	manifests := []images.ImageWithManifest{}
+	manifests := []images.PulledImage{}
 	for _, component := range pkg.Components {
 		for _, imageArchive := range component.ImageArchives {
 			if !filepath.IsAbs(imageArchive.Path) {
@@ -153,11 +156,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		manifests = append(manifests, imageManifests...)
 	}
 
-	for _, manifest := range manifests {
-		ok := images.OnlyHasImageLayers(manifest.Manifest)
-		if ok {
-			sbomImageList = append(sbomImageList, manifest.Image)
-		}
+	for _, pulled := range manifests {
+		sbomImageList = append(sbomImageList, pulled.Image)
 
 		// Sort images index to make build reproducible.
 		err = utils.SortImagesIndex(filepath.Join(buildPath, ImagesDir))
@@ -181,11 +181,8 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 		return nil, err
 	}
 
-	// Copy schema file if specified
-	if pkg.Values.Schema != "" {
-		if err = copyValuesSchema(ctx, pkg.Values.Schema, packagePath, buildPath); err != nil {
-			return nil, err
-		}
+	if err = mergeAndWriteValuesSchema(ctx, pkg.Values.Schema, importedSchemas, packagePath, buildPath); err != nil {
+		return nil, err
 	}
 
 	if err = createDocumentationTar(pkg, packagePath, buildPath); err != nil {
@@ -203,7 +200,10 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, opts.RegistryOverrides, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -242,11 +242,11 @@ type AssembleSkeletonOptions struct {
 }
 
 // AssembleSkeleton creates a skeleton package and returns the path to the created package.
-func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
+func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, importedSchemas []string, opts AssembleSkeletonOptions) (*PackageLayout, error) {
 	pkg.Metadata.Architecture = v1alpha1.SkeletonArch
 
-	// Creating skeletons packages with the values feature is not yet supported
-	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" {
+	// Creating skeleton packages with the values feature is not yet supported
+	if len(pkg.Values.Files) > 0 || pkg.Values.Schema != "" || len(importedSchemas) > 0 {
 		return nil, errors.New("creating skeleton packages with the values feature is not yet supported")
 	}
 
@@ -282,7 +282,10 @@ func AssembleSkeleton(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath
 	}
 	pkg.Metadata.AggregateChecksum = checksumSha
 
-	pkg = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo)
+	pkg, err = recordPackageMetadata(pkg, opts.Flavor, nil, opts.WithBuildMachineInfo, buildPath)
+	if err != nil {
+		return nil, err
+	}
 
 	b, err := goyaml.Marshal(pkg)
 	if err != nil {
@@ -370,7 +373,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -513,7 +516,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -786,7 +789,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	return nil
 }
 
-func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool) v1alpha1.ZarfPackage {
+func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOverrides []images.RegistryOverride, withBuildMachineInfo bool, buildPath string) (v1alpha1.ZarfPackage, error) {
 	now := time.Now()
 	if withBuildMachineInfo {
 		// Just use $USER env variable to avoid CGO issue.
@@ -819,17 +822,15 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Record the flavor of Zarf used to build this package (if any).
 	pkg.Build.Flavor = flavor
 
-	var versionRequirements []v1alpha1.VersionRequirement
-	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			versionRequirements = append(versionRequirements, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
-			break
+	hasIndex := false
+	if buildPath != "" {
+		var err error
+		hasIndex, err = imageLayoutHasIndex(filepath.Join(buildPath, ImagesDir))
+		if err != nil {
+			return v1alpha1.ZarfPackage{}, fmt.Errorf("failed to inspect image layout: %w", err)
 		}
 	}
-	pkg.Build.VersionRequirements = versionRequirements
+	pkg.Build.VersionRequirements = collectVersionRequirements(pkg, hasIndex)
 
 	// We lose the ordering for the user-provided registry overrides.
 	overrides := make(map[string]string, len(registryOverrides))
@@ -847,7 +848,27 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 	// Signature files are appended by SignPackage() if signing occurs.
 	pkg.Build.ProvenanceFiles = []string{Checksums}
 
-	return pkg
+	return pkg, nil
+}
+
+func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
+	var reqs []v1alpha1.VersionRequirement
+	for _, comp := range pkg.Components {
+		if len(comp.ImageArchives) > 0 {
+			reqs = append(reqs, v1alpha1.VersionRequirement{
+				Version: "v0.68.0",
+				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+			})
+			break
+		}
+	}
+	if hasIndex {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.77.0",
+			Reason:  "This package contains multi-platform images preserved by index digest, which require v0.77.0+",
+		})
+	}
+	return reqs
 }
 
 func getChecksum(dirPath string) (string, string, error) {
@@ -1008,36 +1029,131 @@ func mergeAndWriteValuesFile(ctx context.Context, files []string, packagePath, b
 	return nil
 }
 
-// copyValuesSchema validates and copies a values schema file to the build directory.
-// It validates the schema is valid JSON Schema, checks for path traversal, and copies
-// the file to the package root.
-func copyValuesSchema(ctx context.Context, schema, packagePath, buildPath string) error {
+// mergeAndWriteValuesSchema merges imported child schemas with the parent schema (parent wins)
+// and writes the result to buildPath/values.schema.json. If only a parent schema exists with
+// no imports, it is validated and copied as-is. If only child schemas exist, they are merged
+// and written. If neither exists, the function is a no-op.
+//
+// Schemas containing "$ref" pointers are rejected in all cases because references may point
+// to files unavailable after assembly.
+func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importedSchemas []string, packagePath, buildPath string) error {
 	l := logger.From(ctx)
-	l.Debug("copying values schema file to package", "schema", schema)
 
-	// Resolve the schema source path from package root
-	schemaSrc := schema
-	if !filepath.IsAbs(schemaSrc) {
-		schemaSrc = filepath.Join(packagePath, schema)
+	if parentSchema == "" && len(importedSchemas) == 0 {
+		return nil
 	}
 
-	// Validate the schema is valid JSON Schema
-	if err := value.ValidateSchemaFile(schemaSrc); err != nil {
-		return fmt.Errorf("values schema validation failed: %w", err)
+	// loadSchema reads a schema file, rejects any external "$ref" pointers before handing
+	// the document to gojsonschema, then validates the schema structure. CheckNoExternalRefs
+	// runs first so that gojsonschema never attempts to resolve external URIs.
+	loadSchema := func(relPath, label string) (map[string]any, error) {
+		src := relPath
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, relPath)
+		}
+		b, err := os.ReadFile(src)
+		if err != nil {
+			return nil, fmt.Errorf("reading %s schema: %w", label, err)
+		}
+		var s map[string]any
+		if err := json.Unmarshal(b, &s); err != nil {
+			return nil, fmt.Errorf("parsing %s schema: %w", label, err)
+		}
+		if err := value.CheckNoExternalRefs(s); err != nil {
+			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)
+		}
+		if err := value.ValidateSchemaDocument(s); err != nil {
+			return nil, fmt.Errorf("%s schema validation failed: %w", label, err)
+		}
+		return s, nil
 	}
 
-	// Copy schema file to package root
-	schemaDst := filepath.Join(buildPath, ValuesSchema)
-	l.Debug("copying values schema file", "src", schemaSrc, "dst", schemaDst)
-	if err := helpers.CreatePathAndCopy(schemaSrc, schemaDst); err != nil {
-		return fmt.Errorf("failed to copy values schema file %s: %w", schemaSrc, err)
+	// No child schemas — check for $ref, validate, then copy the parent schema file verbatim.
+	if len(importedSchemas) == 0 {
+		src := parentSchema
+		if !filepath.IsAbs(src) {
+			src = filepath.Join(packagePath, parentSchema)
+		}
+		if _, err := loadSchema(parentSchema, "parent"); err != nil {
+			return err
+		}
+		dst := filepath.Join(buildPath, ValuesSchema)
+		l.Debug("copying values schema file", "src", src, "dst", dst)
+		if err := helpers.CreatePathAndCopy(src, dst); err != nil {
+			return fmt.Errorf("failed to copy values schema file %s: %w", parentSchema, err)
+		}
+		return os.Chmod(dst, helpers.ReadWriteUser)
 	}
 
-	// Set appropriate file permissions
-	if err := os.Chmod(schemaDst, helpers.ReadWriteUser); err != nil {
-		return fmt.Errorf("failed to set permissions on values schema file %s: %w", schemaDst, err)
+	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
+
+	// Merge child schemas left-to-right; among children the earlier one wins.
+	var merged map[string]any
+	for _, schemaRelPath := range importedSchemas {
+		child, err := loadSchema(schemaRelPath, "imported")
+		if err != nil {
+			return err
+		}
+		if schemaVersion(child) == "" {
+			return fmt.Errorf("imported schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", schemaRelPath)
+		}
+		if merged == nil {
+			merged = child
+		} else {
+			if err := checkCompatibleVersion(merged, child, schemaRelPath); err != nil {
+				return err
+			}
+			merged = value.MergeSchemas(merged, child)
+		}
 	}
 
+	// Load the parent schema and merge it on top — parent wins over all children.
+	if parentSchema != "" {
+		parent, err := loadSchema(parentSchema, "parent")
+		if err != nil {
+			return err
+		}
+		if schemaVersion(parent) == "" {
+			return fmt.Errorf("parent schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", parentSchema)
+		}
+		if err := checkCompatibleVersion(parent, merged, "imported schemas"); err != nil {
+			return err
+		}
+		merged = value.MergeSchemas(parent, merged)
+	}
+
+	if err := value.ValidateSchemaDocument(merged); err != nil {
+		return fmt.Errorf("merged values schema is invalid: %w", err)
+	}
+
+	dst := filepath.Join(buildPath, ValuesSchema)
+	l.Debug("writing merged values schema", "dst", dst)
+	b, err := json.MarshalIndent(merged, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal merged values schema: %w", err)
+	}
+	if err := os.WriteFile(dst, b, helpers.ReadWriteUser); err != nil {
+		return fmt.Errorf("failed to write merged values schema: %w", err)
+	}
+	return nil
+}
+
+// schemaVersion extracts the "$schema" version URI from a schema map, returning "" if absent or not a string.
+func schemaVersion(s map[string]any) string {
+	if v, ok := s["$schema"].(string); ok {
+		return v
+	}
+	return ""
+}
+
+// checkCompatibleVersion errors when the accumulated merged schema and an incoming schema declare
+// different "$schema" versions, preventing silent cross-version merge bugs.
+func checkCompatibleVersion(accumulated, incoming map[string]any, incomingLabel string) error {
+	a := schemaVersion(accumulated)
+	b := schemaVersion(incoming)
+	if a != b {
+		return fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", a, incomingLabel, b)
+	}
 	return nil
 }
 
@@ -1081,4 +1197,25 @@ func createDocumentationTar(pkg v1alpha1.ZarfPackage, packagePath, buildPath str
 	}
 
 	return nil
+}
+
+func imageLayoutHasIndex(imageDir string) (bool, error) {
+	idxPath := filepath.Join(imageDir, IndexJSON)
+	b, err := os.ReadFile(idxPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to read %s: %w", idxPath, err)
+	}
+	var idx ocispec.Index
+	if err := json.Unmarshal(b, &idx); err != nil {
+		return false, fmt.Errorf("failed to parse %s: %w", idxPath, err)
+	}
+	for _, m := range idx.Manifests {
+		if images.IsIndex(m.MediaType) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

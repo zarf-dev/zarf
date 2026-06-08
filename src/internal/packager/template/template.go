@@ -17,7 +17,6 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
-	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
 
@@ -82,7 +81,7 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 
 		case "zarf-seed-registry", "zarf-registry":
 			builtinMap["SEED_REGISTRY"] = state.LocalhostRegistryAddress(s.IPFamily, s.InjectorInfo.Port)
-			htpasswd, err := generateHtpasswd(&regInfo)
+			htpasswd, err := regInfo.Htpasswd()
 			if err != nil {
 				return templateMap, err
 			}
@@ -109,26 +108,6 @@ func GetZarfTemplates(ctx context.Context, componentName string, s *state.State)
 	debugPrintTemplateMap(ctx, templateMap)
 
 	return templateMap, nil
-}
-
-// generateHtpasswd returns an htpasswd string for the current state's RegistryInfo.
-func generateHtpasswd(regInfo *state.RegistryInfo) (string, error) {
-	// Only calculate this for internal registries to allow longer external passwords
-	if regInfo.IsInternal() {
-		pushUser, err := utils.GetHtpasswdString(regInfo.PushUsername, regInfo.PushPassword)
-		if err != nil {
-			return "", fmt.Errorf("error generating htpasswd string: %w", err)
-		}
-
-		pullUser, err := utils.GetHtpasswdString(regInfo.PullUsername, regInfo.PullPassword)
-		if err != nil {
-			return "", fmt.Errorf("error generating htpasswd string: %w", err)
-		}
-
-		return fmt.Sprintf("%s\\n%s", pushUser, pullUser), nil
-	}
-
-	return "", nil
 }
 
 func debugPrintTemplateMap(ctx context.Context, templateMap map[string]*variables.TextTemplate) {
