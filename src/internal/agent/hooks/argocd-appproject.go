@@ -34,8 +34,8 @@ type AppProjectSpec struct {
 }
 
 // NewAppProjectMutationHook creates a new mutation hook for ArgoCD AppProjects.
-func NewAppProjectMutationHook(ctx context.Context, c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
-	admit := withMutationGuard(ctx, c, mode, func(ctx context.Context, r *v1.AdmissionRequest, proj *AppProject) (*operations.Result, error) {
+func NewAppProjectMutationHook(c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(c, mode, func(ctx context.Context, r *v1.AdmissionRequest, proj *AppProject) (*operations.Result, error) {
 		return mutateAppProject(ctx, r, c, proj)
 	})
 	return operations.Hook{Create: admit, Update: admit}
