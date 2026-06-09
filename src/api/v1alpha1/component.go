@@ -216,6 +216,8 @@ type ZarfChart struct {
 	NoWait bool `json:"noWait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// [alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time
+	TemplatedValuesFiles []string `json:"templatedValuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
 	// [alpha] List of values sources to their Helm override target

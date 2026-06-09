@@ -73,6 +73,16 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err, "unable to get state configmap")
 	require.NotContains(t, kubectlOut, "{{", "storageClass should have been templated")
 
+	// Verify templatedValuesFiles rendered .Values.* into chart values at deploy time.
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-chart-configmap", "-o", "jsonpath='{.data.staticKey}'")
+	require.NoError(t, err, "unable to get chart configmap")
+	require.Contains(t, kubectlOut, "static-from-file", "staticKey should come from valuesFiles unchanged")
+
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-chart-configmap", "-o", "jsonpath='{.data.chartImageTag}'")
+	require.NoError(t, err, "unable to get chart configmap")
+	require.Contains(t, kubectlOut, "override-tag", "chartImageTag should be rendered from .Values.imageTag in templatedValuesFiles")
+	require.NotContains(t, kubectlOut, "{{", "Go template syntax should have been resolved in templatedValuesFiles")
+
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "override-values.yaml")
 	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")

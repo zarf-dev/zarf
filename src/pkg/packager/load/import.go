@@ -467,6 +467,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 					comp.Charts[idx].URL = overrideChart.URL
 				}
 				comp.Charts[idx].ValuesFiles = append(comp.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
+				comp.Charts[idx].TemplatedValuesFiles = append(comp.Charts[idx].TemplatedValuesFiles, overrideChart.TemplatedValuesFiles...)
 				comp.Charts[idx].Variables = append(comp.Charts[idx].Variables, overrideChart.Variables...)
 				comp.Charts[idx].Values = append(comp.Charts[idx].Values, overrideChart.Values...)
 				existing = true
@@ -529,6 +530,10 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
 			composed := makePathRelativeTo(valuesFile, relativeToHead)
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
+		}
+		for valuesIdx, valuesFile := range chart.TemplatedValuesFiles {
+			composed := makePathRelativeTo(valuesFile, relativeToHead)
+			child.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
 			composed := makePathRelativeTo(chart.LocalPath, relativeToHead)
