@@ -592,10 +592,22 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, ch
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
+
+	oldTemplatedValuesFiles := chart.TemplatedValuesFiles
+	templatedValuesFiles := []string{}
+	for _, v := range chart.TemplatedValuesFiles {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
+			v = filepath.Join(packagePath, v)
+		}
+		templatedValuesFiles = append(templatedValuesFiles, v)
+	}
+	chart.TemplatedValuesFiles = templatedValuesFiles
+
 	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, cachePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles
+	chart.TemplatedValuesFiles = oldTemplatedValuesFiles
 	return nil
 }
 
@@ -642,6 +654,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			}
 			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
+			}
+		}
+
+		nValuesFiles := len(chart.ValuesFiles)
+		for valuesIdx, path := range chart.TemplatedValuesFiles {
+			if helpers.IsURL(path) {
+				continue
+			}
+
+			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), nValuesFiles+valuesIdx))
+			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
+
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
+				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
 			}
 		}
 	}
@@ -853,14 +882,34 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
+	var hasImageArchives, hasTemplatedValuesFiles bool
 	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			reqs = append(reqs, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
+		if !hasImageArchives && len(comp.ImageArchives) > 0 {
+			hasImageArchives = true
+		}
+		if !hasTemplatedValuesFiles {
+			for _, chart := range comp.Charts {
+				if len(chart.TemplatedValuesFiles) > 0 {
+					hasTemplatedValuesFiles = true
+					break
+				}
+			}
+		}
+		if hasImageArchives && hasTemplatedValuesFiles {
 			break
 		}
+	}
+	if hasImageArchives {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.68.0",
+			Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+		})
+	}
+	if hasTemplatedValuesFiles {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.78.0",
+			Reason:  "This package uses templatedValuesFiles which require v0.78.0+",
+		})
 	}
 	if hasIndex {
 		reqs = append(reqs, v1alpha1.VersionRequirement{

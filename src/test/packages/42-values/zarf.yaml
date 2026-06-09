@@ -77,3 +77,15 @@ components:
           # if the string is empty, failing the action.
           - cmd: "test -n \"{{ .State.Registry.PushPassword }}\""
             template: true
+
+  - name: test-templated-values-files
+    required: true
+    charts:
+      - name: test-values-chart
+        version: 0.1.0
+        namespace: default
+        localPath: chart
+        valuesFiles:
+          - chart-static-values.yaml
+        templatedValuesFiles:
+          - chart-go-template-values.yaml

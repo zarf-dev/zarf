@@ -593,12 +593,14 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			chart.NoWait = true
 		}
 
-		// zarf magic for the value file
-		for idx := range chart.ValuesFiles {
-			valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-			if err := d.vc.ReplaceTextTemplate(valueFilePath); err != nil {
-				return installedCharts, err
-			}
+		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
+			variableConfig: d.vc,
+			pkg:            pkgLayout.Pkg,
+			vals:           d.vals,
+			s:              d.s,
+			stateAccess:    component.StateAccess,
+		}); err != nil {
+			return installedCharts, err
 		}
 
 		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{

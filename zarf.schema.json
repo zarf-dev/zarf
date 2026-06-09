@@ -449,6 +449,13 @@
           ],
           "type": "string"
         },
+        "templatedValuesFiles": {
+          "description": "[alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
         "url": {
           "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
           "examples": [

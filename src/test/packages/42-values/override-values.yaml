@@ -1,3 +1,4 @@
 test: "override-value"
 additional: "extra-data"
 cliOverride: "file-override"
+imageTag: "override-tag"
