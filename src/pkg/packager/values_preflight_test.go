@@ -73,7 +73,23 @@ func TestValidateTemplateRefs(t *testing.T) {
 			vals:       value.Values{"app": map[string]any{"name": "x"}},
 		},
 		{
-			name: "value defined by setValues elsewhere passes",
+			name: "value defined by a prior component's setValues passes",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name: "a",
+					Actions: v1alpha1.ZarfComponentActions{
+						OnDeploy: v1alpha1.ZarfComponentActionSet{
+							Before: []v1alpha1.ZarfComponentAction{
+								{Cmd: "get-db", SetValues: []v1alpha1.SetValue{{Key: ".db", Type: v1alpha1.SetValueYAML}}},
+							},
+						},
+					},
+				},
+				componentWithCmd("b", "echo {{ .Values.db.host }}"),
+			},
+		},
+		{
+			name: "value set by a later component fails",
 			components: []v1alpha1.ZarfComponent{
 				componentWithCmd("a", "echo {{ .Values.db.host }}"),
 				{
@@ -87,9 +103,42 @@ func TestValidateTemplateRefs(t *testing.T) {
 					},
 				},
 			},
+			wantErr: ".Values.db.host",
 		},
 		{
-			name: "value defined by root setValues passes",
+			name: "value set by an earlier action in the same component passes",
+			components: []v1alpha1.ZarfComponent{{
+				Name: "a",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "get-db", SetValues: []v1alpha1.SetValue{{Key: ".db", Type: v1alpha1.SetValueYAML}}},
+						},
+						After: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.db.host }}", Template: tmplPtr()},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "value defined by a prior component's root setValues passes",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name: "a",
+					Actions: v1alpha1.ZarfComponentActions{
+						OnDeploy: v1alpha1.ZarfComponentActionSet{
+							Before: []v1alpha1.ZarfComponentAction{
+								{Cmd: "get", SetValues: []v1alpha1.SetValue{{Key: ".", Type: v1alpha1.SetValueYAML}}},
+							},
+						},
+					},
+				},
+				componentWithCmd("b", "echo {{ .Values.anything }}"),
+			},
+		},
+		{
+			name: "root setValues in a later component fails",
 			components: []v1alpha1.ZarfComponent{
 				componentWithCmd("a", "echo {{ .Values.anything }}"),
 				{
@@ -103,6 +152,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 					},
 				},
 			},
+			wantErr: ".Values.anything",
 		},
 		{
 			name:       "partial value path fails",
@@ -140,7 +190,23 @@ func TestValidateTemplateRefs(t *testing.T) {
 			wantErr:    "maps undefined value .registry.port",
 		},
 		{
-			name: "chart value source defined by setValues passes",
+			name: "chart value source defined by a prior component's setValues passes",
+			components: []v1alpha1.ZarfComponent{
+				{
+					Name: "a",
+					Actions: v1alpha1.ZarfComponentActions{
+						OnDeploy: v1alpha1.ZarfComponentActionSet{
+							Before: []v1alpha1.ZarfComponentAction{
+								{Cmd: "get", SetValues: []v1alpha1.SetValue{{Key: ".registry", Type: v1alpha1.SetValueYAML}}},
+							},
+						},
+					},
+				},
+				componentWithChartValue("b", ".registry.port"),
+			},
+		},
+		{
+			name: "chart value source set by a later component fails",
 			components: []v1alpha1.ZarfComponent{
 				componentWithChartValue("a", ".registry.port"),
 				{
@@ -154,6 +220,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 					},
 				},
 			},
+			wantErr: "maps undefined value .registry.port",
 		},
 		{
 			name: "wait cluster condition references undefined value fails",
@@ -174,14 +241,10 @@ func TestValidateTemplateRefs(t *testing.T) {
 			wantErr: ".Values.host",
 		},
 		{
-			// Known under-catch (finding #2): the preflight cannot know a setValues key will hold a
-			// scalar at runtime, so the prefix match treats .db.host as satisfied even though the deploy
-			// would fail templating it. This pins the current behavior; flip it if the rule is tightened.
 			name: "scalar setValues key satisfies a deeper reference",
 			components: []v1alpha1.ZarfComponent{
-				componentWithCmd("a", "echo {{ .Values.db.host }}"),
 				{
-					Name: "b",
+					Name: "a",
 					Actions: v1alpha1.ZarfComponentActions{
 						OnDeploy: v1alpha1.ZarfComponentActionSet{
 							Before: []v1alpha1.ZarfComponentAction{
@@ -190,6 +253,7 @@ func TestValidateTemplateRefs(t *testing.T) {
 						},
 					},
 				},
+				componentWithCmd("b", "echo {{ .Values.db.host }}"),
 			},
 		},
 	}

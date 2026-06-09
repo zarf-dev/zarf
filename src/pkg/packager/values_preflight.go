@@ -30,10 +30,11 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		return fmt.Errorf("pkg layout is required")
 	}
 	components := pkgLayout.Pkg.Components
-	defined := buildDefinedValues(components, vals)
+	defined := newDefinedValues(vals)
 
 	var errs []error
 	for _, component := range components {
+		defined.addComponent(component)
 		for _, action := range onDeployActions(component) {
 			if !action.ShouldTemplate() {
 				continue
@@ -71,28 +72,31 @@ type definedValues struct {
 	setValueRoot bool
 }
 
-func buildDefinedValues(components []v1alpha1.ZarfComponent, vals value.Values) definedValues {
-	d := definedValues{vals: vals}
-	if d.vals == nil {
-		d.vals = value.Values{}
+func newDefinedValues(vals value.Values) *definedValues {
+	if vals == nil {
+		vals = value.Values{}
 	}
-	for _, component := range components {
-		for _, action := range onDeployActions(component) {
-			for _, sv := range action.SetValues {
-				if sv.Key == "." {
-					d.setValueRoot = true
-					continue
-				}
-				if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
-					d.setValueKeys = append(d.setValueKeys, segments)
-				}
+	return &definedValues{vals: vals}
+}
+
+// addComponent records the setValues a component contributes. Components deploy in order, so a
+// component's templates can only rely on values set by itself or a prior component. Calling this
+// before validating each component keeps later components' setValues out of the defined set.
+func (d *definedValues) addComponent(component v1alpha1.ZarfComponent) {
+	for _, action := range onDeployActions(component) {
+		for _, sv := range action.SetValues {
+			if sv.Key == "." {
+				d.setValueRoot = true
+				continue
+			}
+			if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
+				d.setValueKeys = append(d.setValueKeys, segments)
 			}
 		}
 	}
-	return d
 }
 
-func (d definedValues) hasValue(path []string) bool {
+func (d *definedValues) hasValue(path []string) bool {
 	if d.setValueRoot {
 		return true
 	}
@@ -106,7 +110,7 @@ func (d definedValues) hasValue(path []string) bool {
 	return err == nil
 }
 
-func checkTemplateString(s string, defined definedValues, location string) []error {
+func checkTemplateString(s string, defined *definedValues, location string) []error {
 	refs, err := template.ReferencedKeys(s)
 	if err != nil {
 		return []error{fmt.Errorf("%s: invalid go-template: %w", location, err)}
