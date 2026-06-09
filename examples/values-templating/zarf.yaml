@@ -20,7 +20,6 @@ components:
     description: This component demonstrates templating manifest files by deploying an nginx page to the cluster
     required: true
     images:
-      # NOTE: Pkgtemplates aren't yet available with value and go-templates.
       - "docker.io/library/nginx:1.29.2"
     actions:
       onRemove:
