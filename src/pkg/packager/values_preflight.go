@@ -14,6 +14,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
+	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -157,8 +158,8 @@ type templateSource struct {
 	location string
 }
 
-// componentFileSources extracts and reads the go-templated manifest and file contents for a
-// component. Components without templated manifests or files require no extraction.
+// componentFileSources extracts and reads the go-templated manifest, file, and chart values-file
+// contents for a component.
 func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent) (_ []templateSource, err error) {
 	hasManifests := false
 	for _, m := range component.Manifests {
@@ -174,7 +175,14 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 			break
 		}
 	}
-	if !hasManifests && !hasFiles {
+	hasTemplatedValues := false
+	for _, chart := range component.Charts {
+		if len(chart.TemplatedValuesFiles) > 0 {
+			hasTemplatedValues = true
+			break
+		}
+	}
+	if !hasManifests && !hasFiles && !hasTemplatedValues {
 		return nil, nil
 	}
 
@@ -234,6 +242,27 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 				sources = append(sources, templateSource{
 					content:  string(content),
 					location: fmt.Sprintf("component %q file %q", component.Name, file.Target),
+				})
+			}
+		}
+	}
+	if hasTemplatedValues {
+		valuesDir, err := pkgLayout.GetComponentDir(ctx, tmpDir, component.Name, layout.ValuesComponentDir)
+		if err != nil {
+			return nil, err
+		}
+		for _, chart := range component.Charts {
+			for _, vf := range helm.GetChartValuesFiles(chart) {
+				if !vf.Template {
+					continue
+				}
+				content, err := os.ReadFile(helm.StandardValuesName(valuesDir, chart, vf.GlobalIdx))
+				if err != nil {
+					return nil, err
+				}
+				sources = append(sources, templateSource{
+					content:  string(content),
+					location: fmt.Sprintf("component %q chart %q templated values file %q", component.Name, chart.Name, vf.Source),
 				})
 			}
 		}

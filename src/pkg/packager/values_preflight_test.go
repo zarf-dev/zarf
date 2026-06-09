@@ -386,6 +386,15 @@ func TestValidateTemplateRefsManifestsAndFiles(t *testing.T) {
 			dir:      "dir-file",
 			wantErrs: []string{`file "confdir"`, ".Values.absentInDir"},
 		},
+		{
+			name: "defined templated values file passes; plain values file is not validated",
+			dir:  "valid-values",
+		},
+		{
+			name:     "undefined templated values file value fails",
+			dir:      "undefined-values",
+			wantErrs: []string{`chart "values-chart" templated values file "templated-values.yaml"`, ".Values.absentValues"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

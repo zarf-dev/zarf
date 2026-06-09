@@ -1,0 +1,14 @@
+kind: ZarfPackageConfig
+metadata:
+  name: template-refs-valid-values
+components:
+  - name: comp
+    charts:
+      - name: values-chart
+        version: 1.0.0
+        namespace: test
+        localPath: chart
+        valuesFiles:
+          - static-values.yaml
+        templatedValuesFiles:
+          - templated-values.yaml
