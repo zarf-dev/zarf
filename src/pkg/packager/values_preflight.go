@@ -34,35 +34,67 @@ func validateTemplateRefs(ctx context.Context, pkgLayout *layout.PackageLayout, 
 
 	var errs []error
 	for _, component := range components {
-		defined.addComponent(component)
-		for _, action := range onDeployActions(component) {
-			if !action.ShouldTemplate() {
-				continue
-			}
-			location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
-			for _, s := range actionTemplateStrings(action) {
-				errs = append(errs, checkTemplateString(s, defined, location)...)
-			}
-		}
-
-		sources, err := componentFileSources(ctx, pkgLayout, component)
+		componentErrs, err := checkComponent(ctx, pkgLayout, component, defined)
 		if err != nil {
 			return err
 		}
-		for _, src := range sources {
-			errs = append(errs, checkTemplateString(src.content, defined, src.location)...)
-		}
+		errs = append(errs, componentErrs...)
+	}
+	return errors.Join(errs...)
+}
 
-		for _, chart := range component.Charts {
-			for _, cv := range chart.Values {
-				if !defined.hasValue(value.Path(cv.SourcePath).Segments()) {
-					errs = append(errs, fmt.Errorf("component %q chart %q: maps undefined value %s to %s",
-						component.Name, chart.Name, cv.SourcePath, cv.TargetPath))
-				}
+func checkComponent(ctx context.Context, pkgLayout *layout.PackageLayout, component v1alpha1.ZarfComponent, defined *definedValues) ([]error, error) {
+	onDeploy := component.Actions.OnDeploy
+	var errs []error
+
+	for _, action := range onDeploy.Before {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+
+	sources, err := componentFileSources(ctx, pkgLayout, component)
+	if err != nil {
+		return nil, err
+	}
+	for _, src := range sources {
+		errs = append(errs, checkTemplateString(src.content, defined, src.location)...)
+	}
+
+	for _, chart := range component.Charts {
+		for _, cv := range chart.Values {
+			if !defined.hasValue(value.Path(cv.SourcePath).Segments()) {
+				errs = append(errs, fmt.Errorf("component %q chart %q: maps undefined value %s to %s",
+					component.Name, chart.Name, cv.SourcePath, cv.TargetPath))
 			}
 		}
 	}
-	return errors.Join(errs...)
+
+	for _, action := range onDeploy.After {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+	for _, action := range onDeploy.OnSuccess {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+	for _, action := range onDeploy.OnFailure {
+		errs = append(errs, checkAction(component, action, defined)...)
+		defined.addAction(action)
+	}
+
+	return errs, nil
+}
+
+func checkAction(component v1alpha1.ZarfComponent, action v1alpha1.ZarfComponentAction, defined *definedValues) []error {
+	if !action.ShouldTemplate() {
+		return nil
+	}
+	location := fmt.Sprintf("component %q action %q", component.Name, actionLabel(action))
+	var errs []error
+	for _, s := range actionTemplateStrings(action) {
+		errs = append(errs, checkTemplateString(s, defined, location)...)
+	}
+	return errs
 }
 
 // definedValues describes the value keys a package can provide at deploy time.
@@ -79,19 +111,14 @@ func newDefinedValues(vals value.Values) *definedValues {
 	return &definedValues{vals: vals}
 }
 
-// addComponent records the setValues a component contributes. Components deploy in order, so a
-// component's templates can only rely on values set by itself or a prior component. Calling this
-// before validating each component keeps later components' setValues out of the defined set.
-func (d *definedValues) addComponent(component v1alpha1.ZarfComponent) {
-	for _, action := range onDeployActions(component) {
-		for _, sv := range action.SetValues {
-			if sv.Key == "." {
-				d.setValueRoot = true
-				continue
-			}
-			if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
-				d.setValueKeys = append(d.setValueKeys, segments)
-			}
+func (d *definedValues) addAction(action v1alpha1.ZarfComponentAction) {
+	for _, sv := range action.SetValues {
+		if sv.Key == "." {
+			d.setValueRoot = true
+			continue
+		}
+		if segments := value.Path(sv.Key).Segments(); len(segments) > 0 {
+			d.setValueKeys = append(d.setValueKeys, segments)
 		}
 	}
 }
@@ -212,16 +239,6 @@ func componentFileSources(ctx context.Context, pkgLayout *layout.PackageLayout, 
 		}
 	}
 	return sources, nil
-}
-
-func onDeployActions(c v1alpha1.ZarfComponent) []v1alpha1.ZarfComponentAction {
-	s := c.Actions.OnDeploy
-	actions := make([]v1alpha1.ZarfComponentAction, 0, len(s.Before)+len(s.After)+len(s.OnSuccess)+len(s.OnFailure))
-	actions = append(actions, s.Before...)
-	actions = append(actions, s.After...)
-	actions = append(actions, s.OnSuccess...)
-	actions = append(actions, s.OnFailure...)
-	return actions
 }
 
 func actionTemplateStrings(a v1alpha1.ZarfComponentAction) []string {

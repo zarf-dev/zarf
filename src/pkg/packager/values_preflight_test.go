@@ -122,6 +122,69 @@ func TestValidateTemplateRefs(t *testing.T) {
 			}},
 		},
 		{
+			name: "before action referencing a value set by a later before action fails",
+			components: []v1alpha1.ZarfComponent{{
+				Name: "a",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.db.host }}", Template: tmplPtr()},
+							{Cmd: "get-db", SetValues: []v1alpha1.SetValue{{Key: ".db", Type: v1alpha1.SetValueYAML}}},
+						},
+					},
+				},
+			}},
+			wantErr: ".Values.db.host",
+		},
+		{
+			name: "after action set value used by an earlier after action fails",
+			components: []v1alpha1.ZarfComponent{{
+				Name: "a",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{
+							{Cmd: "echo {{ .Values.db.host }}", Template: tmplPtr()},
+							{Cmd: "get-db", SetValues: []v1alpha1.SetValue{{Key: ".db", Type: v1alpha1.SetValueYAML}}},
+						},
+					},
+				},
+			}},
+			wantErr: ".Values.db.host",
+		},
+		{
+			name: "chart value set by an after action in the same component fails",
+			components: []v1alpha1.ZarfComponent{{
+				Name: "a",
+				Charts: []v1alpha1.ZarfChart{
+					{Name: "chart", Values: []v1alpha1.ZarfChartValue{{SourcePath: ".registry.port", TargetPath: ".dst"}}},
+				},
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{
+							{Cmd: "get", SetValues: []v1alpha1.SetValue{{Key: ".registry", Type: v1alpha1.SetValueYAML}}},
+						},
+					},
+				},
+			}},
+			wantErr: "maps undefined value .registry.port",
+		},
+		{
+			name: "chart value set by a before action in the same component passes",
+			components: []v1alpha1.ZarfComponent{{
+				Name: "a",
+				Charts: []v1alpha1.ZarfChart{
+					{Name: "chart", Values: []v1alpha1.ZarfChartValue{{SourcePath: ".registry.port", TargetPath: ".dst"}}},
+				},
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						Before: []v1alpha1.ZarfComponentAction{
+							{Cmd: "get", SetValues: []v1alpha1.SetValue{{Key: ".registry", Type: v1alpha1.SetValueYAML}}},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "value defined by a prior component's root setValues passes",
 			components: []v1alpha1.ZarfComponent{
 				{
