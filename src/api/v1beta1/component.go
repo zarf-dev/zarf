@@ -132,8 +132,8 @@ type Manifest struct {
 	SkipWait bool `json:"skipWait,omitempty"`
 	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
-	// EnableValues enables go-template processing on these manifests during deploy.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on these manifests during deploy.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
 // Chart defines a helm chart to be deployed.
@@ -237,8 +237,8 @@ type File struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
-	// EnableValues enables go-template processing on this file during deploy.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on this file during deploy.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
 // Image defines an OCI image to include in the package.
@@ -317,8 +317,8 @@ type ComponentAction struct {
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing.
 	Wait *ComponentActionWait `json:"wait,omitempty"`
-	// EnableValues enables go-template processing on the cmd field.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on the cmd field.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 	// setVariables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	setVariables []Variable
 }

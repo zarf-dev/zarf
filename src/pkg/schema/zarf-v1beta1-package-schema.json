@@ -287,8 +287,8 @@
           "description": "The working directory to run the command in (default is CWD).",
           "type": "string"
         },
-        "enableValues": {
-          "description": "EnableValues enables go-template processing on the cmd field.",
+        "enableTemplating": {
+          "description": "EnableTemplating enables go-template processing on the cmd field.",
           "type": "boolean"
         },
         "env": {
@@ -624,8 +624,8 @@
           "description": "The absolute or relative path where the file or folder should be copied to during package deploy.",
           "type": "string"
         },
-        "enableValues": {
-          "description": "EnableValues enables go-template processing on this file during deploy.",
+        "enableTemplating": {
+          "description": "EnableTemplating enables go-template processing on this file during deploy.",
           "type": "boolean"
         },
         "executable": {
@@ -800,8 +800,8 @@
         "^x-": {}
       },
       "properties": {
-        "enableValues": {
-          "description": "EnableValues enables go-template processing on these manifests during deploy.",
+        "enableTemplating": {
+          "description": "EnableTemplating enables go-template processing on these manifests during deploy.",
           "type": "boolean"
         },
         "files": {
