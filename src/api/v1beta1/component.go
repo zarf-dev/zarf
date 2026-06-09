@@ -20,11 +20,15 @@ type Component struct {
 }
 
 // GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Component) GetDeprecatedDataInjections() []ZarfDataInjection {
 	return c.dataInjections
 }
 
 // GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Component) GetDeprecatedGroup() string {
 	return c.group
 }
@@ -166,11 +170,15 @@ type Chart struct {
 }
 
 // GetDeprecatedVersion returns the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Chart) GetDeprecatedVersion() string {
 	return c.version
 }
 
 // GetDeprecatedVariables returns the v1alpha1 chart variables carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
 	return c.variables
 }
@@ -316,6 +324,8 @@ type ComponentAction struct {
 }
 
 // GetDeprecatedSetVariables returns the v1alpha1 setVariables carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (a ComponentAction) GetDeprecatedSetVariables() []Variable {
 	return a.setVariables
 }

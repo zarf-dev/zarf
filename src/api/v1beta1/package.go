@@ -40,11 +40,15 @@ type Package struct {
 }
 
 // GetDeprecatedVariables returns the v1alpha1 variables carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (pkg Package) GetDeprecatedVariables() []InteractiveVariable {
 	return pkg.variables
 }
 
 // GetDeprecatedConstants returns the v1alpha1 constants carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (pkg Package) GetDeprecatedConstants() []Constant {
 	return pkg.constants
 }
@@ -90,6 +94,8 @@ type PackageMetadata struct {
 }
 
 // GetDeprecatedYOLO returns the v1alpha1 YOLO field carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (m PackageMetadata) GetDeprecatedYOLO() bool {
 	return m.yolo
 }
