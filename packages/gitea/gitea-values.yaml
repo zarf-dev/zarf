@@ -59,3 +59,12 @@ valkey-cluster:
 
 strategy:
   type: "Recreate"
+
+affinity:
+  ###ZARF_VAR_GIT_SERVER_AFFINITY###
+
+tolerations:
+  ###ZARF_VAR_GIT_SERVER_TOLERATIONS###
+
+nodeSelector:
+  ###ZARF_VAR_GIT_SERVER_NODE_SELECTOR###
