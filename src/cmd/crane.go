@@ -84,6 +84,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd.AddCommand(newRegistryPruneCommand())
 	cmd.AddCommand(newRegistryLoginCommand())
+	cmd.AddCommand(newRegistryLogoutCommand())
 	cmd.AddCommand(newRegistryCopyCommand(&craneOptions))
 	cmd.AddCommand(newRegistryCatalogCommand(&craneOptions))
 
@@ -574,4 +575,32 @@ func zarfCraneInternalWrapper(commandToWrap func(*[]crane.Option) *cobra.Command
 	}
 
 	return wrappedCommand
+}
+
+type registryLogoutOptions struct {
+	originalRunFn func(cmd *cobra.Command, args []string) error
+}
+
+func newRegistryLogoutCommand() *cobra.Command {
+	o := &registryLogoutOptions{}
+	craneCmd := craneCmd.NewCmdAuthLogout()
+	o.originalRunFn = craneCmd.RunE
+	craneCmd.RunE = o.run
+
+	craneCmd.Args = nil
+	craneCmd.Short = lang.CmdToolsRegistryLogoutShort
+	craneCmd.Example = lang.CmdToolsRegistryLogoutExample
+
+	craneCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return errors.New(lang.CmdToolsRegistryLogoutPromptNoRegistryProvidedErr)
+		}
+		return nil
+	}
+
+	return craneCmd
+}
+
+func (o *registryLogoutOptions) run(cmd *cobra.Command, args []string) error {
+	return o.originalRunFn(cmd, args)
 }
