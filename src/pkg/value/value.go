@@ -261,7 +261,7 @@ func (v Values) Set(path Path, newVal any) error {
 }
 
 // Delete removes the value at the given dot-notation path from v. Deleting a key
-// that does not exist is a no-op. The root path "." cannot be deleted.
+// that does not exist is a no-op.
 func (v Values) Delete(path Path) error {
 	if err := path.Validate(); err != nil {
 		return err
