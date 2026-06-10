@@ -270,7 +270,7 @@ func (v Values) Delete(path Path) error {
 		return fmt.Errorf("cannot delete root path")
 	}
 
-	parts := strings.Split(string(path)[1:], ".")
+	parts := path.Segments()
 	current := v
 	for i, part := range parts {
 		if i == len(parts)-1 {
