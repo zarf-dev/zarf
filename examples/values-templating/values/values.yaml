@@ -38,8 +38,8 @@ app:
   # Helm chart overrides
   name: "helm-overrides-app"  # Maps to .appName in helm chart
   image:
-    pullPolicy: "always"
-    name: IfNotPresent
+    pullPolicy: "Always"
+    name: nginx
 
 # Database configuration for helm chart
 database:
