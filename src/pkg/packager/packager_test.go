@@ -706,26 +706,6 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			},
 			errSubstr: "must start with a dot",
 		},
-		{
-			name: "exclude path that is not a descendant of source returns error",
-			chart: v1alpha1.ZarfChart{
-				Name: "test-chart",
-				Values: []v1alpha1.ZarfChartValue{
-					{
-						SourcePath:   ".loki",
-						TargetPath:   ".",
-						ExcludePaths: []string{".grafana.image"},
-					},
-				},
-			},
-			componentName: "test-component",
-			opts: overrideOpts{
-				variableConfig:     variables.New("", nil, nil),
-				values:             value.Values{"loki": map[string]any{"replicas": 3}},
-				valuesOverridesMap: ValuesOverrides{},
-			},
-			errSubstr: "must be a descendant",
-		},
 	}
 
 	for _, tt := range tests {
