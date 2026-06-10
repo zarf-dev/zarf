@@ -478,6 +478,37 @@ func Test_generateValuesOverrides(t *testing.T) {
 			},
 		},
 		{
+			name: "exclude paths are dropped when mapping source to target",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath: ".loki",
+						TargetPath: ".",
+						ExcludePaths: []string{
+							".loki.image",
+						},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig: variables.New("", nil, nil),
+				values: value.Values{
+					"loki": map[string]any{
+						"replicas": 3,
+						"image": map[string]any{
+							"repository": "grafana/loki",
+						},
+					},
+				},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			expect: map[string]any{
+				"replicas": 3,
+			},
+		},
+		{
 			name: "values overrides map is applied",
 			chart: v1alpha1.ZarfChart{
 				Name: "test-chart",
@@ -675,6 +706,26 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			},
 			errSubstr: "must start with a dot",
 		},
+		{
+			name: "exclude path that is not a descendant of source returns error",
+			chart: v1alpha1.ZarfChart{
+				Name: "test-chart",
+				Values: []v1alpha1.ZarfChartValue{
+					{
+						SourcePath:   ".loki",
+						TargetPath:   ".",
+						ExcludePaths: []string{".grafana.image"},
+					},
+				},
+			},
+			componentName: "test-component",
+			opts: overrideOpts{
+				variableConfig:     variables.New("", nil, nil),
+				values:             value.Values{"loki": map[string]any{"replicas": 3}},
+				valuesOverridesMap: ValuesOverrides{},
+			},
+			errSubstr: "must be a descendant",
+		},
 	}
 
 	for _, tt := range tests {
@@ -688,4 +739,35 @@ func Test_generateValuesOverrides_Errors(t *testing.T) {
 			require.Nil(t, result)
 		})
 	}
+}
+
+func Test_generateValuesOverrides_ExcludePathsDoNotMutateSource(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	vals := value.Values{
+		"loki": map[string]any{
+			"replicas": 3,
+			"image":    map[string]any{"repository": "grafana/loki"},
+		},
+	}
+	chart := v1alpha1.ZarfChart{
+		Name: "test-chart",
+		Values: []v1alpha1.ZarfChartValue{
+			{SourcePath: ".loki", TargetPath: ".", ExcludePaths: []string{".loki.image"}},
+		},
+	}
+	opts := overrideOpts{
+		variableConfig:     variables.New("", nil, nil),
+		values:             vals,
+		valuesOverridesMap: ValuesOverrides{},
+	}
+
+	_, err := generateValuesOverrides(ctx, chart, "test-component", opts)
+	require.NoError(t, err)
+
+	// The excluded key must still be present in the shared source values.
+	loki, ok := vals["loki"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, map[string]any{"repository": "grafana/loki"}, loki["image"])
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -79,8 +80,23 @@ func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, compon
 			return nil, fmt.Errorf("targetPath \"%s\" must start with a dot", chartValue.TargetPath)
 		}
 
+		// Drop any excluded sub-paths before extracting. Work on a copy so the
+		// shared source values are not mutated for other charts.
+		sourceValues := opts.values
+		if len(chartValue.ExcludePaths) > 0 {
+			sourceValues = opts.values.DeepCopy()
+			for _, excludePath := range chartValue.ExcludePaths {
+				if !isPathDescendant(chartValue.SourcePath, excludePath) {
+					return nil, fmt.Errorf("excludePath \"%s\" must be a descendant of sourcePath \"%s\"", excludePath, chartValue.SourcePath)
+				}
+				if err := sourceValues.Delete(value.Path(excludePath)); err != nil {
+					return nil, fmt.Errorf("unable to exclude path %s: %w", excludePath, err)
+				}
+			}
+		}
+
 		// Extract value from source path in values
-		sourceValue, err := opts.values.Extract(value.Path(chartValue.SourcePath))
+		sourceValue, err := sourceValues.Extract(value.Path(chartValue.SourcePath))
 		if err != nil {
 			return nil, fmt.Errorf("unable to extract value source: %w", err)
 		}
@@ -102,6 +118,15 @@ func generateValuesOverrides(_ context.Context, chart v1alpha1.ZarfChart, compon
 	// Merge valuesOverrides into chartOverrides (valuesOverrides takes precedence)
 	chartOverrides.DeepMerge(valuesOverrides)
 	return chartOverrides, nil
+}
+
+// isPathDescendant reports whether child is a strict descendant of parent, where
+// both are dot-notation paths and "." is the root.
+func isPathDescendant(parent, child string) bool {
+	if parent == "." {
+		return child != "." && strings.HasPrefix(child, ".")
+	}
+	return strings.HasPrefix(child, parent+".")
 }
 
 // OverridePackageNamespace overrides the package namespace if the package contains only one unique namespace

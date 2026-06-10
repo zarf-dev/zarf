@@ -817,3 +817,124 @@ func TestValidate_Errors(t *testing.T) {
 		})
 	}
 }
+
+func TestDelete(t *testing.T) {
+	tests := []struct {
+		name   string
+		values Values
+		path   Path
+		expect Values
+	}{
+		{
+			name:   "delete simple key",
+			values: Values{"key1": "value1", "key2": "value2"},
+			path:   ".key1",
+			expect: Values{"key2": "value2"},
+		},
+		{
+			name:   "delete nested key",
+			values: Values{"app": map[string]any{"name": "myapp", "version": "1.0"}},
+			path:   ".app.version",
+			expect: Values{"app": map[string]any{"name": "myapp"}},
+		},
+		{
+			name:   "delete missing key is a no-op",
+			values: Values{"app": map[string]any{"name": "myapp"}},
+			path:   ".app.version",
+			expect: Values{"app": map[string]any{"name": "myapp"}},
+		},
+		{
+			name:   "delete with missing intermediate key is a no-op",
+			values: Values{"app": map[string]any{"name": "myapp"}},
+			path:   ".missing.key",
+			expect: Values{"app": map[string]any{"name": "myapp"}},
+		},
+		{
+			name:   "delete deeply nested key",
+			values: Values{"a": map[string]any{"b": map[string]any{"c": "v", "d": "keep"}}},
+			path:   ".a.b.c",
+			expect: Values{"a": map[string]any{"b": map[string]any{"d": "keep"}}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.values.Delete(tt.path)
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, tt.values)
+		})
+	}
+}
+
+func TestDelete_Errors(t *testing.T) {
+	tests := []struct {
+		name      string
+		values    Values
+		path      Path
+		errSubstr string
+	}{
+		{
+			name:      "error on root path",
+			values:    Values{"key": "value"},
+			path:      ".",
+			errSubstr: "cannot delete root path",
+		},
+		{
+			name:      "error on invalid path format",
+			values:    Values{},
+			path:      "key",
+			errSubstr: "invalid path format",
+		},
+		{
+			name:      "error when intermediate key is not a map",
+			values:    Values{"app": "string-value"},
+			path:      ".app.name",
+			errSubstr: "expected map",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := tt.values.Delete(tt.path)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), tt.errSubstr)
+		})
+	}
+}
+
+func TestDeepCopy(t *testing.T) {
+	t.Parallel()
+	original := Values{
+		"scalar": "value",
+		"nested": map[string]any{
+			"key":  "val",
+			"list": []any{1, map[string]any{"deep": "x"}},
+		},
+	}
+	snapshot := Values{
+		"scalar": "value",
+		"nested": map[string]any{
+			"key":  "val",
+			"list": []any{1, map[string]any{"deep": "x"}},
+		},
+	}
+
+	cp := original.DeepCopy()
+	require.Equal(t, snapshot, cp)
+
+	// Mutate every level of the copy; the original must be untouched.
+	require.NoError(t, cp.Delete(".nested.key"))
+	nested, ok := cp["nested"].(map[string]any)
+	require.True(t, ok)
+	list, ok := nested["list"].([]any)
+	require.True(t, ok)
+	deepMap, ok := list[1].(map[string]any)
+	require.True(t, ok)
+	deepMap["deep"] = "mutated"
+
+	require.Equal(t, snapshot, original)
+}

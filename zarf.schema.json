@@ -504,10 +504,20 @@
         "^x-": {}
       },
       "properties": {
+        "excludePaths": {
+          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.\nFIXME: perhaps add regex",
+          "items": {
+            "examples": [
+              ".registry.image"
+            ],
+            "type": "string"
+          },
+          "type": "array"
+        },
         "sourcePath": {
           "description": "Path to Zarf values key. A single dot (.) represents the root.",
           "examples": [
-            ".registry.port"
+            ".registry"
           ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
@@ -515,7 +525,7 @@
         "targetPath": {
           "description": "Path to chart values key. A single dot (.) represents the root.",
           "examples": [
-            ".service.port"
+            ".distribution"
           ],
           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
           "type": "string"
