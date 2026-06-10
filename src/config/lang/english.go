@@ -516,7 +516,7 @@ $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
   # Login with password from stdin
   $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
 
-    CmdToolsRegistryLogoutShort = "Log out from a registry"
+	CmdToolsRegistryLogoutShort = "Log out from a registry"
 
 	CmdToolsRegistryLogoutExample = `
   # Log out from a registry

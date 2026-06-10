@@ -591,7 +591,7 @@ func newRegistryLogoutCommand() *cobra.Command {
 	craneCmd.Short = lang.CmdToolsRegistryLogoutShort
 	craneCmd.Example = lang.CmdToolsRegistryLogoutExample
 
-	craneCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+	craneCmd.PreRunE = func(_ *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return errors.New(lang.CmdToolsRegistryLogoutPromptNoRegistryProvidedErr)
 		}
