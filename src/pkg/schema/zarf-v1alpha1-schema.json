@@ -505,11 +505,12 @@
       },
       "properties": {
         "excludePaths": {
-          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.\nFIXME: perhaps add regex",
+          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.",
           "items": {
             "examples": [
               ".registry.image"
             ],
+            "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
             "type": "string"
           },
           "type": "array"

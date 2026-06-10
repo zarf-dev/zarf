@@ -266,8 +266,7 @@ type ZarfChartValue struct {
 	// Path to chart values key. A single dot (.) represents the root.
 	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.distribution"`
 	// Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.
-	// FIXME: perhaps add regex
-	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"example=.registry.image"`
+	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"pattern=^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$,example=.registry.image"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.
