@@ -38,10 +38,10 @@ app:
   # Helm chart overrides
   name: "helm-overrides-app"  # Maps to .appName in helm chart
   image:
-    tag: "v2.1.0"             # Maps to .image.tag in helm chart
+    pullPolicy: "always"
+    name: IfNotPresent
 
 # Database configuration for helm chart
 database:
   host: "postgres.zarf.local-schmocal" # Maps to .config.database.host in helm chart
   host2: "postgres.zarf.local" # Also maps to .config.database.host, but takes priority because it's mapped afterwards
-
