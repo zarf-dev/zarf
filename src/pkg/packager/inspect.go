@@ -170,10 +170,10 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 			for _, manifest := range component.Manifests {
 				files := make([]string, 0, len(manifest.Files)+len(manifest.Kustomizations))
 				for idx := range manifest.Files {
-					files = append(files, fmt.Sprintf("%s-%d.yaml", manifest.Name, idx))
+					files = append(files, layout.ManifestFileName(manifest.Name, idx))
 				}
 				for idx := range manifest.Kustomizations {
-					files = append(files, fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx))
+					files = append(files, layout.KustomizationFileName(manifest.Name, idx))
 				}
 				for _, file := range files {
 					path := filepath.Join(manifestDir, file)

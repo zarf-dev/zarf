@@ -38,6 +38,16 @@ func (p Path) Validate() error {
 	return nil
 }
 
+// Segments returns the dot-separated keys of the path with the leading dot removed. The root path
+// "." (or an empty path) yields an empty slice.
+func (p Path) Segments() []string {
+	s := strings.TrimPrefix(string(p), ".")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ".")
+}
+
 // ParseFilesOptions provides optional configuration for ParseFiles
 type ParseFilesOptions struct {
 	// TODO(mkcp): Add schema check. Maybe here in parsing, or later in the process like templating?
@@ -175,8 +185,7 @@ func (v Values) Extract(path Path) (any, error) {
 		return v, nil
 	}
 
-	// Split path into parts (remove leading dot first)
-	parts := strings.Split(string(path)[1:], ".")
+	parts := path.Segments()
 
 	// Traverse the nested map structure
 	current := v
@@ -227,8 +236,7 @@ func (v Values) Set(path Path, newVal any) error {
 		return nil
 	}
 
-	// Split path into parts (remove leading dot first)
-	parts := strings.Split(string(path)[1:], ".")
+	parts := path.Segments()
 
 	// Navigate to the nested location and set the value
 	current := v
