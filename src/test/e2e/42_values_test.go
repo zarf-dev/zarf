@@ -27,7 +27,7 @@ func TestValues(t *testing.T) {
 
 	// Deploy the package with both package values, CLI override values file, and --set-values
 	overrideValuesPath := filepath.Join(src, "override-values.yaml")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--features=\"values=true\"", "--values", overrideValuesPath, "--set-values", "cliOverride=cli-wins")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--features=\"values=true\"", "--values", overrideValuesPath, "--set-values", "cliOverride=cli-wins", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was templated with the override value (--values file overrides package defaults)
@@ -97,7 +97,7 @@ func TestValues(t *testing.T) {
 
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "override-values.yaml")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--features=\"values=true\"", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the remove actions used the values correctly
