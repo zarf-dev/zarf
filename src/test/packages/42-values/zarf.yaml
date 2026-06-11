@@ -89,3 +89,8 @@ components:
           - chart-static-values.yaml
         templatedValuesFiles:
           - chart-go-template-values.yaml
+        values:
+          - sourcePath: .chartMapping
+            targetPath: .mapped
+            excludePaths:
+              - .chartMapping.excluded

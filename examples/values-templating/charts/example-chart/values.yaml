@@ -3,9 +3,9 @@ appName: "default-app"
 replicaCount: 1
 
 image:
-  repository: nginx
-  tag: "latest"
-  pullPolicy: IfNotPresent
+  reference: "docker.io/library/nginx:1.29.2"
+  pullPolicy: "always"
+  name: IfNotPresent
 
 config:
   database:
