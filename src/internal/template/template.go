@@ -41,6 +41,7 @@ const (
 	objectKeyValues    = "Values"
 	objectKeyMetadata  = "Metadata"
 	objectKeyBuild     = "Build"
+	objectKeyPackage   = "Pkg"
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
 	objectKeyState     = "State"
@@ -96,6 +97,8 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 // WithPackage takes a v1alpha1.ZarfPackage and makes Metadata, Constants, and Build available on the Objects map.
 func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
 	// Check for fields that should be set on pkg to see if the sub-obj is available
+	o[objectKeyPackage] = pkg
+
 	if pkg.Metadata.Name != "" {
 		o.WithMetadata(pkg.Metadata)
 	}

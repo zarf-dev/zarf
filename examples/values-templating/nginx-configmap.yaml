@@ -81,6 +81,11 @@ data:
         <pre>IP family: {{ .State.IPFamily }}</pre>
         <pre>IPv6 only: {{ eq .State.IPFamily "ipv6" }}</pre>
 
+        <h3>Package values (via .Pkg)</h3>
+        <pre>Name: {{ .Pkg.Metadata.Name }}</pre>
+        <pre>CLI version during build: {{ .Pkg.Build.Version }}</pre>
+        <pre>Nginx Image: {{ range .Pkg.Components }}{{ if eq .Name "values-with-manifest" }}{{ index .Images 0 }}{{ end }}{{ end }}</pre>
+
         {{ .Values.site.footer }}
       </body>
     </html>
