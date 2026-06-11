@@ -1,3 +1,6 @@
 test: "default-value"
 additional: "not-set"
 cliOverride: "package-default"
+imageTag: "default-tag"
+chartMapping:
+  included: "mapped-source-value"

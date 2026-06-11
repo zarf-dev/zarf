@@ -1,0 +1,4 @@
+apiVersion: v2
+name: test-values-chart
+version: 0.1.0
+description: Minimal chart for testing templatedValuesFiles in the values e2e suite

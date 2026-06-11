@@ -216,6 +216,8 @@ type ZarfChart struct {
 	NoWait bool `json:"noWait,omitempty"`
 	// List of local values file paths or remote URLs to include in the package; these will be merged together when deployed.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
+	// [alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time
+	TemplatedValuesFiles []string `json:"templatedValuesFiles,omitempty"`
 	// [alpha] List of variables to set in the Helm chart.
 	Variables []ZarfChartVariable `json:"variables,omitempty"`
 	// [alpha] List of values sources to their Helm override target
@@ -260,9 +262,11 @@ type ZarfChartVariable struct {
 // ZarfChartValue maps a Zarf Value key to a Helm Value.
 type ZarfChartValue struct {
 	// Path to Zarf values key. A single dot (.) represents the root.
-	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry.port"`
+	SourcePath string `json:"sourcePath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.registry"`
 	// Path to chart values key. A single dot (.) represents the root.
-	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.service.port"`
+	TargetPath string `json:"targetPath" jsonschema:"pattern=^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$,example=.distribution"`
+	// Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.
+	ExcludePaths []string `json:"excludePaths,omitempty" jsonschema:"pattern=^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$,example=.registry.image"`
 }
 
 // ZarfManifest defines raw manifests Zarf will deploy as a helm chart.

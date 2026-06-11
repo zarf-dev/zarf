@@ -61,6 +61,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 
 ```
       --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --agent-mutation-policy string    Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate (default "all")
       --agent-tls-ca string             Path to a PEM-encoded CA certificate for the Zarf agent
       --agent-tls-cert string           Path to a PEM-encoded TLS certificate for the Zarf agent
       --agent-tls-key string            Path to a PEM-encoded TLS private key for the Zarf agent

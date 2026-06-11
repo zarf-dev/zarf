@@ -97,7 +97,7 @@ func TestResolveImports(t *testing.T) {
 		{
 			name:             "chart version and url properties are not overridden",
 			path:             "./testdata/import/chart",
-			expectedChecksum: "cc62674a6faa1c9685aac0c8266dacec3b91e0a9466c8d1ce3664e019348b43a",
+			expectedChecksum: "ec6553c389314a5853259c58c073a8d214dc807f709f4ac9cad4099f25144ffe",
 		},
 		{
 			name:             "archives work as expected",

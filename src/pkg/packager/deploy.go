@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -75,6 +74,8 @@ type DeployOptions struct {
 	InjectorPort   int
 	// AgentTLS allows providing user-managed TLS certificates for the agent. When nil, certs are auto-generated.
 	AgentTLS *pki.GeneratedPKI
+	// AgentMutationPolicy controls whether the agent mutates by default (default-mutate) or only on explicit label (default-ignore).
+	AgentMutationPolicy state.MutationPolicy
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
@@ -183,6 +184,11 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	l.Debug("variables populated", "time", time.Since(start))
+
+	// Fail before deploying anything if a templated action, manifest, file, or chart value mapping references a value without a key
+	if err := validateTemplateRefs(ctx, pkgLayout, vals); err != nil {
+		return DeployResult{}, fmt.Errorf("package references values that cannot be resolved (value templates must be explicitly defined, even if empty): %w", err)
+	}
 
 	deployedComponents, err := d.deployComponents(ctx, pkgLayout, opts)
 	if err != nil {
@@ -357,14 +363,15 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 		}
 		var err error
 		d.s, err = d.c.InitState(ctx, cluster.InitStateOptions{
-			GitServer:        opts.GitServer,
-			RegistryInfo:     opts.RegistryInfo,
-			ArtifactServer:   opts.ArtifactServer,
-			ApplianceMode:    applianceMode,
-			StorageClass:     opts.StorageClass,
-			InjectorPort:     opts.InjectorPort,
-			AgentTLS:         opts.AgentTLS,
-			InternalServices: internalServicesFor(pkgLayout.Pkg.Components, opts),
+			GitServer:           opts.GitServer,
+			RegistryInfo:        opts.RegistryInfo,
+			ArtifactServer:      opts.ArtifactServer,
+			ApplianceMode:       applianceMode,
+			StorageClass:        opts.StorageClass,
+			InjectorPort:        opts.InjectorPort,
+			AgentTLS:            opts.AgentTLS,
+			AgentMutationPolicy: opts.AgentMutationPolicy,
+			InternalServices:    internalServicesFor(pkgLayout.Pkg.Components, opts),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("unable to initialize Zarf state: %w", err)
@@ -586,12 +593,14 @@ func (d *deployer) installCharts(ctx context.Context, pkgLayout *layout.PackageL
 			chart.NoWait = true
 		}
 
-		// zarf magic for the value file
-		for idx := range chart.ValuesFiles {
-			valueFilePath := helm.StandardValuesName(valuesDir, chart, idx)
-			if err := d.vc.ReplaceTextTemplate(valueFilePath); err != nil {
-				return installedCharts, err
-			}
+		if err := templateValuesFiles(ctx, chart, valuesDir, templateValuesFilesOpts{
+			variableConfig: d.vc,
+			pkg:            pkgLayout.Pkg,
+			vals:           d.vals,
+			s:              d.s,
+			stateAccess:    component.StateAccess,
+		}); err != nil {
+			return installedCharts, err
 		}
 
 		valuesOverrides, err := generateValuesOverrides(ctx, chart, component.Name, overrideOpts{
@@ -649,7 +658,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 	installedCharts := []state.InstalledChart{}
 	for _, manifest := range component.Manifests {
 		for idx := range manifest.Files {
-			manifest.Files[idx] = fmt.Sprintf("%s-%d.yaml", manifest.Name, idx)
+			manifest.Files[idx] = layout.ManifestFileName(manifest.Name, idx)
 			path := filepath.Join(manifestDir, manifest.Files[idx])
 			if helpers.InvalidPath(path) {
 				return installedCharts, fmt.Errorf("unable to find manifest file %s", manifest.Files[idx])
@@ -676,7 +685,7 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 		}
 		// Move kustomizations to files now, applying ###ZARF_VAR_*### substitution as well.
 		for idx := range manifest.Kustomizations {
-			kustomization := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, idx)
+			kustomization := layout.KustomizationFileName(manifest.Name, idx)
 			manifest.Files = append(manifest.Files, kustomization)
 			path := filepath.Join(manifestDir, kustomization)
 			if err := d.vc.ReplaceTextTemplate(path); err != nil {
@@ -826,10 +835,7 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 	for fileIdx, file := range component.Files {
 		l.Info("loading file", "name", file.Target)
 
-		fileLocation := filepath.Join(filesDir, strconv.Itoa(fileIdx), filepath.Base(file.Target))
-		if helpers.InvalidPath(fileLocation) {
-			fileLocation = filepath.Join(filesDir, strconv.Itoa(fileIdx))
-		}
+		fileLocation := filepath.Join(filesDir, layout.ComponentFileRelPath(fileIdx, file.Target))
 
 		// If a shasum is specified check it again on deployment as well
 		if file.Shasum != "" {
