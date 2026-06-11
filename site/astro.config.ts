@@ -4,6 +4,7 @@ import starlightSidebarTopics from "starlight-sidebar-topics";
 import { rehypeHeadingIds } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import remarkGemoji from "remark-gemoji";
+import remarkGfm from "remark-gfm";
 import { remarkLinkRewrite } from "./src/plugins/remark-link-rewrite.ts";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -80,6 +81,7 @@ export default defineConfig({
   },
   markdown: {
     remarkPlugins: [
+      remarkGfm,
       remarkGemoji,
       [remarkLinkRewrite, { srcDir: docsDir, sections }],
     ],
