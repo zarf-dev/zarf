@@ -114,42 +114,22 @@ func TestObjects_WithValues(t *testing.T) {
 
 func TestObjects_WithPackage(t *testing.T) {
 	tests := []struct {
-		name              string
-		pkg               v1alpha1.ZarfPackage
-		expectMetadata    bool
-		expectBuild       bool
-		expectedConstants map[string]string
+		name string
+		pkg  v1alpha1.ZarfPackage
 	}{
 		{
-			name: "full package sets metadata, build, and constants",
+			name: "populated package",
 			pkg: v1alpha1.ZarfPackage{
 				Metadata: v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
 				Build:    v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
 				Constants: []v1alpha1.Constant{
 					{Name: "APP_NAME", Value: "my-app"},
-					{Name: "VERSION", Value: "1.2.3"},
 				},
 			},
-			expectMetadata: true,
-			expectBuild:    true,
-			expectedConstants: map[string]string{
-				"APP_NAME": "my-app",
-				"VERSION":  "1.2.3",
-			},
 		},
 		{
-			name:           "empty metadata name omits metadata",
-			pkg:            v1alpha1.ZarfPackage{},
-			expectMetadata: false,
-			expectBuild:    false,
-		},
-		{
-			name: "empty build user omits build",
-			pkg: v1alpha1.ZarfPackage{
-				Metadata: v1alpha1.ZarfMetadata{Name: "test-package"},
-			},
-			expectMetadata: true,
-			expectBuild:    false,
+			name: "empty package",
+			pkg:  v1alpha1.ZarfPackage{},
 		},
 	}
 
@@ -159,24 +139,10 @@ func TestObjects_WithPackage(t *testing.T) {
 			result := objects.WithPackage(tt.pkg)
 
 			require.Equal(t, tt.pkg, result[objectKeyPackage])
-
-			if tt.expectMetadata {
-				require.Equal(t, tt.pkg.Metadata, result[objectKeyMetadata])
-			} else {
-				require.NotContains(t, result, objectKeyMetadata)
-			}
-
-			if tt.expectBuild {
-				require.Equal(t, tt.pkg.Build, result[objectKeyBuild])
-			} else {
-				require.NotContains(t, result, objectKeyBuild)
-			}
-
-			if tt.expectedConstants != nil {
-				require.Equal(t, tt.expectedConstants, result[objectKeyConstants])
-			} else {
-				require.NotContains(t, result, objectKeyConstants)
-			}
+			// WithPackage only exposes the package itself; it does not unwrap sub-objects.
+			require.NotContains(t, result, objectKeyMetadata)
+			require.NotContains(t, result, objectKeyBuild)
+			require.NotContains(t, result, objectKeyConstants)
 		})
 	}
 }
