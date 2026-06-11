@@ -1,7 +1,7 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import starlightSidebarTopics from "starlight-sidebar-topics";
-import { rehypeHeadingIds } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import remarkGemoji from "remark-gemoji";
 import { remarkLinkRewrite } from "./src/plugins/remark-link-rewrite.ts";
@@ -79,21 +79,23 @@ export default defineConfig({
     "/docs/zarf-overview": "/",
   },
   markdown: {
-    gfm: true,
-    remarkPlugins: [
-      remarkGemoji,
-      [remarkLinkRewrite, { srcDir: docsDir, sections }],
-    ],
-    rehypePlugins: [
-      rehypeHeadingIds,
-      [
-        rehypeAutolinkHeadings,
-        {
-          behavior: "wrap",
-          properties: { ariaHidden: true, tabIndex: -1, class: "heading-link" },
-        },
+    processor: unified({
+      gfm: true,
+      remarkPlugins: [
+        remarkGemoji,
+        [remarkLinkRewrite, { srcDir: docsDir, sections }],
       ],
-    ],
+      rehypePlugins: [
+        rehypeHeadingIds,
+        [
+          rehypeAutolinkHeadings,
+          {
+            behavior: "wrap",
+            properties: { ariaHidden: true, tabIndex: -1, class: "heading-link" },
+          },
+        ],
+      ],
+    }),
   },
   integrations: [
     starlight({
