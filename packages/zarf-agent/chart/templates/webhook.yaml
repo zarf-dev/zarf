@@ -42,6 +42,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-flux-ocirepo.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -115,6 +116,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-flux-gitrepo.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -152,6 +154,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-argocd-application.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -187,6 +190,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-argocd-applicationset.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -222,6 +226,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-argocd-repository.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -262,6 +267,7 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
   - name: agent-argocd-appproject.zarf.dev
     namespaceSelector:
       matchExpressions:
@@ -297,3 +303,4 @@ webhooks:
       - "v1"
       - "v1beta1"
     sideEffects: None
+    timeoutSeconds: 20
