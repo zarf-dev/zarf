@@ -5,30 +5,81 @@ package value
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 )
 
-// LoadJSONSchema reads a JSON schema file if present.
-func LoadJSONSchema(path string) (map[string]any, error) {
+// LoadValidatedSchema loads a JSON schema, rejects external references, and validates
+// the schema document structure. Returns nil if the file does not exist.
+func LoadValidatedSchema(packagePath, path string) (map[string]any, string, error) {
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(packagePath, path)
+	}
+
 	b, err := os.ReadFile(path)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("unable to read existing schema file: %w", err)
+		return nil, path, fmt.Errorf("reading %q schema file: %w", path, err)
 	}
 
 	var schema map[string]any
 	if err := json.Unmarshal(b, &schema); err != nil {
-		return nil, fmt.Errorf("unable to parse existing schema file: %w", err)
+		return nil, path, fmt.Errorf("parsing %q schema file: %w", path, err)
+	}
+	if err := CheckNoExternalRefs(schema); err != nil {
+		return nil, path, fmt.Errorf("%q schema: %w", path, err)
+	}
+	if err := ValidateSchemaDocument(schema); err != nil {
+		return nil, path, fmt.Errorf("%q schema validation failed: %w", path, err)
+	}
+	return schema, path, nil
+}
+
+// MergeSchemaFiles loads, validates, and merges the given schema file paths.
+// Earlier paths take priority over later ones (parent-wins semantics applied left-to-right).
+// Relative paths are resolved against packagePath.
+// Returns nil if paths is empty or all referenced files are absent.
+func MergeSchemaFiles(parentPath string, importedPaths []string, packagePath string) (map[string]any, error) {
+	// Append the parent to the front of the imports to allow it to always win.
+	totalPaths := importedPaths
+	if parentPath != "" {
+		totalPaths = append([]string{parentPath}, totalPaths...)
 	}
 
-	return schema, nil
+	var merged map[string]any
+	var expectedVersion string
+	for _, p := range totalPaths {
+		schema, absPath, err := LoadValidatedSchema(packagePath, p)
+		if err != nil {
+			return nil, err
+		}
+		ver := schemaVersion(schema)
+		if ver == "" {
+			return nil, fmt.Errorf("schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", absPath)
+		}
+		if expectedVersion == "" {
+			expectedVersion = ver
+		} else if ver != expectedVersion {
+			return nil, fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", expectedVersion, absPath, ver)
+		}
+		if merged == nil {
+			merged = schema
+		} else {
+			merged = MergeSchemas(merged, schema)
+		}
+	}
+	return merged, nil
+}
+
+// schemaVersion extracts the "$schema" version URI from a schema map, returning "" if absent or not a string.
+func schemaVersion(s map[string]any) string {
+	if v, ok := s["$schema"].(string); ok {
+		return v
+	}
+	return ""
 }
 
 // CheckNoExternalRefs returns an error if the schema contains any external reference

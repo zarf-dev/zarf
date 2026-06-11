@@ -1092,34 +1092,10 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 		return nil
 	}
 
-	// loadSchema reads a schema file, rejects any external "$ref" pointers before handing
-	// the document to gojsonschema, then validates the schema structure. CheckNoExternalRefs
-	// runs first so that gojsonschema never attempts to resolve external URIs.
-	loadSchema := func(relPath, label string) (map[string]any, error) {
-		src := relPath
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, relPath)
-		}
-		s, err := value.LoadJSONSchema(src)
-		if err != nil {
-			return nil, fmt.Errorf("reading %s schema: %w", label, err)
-		}
-		if err := value.CheckNoExternalRefs(s); err != nil {
-			return nil, fmt.Errorf("%s schema %s: %w", label, relPath, err)
-		}
-		if err := value.ValidateSchemaDocument(s); err != nil {
-			return nil, fmt.Errorf("%s schema validation failed: %w", label, err)
-		}
-		return s, nil
-	}
-
 	// No child schemas — check for $ref, validate, then copy the parent schema file verbatim.
 	if len(importedSchemas) == 0 {
-		src := parentSchema
-		if !filepath.IsAbs(src) {
-			src = filepath.Join(packagePath, parentSchema)
-		}
-		if _, err := loadSchema(parentSchema, "parent"); err != nil {
+		_, src, err := value.LoadValidatedSchema(packagePath, parentSchema)
+		if err != nil {
 			return err
 		}
 		dst := filepath.Join(buildPath, ValuesSchema)
@@ -1133,38 +1109,9 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 	l.Debug("merging values schemas", "parent", parentSchema, "imported", len(importedSchemas))
 
 	// Merge child schemas left-to-right; among children the earlier one wins.
-	var merged map[string]any
-	for _, schemaRelPath := range importedSchemas {
-		child, err := loadSchema(schemaRelPath, "imported")
-		if err != nil {
-			return err
-		}
-		if schemaVersion(child) == "" {
-			return fmt.Errorf("imported schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", schemaRelPath)
-		}
-		if merged == nil {
-			merged = child
-		} else {
-			if err := checkCompatibleVersion(merged, child, schemaRelPath); err != nil {
-				return err
-			}
-			merged = value.MergeSchemas(merged, child)
-		}
-	}
-
-	// Load the parent schema and merge it on top — parent wins over all children.
-	if parentSchema != "" {
-		parent, err := loadSchema(parentSchema, "parent")
-		if err != nil {
-			return err
-		}
-		if schemaVersion(parent) == "" {
-			return fmt.Errorf("parent schema %s: missing \"$schema\" version declaration; all schemas being merged must specify a version", parentSchema)
-		}
-		if err := checkCompatibleVersion(parent, merged, "imported schemas"); err != nil {
-			return err
-		}
-		merged = value.MergeSchemas(parent, merged)
+	merged, err := value.MergeSchemaFiles(parentSchema, importedSchemas, packagePath)
+	if err != nil {
+		return fmt.Errorf("merging schemas: %w", err)
 	}
 
 	if err := value.ValidateSchemaDocument(merged); err != nil {
@@ -1179,25 +1126,6 @@ func mergeAndWriteValuesSchema(ctx context.Context, parentSchema string, importe
 	}
 	if err := os.WriteFile(dst, b, helpers.ReadWriteUser); err != nil {
 		return fmt.Errorf("failed to write merged values schema: %w", err)
-	}
-	return nil
-}
-
-// schemaVersion extracts the "$schema" version URI from a schema map, returning "" if absent or not a string.
-func schemaVersion(s map[string]any) string {
-	if v, ok := s["$schema"].(string); ok {
-		return v
-	}
-	return ""
-}
-
-// checkCompatibleVersion errors when the accumulated merged schema and an incoming schema declare
-// different "$schema" versions, preventing silent cross-version merge bugs.
-func checkCompatibleVersion(accumulated, incoming map[string]any, incomingLabel string) error {
-	a := schemaVersion(accumulated)
-	b := schemaVersion(incoming)
-	if a != b {
-		return fmt.Errorf("cannot merge schemas with different versions: accumulated schema uses %q but %s declares %q", a, incomingLabel, b)
 	}
 	return nil
 }

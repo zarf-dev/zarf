@@ -27,9 +27,10 @@
         },
         "image": {
           "properties": {
-            "tag": {
-              "description": "Image tag version",
-              "pattern": "^v?[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "name": {
+              "type": "string"
+            },
+            "pullPolicy": {
               "type": "string"
             }
           },

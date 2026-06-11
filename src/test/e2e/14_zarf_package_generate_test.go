@@ -48,7 +48,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.NoError(t, err, stdOut, stdErr)
 
 		schemaPath := filepath.Join(packagePath, "values.schema.json")
-		schema, err := value.LoadJSONSchema(schemaPath)
+		schema, _, err := value.LoadValidatedSchema(packagePath, schemaPath)
 		require.NoError(t, err)
 		require.NotNil(t, schema)
 
@@ -60,16 +60,45 @@ func TestZarfDevGenerate(t *testing.T) {
 		appProps, ok := app["properties"].(map[string]any)
 		require.True(t, ok)
 
-		name, ok := appProps["name"].(map[string]any)
+		aName, ok := appProps["name"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "string", name["type"])
-		require.Equal(t, "Application name", name["description"])
+		// .app.name should take the type 'string' from the parent values.yaml
+		require.Equal(t, "string", aName["type"])
+		// .app.name should take the description from the parent values.schema.json
+		require.Equal(t, "Application name", aName["description"])
 
-		replicas, ok := appProps["replicas"].(map[string]any)
+		aReplicas, ok := appProps["replicas"].(map[string]any)
 		require.True(t, ok)
-		require.Equal(t, "number", replicas["type"])
-		require.Equal(t, "Replica count", replicas["description"])
+		// .app.replicas should take the type 'number' from the parent values.yaml
+		require.Equal(t, "number", aReplicas["type"])
+		// .app.replicas should take the description from the parent values.schema.json
+		require.Equal(t, "Replica count", aReplicas["description"])
 
+		backend, ok := props["backend"].(map[string]any)
+		require.True(t, ok)
+		backendProps, ok := backend["properties"].(map[string]any)
+		require.True(t, ok)
+
+		bName, ok := backendProps["name"].(map[string]any)
+		require.True(t, ok)
+		// .backend.name should take the type 'string' from the child values.yaml
+		require.Equal(t, "string", bName["type"])
+		// .backend.name should take the description from the child values.schema.json
+		require.Equal(t, "Backend name", bName["description"])
+
+		bReplicas, ok := backendProps["replicas"].(map[string]any)
+		require.True(t, ok)
+		// .backend.replicas should take the type 'number' from the child values.yaml
+		require.Equal(t, "number", bReplicas["type"])
+		// .backend.replicas should take the description from the child values.schema.json
+		require.Equal(t, "Replica count", bReplicas["description"])
+
+		// .backend.port should be pulled in from the child's mapped chart
+		bPort, ok := backendProps["port"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, "number", bPort["type"])
+
+		// .network should be pulled in from the parent's mapped chart
 		network, ok := props["network"].(map[string]any)
 		require.True(t, ok)
 		networkProps, ok := network["properties"].(map[string]any)
@@ -78,6 +107,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "number", port["type"])
 
+		// .oldField should be dropped from the values.schema.json
 		_, hasOldField := props["oldField"]
 		require.False(t, hasOldField)
 	})

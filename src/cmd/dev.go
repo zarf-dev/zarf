@@ -126,6 +126,7 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		CachePath:            cachePath,
 		RemoteOptions:        defaultRemoteOptions(),
 	}
+
 	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
 	if err != nil {
 		return err
@@ -193,21 +194,32 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		}
 	}
 
-	// Step 3: Generate JSON schema from the final map and save it
+	// Step 3: Generate JSON schema from the final map
 	schema := value.GenerateJSONSchema(zarfValues)
 
-	outputFileName := "values.schema.json"
-	existingSchema, err := value.LoadJSONSchema(outputFileName)
-	if err != nil {
-		return err
+	// Step 4: Merge and reconcile any existing schema
+	existingSchema, mergeErr := value.MergeSchemaFiles(defined.Pkg.Values.Schema, defined.ImportedSchemas, basePath)
+	if mergeErr != nil {
+		l.Warn("unable to merge imported schemas for schema generation", "error", mergeErr.Error())
 	}
+
 	if existingSchema != nil {
 		schema = value.ReconcileJSONSchema(existingSchema, schema)
 	}
 
+	// Step 5: Save the resulting schema
 	b, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
+	}
+
+	outputFileName := "values.schema.json"
+	if defined.Pkg.Values.Schema != "" {
+		if !filepath.IsAbs(defined.Pkg.Values.Schema) {
+			outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
+		} else {
+			outputFileName = defined.Pkg.Values.Schema
+		}
 	}
 
 	err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)

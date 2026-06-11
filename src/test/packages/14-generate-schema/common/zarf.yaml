@@ -9,21 +9,16 @@ values:
   schema: values.schema.json
 
 components:
-  - name: schema-chart
-    required: true
-    charts:
-      - name: schema-chart
-        version: 0.1.0
-        releaseName: schema-chart
-        namespace: schema-test
-        localPath: chart
-        values:
-          - sourcePath: ".app.replicas"
-            targetPath: ".replicaCount"
-          - sourcePath: ".network.port"
-            targetPath: ".service.port"
-  
   - name: backend-chart
     required: true
-    import:
-      path: common
+    charts:
+      - name: backend-chart
+        version: 0.1.0
+        releaseName: backend-chart
+        namespace: backend-test
+        localPath: ../chart
+        values:
+          - sourcePath: ".backend.replicas"
+            targetPath: ".replicaCount"
+          - sourcePath: ".backend.port"
+            targetPath: ".service.port"
