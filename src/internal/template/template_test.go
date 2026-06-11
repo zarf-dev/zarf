@@ -137,7 +137,6 @@ func TestObjects_WithPackage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := make(Objects)
 			result := objects.WithPackage(tt.pkg)
-
 			require.Equal(t, tt.pkg, result[objectKeyPackage])
 		})
 	}
