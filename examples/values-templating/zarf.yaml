@@ -53,13 +53,17 @@ components:
             targetPath: ".appName"
           - sourcePath: ".app.replicas"
             targetPath: ".replicaCount"
-          - sourcePath: ".app.image.tag"
-            targetPath: ".image.tag"
           - sourcePath: ".database.host"
             targetPath: ".config.database.host"
           # Multiple mappings are ok. They are evaluated first to last, so the latest mapping will take priority.
           - sourcePath: ".database.host2"
             targetPath: ".config.database.host"
+          # excludePaths omit sourcePath sub-objects to prevent them from being mapped to the target.
+          # Here we omit the image reference and hardcode it to the chart values file since it will always be the image used on create.
+          - sourcePath: ".app.image"
+            targetPath: ".image"
+            excludePaths:
+              - ".app.image.reference"
 
   - name: actions-with-templates
     description: "This component demonstrates using template: true to enable go-template processing in actions"

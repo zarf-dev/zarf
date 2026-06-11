@@ -1,2 +1,5 @@
 staticKey: ""
 chartImageTag: ""
+mapped:
+  included: ""
+  excluded: "chart-default"

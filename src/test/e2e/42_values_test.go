@@ -27,7 +27,7 @@ func TestValues(t *testing.T) {
 
 	// Deploy the package with both package values, CLI override values file, and --set-values
 	overrideValuesPath := filepath.Join(src, "override-values.yaml")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--values", overrideValuesPath, "--set-values", "cliOverride=cli-wins")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", path, "--confirm", "--values", overrideValuesPath, "--set-values", "cliOverride=cli-wins", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the configmap was templated with the override value (--values file overrides package defaults)
@@ -83,9 +83,21 @@ func TestValues(t *testing.T) {
 	require.Contains(t, kubectlOut, "override-tag", "chartImageTag should be rendered from .Values.imageTag in templatedValuesFiles")
 	require.NotContains(t, kubectlOut, "{{", "Go template syntax should have been resolved in templatedValuesFiles")
 
+	// Verify the chart value mapping carried the non-excluded sibling through.
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-chart-configmap", "-o", "jsonpath='{.data.mappedIncluded}'")
+	require.NoError(t, err, "unable to get chart configmap")
+	require.Contains(t, kubectlOut, "mapped-source-value", "mappedIncluded should be mapped from .chartMapping.included")
+
+	// Verify excludePaths dropped a value supplied at deploy time: override-values.yaml
+	// sets chartMapping.excluded, but the mapping excludes it, so the chart keeps its default.
+	kubectlOut, _, err = e2e.Kubectl(t, "get", "configmap", "test-values-chart-configmap", "-o", "jsonpath='{.data.mappedExcluded}'")
+	require.NoError(t, err, "unable to get chart configmap")
+	require.NotContains(t, kubectlOut, "should-not-appear", "excludePaths should drop the deploy-time value before it reaches the chart")
+	require.Contains(t, kubectlOut, "chart-default", "mappedExcluded should retain the chart default since the source was excluded")
+
 	// Remove the package with values
 	valuesFile := filepath.Join(src, "override-values.yaml")
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "test-values", "--confirm", "--values", valuesFile, "--set-values", "removeKey=custom-remove-value", "--skip-version-check")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Verify the remove actions used the values correctly
