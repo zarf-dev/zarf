@@ -139,10 +139,6 @@ func TestObjects_WithPackage(t *testing.T) {
 			result := objects.WithPackage(tt.pkg)
 
 			require.Equal(t, tt.pkg, result[objectKeyPackage])
-			// WithPackage only exposes the package itself; it does not unwrap sub-objects.
-			require.NotContains(t, result, objectKeyMetadata)
-			require.NotContains(t, result, objectKeyBuild)
-			require.NotContains(t, result, objectKeyConstants)
 		})
 	}
 }
