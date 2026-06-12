@@ -39,8 +39,6 @@ type Objects map[string]any
 
 const (
 	objectKeyValues    = "Values"
-	objectKeyMetadata  = "Metadata"
-	objectKeyBuild     = "Build"
 	objectKeyPackage   = "Pkg"
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
