@@ -173,15 +173,20 @@ func TestBuildInjectionPod(t *testing.T) {
 				corev1.ResourceCPU:    resource.MustParse("1"),
 				corev1.ResourceMemory: resource.MustParse("256Mi"),
 			})
-	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test")
+	// An unset IP family defaults to IPv4.
+	pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", "")
 	require.Equal(t, "injector", *pod.Name)
 	require.Equal(t, "test", pod.Labels["zarf.dev/package"])
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "0.0.0.0:5000"}, pod.Spec.Containers[0].Command)
 	b, err := json.MarshalIndent(pod, "", "  ")
 	require.NoError(t, err)
 
 	expected, err := os.ReadFile("./testdata/expected-injection-pod.json")
 	require.NoError(t, err)
 	require.Equal(t, strings.TrimSpace(string(expected)), string(b))
+
+	ipv6Pod := buildInjectionPod("injection-node", "docker.io/library/ubuntu:latest", []string{"foo", "bar"}, "shasum", resReq, "test", state.IPFamilyIPv6)
+	require.Equal(t, []string{"/zarf-init/zarf-injector", "shasum", "[::]:5000"}, ipv6Pod.Spec.Containers[0].Command)
 }
 
 func setupCluster(t *testing.T, nodes []corev1.Node, pods []corev1.Pod) *Cluster {
