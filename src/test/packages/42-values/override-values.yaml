@@ -2,3 +2,7 @@ test: "override-value"
 additional: "extra-data"
 cliOverride: "file-override"
 imageTag: "override-tag"
+# Supplied at deploy time under a path the chart mapping excludes. It must not
+# reach the rendered chart, proving excludePaths drops deploy-time values too.
+chartMapping:
+  excluded: "should-not-appear"

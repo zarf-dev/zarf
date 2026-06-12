@@ -6,3 +6,5 @@ metadata:
 data:
   staticKey: {{ .Values.staticKey | quote }}
   chartImageTag: {{ .Values.chartImageTag | quote }}
+  mappedIncluded: {{ .Values.mapped.included | quote }}
+  mappedExcluded: {{ .Values.mapped.excluded | quote }}

@@ -260,6 +260,68 @@ func (v Values) Set(path Path, newVal any) error {
 	return nil
 }
 
+// Delete removes the value at the given dot-notation path from v. Deleting a key
+// that does not exist is a no-op.
+func (v Values) Delete(path Path) error {
+	if err := path.Validate(); err != nil {
+		return err
+	}
+	if path == "." {
+		return fmt.Errorf("cannot delete root path")
+	}
+
+	parts := path.Segments()
+	current := v
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			delete(current, part)
+			return nil
+		}
+		next, exists := current[part]
+		if !exists {
+			return nil
+		}
+		nextMap, ok := next.(map[string]any)
+		if !ok {
+			return fmt.Errorf("cannot traverse path %s: key %q contains %T, expected map",
+				path, part, next)
+		}
+		current = nextMap
+	}
+	return nil
+}
+
+// DeepCopy returns a recursive copy of v so the result can be mutated without
+// affecting the original maps or slices.
+func (v Values) DeepCopy() Values {
+	cp := make(Values, len(v))
+	for k, val := range v {
+		cp[k] = deepCopyValue(val)
+	}
+	return cp
+}
+
+func deepCopyValue(val any) any {
+	switch t := val.(type) {
+	case map[string]any:
+		cp := make(map[string]any, len(t))
+		for k, sub := range t {
+			cp[k] = deepCopyValue(sub)
+		}
+		return cp
+	case Values:
+		return deepCopyValue(map[string]any(t))
+	case []any:
+		cp := make([]any, len(t))
+		for i, sub := range t {
+			cp[i] = deepCopyValue(sub)
+		}
+		return cp
+	default:
+		return t
+	}
+}
+
 // ValidateOptions provides optional configuration for Values validation
 type ValidateOptions struct {
 	// SkipRequired skips validation of required fields
