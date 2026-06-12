@@ -18,7 +18,7 @@ components:
         namespace: backend-test
         localPath: ../chart
         values:
-          - sourcePath: ".backend.replicas"
-            targetPath: ".replicaCount"
-          - sourcePath: ".backend.port"
-            targetPath: ".service.port"
+          - sourcePath: ".backend"
+            targetPath: "."
+            excludePaths:
+              - ".backend.image"

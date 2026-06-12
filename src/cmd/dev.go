@@ -184,18 +184,20 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 					continue // skip if not found in defaults
 				}
 
-				_, errExtract := zarfValues.Extract(value.Path(cv.SourcePath))
-				if errExtract != nil {
-					if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
-						l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "sourcePath", cv.SourcePath)
+				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
+					l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "sourcePath", cv.SourcePath)
+				}
+				for _, excludePath := range cv.ExcludePaths {
+					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
+						l.Warn("unable to exclude path from schema", "error", err.Error(), "chart", chart.Name, "excludePath", excludePath)
 					}
 				}
 			}
 		}
 	}
 
-	// Step 3: Generate JSON schema from the final map
-	schema := value.GenerateJSONSchema(zarfValues)
+	// Step 3: Generate JSON generatedSchema from the final map
+	generatedSchema := value.GenerateJSONSchema(zarfValues)
 
 	// Step 4: Merge and reconcile any existing schema
 	existingSchema, mergeErr := value.MergeSchemaFiles(defined.Pkg.Values.Schema, defined.ImportedSchemas, basePath)
@@ -204,11 +206,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 
 	if existingSchema != nil {
-		schema = value.ReconcileJSONSchema(existingSchema, schema)
+		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema)
 	}
 
 	// Step 5: Save the resulting schema
-	b, err := json.MarshalIndent(schema, "", "  ")
+	b, err := json.MarshalIndent(generatedSchema, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
 	}

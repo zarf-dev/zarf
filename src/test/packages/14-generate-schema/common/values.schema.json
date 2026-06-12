@@ -10,7 +10,7 @@
           "type": "number",
           "description": "Backend name"
         },
-        "replicas": {
+        "replicaCount": {
           "type": "string",
           "description": "Replica count"
         }

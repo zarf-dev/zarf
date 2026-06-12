@@ -1,3 +1,6 @@
 replicaCount: 1
 service:
   port: 8080
+
+image:
+  ref: nginx:latest

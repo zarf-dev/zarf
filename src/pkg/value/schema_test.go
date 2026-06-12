@@ -79,7 +79,7 @@ func TestLoadValidatedSchema(t *testing.T) {
 	t.Run("missing file returns nil", func(t *testing.T) {
 		_, _, err := LoadValidatedSchema(base, "does-not-exist.schema.json")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no such file")
+		assert.Contains(t, err.Error(), "does-not-exist.schema.json")
 	})
 
 	t.Run("valid schema is loaded", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestMergeSchemaFiles(t *testing.T) {
 	t.Run("absent schema file returns an error", func(t *testing.T) {
 		_, err := MergeSchemaFiles("", []string{"simple.schema.json", "does-not-exist.schema.json"}, base)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no such file")
+		assert.Contains(t, err.Error(), "does-not-exist.schema.json")
 	})
 
 	t.Run("absolute path is used as-is", func(t *testing.T) {

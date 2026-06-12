@@ -220,7 +220,7 @@ func (v Values) Set(path Path, newVal any) error {
 
 	// Handle root path "." - merge the value directly into the map
 	if path == "." {
-		var valueMap map[string]any
+		var valueMap Values
 		switch val := newVal.(type) {
 		case Values:
 			valueMap = val
@@ -230,9 +230,7 @@ func (v Values) Set(path Path, newVal any) error {
 			return fmt.Errorf("cannot merge non-map value at root path")
 		}
 		// Merge the map contents into v
-		for k, val := range valueMap {
-			v[k] = val
-		}
+		v.DeepMerge(valueMap)
 		return nil
 	}
 
@@ -240,10 +238,35 @@ func (v Values) Set(path Path, newVal any) error {
 
 	// Navigate to the nested location and set the value
 	current := v
+parseParts:
 	for i, part := range parts {
 		if i == len(parts)-1 {
-			// Set the value at the last key in the path
-			current[part] = newVal
+			var valueMap Values
+			switch nv := newVal.(type) {
+			case Values:
+				valueMap = nv
+			case map[string]any:
+				valueMap = nv
+			default:
+				// Set the value at the last key in the path if its not a map
+				current[part] = newVal
+				break parseParts
+			}
+
+			var currentMap Values
+			switch cv := current[part].(type) {
+			case Values:
+				currentMap = cv
+			case map[string]any:
+				currentMap = cv
+			default:
+				// If current is not a map just set new val to the key
+				current[part] = newVal
+				break parseParts
+			}
+
+			// Merge the map contents into v if they are both maps
+			Values(currentMap).DeepMerge(valueMap)
 		} else {
 			if _, exists := current[part]; !exists {
 				// If the part does not exist, create a new map for it
