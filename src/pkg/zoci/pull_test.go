@@ -247,6 +247,44 @@ func TestAssembleLayers(t *testing.T) {
 	require.Contains(t, digests, pkg.image.layer.Digest.String(), "image layer blob present")
 }
 
+func TestAssembleLayersIncludesValues(t *testing.T) {
+	ctx := testutil.TestContext(t)
+	dir := t.TempDir()
+	zarfYAML := `kind: ZarfPackageConfig
+metadata:
+  name: values-pull-test
+  version: 0.0.1
+  architecture: amd64
+values:
+  files:
+    - values.yaml
+  schema: values.schema.json
+components:
+  - name: noop
+    required: true
+`
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("foo: bar\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
+
+	tmpdir := t.TempDir()
+	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
+		OCIConcurrency: 3,
+		CachePath:      tmpdir,
+		SkipSBOM:       true,
+	})
+	require.NoError(t, err)
+
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+	remote, components := publishPackage(ctx, t, packagePath, upstream)
+
+	layers, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	require.NoError(t, err)
+	paths := pathsFromLayers(layers)
+	require.Contains(t, paths, layout.ValuesYAML, "package values file must be pulled")
+	require.Contains(t, paths, layout.ValuesSchema, "package values schema must be pulled")
+}
+
 func buildAndPublishPackage(ctx context.Context, t *testing.T, imageRef, upstream string) *zoci.Remote {
 	t.Helper()
 	packagePath := createVirtualPackage(ctx, t, imageRef)
