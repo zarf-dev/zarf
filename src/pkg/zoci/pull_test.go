@@ -277,7 +277,6 @@ components:
 
 	tmpdir := t.TempDir()
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
-		OCIConcurrency: 3,
 		CachePath:      tmpdir,
 		SigningKeyPath: "testdata/cosign.key",
 	})
