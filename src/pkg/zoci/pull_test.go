@@ -247,23 +247,31 @@ func TestAssembleLayers(t *testing.T) {
 	require.Contains(t, digests, pkg.image.layer.Digest.String(), "image layer blob present")
 }
 
-func TestAssembleLayersIncludesValues(t *testing.T) {
+func TestAllPublishedLayersArePulled(t *testing.T) {
 	ctx := testutil.TestContext(t)
+
 	dir := t.TempDir()
 	zarfYAML := `kind: ZarfPackageConfig
 metadata:
-  name: values-pull-test
+  name: all-layers-test
   version: 0.0.1
   architecture: amd64
 values:
   files:
     - values.yaml
   schema: values.schema.json
+documentation:
+  readme: README.md
 components:
-  - name: noop
+  - name: with-file
     required: true
+    files:
+      - source: data.txt
+        target: data.txt
 `
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "zarf.yaml"), []byte(zarfYAML), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "data.txt"), []byte("hello\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte("foo: bar\n"), 0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "values.schema.json"), []byte(`{"type":"object"}`), 0o644))
 
@@ -271,18 +279,27 @@ components:
 	packagePath, err := packager.Create(ctx, dir, tmpdir, packager.CreateOptions{
 		OCIConcurrency: 3,
 		CachePath:      tmpdir,
-		SkipSBOM:       true,
+		SigningKeyPath: "testdata/cosign.key",
 	})
 	require.NoError(t, err)
 
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	remote, components := publishPackage(ctx, t, packagePath, upstream)
 
-	layers, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	root, err := remote.FetchRoot(ctx)
 	require.NoError(t, err)
-	paths := pathsFromLayers(layers)
-	require.Contains(t, paths, layout.ValuesYAML, "package values file must be pulled")
-	require.Contains(t, paths, layout.ValuesSchema, "package values schema must be pulled")
+
+	pulled, err := remote.AssembleLayers(ctx, components, zoci.GetAllLayerTypes()...)
+	require.NoError(t, err)
+	pulledDigests := map[string]struct{}{}
+	for _, l := range pulled {
+		pulledDigests[l.Digest.String()] = struct{}{}
+	}
+
+	for _, published := range root.Layers {
+		_, ok := pulledDigests[published.Digest.String()]
+		require.True(t, ok, "published layer %q (%s) is not pulled by AssembleLayers", published.Annotations[ocispec.AnnotationTitle], published.Digest)
+	}
 }
 
 func buildAndPublishPackage(ctx context.Context, t *testing.T, imageRef, upstream string) *zoci.Remote {
