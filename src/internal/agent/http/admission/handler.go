@@ -66,7 +66,7 @@ func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerF
 			return
 		}
 
-		result, err := hook.Execute(review.Request)
+		result, err := hook.Execute(r.Context(), review.Request)
 		admissionMeta := metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "AdmissionReview",

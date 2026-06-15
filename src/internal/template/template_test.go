@@ -6,12 +6,15 @@ package template
 
 import (
 	"context"
+	"encoding/base64"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/pkg/pki"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/value"
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 )
@@ -1156,4 +1159,227 @@ func TestFromTOML_Errors(t *testing.T) {
 			require.Contains(t, errMsg, "toml:")
 		})
 	}
+}
+
+func testState() *state.State {
+	return &state.State{
+		Distro:       "k3s",
+		StorageClass: "standard",
+		IPFamily:     state.IPFamilyIPv4,
+		RegistryInfo: state.RegistryInfo{
+			Address:      "registry.example.com",
+			Port:         5000,
+			PushUsername: "push-user",
+			PushPassword: "push-secret",
+			PullUsername: "pull-user",
+			PullPassword: "pull-secret",
+			Secret:       "registry-secret",
+			RegistryMode: state.RegistryModeNodePort,
+		},
+		GitServer: state.GitServerInfo{
+			Address:      "git.example.com",
+			PushUsername: "git-push-user",
+			PushPassword: "git-push-secret",
+			PullUsername: "git-pull-user",
+			PullPassword: "git-pull-secret",
+		},
+		ArtifactServer: state.ArtifactServerInfo{
+			Address:      "artifact.example.com",
+			PushUsername: "artifact-user",
+			PushToken:    "artifact-token",
+		},
+		InjectorInfo: state.InjectorInfo{
+			Image:                  "injector:latest",
+			Port:                   5001,
+			PayLoadConfigMapAmount: 3,
+			PayLoadShaSum:          "abc123",
+		},
+		AgentTLS: pki.GeneratedPKI{
+			CA:   []byte("ca-data"),
+			Cert: []byte("cert-data"),
+			Key:  []byte("key-data"),
+		},
+	}
+}
+
+func TestWithState_NilState(t *testing.T) {
+	t.Parallel()
+	objs := NewObjects(value.Values{})
+	result, err := objs.WithState(StateAccess{})
+	require.NoError(t, err)
+	require.NotContains(t, result, objectKeyState)
+}
+
+func TestWithState_NonSensitiveFields(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{State: s})
+	require.NoError(t, err)
+	require.Contains(t, objs, objectKeyState)
+
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Distro }}`:                     s.Distro,
+		`{{ .State.StorageClass }}`:               s.StorageClass,
+		`{{ .State.IPFamily }}`:                   string(s.IPFamily),
+		`{{ .State.Registry.Address }}`:           s.RegistryInfo.Address,
+		`{{ .State.Registry.PushUsername }}`:      s.RegistryInfo.PushUsername,
+		`{{ .State.Registry.PullUsername }}`:      s.RegistryInfo.PullUsername,
+		`{{ .State.Git.Address }}`:                s.GitServer.Address,
+		`{{ .State.Git.PushUsername }}`:           s.GitServer.PushUsername,
+		`{{ .State.Git.PullUsername }}`:           s.GitServer.PullUsername,
+		`{{ .State.Injector.Image }}`:             s.InjectorInfo.Image,
+		`{{ .State.Injector.PayloadConfigMaps }}`: "3",
+		`{{ .State.Injector.PayloadShaSum }}`:     s.InjectorInfo.PayLoadShaSum,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render without error", tmpl)
+		require.Equal(t, expected, out, "template %q rendered unexpected value", tmpl)
+	}
+}
+
+func TestWithState_SensitiveFieldsBlockedWithoutOptIn(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{State: s})
+	require.NoError(t, err)
+
+	// Sensitive fields must not be accessible without declaring the group
+	for _, tmpl := range []string{
+		`{{ .State.Registry.PushPassword }}`,
+		`{{ .State.Registry.PullPassword }}`,
+		`{{ .State.Registry.Secret }}`,
+		`{{ .State.Registry.Htpasswd }}`,
+		`{{ .State.Git.PushPassword }}`,
+		`{{ .State.Git.PullPassword }}`,
+		`{{ .State.Agent.CA }}`,
+	} {
+		_, err := Apply(ctx, tmpl, objs)
+		require.Error(t, err, "template %q should fail without the matching stateAccess group", tmpl)
+	}
+}
+
+func TestWithState_RegistryCredentialsGroup(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
+		State:      s,
+		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessRegistryCredentials},
+	})
+	require.NoError(t, err)
+
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Registry.PushPassword }}`: s.RegistryInfo.PushPassword,
+		`{{ .State.Registry.PullPassword }}`: s.RegistryInfo.PullPassword,
+		`{{ .State.Registry.Secret }}`:       s.RegistryInfo.Secret,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render with registryCredentials", tmpl)
+		require.Equal(t, expected, out)
+	}
+	// Other sensitive groups must still be blocked
+	_, err = Apply(ctx, `{{ .State.Git.PushPassword }}`, objs)
+	require.Error(t, err, "gitCredentials should still be blocked")
+}
+
+func TestWithState_GitCredentialsGroup(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
+		State:      s,
+		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessGitCredentials},
+	})
+	require.NoError(t, err)
+
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Git.PushPassword }}`: s.GitServer.PushPassword,
+		`{{ .State.Git.PullPassword }}`: s.GitServer.PullPassword,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render with gitCredentials", tmpl)
+		require.Equal(t, expected, out)
+	}
+	// Other groups must remain blocked
+	_, err = Apply(ctx, `{{ .State.Registry.PushPassword }}`, objs)
+	require.Error(t, err, "registryCredentials should still be blocked")
+}
+
+func TestWithState_AgentCertsGroup(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
+		State:      s,
+		AccessKeys: []v1alpha1.StateAccessKey{v1alpha1.StateAccessAgentCerts},
+	})
+	require.NoError(t, err)
+
+	// Agent sub-map is only present when agentCerts is declared
+	stateMap, ok := objs[objectKeyState].(map[string]any)
+	require.True(t, ok, "state object should be map[string]any")
+	require.Contains(t, stateMap, "Agent")
+
+	for tmpl, expectedB64 := range map[string][]byte{
+		`{{ .State.Agent.CA }}`:   s.AgentTLS.CA,
+		`{{ .State.Agent.Cert }}`: s.AgentTLS.Cert,
+		`{{ .State.Agent.Key }}`:  s.AgentTLS.Key,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render with agentCerts", tmpl)
+		require.Equal(t, base64.StdEncoding.EncodeToString(expectedB64), out)
+	}
+
+	// Other groups must remain blocked
+	_, err = Apply(ctx, `{{ .State.Registry.PushPassword }}`, objs)
+	require.Error(t, err, "registryCredentials should still be blocked")
+	_, err = Apply(ctx, `{{ .State.Git.PushPassword }}`, objs)
+	require.Error(t, err, "gitCredentials should still be blocked")
+}
+
+func TestWithState_AgentMapAbsentWithoutGroup(t *testing.T) {
+	t.Parallel()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{State: s})
+	require.NoError(t, err)
+	stateMap, ok := objs[objectKeyState].(map[string]any)
+	require.True(t, ok, "state object should be map[string]any")
+	require.NotContains(t, stateMap, "Agent",
+		"Agent sub-map must not exist without agentCerts access key")
+}
+
+func TestWithState_MultipleGroups(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	s := testState()
+	objs, err := NewObjects(value.Values{}).WithState(StateAccess{
+		State: s,
+		AccessKeys: []v1alpha1.StateAccessKey{
+			v1alpha1.StateAccessRegistryCredentials,
+			v1alpha1.StateAccessGitCredentials,
+		},
+	})
+	require.NoError(t, err)
+
+	// Both declared groups are accessible
+	for tmpl, expected := range map[string]string{
+		`{{ .State.Registry.PushPassword }}`: s.RegistryInfo.PushPassword,
+		`{{ .State.Registry.PullPassword }}`: s.RegistryInfo.PullPassword,
+		`{{ .State.Git.PushPassword }}`:      s.GitServer.PushPassword,
+		`{{ .State.Git.PullPassword }}`:      s.GitServer.PullPassword,
+	} {
+		out, err := Apply(ctx, tmpl, objs)
+		require.NoError(t, err, "template %q should render", tmpl)
+		require.Equal(t, expected, out)
+	}
+
+	// Undeclared groups remain blocked
+	_, err = Apply(ctx, `{{ .State.Agent.CA }}`, objs)
+	require.Error(t, err, "agentCerts should still be blocked")
+	stateMap, ok := objs[objectKeyState].(map[string]any)
+	require.True(t, ok, "state object should be map[string]any")
+	require.NotContains(t, stateMap, "Agent",
+		"Agent sub-map must not exist without agentCerts")
 }

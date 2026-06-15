@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -71,9 +72,10 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
-	VInitAgentTLSCA   = "init.agent.tls_ca"
-	VInitAgentTLSCert = "init.agent.tls_cert"
-	VInitAgentTLSKey  = "init.agent.tls_key"
+	VInitAgentTLSCA          = "init.agent.tls_ca"
+	VInitAgentTLSCert        = "init.agent.tls_cert"
+	VInitAgentTLSKey         = "init.agent.tls_key"
+	VInitAgentMutationPolicy = "init.agent.mutation_policy"
 
 	// Package config keys
 
@@ -279,6 +281,9 @@ func setDefaults(v *viper.Viper) {
 
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
+
+	// Init defaults that are non-zero values
+	v.SetDefault(VInitAgentMutationPolicy, string(state.MutationPolicyAll))
 }
 
 // GetStringSlice returns a string slice from viper

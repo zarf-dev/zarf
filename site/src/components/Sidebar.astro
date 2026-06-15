@@ -1,0 +1,9 @@
+---
+// starlight-sidebar-topics scopes the sidebar to the current docs version via
+// route middleware. We override its Sidebar to render only the scoped sidebar,
+// suppressing the plugin's topic list — version switching lives in the header
+// VersionSelect instead.
+import Default from "@astrojs/starlight/components/Sidebar.astro";
+---
+
+<Default><slot /></Default>

@@ -1,0 +1,2 @@
+replicaCount: {{ .Values.replicas }}
+tag: {{ .Values.imageTag }}

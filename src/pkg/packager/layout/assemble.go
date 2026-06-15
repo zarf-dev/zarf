@@ -30,6 +30,7 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/git"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/kustomize"
+	"github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -372,7 +373,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	onCreate := component.Actions.OnCreate
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.Before, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component before action: %w", err)
 	}
 
@@ -387,7 +388,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 	}
 
 	for filesIdx, file := range component.Files {
-		rel := filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target))
+		rel := filepath.Join(string(FilesComponentDir), ComponentFileRelPath(filesIdx, file.Target))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 
@@ -515,7 +516,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 		}
 	}
 
-	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil); err != nil {
+	if err := actions.Run(ctx, packagePath, onCreate.Defaults, onCreate.After, nil, nil, template.StateAccess{}); err != nil {
 		return fmt.Errorf("unable to run component after action: %w", err)
 	}
 
@@ -542,7 +543,7 @@ func assemblePackageComponent(ctx context.Context, component v1alpha1.ZarfCompon
 // PackageManifest takes a Zarf manifest definition and packs it into a package layout
 func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBuildPath string, packagePath string) error {
 	for fileIdx, path := range manifest.Files {
-		rel := filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx))
+		rel := filepath.Join(string(ManifestsComponentDir), ManifestFileName(manifest.Name, fileIdx))
 		dst := filepath.Join(compBuildPath, rel)
 
 		// Copy manifests without any processing.
@@ -563,7 +564,7 @@ func PackageManifest(ctx context.Context, manifest v1alpha1.ZarfManifest, compBu
 
 	for kustomizeIdx, path := range manifest.Kustomizations {
 		// Generate manifests from kustomizations and place in the package.
-		kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+		kname := KustomizationFileName(manifest.Name, kustomizeIdx)
 		rel := filepath.Join(string(ManifestsComponentDir), kname)
 		dst := filepath.Join(compBuildPath, rel)
 
@@ -591,10 +592,22 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, packagePath, ch
 		valuesFiles = append(valuesFiles, v)
 	}
 	chart.ValuesFiles = valuesFiles
+
+	oldTemplatedValuesFiles := chart.TemplatedValuesFiles
+	templatedValuesFiles := []string{}
+	for _, v := range chart.TemplatedValuesFiles {
+		if !helpers.IsURL(v) && !filepath.IsAbs(v) {
+			v = filepath.Join(packagePath, v)
+		}
+		templatedValuesFiles = append(templatedValuesFiles, v)
+	}
+	chart.TemplatedValuesFiles = templatedValuesFiles
+
 	if err := helm.PackageChart(ctx, chart, chartPath, valuesFilePath, cachePath, remoteOpts); err != nil {
 		return err
 	}
 	chart.ValuesFiles = oldValuesFiles
+	chart.TemplatedValuesFiles = oldTemplatedValuesFiles
 	return nil
 }
 
@@ -643,6 +656,23 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 				return fmt.Errorf("unable to copy chart values file %s: %w", path, err)
 			}
 		}
+
+		nValuesFiles := len(chart.ValuesFiles)
+		for valuesIdx, path := range chart.TemplatedValuesFiles {
+			if helpers.IsURL(path) {
+				continue
+			}
+
+			rel := filepath.ToSlash(fmt.Sprintf("%s-%d", helm.StandardName(string(ValuesComponentDir), chart), nValuesFiles+valuesIdx))
+			component.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = rel
+
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(packagePath, path)
+			}
+			if err := helpers.CreatePathAndCopy(path, filepath.Join(compBuildPath, rel)); err != nil {
+				return fmt.Errorf("unable to copy chart templated values file %s: %w", path, err)
+			}
+		}
 	}
 
 	for filesIdx, file := range component.Files {
@@ -650,7 +680,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 			continue
 		}
 
-		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), strconv.Itoa(filesIdx), filepath.Base(file.Target)))
+		rel := filepath.ToSlash(filepath.Join(string(FilesComponentDir), ComponentFileRelPath(filesIdx, file.Target)))
 		dst := filepath.Join(compBuildPath, rel)
 		destinationDir := filepath.Dir(dst)
 		src := file.Source
@@ -729,7 +759,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 	}
 	for manifestIdx, manifest := range component.Manifests {
 		for fileIdx, path := range manifest.Files {
-			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), fmt.Sprintf("%s-%d.yaml", manifest.Name, fileIdx)))
+			rel := filepath.ToSlash(filepath.Join(string(ManifestsComponentDir), ManifestFileName(manifest.Name, fileIdx)))
 			dst := filepath.Join(compBuildPath, rel)
 
 			// Copy manifests without any processing.
@@ -746,7 +776,7 @@ func assembleSkeletonComponent(ctx context.Context, component v1alpha1.ZarfCompo
 
 		for kustomizeIdx, path := range manifest.Kustomizations {
 			// Generate manifests from kustomizations and place in the package.
-			kname := fmt.Sprintf("kustomization-%s-%d.yaml", manifest.Name, kustomizeIdx)
+			kname := KustomizationFileName(manifest.Name, kustomizeIdx)
 			rel := filepath.Join(string(ManifestsComponentDir), kname)
 			dst := filepath.Join(compBuildPath, rel)
 
@@ -852,14 +882,34 @@ func recordPackageMetadata(pkg v1alpha1.ZarfPackage, flavor string, registryOver
 
 func collectVersionRequirements(pkg v1alpha1.ZarfPackage, hasIndex bool) []v1alpha1.VersionRequirement {
 	var reqs []v1alpha1.VersionRequirement
+	var hasImageArchives, hasTemplatedValuesFiles bool
 	for _, comp := range pkg.Components {
-		if len(comp.ImageArchives) > 0 {
-			reqs = append(reqs, v1alpha1.VersionRequirement{
-				Version: "v0.68.0",
-				Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
-			})
+		if !hasImageArchives && len(comp.ImageArchives) > 0 {
+			hasImageArchives = true
+		}
+		if !hasTemplatedValuesFiles {
+			for _, chart := range comp.Charts {
+				if len(chart.TemplatedValuesFiles) > 0 {
+					hasTemplatedValuesFiles = true
+					break
+				}
+			}
+		}
+		if hasImageArchives && hasTemplatedValuesFiles {
 			break
 		}
+	}
+	if hasImageArchives {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.68.0",
+			Reason:  "This package contains image archives which will only be recognized on v0.68.0+",
+		})
+	}
+	if hasTemplatedValuesFiles {
+		reqs = append(reqs, v1alpha1.VersionRequirement{
+			Version: "v0.78.0",
+			Reason:  "This package uses templatedValuesFiles which require v0.78.0+",
+		})
 	}
 	if hasIndex {
 		reqs = append(reqs, v1alpha1.VersionRequirement{
