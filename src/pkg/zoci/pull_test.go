@@ -285,6 +285,7 @@ components:
 	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
 	remote, components := publishPackage(ctx, t, packagePath, upstream)
 
+	// Verify that for each entry on the manifest there is an associated layer pulled by remote.AssembleLayers
 	root, err := remote.FetchRoot(ctx)
 	require.NoError(t, err)
 
