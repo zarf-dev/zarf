@@ -39,7 +39,7 @@ type Objects map[string]any
 
 const (
 	objectKeyValues    = "Values"
-	objectKeyPackage   = "Pkg"
+	objectKeyPackage   = "V1alpha1Pkg"
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
 	objectKeyState     = "State"
