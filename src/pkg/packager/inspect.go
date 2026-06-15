@@ -183,7 +183,6 @@ func InspectPackageResources(ctx context.Context, pkgLayout *layout.PackageLayou
 					if manifest.IsTemplate() {
 						objs, err := tmpl.NewObjects(vals).
 							WithPackage(pkgLayout.Pkg).
-							WithBuild(pkgLayout.Pkg.Build).
 							WithVariables(variableConfig.GetSetVariableMap()).
 							WithConstants(variableConfig.GetConstants()).
 							WithState(tmpl.StateAccess{State: s, AccessKeys: component.StateAccess})
@@ -235,7 +234,6 @@ func templateValuesFiles(ctx context.Context, chart v1alpha1.ZarfChart, valuesDi
 	// Build objs once — inputs don't vary per file and WithState may invoke bcrypt.
 	objs, err := tmpl.NewObjects(opts.vals).
 		WithPackage(opts.pkg).
-		WithBuild(opts.pkg.Build).
 		WithVariables(opts.variableConfig.GetSetVariableMap()).
 		WithConstants(opts.variableConfig.GetConstants()).
 		WithState(tmpl.StateAccess{State: opts.s, AccessKeys: opts.stateAccess})
@@ -407,6 +405,7 @@ func getTemplatedManifests(ctx context.Context, manifest v1alpha1.ZarfManifest, 
 			objs, err := tmpl.NewObjects(vals).
 				WithPackage(pkg).
 				WithVariables(variableConfig.GetSetVariableMap()).
+				WithConstants(variableConfig.GetConstants()).
 				WithState(stateAccess)
 			if err != nil {
 				return fmt.Errorf("error building state template objects: %w", err)
