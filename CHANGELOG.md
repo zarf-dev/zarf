@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.79.0](https://github.com/zarf-dev/zarf/compare/v0.78.0...v0.79.0) (2026-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981))
+
+### Features
+
+* **injector:** dynamically determine host based on IP family ([#4985](https://github.com/zarf-dev/zarf/issues/4985)) ([8ef592c](https://github.com/zarf-dev/zarf/commit/8ef592c59de83039f1f0745207429858a15cddba))
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981)) ([1e7e767](https://github.com/zarf-dev/zarf/commit/1e7e767c834b7a5ae4b262c50819c0d118b49b33))
+
+
+### Bug Fixes
+
+* **docs:** render markdown tables ([#4982](https://github.com/zarf-dev/zarf/issues/4982)) ([c96636e](https://github.com/zarf-dev/zarf/commit/c96636ebde2a4ec85c3824dfdc03876b8a95eb13))
+* **pull:** always pull values.yaml and values.schema.json ([#4987](https://github.com/zarf-dev/zarf/issues/4987)) ([78ac28e](https://github.com/zarf-dev/zarf/commit/78ac28e41bc812ca93a0f7c0801bd4376873f555))
+
 ## [0.78.0](https://github.com/zarf-dev/zarf/compare/v0.77.0...v0.78.0) (2026-06-11)
 
 
