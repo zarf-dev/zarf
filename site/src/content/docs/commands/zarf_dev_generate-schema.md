@@ -17,9 +17,11 @@ zarf dev generate-schema [ DIRECTORY ] [flags]
 ### Options
 
 ```
+      --delete-not-found     Remove existing schema keys when they are not found in the mapped values
   -f, --flavor string        The flavor of components to include in the resulting package (i.e. have a matching or empty "only.flavor" key)
   -h, --help                 help for generate-schema
       --set stringToString   Specify package templates to set on the command line (KEY=value) (default [])
+  -u, --update               Update the existing schema. Formatting such as ordering and newlines may change.
 ```
 
 ### Options inherited from parent commands
