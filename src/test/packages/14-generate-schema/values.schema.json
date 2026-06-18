@@ -1,50 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
   "properties": {
     "app": {
+      "type": "object",
       "description": "Application configuration",
       "properties": {
         "name": {
-          "description": "Application name",
-          "type": "string"
+          "type": "number",
+          "description": "Application name"
         },
         "replicas": {
-          "description": "Replica count",
-          "type": "number"
+          "type": "string",
+          "description": "Replica count"
         }
-      },
-      "type": "object"
+      }
     },
-    "backend": {
-      "description": "Backend configuration",
-      "properties": {
-        "name": {
-          "description": "Backend name",
-          "type": "string"
-        },
-        "replicaCount": {
-          "description": "Replica count",
-          "type": "number"
-        },
-        "service": {
-          "properties": {
-            "port": {
-              "type": "number"
-            }
-          },
-          "type": "object"
-        }
-      },
-      "type": "object"
-    },
-    "network": {
-      "properties": {
-        "port": {
-          "type": "number"
-        }
-      },
-      "type": "object"
+    "oldField": {
+      "type": "string",
+      "description": "Should be removed"
     }
-  },
-  "type": "object"
+  }
 }

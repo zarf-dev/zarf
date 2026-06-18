@@ -82,8 +82,10 @@ func newDevCommand() *cobra.Command {
 }
 
 type devGenerateSchemaOptions struct {
-	flavor     string
-	setPkgTmpl map[string]string
+	flavor         string
+	setPkgTmpl     map[string]string
+	update         bool
+	deleteNotFound bool
 }
 
 func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
@@ -100,6 +102,8 @@ func newDevGenerateSchemaCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().StringVarP(&o.flavor, "flavor", "f", "", lang.CmdPackageCreateFlagFlavor)
 	cmd.Flags().StringToStringVar(&o.setPkgTmpl, "set", v.GetStringMapString(VPkgCreateSet), lang.CmdPackageCreateFlagSetPkgTmpl)
+	cmd.Flags().BoolVarP(&o.update, "update", "u", false, lang.CmdDevFlagGenerateSchemaUpdate)
+	cmd.Flags().BoolVar(&o.deleteNotFound, "delete-not-found", false, lang.CmdDevFlagGenerateSchemaDeleteNotFound)
 
 	return cmd
 }
@@ -118,13 +122,13 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	}
 
 	loadOpts := load.DefinitionOptions{
-		Flavor:               o.flavor,
-		SetVariables:         o.setPkgTmpl,
-		IsInteractive:        true,
-		SkipVersionCheck:     true,
-		SkipSchemaValidation: true,
-		CachePath:            cachePath,
-		RemoteOptions:        defaultRemoteOptions(),
+		Flavor:                     o.flavor,
+		SetVariables:               o.setPkgTmpl,
+		IsInteractive:              true,
+		SkipVersionCheck:           true,
+		SkipValuesSchemaValidation: true,
+		CachePath:                  cachePath,
+		RemoteOptions:              defaultRemoteOptions(),
 	}
 
 	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
@@ -160,14 +164,12 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 
 			err := layout.PackageChart(ctx, chart, basePath, chartPath, valuesFilePath, cachePath, defaultRemoteOptions())
 			if err != nil {
-				l.Warn("unable to package chart for schema generation", "chart", chart.Name, "error", err.Error())
-				continue
+				return fmt.Errorf("unable to package chart %q for schema generation: %w", chart.Name, err)
 			}
 
 			helmChart, valuesFilesValues, err := helm.LoadChartData(chart, chartPath, valuesFilePath, nil)
 			if err != nil {
-				l.Warn("unable to to load default values for chart", "chart", chart.Name, "error", err.Error())
-				continue
+				return fmt.Errorf("unable to load default values for chart %q: %w", chart.Name, err)
 			}
 
 			appliedValues := helpers.MergeMapRecursive(helmChart.Values, valuesFilesValues)
@@ -175,21 +177,19 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 			// Map ChartValues' Source to Target and merge into zarfValues if not already present
 			for _, cv := range chart.Values {
 				if cv.SourcePath == "" || cv.TargetPath == "" {
-					l.Warn("skipping chart value mapping - sourcePath or targetPath is empty", "chart", chart.Name)
-					continue
+					return fmt.Errorf("chart %q value mapping has empty sourcePath or targetPath", chart.Name)
 				}
 				val, err := value.Values(appliedValues).Extract(value.Path(cv.TargetPath))
 				if err != nil {
-					l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "targetPath", cv.TargetPath)
-					continue // skip if not found in defaults
+					return fmt.Errorf("unable to extract chart %q value at targetPath %q: %w", chart.Name, cv.TargetPath, err)
 				}
 
 				if err := zarfValues.Set(value.Path(cv.SourcePath), val); err != nil {
-					l.Warn("skipping chart value mapping", "error", err.Error(), "chart", chart.Name, "sourcePath", cv.SourcePath)
+					return fmt.Errorf("unable to set chart %q value at sourcePath %q: %w", chart.Name, cv.SourcePath, err)
 				}
 				for _, excludePath := range cv.ExcludePaths {
 					if err := zarfValues.Delete(value.Path(excludePath)); err != nil {
-						l.Warn("unable to exclude path from schema", "error", err.Error(), "chart", chart.Name, "excludePath", excludePath)
+						return fmt.Errorf("unable to exclude path %q from schema for chart %q: %w", excludePath, chart.Name, err)
 					}
 				}
 			}
@@ -202,11 +202,11 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	// Step 4: Merge and reconcile any existing schema
 	existingSchema, mergeErr := value.MergeSchemaFiles(defined.Pkg.Values.Schema, defined.ImportedSchemas, basePath)
 	if mergeErr != nil {
-		l.Warn("unable to merge imported schemas for schema generation", "error", mergeErr.Error())
+		return fmt.Errorf("unable to merge imported schemas for schema generation: %w", mergeErr)
 	}
 
 	if existingSchema != nil {
-		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema)
+		generatedSchema = value.ReconcileJSONSchema(existingSchema, generatedSchema, o.deleteNotFound)
 	}
 
 	// Step 5: Save the resulting schema
@@ -215,21 +215,25 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 		return fmt.Errorf("unable to marshal schema to JSON: %w", err)
 	}
 
-	outputFileName := "values.schema.json"
-	if defined.Pkg.Values.Schema != "" {
-		if !filepath.IsAbs(defined.Pkg.Values.Schema) {
-			outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
-		} else {
-			outputFileName = defined.Pkg.Values.Schema
+	fmt.Println(string(b))
+
+	if o.update {
+		outputFileName := "values.schema.json"
+		if defined.Pkg.Values.Schema != "" {
+			if !filepath.IsAbs(defined.Pkg.Values.Schema) {
+				outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
+			} else {
+				outputFileName = defined.Pkg.Values.Schema
+			}
 		}
-	}
 
-	err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
-	if err != nil {
-		return fmt.Errorf("unable to write schema file: %w", err)
-	}
+		err = os.WriteFile(outputFileName, b, helpers.ReadAllWriteUser)
+		if err != nil {
+			return fmt.Errorf("unable to write schema file: %w", err)
+		}
 
-	l.Info("Schema successfully generated", "filename", outputFileName)
+		l.Info("Schema successfully generated", "filename", outputFileName)
+	}
 	return nil
 }
 

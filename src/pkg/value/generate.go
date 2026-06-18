@@ -3,6 +3,8 @@
 
 package value
 
+import "maps"
+
 // GenerateJSONSchema infers a JSON schema from the structure and scalar types in values.
 func GenerateJSONSchema(vals Values) map[string]any {
 	props := make(map[string]any)
@@ -21,7 +23,8 @@ func GenerateJSONSchema(vals Values) map[string]any {
 
 // ReconcileJSONSchema updates structural fields in an existing schema from inferred values.
 // Non-structural fields (description/enum/required/etc.) are preserved by default.
-func ReconcileJSONSchema(existing, inferred map[string]any) map[string]any {
+func ReconcileJSONSchema(existing, inferred map[string]any, deleteNotFound bool) map[string]any {
+	existing = maps.Clone(existing)
 	typeVal, hasType := inferred["type"]
 	if hasType {
 		existing["type"] = typeVal
@@ -32,11 +35,11 @@ func ReconcileJSONSchema(existing, inferred map[string]any) map[string]any {
 		typeStr = ""
 	}
 	if typeStr == "object" {
-		reconcileSchemaProperties(existing, inferred)
+		reconcileSchemaProperties(existing, inferred, deleteNotFound)
 	}
 
 	if typeStr == "array" {
-		reconcileSchemaItems(existing, inferred)
+		reconcileSchemaItems(existing, inferred, deleteNotFound)
 	}
 
 	if schemaURI, ok := inferred["$schema"]; ok {
@@ -46,7 +49,7 @@ func ReconcileJSONSchema(existing, inferred map[string]any) map[string]any {
 	return existing
 }
 
-func reconcileSchemaProperties(existing, inferred map[string]any) {
+func reconcileSchemaProperties(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredProps, ok := inferred["properties"].(map[string]any)
 	if !ok {
 		return
@@ -58,9 +61,11 @@ func reconcileSchemaProperties(existing, inferred map[string]any) {
 		existing["properties"] = existingProps
 	}
 
-	for key := range existingProps {
-		if _, found := inferredProps[key]; !found {
-			delete(existingProps, key)
+	if deleteNotFound {
+		for key := range existingProps {
+			if _, found := inferredProps[key]; !found {
+				delete(existingProps, key)
+			}
 		}
 	}
 
@@ -77,11 +82,11 @@ func reconcileSchemaProperties(existing, inferred map[string]any) {
 			continue
 		}
 
-		existingProps[key] = ReconcileJSONSchema(existingPropMap, inferredPropMap)
+		existingProps[key] = ReconcileJSONSchema(existingPropMap, inferredPropMap, deleteNotFound)
 	}
 }
 
-func reconcileSchemaItems(existing, inferred map[string]any) {
+func reconcileSchemaItems(existing, inferred map[string]any, deleteNotFound bool) {
 	inferredItems, hasInferredItems := inferred["items"].(map[string]any)
 	if !hasInferredItems {
 		return
@@ -93,7 +98,7 @@ func reconcileSchemaItems(existing, inferred map[string]any) {
 		return
 	}
 
-	existing["items"] = ReconcileJSONSchema(existingItems, inferredItems)
+	existing["items"] = ReconcileJSONSchema(existingItems, inferredItems, deleteNotFound)
 }
 
 func inferSchemaType(v any) any {

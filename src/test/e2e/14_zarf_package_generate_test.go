@@ -44,7 +44,7 @@ func TestZarfDevGenerate(t *testing.T) {
 		err := helpers.CreatePathAndCopy("src/test/packages/14-generate-schema", packagePath)
 		require.NoError(t, err)
 
-		stdOut, stdErr, err := e2e.ZarfInDir(t, packagePath, "dev", "generate-schema", ".", "--features=values=true")
+		stdOut, stdErr, err := e2e.ZarfInDir(t, packagePath, "dev", "generate-schema", ".", "-u", "--delete-not-found", "--features=values=true")
 		require.NoError(t, err, stdOut, stdErr)
 
 		schemaPath := filepath.Join(packagePath, "values.schema.json")
