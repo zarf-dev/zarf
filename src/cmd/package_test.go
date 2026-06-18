@@ -229,7 +229,9 @@ func TestPackageInspectManifests(t *testing.T) {
 				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
+			testCmd := &cobra.Command{}
+			testCmd.SetContext(context.Background())
+			err = opts.run(testCmd, []string{packagePath})
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
 				return
@@ -391,7 +393,9 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		components:   tc.components,
 	}
 	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-	err = opts.run(context.Background(), []string{packagePath})
+	testCmd := &cobra.Command{}
+	testCmd.SetContext(context.Background())
+	err = opts.run(testCmd, []string{packagePath})
 	if tc.expectedErr != "" {
 		require.ErrorContains(t, err, tc.expectedErr)
 		return
