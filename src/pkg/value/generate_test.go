@@ -61,95 +61,113 @@ func TestGenerateJSONSchema(t *testing.T) {
 }
 
 func TestReconcileJSONSchema(t *testing.T) {
-	t.Run("updates structure and preserves handcrafted metadata", func(t *testing.T) {
-		existing := map[string]any{
-			"$schema": "http://json-schema.org/draft-07/schema#",
-			"type":    "object",
-			"properties": map[string]any{
-				"site": map[string]any{
-					"type":        "object",
-					"description": "Site configuration",
-					"properties": map[string]any{
-						"name": map[string]any{
-							"type":        "string",
-							"description": "Site name",
-							"minLength":   float64(1),
+	tests := []struct {
+		name           string
+		deleteNotFound bool
+	}{
+		{name: "retains fields not in inferred schema", deleteNotFound: false},
+		{name: "removes fields not in inferred schema", deleteNotFound: true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			existing := map[string]any{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type":    "object",
+				"properties": map[string]any{
+					"site": map[string]any{
+						"type":        "object",
+						"description": "Site configuration",
+						"properties": map[string]any{
+							"name": map[string]any{
+								"type":        "string",
+								"description": "Site name",
+								"minLength":   float64(1),
+							},
+							"legacy": map[string]any{
+								"type":        "string",
+								"description": "Old field",
+							},
 						},
-						"legacy": map[string]any{
-							"type":        "string",
-							"description": "Old field",
+						"required": []any{"name"},
+					},
+					"features": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type":      "string",
+							"enum":      []any{"alpha", "beta"},
+							"minLength": float64(2),
 						},
 					},
-					"required": []any{"name"},
-				},
-				"features": map[string]any{
-					"type": "array",
-					"items": map[string]any{
-						"type":      "string",
-						"enum":      []any{"alpha", "beta"},
-						"minLength": float64(2),
+					"oldField": map[string]any{
+						"type": "string",
 					},
 				},
-				"oldField": map[string]any{
-					"type": "string",
-				},
-			},
-		}
+			}
 
-		inferred := map[string]any{
-			"$schema": "http://json-schema.org/draft-07/schema#",
-			"type":    "object",
-			"properties": map[string]any{
-				"site": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"name": map[string]any{"type": "string"},
+			inferred := map[string]any{
+				"$schema": "http://json-schema.org/draft-07/schema#",
+				"type":    "object",
+				"properties": map[string]any{
+					"site": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"name": map[string]any{"type": "string"},
+						},
+					},
+					"features": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type": "number",
+						},
+					},
+					"newField": map[string]any{
+						"type": "string",
 					},
 				},
-				"features": map[string]any{
-					"type": "array",
-					"items": map[string]any{
-						"type": "number",
-					},
-				},
-				"newField": map[string]any{
-					"type": "string",
-				},
-			},
-		}
+			}
 
-		result := ReconcileJSONSchema(existing, inferred)
+			result := ReconcileJSONSchema(existing, inferred, tc.deleteNotFound)
 
-		props, ok := result["properties"].(map[string]any)
-		require.True(t, ok)
-		site, ok := props["site"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "Site configuration", site["description"]) // preserved
-		assert.Equal(t, []any{"name"}, site["required"])           // preserved
+			props, ok := result["properties"].(map[string]any)
+			require.True(t, ok)
+			site, ok := props["site"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "Site configuration", site["description"]) // preserved
+			assert.Equal(t, []any{"name"}, site["required"])           // preserved
 
-		siteProps, ok := site["properties"].(map[string]any)
-		require.True(t, ok)
-		_, hasLegacy := siteProps["legacy"]
-		assert.False(t, hasLegacy) // removed (not inferred)
+			siteProps, ok := site["properties"].(map[string]any)
+			require.True(t, ok)
+			_, hasLegacy := siteProps["legacy"]
+			if tc.deleteNotFound {
+				assert.False(t, hasLegacy) // removed (not inferred)
+			} else {
+				assert.True(t, hasLegacy) // retained
+			}
 
-		name, ok := siteProps["name"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "Site name", name["description"])   // preserved
-		assert.InDelta(t, float64(1), name["minLength"], 0) // preserved
-		assert.Equal(t, "string", name["type"])             // structural sync
+			name, ok := siteProps["name"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "Site name", name["description"])   // preserved
+			assert.InDelta(t, float64(1), name["minLength"], 0) // preserved
+			assert.Equal(t, "string", name["type"])             // structural sync
 
-		features, ok := props["features"].(map[string]any)
-		require.True(t, ok)
-		items, ok := features["items"].(map[string]any)
-		require.True(t, ok)
-		assert.Equal(t, "number", items["type"])               // updated from inferred
-		assert.Equal(t, []any{"alpha", "beta"}, items["enum"]) // preserved
-		assert.InDelta(t, float64(2), items["minLength"], 0)   // preserved
+			features, ok := props["features"].(map[string]any)
+			require.True(t, ok)
+			items, ok := features["items"].(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, "number", items["type"])               // updated from inferred
+			assert.Equal(t, []any{"alpha", "beta"}, items["enum"]) // preserved
+			assert.InDelta(t, float64(2), items["minLength"], 0)   // preserved
 
-		_, hasNewField := props["newField"]
-		assert.True(t, hasNewField) // added (inferred)
+			_, hasNewField := props["newField"]
+			assert.True(t, hasNewField) // added (inferred)
 
-		_, hasOldField := props["oldField"]
-		assert.False(t, hasOldField) // removed (not contained in inferred)
-	})
+			_, hasOldField := props["oldField"]
+			if tc.deleteNotFound {
+				assert.False(t, hasOldField) // removed (not inferred)
+			} else {
+				assert.True(t, hasOldField) // retained
+			}
+		})
+	}
 }
