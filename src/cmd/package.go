@@ -727,7 +727,45 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 	cmd.AddCommand(newPackageInspectDefinitionCommand(v))
 	cmd.AddCommand(newPackageInspectValuesFilesCommand(v))
 	cmd.AddCommand(newPackageInspectDocumentationCommand(v))
+	cmd.AddCommand(newPackageInspectDigestCommand(v))
 	return cmd
+}
+
+type packageInspectDigestOptions struct {
+	ociConcurrency int
+}
+
+func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
+	o := &packageInspectDigestOptions{}
+	cmd := &cobra.Command{
+		Use:   "digest [ PACKAGE_SOURCE ]",
+		Short: "Outputs the SHA256 digest of the package's OCI manifest",
+		Long:  "Outputs the SHA256 digest of the package's OCI manifest. For OCI sources the digest is resolved directly from the registry. For local tarballs the manifest is computed deterministically from the package contents.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(cmd.Context(), args)
+		},
+	}
+	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	return cmd
+}
+
+func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) error {
+	src, err := choosePackage(ctx, args)
+	if err != nil {
+		return err
+	}
+
+	digest, err := packager.PackageDigest(ctx, src, packager.PackageDigestOptions{
+		Architecture:  config.GetArch(),
+		RemoteOptions: defaultRemoteOptions(),
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(OutputWriter, digest)
+	return nil
 }
 
 type packageInspectValuesFilesOptions struct {
