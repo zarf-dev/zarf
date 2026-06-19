@@ -316,10 +316,6 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageDeployOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
@@ -572,8 +568,8 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageMirrorResourcesOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
+func (o *packageMirrorResourcesOptions) preRun(cmd *cobra.Command, args []string) {
+	o.packageVerifyFlags.preRun(cmd, args)
 
 	// post flag validation - perform both if neither were set
 	if !o.mirrorImages && !o.mirrorRepos {
@@ -760,10 +756,6 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectValuesFilesOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *packageInspectValuesFilesOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
@@ -870,10 +862,6 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectManifestsOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *packageInspectManifestsOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
@@ -974,10 +962,6 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectSBOMOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 // run performs the execution of 'package inspect sbom' sub-command.
 func (o *packageInspectSBOMOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
@@ -1050,10 +1034,6 @@ func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
 	markVerifyFlagsMutuallyExclusive(cmd)
 	return cmd
-}
-
-func (o *packageInspectImagesOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
 }
 
 func (o *packageInspectImagesOptions) run(cmd *cobra.Command, args []string) error {
@@ -1129,10 +1109,6 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageInspectDocumentationOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *packageInspectDocumentationOptions) run(cmd *cobra.Command, args []string) (err error) {
 	ctx := cmd.Context()
 	src, err := choosePackage(ctx, args)
@@ -1192,10 +1168,6 @@ func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
 	markVerifyFlagsMutuallyExclusive(cmd)
 	return cmd
-}
-
-func (o *packageInspectDefinitionOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
 }
 
 func (o *packageInspectDefinitionOptions) run(cmd *cobra.Command, args []string) error {
@@ -1377,10 +1349,6 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	return cmd
 }
 
-func (o *packageRemoveOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	packageSource, err := choosePackage(ctx, args)
@@ -1485,10 +1453,6 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
 	markVerifyFlagsMutuallyExclusive(cmd)
 	return cmd
-}
-
-func (o *packagePublishOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
 }
 
 func (o *packagePublishOptions) run(cmd *cobra.Command, args []string) error {
@@ -1650,10 +1614,6 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	markVerifyFlagsMutuallyExclusive(cmd)
 
 	return cmd
-}
-
-func (o *packagePullOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
 }
 
 func (o *packagePullOptions) run(cmd *cobra.Command, args []string) error {
@@ -2125,9 +2085,9 @@ func (f *packageVerifyFlags) buildVerifyBlobOptions(cmd *cobra.Command, v *viper
 	return &opts
 }
 
-// handleDeprecatedSkipSignatureValidation handles the deprecated --skip-signature-validation flag.
-// Call this in preRun for commands that embed packageVerifyFlags.
-func (f *packageVerifyFlags) handleDeprecatedSkipSignatureValidation(cmd *cobra.Command) {
+// preRun is the cobra PreRun handler for commands that embed packageVerifyFlags.
+// It is promoted to embedding structs automatically, so no per-command wrapper is needed.
+func (f *packageVerifyFlags) preRun(cmd *cobra.Command, _ []string) {
 	if cmd.Flags().Changed("skip-signature-validation") {
 		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. " +
 			"Use --verify to enforce signature validation.")

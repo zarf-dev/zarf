@@ -143,10 +143,6 @@ func newInitCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
-	o.handleDeprecatedSkipSignatureValidation(cmd)
-}
-
 func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 
