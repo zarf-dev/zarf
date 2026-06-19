@@ -1914,7 +1914,8 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
+	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
+	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
 	markVerifyFlagsMutuallyExclusive(cmd)
 
 	return cmd
@@ -2071,9 +2072,6 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 }
 
 // newVerifyFlagSet creates a pflag.FlagSet containing all 10 package verification flags
-// (--key, --verify, deprecated --skip-signature-validation, plus the 7 keyless flags).
-// Add to a command with cmd.Flags().AddFlagSet(newVerifyFlagSet(v, f)) then call
-// markVerifyFlagsMutuallyExclusive(cmd).
 func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs := pflag.NewFlagSet("verify", pflag.ContinueOnError)
 
