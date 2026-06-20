@@ -311,8 +311,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", v.GetString(VPkgDeployNamespace), lang.CmdPackageDeployFlagNamespace)
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when deploying the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -544,8 +543,7 @@ func newPackageMirrorResourcesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().BoolVar(&o.noImgChecksum, "no-img-checksum", false, lang.CmdPackageMirrorFlagNoChecksum)
 
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().StringVar(&o.optionalComponents, "components", v.GetString(VPkgDeployComponents), lang.CmdPackageMirrorFlagComponents)
@@ -751,8 +749,7 @@ func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -857,8 +854,7 @@ func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.setVariables, "set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", GetStringSlice(v, VPkgDeployValues), lang.CmdPackageDeployFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgDeploySetValues), lang.CmdPackageDeployFlagSetValues)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -957,8 +953,7 @@ func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, lang.CmdPackageCreateFlagSbomOut)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1031,8 +1026,7 @@ func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1104,8 +1098,7 @@ func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringSliceVar(&o.keys, "keys", []string{}, "Comma-separated list of documentation keys to extract (e.g., 'configuration,changelog')")
 	cmd.Flags().StringVar(&o.outputDir, "output", o.outputDir, "Directory to extract documentation to (created under '<package-name>-documentation' subdirectory)")
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1165,8 +1158,7 @@ func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1344,8 +1336,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().StringSliceVarP(&o.valuesFiles, "values", "v", []string{}, lang.CmdPackageRemoveFlagValuesFiles)
 	cmd.Flags().StringToStringVar(&o.setValues, "set-values", v.GetStringMapString(VPkgRemoveSetValues), lang.CmdPackageDeployFlagSetValues)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1450,8 +1441,7 @@ func newPackagePublishCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().BoolVar(&o.skipVersionCheck, "skip-version-check", false, "Ignore version requirements when publishing the package")
 	_ = cmd.Flags().MarkHidden("skip-version-check")
 	cmd.Flags().BoolVar(&o.withBuildMachineInfo, "with-build-machine-info", v.GetBool(VPkgPublishWithBuildMachineInfo), lang.CmdPackageCreateFlagWithBuildMachineInfo)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 	return cmd
 }
 
@@ -1610,8 +1600,7 @@ func newPackagePullCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVar(&o.shasum, "shasum", "", lang.CmdPackagePullFlagShasum)
 	cmd.Flags().StringVarP(&o.outputDirectory, "output-directory", "o", v.GetString(VPkgPullOutputDir), lang.CmdPackagePullFlagOutputDirectory)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	return cmd
 }
@@ -2044,6 +2033,15 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 
 	fs.AddFlagSet(newKeylessVerifyFlagSet(v, f))
 	return fs
+}
+
+// addVerifyFlags registers the full verification flag set on cmd and marks the
+// key/keyless flags mutually exclusive. Use this for all commands that load packages.
+// The sign and verify commands are exceptions — they register --key manually and use
+// newKeylessVerifyFlagSet directly, then call markVerifyFlagsMutuallyExclusive themselves.
+func addVerifyFlags(cmd *cobra.Command, v *viper.Viper, f *packageVerifyFlags) {
+	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, f))
+	markVerifyFlagsMutuallyExclusive(cmd)
 }
 
 // markVerifyFlagsMutuallyExclusive registers --key vs keyless flag mutual exclusions on cmd.

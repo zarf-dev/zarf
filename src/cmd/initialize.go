@@ -125,8 +125,7 @@ func newInitCommand() *cobra.Command {
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &o.packageVerifyFlags))
-	markVerifyFlagsMutuallyExclusive(cmd)
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
