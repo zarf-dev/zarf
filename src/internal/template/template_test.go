@@ -112,110 +112,32 @@ func TestObjects_WithValues(t *testing.T) {
 	}
 }
 
-func TestObjects_WithMetadata(t *testing.T) {
+func TestObjects_WithPackage(t *testing.T) {
 	tests := []struct {
-		name     string
-		metadata v1alpha1.ZarfMetadata
-		expected v1alpha1.ZarfMetadata
+		name string
+		pkg  v1alpha1.ZarfPackage
 	}{
 		{
-			name: "complete metadata",
-			metadata: v1alpha1.ZarfMetadata{
-				Name:        "test-package",
-				Description: "A test package",
-				Version:     "1.0.0",
-			},
-			expected: v1alpha1.ZarfMetadata{
-				Name:        "test-package",
-				Description: "A test package",
-				Version:     "1.0.0",
+			name: "populated package",
+			pkg: v1alpha1.ZarfPackage{
+				Metadata: v1alpha1.ZarfMetadata{Name: "test-package", Version: "1.0.0"},
+				Build:    v1alpha1.ZarfBuildData{User: "test-user", Architecture: "amd64"},
+				Constants: []v1alpha1.Constant{
+					{Name: "APP_NAME", Value: "my-app"},
+				},
 			},
 		},
 		{
-			name: "minimal metadata",
-			metadata: v1alpha1.ZarfMetadata{
-				Name: "minimal-package",
-			},
-			expected: v1alpha1.ZarfMetadata{
-				Name: "minimal-package",
-			},
-		},
-		{
-			name: "metadata with URL and author",
-			metadata: v1alpha1.ZarfMetadata{
-				Name:        "example-package",
-				Description: "An example package for testing",
-				Version:     "2.1.0",
-				URL:         "https://example.com",
-				Authors:     "Test Author <test@example.com>",
-			},
-			expected: v1alpha1.ZarfMetadata{
-				Name:        "example-package",
-				Description: "An example package for testing",
-				Version:     "2.1.0",
-				URL:         "https://example.com",
-				Authors:     "Test Author <test@example.com>",
-			},
+			name: "empty package",
+			pkg:  v1alpha1.ZarfPackage{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			objects := make(Objects)
-			result := objects.WithMetadata(tt.metadata)
-			require.Equal(t, tt.expected, result[objectKeyMetadata])
-		})
-	}
-}
-
-func TestObjects_WithBuild(t *testing.T) {
-	tests := []struct {
-		name     string
-		build    v1alpha1.ZarfBuildData
-		expected v1alpha1.ZarfBuildData
-	}{
-		{
-			name: "complete build data",
-			build: v1alpha1.ZarfBuildData{
-				User:         "test-user",
-				Architecture: "amd64",
-				Timestamp:    "2023-01-01T00:00:00Z",
-			},
-			expected: v1alpha1.ZarfBuildData{
-				User:         "test-user",
-				Architecture: "amd64",
-				Timestamp:    "2023-01-01T00:00:00Z",
-			},
-		},
-		{
-			name: "minimal build data",
-			build: v1alpha1.ZarfBuildData{
-				User: "minimal-user",
-			},
-			expected: v1alpha1.ZarfBuildData{
-				User: "minimal-user",
-			},
-		},
-		{
-			name: "arm64 architecture",
-			build: v1alpha1.ZarfBuildData{
-				User:         "arm-user",
-				Architecture: "arm64",
-				Timestamp:    "2023-12-01T10:30:00Z",
-			},
-			expected: v1alpha1.ZarfBuildData{
-				User:         "arm-user",
-				Architecture: "arm64",
-				Timestamp:    "2023-12-01T10:30:00Z",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			objects := make(Objects)
-			result := objects.WithBuild(tt.build)
-			require.Equal(t, tt.expected, result[objectKeyBuild])
+			result := objects.WithPackage(tt.pkg)
+			require.Equal(t, tt.pkg, result[objectKeyPackage])
 		})
 	}
 }

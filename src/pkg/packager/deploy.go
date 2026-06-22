@@ -405,6 +405,7 @@ func (d *deployer) deployInitComponent(ctx context.Context, pkgLayout *layout.Pa
 			seedImage, seedPort, err := d.c.StartInjection(ctx, pkgLayout.DirPath(), pkgLayout.GetImageDirPath(), component.GetImages(), pkgLayout.Pkg.Metadata.Name, pkgLayout.Pkg.Metadata.Architecture, cluster.ZarfInjectorOptions{
 				InjectorNodePort: uint16(d.s.InjectorInfo.Port),
 				RegistryNodePort: uint16(d.s.RegistryInfo.Port),
+				IPFamily:         d.s.IPFamily,
 			})
 			if err != nil {
 				return nil, err
@@ -671,7 +672,6 @@ func (d *deployer) installManifests(ctx context.Context, pkgLayout *layout.Packa
 				l.Debug("start manifest template", "manifest", manifest.Name, "path", path)
 				objs, err := template.NewObjects(d.vals).
 					WithPackage(pkgLayout.Pkg).
-					WithBuild(pkgLayout.Pkg.Build).
 					WithVariables(d.vc.GetSetVariableMap()).
 					WithConstants(d.vc.GetConstants()).
 					WithState(template.StateAccess{State: d.s, AccessKeys: component.StateAccess})
@@ -882,7 +882,6 @@ func processComponentFiles(ctx context.Context, pkgLayout *layout.PackageLayout,
 				l.Debug("templates enabled, processing file", "name", file.Target)
 				objs, err := template.NewObjects(values).
 					WithPackage(pkgLayout.Pkg).
-					WithBuild(pkgLayout.Pkg.Build).
 					WithVariables(variableConfig.GetSetVariableMap()).
 					WithConstants(variableConfig.GetConstants()).
 					WithState(stateAccess)
