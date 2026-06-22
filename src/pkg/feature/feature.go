@@ -203,10 +203,11 @@ func featuresToMap(fs []Feature) map[Name]Feature {
 // List of feature names
 const (
 	// AxolotlMode declares the "axolotl-mode" feature
-	AxolotlMode     Name = "axolotl-mode"
-	RegistryProxy   Name = "registry-proxy"
-	Values          Name = "values"
-	BundleSignature Name = "bundle-signature"
+	AxolotlMode            Name = "axolotl-mode"
+	RegistryProxy          Name = "registry-proxy"
+	Values                 Name = "values"
+	BundleSignature        Name = "bundle-signature"
+	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
 )
 
 func init() {
@@ -250,6 +251,17 @@ func init() {
 			Enabled:     true,
 			Since:       "v0.72.0",
 			Stage:       Alpha,
+		},
+		{
+			Name: DockerDaemonDirectPull,
+			Description: "When pulling images that only exist in the local Docker daemon, save them directly via the " +
+				"Docker engine's OCI image export instead of Crane, which is faster and simpler. The direct export is " +
+				"only used when the Docker engine is v25.0 or newer (released Jan 2024), the first version to export " +
+				"images in the OCI layout format; older engines automatically fall back to Crane. Disabling this " +
+				"feature forces the Crane path regardless of engine version.",
+			Enabled: true,
+			Since:   "v0.80.0",
+			Stage:   Alpha,
 		},
 	}
 

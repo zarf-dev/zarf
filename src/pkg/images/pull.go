@@ -8,12 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	retry "github.com/avast/retry-go/v4"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/cli/cli/context/docker"
@@ -35,6 +37,8 @@ import (
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
+	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -272,7 +276,6 @@ func getDockerEndpointHost() (string, error) {
 }
 
 func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride, dst *oci.Store, arch string, concurrency int) (_ []PulledImage, err error) {
-	l := logger.From(ctx)
 	pulledImages := []PulledImage{}
 	dockerEndPointHost, err := getDockerEndpointHost()
 	if err != nil {
@@ -289,109 +292,225 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	defer func() {
 		err = errors.Join(err, cli.Close())
 	}()
+	// Saving images directly from the Docker daemon's OCI image export is faster and simpler than Crane, but it
+	// requires Docker engine v25.0+ (Jan 2024), the first version to export the OCI layout format. We only take the
+	// direct path when the feature is enabled (the default) and the daemon is new enough; otherwise we fall back to
+	// Crane, which handles the older export formats. The feature flag can be disabled to force the Crane path.
+	directPull := feature.IsEnabled(feature.DockerDaemonDirectPull) && daemonSupportsOCIExport(ctx, cli)
 	for _, daemonImage := range daemonImages {
-		err := func() error {
-			// Pull the image into a Crane directory as the logic for extracting the earlier Docker formats is quite complex
-			// Docker starting saving images to the OCI layout format in Feb 2024 in engine version 25
-			// Once we feel the user base has updated we can remove Crane here by pulling from the daemon directly then calling oras.Copy
-			tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
-			if err != nil {
-				return fmt.Errorf("failed to make temp directory: %w", err)
-			}
-			defer func() {
-				err = errors.Join(err, os.RemoveAll(tmpDir))
-			}()
-			reference, err := name.ParseReference(daemonImage.overridden.Reference)
-			if err != nil {
-				return fmt.Errorf("failed to parse reference: %w", err)
-			}
-			// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
-			// This will also take forever to load large images.
-			img, err := daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithClient(cli))
-			if err != nil {
-				return fmt.Errorf("failed to load from docker daemon: %w", err)
-			}
-			cranePath, err := clayout.Write(tmpDir, empty.Index)
-			if err != nil {
-				return fmt.Errorf("failed to create OCI layout: %w", err)
-			}
-			if err := cranePath.WriteImage(img); err != nil {
-				return fmt.Errorf("failed to write docker image: %w", err)
-			}
-			annotations := map[string]string{
-				ocispec.AnnotationBaseImageName: daemonImage.original.Reference,
-				ocispec.AnnotationRefName:       daemonImage.original.Reference,
-			}
-			platform := &ocispec.Platform{
-				Architecture: arch,
-				OS:           "linux",
-			}
-			cranePlatform := cranev1.Platform{
-				OS:           platform.OS,
-				Architecture: platform.Architecture,
-			}
-			err = cranePath.AppendImage(img, clayout.WithAnnotations(annotations), clayout.WithPlatform(cranePlatform))
-			if err != nil {
-				return fmt.Errorf("failed to write image: %w", err)
-			}
-
-			// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
-			// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
-			// https://github.com/zarf-dev/zarf/issues/2584
-			// This is a band aid fix while we wait for crane and or docker to create the permanent fix
-			blobDir := filepath.Join(tmpDir, "blobs", "sha256")
-			err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if fi.IsDir() {
-					return nil
-				}
-				hash, err := helpers.GetSHA256OfFile(path)
-				if err != nil {
-					return err
-				}
-				newFile := filepath.Join(blobDir, hash)
-				return os.Rename(path, newFile)
-			})
-			if err != nil {
-				return err
-			}
-
-			dockerImageSrc, err := oci.NewWithContext(ctx, tmpDir)
-			if err != nil {
-				return fmt.Errorf("failed to create OCI store: %w", err)
-			}
-			fetchBytesOpts := oras.DefaultFetchBytesOptions
-			fetchBytesOpts.TargetPlatform = platform
-			desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, daemonImage.original.Reference, fetchBytesOpts)
-			if err != nil {
-				return fmt.Errorf("failed to get manifest from docker image source: %w", err)
-			}
-			if !IsManifest(desc.MediaType) {
-				return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
-			}
-			pulledImages = append(pulledImages, PulledImage{Image: daemonImage.original})
-			size, err := getSizeOfManifest(desc, b)
-			if err != nil {
-				return err
-			}
-			l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
-			copyOpts := oras.DefaultCopyOptions
-			copyOpts.WithTargetPlatform(platform)
-			copyOpts.Concurrency = concurrency
-			_, err = oras.Copy(ctx, dockerImageSrc, daemonImage.original.Reference, dst, "", copyOpts)
-			if err != nil {
-				return fmt.Errorf("failed to copy: %w", err)
-			}
-			return nil
-		}()
-		if err != nil {
-			return nil, err
+		var pullErr error
+		if directPull {
+			pullErr = saveImageFromDockerDaemon(ctx, cli, dst, daemonImage, concurrency)
+		} else {
+			pullErr = craneSaveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency)
 		}
+		if pullErr != nil {
+			return nil, pullErr
+		}
+		pulledImages = append(pulledImages, PulledImage{Image: daemonImage.original})
 	}
 
 	return pulledImages, nil
+}
+
+// minDockerVersionForOCIExport is the first Docker engine version (released Jan 2024) to export images in the OCI
+// layout format via ImageSave. Older engines use legacy formats that require the Crane-based fallback.
+var minDockerVersionForOCIExport = semver.MustParse("25.0.0")
+
+// daemonSupportsOCIExport reports whether the connected Docker daemon is new enough to export images in the OCI
+// layout format. If the version can't be determined or parsed, it returns false so the caller falls back to Crane.
+func daemonSupportsOCIExport(ctx context.Context, cli *client.Client) bool {
+	l := logger.From(ctx)
+	v, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
+	if err != nil {
+		l.Debug("unable to determine docker daemon version, using crane for daemon pull", "err", err)
+		return false
+	}
+	ver, err := semver.NewVersion(v.Version)
+	if err != nil {
+		l.Debug("unable to parse docker daemon version, using crane for daemon pull", "version", v.Version, "err", err)
+		return false
+	}
+	return !ver.LessThan(minDockerVersionForOCIExport)
+}
+
+// saveImageFromDockerDaemon exports a single image from the Docker daemon via the engine's OCI image export
+// (the equivalent of `docker save`) and copies it into dst. This requires Docker engine v25.0+ (Feb 2024), the
+// first version to export images in the OCI layout format.
+func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, concurrency int) (err error) {
+	l := logger.From(ctx)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to make temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+
+	// Note: ImageSave accepts an ocispec.Platform, but the effect it would have on users without client API version
+	// 1.48 (released Feb 2025) is unclear. This could make the export more efficient in some cases, but we avoid it
+	// for now to give users more time to update.
+	imageReader, err := cli.ImageSave(ctx, []string{daemonImage.overridden.Reference})
+	if err != nil {
+		return fmt.Errorf("failed to save image %s from docker daemon: %w", daemonImage.overridden.Reference, err)
+	}
+	defer func() {
+		err = errors.Join(err, imageReader.Close())
+	}()
+
+	imageTarPath := filepath.Join(tmpDir, "image.tar")
+	tarFile, err := os.Create(imageTarPath)
+	if err != nil {
+		return fmt.Errorf("failed to create tar file: %w", err)
+	}
+	if _, err := io.Copy(tarFile, imageReader); err != nil {
+		return errors.Join(fmt.Errorf("failed to write image to tar file: %w", err), tarFile.Close())
+	}
+	if err := tarFile.Close(); err != nil {
+		return fmt.Errorf("failed to close tar file: %w", err)
+	}
+
+	dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
+	if err := archive.Decompress(ctx, imageTarPath, dockerImageOCILayoutPath, archive.DecompressOpts{}); err != nil {
+		return fmt.Errorf("failed to extract image tar: %w", err)
+	}
+	idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
+	if err != nil {
+		return err
+	}
+	// The export of a single image should always contain exactly one manifest.
+	if len(idx.Manifests) != 1 {
+		return fmt.Errorf("expected exactly one manifest in image export, found %d", len(idx.Manifests))
+	}
+	if idx.Manifests[0].Annotations == nil {
+		idx.Manifests[0].Annotations = map[string]string{}
+	}
+	// Set the ref name annotation so ORAS can resolve the image by its original reference.
+	idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = daemonImage.original.Reference
+	if err := saveIndexToOCILayout(dockerImageOCILayoutPath, idx); err != nil {
+		return err
+	}
+
+	dockerImageSrc, err := oci.NewWithContext(ctx, dockerImageOCILayoutPath)
+	if err != nil {
+		return fmt.Errorf("failed to create OCI store: %w", err)
+	}
+	desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, daemonImage.original.Reference, oras.DefaultFetchBytesOptions)
+	if err != nil {
+		return fmt.Errorf("failed to get manifest from docker image source: %w", err)
+	}
+	if !IsManifest(desc.MediaType) {
+		return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
+	}
+	size, err := getSizeOfManifest(desc, b)
+	if err != nil {
+		return err
+	}
+	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.Concurrency = concurrency
+	_, err = oras.Copy(ctx, dockerImageSrc, daemonImage.original.Reference, dst, "", copyOpts)
+	if err != nil {
+		return fmt.Errorf("failed to copy: %w", err)
+	}
+	return nil
+}
+
+// craneSaveImageFromDockerDaemon exports a single image from the Docker daemon using Crane and copies it into dst.
+// Crane handles the older, pre-OCI-layout Docker export formats whose extraction logic is quite complex. Once the
+// user base has moved to Docker engine v25.0+ this can be removed in favor of saveImageFromDockerDaemon.
+func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
+	l := logger.From(ctx)
+	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to make temp directory: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, os.RemoveAll(tmpDir))
+	}()
+	reference, err := name.ParseReference(daemonImage.overridden.Reference)
+	if err != nil {
+		return fmt.Errorf("failed to parse reference: %w", err)
+	}
+	// Use unbuffered opener to avoid OOM Kill issues https://github.com/zarf-dev/zarf/issues/1214.
+	// This will also take forever to load large images.
+	img, err := daemon.Image(reference, daemon.WithUnbufferedOpener(), daemon.WithClient(cli))
+	if err != nil {
+		return fmt.Errorf("failed to load from docker daemon: %w", err)
+	}
+	cranePath, err := clayout.Write(tmpDir, empty.Index)
+	if err != nil {
+		return fmt.Errorf("failed to create OCI layout: %w", err)
+	}
+	if err := cranePath.WriteImage(img); err != nil {
+		return fmt.Errorf("failed to write docker image: %w", err)
+	}
+	annotations := map[string]string{
+		ocispec.AnnotationBaseImageName: daemonImage.original.Reference,
+		ocispec.AnnotationRefName:       daemonImage.original.Reference,
+	}
+	platform := &ocispec.Platform{
+		Architecture: arch,
+		OS:           "linux",
+	}
+	cranePlatform := cranev1.Platform{
+		OS:           platform.OS,
+		Architecture: platform.Architecture,
+	}
+	err = cranePath.AppendImage(img, clayout.WithAnnotations(annotations), clayout.WithPlatform(cranePlatform))
+	if err != nil {
+		return fmt.Errorf("failed to write image: %w", err)
+	}
+
+	// Needed because when pulling from the local docker daemon, while using the docker containerd runtime
+	// Crane incorrectly names the blob of the docker image config to a sha that does not match the contents
+	// https://github.com/zarf-dev/zarf/issues/2584
+	// This is a band aid fix while we wait for crane and or docker to create the permanent fix
+	blobDir := filepath.Join(tmpDir, "blobs", "sha256")
+	err = filepath.Walk(blobDir, func(path string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			return nil
+		}
+		hash, err := helpers.GetSHA256OfFile(path)
+		if err != nil {
+			return err
+		}
+		newFile := filepath.Join(blobDir, hash)
+		return os.Rename(path, newFile)
+	})
+	if err != nil {
+		return err
+	}
+
+	dockerImageSrc, err := oci.NewWithContext(ctx, tmpDir)
+	if err != nil {
+		return fmt.Errorf("failed to create OCI store: %w", err)
+	}
+	fetchBytesOpts := oras.DefaultFetchBytesOptions
+	fetchBytesOpts.TargetPlatform = platform
+	desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, daemonImage.original.Reference, fetchBytesOpts)
+	if err != nil {
+		return fmt.Errorf("failed to get manifest from docker image source: %w", err)
+	}
+	if !IsManifest(desc.MediaType) {
+		return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
+	}
+	size, err := getSizeOfManifest(desc, b)
+	if err != nil {
+		return err
+	}
+	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
+	copyOpts := oras.DefaultCopyOptions
+	copyOpts.WithTargetPlatform(platform)
+	copyOpts.Concurrency = concurrency
+	_, err = oras.Copy(ctx, dockerImageSrc, daemonImage.original.Reference, dst, "", copyOpts)
+	if err != nil {
+		return fmt.Errorf("failed to copy: %w", err)
+	}
+	return nil
 }
 
 func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, dst *oci.Store, client *auth.Client) error {
