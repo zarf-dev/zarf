@@ -300,7 +300,7 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 	for _, daemonImage := range daemonImages {
 		var pullErr error
 		if directPull {
-			pullErr = saveImageFromDockerDaemon(ctx, cli, dst, daemonImage, concurrency)
+			pullErr = saveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency)
 		} else {
 			pullErr = craneSaveImageFromDockerDaemon(ctx, cli, dst, daemonImage, arch, concurrency)
 		}
@@ -337,7 +337,7 @@ func daemonSupportsOCIExport(ctx context.Context, cli *client.Client) bool {
 // saveImageFromDockerDaemon exports a single image from the Docker daemon via the engine's OCI image export
 // (the equivalent of `docker save`) and copies it into dst. This requires Docker engine v25.0+ (Feb 2024), the
 // first version to export images in the OCI layout format.
-func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, concurrency int) (err error) {
+func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
@@ -370,48 +370,28 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		return fmt.Errorf("failed to close tar file: %w", err)
 	}
 
+	// The Docker daemon's OCI export is an image archive; once extracted it is handled exactly like
+	// any other image archive, including multi-platform indexes exported by the containerd image store.
 	dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
 	if err := archive.Decompress(ctx, imageTarPath, dockerImageOCILayoutPath, archive.DecompressOpts{}); err != nil {
 		return fmt.Errorf("failed to extract image tar: %w", err)
 	}
-	idx, err := getIndexFromOCILayout(dockerImageOCILayoutPath)
+	manifests, err := getManifestsFromOCILayout(dockerImageOCILayoutPath)
 	if err != nil {
 		return err
 	}
 	// The export of a single image should always contain exactly one manifest.
-	if len(idx.Manifests) != 1 {
-		return fmt.Errorf("expected exactly one manifest in image export, found %d", len(idx.Manifests))
-	}
-	if idx.Manifests[0].Annotations == nil {
-		idx.Manifests[0].Annotations = map[string]string{}
-	}
-	// Set the ref name annotation so ORAS can resolve the image by its original reference.
-	idx.Manifests[0].Annotations[ocispec.AnnotationRefName] = daemonImage.original.Reference
-	if err := saveIndexToOCILayout(dockerImageOCILayoutPath, idx); err != nil {
-		return err
+	if len(manifests) != 1 {
+		return fmt.Errorf("expected exactly one manifest in image export, found %d", len(manifests))
 	}
 
 	dockerImageSrc, err := oci.NewWithContext(ctx, dockerImageOCILayoutPath)
 	if err != nil {
 		return fmt.Errorf("failed to create OCI store: %w", err)
 	}
-	desc, b, err := oras.FetchBytes(ctx, dockerImageSrc, daemonImage.original.Reference, oras.DefaultFetchBytesOptions)
-	if err != nil {
-		return fmt.Errorf("failed to get manifest from docker image source: %w", err)
-	}
-	if !IsManifest(desc.MediaType) {
-		return fmt.Errorf("expected to find image manifest instead found %s", desc.MediaType)
-	}
-	size, err := getSizeOfManifest(desc, b)
-	if err != nil {
+	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference)
+	if _, err := copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency); err != nil {
 		return err
-	}
-	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference, "size", utils.ByteFormat(float64(size), 2))
-	copyOpts := oras.DefaultCopyOptions
-	copyOpts.Concurrency = concurrency
-	_, err = oras.Copy(ctx, dockerImageSrc, daemonImage.original.Reference, dst, "", copyOpts)
-	if err != nil {
-		return fmt.Errorf("failed to copy: %w", err)
 	}
 	return nil
 }
