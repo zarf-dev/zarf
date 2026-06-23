@@ -12,6 +12,7 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
+	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -56,7 +57,11 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 		if err != nil {
 			return "", fmt.Errorf("unable to create temp directory: %w", err)
 		}
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				logger.From(ctx).Warn("failed to remove temp directory", "path", tmpDir, "error", err)
+			}
+		}()
 		tmpPath := filepath.Join(tmpDir, "data.tar.zst")
 		if err := split.ReassembleFile(source, tmpPath); err != nil {
 			return "", fmt.Errorf("unable to reassemble split package: %w", err)
@@ -71,7 +76,11 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 		if err != nil {
 			return "", fmt.Errorf("unable to load package: %w", err)
 		}
-		defer pkgLayout.Cleanup()
+		defer func() {
+			if err := pkgLayout.Cleanup(); err != nil {
+				logger.From(ctx).Warn("failed to cleanup package layout", "error", err)
+			}
+		}()
 		return zoci.DigestForLayout(ctx, pkgLayout)
 
 	default:
