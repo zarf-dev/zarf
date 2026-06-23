@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/moby/moby/client"
+	"github.com/moby/moby/client/pkg/versions"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"golang.org/x/sync/errgroup"
@@ -347,10 +348,14 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		err = errors.Join(err, os.RemoveAll(tmpDir))
 	}()
 
-	// Note: ImageSave accepts an ocispec.Platform, but the effect it would have on users without client API version
-	// 1.48 (released Feb 2025) is unclear. This could make the export more efficient in some cases, but we avoid it
-	// for now to give users more time to update.
-	imageReader, err := cli.ImageSave(ctx, []string{daemonImage.overridden.Reference})
+	// Passing a platform only has an effect on multi-platform images and requires client API version 1.48 (released
+	// Feb 2025); ImageSave errors if we send it to older clients, so we only set it when the negotiated version
+	// supports it.
+	var saveOpts []client.ImageSaveOption
+	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.48") {
+		saveOpts = append(saveOpts, client.ImageSaveWithPlatforms(ocispec.Platform{Architecture: arch, OS: "linux"}))
+	}
+	imageReader, err := cli.ImageSave(ctx, []string{daemonImage.overridden.Reference}, saveOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to save image %s from docker daemon: %w", daemonImage.overridden.Reference, err)
 	}
@@ -370,8 +375,6 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		return fmt.Errorf("failed to close tar file: %w", err)
 	}
 
-	// The Docker daemon's OCI export is an image archive; once extracted it is handled exactly like
-	// any other image archive, including multi-platform indexes exported by the containerd image store.
 	dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
 	if err := archive.Decompress(ctx, imageTarPath, dockerImageOCILayoutPath, archive.DecompressOpts{}); err != nil {
 		return fmt.Errorf("failed to extract image tar: %w", err)
