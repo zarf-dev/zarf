@@ -397,7 +397,7 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 // Crane handles the older, pre-OCI-layout Docker export formats
 func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
-	l.Debug("pulling image from the Docker Daemon with Crane SDK")
+	l.Warn("pulling from the Docker daemon using the legacy method. This method will be removed in Zarf v1.0. Upgrade Docker to >=v25.0.0 for continued daemon functionality")
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to make temp directory: %w", err)
