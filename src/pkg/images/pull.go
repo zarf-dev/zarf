@@ -340,6 +340,7 @@ func daemonSupportsOCIExport(ctx context.Context, cli *client.Client) bool {
 // first version to export images in the OCI layout format.
 func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
+	l.Debug("pulling image from the Docker Daemon using Docker SDK")
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to make temp directory: %w", err)
@@ -404,6 +405,7 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 // user base has moved to Docker engine v25.0+ this can be removed in favor of saveImageFromDockerDaemon.
 func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
+	l.Debug("pulling image from the Docker Daemon with Crane SDK")
 	tmpDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to make temp directory: %w", err)

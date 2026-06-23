@@ -254,14 +254,11 @@ func init() {
 		},
 		{
 			Name: DockerDaemonDirectPull,
-			Description: "When pulling images that only exist in the local Docker daemon, save them directly via the " +
-				"Docker engine's OCI image export instead of Crane, which is faster and simpler. The direct export is " +
-				"only used when the Docker engine is v25.0 or newer (released Jan 2024), the first version to export " +
-				"images in the OCI layout format; older engines automatically fall back to Crane. Disabling this " +
-				"feature forces the Crane path regardless of engine version.",
+			Description: "Saves images from the local Docker daemon directly via the engine's OCI image export " +
+				"disabling this feature falls back to pulling with Crane.",
 			Enabled: true,
 			Since:   "v0.80.0",
-			Stage:   Alpha,
+			Stage:   GA,
 		},
 	}
 
