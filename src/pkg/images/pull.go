@@ -294,9 +294,8 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 		err = errors.Join(err, cli.Close())
 	}()
 	// Saving images directly from the Docker daemon's OCI image export is faster and simpler than Crane, but it
-	// requires Docker engine v25.0+ (Jan 2024), the first version to export the OCI layout format. We only take the
-	// direct path when the feature is enabled (the default) and the daemon is new enough; otherwise we fall back to
-	// Crane, which handles the older export formats. The feature flag can be disabled to force the Crane path.
+	// requires Docker engine v25.0+, the first version to export the OCI layout format. For older versions
+	// or if the feature flag is disabled, we fall back to Crane.
 	directPull := feature.IsEnabled(feature.DockerDaemonDirectPull) && daemonSupportsOCIExport(ctx, cli)
 	for _, daemonImage := range daemonImages {
 		var pullErr error
@@ -315,29 +314,23 @@ func pullFromDockerDaemon(ctx context.Context, daemonImages []imageWithOverride,
 }
 
 // minDockerVersionForOCIExport is the first Docker engine version (released Jan 2024) to export images in the OCI
-// layout format via ImageSave. Older engines use legacy formats that require the Crane-based fallback.
+// layout format via ImageSave.
 var minDockerVersionForOCIExport = semver.MustParse("25.0.0")
 
-// daemonSupportsOCIExport reports whether the connected Docker daemon is new enough to export images in the OCI
-// layout format. If the version can't be determined or parsed, it returns false so the caller falls back to Crane.
 func daemonSupportsOCIExport(ctx context.Context, cli *client.Client) bool {
-	l := logger.From(ctx)
 	v, err := cli.ServerVersion(ctx, client.ServerVersionOptions{})
 	if err != nil {
-		l.Debug("unable to determine docker daemon version, using crane for daemon pull", "err", err)
 		return false
 	}
 	ver, err := semver.NewVersion(v.Version)
 	if err != nil {
-		l.Debug("unable to parse docker daemon version, using crane for daemon pull", "version", v.Version, "err", err)
 		return false
 	}
 	return !ver.LessThan(minDockerVersionForOCIExport)
 }
 
 // saveImageFromDockerDaemon exports a single image from the Docker daemon via the engine's OCI image export
-// (the equivalent of `docker save`) and copies it into dst. This requires Docker engine v25.0+ (Feb 2024), the
-// first version to export images in the OCI layout format.
+// (the equivalent of `docker save`) and copies it into dst.
 func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
 	l.Debug("pulling image from the Docker Daemon using Docker SDK")
@@ -401,8 +394,7 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 }
 
 // craneSaveImageFromDockerDaemon exports a single image from the Docker daemon using Crane and copies it into dst.
-// Crane handles the older, pre-OCI-layout Docker export formats whose extraction logic is quite complex. Once the
-// user base has moved to Docker engine v25.0+ this can be removed in favor of saveImageFromDockerDaemon.
+// Crane handles the older, pre-OCI-layout Docker export formats
 func craneSaveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci.Store, daemonImage imageWithOverride, arch string, concurrency int) (err error) {
 	l := logger.From(ctx)
 	l.Debug("pulling image from the Docker Daemon with Crane SDK")
