@@ -22,6 +22,7 @@ zarf package inspect digest [ PACKAGE_SOURCE ] [flags]
 
 ```
   -h, --help                  help for digest
+  -n, --namespace string      [Alpha] Override the namespace for package inspection. Applicable only to packages deployed using the namespace flag.
       --oci-concurrency int   Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
 ```
 
