@@ -6,14 +6,11 @@ package zoci
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"maps"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -42,17 +39,14 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	src, root, manifestConfigBytes, totalSize, err := manifestForLayout(ctx, pkgLayout)
-	if err != nil {
-		return ocispec.Descriptor{}, err
+	if pkgLayout.Digest() == "" {
+		return ocispec.Descriptor{}, fmt.Errorf("package layout has no digest; manifest must be computed before publishing")
 	}
-	defer func() {
-		err2 := src.Close()
-		err = errors.Join(err, err2)
-	}()
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
 	copyOpts.Concurrency = opts.OCIConcurrency
+
+	totalSize := pkgLayout.TotalSize()
 
 	var publishedDesc ocispec.Descriptor
 	err = retry.Do(
@@ -60,28 +54,16 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 			l.Info("pushing package to registry", "destination", r.Repo().Reference.String(),
 				"architecture", pkgLayout.Pkg.Build.Architecture, "size", utils.ByteFormat(float64(totalSize), 2))
 
-			manifestConfigDesc, err := r.PushLayer(ctx, manifestConfigBytes, ZarfConfigMediaType)
-			if err != nil {
-				return err
-			}
-
-			if err = src.Tag(ctx, root, root.Digest.String()); err != nil {
-				return err
-			}
-
-			// Update the total with manifest + config for better progress (optional)
-			attemptTotal := totalSize + root.Size + manifestConfigDesc.Size
-
 			trackedRemote := images.NewTrackedTarget(
 				r.Repo(),
-				attemptTotal,
+				totalSize,
 				images.DefaultReport(r.Log(), "package publish in progress", r.Repo().Reference.String()),
 			)
 			trackedRemote.StartReporting(ctx)
 			defer trackedRemote.StopReporting()
 
 			var copyErr error
-			publishedDesc, copyErr = oras.Copy(ctx, src, root.Digest.String(), trackedRemote, "", copyOpts)
+			publishedDesc, copyErr = oras.Copy(ctx, pkgLayout, pkgLayout.Digest(), trackedRemote, "", copyOpts)
 			if copyErr != nil {
 				return copyErr
 			}
@@ -113,30 +95,4 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		"duration", time.Since(start).Round(100*time.Millisecond))
 
 	return publishedDesc, nil
-}
-
-func annotationsFromMetadata(metadata v1alpha1.ZarfMetadata) map[string]string {
-	annotations := map[string]string{
-		ocispec.AnnotationTitle:       metadata.Name,
-		ocispec.AnnotationDescription: metadata.Description,
-	}
-
-	if url := metadata.URL; url != "" {
-		annotations[ocispec.AnnotationURL] = url
-	}
-	if authors := metadata.Authors; authors != "" {
-		annotations[ocispec.AnnotationAuthors] = authors
-	}
-	if documentation := metadata.Documentation; documentation != "" {
-		annotations[ocispec.AnnotationDocumentation] = documentation
-	}
-	if source := metadata.Source; source != "" {
-		annotations[ocispec.AnnotationSource] = source
-	}
-	if vendor := metadata.Vendor; vendor != "" {
-		annotations[ocispec.AnnotationVendor] = vendor
-	}
-	// annotations explicitly defined in `metadata.annotations` take precedence over legacy fields
-	maps.Copy(annotations, metadata.Annotations)
-	return annotations
 }

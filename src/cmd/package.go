@@ -732,7 +732,8 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 type packageInspectDigestOptions struct {
-	ociConcurrency int
+	ociConcurrency    int
+	namespaceOverride string
 }
 
 func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
@@ -747,6 +748,7 @@ func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
+	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	return cmd
 }
 
@@ -756,10 +758,24 @@ func (o *packageInspectDigestOptions) run(ctx context.Context, args []string) er
 		return err
 	}
 
-	digest, err := packager.PackageDigest(ctx, src, packager.PackageDigestOptions{
-		Architecture:  config.GetArch(),
-		RemoteOptions: defaultRemoteOptions(),
-	})
+	opts := packager.PackageDigestOptions{
+		Architecture:      config.GetArch(),
+		RemoteOptions:     defaultRemoteOptions(),
+		NamespaceOverride: o.namespaceOverride,
+	}
+
+	// Cluster sources are deployed package names; connect to the cluster to retrieve the stored digest.
+	if state.DeployedPackageNameRegex(src) {
+		connectCtx, cancel := context.WithTimeout(ctx, cluster.DefaultTimeout)
+		defer cancel()
+		c, err := cluster.NewWithWait(connectCtx)
+		if err != nil {
+			return fmt.Errorf("unable to connect to the Kubernetes cluster: %w", err)
+		}
+		opts.Cluster = c
+	}
+
+	digest, err := packager.PackageDigest(ctx, src, opts)
 	if err != nil {
 		return err
 	}

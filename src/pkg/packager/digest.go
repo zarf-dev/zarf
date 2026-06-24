@@ -12,9 +12,11 @@ import (
 	"github.com/defenseunicorns/pkg/oci"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/split"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/filters"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 	"github.com/zarf-dev/zarf/src/types"
@@ -24,6 +26,11 @@ import (
 type PackageDigestOptions struct {
 	Architecture  string
 	RemoteOptions types.RemoteOptions
+	// Cluster is required when the source is a deployed package name (cluster source).
+	Cluster *cluster.Cluster
+	// NamespaceOverride is the namespace override used when the package was deployed,
+	// required to locate the correct secret for cluster sources.
+	NamespaceOverride string
 }
 
 // PackageDigest returns the SHA256 OCI manifest digest for the given package source.
@@ -38,6 +45,19 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 	}
 
 	switch srcType {
+	case "cluster":
+		if opts.Cluster == nil {
+			return "", fmt.Errorf("a cluster connection is required to retrieve the digest for a cluster source")
+		}
+		depPkg, err := opts.Cluster.GetDeployedPackage(ctx, source, state.WithPackageNamespaceOverride(opts.NamespaceOverride))
+		if err != nil {
+			return "", fmt.Errorf("unable to get deployed package %q from cluster: %w", source, err)
+		}
+		if depPkg.Digest == "" {
+			return "", fmt.Errorf("deployed package %q does not have a stored OCI manifest digest; it may have been deployed before this feature was added", source)
+		}
+		return depPkg.Digest, nil
+
 	case "oci":
 		platform := oci.PlatformForArch(config.GetArch(opts.Architecture))
 		remote, err := zoci.NewRemote(ctx, source, platform,
@@ -81,7 +101,10 @@ func PackageDigest(ctx context.Context, source string, opts PackageDigestOptions
 				logger.From(ctx).Warn("failed to cleanup package layout", "error", err)
 			}
 		}()
-		return zoci.DigestForLayout(ctx, pkgLayout)
+		if pkgLayout.Digest() == "" {
+			return "", fmt.Errorf("unable to compute OCI manifest digest for package")
+		}
+		return pkgLayout.Digest(), nil
 
 	default:
 		return "", fmt.Errorf("digest is not supported for source type %q", srcType)

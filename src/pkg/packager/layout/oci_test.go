@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2021-Present The Zarf Authors
 
-package zoci
+package layout
 
 import (
 	"testing"
@@ -26,7 +26,7 @@ func TestAnnotationsFromMetadata(t *testing.T) {
 			"org.opencontainers.image.new":   "new-field",
 		},
 	}
-	annotations := annotationsFromMetadata(metadata)
+	annotations := AnnotationsFromMetadata(metadata)
 	expectedAnnotations := map[string]string{
 		"org.opencontainers.image.title":         "overridden",
 		"org.opencontainers.image.description":   "bar",
