@@ -55,7 +55,7 @@ func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result := convert.V1Alpha1PkgToV1Beta1(pkg)
+	result := convert.PackageV1alpha1ToV1beta1(pkg)
 
 	out, err := goyaml.Marshal(result)
 	if err != nil {
