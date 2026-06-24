@@ -8,13 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
+	"github.com/zarf-dev/zarf/src/pkg/utils"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/file"
@@ -36,18 +39,46 @@ func DigestForLayout(ctx context.Context, pkgLayout *layout.PackageLayout) (stri
 	return root.Digest.String(), nil
 }
 
-// manifestForLayout opens a file store rooted at the package layout directory, stages all
-// package files into it, packs the OCI manifest, and returns the store, manifest descriptor,
-// marshaled config bytes (needed to push config to the remote), and total layer size in bytes.
-// The caller is responsible for closing the store; on error the store is closed before returning.
-func manifestForLayout(ctx context.Context, pkgLayout *layout.PackageLayout) (_ *file.Store, _ ocispec.Descriptor, _ []byte, _ int64, err error) {
-	store, err := file.New(pkgLayout.DirPath())
+// fileStoreCloser wraps a file.Store and removes its working directory on Close.
+//
+// oras.PackManifest copies ManifestAnnotations (including AnnotationTitle) onto the
+// descriptor it pushes, so the file store will write the manifest JSON to
+// {workingDir}/{title} as a named file. Named files are NOT tracked in tmpFiles,
+// so file.Store.Close alone does not delete them. This wrapper ensures the temp
+// directory is removed when the store is no longer needed (without the caller needing
+// to worry about it), preventing the manifest file from being picked up by
+// pkgLayout.Files() on subsequent calls.
+type fileStoreCloser struct {
+	*file.Store
+	dir string
+}
+
+func (f *fileStoreCloser) Close() error {
+	err := f.Store.Close()
+	if rmErr := os.RemoveAll(f.dir); rmErr != nil {
+		err = errors.Join(err, rmErr)
+	}
+	return err
+}
+
+// manifestForLayout stages all package files into a temporary OCI file store,
+// packs the OCI manifest, and returns the store (caller must Close it), manifest
+// descriptor, marshaled config bytes, and total layer size. On error the store
+// is closed and its temp directory removed before returning.
+func manifestForLayout(ctx context.Context, pkgLayout *layout.PackageLayout) (_ *fileStoreCloser, _ ocispec.Descriptor, _ []byte, _ int64, err error) {
+	storeDir, err := utils.MakeTempDir(config.CommonOptions.TempDirectory)
 	if err != nil {
 		return nil, ocispec.Descriptor{}, nil, 0, err
 	}
+	store, err := file.New(storeDir)
+	if err != nil {
+		_ = os.RemoveAll(storeDir)
+		return nil, ocispec.Descriptor{}, nil, 0, err
+	}
+	wrapped := &fileStoreCloser{Store: store, dir: storeDir}
 	defer func() {
 		if err != nil {
-			if closeErr := store.Close(); closeErr != nil {
+			if closeErr := wrapped.Close(); closeErr != nil {
 				err = errors.Join(err, closeErr)
 			}
 		}
@@ -102,5 +133,5 @@ func manifestForLayout(ctx context.Context, pkgLayout *layout.PackageLayout) (_ 
 		return nil, ocispec.Descriptor{}, nil, 0, fmt.Errorf("unable to pack manifest: %w", err)
 	}
 
-	return store, root, configBytes, totalLayerSize, nil
+	return wrapped, root, configBytes, totalLayerSize, nil
 }
