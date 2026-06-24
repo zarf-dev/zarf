@@ -93,28 +93,29 @@ func APIVersion(b []byte) (string, error) {
 	return chosen.version, nil
 }
 
-// ParseV1Beta1 returns the v1beta1 document from a package definition that may contain
-// multiple documents, erroring if none is present.
-func ParseV1Beta1(_ context.Context, b []byte) (v1beta1.Package, error) {
+// ParseAs returns the document declaring the given apiVersion from a package definition that
+// may contain multiple documents, decoded into T. It errors if no matching document is present.
+func ParseAs[T any](_ context.Context, b []byte, apiVersion string) (T, error) {
+	var zero T
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
-		return v1beta1.Package{}, err
+		return zero, err
 	}
 	for i, doc := range docs {
 		version, err := apiVersionFromNode(doc.Body)
 		if err != nil {
-			return v1beta1.Package{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+			return zero, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
-		if version != v1beta1.APIVersion {
+		if version != apiVersion {
 			continue
 		}
-		var pkg v1beta1.Package
-		if err := goyaml.NodeToValue(doc.Body, &pkg); err != nil {
-			return v1beta1.Package{}, err
+		var out T
+		if err := goyaml.NodeToValue(doc.Body, &out); err != nil {
+			return zero, err
 		}
-		return pkg, nil
+		return out, nil
 	}
-	return v1beta1.Package{}, fmt.Errorf("no %q document found in package definition", v1beta1.APIVersion)
+	return zero, fmt.Errorf("no %q document found in package definition", apiVersion)
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.

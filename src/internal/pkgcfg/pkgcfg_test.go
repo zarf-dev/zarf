@@ -317,7 +317,7 @@ func TestAPIVersion(t *testing.T) {
 	}
 }
 
-func TestParseV1Beta1(t *testing.T) {
+func TestParseAs(t *testing.T) {
 	t.Parallel()
 
 	yaml := `
@@ -330,7 +330,7 @@ components:
   - name: first
     description: a component
 `
-	pkg, err := ParseV1Beta1(context.Background(), []byte(yaml))
+	pkg, err := ParseAs[v1beta1.Package](context.Background(), []byte(yaml), v1beta1.APIVersion)
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta-pkg", pkg.Metadata.Name)
@@ -339,28 +339,33 @@ components:
 	require.Equal(t, "first", pkg.Components[0].Name)
 }
 
-func TestParseV1Beta1SelectsFromMultiDoc(t *testing.T) {
+func TestParseAsSelectsFromMultiDoc(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	// The v1beta1 document is returned regardless of where it sits among other versions.
+	// The requested apiVersion's document is returned regardless of where it sits among others.
 	mixed := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
-	pkg, err := ParseV1Beta1(ctx, []byte(mixed))
+	pkg, err := ParseAs[v1beta1.Package](ctx, []byte(mixed), v1beta1.APIVersion)
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", pkg.Metadata.Name)
+
+	// The same definition can be read as its v1alpha1 document by naming that apiVersion.
+	alpha, err := ParseAs[v1alpha1.ZarfPackage](ctx, []byte(mixed), v1alpha1.APIVersion)
+	require.NoError(t, err)
+	require.Equal(t, "alpha", alpha.Metadata.Name)
 }
 
-func TestParseV1Beta1Errors(t *testing.T) {
+func TestParseAsErrors(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
-	_, err := ParseV1Beta1(ctx, []byte(""))
+	_, err := ParseAs[v1beta1.Package](ctx, []byte(""), v1beta1.APIVersion)
 	require.ErrorContains(t, err, "no package definition found")
 
-	// A definition without a v1beta1 document errors rather than falling back.
+	// A definition without a matching document errors rather than falling back.
 	alphaOnly := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n"
-	_, err = ParseV1Beta1(ctx, []byte(alphaOnly))
+	_, err = ParseAs[v1beta1.Package](ctx, []byte(alphaOnly), v1beta1.APIVersion)
 	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
 }
 

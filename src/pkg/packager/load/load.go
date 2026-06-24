@@ -74,7 +74,6 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 
-	// FIXME: this should handle multi documents, and pick the latest one
 	version, err := pkgcfg.APIVersion(b)
 	if err != nil {
 		return DefinedPackage{}, err
@@ -84,9 +83,10 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	switch version {
 	case v1beta1.APIVersion:
 		defined, err = v1beta1PackageDefinition(ctx, b, pkgPath, opts)
-	// FIXME: this should be explicit about wanting v1alpha1, other kinds error
-	default:
+	case v1alpha1.APIVersion:
 		defined, err = v1alpha1PackageDefinition(ctx, b, pkgPath, opts)
+	default:
+		return DefinedPackage{}, fmt.Errorf("unrecognized API version")
 	}
 	if err != nil {
 		return DefinedPackage{}, err
@@ -98,6 +98,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
 	// FIXME: this should explicitly call out v1alpha1
+	// FIXME: perhaps use generics?
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
@@ -131,7 +132,7 @@ func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.Pac
 }
 
 func v1beta1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
-	pkg, err := pkgcfg.ParseV1Beta1(ctx, b)
+	pkg, err := pkgcfg.ParseAs[v1beta1.Package](ctx, b, v1beta1.APIVersion)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
