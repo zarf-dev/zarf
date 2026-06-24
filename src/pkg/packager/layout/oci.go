@@ -176,8 +176,11 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 
 	annotations := AnnotationsFromMetadata(p.Pkg.Metadata)
 
-	// Back-compatible timestamp parsing → OCI format
-	t, _ := time.Parse(v1alpha1.BuildTimestampFormat, p.Pkg.Build.Timestamp)
+	// // Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
+	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, p.Pkg.Build.Timestamp)
+	if parseErr != nil {
+		t = time.Time{}
+	}
 	annotations[ocispec.AnnotationCreated] = t.UTC().Format(time.RFC3339)
 
 	memStore := memory.New()
@@ -194,9 +197,8 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("fetching packed manifest: %w", err)
 	}
-	defer manifestReader.Close()
-	manifestJSON, err := io.ReadAll(manifestReader)
-	if err != nil {
+	manifestJSON, readErr := io.ReadAll(manifestReader)
+	if err := errors.Join(readErr, manifestReader.Close()); err != nil {
 		return fmt.Errorf("reading packed manifest: %w", err)
 	}
 
