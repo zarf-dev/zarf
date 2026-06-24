@@ -42,8 +42,16 @@ type DefinitionOptions struct {
 	types.RemoteOptions
 }
 
+// DefinedPackage is the result of loading and resolving a package definition.
+// ImportedSchemas is transient assembly state — child schema paths collected during
+// import resolution that must be passed to AssemblePackage for merging.
+type DefinedPackage struct {
+	Pkg             v1alpha1.ZarfPackage
+	ImportedSchemas []string
+}
+
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
-func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (v1alpha1.ZarfPackage, error) {
+func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 	l.Debug("start layout.LoadPackage",
@@ -54,44 +62,45 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 
 	b, err := os.ReadFile(pkgPath.ManifestFile)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
-	pkg, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
+	var importedSchemas []string
+	pkg, importedSchemas, err = resolveImports(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor, []string{}, opts.CachePath, opts.SkipVersionCheck, opts.RemoteOptions)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 
 	if len(pkg.Values.Files) > 0 && !feature.IsEnabled(feature.Values) {
-		return v1alpha1.ZarfPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
+		return DefinedPackage{}, fmt.Errorf("creating package with Values files, but \"%s\" feature is not enabled."+
 			" Run again with --features=\"%s=true\"", feature.Values, feature.Values)
 	}
 
 	if opts.SetVariables != nil {
 		pkg, _, err = fillActiveTemplate(ctx, pkg, opts.SetVariables, opts.IsInteractive)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return DefinedPackage{}, err
 		}
 	}
 	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return DefinedPackage{}, err
 	}
 	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return pkg, nil
+	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
