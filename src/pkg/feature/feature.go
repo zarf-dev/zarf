@@ -240,7 +240,7 @@ func init() {
 			Description: "Enabling \"values\" allows for Helm-like values files to be imported. Values are intended to" +
 				"be used for advanced configuration of Zarf components and offer a simple and more flexible " +
 				"alternative to Variables .",
-			Enabled: false,
+			Enabled: true,
 			Since:   "v0.64.0",
 			Stage:   Alpha,
 		},

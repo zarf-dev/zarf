@@ -200,7 +200,7 @@ func createFileSBOM(ctx context.Context, component v1alpha1.ZarfComponent, outpu
 		return nil
 	}
 	for i, file := range component.Files {
-		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), strconv.Itoa(i), filepath.Base(file.Target))
+		path := filepath.Join(tmpDir, component.Name, string(FilesComponentDir), ComponentFileRelPath(i, file.Target))
 		err := appendSBOMFiles(path)
 		if err != nil {
 			return nil, err

@@ -1,4 +1,6 @@
 ---
+import { loadSchema } from "../lib/schema";
+
 const { item, include, invert, unwrap } = Astro.props;
 
 const includesElement = (key: string) => {
@@ -11,15 +13,13 @@ const includesElement = (key: string) => {
   }
 };
 
-const json = await import("../assets/zarf.schema.json");
+const json = await loadSchema(Astro.url.pathname);
 
-// @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
 const itemSchema = json["$defs"][item];
 
 if (unwrap) {
   unwrap.forEach((wrapped: string) => {
     if (itemSchema.properties[wrapped]) {
-      // @ts-expect-error - We don't import a TS type for the schema, but we know it's structured correctly
       const wrappedSchema = json.definitions[wrapped];
 
       delete itemSchema.properties[wrapped]

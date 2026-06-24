@@ -18,6 +18,7 @@
 *.zst
 *.zim
 build
+.docs-version-builds/
 data/
 zarf
 zarf-pki

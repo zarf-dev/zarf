@@ -23,6 +23,7 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/helm"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
+	itpl "github.com/zarf-dev/zarf/src/internal/template"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
@@ -108,16 +109,16 @@ func FindDefinitionImages(ctx context.Context, packagePath string, opts FindImag
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
-	imageScans, err := findImages(ctx, pkg, packagePath, opts)
+	imageScans, err := findImages(ctx, defined.Pkg, packagePath, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	return filterImagesFoundInArchives(ctx, pkg, packagePath, imageScans)
+	return filterImagesFoundInArchives(ctx, defined.Pkg, packagePath, imageScans)
 }
 
 // FindImages iterates over the manifests and charts within each component to find any container images
@@ -136,12 +137,12 @@ func FindImages(ctx context.Context, packagePath string, opts FindImagesOptions)
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return nil, err
 	}
 
-	return findImages(ctx, pkg, packagePath, opts)
+	return findImages(ctx, defined.Pkg, packagePath, opts)
 }
 
 // filterImagesFoundInArchives merges scan results with each component's imageArchives.
@@ -285,7 +286,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 		matchedImages := map[string]bool{}
 		maybeImages := map[string]bool{}
 		for _, zarfChart := range component.Charts {
-			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
+			chartResource, values, err := getTemplatedChart(ctx, zarfChart, component.Name, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, s, component.StateAccess, opts.KubeVersionOverride, opts.IsInteractive, opts.CachePath, opts.RemoteOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -328,7 +329,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			}
 		}
 		for _, manifest := range component.Manifests {
-			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg)
+			manifestResources, err := getTemplatedManifests(ctx, manifest, pkgPath.BaseDir, compBuildPath, variableConfig, vals, pkg, itpl.StateAccess{State: s, AccessKeys: component.StateAccess})
 			if err != nil {
 				return nil, err
 			}
@@ -399,6 +400,30 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 			"duration", time.Since(imgCompStart))
 
 		if !opts.SkipCosign {
+			cosignHosts := map[string]struct{}{}
+			addCosignHosts := func(images []string) error {
+				for _, image := range images {
+					parsed, parseErr := transform.ParseImageRef(image)
+					if parseErr != nil {
+						return fmt.Errorf("could not parse image reference for cosign pre-auth %s: %w", image, parseErr)
+					}
+					cosignHosts[parsed.Host] = struct{}{}
+				}
+
+				return nil
+			}
+			if err := addCosignHosts(scan.Matches); err != nil {
+				return nil, err
+			}
+			if err := addCosignHosts(scan.PotentialMatches); err != nil {
+				return nil, err
+			}
+
+			cosignClient, err := images.NewAuthClientFromDocker(ctx, opts.InsecureSkipTLSVerify, 0, cosignHosts)
+			if err != nil {
+				return nil, err
+			}
+
 			// Handle cosign artifact lookups
 			if len(scan.Matches) > 0 || len(scan.PotentialMatches) > 0 {
 				imgStart := time.Now()
@@ -406,7 +431,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.Matches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}
@@ -415,7 +440,7 @@ func findImages(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath strin
 
 				for _, image := range scan.PotentialMatches {
 					l.Debug("looking up cosign artifacts for image", "name", image)
-					cosignArtifacts, err := utils.GetCosignArtifacts(image)
+					cosignArtifacts, err := utils.GetCosignArtifacts(ctx, image, cosignClient)
 					if err != nil {
 						return nil, fmt.Errorf("could not lookup the cosign artifacts for image %s: %w", image, err)
 					}

@@ -133,12 +133,12 @@ func (o *devInspectDefinitionOptions) run(cmd *cobra.Command, args []string) err
 	if err != nil {
 		return err
 	}
-	pkg, err := load.PackageDefinition(ctx, basePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, basePath, loadOpts)
 	if err != nil {
 		return err
 	}
-	pkg.Build = v1alpha1.ZarfBuildData{}
-	err = utils.ColorPrintYAML(pkg, nil, false)
+	defined.Pkg.Build = v1alpha1.ZarfBuildData{}
+	err = utils.ColorPrintYAML(defined.Pkg, nil, false)
 	if err != nil {
 		return err
 	}

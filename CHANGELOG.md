@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.79.0](https://github.com/zarf-dev/zarf/compare/v0.78.0...v0.79.0) (2026-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981))
+
+### Features
+
+* **injector:** dynamically determine host based on IP family ([#4985](https://github.com/zarf-dev/zarf/issues/4985)) ([8ef592c](https://github.com/zarf-dev/zarf/commit/8ef592c59de83039f1f0745207429858a15cddba))
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981)) ([1e7e767](https://github.com/zarf-dev/zarf/commit/1e7e767c834b7a5ae4b262c50819c0d118b49b33))
+
+
+### Bug Fixes
+
+* **docs:** render markdown tables ([#4982](https://github.com/zarf-dev/zarf/issues/4982)) ([c96636e](https://github.com/zarf-dev/zarf/commit/c96636ebde2a4ec85c3824dfdc03876b8a95eb13))
+* **pull:** always pull values.yaml and values.schema.json ([#4987](https://github.com/zarf-dev/zarf/issues/4987)) ([78ac28e](https://github.com/zarf-dev/zarf/commit/78ac28e41bc812ca93a0f7c0801bd4376873f555))
+
+## [0.78.0](https://github.com/zarf-dev/zarf/compare/v0.77.0...v0.78.0) (2026-06-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** support state built-ins ([#4957](https://github.com/zarf-dev/zarf/issues/4957))
+* **values:** support schema merge on imports ([#4951](https://github.com/zarf-dev/zarf/issues/4951))
+
+### Features
+
+* add nodeSelector to gitea chart ([#4972](https://github.com/zarf-dev/zarf/issues/4972)) ([940e028](https://github.com/zarf-dev/zarf/commit/940e028fff048d745641d66bd29aa60c5bbd978a))
+* **agent:** add readiness probe ([#4980](https://github.com/zarf-dev/zarf/issues/4980)) ([55b9d59](https://github.com/zarf-dev/zarf/commit/55b9d590ec4ce70a5894c3d4d11b4cb8b538000d))
+* **init:** add init agent for the agent to only mutate labeled resources ([#4937](https://github.com/zarf-dev/zarf/issues/4937)) ([4dcc4ae](https://github.com/zarf-dev/zarf/commit/4dcc4ae8532fc5549a5e4884d1028fb0945d068b))
+* **values:** chart values exclude path ([#4974](https://github.com/zarf-dev/zarf/issues/4974)) ([dbf357e](https://github.com/zarf-dev/zarf/commit/dbf357e3758e6ec8b23611d5c02cbcf9651d48c6))
+* **values:** fail early during deploy if values are not defined ([#4968](https://github.com/zarf-dev/zarf/issues/4968)) ([21beb29](https://github.com/zarf-dev/zarf/commit/21beb29ac6bfc55a2638bdd33680024b656f654d))
+* **values:** support for go templating in chart valuesFIles ([#4967](https://github.com/zarf-dev/zarf/issues/4967)) ([feb5555](https://github.com/zarf-dev/zarf/commit/feb5555e10e36325bb6dadc75c2e4d3cfabc94f9))
+* **values:** support schema merge on imports ([#4951](https://github.com/zarf-dev/zarf/issues/4951)) ([9c79597](https://github.com/zarf-dev/zarf/commit/9c7959763b258373ffe14094c7a6f0a9ebbbdf1b))
+* **values:** support state built-ins ([#4957](https://github.com/zarf-dev/zarf/issues/4957)) ([5105843](https://github.com/zarf-dev/zarf/commit/51058430fccac9a5a035d74adbea7039536e9b8d))
+
+
+### Bug Fixes
+
+* **agent:** properly pass through context ([#4966](https://github.com/zarf-dev/zarf/issues/4966)) ([9b844cc](https://github.com/zarf-dev/zarf/commit/9b844cca8977d578e0f097d476ee09bff9874c27))
+* **tools,wait:** handle context propagation for networking calls ([#4925](https://github.com/zarf-dev/zarf/issues/4925)) ([42dba94](https://github.com/zarf-dev/zarf/commit/42dba94122371cfb53132290e375be83f309d8c7))
+
 ## [0.77.0](https://github.com/zarf-dev/zarf/compare/v0.76.0...v0.77.0) (2026-05-28)
 
 

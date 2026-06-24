@@ -38,6 +38,16 @@ func (p Path) Validate() error {
 	return nil
 }
 
+// Segments returns the dot-separated keys of the path with the leading dot removed. The root path
+// "." (or an empty path) yields an empty slice.
+func (p Path) Segments() []string {
+	s := strings.TrimPrefix(string(p), ".")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ".")
+}
+
 // ParseFilesOptions provides optional configuration for ParseFiles
 type ParseFilesOptions struct {
 	// TODO(mkcp): Add schema check. Maybe here in parsing, or later in the process like templating?
@@ -175,8 +185,7 @@ func (v Values) Extract(path Path) (any, error) {
 		return v, nil
 	}
 
-	// Split path into parts (remove leading dot first)
-	parts := strings.Split(string(path)[1:], ".")
+	parts := path.Segments()
 
 	// Traverse the nested map structure
 	current := v
@@ -227,8 +236,7 @@ func (v Values) Set(path Path, newVal any) error {
 		return nil
 	}
 
-	// Split path into parts (remove leading dot first)
-	parts := strings.Split(string(path)[1:], ".")
+	parts := path.Segments()
 
 	// Navigate to the nested location and set the value
 	current := v
@@ -250,6 +258,68 @@ func (v Values) Set(path Path, newVal any) error {
 		}
 	}
 	return nil
+}
+
+// Delete removes the value at the given dot-notation path from v. Deleting a key
+// that does not exist is a no-op.
+func (v Values) Delete(path Path) error {
+	if err := path.Validate(); err != nil {
+		return err
+	}
+	if path == "." {
+		return fmt.Errorf("cannot delete root path")
+	}
+
+	parts := path.Segments()
+	current := v
+	for i, part := range parts {
+		if i == len(parts)-1 {
+			delete(current, part)
+			return nil
+		}
+		next, exists := current[part]
+		if !exists {
+			return nil
+		}
+		nextMap, ok := next.(map[string]any)
+		if !ok {
+			return fmt.Errorf("cannot traverse path %s: key %q contains %T, expected map",
+				path, part, next)
+		}
+		current = nextMap
+	}
+	return nil
+}
+
+// DeepCopy returns a recursive copy of v so the result can be mutated without
+// affecting the original maps or slices.
+func (v Values) DeepCopy() Values {
+	cp := make(Values, len(v))
+	for k, val := range v {
+		cp[k] = deepCopyValue(val)
+	}
+	return cp
+}
+
+func deepCopyValue(val any) any {
+	switch t := val.(type) {
+	case map[string]any:
+		cp := make(map[string]any, len(t))
+		for k, sub := range t {
+			cp[k] = deepCopyValue(sub)
+		}
+		return cp
+	case Values:
+		return deepCopyValue(map[string]any(t))
+	case []any:
+		cp := make([]any, len(t))
+		for i, sub := range t {
+			cp[i] = deepCopyValue(sub)
+		}
+		return cp
+	default:
+		return t
+	}
 }
 
 // ValidateOptions provides optional configuration for Values validation
@@ -353,6 +423,17 @@ func ValidateSchemaFile(schemaPath string) error {
 		return fmt.Errorf("invalid JSON schema at %s: %w", schemaPath, err)
 	}
 
+	return nil
+}
+
+// ValidateSchemaDocument validates that an already-parsed document is a valid JSON Schema.
+// Prefer this over ValidateSchemaFile when the document has already been read and unmarshaled,
+// as it avoids a second disk read and parse.
+func ValidateSchemaDocument(doc map[string]any) error {
+	_, err := gojsonschema.NewSchema(gojsonschema.NewGoLoader(doc))
+	if err != nil {
+		return fmt.Errorf("invalid JSON schema: %w", err)
+	}
 	return nil
 }
 

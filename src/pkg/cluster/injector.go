@@ -45,6 +45,8 @@ type ZarfInjectorOptions struct {
 	RegistryNodePort uint16
 	// InjectorNodePort, using uint16 allows for only valid ports; 0 lets Kubernetes choose
 	InjectorNodePort uint16
+	// IPFamily determines the injector listen address; defaults to IPv4 when unset
+	IPFamily state.IPFamily
 }
 
 // StartInjection initializes a Zarf injection into the cluster.
@@ -88,7 +90,7 @@ func (c *Cluster) StartInjection(ctx context.Context, tmpDir, imagesDir string, 
 		return "", 0, err
 	}
 
-	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName)
+	pod := buildInjectionPod(injectorNodeName, injectorImage, payloadCmNames, shasum, resReq, pkgName, opts.IPFamily)
 	_, err = c.Clientset.CoreV1().Pods(*pod.Namespace).Apply(ctx, pod, metav1.ApplyOptions{Force: true, FieldManager: FieldManagerName})
 	if err != nil {
 		return "", 0, fmt.Errorf("error creating pod in cluster: %w", err)
@@ -532,7 +534,13 @@ func hasBlockingTaints(taints []corev1.Taint) bool {
 	return false
 }
 
-func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string) *v1ac.PodApplyConfiguration {
+func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum string, resReq *v1ac.ResourceRequirementsApplyConfiguration, pkgName string, ipFamily state.IPFamily) *v1ac.PodApplyConfiguration {
+	listenHost := "0.0.0.0"
+	if ipFamily == state.IPFamilyIPv6 {
+		listenHost = "[::]"
+	}
+	listenAddr := fmt.Sprintf("%s:%d", listenHost, 5000)
+
 	executeMode := int32(0777)
 	userID := int64(1000)
 	groupID := int64(2000)
@@ -600,7 +608,7 @@ func buildInjectionPod(nodeName, image string, payloadCmNames []string, shasum s
 						WithImage(image).
 						WithImagePullPolicy(corev1.PullIfNotPresent).
 						WithWorkingDir("/zarf-init").
-						WithCommand("/zarf-init/zarf-injector", shasum).
+						WithCommand("/zarf-init/zarf-injector", shasum, listenAddr).
 						WithVolumeMounts(volumeMounts...).
 						WithSecurityContext(
 							v1ac.SecurityContext().

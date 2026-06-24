@@ -20,11 +20,15 @@ type Component struct {
 }
 
 // GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Component) GetDeprecatedDataInjections() []ZarfDataInjection {
 	return c.dataInjections
 }
 
 // GetDeprecatedGroup returns the v1alpha1 group carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Component) GetDeprecatedGroup() string {
 	return c.group
 }
@@ -128,8 +132,8 @@ type Manifest struct {
 	SkipWait bool `json:"skipWait,omitempty"`
 	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to "auto" when omitted.
 	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
-	// EnableValues enables go-template processing on these manifests during deploy.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on these manifests during deploy.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
 // Chart defines a helm chart to be deployed.
@@ -166,11 +170,15 @@ type Chart struct {
 }
 
 // GetDeprecatedVersion returns the deprecated top-level chart version, used as a v1alpha1 backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Chart) GetDeprecatedVersion() string {
 	return c.version
 }
 
 // GetDeprecatedVariables returns the v1alpha1 chart variables carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (c Chart) GetDeprecatedVariables() []ZarfChartVariable {
 	return c.variables
 }
@@ -229,8 +237,8 @@ type File struct {
 	Symlinks []string `json:"symlinks,omitempty"`
 	// Local folder or file to be extracted from a 'source' archive.
 	ExtractPath string `json:"extractPath,omitempty"`
-	// EnableValues enables go-template processing on this file during deploy.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on this file during deploy.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
 
 // Image defines an OCI image to include in the package.
@@ -248,6 +256,24 @@ type ImageArchive struct {
 	// The list of images contained in the archive.
 	Images []string `json:"images"`
 }
+
+// Repository defines a git repository to include in the package.
+type Repository struct {
+	// The URL of the git repository.
+	URL string `json:"url"`
+}
+
+// StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
 
 // ComponentActions are ActionSets that map to different Zarf package operations.
 type ComponentActions struct {
@@ -309,13 +335,15 @@ type ComponentAction struct {
 	Description string `json:"description,omitempty"`
 	// Wait for a condition to be met before continuing.
 	Wait *ComponentActionWait `json:"wait,omitempty"`
-	// EnableValues enables go-template processing on the cmd field.
-	EnableValues bool `json:"enableValues,omitempty"`
+	// EnableTemplating enables go-template processing on the cmd field.
+	EnableTemplating bool `json:"enableTemplating,omitempty"`
 	// setVariables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
 	setVariables []Variable
 }
 
 // GetDeprecatedSetVariables returns the v1alpha1 setVariables carried as a backwards-compatibility shim.
+//
+// Deprecated: only used to convert v1alpha1 packages; will be removed once v1alpha1 support is dropped.
 func (a ComponentAction) GetDeprecatedSetVariables() []Variable {
 	return a.setVariables
 }
