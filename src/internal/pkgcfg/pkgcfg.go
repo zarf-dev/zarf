@@ -16,6 +16,8 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -30,6 +32,7 @@ type apiVersionHandler struct {
 // new version, append an entry with a higher priority than any existing one.
 var knownAPIVersions = []apiVersionHandler{
 	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
+	{version: v1beta1.APIVersion, priority: -1, decode: decodeV1Beta1},
 }
 
 // Parse parses a single Zarf package definition at any supported API version
@@ -52,38 +55,66 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	return handler.decode(ctx, docs[0].Body)
 }
 
-// APIVersion returns the raw apiVersion of a single-document package definition.
-// An empty string means the field is unset and callers should treat it as v1alpha1.
+// APIVersion reports which apiVersion a package definition should be loaded as. When the
+// definition spans multiple documents, the highest-priority known version wins, matching
+// how ParseMultiDoc selects a document. If no document declares a known version, the first
+// raw apiVersion is returned so the caller can surface it (e.g. "unsupported apiVersion").
 func APIVersion(b []byte) (string, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return "", err
 	}
-	if len(docs) > 1 {
-		return "", errors.New("package definition must contain a single YAML document")
+
+	var (
+		chosen   apiVersionHandler
+		found    bool
+		firstRaw string
+	)
+	for i, doc := range docs {
+		version, err := apiVersionFromNode(doc.Body)
+		if err != nil {
+			return "", fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+		}
+		if i == 0 {
+			firstRaw = version
+		}
+		handler, known := handlerFor(version)
+		if !known {
+			continue
+		}
+		if !found || handler.priority > chosen.priority {
+			chosen = handler
+			found = true
+		}
 	}
-	version, err := apiVersionFromNode(docs[0].Body)
-	if err != nil {
-		return "", fmt.Errorf("reading apiVersion: %w", err)
+	if !found {
+		return firstRaw, nil
 	}
-	return version, nil
+	return chosen.version, nil
 }
 
-// ParseV1Beta1 decodes a single v1beta1 package definition. Unlike Parse, it does
-// not apply v1alpha1 migrations, which are specific to the v1alpha1 schema.
+// ParseV1Beta1 returns the v1beta1 document from a package definition that may contain
+// multiple documents, erroring if none is present.
 func ParseV1Beta1(_ context.Context, b []byte) (v1beta1.Package, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return v1beta1.Package{}, err
 	}
-	if len(docs) > 1 {
-		return v1beta1.Package{}, errors.New("package definition must contain a single YAML document")
+	for i, doc := range docs {
+		version, err := apiVersionFromNode(doc.Body)
+		if err != nil {
+			return v1beta1.Package{}, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
+		}
+		if version != v1beta1.APIVersion {
+			continue
+		}
+		var pkg v1beta1.Package
+		if err := goyaml.NodeToValue(doc.Body, &pkg); err != nil {
+			return v1beta1.Package{}, err
+		}
+		return pkg, nil
 	}
-	var pkg v1beta1.Package
-	if err := goyaml.NodeToValue(docs[0].Body, &pkg); err != nil {
-		return v1beta1.Package{}, err
-	}
-	return pkg, nil
+	return v1beta1.Package{}, fmt.Errorf("no %q document found in package definition", v1beta1.APIVersion)
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.
@@ -135,6 +166,16 @@ func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, e
 		return v1alpha1.ZarfPackage{}, err
 	}
 	return applyV1Alpha1Migrations(ctx, pkg), nil
+}
+
+// decodeV1Beta1 decodes a v1beta1 document and converts it down to v1alpha1 so the rest of
+// Zarf keeps operating on a single internal type. v1beta1 has no v1alpha1-style migrations.
+func decodeV1Beta1(_ context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
+	var pkg v1beta1.Package
+	if err := goyaml.NodeToValue(node, &pkg); err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return internalv1alpha1.ConvertFromGeneric(internalv1beta1.ConvertToGeneric(pkg)), nil
 }
 
 func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.ZarfPackage {

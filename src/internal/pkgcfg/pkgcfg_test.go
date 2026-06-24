@@ -265,9 +265,30 @@ func TestAPIVersion(t *testing.T) {
 			want: "zarf.dev/v1beta1",
 		},
 		{
-			name: "omitted apiVersion returns empty string",
+			name: "omitted apiVersion resolves to v1alpha1",
 			yaml: "kind: ZarfPackageConfig\nmetadata:\n  name: c\n",
-			want: "",
+			want: "zarf.dev/v1alpha1",
+		},
+		// FIXME: make these tests aware of the priority so they don't have to be updated
+		{
+			name: "multi-doc prefers higher-priority v1alpha1 over v1beta1",
+			yaml: "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n",
+			want: "zarf.dev/v1alpha1",
+		},
+		{
+			name: "multi-doc prefers v1alpha1 regardless of document order",
+			yaml: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n",
+			want: "zarf.dev/v1alpha1",
+		},
+		{
+			name: "multi-doc with only v1beta1 and an unknown version picks v1beta1",
+			yaml: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n---\napiVersion: " + newer + "\nkind: ZarfPackageConfig\nmetadata:\n  name: x\n",
+			want: "zarf.dev/v1beta1",
+		},
+		{
+			name: "unknown version is returned unresolved for the caller to reject",
+			yaml: "apiVersion: " + newer + "\nkind: ZarfPackageConfig\nmetadata:\n  name: x\n",
+			want: newer,
 		},
 		{
 			name:    "malformed apiVersion errors",
@@ -278,11 +299,6 @@ func TestAPIVersion(t *testing.T) {
 			name:    "empty input errors",
 			yaml:    "",
 			wantErr: "no package definition found",
-		},
-		{
-			name:    "multi-document input errors",
-			yaml:    "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n",
-			wantErr: "single YAML document",
 		},
 	}
 
@@ -323,15 +339,54 @@ components:
 	require.Equal(t, "first", pkg.Components[0].Name)
 }
 
+func TestParseV1Beta1SelectsFromMultiDoc(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	// The v1beta1 document is returned regardless of where it sits among other versions.
+	mixed := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
+	pkg, err := ParseV1Beta1(ctx, []byte(mixed))
+	require.NoError(t, err)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", pkg.Metadata.Name)
+}
+
 func TestParseV1Beta1Errors(t *testing.T) {
 	t.Parallel()
+	ctx := context.Background()
 
-	_, err := ParseV1Beta1(context.Background(), []byte(""))
+	_, err := ParseV1Beta1(ctx, []byte(""))
 	require.ErrorContains(t, err, "no package definition found")
 
-	multiDoc := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n"
-	_, err = ParseV1Beta1(context.Background(), []byte(multiDoc))
-	require.ErrorContains(t, err, "single YAML document")
+	// A definition without a v1beta1 document errors rather than falling back.
+	alphaOnly := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n"
+	_, err = ParseV1Beta1(ctx, []byte(alphaOnly))
+	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
+}
+
+func TestParseDecodesV1Beta1DownToV1Alpha1(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	beta := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
+
+	// Parse transparently converts a single v1beta1 document down to v1alpha1.
+	pkg, err := Parse(ctx, []byte(beta))
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", pkg.Metadata.Name)
+
+	// ParseMultiDoc prefers the higher-priority v1alpha1 document when both are present.
+	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
+	pkg, err = ParseMultiDoc(ctx, []byte(mixed))
+	require.NoError(t, err)
+	require.Equal(t, "alpha", pkg.Metadata.Name)
+
+	// With only a v1beta1 document, ParseMultiDoc decodes it via conversion.
+	pkg, err = ParseMultiDoc(ctx, []byte(beta))
+	require.NoError(t, err)
+	require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", pkg.Metadata.Name)
 }
 
 func TestHandlerFor(t *testing.T) {
