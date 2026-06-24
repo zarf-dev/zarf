@@ -75,7 +75,8 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 		Description:  c.Description,
 		Optional:     c.Optional,
 		Service:      string(c.Service),
-		Repositories: c.Repositories,
+		Repositories: repositoriesToGeneric(c.Repositories),
+		StateAccess:  stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Target.OS,
 			Architecture: c.Target.Architecture,
@@ -96,13 +97,13 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 
 	for _, f := range c.Files {
 		gc.Files = append(gc.Files, types.File{
-			Source:       f.Source,
-			Checksum:     f.Checksum,
-			Destination:  f.Destination,
-			Executable:   f.Executable,
-			Symlinks:     f.Symlinks,
-			ExtractPath:  f.ExtractPath,
-			EnableValues: f.EnableValues,
+			Source:           f.Source,
+			Checksum:         f.Checksum,
+			Destination:      f.Destination,
+			Executable:       f.Executable,
+			Symlinks:         f.Symlinks,
+			ExtractPath:      f.ExtractPath,
+			EnableTemplating: f.EnableTemplating,
 		})
 	}
 
@@ -136,12 +137,12 @@ func importToGeneric(imp v1beta1.ComponentImport) types.ComponentImport {
 
 func manifestToGeneric(m v1beta1.Manifest) types.Manifest {
 	gm := types.Manifest{
-		Name:            m.Name,
-		Namespace:       m.Namespace,
-		Files:           m.Files,
-		SkipWait:        m.SkipWait,
-		ServerSideApply: string(m.ServerSideApply),
-		EnableValues:    m.EnableValues,
+		Name:             m.Name,
+		Namespace:        m.Namespace,
+		Files:            m.Files,
+		SkipWait:         m.SkipWait,
+		ServerSideApply:  string(m.ServerSideApply),
+		EnableTemplating: m.EnableTemplating,
 	}
 	if m.Kustomize != nil {
 		gm.Kustomize = &types.KustomizeManifest{
@@ -237,16 +238,16 @@ func actionSliceToGeneric(actions []v1beta1.ComponentAction) []types.ComponentAc
 
 func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 	ga := types.ComponentAction{
-		Silent:          a.Silent,
-		MaxTotalSeconds: a.MaxTotalSeconds,
-		Retries:         a.Retries,
-		Dir:             a.Dir,
-		Env:             a.Env,
-		Cmd:             a.Cmd,
-		Description:     a.Description,
-		Wait:            waitToGeneric(a.Wait),
-		EnableValues:    a.EnableValues,
-		SetVariables:    deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()),
+		Silent:           a.Silent,
+		MaxTotalSeconds:  a.MaxTotalSeconds,
+		Retries:          a.Retries,
+		Dir:              a.Dir,
+		Env:              a.Env,
+		Cmd:              a.Cmd,
+		Description:      a.Description,
+		Wait:             waitToGeneric(a.Wait),
+		EnableTemplating: a.EnableTemplating,
+		SetVariables:     deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()),
 	}
 
 	for _, sv := range a.SetValues {
@@ -398,7 +399,8 @@ func componentFromGeneric(c types.Component) v1beta1.Component {
 		Description: c.Description,
 		Optional:    optionalFromGeneric(c.Optional, c.Required),
 		ComponentSpec: v1beta1.ComponentSpec{
-			Repositories: c.Repositories,
+			Repositories: repositoriesFromGeneric(c.Repositories),
+			StateAccess:  stateAccessFromGeneric(c.StateAccess),
 			Target: v1beta1.ComponentTarget{
 				OS:           c.Target.OS,
 				Architecture: c.Target.Architecture,
@@ -420,13 +422,13 @@ func componentFromGeneric(c types.Component) v1beta1.Component {
 
 	for _, f := range c.Files {
 		bc.Files = append(bc.Files, v1beta1.File{
-			Source:       f.Source,
-			Checksum:     f.Checksum,
-			Destination:  f.Destination,
-			Executable:   f.Executable,
-			Symlinks:     f.Symlinks,
-			ExtractPath:  f.ExtractPath,
-			EnableValues: f.EnableValues,
+			Source:           f.Source,
+			Checksum:         f.Checksum,
+			Destination:      f.Destination,
+			Executable:       f.Executable,
+			Symlinks:         f.Symlinks,
+			ExtractPath:      f.ExtractPath,
+			EnableTemplating: f.EnableTemplating,
 		})
 	}
 
@@ -510,12 +512,12 @@ func importFromGeneric(imp types.ComponentImport) v1beta1.ComponentImport {
 
 func manifestFromGeneric(m types.Manifest) v1beta1.Manifest {
 	bm := v1beta1.Manifest{
-		Name:            m.Name,
-		Namespace:       m.Namespace,
-		Files:           m.Files,
-		SkipWait:        m.SkipWait,
-		ServerSideApply: v1beta1.ServerSideApplyMode(m.ServerSideApply),
-		EnableValues:    m.EnableValues,
+		Name:             m.Name,
+		Namespace:        m.Namespace,
+		Files:            m.Files,
+		SkipWait:         m.SkipWait,
+		ServerSideApply:  v1beta1.ServerSideApplyMode(m.ServerSideApply),
+		EnableTemplating: m.EnableTemplating,
 	}
 	if m.Kustomize != nil {
 		bm.Kustomize = &v1beta1.KustomizeManifest{
@@ -524,9 +526,9 @@ func manifestFromGeneric(m types.Manifest) v1beta1.Manifest {
 			EnablePlugins:     m.Kustomize.EnablePlugins,
 		}
 	}
-	// v1alpha1 Template *bool maps onto EnableValues when it is explicitly true.
-	if !bm.EnableValues && m.Template != nil && *m.Template {
-		bm.EnableValues = true
+	// v1alpha1 Template *bool maps onto EnableTemplating when it is explicitly true.
+	if !bm.EnableTemplating && m.Template != nil && *m.Template {
+		bm.EnableTemplating = true
 	}
 	return bm
 }
@@ -635,15 +637,15 @@ func actionSliceFromGeneric(actions []types.ComponentAction) []v1beta1.Component
 
 func actionFromGeneric(a types.ComponentAction) v1beta1.ComponentAction {
 	ba := v1beta1.ComponentAction{
-		Silent:          a.Silent,
-		MaxTotalSeconds: a.MaxTotalSeconds,
-		Retries:         a.Retries,
-		Dir:             a.Dir,
-		Env:             a.Env,
-		Cmd:             a.Cmd,
-		Description:     a.Description,
-		Wait:            waitFromGeneric(a.Wait),
-		EnableValues:    a.EnableValues,
+		Silent:           a.Silent,
+		MaxTotalSeconds:  a.MaxTotalSeconds,
+		Retries:          a.Retries,
+		Dir:              a.Dir,
+		Env:              a.Env,
+		Cmd:              a.Cmd,
+		Description:      a.Description,
+		Wait:             waitFromGeneric(a.Wait),
+		EnableTemplating: a.EnableTemplating,
 	}
 
 	for _, sv := range a.SetValues {
@@ -703,6 +705,38 @@ func isGitURL(url string) bool {
 		url = url[:idx]
 	}
 	return strings.HasSuffix(url, ".git")
+}
+
+func repositoriesToGeneric(in []v1beta1.Repository) []string {
+	var out []string
+	for _, r := range in {
+		out = append(out, r.URL)
+	}
+	return out
+}
+
+func repositoriesFromGeneric(in []string) []v1beta1.Repository {
+	var out []v1beta1.Repository
+	for _, url := range in {
+		out = append(out, v1beta1.Repository{URL: url})
+	}
+	return out
+}
+
+func stateAccessToGeneric(in []v1beta1.StateAccessKey) []string {
+	var out []string
+	for _, s := range in {
+		out = append(out, string(s))
+	}
+	return out
+}
+
+func stateAccessFromGeneric(in []string) []v1beta1.StateAccessKey {
+	var out []v1beta1.StateAccessKey
+	for _, s := range in {
+		out = append(out, v1beta1.StateAccessKey(s))
+	}
+	return out
 }
 
 func deprecatedVarToGeneric(v v1beta1.Variable) types.Variable {

@@ -97,6 +97,7 @@ type Component struct {
 	Images        []Image
 	ImageArchives []ImageArchive
 	Repositories  []string
+	StateAccess   []string
 	Actions       ComponentActions
 
 	// v1alpha1-only fields preserved for lossless round-trip.
@@ -146,13 +147,13 @@ type KustomizeManifest struct {
 
 // Manifest is the superset of manifest fields across API versions.
 type Manifest struct {
-	Name            string
-	Namespace       string
-	Files           []string
-	Kustomize       *KustomizeManifest
-	SkipWait        bool
-	ServerSideApply string
-	EnableValues    bool
+	Name             string
+	Namespace        string
+	Files            []string
+	Kustomize        *KustomizeManifest
+	SkipWait         bool
+	ServerSideApply  string
+	EnableTemplating bool
 
 	// v1alpha1-only round-trip fields.
 	Template *bool
@@ -217,13 +218,13 @@ type OCISource struct {
 
 // File is the superset of file fields across API versions.
 type File struct {
-	Source       string
-	Checksum     string
-	Destination  string
-	Executable   bool
-	Symlinks     []string
-	ExtractPath  string
-	EnableValues bool
+	Source           string
+	Checksum         string
+	Destination      string
+	Executable       bool
+	Symlinks         []string
+	ExtractPath      string
+	EnableTemplating bool
 }
 
 // Image represents an OCI image in the package.
@@ -265,17 +266,17 @@ type ComponentActionDefaults struct {
 
 // ComponentAction is the superset of action fields across API versions.
 type ComponentAction struct {
-	Silent          *bool
-	MaxTotalSeconds *int32
-	Retries         *int32
-	Dir             *string
-	Env             []string
-	Cmd             string
-	Shell           *Shell
-	SetValues       []SetValue
-	Description     string
-	Wait            *ComponentActionWait
-	EnableValues    bool
+	Silent           *bool
+	MaxTotalSeconds  *int32
+	Retries          *int32
+	Dir              *string
+	Env              []string
+	Cmd              string
+	Shell            *Shell
+	SetValues        []SetValue
+	Description      string
+	Wait             *ComponentActionWait
+	EnableTemplating bool
 
 	// v1alpha1-only round-trip fields.
 	SetVariables          []Variable

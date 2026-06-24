@@ -202,7 +202,11 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 					URL:  "oci://example.com/pkg",
 				},
 				Images: []string{"nginx:latest", "redis:7"},
-				Repos:  []string{"https://github.com/example/repo"},
+				Repos:  []string{"https://github.com/example/repo", "https://github.com/example/other"},
+				StateAccess: []v1alpha1.StateAccessKey{
+					v1alpha1.StateAccessRegistryCredentials,
+					v1alpha1.StateAccessGitCredentials,
+				},
 				DataInjections: []v1alpha1.ZarfDataInjection{
 					{Source: "/data", Target: v1alpha1.ZarfContainerTarget{Namespace: "default", Selector: "app=test", Container: "main", Path: "/inject"}},
 				},
@@ -239,7 +243,17 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "nginx:latest", comp.Images[0].Name)
 	require.Equal(t, "redis:7", comp.Images[1].Name)
 
-	require.Equal(t, []string{"https://github.com/example/repo"}, comp.Repositories)
+	// v1alpha1 Repos ([]string) become v1beta1 Repository objects keyed by URL.
+	require.Equal(t, []v1beta1.Repository{
+		{URL: "https://github.com/example/repo"},
+		{URL: "https://github.com/example/other"},
+	}, comp.Repositories)
+
+	// StateAccess keys carry over unchanged.
+	require.Equal(t, []v1beta1.StateAccessKey{
+		v1beta1.StateAccessRegistryCredentials,
+		v1beta1.StateAccessGitCredentials,
+	}, comp.StateAccess)
 
 	// DataInjections should be preserved via the private shim.
 	di := comp.GetDeprecatedDataInjections()
@@ -559,7 +573,7 @@ func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 	require.True(t, f.Executable)
 	require.Equal(t, []string{"/usr/local/bin/file"}, f.Symlinks)
 	require.Equal(t, "bin/file", f.ExtractPath)
-	require.True(t, f.EnableValues)
+	require.True(t, f.EnableTemplating)
 }
 
 func TestV1Alpha1PkgToV1Beta1_ValuesAndDocumentation(t *testing.T) {
@@ -740,7 +754,14 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 						{Name: "nginx:latest"},
 						{Name: "redis:7", Source: "daemon"},
 					},
-					Repositories: []string{"https://github.com/example/repo"},
+					Repositories: []v1beta1.Repository{
+						{URL: "https://github.com/example/repo"},
+						{URL: "https://github.com/example/other"},
+					},
+					StateAccess: []v1beta1.StateAccessKey{
+						v1beta1.StateAccessRegistryCredentials,
+						v1beta1.StateAccessAgentCerts,
+					},
 				},
 			},
 		},
@@ -770,7 +791,17 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 	require.Equal(t, "nginx:latest", comp.Images[0])
 	require.Equal(t, "redis:7", comp.Images[1])
 
-	require.Equal(t, []string{"https://github.com/example/repo"}, comp.Repos)
+	// v1beta1 Repository objects collapse back to v1alpha1 Repos ([]string of URLs).
+	require.Equal(t, []string{
+		"https://github.com/example/repo",
+		"https://github.com/example/other",
+	}, comp.Repos)
+
+	// StateAccess keys carry over unchanged.
+	require.Equal(t, []v1alpha1.StateAccessKey{
+		v1alpha1.StateAccessRegistryCredentials,
+		v1alpha1.StateAccessAgentCerts,
+	}, comp.StateAccess)
 }
 
 func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
@@ -1082,7 +1113,12 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 				Name:     "test-comp",
 				Required: &required,
 				Images:   []string{"nginx:latest"},
-				Repos:    []string{"https://github.com/example/repo"},
+				Repos:    []string{"https://github.com/example/repo", "https://github.com/example/other"},
+				StateAccess: []v1alpha1.StateAccessKey{
+					v1alpha1.StateAccessRegistryCredentials,
+					v1alpha1.StateAccessGitCredentials,
+					v1alpha1.StateAccessAgentCerts,
+				},
 				Charts: []v1alpha1.ZarfChart{
 					{
 						Name:      "my-chart",
@@ -1153,6 +1189,14 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 	require.NotNil(t, comp.Required)
 	require.True(t, *comp.Required)
 	require.Equal(t, []string{"nginx:latest"}, comp.Images)
+
+	// Repos and StateAccess should survive the round-trip unchanged.
+	require.Equal(t, []string{"https://github.com/example/repo", "https://github.com/example/other"}, comp.Repos)
+	require.Equal(t, []v1alpha1.StateAccessKey{
+		v1alpha1.StateAccessRegistryCredentials,
+		v1alpha1.StateAccessGitCredentials,
+		v1alpha1.StateAccessAgentCerts,
+	}, comp.StateAccess)
 
 	// Chart should round-trip via structured source → flat fields.
 	require.Len(t, comp.Charts, 1)

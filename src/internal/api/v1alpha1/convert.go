@@ -87,6 +87,7 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 		DataInjections: dataInjectionsToGeneric(c.DataInjections),
 		HealthChecks:   healthChecksToGeneric(c.HealthChecks),
 		Repositories:   c.Repos,
+		StateAccess:    stateAccessToGeneric(c.StateAccess),
 		Target: types.ComponentTarget{
 			OS:           c.Only.LocalOS,
 			Architecture: c.Only.Cluster.Architecture,
@@ -111,13 +112,13 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 
 	for _, f := range c.Files {
 		gc.Files = append(gc.Files, types.File{
-			Source:       f.Source,
-			Checksum:     f.Shasum,
-			Destination:  f.Target,
-			Executable:   f.Executable,
-			Symlinks:     f.Symlinks,
-			ExtractPath:  f.ExtractPath,
-			EnableValues: derefBool(f.Template),
+			Source:           f.Source,
+			Checksum:         f.Shasum,
+			Destination:      f.Target,
+			Executable:       f.Executable,
+			Symlinks:         f.Symlinks,
+			ExtractPath:      f.ExtractPath,
+			EnableTemplating: derefBool(f.Template),
 		})
 	}
 
@@ -137,13 +138,13 @@ func componentToGeneric(c v1alpha1.ZarfComponent) types.Component {
 
 func manifestToGeneric(m v1alpha1.ZarfManifest) types.Manifest {
 	gm := types.Manifest{
-		Name:            m.Name,
-		Namespace:       m.Namespace,
-		Files:           m.Files,
-		SkipWait:        m.NoWait,
-		ServerSideApply: m.ServerSideApply,
-		EnableValues:    derefBool(m.Template),
-		Template:        m.Template,
+		Name:             m.Name,
+		Namespace:        m.Namespace,
+		Files:            m.Files,
+		SkipWait:         m.NoWait,
+		ServerSideApply:  m.ServerSideApply,
+		EnableTemplating: derefBool(m.Template),
+		Template:         m.Template,
 	}
 	if len(m.Kustomizations) > 0 || m.KustomizeAllowAnyDirectory || m.EnableKustomizePlugins {
 		gm.Kustomize = &types.KustomizeManifest{
@@ -236,7 +237,7 @@ func actionToGeneric(a v1alpha1.ZarfComponentAction) types.ComponentAction {
 		Cmd:                   a.Cmd,
 		Description:           a.Description,
 		Wait:                  waitToGeneric(a.Wait),
-		EnableValues:          derefBool(a.Template),
+		EnableTemplating:      derefBool(a.Template),
 		SetVariables:          varsToGeneric(a.SetVariables),
 		DeprecatedSetVariable: a.DeprecatedSetVariable,
 	}
@@ -415,6 +416,7 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 		DataInjections:  dataInjectionsFromGeneric(c.DataInjections),
 		HealthChecks:    healthChecksFromGeneric(c.HealthChecks),
 		Repos:           c.Repositories,
+		StateAccess:     stateAccessFromGeneric(c.StateAccess),
 		Only: v1alpha1.ZarfComponentOnlyTarget{
 			LocalOS: c.Target.OS,
 			Cluster: v1alpha1.ZarfComponentOnlyCluster{
@@ -456,7 +458,7 @@ func componentFromGeneric(c types.Component) v1alpha1.ZarfComponent {
 			Symlinks:    f.Symlinks,
 			ExtractPath: f.ExtractPath,
 		}
-		if f.EnableValues {
+		if f.EnableTemplating {
 			t := true
 			af.Template = &t
 		}
@@ -501,7 +503,7 @@ func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
 		am.KustomizeAllowAnyDirectory = m.Kustomize.AllowAnyDirectory
 		am.EnableKustomizePlugins = m.Kustomize.EnablePlugins
 	}
-	if am.Template == nil && m.EnableValues {
+	if am.Template == nil && m.EnableTemplating {
 		t := true
 		am.Template = &t
 	}
@@ -629,7 +631,7 @@ func actionFromGeneric(a types.ComponentAction) v1alpha1.ZarfComponentAction {
 		v := int(*a.Retries)
 		aa.MaxRetries = &v
 	}
-	if a.EnableValues {
+	if a.EnableTemplating {
 		t := true
 		aa.Template = &t
 	}
@@ -845,6 +847,22 @@ func healthChecksFromGeneric(in []types.NamespacedObjectKindReference) []v1alpha
 			Namespace:  h.Namespace,
 			Name:       h.Name,
 		})
+	}
+	return out
+}
+
+func stateAccessToGeneric(in []v1alpha1.StateAccessKey) []string {
+	var out []string
+	for _, s := range in {
+		out = append(out, string(s))
+	}
+	return out
+}
+
+func stateAccessFromGeneric(in []string) []v1alpha1.StateAccessKey {
+	var out []v1alpha1.StateAccessKey
+	for _, s := range in {
+		out = append(out, v1alpha1.StateAccessKey(s))
 	}
 	return out
 }
