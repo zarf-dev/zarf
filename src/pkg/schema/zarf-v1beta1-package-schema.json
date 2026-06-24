@@ -243,7 +243,7 @@
         "repositories": {
           "description": "List of git repositories to include in the package.",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/Repository"
           },
           "type": "array"
         },
@@ -257,6 +257,13 @@
             "git-server"
           ],
           "type": "string"
+        },
+        "stateAccess": {
+          "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "target": {
           "$ref": "#/$defs/ComponentTarget",
@@ -911,6 +918,23 @@
       },
       "required": [
         "name"
+      ],
+      "type": "object"
+    },
+    "Repository": {
+      "additionalProperties": false,
+      "description": "Repository defines a git repository to include in the package.",
+      "patternProperties": {
+        "^x-": {}
+      },
+      "properties": {
+        "url": {
+          "description": "The URL of the git repository.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
       ],
       "type": "object"
     },

@@ -257,6 +257,24 @@ type ImageArchive struct {
 	Images []string `json:"images"`
 }
 
+// Repository defines a git repository to include in the package.
+type Repository struct {
+	// The URL of the git repository.
+	URL string `json:"url"`
+}
+
+// StateAccessKey identifies a named group of sensitive state fields available in {{ .State }} Go templates.
+type StateAccessKey string
+
+const (
+	// StateAccessRegistryCredentials unlocks .State.Registry.{PushPassword,PullPassword,Secret,Htpasswd}.
+	StateAccessRegistryCredentials StateAccessKey = "registryCredentials"
+	// StateAccessGitCredentials unlocks .State.Git.{PushPassword,PullPassword}.
+	StateAccessGitCredentials StateAccessKey = "gitCredentials"
+	// StateAccessAgentCerts unlocks .State.Agent.{CA,Cert,Key} (base64-encoded) and adds the .State.Agent sub-object.
+	StateAccessAgentCerts StateAccessKey = "agentCerts"
+)
+
 // ComponentActions are ActionSets that map to different Zarf package operations.
 type ComponentActions struct {
 	// Actions to run during package creation.
