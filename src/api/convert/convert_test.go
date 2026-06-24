@@ -294,7 +294,7 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			pkg := v1alpha1.ZarfPackage{
-				Kind: v1alpha1.ZarfPackageConfig,
+				Kind: v1alpha1.ZarfInitConfig,
 				Components: []v1alpha1.ZarfComponent{
 					{Name: tt.compName},
 				},
@@ -302,6 +302,50 @@ func TestV1Alpha1PkgToV1Beta1_ServiceInference(t *testing.T) {
 			result := PackageV1alpha1ToV1beta1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Equal(t, tt.service, result.Components[0].Service)
+		})
+	}
+}
+
+func TestV1Alpha1PkgToV1Beta1_NoServiceInferenceForNonInit(t *testing.T) {
+	t.Parallel()
+	// Components with init-service names must not gain a Service on a non-init package.
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{Name: "zarf-registry"},
+			{Name: "zarf-agent"},
+		},
+	}
+	result := PackageV1alpha1ToV1beta1(pkg)
+	require.Len(t, result.Components, 2)
+	require.Empty(t, result.Components[0].Service)
+	require.Empty(t, result.Components[1].Service)
+}
+
+func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name         string
+		service      v1beta1.Service
+		expectedKind v1alpha1.ZarfPackageKind
+	}{
+		{name: "with service", service: v1beta1.ServiceRegistry, expectedKind: v1alpha1.ZarfInitConfig},
+		{name: "without service", service: "", expectedKind: v1alpha1.ZarfPackageConfig},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			pkg := v1beta1.Package{
+				Kind: v1beta1.ZarfPackageConfig,
+				Components: []v1beta1.Component{
+					{
+						Name:          "zarf-registry",
+						ComponentSpec: v1beta1.ComponentSpec{Service: tt.service},
+					},
+				},
+			}
+			result := PackageV1Beta1ToV1Alpha1(pkg)
+			require.Equal(t, tt.expectedKind, result.Kind)
 		})
 	}
 }

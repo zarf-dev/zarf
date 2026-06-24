@@ -314,6 +314,14 @@ func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c))
 	}
 
+	// A component providing a Zarf CLI service marks this as an init package.
+	for _, c := range g.Components {
+		if c.Service != "" {
+			pkg.Kind = v1alpha1.ZarfInitConfig
+			break
+		}
+	}
+
 	return pkg
 }
 

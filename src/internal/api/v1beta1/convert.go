@@ -307,12 +307,14 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 	}
 
 	// v1beta1 has no Kind ZarfInitConfig; collapse the v1alpha1 init kind into the normal package kind.
-	if string(pkg.Kind) == "ZarfInitConfig" {
+	// Component services are only inferred for packages that were init configs.
+	isInit := string(pkg.Kind) == "ZarfInitConfig"
+	if isInit {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
 	}
 
 	return pkg
@@ -393,7 +395,7 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 	return out
 }
 
-func componentFromGeneric(c types.Component) v1beta1.Component {
+func componentFromGeneric(c types.Component, isInit bool) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -407,7 +409,7 @@ func componentFromGeneric(c types.Component) v1beta1.Component {
 				Flavor:       c.Target.Flavor,
 			},
 			Import:  importFromGeneric(c.Import),
-			Service: serviceFromGeneric(c),
+			Service: serviceFromGeneric(c, isInit),
 			Actions: actionsFromGeneric(c.Actions),
 		},
 	}
@@ -472,9 +474,13 @@ func optionalFromGeneric(optional bool, required *bool) bool {
 	return optional
 }
 
-func serviceFromGeneric(c types.Component) v1beta1.Service {
+func serviceFromGeneric(c types.Component, isInit bool) v1beta1.Service {
 	if c.Service != "" {
 		return v1beta1.Service(c.Service)
+	}
+	// Services only exist on init packages, so don't infer them otherwise.
+	if !isInit {
+		return ""
 	}
 	// Infer the v1beta1 Service from well-known v1alpha1 component names.
 	switch c.Name {
