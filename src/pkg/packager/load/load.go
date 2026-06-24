@@ -12,9 +12,11 @@ import (
 	"time"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
+	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/interactive"
@@ -51,6 +53,8 @@ type DefinedPackage struct {
 }
 
 // PackageDefinition returns a validated package definition after flavors, imports, variables, and values are applied.
+// It dispatches on the manifest's apiVersion; v1beta1 packages are converted down to v1alpha1 so the
+// rest of Zarf continues to operate on a single internal type.
 func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionOptions) (DefinedPackage, error) {
 	l := logger.From(ctx)
 	start := time.Now()
@@ -69,6 +73,31 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
+
+	// FIXME: this should handle multi documents, and pick the latest one
+	version, err := pkgcfg.APIVersion(b)
+	if err != nil {
+		return DefinedPackage{}, err
+	}
+
+	var defined DefinedPackage
+	switch version {
+	case v1beta1.APIVersion:
+		defined, err = v1beta1PackageDefinition(ctx, b, pkgPath, opts)
+	// FIXME: this should be explicit about wanting v1alpha1, other kinds error
+	default:
+		defined, err = v1alpha1PackageDefinition(ctx, b, pkgPath, opts)
+	}
+	if err != nil {
+		return DefinedPackage{}, err
+	}
+
+	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
+	return defined, nil
+}
+
+func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+	// FIXME: this should explicitly call out v1alpha1
 	pkg, err := pkgcfg.Parse(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
@@ -95,12 +124,32 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 			return DefinedPackage{}, err
 		}
 	}
-	err = validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues)
+	if err := validate(ctx, pkg, pkgPath.ManifestFile, opts.SetVariables, opts.Flavor, opts.SkipRequiredValues); err != nil {
+		return DefinedPackage{}, err
+	}
+	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
+}
+
+func v1beta1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+	pkg, err := pkgcfg.ParseV1Beta1(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	l.Debug("done layout.LoadPackage", "duration", time.Since(start))
-	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
+	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+
+	// FIXME: need to add import logic
+	for _, comp := range pkg.Components {
+		if len(comp.Import.Local) > 0 || len(comp.Import.Remote) > 0 {
+			return DefinedPackage{}, fmt.Errorf("component %q uses imports, which are not yet supported for v1beta1 packages", comp.Name)
+		}
+	}
+
+	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
+		return DefinedPackage{}, err
+	}
+
+	v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(internalv1beta1.ConvertToGeneric(pkg))
+	return DefinedPackage{Pkg: v1alpha1Pkg}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {
@@ -142,6 +191,39 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		"duration", time.Since(start),
 	)
 
+	return nil
+}
+
+// validateV1Beta1 validates a v1beta1 package before it is converted down to v1alpha1.
+// Non-schema v1beta1 rules will grow in src/internal/api/v1beta1 over time; for now this is schema-only.
+func validateV1Beta1(ctx context.Context, pkg v1beta1.Package, packagePath string, flavor string) error {
+	l := logger.From(ctx)
+	start := time.Now()
+	l.Debug("start v1beta1 validate",
+		"pkg", pkg.Metadata.Name,
+		"packagePath", packagePath,
+		"flavor", flavor,
+	)
+
+	findings, err := lint.ValidatePackageSchemaAtPathV1Beta1(packagePath)
+	if err != nil {
+		return fmt.Errorf("unable to check schema: %w", err)
+	}
+	if len(findings) != 0 {
+		return &lint.LintError{
+			PackageName: pkg.Metadata.Name,
+			Findings:    findings,
+		}
+	}
+
+	// FIXME: need to add validate for v1beta1
+
+	l.Debug("done v1beta1 validate",
+		"pkg", pkg.Metadata.Name,
+		"path", packagePath,
+		"findings", findings,
+		"duration", time.Since(start),
+	)
 	return nil
 }
 

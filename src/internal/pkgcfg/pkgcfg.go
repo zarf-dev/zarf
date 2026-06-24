@@ -15,6 +15,7 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
@@ -49,6 +50,40 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unsupported apiVersion %q", version)
 	}
 	return handler.decode(ctx, docs[0].Body)
+}
+
+// APIVersion returns the raw apiVersion of a single-document package definition.
+// An empty string means the field is unset and callers should treat it as v1alpha1.
+func APIVersion(b []byte) (string, error) {
+	docs, err := parseZarfYAMLDocs(b)
+	if err != nil {
+		return "", err
+	}
+	if len(docs) > 1 {
+		return "", errors.New("package definition must contain a single YAML document")
+	}
+	version, err := apiVersionFromNode(docs[0].Body)
+	if err != nil {
+		return "", fmt.Errorf("reading apiVersion: %w", err)
+	}
+	return version, nil
+}
+
+// ParseV1Beta1 decodes a single v1beta1 package definition. Unlike Parse, it does
+// not apply v1alpha1 migrations, which are specific to the v1alpha1 schema.
+func ParseV1Beta1(_ context.Context, b []byte) (v1beta1.Package, error) {
+	docs, err := parseZarfYAMLDocs(b)
+	if err != nil {
+		return v1beta1.Package{}, err
+	}
+	if len(docs) > 1 {
+		return v1beta1.Package{}, errors.New("package definition must contain a single YAML document")
+	}
+	var pkg v1beta1.Package
+	if err := goyaml.NodeToValue(docs[0].Body, &pkg); err != nil {
+		return v1beta1.Package{}, err
+	}
+	return pkg, nil
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.

@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/api/v1beta1"
 )
 
 // newer is a future apiVersion this binary does not understand.
@@ -242,6 +243,95 @@ func TestParseDefinitionAndParseBuiltPackageAgreeOnSingleDoc(t *testing.T) {
 	fromPkg, err := ParseMultiDoc(ctx, body)
 	require.NoError(t, err)
 	require.Equal(t, fromDef, fromPkg)
+}
+
+func TestAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		yaml    string
+		want    string
+		wantErr string
+	}{
+		{
+			name: "explicit v1alpha1",
+			yaml: "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n",
+			want: "zarf.dev/v1alpha1",
+		},
+		{
+			name: "explicit v1beta1",
+			yaml: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n",
+			want: "zarf.dev/v1beta1",
+		},
+		{
+			name: "omitted apiVersion returns empty string",
+			yaml: "kind: ZarfPackageConfig\nmetadata:\n  name: c\n",
+			want: "",
+		},
+		{
+			name:    "malformed apiVersion errors",
+			yaml:    "apiVersion: [not, a, string]\n",
+			wantErr: "apiVersion",
+		},
+		{
+			name:    "empty input errors",
+			yaml:    "",
+			wantErr: "no package definition found",
+		},
+		{
+			name:    "multi-document input errors",
+			yaml:    "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n",
+			wantErr: "single YAML document",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := APIVersion([]byte(tt.yaml))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestParseV1Beta1(t *testing.T) {
+	t.Parallel()
+
+	yaml := `
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-pkg
+  description: a v1beta1 package
+components:
+  - name: first
+    description: a component
+`
+	pkg, err := ParseV1Beta1(context.Background(), []byte(yaml))
+	require.NoError(t, err)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta-pkg", pkg.Metadata.Name)
+	require.Equal(t, "a v1beta1 package", pkg.Metadata.Description)
+	require.Len(t, pkg.Components, 1)
+	require.Equal(t, "first", pkg.Components[0].Name)
+}
+
+func TestParseV1Beta1Errors(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseV1Beta1(context.Background(), []byte(""))
+	require.ErrorContains(t, err, "no package definition found")
+
+	multiDoc := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n"
+	_, err = ParseV1Beta1(context.Background(), []byte(multiDoc))
+	require.ErrorContains(t, err, "single YAML document")
 }
 
 func TestHandlerFor(t *testing.T) {

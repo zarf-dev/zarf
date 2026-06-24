@@ -1,0 +1,13 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-package
+  description: a self-contained v1beta1 package
+  version: 0.0.1
+components:
+  - name: first
+    description: a component with an image and a repository
+    images:
+      - name: nginx:1.27.0
+    repositories:
+      - url: https://github.com/zarf-dev/zarf.git

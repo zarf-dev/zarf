@@ -156,6 +156,33 @@ func TestPackageDefinitionWithValuesSchema(t *testing.T) {
 	}
 }
 
+func TestV1Beta1PackageDefinition(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	t.Run("loads, validates, and converts down to v1alpha1", func(t *testing.T) {
+		t.Parallel()
+		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-package"), DefinitionOptions{})
+		require.NoError(t, err)
+
+		pkg := defined.Pkg
+		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+		require.Equal(t, "beta-package", pkg.Metadata.Name)
+		require.NotEmpty(t, pkg.Metadata.Architecture)
+		require.Len(t, pkg.Components, 1)
+		require.Equal(t, "first", pkg.Components[0].Name)
+		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
+		require.Equal(t, []string{"https://github.com/zarf-dev/zarf.git"}, pkg.Components[0].Repos)
+		require.Empty(t, defined.ImportedSchemas)
+	})
+
+	t.Run("returns a clear error when a component declares imports", func(t *testing.T) {
+		t.Parallel()
+		_, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
+		require.ErrorContains(t, err, "imports, which are not yet supported for v1beta1")
+	})
+}
+
 func TestPackageDefinitionErrors(t *testing.T) {
 	t.Parallel()
 	ctx := testutil.TestContext(t)

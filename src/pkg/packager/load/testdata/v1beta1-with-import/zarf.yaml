@@ -1,0 +1,9 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfPackageConfig
+metadata:
+  name: beta-with-import
+components:
+  - name: imports
+    import:
+      local:
+        - path: ./child
