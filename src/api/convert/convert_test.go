@@ -138,7 +138,7 @@ func TestV1Alpha1PkgToV1Beta1_VariablesAndConstantsShim(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	vars := result.GetDeprecatedVariables()
+	vars := result.GetDeprecatedVariables() //nolint:staticcheck // shim used only by the API conversion layer
 	require.Len(t, vars, 1)
 	require.Equal(t, "MY_VAR", vars[0].Name)
 	require.True(t, vars[0].Sensitive)
@@ -149,7 +149,7 @@ func TestV1Alpha1PkgToV1Beta1_VariablesAndConstantsShim(t *testing.T) {
 	require.Equal(t, "default-val", vars[0].Default)
 	require.True(t, vars[0].Prompt)
 
-	consts := result.GetDeprecatedConstants()
+	consts := result.GetDeprecatedConstants() //nolint:staticcheck // shim used only by the API conversion layer
 	require.Len(t, consts, 1)
 	require.Equal(t, "MY_CONST", consts[0].Name)
 	require.Equal(t, "const-val", consts[0].Value)
@@ -175,9 +175,9 @@ func TestV1Alpha1PkgToV1Beta1_YOLOAndGroupShim(t *testing.T) {
 
 	result := V1Alpha1PkgToV1Beta1(pkg)
 
-	require.True(t, result.Metadata.GetDeprecatedYOLO())
+	require.True(t, result.Metadata.GetDeprecatedYOLO()) //nolint:staticcheck // shim used only by the API conversion layer
 	require.Len(t, result.Components, 1)
-	require.Equal(t, "my-group", result.Components[0].GetDeprecatedGroup())
+	require.Equal(t, "my-group", result.Components[0].GetDeprecatedGroup()) //nolint:staticcheck // shim used only by the API conversion layer
 }
 
 func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
@@ -256,7 +256,7 @@ func TestV1Alpha1PkgToV1Beta1_ComponentBasics(t *testing.T) {
 	}, comp.StateAccess)
 
 	// DataInjections should be preserved via the private shim.
-	di := comp.GetDeprecatedDataInjections()
+	di := comp.GetDeprecatedDataInjections() //nolint:staticcheck // shim used only by the API conversion layer
 	require.Len(t, di, 1)
 	require.Equal(t, "/data", di[0].Source)
 
@@ -524,7 +524,7 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	require.Equal(t, int32(3), *before.Retries)
 	require.Equal(t, "run before", before.Description)
 	// SetVariables should include both the explicit one and the deprecated one, surfaced via the shim.
-	setVars := before.GetDeprecatedSetVariables()
+	setVars := before.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
 	require.Len(t, setVars, 2)
 	require.Equal(t, "OUT_VAR", setVars[0].Name)
 	require.True(t, setVars[0].Sensitive)
@@ -618,7 +618,7 @@ func TestV1Alpha1PkgToV1Beta1_DeprecatedVersionShim(t *testing.T) {
 
 	require.Len(t, result.Components[0].Charts, 1)
 	chart := result.Components[0].Charts[0]
-	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion())
+	require.Equal(t, "1.2.3", chart.GetDeprecatedVersion()) //nolint:staticcheck // shim used only by the API conversion layer
 }
 
 func TestV1Alpha1PkgToV1Beta1_OriginalAPIVersion(t *testing.T) {

@@ -51,8 +51,8 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Schema: pkg.Values.Schema,
 		},
 		Documentation: pkg.Documentation,
-		Variables:     deprecatedVarsToGeneric(pkg.GetDeprecatedVariables()),
-		Constants:     deprecatedConstantsToGeneric(pkg.GetDeprecatedConstants()),
+		Variables:     deprecatedVarsToGeneric(pkg.GetDeprecatedVariables()),      //nolint:staticcheck // shim used only by the API conversion layer
+		Constants:     deprecatedConstantsToGeneric(pkg.GetDeprecatedConstants()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	for _, vr := range pkg.Build.VersionRequirements {
@@ -84,7 +84,7 @@ func componentToGeneric(c v1beta1.Component) types.Component {
 		},
 		Import:         importToGeneric(c.Import),
 		Actions:        actionsToGeneric(c.Actions),
-		DataInjections: deprecatedDataInjectionsToGeneric(c.GetDeprecatedDataInjections()),
+		DataInjections: deprecatedDataInjectionsToGeneric(c.GetDeprecatedDataInjections()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	for _, m := range c.Manifests {
@@ -163,8 +163,8 @@ func chartToGeneric(ch v1beta1.Chart) types.Chart {
 		SkipSchemaValidation: ch.SkipSchemaValidation,
 		ServerSideApply:      string(ch.ServerSideApply),
 		SkipWait:             ch.SkipWait,
-		Version:              ch.GetDeprecatedVersion(),
-		Variables:            deprecatedChartVarsToGeneric(ch.GetDeprecatedVariables()),
+		Version:              ch.GetDeprecatedVersion(),                                 //nolint:staticcheck // shim used only by the API conversion layer
+		Variables:            deprecatedChartVarsToGeneric(ch.GetDeprecatedVariables()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	if ch.HelmRepository != nil {
@@ -247,7 +247,7 @@ func actionToGeneric(a v1beta1.ComponentAction) types.ComponentAction {
 		Description:      a.Description,
 		Wait:             waitToGeneric(a.Wait),
 		EnableTemplating: a.EnableTemplating,
-		SetVariables:     deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()),
+		SetVariables:     deprecatedSetVarsToGeneric(a.GetDeprecatedSetVariables()), //nolint:staticcheck // shim used only by the API conversion layer
 	}
 
 	for _, sv := range a.SetValues {
