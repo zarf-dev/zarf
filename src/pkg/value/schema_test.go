@@ -4,6 +4,7 @@
 package value
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,6 +70,96 @@ func TestCheckNoExternalRefs(t *testing.T) {
 		err := CheckNoExternalRefs(schema)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "$ref")
+	})
+}
+
+func TestLoadValidatedSchema(t *testing.T) {
+	base := filepath.Join("testdata", "schema")
+
+	t.Run("missing file returns nil", func(t *testing.T) {
+		_, _, err := LoadValidatedSchema(base, "does-not-exist.schema.json")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does-not-exist.schema.json")
+	})
+
+	t.Run("valid schema is loaded", func(t *testing.T) {
+		s, _, err := LoadValidatedSchema(base, "simple.schema.json")
+		require.NoError(t, err)
+		require.NotNil(t, s)
+		assert.Equal(t, "http://json-schema.org/draft-07/schema#", s["$schema"])
+	})
+
+	t.Run("schema with external ref is rejected", func(t *testing.T) {
+		_, _, err := LoadValidatedSchema(base, "external-ref.schema.json")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "$ref")
+	})
+
+	t.Run("invalid json returns error", func(t *testing.T) {
+		_, _, err := LoadValidatedSchema(base, "invalid-values.yaml")
+		require.Error(t, err)
+	})
+}
+
+func TestMergeSchemaFiles(t *testing.T) {
+	base := filepath.Join("testdata", "schema")
+
+	t.Run("empty paths slice returns nil", func(t *testing.T) {
+		merged, err := MergeSchemaFiles("", nil, base)
+		require.NoError(t, err)
+		require.Nil(t, merged)
+	})
+
+	t.Run("single schema is returned as-is", func(t *testing.T) {
+		merged, err := MergeSchemaFiles("simple.schema.json", nil, base)
+		require.NoError(t, err)
+		require.NotNil(t, merged)
+		props, ok := merged["properties"].(map[string]any)
+		require.True(t, ok)
+		assert.Contains(t, props, "name")
+		assert.Contains(t, props, "replicas")
+	})
+
+	t.Run("earlier schema wins on conflict", func(t *testing.T) {
+		// simple.schema.json has replicas as integer; second.schema.json has replicas as number
+		merged, err := MergeSchemaFiles("simple.schema.json", []string{"second.schema.json"}, base)
+		require.NoError(t, err)
+		require.NotNil(t, merged)
+		props, ok := merged["properties"].(map[string]any)
+		require.True(t, ok)
+		replicas, ok := props["replicas"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, "integer", replicas["type"], "first schema should win on replicas type")
+	})
+
+	t.Run("child-only property is inherited", func(t *testing.T) {
+		// second.schema.json has tag, simple.schema.json does not
+		merged, err := MergeSchemaFiles("", []string{"simple.schema.json", "second.schema.json"}, base)
+		require.NoError(t, err)
+		require.NotNil(t, merged)
+		props, ok := merged["properties"].(map[string]any)
+		require.True(t, ok)
+		assert.Contains(t, props, "tag", "child-only property should be present in merged result")
+	})
+
+	t.Run("schema with external ref returns error", func(t *testing.T) {
+		_, err := MergeSchemaFiles("", []string{"simple.schema.json", "external-ref.schema.json"}, base)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "$ref")
+	})
+
+	t.Run("absent schema file returns an error", func(t *testing.T) {
+		_, err := MergeSchemaFiles("", []string{"simple.schema.json", "does-not-exist.schema.json"}, base)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does-not-exist.schema.json")
+	})
+
+	t.Run("absolute path is used as-is", func(t *testing.T) {
+		abs, err := filepath.Abs(filepath.Join(base, "simple.schema.json"))
+		require.NoError(t, err)
+		merged, err := MergeSchemaFiles(abs, nil, "")
+		require.NoError(t, err)
+		require.NotNil(t, merged)
 	})
 }
 
