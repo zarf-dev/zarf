@@ -18,6 +18,9 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 	if originalAPIVersion == "" {
 		originalAPIVersion = pkg.APIVersion
 	}
+	// Carry the equivalent v1alpha1 AllowNamespaceOverride pointer so conversions to v1alpha1
+	// produce an explicit value rather than relying on a projection.
+	allowNamespaceOverride := !pkg.Metadata.PreventNamespaceOverride
 	g := types.Package{
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
@@ -29,6 +32,7 @@ func ConvertToGeneric(pkg v1beta1.Package) types.Package {
 			Architecture:             pkg.Metadata.Architecture,
 			Annotations:              pkg.Metadata.Annotations,
 			PreventNamespaceOverride: pkg.Metadata.PreventNamespaceOverride,
+			AllowNamespaceOverride:   &allowNamespaceOverride,
 		},
 		Build: types.BuildData{
 			Hostname:                   pkg.Build.Hostname,
@@ -627,8 +631,9 @@ func actionSetFromGeneric(s types.ComponentActionSet) v1beta1.ComponentActionSet
 				Darwin:  s.Defaults.Shell.Darwin,
 			},
 		},
-		Before:    actionSliceFromGeneric(s.Before),
-		OnSuccess: actionSliceFromGeneric(s.OnSuccess),
+		Before: actionSliceFromGeneric(s.Before),
+		// v1beta1 has no After hook; fold the v1alpha1-preserved After actions into OnSuccess.
+		OnSuccess: append(actionSliceFromGeneric(s.After), actionSliceFromGeneric(s.OnSuccess)...),
 		OnFailure: actionSliceFromGeneric(s.OnFailure),
 	}
 }
