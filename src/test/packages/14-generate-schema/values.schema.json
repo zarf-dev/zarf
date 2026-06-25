@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "app": {
+      "type": "object",
+      "description": "Application configuration",
+      "properties": {
+        "name": {
+          "type": "number",
+          "description": "Application name"
+        },
+        "replicas": {
+          "type": "string",
+          "description": "Replica count"
+        }
+      }
+    },
+    "oldField": {
+      "type": "string",
+      "description": "Should be removed"
+    }
+  }
+}
