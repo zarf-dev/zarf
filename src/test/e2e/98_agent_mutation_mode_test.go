@@ -45,6 +45,11 @@ func TestAgentMutationPolicy(t *testing.T) {
 	_, stdErr, err = e2e.Zarf(t, "init", initPackagePath, "--agent-mutation-policy=labeled", "--confirm")
 	require.NoError(t, err, stdErr)
 
+	// Snapshot what the API server can route to right after init, while the webhook is first created.
+	// This will let us check if the endpoint slices have an address and if .endpoints.address[x].conditions.ready: true
+	_, _, err = e2e.Kubectl(t, "get", "endpointslices", "-n", "zarf", "-l", "kubernetes.io/service-name=agent-hook", "-o", "yaml")
+	require.NoError(t, err)
+
 	// Create and run a pod in the unlabeled ns
 	_, _, err = e2e.Kubectl(t, "create", "namespace", nsName)
 	require.NoError(t, err)
