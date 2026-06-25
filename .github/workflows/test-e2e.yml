@@ -210,3 +210,17 @@ jobs:
       - name: get cluster info
         uses: ./.github/actions/debug-cluster
         if: failure()
+
+        # These logs were added to find the cause of https://github.com/zarf-dev/zarf/issues/4986
+      - name: get agent info
+        if: failure()
+        run: |
+          echo "***** Describing agent pods *****"
+          kubectl describe pod -l app=agent-hook -n zarf
+
+          echo "***** Agent logs *****"
+          kubectl logs -l app=agent-hook -n zarf
+
+          # Trying to see
+          echo "CPU pressure"
+          cat /proc/pressure/cpu 2>/dev/null
