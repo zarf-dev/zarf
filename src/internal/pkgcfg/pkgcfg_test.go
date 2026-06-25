@@ -356,6 +356,35 @@ func TestParseAsSelectsFromMultiDoc(t *testing.T) {
 	require.Equal(t, "alpha", alpha.Metadata.Name)
 }
 
+func TestParseAsV1Alpha1(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	// A document with no apiVersion is treated as v1alpha1, matching handlerFor.
+	omitted := "kind: ZarfPackageConfig\nmetadata:\n  name: no-api-version\ncomponents:\n  - name: c\n"
+	pkg, err := ParseAs[v1alpha1.ZarfPackage](ctx, []byte(omitted), v1alpha1.APIVersion)
+	require.NoError(t, err)
+	require.Equal(t, "no-api-version", pkg.Metadata.Name)
+
+	// v1alpha1 deprecation migrations run as part of decoding: a deprecated script becomes an
+	// action and the migration is recorded on the build data.
+	withScripts := `
+apiVersion: zarf.dev/v1alpha1
+kind: ZarfPackageConfig
+metadata:
+  name: migrate-me
+components:
+  - name: c
+    scripts:
+      prepare:
+        - "echo hello"
+`
+	pkg, err = ParseAs[v1alpha1.ZarfPackage](ctx, []byte(withScripts), v1alpha1.APIVersion)
+	require.NoError(t, err)
+	require.Contains(t, pkg.Build.Migrations, ScriptsToActionsMigrated)
+	require.Equal(t, "echo hello", pkg.Components[0].Actions.OnCreate.Before[0].Cmd)
+}
+
 func TestParseAsErrors(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
@@ -367,6 +396,10 @@ func TestParseAsErrors(t *testing.T) {
 	alphaOnly := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\n"
 	_, err = ParseAs[v1beta1.Package](ctx, []byte(alphaOnly), v1beta1.APIVersion)
 	require.ErrorContains(t, err, `no "zarf.dev/v1beta1" document found`)
+
+	// An unknown requested apiVersion is rejected up front.
+	_, err = ParseAs[v1beta1.Package](ctx, []byte(alphaOnly), newer)
+	require.ErrorContains(t, err, `unsupported apiVersion "`+newer+`"`)
 }
 
 func TestParseDecodesV1Beta1DownToV1Alpha1(t *testing.T) {

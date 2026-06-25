@@ -97,9 +97,7 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 }
 
 func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
-	// FIXME: this should explicitly call out v1alpha1
-	// FIXME: perhaps use generics?
-	pkg, err := pkgcfg.Parse(ctx, b)
+	pkg, err := pkgcfg.ParseAs[v1alpha1.ZarfPackage](ctx, b, v1alpha1.APIVersion)
 	if err != nil {
 		return DefinedPackage{}, err
 	}

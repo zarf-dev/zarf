@@ -21,18 +21,22 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-// apiVersionHandler pairs a supported apiVersion with its decoder.
+// apiVersionHandler pairs a supported apiVersion with its decoder. decode returns the package
+// in its native type (e.g. v1alpha1.ZarfPackage or v1beta1.Package) with any version-specific
+// migrations applied
 type apiVersionHandler struct {
-	version  string
-	priority int
-	decode   func(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error)
+	version        string
+	priority       int
+	decode         func(ctx context.Context, node ast.Node) (any, error)
+	toPriorityType func(pkg any) v1alpha1.ZarfPackage
 }
 
 // knownAPIVersions lists every apiVersion this Zarf version can decode. To add a
 // new version, append an entry with a higher priority than any existing one.
 var knownAPIVersions = []apiVersionHandler{
-	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1},
-	{version: v1beta1.APIVersion, priority: -1, decode: decodeV1Beta1},
+	{version: v1alpha1.APIVersion, priority: 1, decode: decodeV1Alpha1, toPriorityType: v1alpha1ToPriority},
+	// -1 until v1beta1 is ready for use
+	{version: v1beta1.APIVersion, priority: -1, decode: decodeV1Beta1, toPriorityType: v1beta1ToPriority},
 }
 
 // Parse parses a single Zarf package definition at any supported API version
@@ -52,13 +56,15 @@ func Parse(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) {
 	if !known {
 		return v1alpha1.ZarfPackage{}, fmt.Errorf("unsupported apiVersion %q", version)
 	}
-	return handler.decode(ctx, docs[0].Body)
+	native, err := handler.decode(ctx, docs[0].Body)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return handler.toPriorityType(native), nil
 }
 
 // APIVersion reports which apiVersion a package definition should be loaded as. When the
-// definition spans multiple documents, the highest-priority known version wins, matching
-// how ParseMultiDoc selects a document. If no document declares a known version, the first
-// raw apiVersion is returned so the caller can surface it (e.g. "unsupported apiVersion").
+// definition spans multiple documents, the highest-priority known version wins.
 func APIVersion(b []byte) (string, error) {
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
@@ -75,6 +81,7 @@ func APIVersion(b []byte) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
+		// FIXME: perhaps no point to firstRaw
 		if i == 0 {
 			firstRaw = version
 		}
@@ -93,10 +100,14 @@ func APIVersion(b []byte) (string, error) {
 	return chosen.version, nil
 }
 
-// ParseAs returns the document declaring the given apiVersion from a package definition that
-// may contain multiple documents, decoded into T. It errors if no matching document is present.
-func ParseAs[T any](_ context.Context, b []byte, apiVersion string) (T, error) {
+// ParseAs returns the document for the given apiVersion from a package definition that may
+// contain multiple documents, decoded into its native type T.
+func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error) {
 	var zero T
+	handler, known := handlerFor(apiVersion)
+	if !known {
+		return zero, fmt.Errorf("unsupported apiVersion %q", apiVersion)
+	}
 	docs, err := parseZarfYAMLDocs(b)
 	if err != nil {
 		return zero, err
@@ -106,16 +117,21 @@ func ParseAs[T any](_ context.Context, b []byte, apiVersion string) (T, error) {
 		if err != nil {
 			return zero, fmt.Errorf("document %d: reading apiVersion: %w", i, err)
 		}
-		if version != apiVersion {
+		docHandler, docKnown := handlerFor(version)
+		if !docKnown || docHandler.version != handler.version {
 			continue
 		}
-		var out T
-		if err := goyaml.NodeToValue(doc.Body, &out); err != nil {
+		native, err := handler.decode(ctx, doc.Body)
+		if err != nil {
 			return zero, err
+		}
+		out, ok := native.(T)
+		if !ok {
+			return zero, fmt.Errorf("decoded %q package does not match the requested type", handler.version)
 		}
 		return out, nil
 	}
-	return zero, fmt.Errorf("no %q document found in package definition", apiVersion)
+	return zero, fmt.Errorf("no %q document found in package definition", handler.version)
 }
 
 // ParseMultiDoc parses a multi doc zarf.yaml file, generally from an already built package.
@@ -158,27 +174,40 @@ func ParseMultiDoc(ctx context.Context, b []byte) (v1alpha1.ZarfPackage, error) 
 	if !found {
 		return v1alpha1.ZarfPackage{}, errors.New("no supported apiVersion found in package definition")
 	}
-	return chosen.decode(ctx, chosenNode)
+	native, err := chosen.decode(ctx, chosenNode)
+	if err != nil {
+		return v1alpha1.ZarfPackage{}, err
+	}
+	return chosen.toPriorityType(native), nil
 }
 
-func decodeV1Alpha1(ctx context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
+func decodeV1Alpha1(ctx context.Context, node ast.Node) (any, error) {
 	var pkg v1alpha1.ZarfPackage
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return nil, err
 	}
 	return applyV1Alpha1Migrations(ctx, pkg), nil
 }
 
-// decodeV1Beta1 decodes a v1beta1 document and converts it down to v1alpha1 so the rest of
-// Zarf keeps operating on a single internal type. v1beta1 has no v1alpha1-style migrations.
-func decodeV1Beta1(_ context.Context, node ast.Node) (v1alpha1.ZarfPackage, error) {
-	var pkg v1beta1.Package
-	if err := goyaml.NodeToValue(node, &pkg); err != nil {
-		return v1alpha1.ZarfPackage{}, err
-	}
-	return internalv1alpha1.ConvertFromGeneric(internalv1beta1.ConvertToGeneric(pkg)), nil
+func v1alpha1ToPriority(pkg any) v1alpha1.ZarfPackage {
+	return pkg.(v1alpha1.ZarfPackage) //nolint:errcheck
 }
 
+// decodeV1Beta1 decodes a v1beta1 document into its native type. v1beta1 has no v1alpha1-style
+// migrations; the down-conversion to Zarf's internal currency type happens in v1beta1ToCurrency.
+func decodeV1Beta1(_ context.Context, node ast.Node) (any, error) {
+	var pkg v1beta1.Package
+	if err := goyaml.NodeToValue(node, &pkg); err != nil {
+		return nil, err
+	}
+	return pkg, nil
+}
+
+func v1beta1ToPriority(pkg any) v1alpha1.ZarfPackage {
+	return internalv1alpha1.ConvertFromGeneric(internalv1beta1.ConvertToGeneric(pkg.(v1beta1.Package))) //nolint:errcheck
+}
+
+// FIXME: move migrations to internal/v1alpha1
 func applyV1Alpha1Migrations(ctx context.Context, pkg v1alpha1.ZarfPackage) v1alpha1.ZarfPackage {
 	pkg, warnings := migrateDeprecated(pkg)
 	for _, warning := range warnings {
