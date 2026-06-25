@@ -177,13 +177,14 @@ type Chart struct {
 	OCI            *OCISource
 
 	// v1alpha1-only flat source fields. Used during conversion to populate structured sources.
-	URL              string
-	RepoName         string
-	GitPath          string
-	LocalPath        string
-	Version          string
-	SchemaValidation *bool
-	Variables        []ZarfChartVariable
+	URL                  string
+	RepoName             string
+	GitPath              string
+	LocalPath            string
+	Version              string
+	SchemaValidation     *bool
+	Variables            []ZarfChartVariable
+	TemplatedValuesFiles []string
 }
 
 // ChartValue maps a source path to a target path.
@@ -252,6 +253,10 @@ type ComponentActionSet struct {
 	Before    []ComponentAction
 	OnSuccess []ComponentAction
 	OnFailure []ComponentAction
+
+	// After is the v1alpha1-only "run at the end of an operation" hook, preserved for lossless
+	// round-trips. v1beta1 has no equivalent and folds these into OnSuccess on conversion.
+	After []ComponentAction
 }
 
 // ComponentActionDefaults sets defaults for child actions.

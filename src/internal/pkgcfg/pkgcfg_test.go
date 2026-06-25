@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 )
 
@@ -114,7 +115,7 @@ metadata:
 			pkg, err := Parse(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
+				require.Equal(t, types.Package{}, pkg)
 				return
 			}
 			require.NoError(t, err)
@@ -222,7 +223,7 @@ metadata:
 			pkg, err := ParseMultiDoc(context.Background(), []byte(tt.yaml))
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, v1alpha1.ZarfPackage{}, pkg)
+				require.Equal(t, types.Package{}, pkg)
 				return
 			}
 			require.NoError(t, err)
@@ -269,16 +270,15 @@ func TestAPIVersion(t *testing.T) {
 			yaml: "kind: ZarfPackageConfig\nmetadata:\n  name: c\n",
 			want: "zarf.dev/v1alpha1",
 		},
-		// FIXME: make these tests aware of the priority so they don't have to be updated
 		{
-			name: "multi-doc prefers higher-priority v1alpha1 over v1beta1",
+			name: "multi-doc prefers higher-priority v1beta1 over v1alpha1",
 			yaml: "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n---\napiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n",
-			want: "zarf.dev/v1alpha1",
+			want: "zarf.dev/v1beta1",
 		},
 		{
-			name: "multi-doc prefers v1alpha1 regardless of document order",
+			name: "multi-doc prefers v1beta1 regardless of document order",
 			yaml: "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: b\n---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: a\n",
-			want: "zarf.dev/v1alpha1",
+			want: "zarf.dev/v1beta1",
 		},
 		{
 			name: "multi-doc with only v1beta1 and an unknown version picks v1beta1",
@@ -402,28 +402,29 @@ func TestParseAsErrors(t *testing.T) {
 	require.ErrorContains(t, err, `unsupported apiVersion "`+newer+`"`)
 }
 
-func TestParseDecodesV1Beta1DownToV1Alpha1(t *testing.T) {
+func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 
 	beta := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
 
-	// Parse transparently converts a single v1beta1 document down to v1alpha1.
+	// Parse decodes a single v1beta1 document into the generic representation.
 	pkg, err := Parse(ctx, []byte(beta))
 	require.NoError(t, err)
-	require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", pkg.Metadata.Name)
 
-	// ParseMultiDoc prefers the higher-priority v1alpha1 document when both are present.
+	// ParseMultiDoc prefers the higher-priority v1beta1 document when both are present.
 	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
 	pkg, err = ParseMultiDoc(ctx, []byte(mixed))
 	require.NoError(t, err)
-	require.Equal(t, "alpha", pkg.Metadata.Name)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
+	require.Equal(t, "beta", pkg.Metadata.Name)
 
-	// With only a v1beta1 document, ParseMultiDoc decodes it via conversion.
+	// With only a v1beta1 document, ParseMultiDoc decodes it into the generic representation.
 	pkg, err = ParseMultiDoc(ctx, []byte(beta))
 	require.NoError(t, err)
-	require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", pkg.Metadata.Name)
 }
 
