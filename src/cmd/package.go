@@ -714,11 +714,10 @@ func newPackageInspectCommand(v *viper.Viper) *cobra.Command {
 }
 
 type packageInspectDigestOptions struct {
-	ociConcurrency    int
 	namespaceOverride string
 }
 
-func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
+func newPackageInspectDigestCommand(_ *viper.Viper) *cobra.Command {
 	o := &packageInspectDigestOptions{}
 	cmd := &cobra.Command{
 		Use:     "digest [ PACKAGE_SOURCE ]",
@@ -730,7 +729,6 @@ func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
 			return o.run(cmd.Context(), args)
 		},
 	}
-	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.namespaceOverride, "namespace", "n", o.namespaceOverride, lang.CmdPackageInspectFlagNamespace)
 	return cmd
 }
