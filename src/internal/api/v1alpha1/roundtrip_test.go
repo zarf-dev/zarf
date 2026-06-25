@@ -12,7 +12,8 @@ import (
 
 // TestConvertGenericRoundTripLossless asserts that decoding a v1alpha1 package, converting it to
 // the generic representation and back, reproduces the original exactly. layout and zoci load built
-// v1alpha1 packages through this round-trip, so any drift would change packages across build hosts.
+// v1alpha1 packages through this round-trip, so any drift would change packages across build hosts
+// FIXME: add roundtrip test for v1beta1 also
 func TestConvertGenericRoundTripLossless(t *testing.T) {
 	t.Parallel()
 
