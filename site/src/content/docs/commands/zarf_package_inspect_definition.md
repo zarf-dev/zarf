@@ -14,6 +14,21 @@ Displays the 'zarf.yaml' definition for the specified package
 zarf package inspect definition [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Inspect the zarf.yaml of a local package tarball
+$ zarf package inspect definition zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Inspect the zarf.yaml of a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect definition oci://ghcr.io/my-org/my-package:1.0.0
+
+# Inspect the zarf.yaml of a package deployed to a cluster
+$ zarf package inspect definition my-package
+
+```
+
 ### Options
 
 ```

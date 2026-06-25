@@ -14,6 +14,18 @@ Extract documentation files from the package
 zarf package inspect documentation [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Extract documentation from a local package tarball
+$ zarf package inspect documentation zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Extract documentation from a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect documentation oci://ghcr.io/my-org/my-package:1.0.0
+
+```
+
 ### Options
 
 ```

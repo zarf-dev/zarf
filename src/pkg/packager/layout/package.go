@@ -33,6 +33,13 @@ import (
 type PackageLayout struct {
 	dirPath string
 	Pkg     v1alpha1.ZarfPackage
+	digest  string
+	cache   *manifestCache
+}
+
+// Digest returns the OCI manifest digest for this package layout.
+func (p *PackageLayout) Digest() string {
+	return p.digest
 }
 
 // PackageLayoutOptions are the options used when loading a package.
@@ -115,6 +122,10 @@ func LoadFromDir(ctx context.Context, dirPath string, opts PackageLayoutOptions)
 	err = validatePackageIntegrity(pkgLayout, opts.IsPartial)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := pkgLayout.computeManifest(ctx); err != nil {
+		return nil, fmt.Errorf("computing OCI manifest: %w", err)
 	}
 
 	// Resolve deprecated PublicKeyPath into VerifyBlobOptions.
@@ -338,6 +349,10 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		} else {
 			l.Debug("could not read bundle info after signing", "error", bundleErr)
 		}
+	}
+
+	if err := p.computeManifest(ctx); err != nil {
+		return fmt.Errorf("recomputing OCI manifest after signing: %w", err)
 	}
 
 	l.Info("package signed successfully")

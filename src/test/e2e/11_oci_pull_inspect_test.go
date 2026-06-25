@@ -7,6 +7,7 @@ package test
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -71,6 +72,18 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", "oci://"+badPullInspectRef.String(), "--plain-http")
 	suite.Error(err, stdOut, stdErr)
+
+	// Verify inspect digest returns the same value from the local tarball and the OCI registry.
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", out)
+	suite.NoError(err, stdOut, stdErr)
+	tarballDigest := strings.TrimSpace(stdOut)
+	suite.True(strings.HasPrefix(tarballDigest, "sha256:"))
+
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "digest", simplePackageRef, "--plain-http")
+	suite.NoError(err, stdOut, stdErr)
+	ociDigest := strings.TrimSpace(stdOut)
+	suite.Equal(tarballDigest, ociDigest,
+		"inspect digest should return the same value for the tarball and the OCI source it was published from")
 }
 
 func (suite *PullInspectTestSuite) Test_1_Remote_Inspect() {

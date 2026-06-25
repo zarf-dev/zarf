@@ -236,10 +236,11 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -330,6 +331,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		// Create existing legacy signature file
 		err = os.WriteFile(legacySignaturePath, []byte("old legacy signature"), 0o644)
@@ -337,7 +339,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -408,10 +410,11 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -488,7 +491,8 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 
 		// Create initial zarf.yaml with a valid package
 		initialPkg := v1alpha1.ZarfPackage{
-			Kind: v1alpha1.ZarfPackageConfig,
+			APIVersion: v1alpha1.APIVersion,
+			Kind:       v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
 				Name:    "test-package",
 				Version: "1.0.0",
@@ -508,6 +512,7 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NoError(t, err)
 		err = os.WriteFile(yamlPath, b, 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		// Sign the package
 		opts := signing.DefaultSignBlobOptions()
@@ -558,11 +563,13 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				existingSigned := false
 				layout := &PackageLayout{
 					dirPath: tmpDir,
 					Pkg: v1alpha1.ZarfPackage{
+						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
 						},
@@ -585,11 +592,13 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				existingSigned := true
 				layout := &PackageLayout{
 					dirPath: tmpDir,
 					Pkg: v1alpha1.ZarfPackage{
+						APIVersion: v1alpha1.APIVersion,
 						Build: v1alpha1.ZarfBuildData{
 							Signed: &existingSigned,
 						},
@@ -612,10 +621,11 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("test content"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				layout := &PackageLayout{
 					dirPath: tmpDir,
-					Pkg:     v1alpha1.ZarfPackage{},
+					Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 				}
 
 				opts := signing.DefaultSignBlobOptions()
@@ -659,12 +669,14 @@ func TestPackageLayoutSignPackageValidation(t *testing.T) {
 				tmpDir := t.TempDir()
 				yamlPath := filepath.Join(tmpDir, ZarfYAML)
 				require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 				layout := &PackageLayout{
 					dirPath: tmpDir,
 					Pkg: v1alpha1.ZarfPackage{
-						Metadata: v1alpha1.ZarfMetadata{},
-						Build:    v1alpha1.ZarfBuildData{},
+						APIVersion: v1alpha1.APIVersion,
+						Metadata:   v1alpha1.ZarfMetadata{},
+						Build:      v1alpha1.ZarfBuildData{},
 					},
 				}
 
@@ -727,10 +739,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create and sign a package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign the package (legacy only, bundle feature disabled by default)
@@ -757,10 +770,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create and sign a package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign with the test key
@@ -853,10 +867,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create signed package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign the package
@@ -882,10 +897,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create and sign package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign the package
@@ -920,10 +936,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create and sign package
 		err := os.WriteFile(yamlPath, []byte("original content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign the package
@@ -955,10 +972,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		// Create and sign package
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		// Sign the package
@@ -990,10 +1008,11 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
@@ -1034,10 +1053,11 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		opts := signing.DefaultSignBlobOptions()
@@ -1057,7 +1077,8 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)
 
 		initialPkg := v1alpha1.ZarfPackage{
-			Kind: v1alpha1.ZarfPackageConfig,
+			APIVersion: v1alpha1.APIVersion,
+			Kind:       v1alpha1.ZarfPackageConfig,
 			Metadata: v1alpha1.ZarfMetadata{
 				Name:    "test-package",
 				Version: "1.0.0",
@@ -1076,6 +1097,7 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 		require.NoError(t, err)
 		err = os.WriteFile(yamlPath, b, 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		opts := signing.DefaultSignBlobOptions()
 		opts.Key = "./testdata/cosign.key"
@@ -1103,10 +1125,11 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
@@ -1132,10 +1155,11 @@ func TestSignPackageBundleSignatureEnabled(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("test content"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
-			Pkg:     v1alpha1.ZarfPackage{},
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
 		}
 
 		signOpts := signing.DefaultSignBlobOptions()
@@ -1688,10 +1712,12 @@ func TestSignPackage_PopulatesProvenanceFiles(t *testing.T) {
 
 		err := os.WriteFile(yamlPath, []byte("foobar"), 0o644)
 		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
 
 		pkgLayout := &PackageLayout{
 			dirPath: tmpDir,
 			Pkg: v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
 				Build: v1alpha1.ZarfBuildData{
 					ProvenanceFiles: []string{Checksums},
 				},

@@ -18,14 +18,17 @@ zarf package publish { PACKAGE_SOURCE | SKELETON DIRECTORY } REPOSITORY [flags]
 
 ```
 
-# Publish a package to a remote registry
-$ zarf package publish my-package.tar oci://my-registry.com/my-namespace
+# Publish a local package tarball to a remote registry
+$ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace
 
-# Publish a skeleton package to a remote registry
+# Publish a skeleton package (pre-'create' directory) to a remote registry
 $ zarf package publish ./path/to/dir oci://my-registry.com/my-namespace
 
+# Copy a package from one OCI registry to another (requires oci:// scheme on source)
+$ zarf package publish oci://source-registry.com/my-namespace/my-package:1.0.0 oci://my-registry.com/my-namespace
+
 # Publish a package with a specific tag different from the package metadata.version
-$ zarf package publish my-package.tar oci://my-registry.com/my-namespace --tag v0.0.1
+$ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry.com/my-namespace --tag v0.0.1
 
 ```
 

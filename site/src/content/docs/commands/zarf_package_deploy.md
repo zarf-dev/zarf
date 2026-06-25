@@ -19,6 +19,24 @@ Kubernetes clusters are accessed via credentials in your current kubecontext def
 zarf package deploy [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Deploy a local package tarball
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
+
+# Deploy a package from an OCI registry (requires oci:// scheme)
+$ zarf package deploy oci://ghcr.io/my-org/my-package:1.0.0 --confirm
+
+# Deploy a package from an HTTPS URL (--shasum required for integrity verification)
+$ zarf package deploy https://example.com/zarf-package-my-app-amd64-1.0.0.tar.zst --shasum <sha256sum> --confirm
+
+# Deploy a split package (pass the .part000 file)
+$ zarf package deploy zarf-package-my-app-amd64-1.0.0.tar.zst.part000 --confirm
+
+```
+
 ### Options
 
 ```
