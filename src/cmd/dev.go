@@ -218,12 +218,16 @@ func (o *devGenerateSchemaOptions) run(ctx context.Context, args []string) error
 	fmt.Println(string(b))
 
 	if o.update {
-		outputFileName := "values.schema.json"
+		outputFileName := filepath.Join(basePath, "values.schema.json")
 		if defined.Pkg.Values.Schema != "" {
 			if !filepath.IsAbs(defined.Pkg.Values.Schema) {
 				outputFileName = filepath.Join(basePath, defined.Pkg.Values.Schema)
 			} else {
 				outputFileName = defined.Pkg.Values.Schema
+			}
+		} else {
+			if err := packager.UpdateSchema(ctx, basePath, "values.schema.json"); err != nil {
+				return fmt.Errorf("unable to update zarf.yaml with schema path: %w", err)
 			}
 		}
 
