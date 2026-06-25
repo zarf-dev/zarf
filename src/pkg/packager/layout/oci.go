@@ -21,6 +21,7 @@ import (
 	godigest "github.com/opencontainers/go-digest"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
+	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
@@ -81,7 +82,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	// Parse checksums.txt into relpath → sha256hex.
 	checksumsPath := filepath.Join(p.dirPath, Checksums)
 	checksumsBytes, err := os.ReadFile(checksumsPath)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err != nil {
 		return fmt.Errorf("reading checksums file: %w", err)
 	}
 	checksumMap := map[string]string{}
@@ -168,16 +169,26 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 		return descs[i].Digest.String() < descs[j].Digest.String()
 	})
 
-	configBytes, err := json.Marshal(p.Pkg)
+	// Read the zarf.yaml from disk rather than using p.Pkg, which may have been
+	// component-filtered or otherwise mutated after load.
+	zarfYAMLBytes, err := os.ReadFile(filepath.Join(p.dirPath, ZarfYAML))
+	if err != nil {
+		return fmt.Errorf("reading %s for manifest: %w", ZarfYAML, err)
+	}
+	zarfPkg, err := pkgcfg.ParseMultiDoc(ctx, zarfYAMLBytes)
+	if err != nil {
+		return fmt.Errorf("parsing %s for manifest: %w", ZarfYAML, err)
+	}
+	configBytes, err := json.Marshal(zarfPkg)
 	if err != nil {
 		return err
 	}
 	configDesc := content.NewDescriptorFromBytes(ZarfConfigMediaType, configBytes)
 
-	annotations := AnnotationsFromMetadata(p.Pkg.Metadata)
+	annotations := AnnotationsFromMetadata(zarfPkg.Metadata)
 
-	// // Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
-	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, p.Pkg.Build.Timestamp)
+	// Back-compatible timestamp parsing → OCI format. Fall back to zero time (epoch) if the timestamp is absent.
+	t, parseErr := time.Parse(v1alpha1.BuildTimestampFormat, zarfPkg.Build.Timestamp)
 	if parseErr != nil {
 		t = time.Time{}
 	}
