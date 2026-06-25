@@ -72,18 +72,13 @@ func APIVersion(b []byte) (string, error) {
 	}
 
 	var (
-		chosen   apiVersionHandler
-		found    bool
-		firstRaw string
+		chosen apiVersionHandler
+		found  bool
 	)
 	for i, doc := range docs {
 		version, err := apiVersionFromNode(doc.Body)
 		if err != nil {
 			return "", fmt.Errorf("document %d: reading apiVersion: %w", i, err)
-		}
-		// FIXME: perhaps no point to firstRaw
-		if i == 0 {
-			firstRaw = version
 		}
 		handler, known := handlerFor(version)
 		if !known {
@@ -95,7 +90,7 @@ func APIVersion(b []byte) (string, error) {
 		}
 	}
 	if !found {
-		return firstRaw, nil
+		return "", errors.New("no supported apiVersion found in package definition")
 	}
 	return chosen.version, nil
 }

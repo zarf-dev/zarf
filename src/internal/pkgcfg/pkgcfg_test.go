@@ -286,9 +286,9 @@ func TestAPIVersion(t *testing.T) {
 			want: "zarf.dev/v1beta1",
 		},
 		{
-			name: "unknown version is returned unresolved for the caller to reject",
-			yaml: "apiVersion: " + newer + "\nkind: ZarfPackageConfig\nmetadata:\n  name: x\n",
-			want: newer,
+			name:    "only unknown versions errors",
+			yaml:    "apiVersion: " + newer + "\nkind: ZarfPackageConfig\nmetadata:\n  name: x\n",
+			wantErr: "no supported apiVersion found",
 		},
 		{
 			name:    "malformed apiVersion errors",
