@@ -12,6 +12,7 @@ import (
 )
 
 // ConvertToGeneric converts a v1alpha1 ZarfPackage to the internal generic representation.
+// FIXME: move this and the roundtrip test to previous PR
 func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 	// Preserve an already-recorded original across multi-hop conversions; otherwise this is the original.
 	originalAPIVersion := pkg.Build.OriginalAPIVersion()
@@ -22,21 +23,22 @@ func ConvertToGeneric(pkg v1alpha1.ZarfPackage) types.Package {
 		APIVersion: pkg.APIVersion,
 		Kind:       string(pkg.Kind),
 		Metadata: types.PackageMetadata{
-			Name:                   pkg.Metadata.Name,
-			Description:            pkg.Metadata.Description,
-			Version:                pkg.Metadata.Version,
-			Uncompressed:           pkg.Metadata.Uncompressed,
-			Architecture:           pkg.Metadata.Architecture,
-			Annotations:            pkg.Metadata.Annotations,
-			AllowNamespaceOverride: pkg.Metadata.AllowNamespaceOverride,
-			URL:                    pkg.Metadata.URL,
-			Image:                  pkg.Metadata.Image,
-			YOLO:                   pkg.Metadata.YOLO,
-			Authors:                pkg.Metadata.Authors,
-			Documentation:          pkg.Metadata.Documentation,
-			Source:                 pkg.Metadata.Source,
-			Vendor:                 pkg.Metadata.Vendor,
-			AggregateChecksum:      pkg.Metadata.AggregateChecksum,
+			Name:                     pkg.Metadata.Name,
+			Description:              pkg.Metadata.Description,
+			Version:                  pkg.Metadata.Version,
+			Uncompressed:             pkg.Metadata.Uncompressed,
+			Architecture:             pkg.Metadata.Architecture,
+			Annotations:              pkg.Metadata.Annotations,
+			AllowNamespaceOverride:   pkg.Metadata.AllowNamespaceOverride,
+			PreventNamespaceOverride: !pkg.AllowsNamespaceOverride(),
+			URL:                      pkg.Metadata.URL,
+			Image:                    pkg.Metadata.Image,
+			YOLO:                     pkg.Metadata.YOLO,
+			Authors:                  pkg.Metadata.Authors,
+			Documentation:            pkg.Metadata.Documentation,
+			Source:                   pkg.Metadata.Source,
+			Vendor:                   pkg.Metadata.Vendor,
+			AggregateChecksum:        pkg.Metadata.AggregateChecksum,
 		},
 		Build: types.BuildData{
 			Hostname:                   pkg.Build.Terminal,
@@ -173,6 +175,7 @@ func chartToGeneric(ch v1alpha1.ZarfChart) types.Chart {
 		SchemaValidation:     ch.SchemaValidation,
 		Variables:            chartVarsToGeneric(ch.Variables),
 		Values:               chartValuesToGeneric(ch.Values),
+		TemplatedValuesFiles: ch.TemplatedValuesFiles,
 	}
 	return gc
 }
@@ -210,13 +213,11 @@ func actionSetToGeneric(s v1alpha1.ZarfComponentActionSet) types.ComponentAction
 		},
 	}
 
-	onSuccess := actionSliceToGeneric(s.After)
-	onSuccess = append(onSuccess, actionSliceToGeneric(s.OnSuccess)...)
-
 	return types.ComponentActionSet{
 		Defaults:  defaults,
 		Before:    actionSliceToGeneric(s.Before),
-		OnSuccess: onSuccess,
+		After:     actionSliceToGeneric(s.After),
+		OnSuccess: actionSliceToGeneric(s.OnSuccess),
 		OnFailure: actionSliceToGeneric(s.OnFailure),
 	}
 }
@@ -295,8 +296,14 @@ func waitToGeneric(w *v1alpha1.ZarfComponentActionWait) *types.ComponentActionWa
 
 // ConvertFromGeneric converts the internal generic representation to a v1alpha1 ZarfPackage.
 func ConvertFromGeneric(g types.Package) v1alpha1.ZarfPackage {
+	// An empty source apiVersion is the implicit v1alpha1 form; preserve it so a v1alpha1
+	// round-trip stays byte-for-byte lossless. Any other source becomes explicit v1alpha1.
+	apiVersion := v1alpha1.APIVersion
+	if g.APIVersion == "" {
+		apiVersion = ""
+	}
 	pkg := v1alpha1.ZarfPackage{
-		APIVersion:    v1alpha1.APIVersion,
+		APIVersion:    apiVersion,
 		Kind:          v1alpha1.ZarfPackageKind(g.Kind),
 		Metadata:      metadataFromGeneric(g.Metadata, g.Build),
 		Build:         buildFromGeneric(g.Build),
@@ -340,12 +347,6 @@ func metadataFromGeneric(m types.PackageMetadata, b types.BuildData) v1alpha1.Za
 		Documentation:          m.Documentation,
 		Source:                 m.Source,
 		Vendor:                 m.Vendor,
-	}
-
-	// If we only have the v1beta1 form of namespace override, project it back to v1alpha1.
-	if meta.AllowNamespaceOverride == nil {
-		allow := !m.PreventNamespaceOverride
-		meta.AllowNamespaceOverride = &allow
 	}
 
 	// AggregateChecksum: prefer the v1alpha1 native location, fall back to build (v1beta1 location).
@@ -520,18 +521,19 @@ func manifestFromGeneric(m types.Manifest) v1alpha1.ZarfManifest {
 
 func chartFromGeneric(ch types.Chart) v1alpha1.ZarfChart {
 	ac := v1alpha1.ZarfChart{
-		Name:            ch.Name,
-		Namespace:       ch.Namespace,
-		ReleaseName:     ch.ReleaseName,
-		ValuesFiles:     ch.ValuesFiles,
-		ServerSideApply: ch.ServerSideApply,
-		NoWait:          ch.SkipWait,
-		URL:             ch.URL,
-		RepoName:        ch.RepoName,
-		GitPath:         ch.GitPath,
-		LocalPath:       ch.LocalPath,
-		Version:         ch.Version,
-		Variables:       chartVarsFromGeneric(ch.Variables),
+		Name:                 ch.Name,
+		Namespace:            ch.Namespace,
+		ReleaseName:          ch.ReleaseName,
+		ValuesFiles:          ch.ValuesFiles,
+		ServerSideApply:      ch.ServerSideApply,
+		NoWait:               ch.SkipWait,
+		URL:                  ch.URL,
+		RepoName:             ch.RepoName,
+		GitPath:              ch.GitPath,
+		LocalPath:            ch.LocalPath,
+		Version:              ch.Version,
+		Variables:            chartVarsFromGeneric(ch.Variables),
+		TemplatedValuesFiles: ch.TemplatedValuesFiles,
 	}
 
 	// Prefer preserved v1alpha1 SchemaValidation; otherwise derive from SkipSchemaValidation.
@@ -606,6 +608,7 @@ func actionSetFromGeneric(s types.ComponentActionSet) v1alpha1.ZarfComponentActi
 	return v1alpha1.ZarfComponentActionSet{
 		Defaults:  defaults,
 		Before:    actionSliceFromGeneric(s.Before),
+		After:     actionSliceFromGeneric(s.After),
 		OnSuccess: actionSliceFromGeneric(s.OnSuccess),
 		OnFailure: actionSliceFromGeneric(s.OnFailure),
 	}
