@@ -33,6 +33,8 @@ const (
 	ZarfLayerMediaTypeBlob = "application/vnd.zarf.layer.v1.blob"
 	// ZarfConfigMediaType is the media type for the Zarf package manifest config.
 	ZarfConfigMediaType = "application/vnd.zarf.config.v1+json"
+	// OCITimestampFormat is the format used for the OCI timestamp annotation
+	OCITimestampFormat = time.RFC3339
 )
 
 // manifestCache holds the computed OCI manifest for the package layout.
@@ -192,7 +194,7 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 	if parseErr != nil {
 		t = time.Time{}
 	}
-	annotations[ocispec.AnnotationCreated] = t.UTC().Format(time.RFC3339)
+	annotations[ocispec.AnnotationCreated] = t.UTC().Format(OCITimestampFormat)
 
 	memStore := memory.New()
 	root, err := oras.PackManifest(ctx, memStore, oras.PackManifestVersion1_1, "", oras.PackManifestOptions{
@@ -232,6 +234,13 @@ func (p *PackageLayout) computeManifest(ctx context.Context) error {
 func (p *PackageLayout) SetRegistryDigest(digest string) {
 	p.digest = digest
 	p.cache = nil
+}
+
+// IsPushable reports whether this layout has a computed manifest cache and can
+// be used as a push source. A layout with only a registry digest (e.g. from a
+// partial OCI pull via SetRegistryDigest) returns false because the cache is nil.
+func (p *PackageLayout) IsPushable() bool {
+	return p.cache != nil
 }
 
 // TotalSize returns the total bytes that would be pushed for this package (all

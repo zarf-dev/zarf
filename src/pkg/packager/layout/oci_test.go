@@ -58,6 +58,13 @@ func newTestLayout(t *testing.T) (*PackageLayout, []byte) {
 	blobContent := []byte("test blob content")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "test.txt"), blobContent, 0600))
 
+	// checksums.txt is required by computeManifest; empty means all files are hashed on-demand.
+	require.NoError(t, os.WriteFile(filepath.Join(dir, Checksums), []byte{}, 0600))
+
+	// zarf.yaml is required; computeManifest reads it from disk for the OCI config.
+	zarfYAML := "apiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: test-pkg\n  version: 1.0.0\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ZarfYAML), []byte(zarfYAML), 0600))
+
 	p := &PackageLayout{
 		dirPath: dir,
 		Pkg: v1alpha1.ZarfPackage{
@@ -74,7 +81,7 @@ func TestDigest(t *testing.T) {
 	p, _ := newTestLayout(t)
 
 	d := p.Digest()
-	assert.Equal(t, "sha256:9d8e3a47547e53c2fc1ec89d221336c58905a24f473315090d28e8596568a032", d, "digest should match expected precomputed digest")
+	assert.Equal(t, "sha256:25242bc565875477a9f691d8ce135b433bb014340a46b87113d977f0c08bd728", d, "digest should match expected precomputed digest")
 }
 
 func TestTotalSize(t *testing.T) {
@@ -147,13 +154,9 @@ func TestFetch(t *testing.T) {
 	})
 
 	t.Run("blob", func(t *testing.T) {
-		// Pick any layer blob digest from the cache to fetch.
-		var blobDigest godigest.Digest
-		for d := range p.cache.blobs {
-			blobDigest = d
-			break
-		}
-		require.NotEmpty(t, blobDigest)
+		// Use the deterministic digest of the known blob content written by newTestLayout.
+		blobDigest := godigest.FromBytes(blobContent)
+		require.Contains(t, p.cache.blobs, blobDigest, "test.txt digest should be in the blob cache")
 
 		r, err := p.Fetch(ctx, ocispec.Descriptor{Digest: blobDigest})
 		require.NoError(t, err)

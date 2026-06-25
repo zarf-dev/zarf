@@ -18,9 +18,6 @@ import (
 	"oras.land/oras-go/v2"
 )
 
-// OCITimestampFormat is the format used for the OCI timestamp annotation
-const OCITimestampFormat = time.RFC3339
-
 // PushPackage publishes the zarf package to the remote repository.
 func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayout, opts PublishOptions) (_ ocispec.Descriptor, err error) {
 	l := logger.From(ctx)
@@ -39,8 +36,8 @@ func (r *Remote) PushPackage(ctx context.Context, pkgLayout *layout.PackageLayou
 		opts.Retries = DefaultRetries
 	}
 
-	if pkgLayout.Digest() == "" {
-		return ocispec.Descriptor{}, fmt.Errorf("package layout has no digest; manifest must be computed before publishing")
+	if !pkgLayout.IsPushable() {
+		return ocispec.Descriptor{}, fmt.Errorf("package layout is not pushable; manifest cache must be computed before publishing")
 	}
 
 	copyOpts := r.OrasRemote.GetDefaultCopyOpts()
