@@ -23,11 +23,14 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 
 ```
 
-# Mirror resources to internal Zarf resources - by default this will use Zarf state if available
-$ zarf package mirror-resources <your-package.tar.zst>
+# Mirror a local package to internal Zarf resources (uses Zarf state if available)
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror resources to external resources
-$ zarf package mirror-resources <your-package.tar.zst> \
+# Mirror a package from an OCI registry (requires oci:// scheme)
+$ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
+
+# Mirror a local package to external resources
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password> \
@@ -35,14 +38,14 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
 
-# Mirroring resources can be specified by artifact type - this will only mirror images
-$ zarf package mirror-resources <your-package.tar.zst> --images \
+# Mirror only images from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --images \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password>
 
-# Mirroring for repositories can be specified by artifact type - this will only mirror git repositories
-$ zarf package mirror-resources <your-package.tar.zst> --repos \
+# Mirror only git repositories from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos \
 	--git-url https://git.enterprise.corp \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>

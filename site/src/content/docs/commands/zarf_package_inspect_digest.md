@@ -18,6 +18,21 @@ Outputs the SHA256 digest of the package's OCI manifest. For OCI sources the dig
 zarf package inspect digest [ PACKAGE_SOURCE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Get the digest of a local package tarball
+$ zarf package inspect digest zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Get the digest of a package in an OCI registry (requires oci:// scheme; resolved directly from the registry)
+$ zarf package inspect digest oci://ghcr.io/my-org/my-package:1.0.0
+
+# Get the stored digest of a package already deployed to a cluster
+$ zarf package inspect digest my-package
+
+```
+
 ### Options
 
 ```

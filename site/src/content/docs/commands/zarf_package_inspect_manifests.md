@@ -14,6 +14,18 @@ Template and output all manifests and charts in a package
 zarf package inspect manifests [ PACKAGE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Show templated manifests for a local package tarball
+$ zarf package inspect manifests zarf-package-my-app-amd64-1.0.0.tar.zst
+
+# Show manifests for a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect manifests oci://ghcr.io/my-org/my-package:1.0.0
+
+```
+
 ### Options
 
 ```

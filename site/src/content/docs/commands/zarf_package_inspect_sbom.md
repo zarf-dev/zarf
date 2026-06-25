@@ -14,6 +14,18 @@ Output the package SBOM (Software Bill Of Materials) to the specified directory
 zarf package inspect sbom [ PACKAGE ] [flags]
 ```
 
+### Examples
+
+```
+
+# Extract the SBOM from a local package tarball
+$ zarf package inspect sbom zarf-package-my-app-amd64-1.0.0.tar.zst --output ./sbom
+
+# Extract the SBOM from a package in an OCI registry (requires oci:// scheme)
+$ zarf package inspect sbom oci://ghcr.io/my-org/my-package:1.0.0 --output ./sbom
+
+```
+
 ### Options
 
 ```

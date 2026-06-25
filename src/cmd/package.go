@@ -285,6 +285,7 @@ func newPackageDeployCommand(v *viper.Viper) *cobra.Command {
 		Aliases: []string{"d"},
 		Short:   lang.CmdPackageDeployShort,
 		Long:    lang.CmdPackageDeployLong,
+		Example: lang.CmdPackageDeployExample,
 		Args:    cobra.MaximumNArgs(1),
 		PreRun:  o.preRun,
 		RunE:    o.run,
@@ -720,10 +721,11 @@ type packageInspectDigestOptions struct {
 func newPackageInspectDigestCommand(v *viper.Viper) *cobra.Command {
 	o := &packageInspectDigestOptions{}
 	cmd := &cobra.Command{
-		Use:   "digest [ PACKAGE_SOURCE ]",
-		Short: "Outputs the SHA256 digest of the package's OCI manifest",
-		Long:  "Outputs the SHA256 digest of the package's OCI manifest. For OCI sources the digest is resolved directly from the registry. For local tarballs the manifest is computed deterministically from the package contents.",
-		Args:  cobra.MaximumNArgs(1),
+		Use:     "digest [ PACKAGE_SOURCE ]",
+		Short:   "Outputs the SHA256 digest of the package's OCI manifest",
+		Long:    "Outputs the SHA256 digest of the package's OCI manifest. For OCI sources the digest is resolved directly from the registry. For local tarballs the manifest is computed deterministically from the package contents.",
+		Example: lang.CmdPackageInspectDigestExample,
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd.Context(), args)
 		},
@@ -785,11 +787,12 @@ func newPackageInspectValuesFilesOptions() *packageInspectValuesFilesOptions {
 func newPackageInspectValuesFilesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectValuesFilesOptions()
 	cmd := &cobra.Command{
-		Use:    "values-files [ PACKAGE ]",
-		Short:  "Creates, templates, and outputs the values-files to be sent to each chart",
-		Long:   "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
+		Use:     "values-files [ PACKAGE ]",
+		Short:   "Creates, templates, and outputs the values-files to be sent to each chart",
+		Long:    "Creates, templates, and outputs the values-files to be sent to each chart. Does not consider values files builtin to charts",
+		Example: lang.CmdPackageInspectValuesFilesExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd, args)
 		},
@@ -891,10 +894,11 @@ func newPackageInspectManifestsOptions() *packageInspectManifestsOptions {
 func newPackageInspectManifestsCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectManifestsOptions()
 	cmd := &cobra.Command{
-		Use:    "manifests [ PACKAGE ]",
-		Short:  "Template and output all manifests and charts in a package",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
+		Use:     "manifests [ PACKAGE ]",
+		Short:   "Template and output all manifests and charts in a package",
+		Example: lang.CmdPackageInspectManifestsExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return o.run(cmd, args)
 		},
@@ -998,11 +1002,12 @@ func newPackageInspectSBOMOptions() *packageInspectSBOMOptions {
 func newPackageInspectSBOMCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectSBOMOptions()
 	cmd := &cobra.Command{
-		Use:    "sbom [ PACKAGE ]",
-		Short:  "Output the package SBOM (Software Bill Of Materials) to the specified directory",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
-		RunE:   o.run,
+		Use:     "sbom [ PACKAGE ]",
+		Short:   "Output the package SBOM (Software Bill Of Materials) to the specified directory",
+		Example: lang.CmdPackageInspectSBOMExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1071,11 +1076,12 @@ func newPackageInspectImagesOptions() *packageInspectImagesOptions {
 func newPackageInspectImagesCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectImagesOptions()
 	cmd := &cobra.Command{
-		Use:    "images [ PACKAGE_SOURCE ]",
-		Short:  "List all container images contained in the package",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
-		RunE:   o.run,
+		Use:     "images [ PACKAGE_SOURCE ]",
+		Short:   "List all container images contained in the package",
+		Example: lang.CmdPackageInspectImagesExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1142,11 +1148,12 @@ func newPackageInspectDocumentationOptions() *packageInspectDocumentationOptions
 func newPackageInspectDocumentationCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDocumentationOptions()
 	cmd := &cobra.Command{
-		Use:    "documentation [ PACKAGE_SOURCE ]",
-		Short:  "Extract documentation files from the package",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
-		RunE:   o.run,
+		Use:     "documentation [ PACKAGE_SOURCE ]",
+		Short:   "Extract documentation files from the package",
+		Example: lang.CmdPackageInspectDocumentationExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1203,11 +1210,12 @@ func newPackageInspectDefinitionOptions() *packageInspectDefinitionOptions {
 func newPackageInspectDefinitionCommand(v *viper.Viper) *cobra.Command {
 	o := newPackageInspectDefinitionOptions()
 	cmd := &cobra.Command{
-		Use:    "definition [ PACKAGE_SOURCE ]",
-		Short:  "Displays the 'zarf.yaml' definition for the specified package",
-		Args:   cobra.MaximumNArgs(1),
-		PreRun: o.preRun,
-		RunE:   o.run,
+		Use:     "definition [ PACKAGE_SOURCE ]",
+		Short:   "Displays the 'zarf.yaml' definition for the specified package",
+		Example: lang.CmdPackageInspectDefinitionExample,
+		Args:    cobra.MaximumNArgs(1),
+		PreRun:  o.preRun,
+		RunE:    o.run,
 	}
 
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
@@ -1377,6 +1385,7 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 		Args:              cobra.MaximumNArgs(1),
 		Short:             lang.CmdPackageRemoveShort,
 		Long:              lang.CmdPackageRemoveLong,
+		Example:           lang.CmdPackageRemoveExample,
 		PreRun:            o.preRun,
 		RunE:              o.run,
 		ValidArgsFunction: getPackageCompletionArgs,
