@@ -17,113 +17,6 @@ import (
 // newer is a future apiVersion this binary does not understand.
 const newer = "zarf.dev/v1beta999"
 
-func TestParseDefinition(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		yaml     string
-		wantName string
-		wantErr  string
-	}{
-		{
-			name: "omitted apiVersion parses as v1alpha1",
-			yaml: `
-kind: ZarfPackageConfig
-metadata:
-  name: no-api-version
-`,
-			wantName: "no-api-version",
-		},
-		{
-			name: "explicit v1alpha1 apiVersion parses",
-			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: explicit-v1alpha1
-`,
-			wantName: "explicit-v1alpha1",
-		},
-		{
-			name: "unknown apiVersion errors without silent fallback",
-			yaml: `
-apiVersion: ` + newer + `
-kind: ZarfPackageConfig
-metadata:
-  name: from-future
-`,
-			wantErr: `unsupported apiVersion "` + newer + `"`,
-		},
-		{
-			name: "multi-document input errors",
-			yaml: `
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: first
----
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: second
-`,
-			wantErr: "single YAML document",
-		},
-		{
-			name: "leading document separator is accepted",
-			yaml: `---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: leading-sep
-`,
-			wantName: "leading-sep",
-		},
-		{
-			name: "leading and trailing separators are accepted",
-			yaml: `---
-apiVersion: zarf.dev/v1alpha1
-kind: ZarfPackageConfig
-metadata:
-  name: both-sep
----
-`,
-			wantName: "both-sep",
-		},
-		{
-			name:    "empty input errors",
-			yaml:    "",
-			wantErr: "no package definition found",
-		},
-		{
-			name:    "whitespace-only input errors",
-			yaml:    "\n  \n",
-			wantErr: "no package definition found",
-		},
-		{
-			name:    "malformed yaml bubbles up from the parser",
-			yaml:    "apiVersion: [not, a, string]\n",
-			wantErr: "apiVersion",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			pkg, err := Parse(context.Background(), []byte(tt.yaml))
-			if tt.wantErr != "" {
-				require.ErrorContains(t, err, tt.wantErr)
-				require.Equal(t, types.Package{}, pkg)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.wantName, pkg.Metadata.Name)
-		})
-	}
-}
-
 func TestParseBuiltPackageDefinition(t *testing.T) {
 	t.Parallel()
 
@@ -230,20 +123,6 @@ metadata:
 			require.Equal(t, tt.wantName, pkg.Metadata.Name)
 		})
 	}
-}
-
-// TestParseDefinitionAndParseBuiltPackageAgreeOnSingleDoc confirms that a
-// single-doc v1alpha1 yaml decodes identically through both entry points.
-func TestParseDefinitionAndParseBuiltPackageAgreeOnSingleDoc(t *testing.T) {
-	t.Parallel()
-	ctx := context.Background()
-	body := []byte("apiVersion: " + v1alpha1.APIVersion + "\nkind: ZarfPackageConfig\nmetadata:\n  name: agree\ncomponents:\n  - name: c\n")
-
-	fromDef, err := Parse(ctx, body)
-	require.NoError(t, err)
-	fromPkg, err := ParseMultiDoc(ctx, body)
-	require.NoError(t, err)
-	require.Equal(t, fromDef, fromPkg)
 }
 
 func TestAPIVersion(t *testing.T) {
@@ -407,16 +286,9 @@ func TestParseDecodesV1Beta1ToGeneric(t *testing.T) {
 	ctx := context.Background()
 
 	beta := "apiVersion: zarf.dev/v1beta1\nkind: ZarfPackageConfig\nmetadata:\n  name: beta\ncomponents:\n  - name: c\n"
-
-	// Parse decodes a single v1beta1 document into the generic representation.
-	pkg, err := Parse(ctx, []byte(beta))
-	require.NoError(t, err)
-	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
-	require.Equal(t, "beta", pkg.Metadata.Name)
-
 	// ParseMultiDoc prefers the higher-priority v1beta1 document when both are present.
 	mixed := beta + "---\napiVersion: zarf.dev/v1alpha1\nkind: ZarfPackageConfig\nmetadata:\n  name: alpha\ncomponents:\n  - name: c\n"
-	pkg, err = ParseMultiDoc(ctx, []byte(mixed))
+	pkg, err := ParseMultiDoc(ctx, []byte(mixed))
 	require.NoError(t, err)
 	require.Equal(t, v1beta1.APIVersion, pkg.APIVersion)
 	require.Equal(t, "beta", pkg.Metadata.Name)

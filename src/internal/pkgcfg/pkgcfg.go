@@ -37,32 +37,6 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1beta1.APIVersion, priority: 2, decode: decodeV1Beta1, toGeneric: v1beta1ToGeneric},
 }
 
-// Parse parses a single Zarf package definition at any supported API version into the
-// internal generic representation.
-// FIXME: delete parse
-func Parse(ctx context.Context, b []byte) (types.Package, error) {
-	docs, err := parseZarfYAMLDocs(b)
-	if err != nil {
-		return types.Package{}, err
-	}
-	if len(docs) > 1 {
-		return types.Package{}, errors.New("package definition must contain a single YAML document")
-	}
-	version, err := apiVersionFromNode(docs[0].Body)
-	if err != nil {
-		return types.Package{}, fmt.Errorf("reading apiVersion: %w", err)
-	}
-	handler, known := handlerFor(version)
-	if !known {
-		return types.Package{}, fmt.Errorf("unsupported apiVersion %q", version)
-	}
-	native, err := handler.decode(ctx, docs[0].Body)
-	if err != nil {
-		return types.Package{}, err
-	}
-	return handler.toGeneric(native), nil
-}
-
 // APIVersion reports which apiVersion a package definition should be loaded as. When the
 // definition spans multiple documents, the highest-priority known version wins.
 func APIVersion(b []byte) (string, error) {
