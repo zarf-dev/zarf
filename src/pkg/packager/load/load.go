@@ -15,6 +15,7 @@ import (
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	internalTypes "github.com/zarf-dev/zarf/src/internal/api/types"
 	internalv1alpha1 "github.com/zarf-dev/zarf/src/internal/api/v1alpha1"
 	internalv1beta1 "github.com/zarf-dev/zarf/src/internal/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/pkgcfg"
@@ -82,9 +83,9 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	var defined DefinedPackage
 	switch genPkg.Build.OriginalAPIVersion {
 	case v1beta1.APIVersion:
-		defined, err = v1beta1PackageDefinition(ctx, b, pkgPath, opts)
+		defined, err = v1beta1PackageDefinition(ctx, genPkg, pkgPath, opts)
 	case v1alpha1.APIVersion:
-		defined, err = v1alpha1PackageDefinition(ctx, b, pkgPath, opts)
+		defined, err = v1alpha1PackageDefinition(ctx, genPkg, pkgPath, opts)
 	default:
 		return DefinedPackage{}, fmt.Errorf("unrecognized API version")
 	}
@@ -96,12 +97,10 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	return defined, nil
 }
 
-func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
-	pkg, err := pkgcfg.ParseAs[v1alpha1.ZarfPackage](ctx, b, v1alpha1.APIVersion)
-	if err != nil {
-		return DefinedPackage{}, err
-	}
+func v1alpha1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+	pkg := internalv1alpha1.ConvertFromGeneric(g)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	var err error
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return DefinedPackage{}, err
@@ -129,11 +128,8 @@ func v1alpha1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.Pac
 	return DefinedPackage{Pkg: pkg, ImportedSchemas: importedSchemas}, nil
 }
 
-func v1beta1PackageDefinition(ctx context.Context, b []byte, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
-	pkg, err := pkgcfg.ParseAs[v1beta1.Package](ctx, b, v1beta1.APIVersion)
-	if err != nil {
-		return DefinedPackage{}, err
-	}
+func v1beta1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgPath layout.PackagePath, opts DefinitionOptions) (DefinedPackage, error) {
+	pkg := internalv1beta1.ConvertFromGeneric(g)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
 	// FIXME: need to add import logic
