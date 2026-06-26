@@ -67,7 +67,7 @@ $ zarf package sign zarf-package-demo-amd64-1.0.0.tar.zst --signing-key awskms:/
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --tsa-server-url string                   RFC3161 timestamp authority URL (e.g. https://timestamp.sigstore.dev/api/v1/timestamp). When set, a signed timestamp is embedded in the bundle as an alternative or complement to --tlog-upload for proving the signature was made while the Fulcio certificate was valid.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode[=always]              Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never. (default if-possible)
+      --verify verifyMode[=always]              Signature verification mode (never|if-possible|always). (default if-possible)
 ```
 
 ### Options inherited from parent commands
