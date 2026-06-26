@@ -32,12 +32,12 @@ import (
 type renderer struct {
 	chart v1alpha1.ZarfChart
 
-	adoptExistingResources bool
-	cluster                *cluster.Cluster
-	connectedDeploy        bool
-	state                  *state.State
-	actionConfig           *action.Configuration
-	variableConfig         *variables.VariableConfig
+	takeOwnership   bool
+	cluster         *cluster.Cluster
+	connectedDeploy bool
+	state           *state.State
+	actionConfig    *action.Configuration
+	variableConfig  *variables.VariableConfig
 
 	connectStrings    state.ConnectStrings
 	namespaces        map[string]*corev1.Namespace
@@ -45,7 +45,7 @@ type renderer struct {
 	namespaceOverride string
 }
 
-func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingResources bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
+func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, takeOwnership bool, c *cluster.Cluster, connectedDeploy bool, s *state.State, actionConfig *action.Configuration, variableConfig *variables.VariableConfig, pkgName string, namespaceOverride string) (*renderer, error) {
 	if actionConfig == nil {
 		return nil, fmt.Errorf("action configuration required to run post renderer")
 	}
@@ -57,17 +57,17 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	}
 	// Update secrets when not in connected mode, as connected packages in hybrid / air-gap clusters could rely on pulling from the registry with ###ZARF_REGISTRY###
 	rend := &renderer{
-		chart:                  chart,
-		adoptExistingResources: adoptExistingResources,
-		cluster:                c,
-		connectedDeploy:        connectedDeploy,
-		state:                  s,
-		actionConfig:           actionConfig,
-		variableConfig:         variableConfig,
-		connectStrings:         state.ConnectStrings{},
-		namespaces:             map[string]*corev1.Namespace{},
-		pkgName:                pkgName,
-		namespaceOverride:      namespaceOverride,
+		chart:             chart,
+		takeOwnership:     takeOwnership,
+		cluster:           c,
+		connectedDeploy:   connectedDeploy,
+		state:             s,
+		actionConfig:      actionConfig,
+		variableConfig:    variableConfig,
+		connectStrings:    state.ConnectStrings{},
+		namespaces:        map[string]*corev1.Namespace{},
+		pkgName:           pkgName,
+		namespaceOverride: namespaceOverride,
 	}
 
 	namespace, err := rend.cluster.Clientset.CoreV1().Namespaces().Get(ctx, rend.chart.Namespace, metav1.GetOptions{})
@@ -76,7 +76,7 @@ func newRenderer(ctx context.Context, chart v1alpha1.ZarfChart, adoptExistingRes
 	}
 	if kerrors.IsNotFound(err) {
 		rend.namespaces[rend.chart.Namespace] = cluster.NewZarfManagedNamespace(rend.chart.Namespace)
-	} else if rend.adoptExistingResources {
+	} else if rend.takeOwnership {
 		delete(namespace.Labels, cluster.AgentLabel)
 		namespace.Labels = cluster.AdoptZarfManagedLabels(namespace.Labels)
 		rend.namespaces[rend.chart.Namespace] = namespace
@@ -133,7 +133,7 @@ func (r *renderer) adoptAndUpdateNamespaces(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("unable to create the missing namespace %s", name)
 			}
-		} else if r.adoptExistingResources {
+		} else if r.takeOwnership {
 			// Refuse to adopt namespace if it is one of four initial Kubernetes namespaces.
 			// https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/#initial-namespaces
 			if slices.Contains([]string{"default", "kube-node-lease", "kube-public", "kube-system"}, name) {

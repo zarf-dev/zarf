@@ -498,19 +498,19 @@ func (o *devInspectValuesFilesOptions) run(ctx context.Context, args []string) e
 }
 
 type devDeployOptions struct {
-	createSetPkgTmpl       map[string]string
-	deploySetVariables     map[string]string
-	registryOverrides      []string
-	flavor                 string
-	registryURL            string
-	adoptExistingResources bool
-	timeout                time.Duration
-	retries                int
-	optionalComponents     string
-	noYOLO                 bool
-	connected              bool
-	ociConcurrency         int
-	skipVersionCheck       bool
+	createSetPkgTmpl   map[string]string
+	deploySetVariables map[string]string
+	registryOverrides  []string
+	flavor             string
+	registryURL        string
+	takeOwnership      bool
+	timeout            time.Duration
+	retries            int
+	optionalComponents string
+	noYOLO             bool
+	connected          bool
+	ociConcurrency     int
+	skipVersionCheck   bool
 }
 
 func newDevDeployCommand(v *viper.Viper) *cobra.Command {
@@ -539,8 +539,8 @@ func newDevDeployCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringToStringVar(&o.deploySetVariables, "deploy-set-variables", v.GetStringMapString(VPkgDeploySet), lang.CmdPackageDeployFlagSetVariables)
 
 	// Always require take-ownership flag (no viper)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
-	cmd.Flags().BoolVar(&o.adoptExistingResources, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
+	cmd.Flags().BoolVar(&o.takeOwnership, "take-ownership", false, lang.CmdPackageDeployFlagTakeOwnership)
+	cmd.Flags().BoolVar(&o.takeOwnership, "adopt-existing-resources", false, lang.CmdPackageDeployFlagAdoptExistingResources)
 	_ = cmd.Flags().MarkDeprecated("adopt-existing-resources", "use --take-ownership instead")
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
