@@ -132,11 +132,9 @@ func v1beta1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgP
 	pkg := internalv1beta1.ConvertFromGeneric(g)
 	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
 
-	// FIXME: need to add import logic
-	for _, comp := range pkg.Components {
-		if len(comp.Import.Local) > 0 || len(comp.Import.Remote) > 0 {
-			return DefinedPackage{}, fmt.Errorf("component %q uses imports, which are not yet supported for v1beta1 packages", comp.Name)
-		}
+	pkg, importedSchemas, err := resolveImportsV1Beta1(ctx, pkg, pkgPath.ManifestFile, pkg.Metadata.Architecture, opts.Flavor)
+	if err != nil {
+		return DefinedPackage{}, err
 	}
 
 	if err := validateV1Beta1(ctx, pkg, pkgPath.ManifestFile, opts.Flavor); err != nil {
@@ -144,7 +142,7 @@ func v1beta1PackageDefinition(ctx context.Context, g internalTypes.Package, pkgP
 	}
 
 	v1alpha1Pkg := internalv1alpha1.ConvertFromGeneric(internalv1beta1.ConvertToGeneric(pkg))
-	return DefinedPackage{Pkg: v1alpha1Pkg}, nil
+	return DefinedPackage{Pkg: v1alpha1Pkg, ImportedSchemas: importedSchemas}, nil
 }
 
 func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string, setVariables map[string]string, flavor string, skipRequiredValues bool) error {

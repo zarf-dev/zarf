@@ -1,0 +1,21 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: logging
+component:
+  charts:
+    - name: loki
+      namespace: logging
+      local:
+        path: loki-chart
+      valuesFiles:
+        - loki-values.yaml
+  files:
+    - source: motd.txt
+      destination: /etc/motd
+  images:
+    - name: grafana/loki:2.9.0
+values:
+  files:
+    - logging-values.yaml
+  schema: logging.schema.json

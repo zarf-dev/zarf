@@ -1,0 +1,14 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: app
+component:
+  images:
+    - name: redis:7
+      source: registry
+    - name: nginx:1.27
+  charts:
+    - name: app
+      namespace: app
+      local:
+        path: app-chart

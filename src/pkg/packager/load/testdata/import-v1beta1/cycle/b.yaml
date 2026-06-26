@@ -1,0 +1,8 @@
+apiVersion: zarf.dev/v1beta1
+kind: ZarfComponentConfig
+metadata:
+  name: b
+component:
+  import:
+    local:
+      - path: a.yaml

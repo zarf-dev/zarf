@@ -176,10 +176,16 @@ func TestV1Beta1PackageDefinition(t *testing.T) {
 		require.Empty(t, defined.ImportedSchemas)
 	})
 
-	t.Run("returns a clear error when a component declares imports", func(t *testing.T) {
+	t.Run("resolves a local component config import", func(t *testing.T) {
 		t.Parallel()
-		_, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
-		require.ErrorContains(t, err, "imports, which are not yet supported for v1beta1")
+		defined, err := PackageDefinition(ctx, filepath.Join("testdata", "v1beta1-with-import"), DefinitionOptions{})
+		require.NoError(t, err)
+
+		pkg := defined.Pkg
+		require.Equal(t, v1alpha1.APIVersion, pkg.APIVersion)
+		require.Len(t, pkg.Components, 1)
+		require.Equal(t, "imported", pkg.Components[0].Name)
+		require.Equal(t, []string{"nginx:1.27.0"}, pkg.Components[0].Images)
 	})
 }
 
