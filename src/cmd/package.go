@@ -67,6 +67,24 @@ func newPackageCommand() *cobra.Command {
 	return cmd
 }
 
+// flagGroupAnnotation is the pflag annotation key used to assign a flag to a named
+// usage section. Flags carrying this annotation are rendered under their group title
+// by the custom usage template instead of the default "Flags:" block.
+const flagGroupAnnotation = "zarf_flag_group"
+
+// verifyFlagGroupTitle is the usage section title for package verification flags.
+const verifyFlagGroupTitle = "Verification Flags"
+
+// annotateFlagGroup tags every flag in fs with the given usage-section title.
+func annotateFlagGroup(fs *pflag.FlagSet, title string) {
+	fs.VisitAll(func(f *pflag.Flag) {
+		err := fs.SetAnnotation(f.Name, flagGroupAnnotation, []string{title})
+		if err != nil {
+			panic(err)
+		}
+	})
+}
+
 // packageVerifyFlags holds all package signature and keyless verification flags.
 // Embed this in any command options struct that performs a package load operation.
 // To add a new verification flag in the future, add the field here and register it
@@ -1933,6 +1951,10 @@ func newPackageVerifyCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
 	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageVerifyFlagKey)
 	cmd.Flags().AddFlagSet(newKeylessVerifyFlagSet(v, &o.packageVerifyFlags))
+	err := cmd.Flags().SetAnnotation("key", flagGroupAnnotation, []string{verifyFlagGroupTitle})
+	if err != nil {
+		panic(err)
+	}
 	markVerifyFlagsMutuallyExclusive(cmd)
 
 	return cmd
@@ -2085,6 +2107,7 @@ func newKeylessVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagS
 	fs.BoolVar(&f.useSignedTimestamps, "use-signed-timestamps",
 		v.GetBool(VPkgUseSignedTimestamps), lang.CmdPackageVerifyFlagUseSignedTimestamps)
 
+	annotateFlagGroup(fs, verifyFlagGroupTitle)
 	return fs
 }
 
@@ -2100,6 +2123,7 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 			"Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
 
 	fs.AddFlagSet(newKeylessVerifyFlagSet(v, f))
+	annotateFlagGroup(fs, verifyFlagGroupTitle)
 	return fs
 }
 
