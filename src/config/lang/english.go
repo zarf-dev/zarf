@@ -224,7 +224,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 	CmdPackageShort                       = "Zarf package commands for creating, deploying, and inspecting packages"
 	CmdPackageFlagConcurrency             = "Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries."
 	CmdPackageFlagFlagPublicKey           = "Path to public key file for validating signed packages"
-	CmdPackageFlagVerify                  = "Signature verification mode: never, if-possible (default; tampered signatures always fail), or always. Bare --verify means always."
+	CmdPackageFlagVerify                  = "Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never."
 	CmdPackageFlagSkipSignatureValidation = "[Deprecated] Use --verify=never instead. This flag will be removed in Zarf v1.0.0."
 	CmdPackageFlagRetries                 = "Number of retries to perform for Zarf operations like git/image pushes"
 
