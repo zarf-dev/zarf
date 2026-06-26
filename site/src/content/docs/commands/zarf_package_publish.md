@@ -51,7 +51,7 @@ $ zarf package publish zarf-package-my-app-amd64-1.0.0.tar.zst oci://my-registry
   -t, --tag string                              The tag to be used in the OCI reference for the package in the registry
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode                       Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never. (default if-possible)
+      --verify verifyMode[=always]              Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never. (default if-possible)
       --with-build-machine-info                 Include build machine information (hostname and username) in the package metadata
 ```
 

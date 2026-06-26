@@ -43,7 +43,7 @@ $ zarf package pull oci://ghcr.io/zarf-dev/packages/dos-games:1.3.0 -a skeleton
       --shasum string                           Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
-      --verify verifyMode                       Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never. (default if-possible)
+      --verify verifyMode[=always]              Signature verification mode (never|if-possible|always). Tampered signatures are always fatal except with never. (default if-possible)
 ```
 
 ### Options inherited from parent commands
