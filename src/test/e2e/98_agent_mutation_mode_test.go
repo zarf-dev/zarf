@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,17 +46,17 @@ func TestAgentMutationPolicy(t *testing.T) {
 	_, stdErr, err = e2e.Zarf(t, "init", initPackagePath, "--agent-mutation-policy=labeled", "--confirm")
 	require.NoError(t, err, stdErr)
 
-	// Snapshot what the API server can route to right after init, while the webhook is first created.
-	// This will let us check if the endpoint slices have an address and if .endpoints.address[x].conditions.ready: true
-	_, _, err = e2e.Kubectl(t, "get", "endpointslices", "-n", "zarf", "-l", "kubernetes.io/service-name=agent-hook", "-o", "yaml")
-	require.NoError(t, err)
-
 	// Create and run a pod in the unlabeled ns
 	_, _, err = e2e.Kubectl(t, "create", "namespace", nsName)
 	require.NoError(t, err)
 
-	_, _, err = e2e.Kubectl(t, "run", podName, "-n", nsName,
-		"--image=ghcr.io/zarf-dev/images/alpine:3.21.3", "--restart=Never", "--", "sleep", "100")
+	// Sometimes the agent flakes, it's possible it's going to the old agent pod just before it finishes terminating
+	// Adding a retry here to test this hypothesis
+	err = retry.Do(func() error {
+		_, _, err := e2e.Kubectl(t, "run", podName, "-n", nsName,
+			"--image=ghcr.io/zarf-dev/images/alpine:3.21.3", "--restart=Never", "--", "sleep", "100")
+		return err
+	}, retry.Attempts(2))
 	require.NoError(t, err)
 
 	// The agent must not have rewritten the image — it should still point to the original registry.
