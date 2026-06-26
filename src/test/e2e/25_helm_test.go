@@ -266,7 +266,7 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 	require.Contains(t, kubectlOut, "deployment.apps/game created")
 
 	// Deploy dos-games into the cluster with Zarf
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--adopt-existing-resources")
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--take-ownership")
 	require.NoError(t, err, stdOut, stdErr)
 
 	// Ensure that this does create a dos-games chart
