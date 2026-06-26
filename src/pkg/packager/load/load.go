@@ -74,13 +74,13 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 		return DefinedPackage{}, err
 	}
 
-	version, err := pkgcfg.APIVersion(b)
+	genPkg, err := pkgcfg.ParseMultiDoc(ctx, b)
 	if err != nil {
 		return DefinedPackage{}, err
 	}
 
 	var defined DefinedPackage
-	switch version {
+	switch genPkg.Build.OriginalAPIVersion {
 	case v1beta1.APIVersion:
 		defined, err = v1beta1PackageDefinition(ctx, b, pkgPath, opts)
 	case v1alpha1.APIVersion:

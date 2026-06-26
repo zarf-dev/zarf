@@ -37,38 +37,6 @@ var knownAPIVersions = []apiVersionHandler{
 	{version: v1beta1.APIVersion, priority: 2, decode: decodeV1Beta1, toGeneric: v1beta1ToGeneric},
 }
 
-// APIVersion reports which apiVersion a package definition should be loaded as. When the
-// definition spans multiple documents, the highest-priority known version wins.
-func APIVersion(b []byte) (string, error) {
-	docs, err := parseZarfYAMLDocs(b)
-	if err != nil {
-		return "", err
-	}
-
-	var (
-		chosen apiVersionHandler
-		found  bool
-	)
-	for i, doc := range docs {
-		version, err := apiVersionFromNode(doc.Body)
-		if err != nil {
-			return "", fmt.Errorf("document %d: reading apiVersion: %w", i, err)
-		}
-		handler, known := handlerFor(version)
-		if !known {
-			continue
-		}
-		if !found || handler.priority > chosen.priority {
-			chosen = handler
-			found = true
-		}
-	}
-	if !found {
-		return "", errors.New("no supported apiVersion found in package definition")
-	}
-	return chosen.version, nil
-}
-
 // ParseAs returns the document for the given apiVersion from a package definition that may
 // contain multiple documents, decoded into its native type T.
 func ParseAs[T any](ctx context.Context, b []byte, apiVersion string) (T, error) {
@@ -156,7 +124,9 @@ func decodeV1Alpha1(ctx context.Context, node ast.Node) (any, error) {
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
 		return nil, err
 	}
-	return internalv1alpha1.ApplyMigrations(ctx, pkg), nil
+	pkg = internalv1alpha1.ApplyMigrations(ctx, pkg)
+	pkg.Build.SetOriginalAPIVersion(v1alpha1.APIVersion)
+	return pkg, nil
 }
 
 func v1alpha1ToGeneric(pkg any) types.Package {
@@ -170,6 +140,7 @@ func decodeV1Beta1(_ context.Context, node ast.Node) (any, error) {
 	if err := goyaml.NodeToValue(node, &pkg); err != nil {
 		return nil, err
 	}
+	pkg.Build.SetOriginalAPIVersion(v1beta1.APIVersion)
 	return pkg, nil
 }
 
