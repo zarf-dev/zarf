@@ -133,8 +133,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 
 		setCompStatus(depComp.Name, state.ComponentStatusRemoving)
-		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
-			l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoving, "error", err.Error())
+		if opts.Cluster != nil {
+			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+				l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoving, "error", err.Error())
+			}
 		}
 
 		err := func() error {
@@ -193,8 +195,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		if err != nil {
 			depPkg.Status = state.PackageStatusRemoveFailed
 			setCompStatus(depComp.Name, state.ComponentStatusRemoveFailed)
-			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
-				l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoveFailed, "error", err.Error())
+			if opts.Cluster != nil {
+				if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+					l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoveFailed, "error", err.Error())
+				}
 			}
 
 			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, template.StateAccess{})
