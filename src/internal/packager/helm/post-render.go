@@ -19,8 +19,6 @@ import (
 	"github.com/zarf-dev/zarf/src/pkg/variables"
 	"helm.sh/helm/v4/pkg/action"
 	releaseutil "helm.sh/helm/v4/pkg/release/v1/util"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
@@ -185,16 +183,6 @@ func (r *renderer) shouldAddAgentIgnoreLabels() bool {
 
 func (r *renderer) editHelmResources(ctx context.Context, resources []releaseutil.Manifest, finalManifestsOutput *bytes.Buffer) error {
 	l := logger.From(ctx)
-	dc, err := dynamic.NewForConfig(r.cluster.RestConfig)
-	if err != nil {
-		return err
-	}
-	groupResources, err := restmapper.GetAPIGroupResources(r.cluster.Clientset.Discovery())
-	if err != nil {
-		return err
-	}
-	mapper := restmapper.NewDiscoveryRESTMapper(groupResources)
-
 	for _, resource := range resources {
 		// parse to unstructured to have access to more data than just the name
 		newContent, rawData, err := processManifestContent(resource.Content, func(obj *unstructured.Unstructured) error {
@@ -269,49 +257,6 @@ func (r *renderer) editHelmResources(ctx context.Context, resources []releaseuti
 			r.namespaces[namespace] = cluster.NewZarfManagedNamespace(namespace)
 		}
 
-		// If we have been asked to adopt existing resources, process those now as well
-		if r.adoptExistingResources {
-			deployedNamespace := namespace
-			if deployedNamespace == "" {
-				deployedNamespace = r.chart.Namespace
-			}
-
-			err := func() error {
-				mapping, err := mapper.RESTMapping(rawData.GroupVersionKind().GroupKind())
-				if err != nil {
-					return err
-				}
-				resource, err := dc.Resource(mapping.Resource).Namespace(deployedNamespace).Get(ctx, rawData.GetName(), metav1.GetOptions{})
-				// Ignore resources that are yet to be created
-				if kerrors.IsNotFound(err) {
-					return nil
-				}
-				if err != nil {
-					return err
-				}
-				labels := resource.GetLabels()
-				if labels == nil {
-					labels = map[string]string{}
-				}
-				labels["app.kubernetes.io/managed-by"] = "Helm"
-				resource.SetLabels(labels)
-				annotations := resource.GetAnnotations()
-				if annotations == nil {
-					annotations = map[string]string{}
-				}
-				annotations["meta.helm.sh/release-name"] = r.chart.ReleaseName
-				annotations["meta.helm.sh/release-namespace"] = r.chart.Namespace
-				resource.SetAnnotations(annotations)
-				_, err = dc.Resource(mapping.Resource).Namespace(deployedNamespace).Update(ctx, resource, metav1.UpdateOptions{})
-				if err != nil {
-					return err
-				}
-				return nil
-			}()
-			if err != nil {
-				return fmt.Errorf("unable to adopt the resource %s: %w", rawData.GetName(), err)
-			}
-		}
 		// Finally place this back onto the output buffer
 		fmt.Fprintf(finalManifestsOutput, "---\n# Source: %s\n%s\n", resource.Name, resource.Content)
 	}

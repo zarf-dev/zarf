@@ -302,6 +302,9 @@ func installChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 	client.ServerSideApply = zarfChart.GetServerSideApply() != "false"
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), nil, opts.ForceConflicts)
 
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.AdoptExistingResources
+
 	// Perform the loadedChart installation.
 	return client.RunWithContext(ctx, chart, chartValues)
 }
@@ -333,6 +336,9 @@ func upgradeChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *char
 		return nil, err
 	}
 	client.ForceConflicts = shouldForceConflicts(zarfChart.GetServerSideApply(), rel, opts.ForceConflicts)
+
+	// Adopt pre-existing resources into the release instead of erroring on ownership conflicts.
+	client.TakeOwnership = opts.AdoptExistingResources
 
 	client.SkipCRDs = true
 
