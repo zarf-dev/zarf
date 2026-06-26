@@ -52,7 +52,9 @@ type DeployOptions struct {
 	value.Values
 	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
 	TakeOwnership bool
-	// AdoptExistingResources is deprecated, use TakeOwnership instead. If either is set the resources are adopted.
+	// AdoptExistingResources adopts any pre-existing K8s resources into the Helm charts managed by Zarf.
+	//
+	// Deprecated: use TakeOwnership instead.
 	AdoptExistingResources bool
 	// Connected deploys without mirroring images/repos and labels resources to bypass the Zarf agent
 	Connected bool
