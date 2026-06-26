@@ -24,7 +24,7 @@ zarf package inspect [flags]
 
 ```
   -a, --architecture string        Architecture for OCI images and Zarf packages
-      --features stringToString    [ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
+      --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.
       --log-format string          Select a logging format. Defaults to 'console'. Valid options are: 'console', 'json', 'dev'. (default "console")
   -l, --log-level string           Log level when running Zarf. Valid options are: warn, info, debug, trace (default "info")
@@ -38,6 +38,7 @@ zarf package inspect [flags]
 
 * [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package inspect definition](/commands/zarf_package_inspect_definition/)	 - Displays the 'zarf.yaml' definition for the specified package
+* [zarf package inspect digest](/commands/zarf_package_inspect_digest/)	 - Outputs the SHA256 digest of the package's OCI manifest
 * [zarf package inspect documentation](/commands/zarf_package_inspect_documentation/)	 - Extract documentation files from the package
 * [zarf package inspect images](/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
 * [zarf package inspect manifests](/commands/zarf_package_inspect_manifests/)	 - Template and output all manifests and charts in a package

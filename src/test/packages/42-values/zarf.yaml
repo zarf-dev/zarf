@@ -56,3 +56,41 @@ components:
         template: true
         files:
           - processed-template-configmap.yaml
+
+  - name: test-state-public
+    required: true
+    manifests:
+      - name: test-state-configmap
+        template: true
+        files:
+          - state-configmap.yaml
+
+  - name: test-state-sensitive
+    required: true
+    stateAccess:
+      - registryCredentials
+    actions:
+      onDeploy:
+        before:
+          # Verifies the sensitive field resolves to a non-empty value without
+          # writing the credential to any cluster resource. test -n exits non-zero
+          # if the string is empty, failing the action.
+          - cmd: "test -n \"{{ .State.Registry.PushPassword }}\""
+            template: true
+
+  - name: test-templated-values-files
+    required: true
+    charts:
+      - name: test-values-chart
+        version: 0.1.0
+        namespace: default
+        localPath: chart
+        valuesFiles:
+          - chart-static-values.yaml
+        templatedValuesFiles:
+          - chart-go-template-values.yaml
+        values:
+          - sourcePath: .chartMapping
+            targetPath: .mapped
+            excludePaths:
+              - .chartMapping.excluded

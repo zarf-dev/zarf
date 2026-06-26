@@ -10,15 +10,65 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	admission "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
+
+const (
+	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
+	AgentErrTransformGitURL = "unable to transform the git url"
+	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
+	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
+)
+
+// withMutationGuard returns an AdmitFunc that unmarshals the request object,
+// checks namespace labels and ShouldMutate, then delegates to fn.
+func withMutationGuard[T any, PT interface {
+	*T
+	metav1.Object
+}](
+	c *cluster.Cluster,
+	mode state.MutationPolicy,
+	fn func(ctx context.Context, r *admission.AdmissionRequest, obj PT) (*operations.Result, error),
+) operations.AdmitFunc {
+	return func(ctx context.Context, r *admission.AdmissionRequest) (*operations.Result, error) {
+		obj := PT(new(T))
+		if err := json.Unmarshal(r.Object.Raw, obj); err != nil {
+			return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+		}
+		var nsLabels map[string]string
+		if r.Namespace != "" {
+			var err error
+			nsLabels, err = getNamespaceLabels(ctx, c, r.Namespace)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if !operations.ShouldMutate(obj.GetLabels(), nsLabels, mode) {
+			return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+		}
+		return fn(ctx, r, obj)
+	}
+}
+
+func getNamespaceLabels(ctx context.Context, c *cluster.Cluster, name string) (map[string]string, error) {
+	ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get namespace %s: %w", name, err)
+	}
+	return ns.Labels, nil
+}
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {
@@ -26,6 +76,26 @@ func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	}
 	currLabels["zarf-agent"] = "patched"
 	return operations.ReplacePatchOperation("/metadata/labels", currLabels)
+}
+
+// classifyURLSchemes reports whether any of the given repository URLs require
+// the Zarf git server or the Zarf registry (OCI).
+func classifyURLSchemes(urls []string) (requiresGit, requiresRegistry bool) {
+	for _, u := range urls {
+		if helpers.IsOCIURL(u) {
+			requiresRegistry = true
+		} else {
+			requiresGit = true
+		}
+	}
+	return
+}
+
+// anyZarfServiceUsable returns true when at least one required Zarf service is
+// configured in the given state. Use this to decide whether a mutation hook
+// should proceed.
+func anyZarfServiceUsable(requiresGit, requiresRegistry bool, s *state.State) bool {
+	return (requiresGit && s.GitServer.IsConfigured()) || (requiresRegistry && s.RegistryInfo.IsConfigured())
 }
 
 func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, transport http.RoundTripper, imageAddress string) (string, error) {

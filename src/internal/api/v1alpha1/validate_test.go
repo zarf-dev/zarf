@@ -431,6 +431,28 @@ func TestValidateChart(t *testing.T) {
 			chart:        v1alpha1.ZarfChart{Namespace: "namespace", URL: "http://whatever", Version: "v1.0.0"},
 			expectedErrs: []string{errChartReleaseNameEmpty},
 		},
+		{
+			name: "valid excludePath descendant of sourcePath",
+			chart: v1alpha1.ZarfChart{
+				Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0", ReleaseName: "valid",
+				Values: []v1alpha1.ZarfChartValue{
+					{SourcePath: ".loki", TargetPath: ".", ExcludePaths: []string{".loki.image"}},
+				},
+			},
+			expectedErrs: nil,
+		},
+		{
+			name: "excludePath not a descendant of sourcePath",
+			chart: v1alpha1.ZarfChart{
+				Name: "chart1", Namespace: "whatever", URL: "http://whatever", Version: "v1.0.0", ReleaseName: "valid",
+				Values: []v1alpha1.ZarfChartValue{
+					{SourcePath: ".loki", TargetPath: ".", ExcludePaths: []string{".grafana.image"}},
+				},
+			},
+			expectedErrs: []string{
+				fmt.Sprintf(PkgValidateErrChartValueExcludePath, "chart1", ".grafana.image", ".loki"),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -5,3 +5,4 @@ metadata:
   namespace: underscore
 data:
   mongodb_exporter_image: docker.io/percona/mongodb_exporter:0.47.1
+  alpine_image_no_fqdn: alpine:3.23

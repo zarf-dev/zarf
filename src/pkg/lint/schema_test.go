@@ -54,6 +54,26 @@ func TestZarfSchema(t *testing.T) {
 			},
 		},
 		{
+			name: "path separators in dynamic path fields",
+			pkg: v1alpha1.ZarfPackage{
+				APIVersion: v1alpha1.APIVersion,
+				Kind:       v1alpha1.ZarfPackageConfig,
+				Metadata:   v1alpha1.ZarfMetadata{Name: "pkg", Version: "a/b"},
+				Components: []v1alpha1.ZarfComponent{
+					{
+						Name:      "comp",
+						Charts:    []v1alpha1.ZarfChart{{Name: "a/b", Version: "1.0"}},
+						Manifests: []v1alpha1.ZarfManifest{{Name: `a\b`}},
+					},
+				},
+			},
+			expectedSchemaStrings: []string{
+				"metadata.version: Does not match pattern '^[^/\\\\]*$'",
+				"components.0.charts.0.name: Does not match pattern '^[^/\\\\]*$'",
+				"components.0.manifests.0.name: Does not match pattern '^[^/\\\\]*$'",
+			},
+		},
+		{
 			name: "invalid package",
 			pkg: v1alpha1.ZarfPackage{
 				APIVersion: "bad-api-version/wrong",

@@ -37,25 +37,24 @@ import (
 )
 
 type initOptions struct {
-	setVariables            map[string]string
-	optionalComponents      string
-	storageClass            string
-	gitServer               state.GitServerInfo
-	registryInfo            state.RegistryInfo
-	artifactServer          state.ArtifactServerInfo
-	injectorPort            int
-	adoptExistingResources  bool
-	forceConflicts          bool
-	timeout                 time.Duration
-	retries                 int
-	publicKeyPath           string
-	verify                  bool
-	skipSignatureValidation bool
-	confirm                 bool
-	ociConcurrency          int
-	agentTLSCAPath          string
-	agentTLSCertPath        string
-	agentTLSKeyPath         string
+	setVariables           map[string]string
+	optionalComponents     string
+	storageClass           string
+	gitServer              state.GitServerInfo
+	registryInfo           state.RegistryInfo
+	artifactServer         state.ArtifactServerInfo
+	injectorPort           int
+	adoptExistingResources bool
+	forceConflicts         bool
+	timeout                time.Duration
+	retries                int
+	confirm                bool
+	ociConcurrency         int
+	agentTLSCAPath         string
+	agentTLSCertPath       string
+	agentTLSKeyPath        string
+	agentMutationPolicy    string
+	packageVerifyFlags
 }
 
 func newInitCommand() *cobra.Command {
@@ -116,6 +115,7 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", v.GetString(VInitAgentTLSCA), "Path to a PEM-encoded CA certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSCertPath, "agent-tls-cert", v.GetString(VInitAgentTLSCert), "Path to a PEM-encoded TLS certificate for the Zarf agent")
 	cmd.Flags().StringVar(&o.agentTLSKeyPath, "agent-tls-key", v.GetString(VInitAgentTLSKey), "Path to a PEM-encoded TLS private key for the Zarf agent")
+	cmd.Flags().StringVar(&o.agentMutationPolicy, "agent-mutation-policy", v.GetString(VInitAgentMutationPolicy), `Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate`)
 
 	// Flags that control how a deployment proceeds
 	// Always require adopt-existing-resources flag (no viper)
@@ -124,14 +124,8 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().DurationVar(&o.timeout, "timeout", v.GetDuration(VPkgDeployTimeout), lang.CmdPackageDeployFlagTimeout)
 
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
-	cmd.Flags().StringVarP(&o.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
-	cmd.Flags().BoolVar(&o.verify, "verify", v.GetBool(VPkgVerify), lang.CmdPackageFlagVerify)
 	cmd.Flags().IntVar(&o.ociConcurrency, "oci-concurrency", v.GetInt(VPkgOCIConcurrency), lang.CmdPackageFlagConcurrency)
-	cmd.Flags().BoolVar(&o.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
-	errSig := cmd.Flags().MarkDeprecated("skip-signature-validation", "Signature verification now occurs on every execution, but is not enforced by default. Use --verify to enforce validation. This flag will be removed in Zarf v1.0.0.")
-	if errSig != nil {
-		logger.Default().Debug("unable to mark skip-signature-validation", "error", errSig)
-	}
+	addVerifyFlags(cmd, v, &o.packageVerifyFlags)
 
 	// Agent TLS flags must all be provided together
 	cmd.MarkFlagsRequiredTogether("agent-tls-ca", "agent-tls-cert", "agent-tls-key")
@@ -146,19 +140,6 @@ func newInitCommand() *cobra.Command {
 	cmd.Flags().SortFlags = true
 
 	return cmd
-}
-
-func (o *initOptions) preRun(cmd *cobra.Command, _ []string) {
-	// Handle deprecated --skip-signature-validation flag for backwards compatibility
-	if cmd.Flags().Changed("skip-signature-validation") {
-		logger.Default().Warn("--skip-signature-validation is deprecated and will be removed in v1.0.0. Use --verify to enforce signature validation.")
-
-		if cmd.Flags().Changed("verify") {
-			return
-		}
-
-		o.verify = !o.skipSignatureValidation
-	}
 }
 
 func (o *initOptions) run(cmd *cobra.Command, args []string) error {
@@ -219,7 +200,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 	}
 
 	loadOpt := packager.LoadOptions{
-		VerifyBlobOptions:    verifyBlobOptionsFromKeyPath(o.publicKeyPath),
+		VerifyBlobOptions:    o.buildVerifyBlobOptions(cmd, v),
 		VerificationStrategy: getVerificationStrategy(o.verify),
 		Filter:               filter,
 		Architecture:         config.GetArch(),
@@ -251,6 +232,7 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
+		AgentMutationPolicy:    state.MutationPolicy(o.agentMutationPolicy),
 	}
 	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
 	if err != nil {
@@ -455,6 +437,13 @@ func (o *initOptions) validateInitFlags() error {
 	}
 	if o.registryInfo.RegistryMode != "" && o.registryInfo.RegistryMode != state.RegistryModeExternal && o.registryInfo.Address != "" {
 		return fmt.Errorf("--registry-url cannot be used with --registry-mode=%s", o.registryInfo.RegistryMode)
+	}
+
+	switch state.MutationPolicy(o.agentMutationPolicy) {
+	case state.MutationPolicyAll, state.MutationPolicyLabeled:
+	default:
+		return fmt.Errorf("invalid agent mutation policy %q, must be %q or %q", o.agentMutationPolicy,
+			state.MutationPolicyAll, state.MutationPolicyLabeled)
 	}
 
 	return nil

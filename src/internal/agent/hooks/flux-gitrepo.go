@@ -6,7 +6,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
@@ -17,42 +16,31 @@ import (
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	v1 "k8s.io/api/admission/v1"
 )
 
-// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
-const AgentErrTransformGitURL = "unable to transform the git url"
-
 // NewGitRepositoryMutationHook creates a new instance of the git repo mutation hook.
-func NewGitRepositoryMutationHook(ctx context.Context, cluster *cluster.Cluster) operations.Hook {
-	return operations.Hook{
-		Create: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
-		},
-		Update: func(r *v1.AdmissionRequest) (*operations.Result, error) {
-			return mutateGitRepo(ctx, r, cluster)
-		},
-	}
+func NewGitRepositoryMutationHook(c *cluster.Cluster, mode state.MutationPolicy) operations.Hook {
+	admit := withMutationGuard(c, mode, func(ctx context.Context, r *v1.AdmissionRequest, repo *flux.GitRepository) (*operations.Result, error) {
+		return mutateGitRepo(ctx, r, c, repo)
+	})
+	return operations.Hook{Create: admit, Update: admit}
 }
 
-// mutateGitRepoCreate mutates the git repository url to point to the repository URL defined in the ZarfState.
-func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, cluster *cluster.Cluster) (*operations.Result, error) {
+// mutateGitRepo mutates the git repository url to point to the repository URL defined in the ZarfState.
+func mutateGitRepo(ctx context.Context, r *v1.AdmissionRequest, c *cluster.Cluster, repo *flux.GitRepository) (*operations.Result, error) {
 	l := logger.From(ctx)
 	var patches []operations.PatchOperation
 
-	s, err := cluster.LoadState(ctx)
+	s, err := c.LoadState(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if !s.GitServer.IsConfigured() {
 		l.Debug("no Zarf git server configured, skipping Flux GitRepository mutation")
 		return &operations.Result{Allowed: true}, nil
-	}
-
-	repo := flux.GitRepository{}
-	if err = json.Unmarshal(r.Object.Raw, &repo); err != nil {
-		return nil, fmt.Errorf(lang.ErrUnmarshal, err)
 	}
 
 	l.Info("using the Zarf git server URL to mutate the Flux GitRepository",

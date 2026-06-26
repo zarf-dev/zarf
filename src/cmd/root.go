@@ -211,6 +211,8 @@ func NewZarfCommand() *cobra.Command {
 		setupRootFlags(rootCmd)
 	}
 
+	setupGroupedFlagUsage(rootCmd)
+
 	return rootCmd
 }
 
@@ -220,7 +222,7 @@ func setupRootFlags(rootCmd *cobra.Command) {
 	vpr := getViper()
 
 	// Features
-	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "[ALPHA] Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
+	rootCmd.PersistentFlags().StringToStringVar(&features, "features", vpr.GetStringMapString(VFeatures), "Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features \"foo=true,bar=false,baz=true\"")
 
 	// Logs
 	rootCmd.PersistentFlags().StringVarP(&LogLevelCLI, "log-level", "l", vpr.GetString(VLogLevel), lang.RootCmdFlagLogLevel)

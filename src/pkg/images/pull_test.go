@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/opencontainers/go-digest"
@@ -22,6 +23,43 @@ import (
 	"github.com/zarf-dev/zarf/src/test/testutil"
 	"oras.land/oras-go/v2/registry/remote"
 )
+
+// requireManifestBlobs asserts the manifest blob at digest is on disk in destDir along with its
+// config and every layer. Returns the parsed manifest so callers can make test-specific assertions.
+func requireManifestBlobs(t *testing.T, destDir, digest string) ocispec.Manifest {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var m ocispec.Manifest
+	require.NoError(t, json.Unmarshal(b, &m))
+	require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", m.Config.Digest.Hex()))
+	for _, layer := range m.Layers {
+		require.FileExists(t, filepath.Join(destDir, "blobs", "sha256", layer.Digest.Hex()))
+	}
+	return m
+}
+
+// requireIndexBlobs asserts the index blob at digest is on disk and every descendant (nested
+// indexes + leaf manifests with their config/layers) is too. Returns the parsed top-level index.
+func requireIndexBlobs(t *testing.T, destDir, digest string) ocispec.Index {
+	t.Helper()
+	path := filepath.Join(destDir, "blobs", "sha256", strings.TrimPrefix(digest, "sha256:"))
+	require.FileExists(t, path)
+	b, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var idx ocispec.Index
+	require.NoError(t, json.Unmarshal(b, &idx))
+	for _, child := range idx.Manifests {
+		if IsIndex(child.MediaType) {
+			requireIndexBlobs(t, destDir, child.Digest.String())
+			continue
+		}
+		requireManifestBlobs(t, destDir, child.Digest.String())
+	}
+	return idx
+}
 
 // pushDockerManifestList pushes a Docker-mediaType manifest list to exercise isIndex's docker path.
 func pushDockerManifestList(ctx context.Context, t *testing.T, repo *remote.Repository, children []ocispec.Descriptor) ocispec.Descriptor {
@@ -76,31 +114,25 @@ func TestCheckForIndex(t *testing.T) {
 	dockerList := pushDockerManifestList(ctx, t, dockerRepo, dockerChildren)
 	require.NoError(t, dockerRepo.Tag(ctx, dockerList, "v1"))
 
+	nestedIdxDigest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested-idx", "v1", platforms)
+
 	manifestDigest := testutil.PushImage(ctx, t, upstream+"/fixtures/img", "v1")
 
 	testCases := []struct {
-		name            string
-		ref             string
-		expectedDigests []string
-		expectedErr     string
+		name string
+		ref  string
 	}{
 		{
-			name:        "oci index sha",
-			ref:         fmt.Sprintf("%s/fixtures/idx@%s", upstream, ociIdx.Digest),
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
-			expectedDigests: []string{
-				ociChildren[0].Digest.String(),
-				ociChildren[1].Digest.String(),
-			},
+			name: "oci index sha",
+			ref:  fmt.Sprintf("%s/fixtures/idx@%s", upstream, ociIdx.Digest),
 		},
 		{
-			name:        "docker manifest list",
-			ref:         fmt.Sprintf("%s/fixtures/docker-list@%s", upstream, dockerList.Digest),
-			expectedErr: "%s resolved to an OCI image index which is not supported by Zarf, select a specific platform to use",
-			expectedDigests: []string{
-				dockerChildren[0].Digest.String(),
-				dockerChildren[1].Digest.String(),
-			},
+			name: "docker manifest list",
+			ref:  fmt.Sprintf("%s/fixtures/docker-list@%s", upstream, dockerList.Digest),
+		},
+		{
+			name: "nested oci index sha",
+			ref:  fmt.Sprintf("%s/fixtures/nested-idx@%s", upstream, nestedIdxDigest),
 		},
 		{
 			name: "image manifest by tag",
@@ -126,14 +158,23 @@ func TestCheckForIndex(t *testing.T) {
 				PlainHTTP:      true,
 			}
 			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
-			if tc.expectedErr != "" {
-				require.ErrorContains(t, err, fmt.Sprintf(tc.expectedErr, refInfo.Reference))
-				for _, d := range tc.expectedDigests {
-					require.ErrorContains(t, err, d)
+			require.NoError(t, err)
+
+			idx, err := getIndexFromOCILayout(dstDir)
+			require.NoError(t, err)
+			var top *ocispec.Descriptor
+			for i := range idx.Manifests {
+				if idx.Manifests[i].Annotations[ocispec.AnnotationRefName] == refInfo.Reference {
+					top = &idx.Manifests[i]
+					break
 				}
+			}
+			require.NotNil(t, top, "no manifest tagged with ref %s in %v", refInfo.Reference, idx.Manifests)
+			if IsIndex(top.MediaType) {
+				requireIndexBlobs(t, dstDir, top.Digest.String())
 				return
 			}
-			require.NoError(t, err)
+			requireManifestBlobs(t, dstDir, top.Digest.String())
 		})
 	}
 }
@@ -206,12 +247,13 @@ func TestPull(t *testing.T) {
 				PlainHTTP:         true,
 			}
 
-			imageManifests, err := Pull(ctx, images, destDir, opts)
+			pulled, err := Pull(ctx, images, destDir, opts)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
+			require.Len(t, pulled, len(images))
 
 			idx, err := getIndexFromOCILayout(filepath.Join(destDir))
 			require.NoError(t, err)
@@ -229,9 +271,10 @@ func TestPull(t *testing.T) {
 			}
 			require.ElementsMatch(t, expectedImageAnnotations, actualImageAnnotations)
 
-			for _, imageWithManifest := range imageManifests {
-				for _, layer := range imageWithManifest.Manifest.Layers {
-					require.FileExists(t, filepath.Join(destDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
+			// Make sure all the layers of the image are pulled in (including the shared cache).
+			for _, manifestDesc := range idx.Manifests {
+				m := requireManifestBlobs(t, destDir, manifestDesc.Digest.String())
+				for _, layer := range m.Layers {
 					require.FileExists(t, filepath.Join(cacheDir, fmt.Sprintf("blobs/sha256/%s", layer.Digest.Hex())))
 				}
 			}

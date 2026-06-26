@@ -38,6 +38,7 @@ func NewHandler() *Handler {
 func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerFunc {
 	l := logger.From(ctx)
 	return func(w http.ResponseWriter, r *http.Request) {
+		l.Debug("received admission request", "method", r.Method, "path", r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method != http.MethodPost {
 			http.Error(w, lang.AgentErrInvalidMethod, http.StatusMethodNotAllowed)
@@ -66,7 +67,7 @@ func (h *Handler) Serve(ctx context.Context, hook operations.Hook) http.HandlerF
 			return
 		}
 
-		result, err := hook.Execute(review.Request)
+		result, err := hook.Execute(r.Context(), review.Request)
 		admissionMeta := metav1.TypeMeta{
 			APIVersion: corev1.SchemeGroupVersion.String(),
 			Kind:       "AdmissionReview",

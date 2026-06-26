@@ -43,19 +43,19 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		SkipVersionCheck: true,
 		RemoteOptions:    opts.RemoteOptions,
 	}
-	pkg, err := load.PackageDefinition(ctx, packagePath, loadOpts)
+	defined, err := load.PackageDefinition(ctx, packagePath, loadOpts)
 	if err != nil {
 		return err
 	}
 	findings := []lint.PackageFinding{}
-	for i, component := range pkg.Components {
+	for i, component := range defined.Pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)
 	}
 	if len(findings) == 0 {
 		return nil
 	}
 	return &lint.LintError{
-		PackageName: pkg.Metadata.Name,
+		PackageName: defined.Pkg.Metadata.Name,
 		Findings:    findings,
 	}
 }

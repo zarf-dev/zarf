@@ -5,7 +5,10 @@
 package images
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,7 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
+	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/test/testutil"
+	"oras.land/oras-go/v2/content/oci"
 )
 
 func TestGetRefFromManifest(t *testing.T) {
@@ -44,7 +49,17 @@ func TestGetRefFromManifest(t *testing.T) {
 					"containerd.io/distribution.source.docker.io": "library/nginx",
 				},
 			},
-			expected: "library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+			expected: "docker.io/library/nginx@sha256:b20377b80653db287c2047b8effbd2458d045ee9c43098cf57d769fd6fc1a110",
+		},
+		{
+			name: "non-docker.io distribution source uses its registry",
+			desc: ocispec.Descriptor{
+				Digest: "sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c",
+				Annotations: map[string]string{
+					"containerd.io/distribution.source.ghcr.io": "zarf-dev/images/alpine",
+				},
+			},
+			expected: "ghcr.io/zarf-dev/images/alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c",
 		},
 		{
 			name: "org.opencontainers.image.ref.name present",
@@ -68,6 +83,117 @@ func TestGetRefFromManifest(t *testing.T) {
 			t.Parallel()
 			result := getRefFromManifest(tc.desc)
 			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestFindImagesInOCIManifests(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name           string
+		manifests      []ocispec.Descriptor
+		expectedImages []string
+		expectErr      error
+	}{
+		{
+			name: "single manifest descriptor, single image",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world:linux",
+					},
+				},
+			},
+			expectedImages: []string{"docker.io/library/hello-world:linux"},
+		},
+		{
+			name: "multiple manifest descriptors, blank image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
+					},
+				},
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test:1.0.0",
+					},
+				},
+				{
+					Annotations: nil,
+				},
+			},
+			expectedImages: []string{
+				"docker.io/library/hello-world@sha256:03b62250a3cb1abd125271d393fc08bf0cc713391eda6b57c02d1ef85efcc25c",
+				"localhost:9999/local-test:1.0.0",
+			},
+		},
+		{
+			name: "invalid image name",
+			manifests: []ocispec.Descriptor{
+				{
+					Annotations: map[string]string{
+						dockerRefAnnotation: "localhost:9999/local-test@hello-world:1.0.0",
+					},
+				},
+			},
+			expectedImages: []string{},
+			expectErr:      errors.New("failed to parse image reference localhost:9999/local-test@hello-world:1.0.0"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			images, err := FindImagesInOCIManifests(tc.manifests)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+				return
+			}
+			require.NoError(t, err)
+
+			for _, img := range tc.expectedImages {
+				require.Contains(t, images, img)
+			}
+		})
+	}
+}
+
+func TestGetManifestsFromArchive(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name          string
+		srcDir        string
+		expectedImage string
+		expectErr     error
+	}{
+		{
+			name:          "single archive",
+			srcDir:        filepath.Join("testdata", "docker-graph-driver-image-store"),
+			expectedImage: "docker.io/library/hello-world:linux",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ctx := testutil.TestContext(t)
+
+			// Create a tar from the source directory
+			tarFile := filepath.Join(t.TempDir(), "images.tar")
+			err := archive.Compress(ctx, []string{tc.srcDir}, tarFile, archive.CompressOpts{})
+			require.NoError(t, err)
+			manifests, err := GetManifestsFromArchive(ctx, tarFile)
+			if tc.expectErr != nil {
+				require.ErrorContains(t, err, tc.expectErr.Error())
+			}
+			require.NoError(t, err)
+
+			for _, manifest := range manifests {
+				require.Equal(t, tc.expectedImage, manifest.Annotations[dockerRefAnnotation])
+			}
 		})
 	}
 }
@@ -141,15 +267,12 @@ func TestUnpackMultipleImages(t *testing.T) {
 			}
 			require.NoError(t, err)
 
-			imageMap := make(map[string]ImageWithManifest)
+			seen := make(map[string]bool)
 			for _, img := range images {
-				imageMap[img.Image.Reference] = img
+				seen[img.Image.Reference] = true
 			}
-
 			for _, ref := range tc.requestedImages {
-				img, found := imageMap[ref]
-				require.True(t, found)
-				require.NotEmpty(t, img.Manifest.Config.Digest)
+				require.True(t, seen[ref], "expected pulled image for %s", ref)
 			}
 
 			idx, err := getIndexFromOCILayout(dstDir)
@@ -162,13 +285,152 @@ func TestUnpackMultipleImages(t *testing.T) {
 				require.Contains(t, tc.requestedImages, imageName)
 			}
 
-			// Verify all the required layers exist in the oci layout
-			for _, img := range images {
-				for _, layer := range img.Manifest.Layers {
-					layerBlobPath := filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex())
-					require.FileExists(t, layerBlobPath)
+			// Verify every manifest's layers landed on disk by re-reading from the layout.
+			for _, m := range idx.Manifests {
+				if !IsManifest(m.MediaType) {
+					continue
+				}
+				manifestPath := filepath.Join(dstDir, "blobs", "sha256", m.Digest.Hex())
+				body, err := os.ReadFile(manifestPath)
+				require.NoError(t, err)
+				var manifest ocispec.Manifest
+				require.NoError(t, json.Unmarshal(body, &manifest))
+				for _, layer := range manifest.Layers {
+					require.FileExists(t, filepath.Join(dstDir, "blobs", "sha256", layer.Digest.Hex()))
 				}
 			}
 		})
 	}
+}
+
+func TestUnpackImageIndexes(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	multiArchDigest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "v1", platforms)
+	nestedDigest := testutil.PushNestedIndex(ctx, t, upstream+"/fixtures/nested", "v1", platforms)
+
+	testCases := []struct {
+		name string
+		ref  string
+	}{
+		{
+			name: "multi-arch index by digest preserves index",
+			ref:  fmt.Sprintf("%s/fixtures/multi@%s", upstream, multiArchDigest),
+		},
+		{
+			name: "nested index by digest preserves nested structure",
+			ref:  fmt.Sprintf("%s/fixtures/nested@%s", upstream, nestedDigest),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			refInfo, err := transform.ParseImageRef(tc.ref)
+			require.NoError(t, err)
+
+			layoutDir := t.TempDir()
+			_, err = Pull(ctx, []transform.Image{refInfo}, layoutDir, PullOptions{
+				Arch:           "amd64",
+				CacheDirectory: t.TempDir(),
+				PlainHTTP:      true,
+			})
+			require.NoError(t, err)
+
+			tarFile := filepath.Join(t.TempDir(), "images.tar")
+			require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+			dstDir := t.TempDir()
+			unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+				Path:   tarFile,
+				Images: []string{tc.ref},
+			}, dstDir, "amd64")
+			require.NoError(t, err)
+			require.Len(t, unpacked, 1)
+			require.Equal(t, tc.ref, unpacked[0].Image.Reference)
+
+			dstIdx, err := getIndexFromOCILayout(dstDir)
+			require.NoError(t, err)
+			var top *ocispec.Descriptor
+			for i := range dstIdx.Manifests {
+				if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tc.ref {
+					top = &dstIdx.Manifests[i]
+					break
+				}
+			}
+			require.NotNil(t, top, "no manifest tagged with ref %s in %v", tc.ref, dstIdx.Manifests)
+			require.True(t, IsIndex(top.MediaType), "expected preserved index, got %s", top.MediaType)
+			preserved := requireIndexBlobs(t, dstDir, top.Digest.String())
+			require.NotEmpty(t, preserved.Manifests)
+		})
+	}
+}
+
+func TestUnpackTaggedIndexFiltersToPlatform(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+	upstream := testutil.SetupInMemoryRegistryDynamic(ctx, t)
+
+	platforms := []ocispec.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm64"},
+	}
+	digest := testutil.PushMultiArchIndex(ctx, t, upstream+"/fixtures/multi", "v1", platforms)
+	digestRef := fmt.Sprintf("%s/fixtures/multi@%s", upstream, digest)
+	tagRef := fmt.Sprintf("%s/fixtures/multi:v1", upstream)
+
+	digestRefInfo, err := transform.ParseImageRef(digestRef)
+	require.NoError(t, err)
+
+	layoutDir := t.TempDir()
+	_, err = Pull(ctx, []transform.Image{digestRefInfo}, layoutDir, PullOptions{
+		Arch:           "amd64",
+		CacheDirectory: t.TempDir(),
+		PlainHTTP:      true,
+	})
+	require.NoError(t, err)
+
+	store, err := oci.NewWithContext(ctx, layoutDir)
+	require.NoError(t, err)
+	desc, err := store.Resolve(ctx, digestRef)
+	require.NoError(t, err)
+	require.NoError(t, store.Untag(ctx, digestRef))
+	require.NoError(t, store.Tag(ctx, desc, tagRef))
+
+	tarFile := filepath.Join(t.TempDir(), "images.tar")
+	require.NoError(t, archive.Compress(ctx, []string{layoutDir}, tarFile, archive.CompressOpts{}))
+
+	dstDir := t.TempDir()
+	unpacked, err := Unpack(ctx, v1alpha1.ImageArchive{
+		Path:   tarFile,
+		Images: []string{tagRef},
+	}, dstDir, "amd64")
+	require.NoError(t, err)
+	require.Len(t, unpacked, 1)
+	require.Equal(t, tagRef, unpacked[0].Image.Reference)
+
+	dstIdx, err := getIndexFromOCILayout(dstDir)
+	require.NoError(t, err)
+	var top *ocispec.Descriptor
+	for i := range dstIdx.Manifests {
+		if dstIdx.Manifests[i].Annotations[ocispec.AnnotationRefName] == tagRef {
+			top = &dstIdx.Manifests[i]
+			break
+		}
+	}
+	require.NotNil(t, top, "no manifest tagged with ref %s in %v", tagRef, dstIdx.Manifests)
+	require.True(t, IsManifest(top.MediaType), "expected platform-filtered manifest, got %s", top.MediaType)
+	manifest := requireManifestBlobs(t, dstDir, top.Digest.String())
+	cfgBytes, err := os.ReadFile(filepath.Join(dstDir, "blobs", "sha256", manifest.Config.Digest.Hex()))
+	require.NoError(t, err)
+	var cfg ocispec.Image
+	require.NoError(t, json.Unmarshal(cfgBytes, &cfg))
+	require.Equal(t, "amd64", cfg.Architecture)
 }

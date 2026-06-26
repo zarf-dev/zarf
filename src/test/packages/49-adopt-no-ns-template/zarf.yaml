@@ -1,0 +1,13 @@
+kind: ZarfPackageConfig
+metadata:
+  name: adopt-no-ns-template
+  version: 0.1.0
+
+components:
+  - name: test
+    required: true
+    charts:
+      - name: adopt-no-ns-template
+        version: 0.1.0
+        namespace: adopt-no-ns-template
+        localPath: chart

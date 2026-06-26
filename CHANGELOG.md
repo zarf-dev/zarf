@@ -1,5 +1,107 @@
 # Changelog
 
+## [0.80.0](https://github.com/zarf-dev/zarf/compare/v0.79.0...v0.80.0) (2026-06-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* add a digest to zarf package state and a digest inspect command ([#4993](https://github.com/zarf-dev/zarf/issues/4993))
+* **schema:** zarf dev schema-generate from existing values ([#4961](https://github.com/zarf-dev/zarf/issues/4961))
+
+### Features
+
+* add a digest to zarf package state and a digest inspect command ([#4993](https://github.com/zarf-dev/zarf/issues/4993)) ([62b0d8d](https://github.com/zarf-dev/zarf/commit/62b0d8de958ae77cfa6c6ad0d5f0ebc9a7bc2a6f))
+* **package:** support verification on all CLI package load operations ([#4996](https://github.com/zarf-dev/zarf/issues/4996)) ([ee2ddd9](https://github.com/zarf-dev/zarf/commit/ee2ddd95a3c1cbb54f9ab7e29844ea2e562a4e66))
+* **schema:** zarf dev schema-generate from existing values ([#4961](https://github.com/zarf-dev/zarf/issues/4961)) ([d1f8d48](https://github.com/zarf-dev/zarf/commit/d1f8d484a64594256409ddc603acd76350485ad6))
+* **viper:** support viper configuration for sign/verify ([#4946](https://github.com/zarf-dev/zarf/issues/4946)) ([887b0b8](https://github.com/zarf-dev/zarf/commit/887b0b85779da2e5a1f27dac97c481e549b9621c))
+
+## [0.79.0](https://github.com/zarf-dev/zarf/compare/v0.78.0...v0.79.0) (2026-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981))
+
+### Features
+
+* **injector:** dynamically determine host based on IP family ([#4985](https://github.com/zarf-dev/zarf/issues/4985)) ([8ef592c](https://github.com/zarf-dev/zarf/commit/8ef592c59de83039f1f0745207429858a15cddba))
+* **values:** expose pkg built in ([#4981](https://github.com/zarf-dev/zarf/issues/4981)) ([1e7e767](https://github.com/zarf-dev/zarf/commit/1e7e767c834b7a5ae4b262c50819c0d118b49b33))
+
+
+### Bug Fixes
+
+* **docs:** render markdown tables ([#4982](https://github.com/zarf-dev/zarf/issues/4982)) ([c96636e](https://github.com/zarf-dev/zarf/commit/c96636ebde2a4ec85c3824dfdc03876b8a95eb13))
+* **pull:** always pull values.yaml and values.schema.json ([#4987](https://github.com/zarf-dev/zarf/issues/4987)) ([78ac28e](https://github.com/zarf-dev/zarf/commit/78ac28e41bc812ca93a0f7c0801bd4376873f555))
+
+## [0.78.0](https://github.com/zarf-dev/zarf/compare/v0.77.0...v0.78.0) (2026-06-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **values:** support state built-ins ([#4957](https://github.com/zarf-dev/zarf/issues/4957))
+* **values:** support schema merge on imports ([#4951](https://github.com/zarf-dev/zarf/issues/4951))
+
+### Features
+
+* add nodeSelector to gitea chart ([#4972](https://github.com/zarf-dev/zarf/issues/4972)) ([940e028](https://github.com/zarf-dev/zarf/commit/940e028fff048d745641d66bd29aa60c5bbd978a))
+* **agent:** add readiness probe ([#4980](https://github.com/zarf-dev/zarf/issues/4980)) ([55b9d59](https://github.com/zarf-dev/zarf/commit/55b9d590ec4ce70a5894c3d4d11b4cb8b538000d))
+* **init:** add init agent for the agent to only mutate labeled resources ([#4937](https://github.com/zarf-dev/zarf/issues/4937)) ([4dcc4ae](https://github.com/zarf-dev/zarf/commit/4dcc4ae8532fc5549a5e4884d1028fb0945d068b))
+* **values:** chart values exclude path ([#4974](https://github.com/zarf-dev/zarf/issues/4974)) ([dbf357e](https://github.com/zarf-dev/zarf/commit/dbf357e3758e6ec8b23611d5c02cbcf9651d48c6))
+* **values:** fail early during deploy if values are not defined ([#4968](https://github.com/zarf-dev/zarf/issues/4968)) ([21beb29](https://github.com/zarf-dev/zarf/commit/21beb29ac6bfc55a2638bdd33680024b656f654d))
+* **values:** support for go templating in chart valuesFIles ([#4967](https://github.com/zarf-dev/zarf/issues/4967)) ([feb5555](https://github.com/zarf-dev/zarf/commit/feb5555e10e36325bb6dadc75c2e4d3cfabc94f9))
+* **values:** support schema merge on imports ([#4951](https://github.com/zarf-dev/zarf/issues/4951)) ([9c79597](https://github.com/zarf-dev/zarf/commit/9c7959763b258373ffe14094c7a6f0a9ebbbdf1b))
+* **values:** support state built-ins ([#4957](https://github.com/zarf-dev/zarf/issues/4957)) ([5105843](https://github.com/zarf-dev/zarf/commit/51058430fccac9a5a035d74adbea7039536e9b8d))
+
+
+### Bug Fixes
+
+* **agent:** properly pass through context ([#4966](https://github.com/zarf-dev/zarf/issues/4966)) ([9b844cc](https://github.com/zarf-dev/zarf/commit/9b844cca8977d578e0f097d476ee09bff9874c27))
+* **tools,wait:** handle context propagation for networking calls ([#4925](https://github.com/zarf-dev/zarf/issues/4925)) ([42dba94](https://github.com/zarf-dev/zarf/commit/42dba94122371cfb53132290e375be83f309d8c7))
+
+## [0.77.0](https://github.com/zarf-dev/zarf/compare/v0.76.0...v0.77.0) (2026-05-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **signing:** resolve auth flow for CI environments ([#4939](https://github.com/zarf-dev/zarf/issues/4939))
+* allow pulling images by index sha ([#4879](https://github.com/zarf-dev/zarf/issues/4879))
+
+### Features
+
+* allow pulling images by index sha ([#4879](https://github.com/zarf-dev/zarf/issues/4879)) ([945a26d](https://github.com/zarf-dev/zarf/commit/945a26d4082648feb8a4fbbacabdb62cd7b1054c))
+* **find-images:** 4509 include archives in find image ([#4551](https://github.com/zarf-dev/zarf/issues/4551)) ([058754e](https://github.com/zarf-dev/zarf/commit/058754e94194551b911dd030acde464286de2a5a))
+* **init:** prefer injector image without imagePullSecrets ([#4935](https://github.com/zarf-dev/zarf/issues/4935)) ([e46fa25](https://github.com/zarf-dev/zarf/commit/e46fa25da2ecfd655d7a28276261eadb6f1bd1d0))
+* **release:** signed init packages ([#4934](https://github.com/zarf-dev/zarf/issues/4934)) ([158acbc](https://github.com/zarf-dev/zarf/commit/158acbcc858b9bc3be0d39ed5da937a0fd4e34ae))
+* **sign:** support for keyless signing and offline verification ([#4891](https://github.com/zarf-dev/zarf/issues/4891)) ([d0b8665](https://github.com/zarf-dev/zarf/commit/d0b8665fd16c9c90f233cabefd584447bc02fb3f))
+
+
+### Bug Fixes
+
+* **signing:** resolve auth flow for CI environments ([#4939](https://github.com/zarf-dev/zarf/issues/4939)) ([bc60685](https://github.com/zarf-dev/zarf/commit/bc60685469b1fa58f1047b4e791ce9a28689c3a4))
+
+## [0.76.0](https://github.com/zarf-dev/zarf/compare/v0.75.1...v0.76.0) (2026-05-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sign:** align signing and verification flags to cosign ([#4880](https://github.com/zarf-dev/zarf/issues/4880))
+
+### Features
+
+* add OCI support for Argo CD sources ([#4354](https://github.com/zarf-dev/zarf/issues/4354)) ([6b54e0a](https://github.com/zarf-dev/zarf/commit/6b54e0a40d3c75c0da5600fc116a6e2ecc611fdf))
+* implement import logic for Zarf Values ([#4427](https://github.com/zarf-dev/zarf/issues/4427)) ([fde1211](https://github.com/zarf-dev/zarf/commit/fde1211e7ae2ec29dbc5c304d910949de3f5ba29))
+* **sign:** align signing and verification flags to cosign ([#4880](https://github.com/zarf-dev/zarf/issues/4880)) ([04fb929](https://github.com/zarf-dev/zarf/commit/04fb9291bc958c7f0e2847f3a347873eab38bd94))
+* **values:** package inspect values feature support ([#4867](https://github.com/zarf-dev/zarf/issues/4867)) ([2a3ef1b](https://github.com/zarf-dev/zarf/commit/2a3ef1b07f73e6c28c5351c256fa69663a0aa683))
+* verify dynamic path fields in package config are clean ([#4883](https://github.com/zarf-dev/zarf/issues/4883)) ([579ec27](https://github.com/zarf-dev/zarf/commit/579ec276acdad294cc78f2149e341f497f7a1dac))
+
+
+### Bug Fixes
+
+* add cluster timeout cluster.New in dev deploy ([#4882](https://github.com/zarf-dev/zarf/issues/4882)) ([fe7fc39](https://github.com/zarf-dev/zarf/commit/fe7fc39eebba1eab0a0f9d3dbb77a4089f78569c))
+* **deploy:** scope installedCharts by namespace override ([#4873](https://github.com/zarf-dev/zarf/issues/4873)) ([6c6ee8c](https://github.com/zarf-dev/zarf/commit/6c6ee8c5ca2702ada5d9ea9eebae3b968dca3da9))
+* **init:** skip namespace agent labels when agent is disabled ([#4851](https://github.com/zarf-dev/zarf/issues/4851)) ([8ed2439](https://github.com/zarf-dev/zarf/commit/8ed2439272fa7bd5631b1d01b65f7eb96568614e))
+* **variables:** file variable substitution alignment ([#4866](https://github.com/zarf-dev/zarf/issues/4866)) ([a16872c](https://github.com/zarf-dev/zarf/commit/a16872cd3d81496cabf831a897b4b60bd1509a72))
+
 ## [0.75.1](https://github.com/zarf-dev/zarf/compare/v0.75.0...v0.75.1) (2026-04-30)
 
 
