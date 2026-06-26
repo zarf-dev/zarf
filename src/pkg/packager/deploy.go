@@ -79,6 +79,9 @@ type DeployOptions struct {
 
 	// [Library Only] A map of component names to chart names containing Helm Chart values to override values on deploy
 	ValuesOverridesMap ValuesOverrides
+	// Source is the original source string used to load the package (e.g. oci:// URL or tarball path).
+	// Recorded in the cluster's deployed package state.
+	Source string
 	// IsInteractive decides if Zarf can interactively prompt users through the CLI
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
@@ -265,7 +268,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents = append(deployedComponents, deployedComponent)
 		idx := len(deployedComponents) - 1
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride), state.WithPackageSource(opts.Source), state.WithPackageStatus(state.PackageStatusDeploying)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}
@@ -292,7 +295,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 				deployedComponents[idx].Status = state.ComponentStatusFailed
 				deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, true)
 				if d.isConnectedToCluster() {
-					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+					if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride), state.WithPackageSource(opts.Source), state.WithPackageStatus(state.PackageStatusFailed)); err != nil {
 						l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 					}
 				}
@@ -312,7 +315,7 @@ func (d *deployer) deployComponents(ctx context.Context, pkgLayout *layout.Packa
 		deployedComponents[idx].InstalledCharts = state.MergeInstalledChartsForComponent(deployedComponents[idx].InstalledCharts, charts, false)
 		deployedComponents[idx].Status = state.ComponentStatusSucceeded
 		if d.isConnectedToCluster() {
-			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride)); err != nil {
+			if _, err := d.c.RecordPackageDeployment(ctx, pkgLayout.Pkg, pkgLayout.Digest(), deployedComponents, packageGeneration, state.WithPackageConnectivity(opts.Connected), state.WithPackageNamespaceOverride(opts.NamespaceOverride), state.WithPackageSource(opts.Source), state.WithPackageStatus(state.PackageStatusSucceeded)); err != nil {
 				l.Debug("unable to record package deployment", "component", component.Name, "error", err.Error())
 			}
 		}

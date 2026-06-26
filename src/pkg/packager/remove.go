@@ -91,6 +91,10 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		if err != nil {
 			return fmt.Errorf("unable to load the secret for the package we are attempting to remove: %w", err)
 		}
+		depPkg.Status = state.PackageStatusRemoving
+		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+			l.Warn("unable to update package status to removing", "pkgName", depPkg.Name, "error", err.Error())
+		}
 	} else {
 		// If we do not need the cluster, create a deployed components object based on the info we have
 		depPkg.Name = pkg.Metadata.Name
@@ -105,6 +109,20 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	// setCompStatus finds the component in depPkg.DeployedComponents by name and sets its status.
+	setCompStatus := func(name string, status state.ComponentStatus) {
+		if opts.Cluster == nil {
+			return
+		}
+		idx := slices.IndexFunc(depPkg.DeployedComponents, func(c state.DeployedComponent) bool {
+			return c.Name == name
+		})
+		if idx < 0 {
+			return
+		}
+		depPkg.DeployedComponents[idx].Status = status
+	}
+
 	reverseDepComps := slices.Clone(depPkg.DeployedComponents)
 	slices.Reverse(reverseDepComps)
 	for _, depComp := range reverseDepComps {
@@ -112,6 +130,11 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		comp, ok := componentIdx[depComp.Name]
 		if !ok {
 			continue
+		}
+
+		setCompStatus(depComp.Name, state.ComponentStatusRemoving)
+		if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+			l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoving, "error", err.Error())
 		}
 
 		err := func() error {
@@ -168,6 +191,12 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 			return nil
 		}()
 		if err != nil {
+			depPkg.Status = state.PackageStatusRemoveFailed
+			setCompStatus(depComp.Name, state.ComponentStatusRemoveFailed)
+			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+				l.Warn("unable to update status", "component", depComp.Name, "status", state.ComponentStatusRemoveFailed, "error", err.Error())
+			}
+
 			removeErr := actions.Run(ctx, cwd, comp.Actions.OnRemove.Defaults, comp.Actions.OnRemove.OnFailure, nil, vals, template.StateAccess{})
 			if removeErr != nil {
 				return errors.Join(fmt.Errorf("unable to run the failure action: %w", err), removeErr)
@@ -176,11 +205,19 @@ func Remove(ctx context.Context, pkg v1alpha1.ZarfPackage, opts RemoveOptions) e
 		}
 	}
 
-	// All the installed components were deleted, therefore this package is no longer actually deployed
-	if opts.Cluster != nil && len(depPkg.DeployedComponents) == 0 {
-		err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
-		if err != nil {
-			l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+	if opts.Cluster != nil {
+		if len(depPkg.DeployedComponents) == 0 {
+			// All installed components were deleted, therefore this package is no longer actually deployed
+			err := opts.Cluster.DeleteDeployedPackage(ctx, *depPkg)
+			if err != nil {
+				l.Warn("unable to delete secret for package, this may be normal if the cluster was removed", "pkgName", depPkg.Name, "error", err.Error())
+			}
+		} else {
+			// Some components remain; reset the package status to Succeeded since the partial remove succeeded.
+			depPkg.Status = state.PackageStatusSucceeded
+			if err := opts.Cluster.UpdateDeployedPackage(ctx, *depPkg); err != nil {
+				l.Warn("unable to reset package status after partial remove", "pkgName", depPkg.Name, "error", err.Error())
+			}
 		}
 	}
 

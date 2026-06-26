@@ -383,6 +383,7 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		SetVariables:           o.setVariables,
 		NamespaceOverride:      o.namespaceOverride,
 		RemoteOptions:          defaultRemoteOptions(),
+		Source:                 packageSource,
 		IsInteractive:          !o.confirm,
 		SkipVersionCheck:       o.skipVersionCheck,
 	}
@@ -1308,8 +1309,11 @@ func (o *packageListOptions) complete(ctx context.Context) error {
 // packageListInfo represents the package information for output.
 type packageListInfo struct {
 	Package           string                    `json:"package"`
-	NamespaceOverride string                    `json:"namespaceOverride"`
+	NamespaceOverride string                    `json:"namespaceOverride,omitempty"`
 	Version           string                    `json:"version"`
+	Digest            string                    `json:"digest,omitempty"`
+	Source            string                    `json:"source,omitempty"`
+	Status            state.PackageStatus       `json:"status"`
 	Connectivity      state.PackageConnectivity `json:"connectivity"`
 	Components        []string                  `json:"components"`
 }
@@ -1330,6 +1334,9 @@ func (o *packageListOptions) run(ctx context.Context) error {
 			Package:           pkg.Name,
 			NamespaceOverride: pkg.NamespaceOverride,
 			Version:           pkg.Data.Metadata.Version,
+			Digest:            pkg.Digest,
+			Source:            pkg.Source,
+			Status:            pkg.GetStatus(),
 			Connectivity:      pkg.GetPackageConnectivity(),
 			Components:        components,
 		})
@@ -1349,11 +1356,11 @@ func (o *packageListOptions) run(ctx context.Context) error {
 		}
 		fmt.Fprint(o.outputWriter, string(output))
 	case outputTable:
-		header := []string{"Package", "Namespace Override", "Version", "Connectivity", "Components"}
+		header := []string{"Package", "Namespace Override", "Version", "Status", "Connectivity", "Components"}
 		var packageData [][]string
 		for _, info := range packageList {
 			packageData = append(packageData, []string{
-				info.Package, info.NamespaceOverride, info.Version, string(info.Connectivity), fmt.Sprintf("%v", info.Components),
+				info.Package, info.NamespaceOverride, info.Version, string(info.Status), string(info.Connectivity), fmt.Sprintf("%v", info.Components),
 			})
 		}
 		message.TableWithWriter(o.outputWriter, header, packageData)
