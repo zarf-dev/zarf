@@ -1764,6 +1764,7 @@ func newPackageSignCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().IntVar(&o.retries, "retries", v.GetInt(VPkgRetries), lang.CmdPackageFlagRetries)
 	o.verify = verifyModeIfPossible
 	cmd.Flags().VarP(&o.verify, "verify", "", lang.CmdPackageFlagVerify)
+	cmd.Flags().Lookup("verify").NoOptDefVal = string(verifyModeAlways)
 
 	cmd.Flags().BoolVar(&o.keyless, "keyless", v.GetBool(VPkgSignKeyless), lang.CmdPackageSignFlagKeyless)
 	cmd.Flags().StringVar(&o.identityToken, "identity-token", v.GetString(VPkgSignIdentityToken), lang.CmdPackageSignFlagIdentityToken)
@@ -2151,6 +2152,7 @@ func newVerifyFlagSet(v *viper.Viper, f *packageVerifyFlags) *pflag.FlagSet {
 	fs.StringVarP(&f.publicKeyPath, "key", "k", v.GetString(VPkgPublicKey), lang.CmdPackageFlagFlagPublicKey)
 	f.verify = verifyModeIfPossible
 	fs.VarP(&f.verify, "verify", "", lang.CmdPackageFlagVerify)
+	fs.Lookup("verify").NoOptDefVal = string(verifyModeAlways)
 	fs.BoolVar(&f.skipSignatureValidation, "skip-signature-validation", false, lang.CmdPackageFlagSkipSignatureValidation)
 	_ = fs.MarkDeprecated("skip-signature-validation",
 		"Use --verify=never to skip signature validation. This flag will be removed in Zarf v1.0.0.")
