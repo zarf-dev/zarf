@@ -321,6 +321,8 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
 	}
 
+	pkg = v1beta1.SetDeprecatedFromGeneric(g, pkg)
+
 	return pkg
 }
 
