@@ -213,7 +213,7 @@ jobs:
 
         # These logs were added to find the cause of https://github.com/zarf-dev/zarf/issues/4986
       - name: get agent info
-        if: failure()
+        if: always()
         run: |
           echo "***** Describing agent pods *****"
           kubectl describe pod -l app=agent-hook -n zarf
