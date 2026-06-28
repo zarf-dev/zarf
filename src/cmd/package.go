@@ -1420,7 +1420,6 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 }
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
-
 	ctx := cmd.Context()
 	if len(args) == 0 {
 		packageSource, err := choosePackage(ctx, nil)
