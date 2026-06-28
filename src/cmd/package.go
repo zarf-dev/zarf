@@ -1490,7 +1490,6 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 			errs = append(errs, fmt.Errorf("package %q: %w", packageSource, err))
 			continue
 		}
-
 	}
 	return errors.Join(errs...)
 }
