@@ -36,7 +36,6 @@ func TestReleaseHistoryHelm(t *testing.T) {
 }
 
 func TestHelmChartsExample(t *testing.T) {
-	t.Parallel()
 	t.Log("E2E: Helm chart example")
 	tmpdir := t.TempDir()
 
@@ -91,7 +90,6 @@ func TestHelmChartsExample(t *testing.T) {
 }
 
 func TestHelmServerSideApply(t *testing.T) {
-	t.Parallel()
 	t.Log("E2E: Helm server-side apply")
 	tmpdir := t.TempDir()
 
@@ -148,7 +146,6 @@ func TestHelmExampleWithOverrides(t *testing.T) {
 }
 
 func TestHelmEscaping(t *testing.T) {
-	t.Parallel()
 	t.Log("E2E: Helm chart escaping")
 
 	// Create the package.
@@ -295,7 +292,6 @@ func TestHelmAdoption(t *testing.T) {
 }
 
 func TestHelmHooks(t *testing.T) {
-	t.Parallel()
 	tmpdir := t.TempDir()
 	packagePath := filepath.Join("src", "test", "packages", "25-helm-hooks")
 
