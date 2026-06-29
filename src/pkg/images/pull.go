@@ -377,10 +377,8 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		return fmt.Errorf("failed to create OCI store: %w", err)
 	}
 	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference)
-	if _, err := copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency); err != nil {
-		return err
-	}
-	return nil
+	_, err = copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency)
+	return err
 }
 
 // craneSaveImageFromDockerDaemon exports a single image from the Docker daemon using Crane and copies it into dst.
