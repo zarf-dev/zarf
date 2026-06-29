@@ -223,9 +223,9 @@ func unarchive(ctx context.Context, extractor archives.Extractor, src, dst strin
 	})
 }
 
-// DecompressStream extracts an archive read from src into dst per opts, behaving identically to
-// Decompress except that the source is a stream. Because the archive format cannot be detected
-// from a stream, opts.Extractor must be set.
+// DecompressStream extracts an archive read from src into dst. Because the archive format cannot be detected
+// from a stream, opts.Extractor is required. The extractor must support sequential reads from a non-seekable stream.
+// Formats that require random access to the whole archive (e.g. zip) will error unless src also implements io.ReaderAt and io.Seeker.
 func DecompressStream(ctx context.Context, src io.Reader, dst string, opts DecompressOpts) error {
 	if opts.Extractor == nil {
 		return fmt.Errorf("opts.Extractor must be set to decompress a stream")
