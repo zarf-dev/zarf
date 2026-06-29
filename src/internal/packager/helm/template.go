@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
+	"github.com/goccy/go-yaml/ast"
+	"github.com/goccy/go-yaml/parser"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/internal/packager/template"
@@ -164,7 +166,103 @@ func getTemplatedManifests(renderedManifests *bytes.Buffer, variableConfig *vari
 		releaseutil.InstallOrder,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error re-rendering helm output: %w", err)
+		// STOPGAP (zarf #4977, fixed upstream by helm/helm#32204): Helm v4 splits
+		// kind:List items into separate documents but keeps YAML anchors, dangling
+		// any alias that crosses items. Repair the anchor scope and retry once.
+		if repaired, rerr := resolveCrossDocumentAnchors(buff); rerr == nil && repaired != nil {
+			hooks, resources, err = releaseutil.SortManifests(map[string]string{path: string(repaired)},
+				actionConfig.Capabilities.APIVersions,
+				releaseutil.InstallOrder,
+			)
+		}
+		if err != nil {
+			return nil, nil, fmt.Errorf("error re-rendering helm output: %w", err)
+		}
 	}
 	return hooks, resources, nil
+}
+
+// resolveCrossDocumentAnchors materializes YAML aliases against anchors collected
+// across the whole stream, returning (nil, nil) when there is nothing to repair.
+//
+// STOPGAP for zarf #4977 (fixed upstream by helm/helm#32204); remove once a fixed
+// Helm is vendored.
+func resolveCrossDocumentAnchors(content []byte) ([]byte, error) {
+	// goccy's parser tolerates the dangling alias that yaml.v3 rejects at decode time.
+	file, err := parser.ParseBytes(content, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	collector := &anchorCollector{anchors: map[string]ast.Node{}}
+	for _, doc := range file.Docs {
+		if doc.Body != nil {
+			ast.Walk(collector, doc.Body)
+		}
+	}
+	if len(collector.anchors) == 0 {
+		return nil, nil
+	}
+
+	resolver := &aliasResolver{anchors: collector.anchors}
+	for _, doc := range file.Docs {
+		if doc.Body != nil {
+			ast.Walk(resolver, doc.Body)
+		}
+	}
+	if resolver.resolved == 0 {
+		return nil, nil
+	}
+
+	return []byte(file.String()), nil
+}
+
+// anchorCollector walks a YAML AST collecting anchor definitions keyed by name.
+type anchorCollector struct {
+	anchors map[string]ast.Node
+}
+
+func (c *anchorCollector) Visit(node ast.Node) ast.Visitor {
+	if anchor, ok := node.(*ast.AnchorNode); ok && anchor.Name != nil && anchor.Value != nil {
+		c.anchors[anchor.Name.String()] = anchor.Value
+	}
+	return c
+}
+
+// aliasResolver walks a YAML AST replacing alias references with the matching
+// anchor's value node, in place.
+type aliasResolver struct {
+	anchors  map[string]ast.Node
+	resolved int
+}
+
+// resolve returns the anchor value node for an alias, or nil if node is not a
+// resolvable alias.
+func (r *aliasResolver) resolve(node ast.Node) ast.Node {
+	alias, ok := node.(*ast.AliasNode)
+	if !ok || alias.Value == nil {
+		return nil
+	}
+	value, found := r.anchors[alias.Value.String()]
+	if !found {
+		return nil
+	}
+	r.resolved++
+	return value
+}
+
+func (r *aliasResolver) Visit(node ast.Node) ast.Visitor {
+	switch n := node.(type) {
+	case *ast.MappingValueNode:
+		if value := r.resolve(n.Value); value != nil {
+			n.Value = value
+		}
+	case *ast.SequenceNode:
+		for i, entry := range n.Values {
+			if value := r.resolve(entry); value != nil {
+				n.Values[i] = value
+			}
+		}
+	}
+	return r
 }
