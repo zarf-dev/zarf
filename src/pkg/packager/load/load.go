@@ -29,7 +29,7 @@ import (
 // DefinitionOptions are the optional parameters to load.PackageDefinition
 type DefinitionOptions struct {
 	Flavor string
-	// All variants will ignore Flavor and will return all components, regardless of flavor
+	// All variants will ignore Flavor & architecture and will return all components. Mutually exclusive with flavor.
 	AllVariants  bool
 	SetVariables map[string]string
 	// SkipRequiredValues ignores values schema validation errors when a "required" field is empty. Used when a package
@@ -127,10 +127,8 @@ func validate(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath string,
 		l.Warn("flavor not used in package", "flavor", flavor)
 	}
 
-	validationOpts := internalv1alpha1.ValidateOpts{}
-
-	if allVariants {
-		validationOpts.SkipComponentNameUniquenessValidation = true
+	validationOpts := internalv1alpha1.ValidateOpts{
+		SkipComponentNameUniquenessValidation: allVariants,
 	}
 
 	if err := internalv1alpha1.ValidatePackage(pkg, validationOpts); err != nil {

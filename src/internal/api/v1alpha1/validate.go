@@ -7,7 +7,6 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 
@@ -98,7 +97,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage, opts ValidateOpts) error {
 			// only check if only block is duplicated if we're skipping name uniqueness checks
 			if opts.SkipComponentNameUniquenessValidation {
 				duplicateOnly = slices.ContainsFunc(uniqueComponentNames[component.Name], func(o v1alpha1.ZarfComponentOnlyTarget) bool {
-					return reflect.DeepEqual(o, component.Only)
+					return onlyTargetsEqual(o, component.Only)
 				})
 			}
 			if !opts.SkipComponentNameUniquenessValidation || duplicateOnly {
@@ -350,4 +349,8 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	}
 
 	return err
+}
+
+func onlyTargetsEqual(a, b v1alpha1.ZarfComponentOnlyTarget) bool {
+	return a.LocalOS == b.LocalOS && a.Flavor == b.Flavor && a.Cluster.Architecture == b.Cluster.Architecture && (slices.Equal(a.Cluster.Distros, b.Cluster.Distros))
 }
