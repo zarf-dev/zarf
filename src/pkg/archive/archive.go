@@ -185,27 +185,12 @@ type DecompressOpts struct {
 	Extractor archives.Extractor
 }
 
-// Decompress extracts source into dst, using strip or filter logic per opts, then optionally nests.
+// Decompress extracts source into dst, using strip or filter logic, then optionally
+// nests. If opts.Extractor is nil the archive format is detected from source's file extension.
 func Decompress(ctx context.Context, source, dst string, opts DecompressOpts) error {
-	switch {
-	case len(opts.Files) > 0:
-		return unarchiveFiltered(ctx, opts.Extractor, source, dst, opts.Files, opts.SkipValidation)
-	case opts.StripComponents > 0 || opts.OverwriteExisting:
-		if err := unarchiveWithStrip(ctx, opts.Extractor, source, dst, opts.StripComponents, opts.OverwriteExisting); err != nil {
-			return fmt.Errorf("unable to decompress: %w", err)
-		}
-	default:
-		if err := unarchive(ctx, opts.Extractor, source, dst); err != nil {
-			return fmt.Errorf("unable to decompress: %w", err)
-		}
-	}
-
-	if opts.UnarchiveAll {
-		if err := nestedUnarchive(ctx, opts.Extractor, dst); err != nil {
-			return err
-		}
-	}
-	return nil
+	return withArchive(source, opts.Extractor, func(ex archives.Extractor, input io.Reader) error {
+		return decompressFrom(ctx, ex, input, dst, opts)
+	})
 }
 
 // withArchive opens, identifies, and creates and asserts an extractor if one is not given
@@ -230,53 +215,41 @@ func withArchive(path string, extractor archives.Extractor, fn func(ex archives.
 	return fn(extractor, f)
 }
 
-// unarchive extracts all entries from src into dst using the defaultHandler.
-// It ensures the destination directory exists before extraction.
-func unarchive(ctx context.Context, extractor archives.Extractor, src, dst string) (err error) {
-	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("creating dest %q: %w", dst, err)
-	}
-	root, err := os.OpenRoot(dst)
-	if err != nil {
-		return fmt.Errorf("opening root %q: %w", dst, err)
-	}
-	defer func() { err = errors.Join(err, root.Close()) }()
+// unarchive extracts all entries from src into dst using the default handler. It is used to
+// recursively unpack nested archives discovered on disk.
+func unarchive(ctx context.Context, extractor archives.Extractor, src, dst string) error {
 	return withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
-		if err := ex.Extract(ctx, input, defaultHandler(root)); err != nil {
-			return fmt.Errorf("extracting %q: %w", src, err)
-		}
-		return nil
+		return extract(ctx, ex, input, dst, DecompressOpts{})
 	})
 }
 
-// unarchiveWithStrip extracts all entries from src into dst, stripping the
-// first 'strip' path components and optionally overwriting existing files.
-func unarchiveWithStrip(ctx context.Context, extractor archives.Extractor, src, dst string, strip int, overwrite bool) (err error) {
-	if err := os.MkdirAll(dst, dirPerm); err != nil {
-		return fmt.Errorf("creating dest %q: %w", dst, err)
+// DecompressStream extracts an archive read from src into dst per opts, behaving identically to
+// Decompress except that the source is a stream. Because the archive format cannot be detected
+// from a stream, opts.Extractor must be set.
+func DecompressStream(ctx context.Context, src io.Reader, dst string, opts DecompressOpts) error {
+	if opts.Extractor == nil {
+		return fmt.Errorf("opts.Extractor must be set to decompress a stream")
 	}
-	root, err := os.OpenRoot(dst)
-	if err != nil {
-		return fmt.Errorf("opening root %q: %w", dst, err)
-	}
-	defer func() { err = errors.Join(err, root.Close()) }()
-	return withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
-		if err := ex.Extract(ctx, input, stripHandler(root, strip, overwrite)); err != nil {
-			return fmt.Errorf("extracting %q with strip: %w", src, err)
-		}
-		return nil
-	})
+	return decompressFrom(ctx, opts.Extractor, src, dst, opts)
 }
 
-// unarchiveFiltered extracts only the specified 'want' entries from src into dst.
-// It records found entries and, unless skipValidation is true, returns an error
-// if any requested entry is missing.
-func unarchiveFiltered(ctx context.Context, extractor archives.Extractor, src, dst string, want []string, skipValidation bool) (err error) {
-	found := make(map[string]bool, len(want))
-	wantSet := map[string]bool{}
-	for _, w := range want {
-		wantSet[w] = true
+// decompressFrom extracts input into dst per opts, then optionally recurses into nested archives.
+// It is the shared core of Decompress (file source) and DecompressStream (stream source).
+func decompressFrom(ctx context.Context, extractor archives.Extractor, input io.Reader, dst string, opts DecompressOpts) error {
+	if err := extract(ctx, extractor, input, dst, opts); err != nil {
+		return fmt.Errorf("unable to decompress: %w", err)
 	}
+	if opts.UnarchiveAll {
+		if err := nestedUnarchive(ctx, opts.Extractor, dst); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// extract runs a single extraction pass of input into dst, selecting the traversal-safe entry
+// handler from opts (filtered, stripped, or default). It does not recurse into nested archives.
+func extract(ctx context.Context, extractor archives.Extractor, input io.Reader, dst string, opts DecompressOpts) (err error) {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
@@ -286,18 +259,32 @@ func unarchiveFiltered(ctx context.Context, extractor archives.Extractor, src, d
 	}
 	defer func() { err = errors.Join(err, root.Close()) }()
 
-	err = withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
-		handler := filterHandler(root, wantSet, found)
-		return ex.Extract(ctx, input, handler)
-	})
-	if err != nil {
-		return fmt.Errorf("filtered extract of %q: %w", src, err)
+	var (
+		handler archives.FileHandler
+		found   map[string]bool
+	)
+	switch {
+	case len(opts.Files) > 0:
+		found = make(map[string]bool, len(opts.Files))
+		wantSet := make(map[string]bool, len(opts.Files))
+		for _, f := range opts.Files {
+			wantSet[f] = true
+		}
+		handler = filterHandler(root, wantSet, found)
+	case opts.StripComponents > 0 || opts.OverwriteExisting:
+		handler = stripHandler(root, opts.StripComponents, opts.OverwriteExisting)
+	default:
+		handler = defaultHandler(root)
 	}
 
-	if !skipValidation {
-		for _, w := range want {
-			if !found[w] {
-				return fmt.Errorf("file %q not found in archive %q", w, src)
+	if err := extractor.Extract(ctx, input, handler); err != nil {
+		return fmt.Errorf("extracting: %w", err)
+	}
+
+	if len(opts.Files) > 0 && !opts.SkipValidation {
+		for _, f := range opts.Files {
+			if !found[f] {
+				return fmt.Errorf("file %q not found in archive", f)
 			}
 		}
 	}
