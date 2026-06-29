@@ -203,7 +203,7 @@ func identifySource(src string) (string, error) {
 	if state.DeployedPackageNameRegex(src) {
 		return "cluster", nil
 	}
-	return "", fmt.Errorf("unknown source %s. Did you for get the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
+	return "", fmt.Errorf("unknown source %s. Did you forget the scheme (e.g. (oci://) or file extension (e.g. .tar.zst)?", src)
 }
 
 // GetPackageFromSourceOrCluster retrieves a Zarf package from a source or cluster.
