@@ -35,29 +35,7 @@ func TestReleaseHistoryHelm(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestHelm(t *testing.T) {
-	t.Log("E2E: Helm chart")
-
-	tmpdir := t.TempDir()
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--confirm")
-	require.NoError(t, err, stdOut, stdErr)
-
-	testHelmUninstallRollback(t, tmpdir)
-
-	testHelmAdoption(t, tmpdir)
-
-	t.Run("helm charts example", testHelmChartsExample)
-
-	t.Run("helm charts example with environment registry overrides", testHelmExampleWithOverrides)
-
-	t.Run("helm escaping", testHelmEscaping)
-
-	t.Run("helm server-side apply", testHelmServerSideApply)
-
-	t.Run("helm hooks", testHelmHooks)
-}
-
-func testHelmChartsExample(t *testing.T) {
+func TestHelmChartsExample(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm chart example")
 	tmpdir := t.TempDir()
@@ -112,7 +90,7 @@ func testHelmChartsExample(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmServerSideApply(t *testing.T) {
+func TestHelmServerSideApply(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm server-side apply")
 	tmpdir := t.TempDir()
@@ -155,7 +133,7 @@ func testHelmServerSideApply(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmExampleWithOverrides(t *testing.T) {
+func TestHelmExampleWithOverrides(t *testing.T) {
 	// Cannot use t.Parallel() here because of the Setenv
 	t.Log("E2E: Helm chart with overrides")
 	tmpdir := t.TempDir()
@@ -169,7 +147,7 @@ func testHelmExampleWithOverrides(t *testing.T) {
 	require.Contains(t, string(stdErr), "localhost:555/noway")
 }
 
-func testHelmEscaping(t *testing.T) {
+func TestHelmEscaping(t *testing.T) {
 	t.Parallel()
 	t.Log("E2E: Helm chart escaping")
 
@@ -197,14 +175,20 @@ func testHelmEscaping(t *testing.T) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmUninstallRollback(t *testing.T, tmpdir string) {
+func TestHelmUninstallRollback(t *testing.T) {
 	t.Log("E2E: Helm Uninstall and Rollback")
+
+	tmpdir := t.TempDir()
+
+	// Create the good dos-games package.
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "examples/dos-games", "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
 
 	packageName := fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch)
 	goodPath := filepath.Join(tmpdir, packageName)
 
 	// Create the evil package (with the bad service).
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "-o", tmpdir, "--skip-sbom", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "create", "src/test/packages/25-evil-dos-games/", "-o", tmpdir, "--skip-sbom", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 
 	evilName := fmt.Sprintf("zarf-package-dos-games-%s.tar.zst", e2e.Arch)
@@ -254,9 +238,10 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmAdoption(t *testing.T, tmpdir string) {
+func TestHelmAdoption(t *testing.T) {
 	t.Log("E2E: Helm Adopt existing resources")
 
+	tmpdir := t.TempDir()
 	const ns = "manifest-adoption"
 	// The release name is zarf-<sha1("raw-<pkg>-<component>-<manifest>")>.
 	const releaseName = "zarf-3bf0a070e0db6eba0e7e39a4e1a36caac631d957"
@@ -309,7 +294,7 @@ func testHelmAdoption(t *testing.T, tmpdir string) {
 	require.NoError(t, err, stdOut, stdErr)
 }
 
-func testHelmHooks(t *testing.T) {
+func TestHelmHooks(t *testing.T) {
 	t.Parallel()
 	tmpdir := t.TempDir()
 	packagePath := filepath.Join("src", "test", "packages", "25-helm-hooks")
