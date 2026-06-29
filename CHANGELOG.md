@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.80.0](https://github.com/zarf-dev/zarf/compare/v0.79.0...v0.80.0) (2026-06-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* add a digest to zarf package state and a digest inspect command ([#4993](https://github.com/zarf-dev/zarf/issues/4993))
+* **schema:** zarf dev schema-generate from existing values ([#4961](https://github.com/zarf-dev/zarf/issues/4961))
+
+### Features
+
+* add a digest to zarf package state and a digest inspect command ([#4993](https://github.com/zarf-dev/zarf/issues/4993)) ([62b0d8d](https://github.com/zarf-dev/zarf/commit/62b0d8de958ae77cfa6c6ad0d5f0ebc9a7bc2a6f))
+* **package:** support verification on all CLI package load operations ([#4996](https://github.com/zarf-dev/zarf/issues/4996)) ([ee2ddd9](https://github.com/zarf-dev/zarf/commit/ee2ddd95a3c1cbb54f9ab7e29844ea2e562a4e66))
+* **schema:** zarf dev schema-generate from existing values ([#4961](https://github.com/zarf-dev/zarf/issues/4961)) ([d1f8d48](https://github.com/zarf-dev/zarf/commit/d1f8d484a64594256409ddc603acd76350485ad6))
+* **viper:** support viper configuration for sign/verify ([#4946](https://github.com/zarf-dev/zarf/issues/4946)) ([887b0b8](https://github.com/zarf-dev/zarf/commit/887b0b85779da2e5a1f27dac97c481e549b9621c))
+
 ## [0.79.0](https://github.com/zarf-dev/zarf/compare/v0.78.0...v0.79.0) (2026-06-16)
 
 
