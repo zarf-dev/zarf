@@ -255,34 +255,57 @@ func testHelmUninstallRollback(t *testing.T, tmpdir string) {
 }
 
 func testHelmAdoption(t *testing.T, tmpdir string) {
-	t.Log("E2E: Helm Adopt a Deployment")
+	t.Log("E2E: Helm Adopt existing resources")
 
-	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-dos-games-%s-1.3.0.tar.zst", e2e.Arch))
-	deploymentManifest := "src/test/packages/25-manifest-adoption/deployment.yaml"
+	const ns = "manifest-adoption"
+	// The release name is zarf-<sha1("raw-<pkg>-<component>-<manifest>")>.
+	const releaseName = "zarf-3bf0a070e0db6eba0e7e39a4e1a36caac631d957"
+	adoptionPath := filepath.Join("src", "test", "packages", "25-manifest-adoption")
 
-	// Deploy dos-games manually into the cluster without Zarf
-	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", deploymentManifest)
-	require.NoError(t, err, "unable to apply", "deploymentManifest", deploymentManifest)
+	stdOut, stdErr, err := e2e.Zarf(t, "package", "create", adoptionPath, "-o", tmpdir, "--confirm")
+	require.NoError(t, err, stdOut, stdErr)
+	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-manifest-adoption-%s-0.0.1.tar.zst", e2e.Arch))
+
+	// Deploy the namespaced and cluster-scoped resources manually, without Zarf
+	existingResources := filepath.Join(adoptionPath, "existing-resources.yaml")
+	kubectlOut, _, err := e2e.Kubectl(t, "apply", "-f", existingResources)
+	require.NoError(t, err, "unable to apply", "existingResources", existingResources)
 	require.Contains(t, kubectlOut, "deployment.apps/game created")
+	require.Contains(t, kubectlOut, "clusterrole.rbac.authorization.k8s.io/zarf-adoption-test created")
+	t.Cleanup(func() {
+		_, _, err := e2e.Kubectl(t, "delete", "clusterrole", "zarf-adoption-test", "--ignore-not-found")
+		require.NoError(t, err)
+		_, _, err = e2e.Kubectl(t, "delete", "namespace", ns, "--ignore-not-found")
+		require.NoError(t, err)
+	})
 
-	// Deploy dos-games into the cluster with Zarf
-	stdOut, stdErr, err := e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--take-ownership")
+	// Adopt the pre-existing resources into the cluster with Zarf
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "deploy", packagePath, "--confirm", "--take-ownership")
 	require.NoError(t, err, stdOut, stdErr)
 
-	// Ensure that this does create a dos-games chart
-	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", "dos-games")
+	// Ensure that this creates a Helm release adopting the existing resources
+	helmOut, _, err := e2e.Zarf(t, "tools", "helm", "list", "-n", ns)
 	require.NoError(t, err)
-	require.Contains(t, helmOut, "zarf-f53a99d4a4dd9a3575bedf59cd42d48d751ae866")
+	require.Contains(t, helmOut, releaseName)
 
-	existingLabel, _, err := e2e.Kubectl(t, "get", "ns", "dos-games", "-o=jsonpath={.metadata.labels.keep-this}")
+	// The namespace's pre-existing labels and annotations are preserved
+	existingLabel, _, err := e2e.Kubectl(t, "get", "ns", ns, "-o=jsonpath={.metadata.labels.keep-this}")
+	require.NoError(t, err)
 	require.Equal(t, "label", existingLabel)
+	existingAnnotation, _, err := e2e.Kubectl(t, "get", "ns", ns, "-o=jsonpath={.metadata.annotations.keep-this}")
 	require.NoError(t, err)
-	existingAnnotation, _, err := e2e.Kubectl(t, "get", "ns", "dos-games", "-o=jsonpath={.metadata.annotations.keep-this}")
 	require.Equal(t, "annotation", existingAnnotation)
+
+	// The cluster-scoped resource is adopted into the Helm release
+	managedBy, _, err := e2e.Kubectl(t, "get", "clusterrole", "zarf-adoption-test", "-o=jsonpath={.metadata.labels.app\\.kubernetes\\.io/managed-by}")
 	require.NoError(t, err)
+	require.Equal(t, "Helm", managedBy)
+	adoptedRelease, _, err := e2e.Kubectl(t, "get", "clusterrole", "zarf-adoption-test", "-o=jsonpath={.metadata.annotations.meta\\.helm\\.sh/release-name}")
+	require.NoError(t, err)
+	require.Equal(t, releaseName, adoptedRelease)
 
 	// Remove the package.
-	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "dos-games", "--confirm")
+	stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "manifest-adoption", "--confirm")
 	require.NoError(t, err, stdOut, stdErr)
 }
 
