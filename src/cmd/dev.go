@@ -595,6 +595,7 @@ func (o *devDeployOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:      defaultRemoteOptions(),
 		CachePath:          cachePath,
 		SkipVersionCheck:   o.skipVersionCheck,
+		TakeOwnership:      o.takeOwnership,
 	})
 	var lintErr *lint.LintError
 	if errors.As(err, &lintErr) {
