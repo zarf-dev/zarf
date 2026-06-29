@@ -1396,9 +1396,9 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 	o := &packageRemoveOptions{}
 
 	cmd := &cobra.Command{
-		Use:               "remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm",
+		Use:               "remove { PACKAGE_SOURCE | PACKAGE_NAME }... --confirm",
 		Aliases:           []string{"u", "rm"},
-		Args:              cobra.MaximumNArgs(1),
+		Args:              cobra.ArbitraryArgs,
 		Short:             lang.CmdPackageRemoveShort,
 		Long:              lang.CmdPackageRemoveLong,
 		Example:           lang.CmdPackageRemoveExample,
@@ -1421,11 +1421,14 @@ func newPackageRemoveCommand(v *viper.Viper) *cobra.Command {
 
 func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	packageSource, err := choosePackage(ctx, args)
-	if err != nil {
-		return err
-	}
+	if len(args) == 0 {
+		packageSource, err := choosePackage(ctx, nil)
+		if err != nil {
+			return err
+		}
 
+		args = []string{packageSource}
+	}
 	vals, err := parseValues(ctx, o.valuesFiles, o.setValues)
 	if err != nil {
 		return err
@@ -1451,10 +1454,7 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		RemoteOptions:        defaultRemoteOptions(),
 		CachePath:            cachePath,
 	}
-	pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
-	if err != nil {
-		return fmt.Errorf("unable to load the package: %w", err)
-	}
+
 	removeOpt := packager.RemoveOptions{
 		Cluster:           c,
 		Timeout:           config.ZarfDefaultTimeout,
@@ -1462,26 +1462,36 @@ func (o *packageRemoveOptions) run(cmd *cobra.Command, args []string) error {
 		SkipVersionCheck:  o.skipVersionCheck,
 		Values:            vals,
 	}
-	logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
-	err = utils.ColorPrintYAML(pkg, nil, false)
-	if err != nil {
-		return fmt.Errorf("unable to print package definition: %w", err)
-	}
-	if !o.confirm {
-		prompt := &survey.Confirm{
-			Message: "Remove this Zarf package?",
+	var errs []error
+	for _, arg := range args {
+		packageSource, err := choosePackage(ctx, []string{arg})
+		if err != nil {
+			return err
 		}
-		var confirm bool
-		if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
-			return fmt.Errorf("package remove cancelled")
+		pkg, err := packager.GetPackageFromSourceOrCluster(ctx, c, packageSource, o.namespaceOverride, loadOpts)
+		if err != nil {
+			return fmt.Errorf("unable to load the package: %w", err)
 		}
-	}
+		logger.From(ctx).Info("loaded package for removal", "name", pkg.Metadata.Name)
+		if err := utils.ColorPrintYAML(pkg, nil, false); err != nil {
+			return fmt.Errorf("unable to print package definition: %w", err)
+		}
+		if !o.confirm {
+			prompt := &survey.Confirm{
+				Message: fmt.Sprintf("Remove the Zarf package '%s'?", pkg.Metadata.Name),
+			}
+			var confirm bool
+			if err := survey.AskOne(prompt, &confirm); err != nil || !confirm {
+				return fmt.Errorf("package remove cancelled")
+			}
+		}
 
-	err = packager.Remove(ctx, pkg, removeOpt)
-	if err != nil {
-		return err
+		if err := packager.Remove(ctx, pkg, removeOpt); err != nil {
+			errs = append(errs, fmt.Errorf("package %q: %w", packageSource, err))
+			continue
+		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 type packagePublishOptions struct {
