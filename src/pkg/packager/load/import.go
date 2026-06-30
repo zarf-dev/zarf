@@ -400,6 +400,20 @@ func overrideMetadata(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompone
 		}
 		comp.Only.LocalOS = override.Only.LocalOS
 	}
+
+	if len(override.Only.Variable) > 0 {
+		merged := make(map[string]string, len(comp.Only.Variable)+len(override.Only.Variable))
+		for k, v := range comp.Only.Variable {
+			merged[k] = v
+		}
+		for k, v := range override.Only.Variable {
+			if existing, ok := merged[k]; ok && existing != v {
+				return v1alpha1.ZarfComponent{}, fmt.Errorf("component %q: \"only.variable.%s\" %q cannot be redefined as %q during compose", comp.Name, k, existing, v)
+			}
+			merged[k] = v
+		}
+		comp.Only.Variable = merged
+	}
 	return comp, nil
 }
 

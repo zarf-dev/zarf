@@ -87,6 +87,23 @@ func CheckComponentValues(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	return findings
 }
 
+// CheckOnlyVariableReferences warns when a key in only.variable doesn't match a declared package variable or constant.
+func CheckOnlyVariableReferences(c v1alpha1.ZarfComponent, i int, declared map[string]struct{}) []PackageFinding {
+	var findings []PackageFinding
+	for key := range c.Only.Variable {
+		if _, ok := declared[key]; ok {
+			continue
+		}
+		findings = append(findings, PackageFinding{
+			YqPath:      fmt.Sprintf(".components.[%d].only.variable.%s", i, key),
+			Description: fmt.Sprintf("only.variable references %q which is not declared as a package variable or constant", key),
+			Item:        key,
+			Severity:    SevWarn,
+		})
+	}
+	return findings
+}
+
 func checkForUnpinnedRepos(c v1alpha1.ZarfComponent, i int) []PackageFinding {
 	var findings []PackageFinding
 	for j, repo := range c.Repos {

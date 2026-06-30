@@ -26,6 +26,23 @@ func (vc *VariableConfig) GetSetVariableMap() SetVariableMap {
 	return vc.setVariableMap
 }
 
+// GetResolvedValues returns a name->value map combining set variables and constants.
+// Set variables take precedence on key conflicts. Used by component filtering to gate
+// components on resolved variable/constant values at deploy time.
+func (vc *VariableConfig) GetResolvedValues() map[string]string {
+	resolved := make(map[string]string, len(vc.constants)+len(vc.setVariableMap))
+	for _, c := range vc.constants {
+		resolved[c.Name] = c.Value
+	}
+	for name, v := range vc.setVariableMap {
+		if v == nil {
+			continue
+		}
+		resolved[name] = v.Value
+	}
+	return resolved
+}
+
 // PopulateVariables handles setting the active variables within a VariableConfig's SetVariableMap
 func (vc *VariableConfig) PopulateVariables(variables []v1alpha1.InteractiveVariable, presetVariables map[string]string) error {
 	for name, value := range presetVariables {

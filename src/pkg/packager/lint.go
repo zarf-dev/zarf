@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/pkg/lint"
 	"github.com/zarf-dev/zarf/src/pkg/packager/load"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
@@ -46,8 +47,10 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		return err
 	}
 	findings := []lint.PackageFinding{}
+	declared := declaredVariableNames(defined.Pkg)
 	for i, component := range defined.Pkg.Components {
 		findings = append(findings, lint.CheckComponentValues(component, i)...)
+		findings = append(findings, lint.CheckOnlyVariableReferences(component, i, declared)...)
 	}
 	if len(findings) == 0 {
 		return nil
@@ -56,4 +59,15 @@ func Lint(ctx context.Context, packagePath string, opts LintOptions) error {
 		PackageName: defined.Pkg.Metadata.Name,
 		Findings:    findings,
 	}
+}
+
+func declaredVariableNames(pkg v1alpha1.ZarfPackage) map[string]struct{} {
+	names := make(map[string]struct{}, len(pkg.Variables)+len(pkg.Constants))
+	for _, v := range pkg.Variables {
+		names[v.Name] = struct{}{}
+	}
+	for _, c := range pkg.Constants {
+		names[c.Name] = struct{}{}
+	}
+	return names
 }

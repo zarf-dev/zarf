@@ -1,0 +1,80 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-only-variable
+  description: Conditionally include components based on package variable or constant values at deploy time
+
+variables:
+  - name: NEEDS_REFRESH
+    description: When set to "true", the refresh component runs during deploy
+    default: "false"
+    prompt: true
+  - name: NEEDS_SEED
+    description: When set to "true", the seed component runs during deploy
+    default: "false"
+    prompt: true
+
+components:
+  # No only.variable — always included (subject to other only.* gating).
+  - name: base
+    required: true
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "base component"
+
+  # Included only when variable resolves to "true" at deploy time.
+  - name: refresh-data
+    only:
+      variable:
+        NEEDS_REFRESH: "true"
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "refreshing data"
+
+  # Included only when variable resolves to "true" at deploy time.
+  - name: seed-data
+    only:
+      variable:
+        NEEDS_SEED: "true"
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "seeding data"
+
+  # Included only when BOTH conditions hold.
+  - name: refresh-and-seed
+    only:
+      variable:
+        NEEDS_REFRESH: "true"
+        NEEDS_SEED: "true"
+    actions:
+      onDeploy:
+        before:
+          - cmd: echo "running combined refresh + seed pipeline"
+
+x-mdx: |
+  This example demonstrates `only.variable`, which lets you conditionally include a
+  component based on the resolved value of a package variable or constant at deploy time.
+
+  - Variables resolve from `--set`, then declared defaults, then interactive prompts.
+  - Comparisons are string-equal. Quote your values (`"true"`, not `true`) so YAML parses them as strings.
+  - Missing variables resolve to the empty string, so `only.variable: { FOO: "" }` will match when `FOO` is unset.
+
+  Sample invocations:
+
+  ```bash
+  # Only `base` runs.
+  zarf package deploy zarf-package-component-only-variable-*.tar.zst --confirm
+
+  # `base` and `refresh-data` run.
+  zarf package deploy zarf-package-component-only-variable-*.tar.zst --set NEEDS_REFRESH=true --confirm
+
+  # `base`, `refresh-data`, `seed-data`, and `refresh-and-seed` all run.
+  zarf package deploy zarf-package-component-only-variable-*.tar.zst \
+    --set NEEDS_REFRESH=true --set NEEDS_SEED=true --confirm
+  ```
+
+  In an interactive deploy (without `--confirm`), Zarf prompts for any variable marked
+  `prompt: true` before deciding which components to include, so operators can drive
+  selection by answering the prompts.

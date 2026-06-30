@@ -49,6 +49,7 @@ const (
 	PkgValidateErrVariable                = "invalid package variable: %w"
 	PkgValidateErrNoComponents            = "package does not contain any compatible components"
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
+	PkgValidateErrOnlyVariableKey         = "component %q: only.variable key %q must match ^[A-Z0-9_]+$"
 )
 
 // ValidatePackage runs all validation checks on the package.
@@ -122,6 +123,11 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 		if actionsErr := validateActions(component.Actions); actionsErr != nil {
 			err = errors.Join(err, fmt.Errorf("%q: %w", component.Name, actionsErr))
+		}
+		for key := range component.Only.Variable {
+			if !v1alpha1.IsUppercaseNumberUnderscore(key) {
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrOnlyVariableKey, component.Name, key))
+			}
 		}
 		// ensure groups don't have multiple defaults or only one component
 		if component.DeprecatedGroup != "" {

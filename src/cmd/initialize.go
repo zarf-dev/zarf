@@ -233,8 +233,9 @@ func (o *initOptions) run(cmd *cobra.Command, args []string) error {
 		IsInteractive:          !o.confirm,
 		AgentTLS:               agentTLS,
 		AgentMutationPolicy:    state.MutationPolicy(o.agentMutationPolicy),
+		OptionalComponents:     o.optionalComponents,
 	}
-	_, err = deploy(ctx, pkgLayout, opts, o.setVariables, o.optionalComponents)
+	_, err = deploy(ctx, pkgLayout, opts, o.setVariables)
 	if err != nil {
 		return err
 	}

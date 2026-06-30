@@ -1,0 +1,54 @@
+kind: ZarfPackageConfig
+metadata:
+  name: component-only-variable
+  description: Test conditional component inclusion via only.variable
+
+variables:
+  - name: COMPONENT_ONE
+    default: "false"
+  - name: COMPONENT_TWO
+    default: "false"
+
+constants:
+  - name: ALWAYS_TRUE
+    value: "true"
+
+components:
+  - name: always
+    required: true
+    files:
+      - source: blank-file.txt
+        target: always-file.txt
+
+  - name: component-one
+    only:
+      variable:
+        COMPONENT_ONE: "true"
+    files:
+      - source: blank-file.txt
+        target: component-one-file.txt
+
+  - name: component-two
+    only:
+      variable:
+        COMPONENT_TWO: "true"
+    files:
+      - source: blank-file.txt
+        target: component-two-file.txt
+
+  - name: component-one-and-two
+    only:
+      variable:
+        COMPONENT_ONE: "true"
+        COMPONENT_TWO: "true"
+    files:
+      - source: blank-file.txt
+        target: component-one-and-two-file.txt
+
+  - name: gated-by-constant
+    only:
+      variable:
+        ALWAYS_TRUE: "true"
+    files:
+      - source: blank-file.txt
+        target: gated-by-constant-file.txt

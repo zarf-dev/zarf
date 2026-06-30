@@ -1026,6 +1026,13 @@
             "windows"
           ],
           "type": "string"
+        },
+        "variable": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Only deploy component when every listed package variable or constant resolves to the given value at deploy time. Values are compared as strings.",
+          "type": "object"
         }
       },
       "type": "object"
