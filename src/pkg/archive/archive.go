@@ -189,7 +189,8 @@ type DecompressOpts struct {
 // nests. If opts.Extractor is nil the archive format is detected from source's file extension.
 func Decompress(ctx context.Context, source, dst string, opts DecompressOpts) error {
 	return withArchive(source, opts.Extractor, func(ex archives.Extractor, input io.Reader) error {
-		return decompressFrom(ctx, ex, input, dst, opts)
+		opts.Extractor = ex
+		return decompressFrom(ctx, input, dst, opts)
 	})
 }
 
@@ -217,9 +218,9 @@ func withArchive(path string, extractor archives.Extractor, fn func(ex archives.
 
 // unarchive extracts all entries from src into dst using the default handler. It is used to
 // recursively unpack nested archives discovered on disk.
-func unarchive(ctx context.Context, extractor archives.Extractor, src, dst string) error {
-	return withArchive(src, extractor, func(ex archives.Extractor, input io.Reader) error {
-		return extract(ctx, ex, input, dst, DecompressOpts{})
+func unarchive(ctx context.Context, src, dst string) error {
+	return withArchive(src, archives.Tar{}, func(ex archives.Extractor, input io.Reader) error {
+		return extract(ctx, input, dst, DecompressOpts{Extractor: ex})
 	})
 }
 
@@ -233,17 +234,17 @@ func DecompressStream(ctx context.Context, src io.Reader, dst string, opts Decom
 	if src == nil {
 		return fmt.Errorf("src must be set")
 	}
-	return decompressFrom(ctx, opts.Extractor, src, dst, opts)
+	return decompressFrom(ctx, src, dst, opts)
 }
 
 // decompressFrom extracts input into dst per opts, then optionally recurses into nested archives.
 // It is the shared core of Decompress (file source) and DecompressStream (stream source).
-func decompressFrom(ctx context.Context, extractor archives.Extractor, input io.Reader, dst string, opts DecompressOpts) error {
-	if err := extract(ctx, extractor, input, dst, opts); err != nil {
+func decompressFrom(ctx context.Context, input io.Reader, dst string, opts DecompressOpts) error {
+	if err := extract(ctx, input, dst, opts); err != nil {
 		return fmt.Errorf("unable to decompress: %w", err)
 	}
 	if opts.UnarchiveAll {
-		if err := nestedUnarchive(ctx, opts.Extractor, dst); err != nil {
+		if err := nestedUnarchive(ctx, dst); err != nil {
 			return err
 		}
 	}
@@ -252,7 +253,7 @@ func decompressFrom(ctx context.Context, extractor archives.Extractor, input io.
 
 // extract runs a single extraction pass of input into dst, selecting the traversal-safe entry
 // handler from opts (filtered, stripped, or default). It does not recurse into nested archives.
-func extract(ctx context.Context, extractor archives.Extractor, input io.Reader, dst string, opts DecompressOpts) (err error) {
+func extract(ctx context.Context, input io.Reader, dst string, opts DecompressOpts) (err error) {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
 	}
@@ -280,7 +281,7 @@ func extract(ctx context.Context, extractor archives.Extractor, input io.Reader,
 		handler = defaultHandler(root)
 	}
 
-	if err := extractor.Extract(ctx, input, handler); err != nil {
+	if err := opts.Extractor.Extract(ctx, input, handler); err != nil {
 		return fmt.Errorf("extracting: %w", err)
 	}
 
@@ -297,7 +298,7 @@ func extract(ctx context.Context, extractor archives.Extractor, input io.Reader,
 // nestedUnarchive walks dst and unarchives each .tar file it finds.
 // It uses WalkDir so that symlinks are visible via d.Type() and skipped,
 // preventing the walk from following symlinks into directories.
-func nestedUnarchive(ctx context.Context, extractor archives.Extractor, dst string) error {
+func nestedUnarchive(ctx context.Context, dst string) error {
 	return filepath.WalkDir(dst, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -309,7 +310,7 @@ func nestedUnarchive(ctx context.Context, extractor archives.Extractor, dst stri
 		if d.Name() == sbomFileName || d.Name() == documentationFileName {
 			outDir = strings.TrimSuffix(path, extensionTar)
 		}
-		if err := unarchive(ctx, extractor, path, outDir); err != nil {
+		if err := unarchive(ctx, path, outDir); err != nil {
 			return fmt.Errorf(lang.ErrUnarchive, path, err)
 		}
 		if err := os.Remove(path); err != nil {
