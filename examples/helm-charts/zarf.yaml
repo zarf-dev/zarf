@@ -55,10 +55,38 @@ components:
         releaseName: cool-release-name
         valuesFiles:
           - values.yaml
+
     images:
       - ghcr.io/stefanprodan/podinfo:6.4.0
       # This is the cosign signature for the podinfo image for image signature verification
       - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
+
+  - name: demo-patched-helm-chart
+    required: true
+    images:
+      - ghcr.io/stefanprodan/podinfo:6.4.0
+      - ghcr.io/stefanprodan/podinfo:sha256-57a654ace69ec02ba8973093b6a786faa15640575fbf0dbb603db55aca2ccec8.sig
+    charts:
+      - name: podinfo-patched
+        version: 6.4.0
+        namespace: podinfo-from-git-patched
+        # In this case `localPath` will load the local podinfo chart which is created by the `onCreate` action
+        localPath: podinfo/charts/podinfo
+        valuesFiles:
+          - values.yaml
+    # git clone podinfo/ for podinfo-patched chart and apply patches (typically created with `git format-patch`)
+    # This is a simple method to apply modifications to a Helm chart that is not under your control, if value overrides are not sufficient
+    actions:
+      onCreate:
+        before:
+          - cmd: |
+              # Clone and apply patches to git repo
+              rm -rf podinfo
+              git clone -b 6.4.0 --depth 1 -c advice.detachedHead=false https://github.com/stefanprodan/podinfo.git
+              cd podinfo
+              export GIT_COMMITTER_NAME="zarf"
+              export GIT_COMMITTER_EMAIL="zarf@invalid"
+              git am --3way ../*.patch  # will error if the patch does not apply cleanly
 
 documentation:
   readme: readme.md
