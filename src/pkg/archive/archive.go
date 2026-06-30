@@ -230,6 +230,9 @@ func DecompressStream(ctx context.Context, src io.Reader, dst string, opts Decom
 	if opts.Extractor == nil {
 		return fmt.Errorf("opts.Extractor must be set to decompress a stream")
 	}
+	if src == nil {
+		return fmt.Errorf("src must be set")
+	}
 	return decompressFrom(ctx, opts.Extractor, src, dst, opts)
 }
 
