@@ -887,7 +887,8 @@ func TestPackageLayoutVerifyPackageSignature(t *testing.T) {
 		verifyOpts.Key = "" // Empty key
 
 		err = pkgLayout.VerifyPackageSignature(ctx, verifyOpts)
-		require.EqualError(t, err, "package was signed with a key; provide --key to verify")
+		require.ErrorIs(t, err, ErrNoVerificationMaterial)
+		require.Contains(t, err.Error(), "package was signed with a key; provide --key to verify")
 	})
 
 	t.Run("verification fails when signature is corrupted", func(t *testing.T) {
@@ -1434,7 +1435,7 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 		require.Equal(t, "test-verification", pkgLayout.Pkg.Metadata.Name)
 	})
 
-	t.Run("VerifyIfPossible with signed package and wrong key warns but continues", func(t *testing.T) {
+	t.Run("VerifyIfPossible with signed package and wrong key fails", func(t *testing.T) {
 		pkgDir, _ := setupTestPackage(t, true)
 
 		opts := PackageLayoutOptions{
@@ -1442,13 +1443,14 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 			VerifyBlobOptions:    verifyOptsFromKey("./testdata/nonexistent.pub"),
 		}
 
-		// Should warn but not fail
+		// Signed package + verification failure = always fatal, even under VerifyIfPossible.
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
-		require.NoError(t, err)
-		require.NotNil(t, pkgLayout)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+		require.Nil(t, pkgLayout)
 	})
 
-	t.Run("VerifyIfPossible with unsigned package warns but continues", func(t *testing.T) {
+	t.Run("VerifyIfPossible with unsigned package and material provided fails", func(t *testing.T) {
 		pkgDir, _ := setupTestPackage(t, false)
 
 		opts := PackageLayoutOptions{
@@ -1456,10 +1458,47 @@ func TestLoadFromDir_VerificationStrategies(t *testing.T) {
 			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
-		// Should warn about unsigned package but not fail
+		// Providing a key against an unsigned package implies an expectation of a signature — always fatal.
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+		require.Nil(t, pkgLayout)
+	})
+
+	t.Run("VerifyIfPossible with unsigned package and no material warns but continues", func(t *testing.T) {
+		pkgDir, _ := setupTestPackage(t, false)
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+		}
+
+		// Unsigned package with no material = nothing to verify; tolerated under VerifyIfPossible.
 		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
 		require.NoError(t, err)
 		require.NotNil(t, pkgLayout)
+	})
+
+	// Regression test for zarf-dev/zarf#4909: a tampered signature must always fail,
+	// even under the default VerifyIfPossible strategy.
+	t.Run("VerifyIfPossible with signed package and tampered zarf.yaml fails", func(t *testing.T) {
+		pkgDir, pubKeyPath := setupTestPackage(t, true)
+
+		// Tamper the signed artifact after signing: append a comment to keep the YAML
+		// parseable while changing the raw bytes so the cosign signature no longer matches.
+		yamlPath := filepath.Join(pkgDir, ZarfYAML)
+		original, err := os.ReadFile(yamlPath)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(yamlPath, append(original, []byte("\n# tampered\n")...), 0o644))
+
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+			VerifyBlobOptions:    verifyOptsFromKey(pubKeyPath),
+		}
+
+		pkgLayout, err := LoadFromDir(ctx, pkgDir, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+		require.Nil(t, pkgLayout)
 	})
 
 	t.Run("VerifyAlways with signed package and valid key succeeds", func(t *testing.T) {
@@ -1580,13 +1619,29 @@ func TestLoadFromTar_VerificationStrategies(t *testing.T) {
 		require.Equal(t, "test", pkgLayout.Pkg.Metadata.Name)
 	})
 
-	t.Run("VerifyIfPossible warns but continues on unsigned tarball", func(t *testing.T) {
+	t.Run("VerifyIfPossible with unsigned tarball and material provided fails", func(t *testing.T) {
 		opts := PackageLayoutOptions{
 			VerificationStrategy: VerifyIfPossible,
 			VerifyBlobOptions:    verifyOptsFromKey("./testdata/cosign.pub"),
 		}
 
-		// Should succeed with warning since package is unsigned
+		// Providing a key against an unsigned package is always fatal.
+		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "signature verification failed")
+		if pkgLayout != nil {
+			t.Cleanup(func() {
+				require.NoError(t, pkgLayout.Cleanup())
+			})
+		}
+	})
+
+	t.Run("VerifyIfPossible with unsigned tarball and no material warns but continues", func(t *testing.T) {
+		opts := PackageLayoutOptions{
+			VerificationStrategy: VerifyIfPossible,
+		}
+
+		// Unsigned package with no material = nothing to verify; tolerated under VerifyIfPossible.
 		pkgLayout, err := LoadFromTar(ctx, tarPath, opts)
 		require.NoError(t, err)
 		t.Cleanup(func() {

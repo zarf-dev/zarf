@@ -50,7 +50,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 
 	simplePackageRef := fmt.Sprintf("oci://%s/simple-package:0.0.1", ref)
 	// fail to pull the package without providing the public key
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--verify")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "--verify=always")
 	suite.Error(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", publicKeyFlag, "-o", outputPath)
@@ -59,7 +59,7 @@ func (suite *PullInspectTestSuite) Test_0_Pull() {
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "pull", simplePackageRef, "--plain-http", "-o", outputPath)
 	suite.NoError(err, stdOut, stdErr)
 
-	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", "--verify")
+	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "definition", simplePackageRef, "--plain-http", "--verify=always")
 	suite.Error(err, stdOut, stdErr)
 
 	stdOut, stdErr, err = e2e.Zarf(suite.T(), "package", "inspect", "sbom", simplePackageRef, "--plain-http", publicKeyFlag, "--output", suite.T().TempDir())
