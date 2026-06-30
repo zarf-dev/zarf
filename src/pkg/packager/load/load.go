@@ -41,6 +41,8 @@ type DefinitionOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// Skeleton retains all architecture variants instead of filtering to the build host arch
+	Skeleton bool
 	types.RemoteOptions
 }
 
@@ -75,7 +77,11 @@ func PackageDefinition(ctx context.Context, packagePath string, opts DefinitionO
 	if err != nil {
 		return DefinedPackage{}, err
 	}
-	pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	if opts.Skeleton {
+		pkg.Metadata.Architecture = v1alpha1.SkeletonArch
+	} else {
+		pkg.Metadata.Architecture = config.GetArch(pkg.Metadata.Architecture)
+	}
 	opts.CachePath, err = utils.ResolveCachePath(opts.CachePath)
 	if err != nil {
 		return DefinedPackage{}, err

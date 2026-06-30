@@ -278,7 +278,7 @@ func validateComponentCompose(c v1alpha1.ZarfComponent) error {
 }
 
 func compatibleComponent(c v1alpha1.ZarfComponent, arch, flavor string) bool {
-	satisfiesArch := c.Only.Cluster.Architecture == "" || c.Only.Cluster.Architecture == arch
+	satisfiesArch := c.Only.Cluster.Architecture == "" || arch == v1alpha1.SkeletonArch || c.Only.Cluster.Architecture == arch
 	satisfiesFlavor := c.Only.Flavor == "" || c.Only.Flavor == flavor
 	return satisfiesArch && satisfiesFlavor
 }
