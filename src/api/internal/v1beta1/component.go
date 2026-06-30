@@ -95,6 +95,8 @@ type ZarfComponentOnlyTarget struct {
 	Cluster ZarfComponentOnlyCluster `json:"cluster,omitempty"`
 	// Only include this component when a matching '--flavor' is specified on 'zarf package create'.
 	Flavor string `json:"flavor,omitempty"`
+	// Only deploy component when every listed package variable or constant resolves to the given value at deploy time. Values are compared as strings.
+	Variable map[string]string `json:"variable,omitempty"`
 }
 
 // ZarfComponentOnlyCluster represents the architecture and K8s cluster distribution to filter on.

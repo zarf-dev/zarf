@@ -83,6 +83,9 @@ type DeployOptions struct {
 	IsInteractive bool
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// OptionalComponents is the comma-delimited list passed via --components used to drive the deploy filter.
+	// When IsInteractive is true and this value is empty, Zarf prompts the operator to choose components.
+	OptionalComponents string
 }
 
 // deployer tracks mutable fields across deployments. Because components can create a cluster and create state
@@ -150,6 +153,27 @@ func Deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts DeployOpt
 	}
 
 	variableConfig, err := getPopulatedVariableConfig(ctx, pkgLayout.Pkg, opts.SetVariables, opts.IsInteractive)
+	if err != nil {
+		return DeployResult{}, err
+	}
+
+	// Apply only.variable filter using the resolved variable + constant values.
+	// This runs after variable population (so prompted values are visible) and before
+	// the optional-component picker so operators can drive selection via variable inputs.
+	resolvedValues := variableConfig.GetResolvedValues()
+	beforeVariable := pkgLayout.Pkg.Components
+	pkgLayout.Pkg.Components, err = filters.ByVariable(resolvedValues).Apply(pkgLayout.Pkg)
+	if err != nil {
+		return DeployResult{}, err
+	}
+	// Surface a precise error if --components named a component that only.variable just dropped
+	if err := filters.CheckVariableFilterDropsRequested(beforeVariable, pkgLayout.Pkg.Components, opts.OptionalComponents, resolvedValues); err != nil {
+		return DeployResult{}, err
+	}
+
+	// ForDeploy is idempotent when no --components are supplied non-interactively, so it is
+	// safe to re-apply even if the cmd layer already filtered at load time.
+	pkgLayout.Pkg.Components, err = filters.ForDeploy(opts.OptionalComponents, opts.IsInteractive).Apply(pkgLayout.Pkg)
 	if err != nil {
 		return DeployResult{}, err
 	}

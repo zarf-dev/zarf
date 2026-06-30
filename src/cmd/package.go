@@ -403,9 +403,10 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 		RemoteOptions:          defaultRemoteOptions(),
 		IsInteractive:          !o.confirm,
 		SkipVersionCheck:       o.skipVersionCheck,
+		OptionalComponents:     o.optionalComponents,
 	}
 
-	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables, o.optionalComponents)
+	deployedComponents, err := deploy(ctx, pkgLayout, deployOpts, o.setVariables)
 	if err != nil {
 		return err
 	}
@@ -425,30 +426,20 @@ func (o *packageDeployOptions) run(cmd *cobra.Command, args []string) (err error
 	return nil
 }
 
-func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string, optionalComponents string) ([]state.DeployedComponent, error) {
+func deploy(ctx context.Context, pkgLayout *layout.PackageLayout, opts packager.DeployOptions, setVariables map[string]string) ([]state.DeployedComponent, error) {
 	// Intentionally duplicate the deploy override logic here to allow us to render the updated package in confirm below
 	if opts.NamespaceOverride != "" {
 		if err := packager.OverridePackageNamespace(&pkgLayout.Pkg, opts.NamespaceOverride); err != nil {
 			return nil, err
 		}
 	}
-	err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive)
-	if err != nil {
+	if err := confirmDeploy(ctx, pkgLayout, setVariables, opts.IsInteractive); err != nil {
 		return nil, err
 	}
 
-	// In the interactive case we wait until after the component prompt to filter
-	if opts.IsInteractive {
-		filter := filters.Combine(
-			filters.ByLocalOS(runtime.GOOS),
-			filters.ForDeploy(optionalComponents, true),
-		)
-		pkgLayout.Pkg.Components, err = filter.Apply(pkgLayout.Pkg)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+	// Variable resolution, only.variable gating, and the optional-component picker
+	// all happen inside packager.Deploy so prompts run in the order:
+	// variables (incl. prompts) -> only.variable filter -> optional-component picker.
 	result, err := packager.Deploy(ctx, pkgLayout, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to deploy package: %w", err)

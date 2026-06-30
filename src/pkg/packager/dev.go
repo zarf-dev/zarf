@@ -121,6 +121,16 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		return err
 	}
 
+	resolvedValues := variableConfig.GetResolvedValues()
+	beforeVariable := pkgLayout.Pkg.Components
+	pkgLayout.Pkg.Components, err = filters.ByVariable(resolvedValues).Apply(pkgLayout.Pkg)
+	if err != nil {
+		return err
+	}
+	if err := filters.CheckVariableFilterDropsRequested(beforeVariable, pkgLayout.Pkg.Components, opts.OptionalComponents, resolvedValues); err != nil {
+		return err
+	}
+
 	l.Info("starting package dev deploy", "name", pkgLayout.Pkg.Metadata.Name)
 
 	var d deployer
