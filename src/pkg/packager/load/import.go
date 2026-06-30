@@ -152,17 +152,18 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 
 		name := getComponentToImportName(component)
 		found := []v1alpha1.ZarfComponent{}
-		for _, component := range importedPkg.Components {
-			if component.Name == name && compatibleComponent(component, arch, flavor) {
-				found = append(found, component)
+		for _, importedComponent := range importedPkg.Components {
+			if importedComponent.Name == name && compatibleComponent(importedComponent, arch, flavor) {
+				found = append(found, importedComponent)
 			}
 		}
 		if len(found) == 0 {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
-		} else if len(found) > 1 {
+		}
+		// A concrete-arch build resolves to one component; a skeleton retains every arch variant.
+		if len(found) > 1 && arch != v1alpha1.SkeletonArch {
 			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
-		importedComponent := found[0]
 
 		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
 		if err != nil {
@@ -178,16 +179,18 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		if !fileInfo.IsDir() {
 			importPath = filepath.Dir(importPath)
 		}
-		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
-		composed, err := overrideMetadata(importedComponent, component)
-		if err != nil {
-			return v1alpha1.ZarfPackage{}, nil, err
-		}
-		composed = overrideDeprecated(composed, component)
-		composed = overrideActions(composed, component)
-		composed = overrideResources(composed, component)
 
-		components = append(components, composed)
+		for _, importedComponent := range found {
+			importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
+			composed, err := overrideMetadata(importedComponent, component)
+			if err != nil {
+				return v1alpha1.ZarfPackage{}, nil, err
+			}
+			composed = overrideDeprecated(composed, component)
+			composed = overrideActions(composed, component)
+			composed = overrideResources(composed, component)
+			components = append(components, composed)
+		}
 		variables = append(variables, importedPkg.Variables...)
 		constants = append(constants, importedPkg.Constants...)
 		for _, v := range importedPkg.Values.Files {
