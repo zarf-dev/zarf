@@ -252,7 +252,7 @@ func decompressFrom(ctx context.Context, input io.Reader, dst string, opts Decom
 }
 
 // extract runs a single extraction pass of input into dst, selecting the traversal-safe entry
-// handler from opts (filtered, stripped, or default). It does not recurse into nested archives.
+// handler from opts (filtered, stripped, or default).
 func extract(ctx context.Context, input io.Reader, dst string, opts DecompressOpts) (err error) {
 	if err := os.MkdirAll(dst, dirPerm); err != nil {
 		return fmt.Errorf("creating dest %q: %w", dst, err)
