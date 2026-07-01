@@ -34,7 +34,10 @@ func SetDeprecatedFromGeneric(g types.Package, pkg Package) Package {
 
 func applyActionSetSetVariables(set *ComponentActionSet, g types.ComponentActionSet) {
 	applyActionSliceSetVariables(set.Before, g.Before)
-	applyActionSliceSetVariables(set.OnSuccess, g.OnSuccess)
+	// set.OnSuccess is [After..., OnSuccess...] after the fold in actionSetFromGeneric.
+	afterLen := len(g.After)
+	applyActionSliceSetVariables(set.OnSuccess[:afterLen], g.After)
+	applyActionSliceSetVariables(set.OnSuccess[afterLen:], g.OnSuccess)
 	applyActionSliceSetVariables(set.OnFailure, g.OnFailure)
 }
 

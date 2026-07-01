@@ -626,6 +626,51 @@ func TestV1Alpha1PkgToV1Beta1_Actions(t *testing.T) {
 	require.Equal(t, "echo failure", actions.OnDeploy.OnFailure[0].Cmd)
 }
 
+func TestV1Alpha1PkgToV1Beta1_AfterOnSuccessSetVariables(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "sv-comp",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						After: []v1alpha1.ZarfComponentAction{
+							{
+								Cmd:          "echo after",
+								SetVariables: []v1alpha1.Variable{{Name: "AFTER_VAR"}},
+							},
+						},
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{
+								Cmd:          "echo success",
+								SetVariables: []v1alpha1.Variable{{Name: "SUCCESS_VAR", Sensitive: true}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	require.Len(t, result.Components[0].Actions.OnDeploy.OnSuccess, 2)
+
+	afterAction := result.Components[0].Actions.OnDeploy.OnSuccess[0]
+	require.Equal(t, "echo after", afterAction.Cmd)
+	afterVars := afterAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
+	require.Len(t, afterVars, 1)
+	require.Equal(t, "AFTER_VAR", afterVars[0].Name)
+
+	successAction := result.Components[0].Actions.OnDeploy.OnSuccess[1]
+	require.Equal(t, "echo success", successAction.Cmd)
+	successVars := successAction.GetDeprecatedSetVariables() //nolint:staticcheck // shim used only by the API conversion layer
+	require.Len(t, successVars, 1)
+	require.Equal(t, "SUCCESS_VAR", successVars[0].Name)
+	require.True(t, successVars[0].Sensitive)
+}
+
 func TestV1Alpha1PkgToV1Beta1_Files(t *testing.T) {
 	t.Parallel()
 	tmpl := true
