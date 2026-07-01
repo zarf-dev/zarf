@@ -2,56 +2,107 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
   "author": "zarf-dev/zarf maintainers",
-  "timestamp": "2026-07-01T00:00:00Z",
-  "version": 1,
+  "version": 7,
   "statements": [
     {
-      "vulnerability": {"name": "GHSA-f5mr-q85p-6hh6"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/github.com/sigstore/fulcio@v1.8.5"}],
+      "vulnerability": {
+        "name": "GHSA-f5mr-q85p-6hh6"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.8.5"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Zarf uses sigstore/fulcio as a client-side dependency for certificate retrieval during artifact signing. The vulnerable OIDC discovery redirect code lives exclusively in the Fulcio CA server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions."
+      "impact_statement": "Zarf uses sigstore/fulcio as a client-side dependency for certificate retrieval during artifact signing. The vulnerable OIDC discovery redirect code lives exclusively in the Fulcio CA server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions.",
+      "timestamp": "2026-07-01T19:24:44.741062719Z"
     },
     {
-      "vulnerability": {"name": "GHSA-47q9-m4ww-924m"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/github.com/sigstore/rekor@v1.5.1"}],
+      "vulnerability": {
+        "name": "GHSA-47q9-m4ww-924m"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/rekor@v1.5.1"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Zarf uses sigstore/rekor as a client-side dependency for transparency log interaction during artifact signing and verification. The vulnerable unbounded gzip decompression logic in Alpine APK parsing lives exclusively in the Rekor server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions."
+      "impact_statement": "Zarf uses sigstore/rekor as a client-side dependency for transparency log interaction during artifact signing and verification. The vulnerable unbounded gzip decompression logic in Alpine APK parsing lives exclusively in the Rekor server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions.",
+      "timestamp": "2026-07-01T19:24:44.751649895Z"
     },
     {
-      "vulnerability": {"name": "GHSA-hr2v-4r36-88hr"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/helm.sh/helm/v3@v3.19.2"}],
+      "vulnerability": {
+        "name": "GHSA-hr2v-4r36-88hr"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.19.2"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Zarf uses helm.sh/helm/v4 for chart templating and in-memory rendering; helm.sh/helm/v3 is an indirect dependency only. The vulnerable path traversal logic in chart archive extraction is not invoked by any of Zarf's code paths. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected chart extraction functions."
+      "impact_statement": "Zarf uses helm.sh/helm/v4 for chart templating and in-memory rendering; helm.sh/helm/v3 is an indirect dependency only. The vulnerable path traversal logic in chart archive extraction is not invoked by any of Zarf's code paths. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected chart extraction functions.",
+      "timestamp": "2026-07-01T19:24:44.763757169Z"
     },
     {
-      "vulnerability": {"name": "GHSA-fqw6-gf59-qr4w"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "vulnerability": {
+        "name": "GHSA-fqw6-gf59-qr4w"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side container runtime path, which resolves user IDs when starting containers under runAsNonRoot enforcement. Neither k9s nor Zarf starts containers or invokes the runtime user ID setup code. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path."
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side container runtime path, which resolves user IDs when starting containers under runAsNonRoot enforcement. Neither k9s nor Zarf starts containers or invokes the runtime user ID setup code. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path.",
+      "timestamp": "2026-07-01T19:24:44.776387889Z"
     },
     {
-      "vulnerability": {"name": "GHSA-xhf5-7wjv-pqxp"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "vulnerability": {
+        "name": "GHSA-xhf5-7wjv-pqxp"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side CRI plugin, which propagates image-config labels to the binary:// restart-monitor logger enabling host-root command execution. Neither k9s nor Zarf runs the containerd CRI plugin or manages container lifecycle. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable CRI functions are not in Zarf's execute path."
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side CRI plugin, which propagates image-config labels to the binary:// restart-monitor logger enabling host-root command execution. Neither k9s nor Zarf runs the containerd CRI plugin or manages container lifecycle. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable CRI functions are not in Zarf's execute path.",
+      "timestamp": "2026-07-01T19:24:44.789576692Z"
     },
     {
-      "vulnerability": {"name": "GHSA-jpcc-p29g-p8mq"},
-      "timestamp": "2026-07-01T00:00:00Z",
-      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "vulnerability": {
+        "name": "GHSA-jpcc-p29g-p8mq"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code parses /etc/group from an image during container setup to assign supplementary groups, which can trigger unbounded memory allocation. This parsing occurs in the server-side container runtime setup path. Neither k9s nor Zarf executes container setup and the group-parsing code is never invoked. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path."
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code parses /etc/group from an image during container setup to assign supplementary groups, which can trigger unbounded memory allocation. This parsing occurs in the server-side container runtime setup path. Neither k9s nor Zarf executes container setup and the group-parsing code is never invoked. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path.",
+      "timestamp": "2026-07-01T19:24:44.80199249Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-9c54-x2g4-v92j"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/timestamp-authority/v2@v2.0.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf uses sigstore/timestamp-authority as a client-side dependency for RFC 3161 timestamp requests during artifact signing. The vulnerable code is in the server's Prometheus metrics endpoint, which accumulates unbounded label cardinality causing OOM. Zarf does not run the timestamp-authority server and never invokes the metrics endpoint. govulncheck does not flag this CVE as reachable from Zarf's code.",
+      "timestamp": "2026-07-01T19:24:44.813685023Z"
     }
-  ]
+  ],
+  "timestamp": "2026-07-01T19:24:44Z",
+  "last_updated": "2026-07-01T19:24:44Z"
 }
