@@ -3,6 +3,20 @@
   "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
   "author": "zarf-dev/zarf maintainers",
   "timestamp": "2026-07-01T00:00:00Z",
-  "version": 1,
-  "statements": []
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GHSA-jw44-4f3j-q396"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/zarf-dev/zarf"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Helm disputes this as a vulnerability (https://helm.sh/blog/response-cve-2019-25210/): the label injection behavior is documented and intentional. In Zarf's deployment model, all Helm charts are sourced from cryptographically signed and verified packages; a chart cannot be modified by an adversary without invalidating the package signature, eliminating the injection vector this CVE describes."
+    }
+  ]
 }
