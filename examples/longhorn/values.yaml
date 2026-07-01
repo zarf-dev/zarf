@@ -2,7 +2,7 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 global:
-  imageRegistry: "127.0.0.1:31999"
+  imageRegistry: "###ZARF_REGISTRY###"
   cattle:
     systemDefaultRegistry: ""
     windowsCluster:
