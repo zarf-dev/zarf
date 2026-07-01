@@ -37,3 +37,9 @@ components:
   - name: git-server
     import:
       path: packages/gitea
+
+# VEX document shipped with the init package so consumers can reproduce Zarf's
+# accepted-CVE posture when scanning the init package or its components with grype.
+# Retrieve with: zarf package inspect <init-package> --get-documentation zarf.openvex.json
+documentation:
+  zarf.openvex.json: .vex/zarf.openvex.json
