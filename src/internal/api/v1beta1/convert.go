@@ -5,6 +5,7 @@
 package v1beta1
 
 import (
+	"maps"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -330,13 +331,18 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 }
 
 func metadataFromGeneric(m types.PackageMetadata) v1beta1.PackageMetadata {
+	var annotations map[string]string
+	if m.Annotations != nil {
+		annotations = make(map[string]string, len(m.Annotations))
+		maps.Copy(annotations, m.Annotations)
+	}
 	meta := v1beta1.PackageMetadata{
 		Name:         m.Name,
 		Description:  m.Description,
 		Version:      m.Version,
 		Uncompressed: m.Uncompressed,
 		Architecture: m.Architecture,
-		Annotations:  m.Annotations,
+		Annotations:  annotations,
 	}
 
 	// Map v1alpha1 AllowNamespaceOverride (*bool, default allow) onto v1beta1 PreventNamespaceOverride (bool, default allow).
