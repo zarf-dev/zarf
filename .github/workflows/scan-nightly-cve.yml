@@ -49,17 +49,20 @@ jobs:
       ## face. VEX statements in .vex/zarf.openvex.json suppress accepted findings.
       ## Fails the workflow on any un-suppressed High or Critical finding.
 
-      - name: Install grype
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
-            | sh -s -- -b /usr/local/bin
-
       - name: Build Zarf binary
         run: make build-cli-linux-amd
 
+      ## Equivalent to `make scan-grype` (grype <binary> --config .grype.yaml -o json --fail-on high).
+      ## .grype.yaml is auto-detected when 'config' is not set; VEX documents it references are consumed.
       - name: Run grype scan (fails on High+)
         id: grype
-        run: make scan-grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          path: ./build/zarf
+          fail-build: "true"
+          severity-cutoff: high
+          output-format: json
+          output-file: build/grype.json
 
       - name: Check for orphaned VEX statements
         if: always()

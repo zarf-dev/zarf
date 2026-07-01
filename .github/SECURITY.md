@@ -20,8 +20,6 @@ As Zarf has not yet reached v1.0.0, only the current latest minor release is sup
 
 To discuss security related issues, please email the maintainers at zarf-dev-private@googlegroups.com.
 
----
-
 ## CVE Posture & VEX
 
 Each Zarf release includes a **VEX (Vulnerability Exploitability eXchange) document**

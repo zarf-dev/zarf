@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
   "author": "zarf-dev/zarf maintainers",
-  "version": 4,
+  "version": 1,
   "statements": [
     {
       "vulnerability": {
