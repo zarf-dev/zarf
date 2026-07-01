@@ -10,6 +10,17 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOriginalAPIVersion(t *testing.T) {
+	t.Parallel()
+
+	var unset ZarfBuildData
+	require.Equal(t, APIVersion, unset.GetOriginalAPIVersion())
+
+	var recorded ZarfBuildData
+	recorded.SetOriginalAPIVersion("zarf.dev/v1beta1")
+	require.Equal(t, "zarf.dev/v1beta1", recorded.GetOriginalAPIVersion())
+}
+
 func TestZarfPackageIsInitPackage(t *testing.T) {
 	t.Parallel()
 
