@@ -50,6 +50,8 @@ type DevDeployOptions struct {
 	CachePath      string
 	// SkipVersionCheck skips version requirement validation
 	SkipVersionCheck bool
+	// TakeOwnership adopts any pre-existing K8s resources into the Helm charts managed by Zarf
+	TakeOwnership bool
 	types.RemoteOptions
 }
 
@@ -164,6 +166,7 @@ func DevDeploy(ctx context.Context, packagePath string, opts DevDeployOptions) (
 		Connected:      !opts.AirgapMode,
 		OCIConcurrency: opts.OCIConcurrency,
 		RemoteOptions:  opts.RemoteOptions,
+		TakeOwnership:  opts.TakeOwnership,
 	})
 	if err != nil {
 		return err

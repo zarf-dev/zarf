@@ -60,7 +60,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 ### Options
 
 ```
-      --adopt-existing-resources                Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --agent-mutation-policy string            Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate (default "all")
       --agent-tls-ca string                     Path to a PEM-encoded CA certificate for the Zarf agent
       --agent-tls-cert string                   Path to a PEM-encoded TLS certificate for the Zarf agent
@@ -96,6 +95,7 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
       --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
       --storage-class string                    Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
+      --take-ownership                          Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
       --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
       --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
       --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
