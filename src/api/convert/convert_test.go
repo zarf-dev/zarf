@@ -344,7 +344,7 @@ func TestV1Beta1PkgToV1Alpha1_ServiceMarksInitPackage(t *testing.T) {
 					},
 				},
 			}
-			result := PackageV1Beta1ToV1Alpha1(pkg)
+			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Equal(t, tt.expectedKind, result.Kind)
 		})
 	}
@@ -781,7 +781,7 @@ func TestV1Beta1PkgToV1Alpha1_Metadata(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
 	require.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
@@ -834,7 +834,7 @@ func TestV1Beta1PkgToV1Alpha1_Build(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Equal(t, v1alpha1.ZarfPackageConfig, result.Kind)
 	require.Equal(t, "my-machine", result.Build.Terminal)
@@ -886,7 +886,7 @@ func TestV1Beta1PkgToV1Alpha1_ComponentBasics(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components, 1)
 	comp := result.Components[0]
@@ -1013,7 +1013,7 @@ func TestV1Beta1PkgToV1Alpha1_ChartSources(t *testing.T) {
 					},
 				},
 			}
-			result := PackageV1Beta1ToV1Alpha1(pkg)
+			result := PackageV1beta1ToV1alpha1(pkg)
 			require.Len(t, result.Components, 1)
 			require.Len(t, result.Components[0].Charts, 1)
 			tt.validate(t, result.Components[0].Charts[0])
@@ -1043,7 +1043,7 @@ func TestV1Beta1PkgToV1Alpha1_ManifestSkipWaitInversion(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components[0].Manifests, 2)
 
@@ -1102,7 +1102,7 @@ func TestV1Beta1PkgToV1Alpha1_Actions(t *testing.T) {
 		},
 	}
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Components, 1)
 	actions := result.Components[0].Actions
@@ -1157,7 +1157,7 @@ func TestV1Beta1PkgToV1Alpha1_VariablesShim(t *testing.T) {
 		},
 	}, v1beta1.Package{Kind: v1beta1.ZarfPackageConfig})
 
-	result := PackageV1Beta1ToV1Alpha1(pkg)
+	result := PackageV1beta1ToV1alpha1(pkg)
 
 	require.Len(t, result.Variables, 1)
 	v := result.Variables[0]
@@ -1266,7 +1266,7 @@ func TestRoundTrip_V1Alpha1_To_V1Beta1_And_Back(t *testing.T) {
 
 	// Round-trip: v1alpha1 → v1beta1 → v1alpha1.
 	beta := PackageV1alpha1ToV1beta1(original)
-	result := PackageV1Beta1ToV1Alpha1(beta)
+	result := PackageV1beta1ToV1alpha1(beta)
 
 	require.Equal(t, v1alpha1.APIVersion, result.APIVersion)
 	require.Equal(t, original.Kind, result.Kind)
