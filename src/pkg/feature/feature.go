@@ -206,7 +206,6 @@ const (
 	AxolotlMode            Name = "axolotl-mode"
 	RegistryProxy          Name = "registry-proxy"
 	Values                 Name = "values"
-	BundleSignature        Name = "bundle-signature"
 	DockerDaemonDirectPull Name = "docker-daemon-direct-pull"
 )
 
@@ -244,13 +243,6 @@ func init() {
 			Enabled: true,
 			Since:   "v0.64.0",
 			Stage:   Alpha,
-		},
-		{
-			Name:        BundleSignature,
-			Description: "Enables Sigstore bundle format signatures. When disabled, only legacy signature format is produced.",
-			Enabled:     true,
-			Since:       "v0.72.0",
-			Stage:       Alpha,
 		},
 		{
 			Name: DockerDaemonDirectPull,

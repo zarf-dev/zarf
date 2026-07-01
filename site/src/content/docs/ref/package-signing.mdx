@@ -26,22 +26,7 @@ Packages are signed using the [Sigstore bundle format](https://docs.sigstore.dev
 
 The bundle format follows the [Sigstore Bundle Specification](https://github.com/sigstore/cosign/blob/main/specs/BUNDLE_SPEC.md).
 
-### Legacy Signature Format
-
-:::caution[Deprecation]
-
-The legacy signature format (`zarf.yaml.sig`) will be deprecated in favor of the Sigstore bundle format (`zarf.bundle.sig`). While Zarf currently supports both formats for backward compatibility, the legacy format will soon no longer be generated for new signatures. Zarf will retain the ability to verify legacy signatures as a fallback for when a package is signed but no bundle signature is present.
-
-**Reasons for deprecation:**
-
-1. **Limited metadata**: Only stores the raw signature without additional verification context
-2. **Non-standard**: Uses a custom format not compatible with other Sigstore tooling
-3. **Reduced functionality**: Cannot support advanced features like keyless signing or transparency log integration
-4. **Maintenance burden**: Supporting multiple formats increases complexity and testing requirements
-
-**Migration:**
-
-Re-sign packages with legacy signatures using the `zarf package sign --features="bundle-signature=true" --overwrite` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
+Re-sign packages with legacy signatures using the `zarf package sign --overwrite` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
 
 :::
 
