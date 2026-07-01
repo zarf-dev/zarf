@@ -175,8 +175,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -443,8 +443,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -641,8 +641,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -849,8 +849,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -1117,8 +1117,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -1315,8 +1315,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -1523,8 +1523,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -1791,8 +1791,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -1989,8 +1989,8 @@
                               "description": "The working directory to run the command in (default is CWD).",
                               "type": "string"
                             },
-                            "enableValues": {
-                              "description": "EnableValues enables go-template processing on the cmd field.",
+                            "enableTemplating": {
+                              "description": "EnableTemplating enables go-template processing on the cmd field.",
                               "type": "boolean"
                             },
                             "env": {
@@ -2358,8 +2358,8 @@
                       "description": "The absolute or relative path where the file or folder should be copied to during package deploy.",
                       "type": "string"
                     },
-                    "enableValues": {
-                      "description": "EnableValues enables go-template processing on this file during deploy.",
+                    "enableTemplating": {
+                      "description": "EnableTemplating enables go-template processing on this file during deploy.",
                       "type": "boolean"
                     },
                     "executable": {
@@ -2509,8 +2509,8 @@
                     "^x-": {}
                   },
                   "properties": {
-                    "enableValues": {
-                      "description": "EnableValues enables go-template processing on these manifests during deploy.",
+                    "enableTemplating": {
+                      "description": "EnableTemplating enables go-template processing on these manifests during deploy.",
                       "type": "boolean"
                     },
                     "files": {
@@ -2587,7 +2587,21 @@
               "repositories": {
                 "description": "List of git repositories to include in the package.",
                 "items": {
-                  "type": "string"
+                  "additionalProperties": false,
+                  "description": "Repository defines a git repository to include in the package.",
+                  "patternProperties": {
+                    "^x-": {}
+                  },
+                  "properties": {
+                    "url": {
+                      "description": "The URL of the git repository.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "type": "object"
                 },
                 "type": "array"
               },
@@ -2601,6 +2615,13 @@
                   "git-server"
                 ],
                 "type": "string"
+              },
+              "stateAccess": {
+                "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
               },
               "target": {
                 "additionalProperties": false,
@@ -6275,6 +6296,13 @@
                     ],
                     "type": "string"
                   },
+                  "templatedValuesFiles": {
+                    "description": "[alpha] List of local values file paths or remote URLs that will have Go templates applied at deploy time",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
                   "url": {
                     "description": "The URL of the OCI registry, chart repository, or git repo where the helm chart is stored.",
                     "examples": [
@@ -6293,10 +6321,21 @@
                         "^x-": {}
                       },
                       "properties": {
+                        "excludePaths": {
+                          "description": "Paths under sourcePath to omit when mapping to the target. Each path must be a descendant of sourcePath.",
+                          "items": {
+                            "examples": [
+                              ".registry.image"
+                            ],
+                            "pattern": "^\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*$",
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "sourcePath": {
                           "description": "Path to Zarf values key. A single dot (.) represents the root.",
                           "examples": [
-                            ".registry.port"
+                            ".registry"
                           ],
                           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
                           "type": "string"
@@ -6304,7 +6343,7 @@
                         "targetPath": {
                           "description": "Path to chart values key. A single dot (.) represents the root.",
                           "examples": [
-                            ".service.port"
+                            ".distribution"
                           ],
                           "pattern": "^(\\.|\\.[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)*)$",
                           "type": "string"
@@ -6762,6 +6801,13 @@
                 }
               },
               "type": "object"
+            },
+            "stateAccess": {
+              "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
             }
           },
           "required": [

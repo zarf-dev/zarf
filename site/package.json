@@ -6,24 +6,29 @@
   "scripts": {
     "lint": "markdownlint-cli2 . --config ../.markdownlint-cli2.jsonc",
     "lint:fix": "markdownlint-cli2 --fix . --config ../.markdownlint-cli2.jsonc",
-    "predev": "cp ../src/pkg/schema/zarf-v1alpha1-schema.json ./src/assets/zarf-v1alpha1-schema.json && node hack/copy-examples.js",
+    "predev": "mkdir -p src/assets/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
     "dev": "astro dev",
     "start": "astro dev",
-    "prebuild": "cp ../src/pkg/schema/zarf-v1alpha1-schema.json ./src/assets/zarf-v1alpha1-schema.json && node hack/copy-examples.js",
+    "prebuild": "mkdir -p src/assets/schema && cp ../src/pkg/schema/zarf-v1alpha1-schema.json src/assets/schema/latest.json && node hack/copy-examples.js",
     "build": "rm -rf dist && astro check && astro build",
+    "check": "npm run prebuild && astro check",
+    "build:versions": "node hack/build-versions.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "link-check": "linkinator --recurse dist/ --config linkinator.config.json"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.6",
-    "@astrojs/starlight": "^0.37.3",
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/markdown-remark": "^7.2.0",
+    "@astrojs/starlight": "^0.40.0",
     "@fontsource/source-code-pro": "^5.0.17",
-    "astro": "^5.18.1",
+    "astro": "^6.4.6",
     "mermaid": "^10.9.4",
     "rehype-autolink-headings": "^7.1.0",
-    "sharp": "^0.33.3",
-    "typescript": "^5.4.3"
+    "sharp": "^0.34.5",
+    "starlight-sidebar-topics": "^0.7.0",
+    "typescript": "^5.4.3",
+    "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
     "linkinator": "^7.5.3",
@@ -32,6 +37,6 @@
     "yaml": "^2.8.3"
   },
   "engines": {
-    "node": ">=20.11.1"
+    "node": ">=22.12.0"
   }
 }

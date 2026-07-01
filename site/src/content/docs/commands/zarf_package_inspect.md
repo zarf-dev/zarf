@@ -38,6 +38,7 @@ zarf package inspect [flags]
 
 * [zarf package](/commands/zarf_package/)	 - Zarf package commands for creating, deploying, and inspecting packages
 * [zarf package inspect definition](/commands/zarf_package_inspect_definition/)	 - Displays the 'zarf.yaml' definition for the specified package
+* [zarf package inspect digest](/commands/zarf_package_inspect_digest/)	 - Outputs the SHA256 digest of the package's OCI manifest
 * [zarf package inspect documentation](/commands/zarf_package_inspect_documentation/)	 - Extract documentation files from the package
 * [zarf package inspect images](/commands/zarf_package_inspect_images/)	 - List all container images contained in the package
 * [zarf package inspect manifests](/commands/zarf_package_inspect_manifests/)	 - Template and output all manifests and charts in a package

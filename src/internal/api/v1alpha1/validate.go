@@ -43,6 +43,7 @@ const (
 	PkgValidateErrChartNamespaceMissing   = "chart %q must include a namespace"
 	PkgValidateErrChartURLOrPath          = "chart %q must have either a url or localPath"
 	PkgValidateErrChartVersion            = "chart %q must include a chart version"
+	PkgValidateErrChartValueExcludePath   = "chart %q excludePath %q must be a descendant of sourcePath %q"
 	PkgValidateErrManifestFileOrKustomize = "manifest %q must have at least one file or kustomization"
 	PkgValidateErrManifestNameLength      = "manifest %q exceed the maximum length of %d characters"
 	PkgValidateErrVariable                = "invalid package variable: %w"
@@ -299,7 +300,24 @@ func validateChart(chart v1alpha1.ZarfChart) error {
 		err = errors.Join(err, nameErr)
 	}
 
+	for _, cv := range chart.Values {
+		for _, excludePath := range cv.ExcludePaths {
+			if !isPathDescendant(cv.SourcePath, excludePath) {
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrChartValueExcludePath, chart.Name, excludePath, cv.SourcePath))
+			}
+		}
+	}
+
 	return err
+}
+
+// isPathDescendant reports whether child is a strict descendant of parent, where
+// both are dot-notation paths and "." is the root.
+func isPathDescendant(parent, child string) bool {
+	if parent == "." {
+		return child != "." && strings.HasPrefix(child, ".")
+	}
+	return strings.HasPrefix(child, parent+".")
 }
 
 // validateManifest runs all validation checks on a manifest.

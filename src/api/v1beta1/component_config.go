@@ -36,11 +36,14 @@ type ComponentSpec struct {
 	// List of tar archives of images to include in the package.
 	ImageArchives []ImageArchive `json:"imageArchives,omitempty"`
 	// List of git repositories to include in the package.
-	Repositories []string `json:"repositories,omitempty"`
+	Repositories []Repository `json:"repositories,omitempty"`
 	// Custom commands to run at various stages of a package lifecycle.
 	Actions ComponentActions `json:"actions,omitempty"`
 	// The Zarf CLI service this component provides, such as the registry, injector, or agent.
 	Service Service `json:"service,omitempty" jsonschema:"enum=registry,enum=seed-registry,enum=injector,enum=agent,enum=git-server"`
+	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
+	// Valid values: "registryCredentials", "gitCredentials", "agentCerts".
+	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
 }
 
 // ComponentMetadata holds metadata about a component config.

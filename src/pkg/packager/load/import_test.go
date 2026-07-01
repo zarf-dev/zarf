@@ -29,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -97,7 +97,7 @@ func TestResolveImports(t *testing.T) {
 		{
 			name:             "chart version and url properties are not overridden",
 			path:             "./testdata/import/chart",
-			expectedChecksum: "cc62674a6faa1c9685aac0c8266dacec3b91e0a9466c8d1ce3664e019348b43a",
+			expectedChecksum: "ec6553c389314a5853259c58c073a8d214dc807f709f4ac9cad4099f25144ffe",
 		},
 		{
 			name:             "archives work as expected",
@@ -115,7 +115,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -149,7 +149,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
-	resolved, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
+	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
 		"", "", []string{}, "", false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
@@ -245,7 +245,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -256,6 +256,58 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			merged, err := value.ParseFiles(ctx, absPaths, value.ParseFilesOptions{})
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, merged)
+		})
+	}
+}
+
+func TestResolveImportsSchemaCollection(t *testing.T) {
+	t.Parallel()
+	ctx := testutil.TestContext(t)
+
+	testCases := []struct {
+		name            string
+		path            string
+		expectedSchemas []string
+		expectedParent  string
+	}{
+		{
+			name:            "child schema is collected when parent has no schema",
+			path:            "./testdata/import/values/schema-parent-empty",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedParent:  "",
+		},
+		{
+			name:            "child schema is collected when parent also has a schema",
+			path:            "./testdata/import/values/schema-parent-wins",
+			expectedSchemas: []string{"import/child-values.schema.json"},
+			expectedParent:  "parent-values.schema.json",
+		},
+		{
+			name: "schemas are collected transitively through 3-level deep imports",
+			path: "./testdata/import/values/schema-deep",
+			// middle's own schema comes first; bottom's schema (from middle's imports) comes second
+			expectedSchemas: []string{
+				"middle/middle-values.schema.json",
+				"middle/bottom/bottom-values.schema.json",
+			},
+			expectedParent: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			b, err := os.ReadFile(filepath.Join(tc.path, layout.ZarfYAML))
+			require.NoError(t, err)
+			pkg, err := pkgcfg.Parse(ctx, b)
+			require.NoError(t, err)
+
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			require.NoError(t, err)
+
+			require.Equal(t, tc.expectedSchemas, importedSchemas)
+			require.Equal(t, tc.expectedParent, resolved.Values.Schema)
 		})
 	}
 }

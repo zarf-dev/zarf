@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/pkg/state"
 	"github.com/zarf-dev/zarf/src/pkg/zoci"
 
 	"github.com/spf13/viper"
@@ -71,15 +72,26 @@ const (
 	VInitArtifactPushUser  = "init.artifact.push_username"
 	VInitArtifactPushToken = "init.artifact.push_token"
 
-	VInitAgentTLSCA   = "init.agent.tls_ca"
-	VInitAgentTLSCert = "init.agent.tls_cert"
-	VInitAgentTLSKey  = "init.agent.tls_key"
+	VInitAgentTLSCA          = "init.agent.tls_ca"
+	VInitAgentTLSCert        = "init.agent.tls_cert"
+	VInitAgentTLSKey         = "init.agent.tls_key"
+	VInitAgentMutationPolicy = "init.agent.mutation_policy"
 
 	// Package config keys
 
 	VPkgOCIConcurrency = "package.oci_concurrency"
-	VPkgPublicKey      = "package.public_key"
-	VPkgVerify         = "package.verify"
+
+	// Package verification config keys (top-level; shared across verify, deploy, pull, and other load commands)
+
+	VPkgVerify                      = "package.verify"
+	VPkgPublicKey                   = "package.public_key"
+	VPkgCertificateIdentity         = "package.certificate_identity"
+	VPkgCertificateIdentityRegexp   = "package.certificate_identity_regexp"
+	VPkgCertificateOIDCIssuer       = "package.certificate_oidc_issuer"
+	VPkgCertificateOIDCIssuerRegexp = "package.certificate_oidc_issuer_regexp"
+	VPkgTrustedRoot                 = "package.trusted_root"
+	VPkgInsecureIgnoreTlog          = "package.insecure_ignore_tlog"
+	VPkgUseSignedTimestamps         = "package.use_signed_timestamps"
 
 	// Package create config keys
 
@@ -120,6 +132,15 @@ const (
 	VPkgSignSigningKeyPassword = "package.sign.signing_key_password"
 	VPkgSignOutput             = "package.sign.output"
 	VPkgSignOverwrite          = "package.sign.overwrite"
+	VPkgSignKeyless            = "package.sign.keyless"
+	VPkgSignIdentityToken      = "package.sign.identity_token"
+	VPkgSignFulcioURL          = "package.sign.fulcio_url"
+	VPkgSignFulcioAuthFlow     = "package.sign.fulcio_auth_flow"
+	VPkgSignOIDCIssuer         = "package.sign.oidc_issuer"
+	VPkgSignOIDCClientID       = "package.sign.oidc_client_id"
+	VPkgSignRekorURL           = "package.sign.rekor_url"
+	VPkgSignTlogUpload         = "package.sign.tlog_upload"
+	VPkgSignTSAServerURL       = "package.sign.tsa_server_url"
 
 	// Package pull config keys
 
@@ -162,7 +183,7 @@ func initViper() *viper.Viper {
 	v.AutomaticEnv()
 
 	// Set default values for viper
-	setDefaults()
+	setDefaults(v)
 
 	// skip config file setup for version command
 	if isVersionCmd() {
@@ -236,7 +257,7 @@ func PrintViperConfigUsed(ctx context.Context) error {
 	return nil
 }
 
-func setDefaults() {
+func setDefaults(v *viper.Viper) {
 	// Root defaults that are non-zero values
 	v.SetDefault(VLogLevel, "info")
 	v.SetDefault(VZarfCache, config.ZarfDefaultCachePath)
@@ -252,8 +273,17 @@ func setDefaults() {
 	// Package publish opts that are non-zero values
 	v.SetDefault(VPkgPublishRetries, 1)
 
+	// Package sign keyless defaults
+	v.SetDefault(VPkgSignFulcioURL, "https://fulcio.sigstore.dev")
+	v.SetDefault(VPkgSignOIDCIssuer, "https://oauth2.sigstore.dev/auth")
+	v.SetDefault(VPkgSignOIDCClientID, "sigstore")
+	v.SetDefault(VPkgSignRekorURL, "https://rekor.sigstore.dev")
+
 	// Dev deploy defaults
 	v.SetDefault(VDevDeployConnected, true)
+
+	// Init defaults that are non-zero values
+	v.SetDefault(VInitAgentMutationPolicy, string(state.MutationPolicyAll))
 }
 
 // GetStringSlice returns a string slice from viper

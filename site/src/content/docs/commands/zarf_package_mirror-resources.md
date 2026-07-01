@@ -23,11 +23,14 @@ zarf package mirror-resources [ PACKAGE_SOURCE ] [flags]
 
 ```
 
-# Mirror resources to internal Zarf resources - by default this will use Zarf state if available
-$ zarf package mirror-resources <your-package.tar.zst>
+# Mirror a local package to internal Zarf resources (uses Zarf state if available)
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst
 
-# Mirror resources to external resources
-$ zarf package mirror-resources <your-package.tar.zst> \
+# Mirror a package from an OCI registry (requires oci:// scheme)
+$ zarf package mirror-resources oci://ghcr.io/my-org/my-package:1.0.0
+
+# Mirror a local package to external resources
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password> \
@@ -35,14 +38,14 @@ $ zarf package mirror-resources <your-package.tar.zst> \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
 
-# Mirroring resources can be specified by artifact type - this will only mirror images
-$ zarf package mirror-resources <your-package.tar.zst> --images \
+# Mirror only images from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --images \
 	--registry-url registry.enterprise.corp \
 	--registry-push-username <registry-push-username> \
 	--registry-push-password <registry-push-password>
 
-# Mirroring for repositories can be specified by artifact type - this will only mirror git repositories
-$ zarf package mirror-resources <your-package.tar.zst> --repos \
+# Mirror only git repositories from a local package
+$ zarf package mirror-resources zarf-package-my-app-amd64-1.0.0.tar.zst --repos \
 	--git-url https://git.enterprise.corp \
 	--git-push-username <git-push-username> \
 	--git-push-password <git-push-password>
@@ -52,23 +55,30 @@ $ zarf package mirror-resources <your-package.tar.zst> --repos \
 ### Options
 
 ```
-      --components string               Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
-  -c, --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
-      --git-push-password string        Password for the push-user to access the git server
-      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
-      --git-url string                  External git server url to use for this Zarf cluster
-  -h, --help                            help for mirror-resources
-      --images                          mirror only the images
-  -k, --key string                      Path to public key file for validating signed packages
-      --no-img-checksum                 Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images.
-      --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --registry-push-password string   Password for the push-user to connect to the registry
-      --registry-push-username string   Username to access to the registry Zarf is configured to use (default "zarf-push")
-      --registry-url string             External registry url address to use for this Zarf cluster
-      --repos                           mirror only the git repositories
-      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --shasum string                   Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
-      --verify                          Verify the Zarf package signature
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --components string                       Comma-separated list of components to mirror.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
+  -c, --confirm                                 Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --git-push-password string                Password for the push-user to access the git server
+      --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push' (default "zarf-git-user")
+      --git-url string                          External git server url to use for this Zarf cluster
+  -h, --help                                    help for mirror-resources
+      --images                                  mirror only the images
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+      --no-img-checksum                         Turns off the addition of a checksum to image tags (as would be used by the Zarf Agent) while mirroring images.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --registry-push-password string           Password for the push-user to connect to the registry
+      --registry-push-username string           Username to access to the registry Zarf is configured to use (default "zarf-push")
+      --registry-url string                     External registry url address to use for this Zarf cluster
+      --repos                                   mirror only the git repositories
+      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --shasum string                           Shasum of the package to pull. Required if pulling a https package. A shasum can be retrieved using 'zarf dev sha256sum <url>'
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
 ### Options inherited from parent commands

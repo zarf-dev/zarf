@@ -21,6 +21,8 @@ pnpm-debug.log*
 .DS_Store
 
 # zarf specific
-src/assets/zarf.schema.json
-src/assets/zarf-v1alpha1-schema.json
+src/assets/schema/
 src/content/docs/ref/Examples
+# archived version subtrees staged by hack/build-versions.mjs
+src/content/docs/v[0-9]*-[0-9]*/
+versions.json

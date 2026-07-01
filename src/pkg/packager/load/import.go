@@ -37,13 +37,13 @@ func getComponentToImportName(component v1alpha1.ZarfComponent) string {
 	return component.Name
 }
 
-func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, error) {
+func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, arch, flavor string, importStack []string, cachePath string, skipVersionCheck bool, remoteOptions types.RemoteOptions) (v1alpha1.ZarfPackage, []string, error) {
 	l := logger.From(ctx)
 	start := time.Now()
 
 	pkgPath, err := layout.ResolvePackagePath(packagePath)
 	if err != nil {
-		return v1alpha1.ZarfPackage{}, err
+		return v1alpha1.ZarfPackage{}, nil, err
 	}
 
 	// Zarf imports merge in the top level package objects variables and constants
@@ -62,6 +62,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 	)
 
 	var valuesFiles []string
+	var importedSchemas []string
 	variables := pkg.Variables
 	constants := pkg.Constants
 	components := []v1alpha1.ZarfComponent{}
@@ -78,30 +79,31 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 
 		if err := validateComponentCompose(component); err != nil {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("invalid imported definition for %s: %w", component.Name, err)
+			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("invalid imported definition for %s: %w", component.Name, err)
 		}
 
 		var importedPkg v1alpha1.ZarfPackage
+		var innerSchemas []string
 		if component.Import.Path != "" {
 			importPath := filepath.Join(pkgPath.BaseDir, component.Import.Path)
 			for _, sp := range importStack {
 				if sp == importPath {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(pkgPath.BaseDir), component.Name)
+					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s imported in cycle by %s in component %s", filepath.ToSlash(importPath), filepath.ToSlash(pkgPath.BaseDir), component.Name)
 				}
 			}
 
 			importPkgPath, err := layout.ResolvePackagePath(importPath)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access import package path %q: %w", importPath, err)
+				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import package path %q: %w", importPath, err)
 			}
 
 			b, err := os.ReadFile(importPkgPath.ManifestFile)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 			importedPkg, err = pkgcfg.Parse(ctx, b)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 			var relevantComponents []v1alpha1.ZarfComponent
 			for _, importedComponent := range importedPkg.Components {
@@ -110,40 +112,40 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 				}
 			}
 			importedPkg.Components = relevantComponents
-			importedPkg, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
+			importedPkg, innerSchemas, err = resolveImports(ctx, importedPkg, importPkgPath.ManifestFile, arch, flavor, importStack, cachePath, skipVersionCheck, remoteOptions)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 		} else if component.Import.URL != "" {
 			cacheModifier, err := zoci.GetOCICacheModifier(ctx, cachePath)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 			remote, err := zoci.NewRemote(ctx, component.Import.URL, zoci.PlatformForSkeleton(),
 				cacheModifier, oci.WithPlainHTTP(remoteOptions.PlainHTTP), oci.WithInsecureSkipVerify(remoteOptions.InsecureSkipTLSVerify))
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 			_, err = remote.ResolveRoot(ctx)
 			if err != nil {
 				if strings.Contains(err.Error(), "no matching manifest was found in the manifest list") {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
+					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package at %s exists but has not been published as a skeleton: %w", component.Import.URL, err)
 				}
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 			importedPkg, err = remote.FetchZarfYAML(ctx)
 			if err != nil {
-				return v1alpha1.ZarfPackage{}, err
+				return v1alpha1.ZarfPackage{}, nil, err
 			}
 
 			if len(importedPkg.Values.Files) > 0 || importedPkg.Values.Schema != "" {
-				return v1alpha1.ZarfPackage{}, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
+				return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("imported skeleton %s declares values which are not yet supported", component.Import.URL)
 			}
 
 			if !skipVersionCheck {
 				// Validate skeleton package is compatible with new package
 				if err := pkgvalidate.ValidateVersionRequirements(importedPkg); err != nil {
-					return v1alpha1.ZarfPackage{}, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
+					return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("package %s has unmet requirements: %w If you cannot upgrade Zarf you may skip this check with --skip-version-check. Unexpected behavior or errors may occur", component.Import.URL, err)
 				}
 			}
 		}
@@ -156,22 +158,22 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 			}
 		}
 		if len(found) == 0 {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("no compatible component named %s found", name)
+			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("no compatible component named %s found", name)
 		} else if len(found) > 1 {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("multiple components named %s found", name)
+			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("multiple components named %s found", name)
 		}
 		importedComponent := found[0]
 
 		importPath, err := fetchOCISkeleton(ctx, component, pkgPath.BaseDir, cachePath, remoteOptions)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 
 		// this is a special case for paths and imports where we do not want to join BaseDir and importPath
 		// we check that the path is valid but ensure the value remains relative for fixing
 		fileInfo, err := os.Stat(filepath.Join(pkgPath.BaseDir, importPath))
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, fmt.Errorf("unable to access import path %q: %w", importPath, err)
+			return v1alpha1.ZarfPackage{}, nil, fmt.Errorf("unable to access import path %q: %w", importPath, err)
 		}
 		if !fileInfo.IsDir() {
 			importPath = filepath.Dir(importPath)
@@ -179,7 +181,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		importedComponent = fixPaths(importedComponent, importPath, pkgPath.BaseDir)
 		composed, err := overrideMetadata(importedComponent, component)
 		if err != nil {
-			return v1alpha1.ZarfPackage{}, err
+			return v1alpha1.ZarfPackage{}, nil, err
 		}
 		composed = overrideDeprecated(composed, component)
 		composed = overrideActions(composed, component)
@@ -190,6 +192,12 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		constants = append(constants, importedPkg.Constants...)
 		for _, v := range importedPkg.Values.Files {
 			valuesFiles = append(valuesFiles, makePathRelativeTo(v, importPath))
+		}
+		if importedPkg.Values.Schema != "" {
+			importedSchemas = append(importedSchemas, makePathRelativeTo(importedPkg.Values.Schema, importPath))
+		}
+		for _, s := range innerSchemas {
+			importedSchemas = append(importedSchemas, makePathRelativeTo(s, importPath))
 		}
 	}
 
@@ -207,6 +215,16 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		}
 	}
 	pkg.Components = components
+
+	schemasMap := map[string]bool{}
+	var deduplicatedSchemas []string
+	for _, s := range importedSchemas {
+		norm := filepath.ToSlash(filepath.Clean(s))
+		if !schemasMap[norm] {
+			deduplicatedSchemas = append(deduplicatedSchemas, norm)
+			schemasMap[norm] = true
+		}
+	}
 
 	varMap := map[string]bool{}
 	pkg.Variables = nil
@@ -231,7 +249,7 @@ func resolveImports(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath, 
 		"components", len(pkg.Components),
 		"duration", time.Since(start),
 	)
-	return pkg, nil
+	return pkg, deduplicatedSchemas, nil
 }
 
 func validateComponentCompose(c v1alpha1.ZarfComponent) error {
@@ -449,6 +467,7 @@ func overrideResources(comp v1alpha1.ZarfComponent, override v1alpha1.ZarfCompon
 					comp.Charts[idx].URL = overrideChart.URL
 				}
 				comp.Charts[idx].ValuesFiles = append(comp.Charts[idx].ValuesFiles, overrideChart.ValuesFiles...)
+				comp.Charts[idx].TemplatedValuesFiles = append(comp.Charts[idx].TemplatedValuesFiles, overrideChart.TemplatedValuesFiles...)
 				comp.Charts[idx].Variables = append(comp.Charts[idx].Variables, overrideChart.Variables...)
 				comp.Charts[idx].Values = append(comp.Charts[idx].Values, overrideChart.Values...)
 				existing = true
@@ -511,6 +530,10 @@ func fixPaths(child v1alpha1.ZarfComponent, relativeToHead, packagePath string) 
 		for valuesIdx, valuesFile := range chart.ValuesFiles {
 			composed := makePathRelativeTo(valuesFile, relativeToHead)
 			child.Charts[chartIdx].ValuesFiles[valuesIdx] = composed
+		}
+		for valuesIdx, valuesFile := range chart.TemplatedValuesFiles {
+			composed := makePathRelativeTo(valuesFile, relativeToHead)
+			child.Charts[chartIdx].TemplatedValuesFiles[valuesIdx] = composed
 		}
 		if child.Charts[chartIdx].LocalPath != "" {
 			composed := makePathRelativeTo(chart.LocalPath, relativeToHead)

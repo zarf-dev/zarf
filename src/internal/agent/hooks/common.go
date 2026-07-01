@@ -12,9 +12,13 @@ import (
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
+	admission "k8s.io/api/admission/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/registry"
 	orasRemote "oras.land/oras-go/v2/registry/remote"
@@ -27,6 +31,44 @@ const (
 	// AgentErrTransformOCIURL is thrown when the agent fails to make the OCI url a Zarf compatible url
 	AgentErrTransformOCIURL = "unable to transform the OCIRepo URL"
 )
+
+// withMutationGuard returns an AdmitFunc that unmarshals the request object,
+// checks namespace labels and ShouldMutate, then delegates to fn.
+func withMutationGuard[T any, PT interface {
+	*T
+	metav1.Object
+}](
+	c *cluster.Cluster,
+	mode state.MutationPolicy,
+	fn func(ctx context.Context, r *admission.AdmissionRequest, obj PT) (*operations.Result, error),
+) operations.AdmitFunc {
+	return func(ctx context.Context, r *admission.AdmissionRequest) (*operations.Result, error) {
+		obj := PT(new(T))
+		if err := json.Unmarshal(r.Object.Raw, obj); err != nil {
+			return nil, fmt.Errorf(lang.ErrUnmarshal, err)
+		}
+		var nsLabels map[string]string
+		if r.Namespace != "" {
+			var err error
+			nsLabels, err = getNamespaceLabels(ctx, c, r.Namespace)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if !operations.ShouldMutate(obj.GetLabels(), nsLabels, mode) {
+			return &operations.Result{Allowed: true, PatchOps: []operations.PatchOperation{}}, nil
+		}
+		return fn(ctx, r, obj)
+	}
+}
+
+func getNamespaceLabels(ctx context.Context, c *cluster.Cluster, name string) (map[string]string, error) {
+	ns, err := c.Clientset.CoreV1().Namespaces().Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get namespace %s: %w", name, err)
+	}
+	return ns.Labels, nil
+}
 
 func getLabelPatch(currLabels map[string]string) operations.PatchOperation {
 	if currLabels == nil {
