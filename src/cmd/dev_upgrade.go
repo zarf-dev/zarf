@@ -7,13 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	goyaml "github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
+	"github.com/zarf-dev/zarf/src/pkg/packager/layout"
 )
 
 var supportedAPIVersions = []string{v1alpha1.APIVersion, v1beta1.APIVersion}
@@ -46,10 +46,13 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 		dir = args[0]
 	}
 
-	inputPath := filepath.Join(dir, "zarf.yaml")
-	b, err := os.ReadFile(inputPath)
+	pkgPath, err := layout.ResolvePackagePath(dir)
 	if err != nil {
-		return fmt.Errorf("reading %s: %w", inputPath, err)
+		return err
+	}
+	b, err := os.ReadFile(pkgPath.ManifestFile)
+	if err != nil {
+		return err
 	}
 
 	sourceVersion, err := detectAPIVersion(b)
@@ -72,7 +75,7 @@ func (o *devUpgradeSchemaOptions) run(cmd *cobra.Command, args []string) error {
 	case sourceVersion == v1alpha1.APIVersion && o.to == v1beta1.APIVersion:
 		var pkg v1alpha1.ZarfPackage
 		if err := goyaml.Unmarshal(b, &pkg); err != nil {
-			return fmt.Errorf("parsing %s: %w", inputPath, err)
+			return err
 		}
 		if err := checkRemovedFields(pkg); err != nil {
 			return err
