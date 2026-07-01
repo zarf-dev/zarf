@@ -12,7 +12,8 @@ import (
 
 // Constants used in the default package layout.
 const (
-	ZarfYAML     = "zarf.yaml"
+	ZarfYAML = "zarf.yaml"
+	// Deprecated: legacy signature format superseded by Bundle (zarf.bundle.sig) since v0.72.0.
 	Signature    = "zarf.yaml.sig"
 	Bundle       = "zarf.bundle.sig"
 	Checksums    = "checksums.txt"
