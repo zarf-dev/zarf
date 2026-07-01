@@ -59,9 +59,13 @@ func TestComponentStatus(t *testing.T) {
 					errCh <- fmt.Errorf("expected 1 component got %d", len(deployedPackage.DeployedComponents))
 					return
 				}
-				status := deployedPackage.DeployedComponents[0].Status
-				if status != state.ComponentStatusDeploying {
-					errCh <- fmt.Errorf("expected %s got %s", state.ComponentStatusDeploying, status)
+				compStatus := deployedPackage.DeployedComponents[0].Status
+				if compStatus != state.ComponentStatusDeploying {
+					errCh <- fmt.Errorf("expected component status %s got %s", state.ComponentStatusDeploying, compStatus)
+					return
+				}
+				if deployedPackage.Status != state.PackageStatusDeploying {
+					errCh <- fmt.Errorf("expected package status %s got %s", state.PackageStatusDeploying, deployedPackage.Status)
 					return
 				}
 				time.Sleep(2 * time.Second)
@@ -78,13 +82,15 @@ func TestComponentStatus(t *testing.T) {
 		require.NoError(t, err)
 	default:
 	}
-	// Verify that the component status is "succeeded"
+	// Verify that the component and package statuses are "succeeded" and source is recorded
 	stdOut, stdErr, err = e2e.Kubectl(t, "get", "secret", "zarf-package-component-status", "-n", "zarf", "-o", "jsonpath={.data.data}")
 	require.NoError(t, err, stdOut, stdErr)
 	deployedPackage, err := getDeployedPackage(stdOut)
 	require.NoError(t, err)
 	require.Len(t, deployedPackage.DeployedComponents, 1)
 	require.Equal(t, state.ComponentStatusSucceeded, deployedPackage.DeployedComponents[0].Status)
+	require.Equal(t, state.PackageStatusSucceeded, deployedPackage.Status)
+	require.Equal(t, path, deployedPackage.Source)
 	// Remove the package
 	t.Cleanup(func() {
 		stdOut, stdErr, err = e2e.Zarf(t, "package", "remove", "component-status", "--confirm")
