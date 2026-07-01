@@ -40,7 +40,7 @@ fi
 GRYPE_IDS=$(jq -r '
   [
     (.matches // [] | .[].vulnerability.id),
-    (.ignoredMatches // [] | .[].match.vulnerability.id)
+    (.ignoredMatches // [] | .[].vulnerability.id)
   ] | flatten | unique | sort | .[]
 ' "$GRYPE_JSON")
 
