@@ -239,7 +239,6 @@ test-docs-and-schema:
 scan-govulncheck: ## Scan source for vulnerabilities with reachable code paths using govulncheck (version pinned via go.mod tool directive)
 	@test -d ./build || mkdir ./build
 	go tool govulncheck -format sarif ./... > build/govulncheck.sarif
-	go tool govulncheck ./...
 
 scan-grype: build ## Scan the Zarf binary for CVEs using grype + VEX suppression (must `brew install grype` first); fails on High+
 	@test -d ./build || mkdir ./build

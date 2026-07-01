@@ -6,17 +6,28 @@
   "version": 2,
   "statements": [
     {
-      "vulnerability": {
-        "name": "GHSA-jw44-4f3j-q396"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/zarf-dev/zarf"
-        }
-      ],
+      "vulnerability": {"name": "GHSA-f5mr-q85p-6hh6"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/github.com/sigstore/fulcio@v1.8.5"}],
       "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Helm disputes this as a vulnerability (https://helm.sh/blog/response-cve-2019-25210/): the label injection behavior is documented and intentional. In Zarf's deployment model, all Helm charts are sourced from cryptographically signed and verified packages; a chart cannot be modified by an adversary without invalidating the package signature, eliminating the injection vector this CVE describes."
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf uses sigstore/fulcio as a client-side dependency for certificate retrieval during artifact signing. The vulnerable OIDC discovery redirect code lives exclusively in the Fulcio CA server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions."
+    },
+    {
+      "vulnerability": {"name": "GHSA-47q9-m4ww-924m"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/github.com/sigstore/rekor@v1.5.1"}],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf uses sigstore/rekor as a client-side dependency for transparency log interaction during artifact signing and verification. The vulnerable unbounded gzip decompression logic in Alpine APK parsing lives exclusively in the Rekor server component. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected functions."
+    },
+    {
+      "vulnerability": {"name": "GHSA-hr2v-4r36-88hr"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/helm.sh/helm/v3@v3.19.2"}],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Zarf uses helm.sh/helm/v4 for chart templating and in-memory rendering; helm.sh/helm/v3 is an indirect dependency only. The vulnerable path traversal logic in chart archive extraction is not invoked by any of Zarf's code paths. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected chart extraction functions."
     }
   ]
 }
