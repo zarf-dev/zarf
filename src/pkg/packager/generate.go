@@ -94,7 +94,9 @@ func Generate(ctx context.Context, packageName, url, version string, opts Genera
 		pkg.Components[i].Images = append(pkg.Components[i].Images, imageScan.CosignArtifacts...)
 	}
 
-	if err := internalv1alpha1.ValidatePackage(pkg); err != nil {
+	validateOpts := internalv1alpha1.ValidateOpts{}
+
+	if err := internalv1alpha1.ValidatePackage(pkg, validateOpts); err != nil {
 		return v1alpha1.ZarfPackage{}, err
 	}
 	return pkg, nil

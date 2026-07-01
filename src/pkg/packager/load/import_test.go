@@ -29,7 +29,7 @@ func TestResolveImportsCircular(t *testing.T) {
 	pkg, err := pkgcfg.Parse(ctx, b)
 	require.NoError(t, err)
 
-	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, types.RemoteOptions{})
+	_, _, err = resolveImports(ctx, pkg, "./testdata/import/circular/first", "", "", []string{}, "", false, false, types.RemoteOptions{})
 	require.EqualError(t, err, "package testdata/import/circular/second imported in cycle by testdata/import/circular/third in component component")
 }
 
@@ -42,6 +42,7 @@ func TestResolveImports(t *testing.T) {
 		path             string
 		flavor           string
 		expectedChecksum string
+		allVariants      bool
 	}{
 		{
 			name:             "two zarf.yaml files import each other",
@@ -104,6 +105,12 @@ func TestResolveImports(t *testing.T) {
 			path:             "./testdata/import/archives",
 			expectedChecksum: "9601cb578d72727bba116d008a23f63ac6dd40c3a685e1d790d376469792db5a",
 		},
+		{
+			name:             "all variants are included",
+			path:             "./testdata/import/all-variants",
+			expectedChecksum: "30c3897f07ca4434723651e1477e96f9a10d36c2be978e8323cb49287221bc61",
+			allVariants:      true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -115,7 +122,7 @@ func TestResolveImports(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", false, types.RemoteOptions{})
+			resolvedPkg, _, err := resolveImports(ctx, pkg, tc.path, "", tc.flavor, []string{}, "", tc.allVariants, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			b, err = os.ReadFile(filepath.Join(tc.path, "expected.yaml"))
@@ -150,7 +157,7 @@ func TestResolveImportsDedupNormalization(t *testing.T) {
 	// Reuse an existing fixture's directory only as the on-disk anchor — resolveImports
 	// stats the path but does not re-parse zarf.yaml when pkg is passed in.
 	resolved, _, err := resolveImports(ctx, pkg, "./testdata/import/values/duplicate-consecutive",
-		"", "", []string{}, "", false, types.RemoteOptions{})
+		"", "", []string{}, "", false, false, types.RemoteOptions{})
 	require.NoError(t, err)
 	require.Equal(t, []string{"parent-values.yaml"}, resolved.Values.Files)
 }
@@ -245,7 +252,7 @@ func TestResolveImportsValueMerge(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, _, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			absPaths := make([]string, len(resolved.Values.Files))
@@ -303,7 +310,7 @@ func TestResolveImportsSchemaCollection(t *testing.T) {
 			pkg, err := pkgcfg.Parse(ctx, b)
 			require.NoError(t, err)
 
-			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, types.RemoteOptions{})
+			resolved, importedSchemas, err := resolveImports(ctx, pkg, tc.path, "", "", []string{}, "", false, false, types.RemoteOptions{})
 			require.NoError(t, err)
 
 			require.Equal(t, tc.expectedSchemas, importedSchemas)
@@ -439,6 +446,7 @@ func TestCompatibleComponent(t *testing.T) {
 		component      v1alpha1.ZarfComponent
 		arch           string
 		flavor         string
+		allVariants    bool
 		expectedResult bool
 	}{
 		{
@@ -516,7 +524,7 @@ func TestCompatibleComponent(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result := compatibleComponent(tt.component, tt.arch, tt.flavor)
+			result := compatibleComponent(tt.component, tt.arch, tt.flavor, tt.allVariants)
 			require.Equal(t, tt.expectedResult, result)
 		})
 	}

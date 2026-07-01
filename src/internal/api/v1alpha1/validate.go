@@ -7,6 +7,7 @@ package v1alpha1
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -51,8 +52,13 @@ const (
 	PkgValidateErrActionTemplateOnCreate  = "templating is not supported in onCreate actions"
 )
 
+// ValidateOpts governs what validation checks are run in ValidatePackage
+type ValidateOpts struct {
+	SkipComponentNameUniquenessValidation bool
+}
+
 // ValidatePackage runs all validation checks on the package.
-func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
+func ValidatePackage(pkg v1alpha1.ZarfPackage, opts ValidateOpts) error {
 	var err error
 	if len(pkg.Components) == 0 {
 		err = errors.Join(err, errors.New(PkgValidateErrNoComponents))
@@ -65,7 +71,7 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 			err = errors.Join(err, fmt.Errorf(PkgValidateErrConstant, varErr))
 		}
 	}
-	uniqueComponentNames := make(map[string]bool)
+	uniqueComponentNames := make(map[string][]v1alpha1.ZarfComponentOnlyTarget)
 	groupDefault := make(map[string]string)
 	groupedComponents := make(map[string][]string)
 	if pkg.Metadata.YOLO {
@@ -85,11 +91,21 @@ func ValidatePackage(pkg v1alpha1.ZarfPackage) error {
 		}
 	}
 	for _, component := range pkg.Components {
+		var duplicateOnly bool
 		// ensure component name is unique
 		if _, ok := uniqueComponentNames[component.Name]; ok {
-			err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+			// only check if only block is duplicated if we're skipping name uniqueness checks
+			if opts.SkipComponentNameUniquenessValidation {
+				duplicateOnly = slices.ContainsFunc(uniqueComponentNames[component.Name], func(o v1alpha1.ZarfComponentOnlyTarget) bool {
+					return onlyTargetsEqual(o, component.Only)
+				})
+			}
+			if !opts.SkipComponentNameUniquenessValidation || duplicateOnly {
+				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentNameNotUnique, component.Name))
+			}
 		}
-		uniqueComponentNames[component.Name] = true
+
+		uniqueComponentNames[component.Name] = append(uniqueComponentNames[component.Name], component.Only)
 		if component.IsRequired() {
 			if component.Default {
 				err = errors.Join(err, fmt.Errorf(PkgValidateErrComponentReqDefault, component.Name))
@@ -333,4 +349,8 @@ func validateManifest(manifest v1alpha1.ZarfManifest) error {
 	}
 
 	return err
+}
+
+func onlyTargetsEqual(a, b v1alpha1.ZarfComponentOnlyTarget) bool {
+	return a.LocalOS == b.LocalOS && a.Flavor == b.Flavor && a.Cluster.Architecture == b.Cluster.Architecture && (slices.Equal(a.Cluster.Distros, b.Cluster.Distros))
 }

@@ -37,6 +37,7 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client) 
 	// `crane` lookup that would otherwise happen in ociremote.SignatureTag and ociremote.AttestationTag
 	digestRef, err := imageDigestRef(ctx, image, ref, client)
 	if err != nil {
+		l.Info("could not get digest reference for image", "image", image, "error", err)
 		// If we can't get the digest reference, we can't get the cosign artifacts so log the error and skip it
 		l.Debug("could not get digest reference for image", "image", image, "error", err)
 		return nil, nil
