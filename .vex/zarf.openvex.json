@@ -1,0 +1,8 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
+  "author": "zarf-dev/zarf maintainers",
+  "timestamp": "2026-07-01T00:00:00Z",
+  "version": 1,
+  "statements": []
+}
