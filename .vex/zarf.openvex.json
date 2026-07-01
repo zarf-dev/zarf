@@ -3,7 +3,7 @@
   "@id": "https://github.com/zarf-dev/zarf/blob/main/.vex/zarf.openvex.json",
   "author": "zarf-dev/zarf maintainers",
   "timestamp": "2026-07-01T00:00:00Z",
-  "version": 2,
+  "version": 1,
   "statements": [
     {
       "vulnerability": {"name": "GHSA-f5mr-q85p-6hh6"},
@@ -28,6 +28,30 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Zarf uses helm.sh/helm/v4 for chart templating and in-memory rendering; helm.sh/helm/v3 is an indirect dependency only. The vulnerable path traversal logic in chart archive extraction is not invoked by any of Zarf's code paths. govulncheck analysis confirms no reachable call chains from Zarf's code to the affected chart extraction functions."
+    },
+    {
+      "vulnerability": {"name": "GHSA-fqw6-gf59-qr4w"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side container runtime path, which resolves user IDs when starting containers under runAsNonRoot enforcement. Neither k9s nor Zarf starts containers or invokes the runtime user ID setup code. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path."
+    },
+    {
+      "vulnerability": {"name": "GHSA-xhf5-7wjv-pqxp"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code is in containerd's server-side CRI plugin, which propagates image-config labels to the binary:// restart-monitor logger enabling host-root command execution. Neither k9s nor Zarf runs the containerd CRI plugin or manages container lifecycle. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable CRI functions are not in Zarf's execute path."
+    },
+    {
+      "vulnerability": {"name": "GHSA-jpcc-p29g-p8mq"},
+      "timestamp": "2026-07-01T00:00:00Z",
+      "products": [{"@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"}],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "containerd v1 is an indirect dependency of Zarf, pulled in transitively by the embedded k9s tool (zarf tools monitor). k9s uses containerd's gRPC client API (api/services/*) to connect to a running containerd daemon for cluster monitoring. The vulnerable code parses /etc/group from an image during container setup to assign supplementary groups, which can trigger unbounded memory allocation. This parsing occurs in the server-side container runtime setup path. Neither k9s nor Zarf executes container setup and the group-parsing code is never invoked. The Go vulnerability database lacks symbol-level data for this CVE, causing govulncheck to report package-level reachability; the specific vulnerable runtime functions are not in Zarf's execute path."
     }
   ]
 }
