@@ -13,14 +13,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/zarf-dev/zarf/src/api/convert"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
-	"github.com/zarf-dev/zarf/src/pkg/logger"
 )
 
-type internalConvertOptions struct{}
+type devConvertOptions struct{}
 
-// This command will be unhidden and moved to dev once v1beta1 is ready for use
-func newInternalConvertCommand() *cobra.Command {
-	o := &internalConvertOptions{}
+// This command will be unhidden once v1beta1 is ready for use
+func newDevConvertCommand() *cobra.Command {
+	o := &devConvertOptions{}
 
 	cmd := &cobra.Command{
 		Use:    "convert [directory]",
@@ -33,8 +32,7 @@ func newInternalConvertCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
-	l := logger.From(cmd.Context())
+func (o *devConvertOptions) run(cmd *cobra.Command, args []string) error {
 	dir := "."
 	if len(args) > 0 {
 		dir = args[0]
@@ -62,12 +60,10 @@ func (o *internalConvertOptions) run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("marshaling v1beta1 package: %w", err)
 	}
 
-	outputPath := filepath.Join(dir, "zarf-v1beta1.yaml")
-	if err := os.WriteFile(outputPath, out, 0644); err != nil {
-		return fmt.Errorf("writing %s: %w", outputPath, err)
+	if _, err := fmt.Fprint(cmd.OutOrStdout(), string(out)); err != nil {
+		return fmt.Errorf("writing converted package: %w", err)
 	}
 
-	l.Info("converted", "input", inputPath, "output", outputPath)
 	return nil
 }
 
