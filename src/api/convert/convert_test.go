@@ -460,6 +460,48 @@ func TestV1Alpha1PkgToV1Beta1_ChartSources(t *testing.T) {
 	}
 }
 
+func TestV1Alpha1PkgToV1Beta1_WaitConditionBackfill(t *testing.T) {
+	t.Parallel()
+	pkg := v1alpha1.ZarfPackage{
+		Kind: v1alpha1.ZarfPackageConfig,
+		Components: []v1alpha1.ZarfComponent{
+			{
+				Name: "wait-comp",
+				Actions: v1alpha1.ZarfComponentActions{
+					OnDeploy: v1alpha1.ZarfComponentActionSet{
+						OnSuccess: []v1alpha1.ZarfComponentAction{
+							{
+								Wait: &v1alpha1.ZarfComponentActionWait{
+									Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+										Kind: "Pod", Name: "my-pod", Namespace: "default",
+									},
+								},
+							},
+							{
+								Wait: &v1alpha1.ZarfComponentActionWait{
+									Cluster: &v1alpha1.ZarfComponentActionWaitCluster{
+										Kind: "Pod", Name: "ready-pod", Namespace: "default", Condition: "Ready",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	result := PackageV1alpha1ToV1beta1(pkg)
+
+	onSuccess := result.Components[0].Actions.OnDeploy.OnSuccess
+	require.Len(t, onSuccess, 2)
+	// v1alpha1 empty condition meant "wait until exists"; backfill it so v1beta1 kstatus readiness
+	// does not silently change the behavior of migrated packages.
+	require.Equal(t, "exists", onSuccess[0].Wait.Cluster.Condition)
+	// An explicit condition is preserved as-is.
+	require.Equal(t, "Ready", onSuccess[1].Wait.Cluster.Condition)
+}
+
 func TestV1Alpha1PkgToV1Beta1_ManifestSkipWait(t *testing.T) {
 	t.Parallel()
 	pkg := v1alpha1.ZarfPackage{

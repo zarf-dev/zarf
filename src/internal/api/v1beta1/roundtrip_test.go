@@ -146,6 +146,14 @@ func TestConvertGenericRoundTripLossless(t *testing.T) {
 										Cluster: &v1beta1.ComponentActionWaitCluster{Kind: "Pod", Name: "n", Namespace: "ns", Condition: "Ready"},
 									},
 								},
+								{
+									// A native v1beta1 empty condition means kstatus readiness and must survive
+									// the round-trip without being backfilled to "exists".
+									Cmd: "success-ready",
+									Wait: &v1beta1.ComponentActionWait{
+										Cluster: &v1beta1.ComponentActionWaitCluster{Kind: "Pod", Name: "ready", Namespace: "ns"},
+									},
+								},
 							},
 							OnFailure: []v1beta1.ComponentAction{
 								{

@@ -7,6 +7,7 @@ package v1beta1
 import (
 	"strings"
 
+	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/api/v1beta1"
 	"github.com/zarf-dev/zarf/src/internal/api/types"
 )
@@ -314,8 +315,13 @@ func ConvertFromGeneric(g types.Package) v1beta1.Package {
 		pkg.Kind = v1beta1.ZarfPackageConfig
 	}
 
+	// v1beta1 treats an empty wait.cluster.condition as a kstatus readiness check, whereas v1alpha1
+	// treated it as "wait until the resource exists". Backfill "exists" on migration so existing
+	// packages keep their original behavior.
+	migrateFromV1alpha1 := g.Build.OriginalAPIVersion == v1alpha1.APIVersion
+
 	for _, c := range g.Components {
-		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit))
+		pkg.Components = append(pkg.Components, componentFromGeneric(c, isInit, migrateFromV1alpha1))
 	}
 
 	pkg = v1beta1.SetDeprecatedFromGeneric(g, pkg)
@@ -396,7 +402,7 @@ func buildFromGeneric(b types.BuildData, m types.PackageMetadata) v1beta1.BuildD
 	return out
 }
 
-func componentFromGeneric(c types.Component, isInit bool) v1beta1.Component {
+func componentFromGeneric(c types.Component, isInit, migrateFromV1alpha1 bool) v1beta1.Component {
 	bc := v1beta1.Component{
 		Name:        c.Name,
 		Description: c.Description,
@@ -447,6 +453,10 @@ func componentFromGeneric(c types.Component, isInit bool) v1beta1.Component {
 			Path:   ia.Path,
 			Images: ia.Images,
 		})
+	}
+
+	if migrateFromV1alpha1 {
+		backfillWaitExists(&bc.Actions)
 	}
 
 	// Convert v1alpha1 HealthChecks into onDeploy onSuccess wait actions.
@@ -695,6 +705,21 @@ func waitFromGeneric(w *types.ComponentActionWait) *v1beta1.ComponentActionWait 
 		}
 	}
 	return bw
+}
+
+// backfillWaitExists sets any action wait.cluster.condition left empty to "exists", preserving
+// v1alpha1 wait semantics. Health-check-derived waits are appended after this runs and keep an
+// empty condition so they use v1beta1 kstatus readiness checks.
+func backfillWaitExists(actions *v1beta1.ComponentActions) {
+	for _, set := range []*v1beta1.ComponentActionSet{&actions.OnCreate, &actions.OnDeploy, &actions.OnRemove} {
+		for _, slice := range [][]v1beta1.ComponentAction{set.Before, set.OnSuccess, set.OnFailure} {
+			for k := range slice {
+				if w := slice[k].Wait; w != nil && w.Cluster != nil && w.Cluster.Condition == "" {
+					w.Cluster.Condition = "exists"
+				}
+			}
+		}
+	}
 }
 
 // healthCheckKind returns the wait-for kind string for a v1alpha1 health check.
