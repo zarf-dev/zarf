@@ -356,6 +356,47 @@ func TestPackageLayoutSignPackage(t *testing.T) {
 		require.NotEqual(t, "old bundle", string(bundleContent))
 	})
 
+	t.Run("legacy signature removed after re-sign", func(t *testing.T) {
+		// Packages signed before bundle support (pre-v0.72.0) carry only zarf.yaml.sig.
+		// Re-signing must produce zarf.bundle.sig, remove the stale legacy file,
+		// and leave ProvenanceFiles containing only the bundle (not the legacy sig).
+		t.Parallel()
+		tmpDir := t.TempDir()
+		yamlPath := filepath.Join(tmpDir, ZarfYAML)
+		bundlePath := filepath.Join(tmpDir, Bundle)
+		legacySignaturePath := filepath.Join(tmpDir, Signature)
+
+		require.NoError(t, os.WriteFile(yamlPath, []byte("foobar"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tmpDir, Checksums), []byte{}, 0o644))
+
+		// Simulate a legacy-only signed package.
+		legacySignOpts := signing.DefaultSignBlobOptions()
+		legacySignOpts.Key = "./testdata/cosign.key"
+		legacySignOpts.Password = "test"
+		legacySignOpts.NewBundleFormat = false
+		legacySignOpts.OutputSignature = legacySignaturePath
+		_, err := signing.CosignSignBlobWithOptions(ctx, yamlPath, legacySignOpts)
+		require.NoError(t, err)
+		require.FileExists(t, legacySignaturePath)
+		require.NoFileExists(t, bundlePath)
+
+		pkgLayout := &PackageLayout{
+			dirPath: tmpDir,
+			Pkg:     v1alpha1.ZarfPackage{APIVersion: v1alpha1.APIVersion},
+		}
+
+		opts := signing.DefaultSignBlobOptions()
+		opts.Key = "./testdata/cosign.key"
+		opts.Password = "test"
+		opts.Overwrite = true
+
+		require.NoError(t, pkgLayout.SignPackage(ctx, opts))
+		require.FileExists(t, bundlePath)
+		require.NoFileExists(t, legacySignaturePath, "legacy signature should be removed after re-sign")
+		require.Contains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Bundle)
+		require.NotContains(t, pkgLayout.Pkg.Build.ProvenanceFiles, Signature)
+	})
+
 	t.Run("skip signing when ShouldSign returns false", func(t *testing.T) {
 		tmpDir := t.TempDir()
 		yamlPath := filepath.Join(tmpDir, ZarfYAML)

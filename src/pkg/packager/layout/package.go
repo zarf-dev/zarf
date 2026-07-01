@@ -315,6 +315,13 @@ func (p *PackageLayout) SignPackage(ctx context.Context, opts signing.SignBlobOp
 		return fmt.Errorf("failed to move bundle after signing: %w", err)
 	}
 
+	// Remove any legacy zarf.yaml.sig left from a previous sign operation.
+	// The bundle supersedes it; leaving it in place would be misleading.
+	legacySignaturePath := filepath.Join(p.dirPath, Signature)
+	if rmErr := os.Remove(legacySignaturePath); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+		l.Warn("failed to remove legacy signature file", "path", legacySignaturePath, "error", rmErr)
+	}
+
 	if info, bundleErr := signing.ReadBundleInfo(actualBundlePath); bundleErr == nil {
 		if info.Identity != "" {
 			l.Info("keyless signed package", "identity", info.Identity, "issuer", info.Issuer)
