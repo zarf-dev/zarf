@@ -48,7 +48,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "registry",
-		Aliases: []string{"r", "crane"},
+		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
@@ -102,6 +102,16 @@ func newRegistryCommand() *cobra.Command {
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
+	return cmd
+}
+
+func newDeprecatedCraneCommand() *cobra.Command {
+	cmd := newRegistryCommand()
+	cmd.Use = "crane"
+	cmd.Aliases = nil
+	cmd.Short = lang.CmdToolsRegistryShort
+	cmd.Deprecated = "use 'zarf tools registry' instead"
+	cmd.Hidden = true
 	return cmd
 }
 
