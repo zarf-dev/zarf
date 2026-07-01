@@ -111,7 +111,11 @@ func newDeprecatedCraneCommand() *cobra.Command {
 	cmd.Aliases = nil
 	cmd.Short = lang.CmdToolsRegistryShort
 	cmd.Deprecated = "use 'zarf tools registry' instead"
-	cmd.Hidden = true
+	originalPreRunE := cmd.PersistentPreRunE
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		logger.Default().Warn("'zarf tools crane' is deprecated, use 'zarf tools registry' instead")
+		return originalPreRunE(cmd, args)
+	}
 	return cmd
 }
 
