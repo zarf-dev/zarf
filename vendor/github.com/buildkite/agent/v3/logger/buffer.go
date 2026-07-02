@@ -21,37 +21,37 @@ func NewBuffer() *Buffer {
 	}
 }
 
-func (b *Buffer) Debug(format string, v ...any) {
+func (b *Buffer) Debugf(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[debug] "+fmt.Sprintf(format, v...))
 }
 
-func (b *Buffer) Error(format string, v ...any) {
+func (b *Buffer) Errorf(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[error] "+fmt.Sprintf(format, v...))
 }
 
-func (b *Buffer) Fatal(format string, v ...any) {
+func (b *Buffer) Fatalf(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[fatal] "+fmt.Sprintf(format, v...))
 }
 
-func (b *Buffer) Notice(format string, v ...any) {
+func (b *Buffer) Noticef(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[notice] "+fmt.Sprintf(format, v...))
 }
 
-func (b *Buffer) Warn(format string, v ...any) {
+func (b *Buffer) Warnf(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[warn] "+fmt.Sprintf(format, v...))
 }
 
-func (b *Buffer) Info(format string, v ...any) {
+func (b *Buffer) Infof(format string, v ...any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.Messages = append(b.Messages, "[info] "+fmt.Sprintf(format, v...))

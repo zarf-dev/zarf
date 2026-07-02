@@ -41,12 +41,12 @@ var (
 )
 
 type Logger interface {
-	Debug(format string, v ...any)
-	Error(format string, v ...any)
-	Fatal(format string, v ...any)
-	Notice(format string, v ...any)
-	Warn(format string, v ...any)
-	Info(format string, v ...any)
+	Debugf(format string, v ...any)
+	Errorf(format string, v ...any)
+	Fatalf(format string, v ...any)
+	Noticef(format string, v ...any)
+	Warnf(format string, v ...any)
+	Infof(format string, v ...any)
 
 	WithFields(fields ...Field) Logger
 	SetLevel(level Level)
@@ -81,7 +81,7 @@ func (l *ConsoleLogger) SetLevel(level Level) {
 	l.level = level
 }
 
-func (l *ConsoleLogger) Debug(format string, v ...any) {
+func (l *ConsoleLogger) Debugf(format string, v ...any) {
 	if l.level == DEBUG {
 		debugFields := make(Fields, len(l.fields))
 		copy(debugFields, l.fields)
@@ -90,28 +90,28 @@ func (l *ConsoleLogger) Debug(format string, v ...any) {
 	}
 }
 
-func (l *ConsoleLogger) Error(format string, v ...any) {
+func (l *ConsoleLogger) Errorf(format string, v ...any) {
 	l.printer.Print(ERROR, fmt.Sprintf(format, v...), l.fields)
 }
 
-func (l *ConsoleLogger) Fatal(format string, v ...any) {
+func (l *ConsoleLogger) Fatalf(format string, v ...any) {
 	l.printer.Print(FATAL, fmt.Sprintf(format, v...), l.fields)
 	l.exitFn(1)
 }
 
-func (l *ConsoleLogger) Notice(format string, v ...any) {
+func (l *ConsoleLogger) Noticef(format string, v ...any) {
 	if l.level <= NOTICE {
 		l.printer.Print(NOTICE, fmt.Sprintf(format, v...), l.fields)
 	}
 }
 
-func (l *ConsoleLogger) Info(format string, v ...any) {
+func (l *ConsoleLogger) Infof(format string, v ...any) {
 	if l.level <= INFO {
 		l.printer.Print(INFO, fmt.Sprintf(format, v...), l.fields)
 	}
 }
 
-func (l *ConsoleLogger) Warn(format string, v ...any) {
+func (l *ConsoleLogger) Warnf(format string, v ...any) {
 	if l.level <= WARN {
 		l.printer.Print(WARN, fmt.Sprintf(format, v...), l.fields)
 	}
@@ -144,7 +144,7 @@ func (l *TextPrinter) Print(level Level, msg string, fields Fields) {
 	now := time.Now().Format(DateFormat)
 
 	var line string
-	var prefix string
+	var prefix strings.Builder
 	var fieldStrs []string
 
 	if l.IsPrefixFn != nil {
@@ -155,7 +155,7 @@ func (l *TextPrinter) Print(level Level, msg string, fields Fields) {
 			}
 			// Allow some fields to be shown as prefixes
 			if l.IsPrefixFn(f) {
-				prefix += f.String()
+				prefix.WriteString(f.String())
 			}
 		}
 	}
@@ -180,9 +180,9 @@ func (l *TextPrinter) Print(level Level, msg string, fields Fields) {
 			messageColor = red
 		}
 
-		if prefix != "" {
+		if prefix.String() != "" {
 			line = fmt.Sprintf("\x1b[%sm%s %-6s\x1b[0m \x1b[%sm%s\x1b[0m \x1b[%sm%s\x1b[0m",
-				levelColor, now, level, lightgray, prefix, messageColor, msg)
+				levelColor, now, level, lightgray, prefix.String(), messageColor, msg)
 		} else {
 			line = fmt.Sprintf("\x1b[%sm%s %-6s\x1b[0m \x1b[%sm%s\x1b[0m",
 				levelColor, now, level, messageColor, msg)
@@ -199,8 +199,8 @@ func (l *TextPrinter) Print(level Level, msg string, fields Fields) {
 				fieldColor, field.Key(), messageColor, field.String()))
 		}
 	} else {
-		if prefix != "" {
-			line = fmt.Sprintf("%s %-6s %s %s", now, level, prefix, msg)
+		if prefix.String() != "" {
+			line = fmt.Sprintf("%s %-6s %s %s", now, level, prefix.String(), msg)
 		} else {
 			line = fmt.Sprintf("%s %-6s %s", now, level, msg)
 		}
@@ -218,11 +218,11 @@ func (l *TextPrinter) Print(level Level, msg string, fields Fields) {
 
 	// Make sure we're only outputting a line one at a time
 	mutex.Lock()
-	fmt.Fprint(l.Writer, line)
+	_, _ = fmt.Fprint(l.Writer, line)
 	if len(fields) > 0 {
-		fmt.Fprintf(l.Writer, " %s", strings.Join(fieldStrs, " "))
+		_, _ = fmt.Fprintf(l.Writer, " %s", strings.Join(fieldStrs, " "))
 	}
-	fmt.Fprint(l.Writer, "\n")
+	_, _ = fmt.Fprint(l.Writer, "\n")
 	mutex.Unlock()
 }
 
@@ -249,23 +249,23 @@ func NewJSONPrinter(w io.Writer) *JSONPrinter {
 func (p *JSONPrinter) Print(level Level, msg string, fields Fields) {
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf(`"ts":%q,`, time.Now().Format(time.RFC3339)))
-	b.WriteString(fmt.Sprintf(`"level":%q,`, level.String()))
+	_, _ = fmt.Fprintf(&b, `"ts":%q,`, time.Now().Format(time.RFC3339))
+	_, _ = fmt.Fprintf(&b, `"level":%q,`, level.String())
 
 	// Serialize msg to JSON so we're not producing invalid JSON
 	jsonMsg, err := json.Marshal(msg)
 	if err != nil {
 		jsonMsg = []byte(`"error marshaling message"`)
 	}
-	b.WriteString(fmt.Sprintf(`"msg":%s,`, jsonMsg))
+	_, _ = fmt.Fprintf(&b, `"msg":%s,`, jsonMsg)
 
 	for _, field := range fields {
-		b.WriteString(fmt.Sprintf("%q:%q,", field.Key(), field.String()))
+		_, _ = fmt.Fprintf(&b, "%q:%q,", field.Key(), field.String())
 	}
 
 	// Make sure we're only outputting a line one at a time
 	mutex.Lock()
-	fmt.Fprintf(p.Writer, "{%s}\n", strings.TrimSuffix(b.String(), ","))
+	_, _ = fmt.Fprintf(p.Writer, "{%s}\n", strings.TrimSuffix(b.String(), ","))
 	mutex.Unlock()
 }
 
@@ -289,3 +289,16 @@ func (tp TestPrinter) Print(level Level, msg string, fields Fields) {
 	now := time.Now().Format(DateFormat)
 	tp.tb.Logf("%s %s %s %v", now, level, msg, fields)
 }
+
+// DeprecatedLogger wraps the logger with the deprecated (no trailing "f")
+// method names.
+type DeprecatedLogger struct {
+	Logger
+}
+
+func (d DeprecatedLogger) Debug(format string, v ...any)  { d.Debugf(format, v...) }
+func (d DeprecatedLogger) Error(format string, v ...any)  { d.Errorf(format, v...) }
+func (d DeprecatedLogger) Fatal(format string, v ...any)  { d.Fatalf(format, v...) }
+func (d DeprecatedLogger) Notice(format string, v ...any) { d.Noticef(format, v...) }
+func (d DeprecatedLogger) Warn(format string, v ...any)   { d.Warnf(format, v...) }
+func (d DeprecatedLogger) Info(format string, v ...any)   { d.Infof(format, v...) }

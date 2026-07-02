@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v73/github"
+	"github.com/google/go-github/v88/github"
 	"golang.org/x/crypto/nacl/box"
 	"golang.org/x/oauth2"
 
@@ -57,12 +57,16 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 	var client *github.Client
 	if host, ok := env.LookupEnv(env.VariableGitHubHost); ok {
 		var err error
-		client, err = github.NewClient(httpClient).WithEnterpriseURLs(host, host)
+		client, err = github.NewClient(github.WithHTTPClient(httpClient), github.WithEnterpriseURLs(host, host))
 		if err != nil {
 			return fmt.Errorf("could not create github enterprise client: %w", err)
 		}
 	} else {
-		client = github.NewClient(httpClient)
+		var err error
+		client, err = github.NewClient(github.WithHTTPClient(httpClient))
+		if err != nil {
+			return fmt.Errorf("could not create github client: %w", err)
+		}
 	}
 
 	keys, err := cosign.GenerateKeyPair(pf)
@@ -87,7 +91,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("could not get repository public key: %w", err)
 	}
 
-	if getPubKeyResp.StatusCode < 200 && getPubKeyResp.StatusCode >= 300 {
+	if getPubKeyResp.StatusCode < 200 || getPubKeyResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(getPubKeyResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
@@ -102,7 +106,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("could not create \"COSIGN_PASSWORD\" github actions secret: %w", err)
 	}
 
-	if passwordSecretEnvResp.StatusCode < 200 && passwordSecretEnvResp.StatusCode >= 300 {
+	if passwordSecretEnvResp.StatusCode < 200 || passwordSecretEnvResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(passwordSecretEnvResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
@@ -119,7 +123,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("could not create \"COSIGN_PRIVATE_KEY\" github actions secret: %w", err)
 	}
 
-	if privateKeySecretEnvResp.StatusCode < 200 && privateKeySecretEnvResp.StatusCode >= 300 {
+	if privateKeySecretEnvResp.StatusCode < 200 || privateKeySecretEnvResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(privateKeySecretEnvResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
@@ -136,7 +140,7 @@ func (g *Gh) PutSecret(ctx context.Context, ref string, pf cosign.PassFunc) erro
 		return fmt.Errorf("could not create \"COSIGN_PUBLIC_KEY\" github actions secret: %w", err)
 	}
 
-	if publicKeySecretEnvResp.StatusCode < 200 && publicKeySecretEnvResp.StatusCode >= 300 {
+	if publicKeySecretEnvResp.StatusCode < 200 || publicKeySecretEnvResp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(publicKeySecretEnvResp.Body)
 		return fmt.Errorf("%s", bodyBytes)
 	}
