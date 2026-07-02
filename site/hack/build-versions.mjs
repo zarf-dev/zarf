@@ -109,6 +109,21 @@ async function cleanStaged() {
   await fs.rm(schemaDir, { recursive: true, force: true });
 }
 
+async function disablePagefind(dir) {
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await disablePagefind(full);
+      continue;
+    }
+    if (!/\.(mdx?|MDX?)$/.test(entry.name)) continue;
+    const content = await fs.readFile(full, "utf8");
+    if (content.startsWith("---\n")) {
+      await fs.writeFile(full, "---\npagefind: false\n" + content.slice(4));
+    }
+  }
+}
+
 // Copy a tag's docs into `src/content/docs/<slug>/` and stage its generated
 // artifacts (examples, schema). Content renders with the current toolchain.
 async function stageVersion({ ref, slug }) {
@@ -131,6 +146,7 @@ async function stageVersion({ ref, slug }) {
       dstDir: path.join(dst, "ref/Examples"),
       ref,
     });
+    await disablePagefind(dst);
     await fs.mkdir(schemaDir, { recursive: true });
     await fs.cp(path.join(worktree, "zarf.schema.json"), path.join(schemaDir, `${slug}.json`));
   } finally {
