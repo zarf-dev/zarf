@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
 	"github.com/zarf-dev/zarf/src/config"
@@ -228,7 +229,9 @@ func TestPackageInspectManifests(t *testing.T) {
 				components:   tc.components,
 			}
 			packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-			err = opts.run(context.Background(), []string{packagePath})
+			testCmd := &cobra.Command{}
+			testCmd.SetContext(context.Background())
+			err = opts.run(testCmd, []string{packagePath})
 			if tc.expectedErr != "" {
 				require.ErrorContains(t, err, tc.expectedErr)
 				return
@@ -390,7 +393,9 @@ func checkPackageValuesInspectFiles(t *testing.T, tc ValuesFilesTestData) {
 		components:   tc.components,
 	}
 	packagePath := filepath.Join(tmpdir, fmt.Sprintf("zarf-package-%s-%s.tar.zst", tc.packageName, config.GetArch()))
-	err = opts.run(context.Background(), []string{packagePath})
+	testCmd := &cobra.Command{}
+	testCmd.SetContext(context.Background())
+	err = opts.run(testCmd, []string{packagePath})
 	if tc.expectedErr != "" {
 		require.ErrorContains(t, err, tc.expectedErr)
 		return
@@ -602,6 +607,139 @@ func TestPackageInspectDocumentation(t *testing.T) {
 			for _, file := range tc.expectedFiles {
 				require.FileExists(t, filepath.Join(extractedDir, file))
 			}
+		})
+	}
+}
+
+// newTestViper returns a viper instance configured the same way as initViper
+// but without reading any config file, suitable for unit tests.
+func newTestViper() *viper.Viper {
+	v := viper.New()
+	v.SetEnvPrefix("zarf")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+	setDefaults(v)
+	return v
+}
+
+func TestSignConfirmNotViperBound(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("confirm")
+	require.NotNil(t, f)
+	require.Equal(t, "false", f.DefValue, "--confirm must default to false and must not be bound to viper")
+}
+
+func TestSignTlogUploadNotDefaulted(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgSignTlogUpload has no SetDefault, so IsSet must be false when no env/config
+	// is present. If it were true, the keyless safety guard (which checks IsSet) would
+	// always treat the user as having explicitly opted out.
+	require.False(t, v.IsSet(VPkgSignTlogUpload),
+		"VPkgSignTlogUpload must not have a viper default; the keyless safety guard relies on IsSet() being false when the user has not configured the key")
+}
+
+func TestSignTlogUploadEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_SIGN_TLOG_UPLOAD", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the guard treats it as an explicit opt-out.
+	require.True(t, v.IsSet(VPkgSignTlogUpload))
+	require.False(t, v.GetBool(VPkgSignTlogUpload))
+
+	cmd := newPackageSignCommand(v)
+	f := cmd.Flags().Lookup("tlog-upload")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestVerifyInsecureIgnoreTlogDefaultTrue(t *testing.T) {
+	t.Parallel()
+	v := newTestViper()
+	// VPkgInsecureIgnoreTlog has no SetDefault (removed so that IsSet works correctly
+	// for the keyless guard). The flag must still default to true for air-gap compat.
+	require.False(t, v.IsSet(VPkgInsecureIgnoreTlog),
+		"VPkgInsecureIgnoreTlog must not have a viper default; the keyless guard relies on IsSet() being false when the user has not configured the key")
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "true", f.DefValue, "flag must still default to true for air-gap compat when no config is provided")
+}
+
+func TestVerifyInsecureIgnoreTlogEnvRespected(t *testing.T) {
+	t.Setenv("ZARF_PACKAGE_INSECURE_IGNORE_TLOG", "false")
+	v := newTestViper()
+	// With the env var set, IsSet must be true so the keyless guard treats it as explicit.
+	require.True(t, v.IsSet(VPkgInsecureIgnoreTlog))
+	require.False(t, v.GetBool(VPkgInsecureIgnoreTlog))
+
+	cmd := newPackageVerifyCommand(v)
+	f := cmd.Flags().Lookup("insecure-ignore-tlog")
+	require.Equal(t, "false", f.DefValue, "env var must flow through to flag default")
+}
+
+func TestBuildVerifyBlobOptions(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name            string
+		identity        string
+		identityRegexp  string
+		flagTlogChanged bool // simulate --insecure-ignore-tlog being explicitly passed
+		viperTlogSet    bool // simulate ZARF_PACKAGE_INSECURE_IGNORE_TLOG env var
+		wantIgnoreTlog  bool
+	}{
+		{
+			name:           "no identity: IgnoreTlog stays at flag default (true)",
+			wantIgnoreTlog: true,
+		},
+		{
+			name:           "identity set, no explicit override: tlog forced on",
+			identity:       "user@example.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:           "identity regexp set, no explicit override: tlog forced on",
+			identityRegexp: ".*@example\\.com",
+			wantIgnoreTlog: false,
+		},
+		{
+			name:            "identity set, flag explicitly changed: override honored",
+			identity:        "user@example.com",
+			flagTlogChanged: true,
+			wantIgnoreTlog:  true,
+		},
+		{
+			name:           "identity set, viper key set: override honored",
+			identity:       "user@example.com",
+			viperTlogSet:   true,
+			wantIgnoreTlog: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			v := newTestViper()
+			if tc.viperTlogSet {
+				v.Set(VPkgInsecureIgnoreTlog, true)
+			}
+
+			// Use a real command with the verify flag set registered so that
+			// cmd.Flags().Changed works correctly.
+			var f packageVerifyFlags
+			cmd := &cobra.Command{}
+			cmd.Flags().AddFlagSet(newVerifyFlagSet(v, &f))
+
+			f.certificateIdentity = tc.identity
+			f.certificateIdentityRegexp = tc.identityRegexp
+
+			if tc.flagTlogChanged {
+				require.NoError(t, cmd.Flags().Set("insecure-ignore-tlog", "true"))
+			}
+
+			opts := f.buildVerifyBlobOptions(cmd, v)
+			require.Equal(t, tc.wantIgnoreTlog, opts.CommonVerifyOptions.IgnoreTlog)
 		})
 	}
 }

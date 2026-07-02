@@ -60,39 +60,46 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
 ### Options
 
 ```
-      --adopt-existing-resources        Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
-      --agent-mutation-policy string    Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate (default "all")
-      --agent-tls-ca string             Path to a PEM-encoded CA certificate for the Zarf agent
-      --agent-tls-cert string           Path to a PEM-encoded TLS certificate for the Zarf agent
-      --agent-tls-key string            Path to a PEM-encoded TLS private key for the Zarf agent
-      --artifact-push-token string      [alpha] API Token for the push-user to access the artifact registry
-      --artifact-push-username string   [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
-      --artifact-url string             [alpha] External artifact registry url to use for this Zarf cluster
-      --components string               Specify which optional components to install.  E.g. --components=git-server
-  -c, --confirm                         Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
-      --force-conflicts                 Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
-      --git-pull-password string        Password for the pull-only user to access the git server
-      --git-pull-username string        Username for pull-only access to the git server
-      --git-push-password string        Password for the push-user to access the git server
-      --git-push-username string        Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
-      --git-url string                  External git server url to use for this Zarf cluster
-  -h, --help                            help for init
-      --injector-port int               The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
-  -k, --key string                      Path to public key file for validating signed packages
-      --oci-concurrency int             Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --registry-mode string            How to access the registry (valid values: nodeport, proxy, external). Proxy mode is an alpha feature
-      --registry-port int               Port to access the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port
-      --registry-pull-password string   Password for the pull-only user to access the registry
-      --registry-pull-username string   Username for pull-only access to the registry
-      --registry-push-password string   Password for the push-user to connect to the registry
-      --registry-push-username string   Username to access to the registry Zarf is configured to use
-      --registry-secret string          Internal registry secret value. Only used when --registry-url is not set.
-      --registry-url string             External registry url address to use for this Zarf cluster
-      --retries int                     Number of retries to perform for Zarf operations like git/image pushes (default 3)
-      --set-variables stringToString    Specify deployment variables to set on the command line (KEY=value) (default [])
-      --storage-class string            Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
-      --timeout duration                Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
-      --verify                          Verify the Zarf package signature
+      --adopt-existing-resources                Adopts any pre-existing K8s resources into the Helm charts managed by Zarf. ONLY use when you have existing deployments you want Zarf to takeover.
+      --agent-mutation-policy string            Controls agent mutation behavior: "all" mutates all resources by default, "labeled" mutates only resources labeled zarf.dev/agent: mutate (default "all")
+      --agent-tls-ca string                     Path to a PEM-encoded CA certificate for the Zarf agent
+      --agent-tls-cert string                   Path to a PEM-encoded TLS certificate for the Zarf agent
+      --agent-tls-key string                    Path to a PEM-encoded TLS private key for the Zarf agent
+      --artifact-push-token string              [alpha] API Token for the push-user to access the artifact registry
+      --artifact-push-username string           [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
+      --artifact-url string                     [alpha] External artifact registry url to use for this Zarf cluster
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --components string                       Specify which optional components to install.  E.g. --components=git-server
+  -c, --confirm                                 Confirms package deployment without prompting. ONLY use with packages you trust. Skips prompts to review SBOM, configure variables, select optional components and review potential breaking changes.
+      --force-conflicts                         Force Helm to take ownership of conflicting fields during Server-Side Apply operations. Use when external tools (kubectl, HPAs, etc.) have modified resources.
+      --git-pull-password string                Password for the pull-only user to access the git server
+      --git-pull-username string                Username for pull-only access to the git server
+      --git-push-password string                Password for the push-user to access the git server
+      --git-push-username string                Username to access to the git server Zarf is configured to use. User must be able to create repositories via 'git push'
+      --git-url string                          External git server url to use for this Zarf cluster
+  -h, --help                                    help for init
+      --injector-port int                       The port that the injector will be exposed through. Affects the service nodeport in nodeport mode and pod hostport in proxy mode
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --registry-mode string                    How to access the registry (valid values: nodeport, proxy, external). Proxy mode is an alpha feature
+      --registry-port int                       Port to access the internal registry. In nodeport mode this is a Kubernetes NodePort, in proxy mode it is a host port
+      --registry-pull-password string           Password for the pull-only user to access the registry
+      --registry-pull-username string           Username for pull-only access to the registry
+      --registry-push-password string           Password for the push-user to connect to the registry
+      --registry-push-username string           Username to access to the registry Zarf is configured to use
+      --registry-secret string                  Internal registry secret value. Only used when --registry-url is not set.
+      --registry-url string                     External registry url address to use for this Zarf cluster
+      --retries int                             Number of retries to perform for Zarf operations like git/image pushes (default 3)
+      --set-variables stringToString            Specify deployment variables to set on the command line (KEY=value) (default [])
+      --storage-class string                    Specify the storage class to use for the registry and git server.  E.g. --storage-class=standard
+      --timeout duration                        Timeout for health checks and Helm operations such as installs and rollbacks (default 15m0s)
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+      --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
 ### Options inherited from parent commands

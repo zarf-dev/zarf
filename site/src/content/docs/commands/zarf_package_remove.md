@@ -18,18 +18,40 @@ Removes a Zarf package that has been deployed already (runs offline). Remove rev
 zarf package remove { PACKAGE_SOURCE | PACKAGE_NAME } --confirm [flags]
 ```
 
+### Examples
+
+```
+
+# Remove a deployed package by its name (as listed by 'zarf package list')
+$ zarf package remove my-package --confirm
+
+# Remove using a local package tarball (package name is read from the tarball)
+$ zarf package remove zarf-package-my-app-amd64-1.0.0.tar.zst --confirm
+
+# Remove using a package from an OCI registry (requires oci:// scheme)
+$ zarf package remove oci://ghcr.io/my-org/my-package:1.0.0 --confirm
+
+```
+
 ### Options
 
 ```
-      --components string           Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
-  -c, --confirm                     Confirms the removal action
-  -h, --help                        help for remove
-  -k, --key string                  Path to public key file for validating signed packages
-  -n, --namespace string            [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
-      --oci-concurrency int         Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
-      --set-values stringToString   Specify deployment package values to set on the command line (key.path=value). (default [])
-  -v, --values strings              Path to values file(s) for removal actions
-      --verify                      Verify the Zarf package signature
+      --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
+      --certificate-identity-regexp string      Regex variant of --certificate-identity
+      --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com
+      --certificate-oidc-issuer-regexp string   Regex variant of --certificate-oidc-issuer
+      --components string                       Comma-separated list of components to remove.  This list will be respected regardless of a component's 'required' or 'default' status.  Globbing component names with '*' and deselecting components with a leading '-' are also supported.
+  -c, --confirm                                 Confirms the removal action
+  -h, --help                                    help for remove
+      --insecure-ignore-tlog                    Skip Rekor transparency log inclusion verification. Default true for air-gap. Auto-disabled when keyless identity flags are set (keyless signatures require Rekor inclusion proof to remain verifiable past certificate expiry). (default true)
+  -k, --key string                              Path to public key file for validating signed packages
+  -n, --namespace string                        [Alpha] Override the namespace for package removal. Applicable only to packages deployed using the namespace flag.
+      --oci-concurrency int                     Number of concurrent layer operations when pulling or pushing images or packages to/from OCI registries. (default 6)
+      --set-values stringToString               Specify deployment package values to set on the command line (key.path=value). (default [])
+      --trusted-root string                     Path to a Sigstore TrustedRoot JSON. Falls back to the binary-embedded copy when omitted.
+      --use-signed-timestamps                   Verify RFC3161 signed timestamps in the bundle. Auto-enabled when the bundle contains TSA timestamp data. Use when signing was done with --tsa-server-url and Rekor was not used.
+  -v, --values strings                          Path to values file(s) for removal actions
+      --verify verifyMode[=always]              Signature verification mode (always|if-possible|never). (default if-possible)
 ```
 
 ### Options inherited from parent commands

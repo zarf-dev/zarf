@@ -39,8 +39,7 @@ type Objects map[string]any
 
 const (
 	objectKeyValues    = "Values"
-	objectKeyMetadata  = "Metadata"
-	objectKeyBuild     = "Build"
+	objectKeyPackage   = "Pkg"
 	objectKeyConstants = "Constants"
 	objectKeyVariables = "Variables"
 	objectKeyState     = "State"
@@ -56,18 +55,6 @@ func NewObjects(values value.Values) Objects {
 // WithValues takes a value.Values and makes it available in templating Objects.
 func (o Objects) WithValues(values value.Values) Objects {
 	o[objectKeyValues] = values
-	return o
-}
-
-// WithMetadata takes the v1alpha1.ZarfMetadata section of a created package and makes it available in templating Objects.
-func (o Objects) WithMetadata(meta v1alpha1.ZarfMetadata) Objects {
-	o[objectKeyMetadata] = meta
-	return o
-}
-
-// WithBuild takes the v1alpha1.ZarfBuildData section of a created package and makes it available in templating Objects.
-func (o Objects) WithBuild(build v1alpha1.ZarfBuildData) Objects {
-	o[objectKeyBuild] = build
 	return o
 }
 
@@ -93,19 +80,9 @@ func (o Objects) WithVariables(vars variables.SetVariableMap) Objects {
 	return o
 }
 
-// WithPackage takes a v1alpha1.ZarfPackage and makes Metadata, Constants, and Build available on the Objects map.
+// WithPackage makes a v1alpha1.ZarfPackage available on the Objects map.
 func (o Objects) WithPackage(pkg v1alpha1.ZarfPackage) Objects {
-	// Check for fields that should be set on pkg to see if the sub-obj is available
-	if pkg.Metadata.Name != "" {
-		o.WithMetadata(pkg.Metadata)
-	}
-	if pkg.Build.User != "" {
-		o.WithBuild(pkg.Build)
-	}
-	// Are any Constants set? Load them
-	if len(pkg.Constants) > 0 {
-		o.WithConstants(pkg.Constants)
-	}
+	o[objectKeyPackage] = pkg
 	return o
 }
 

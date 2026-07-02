@@ -48,7 +48,7 @@ func newRegistryCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "registry",
-		Aliases: []string{"r", "crane"},
+		Aliases: []string{"r"},
 		Short:   lang.CmdToolsRegistryShort,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 			// TODO (@austinabro321) once the code in cmd is simplified, we should change this to respect
@@ -95,12 +95,28 @@ func newRegistryCommand() *cobra.Command {
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDelete, &craneOptions, lang.CmdToolsRegistryDeleteExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdDigest, &craneOptions, lang.CmdToolsRegistryDigestExample, 0))
 	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdManifest, &craneOptions, lang.CmdToolsRegistryManifestExample, 0))
-	cmd.AddCommand(zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0))
+	registryExportCmd := zarfCraneInternalWrapper(craneCmd.NewCmdExport, &craneOptions, lang.CmdToolsRegistryExportExample, 0)
+	registryExportCmd.Deprecated = "zarf tools registry export is deprecated. Use the Crane CLI to keep this behavior"
+	cmd.AddCommand(registryExportCmd)
 	cmd.AddCommand(craneCmd.NewCmdVersion())
 	cmd.PersistentFlags().BoolVarP(&o.verbose, "verbose", "v", false, lang.CmdToolsRegistryFlagVerbose)
 	cmd.PersistentFlags().BoolVar(&o.insecure, "insecure", false, lang.CmdToolsRegistryFlagInsecure)
 	cmd.PersistentFlags().BoolVar(&o.ndlayers, "allow-nondistributable-artifacts", false, lang.CmdToolsRegistryFlagNonDist)
 	cmd.PersistentFlags().StringVar(&o.platform, "platform", "all", lang.CmdToolsRegistryFlagPlatform)
+	return cmd
+}
+
+func newDeprecatedCraneCommand() *cobra.Command {
+	cmd := newRegistryCommand()
+	cmd.Use = "crane"
+	cmd.Aliases = nil
+	cmd.Short = lang.CmdToolsRegistryShort
+	cmd.Deprecated = "use 'zarf tools registry' instead"
+	originalPreRunE := cmd.PersistentPreRunE
+	cmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		logger.Default().Warn("'zarf tools crane' is deprecated, use 'zarf tools registry' instead")
+		return originalPreRunE(cmd, args)
+	}
 	return cmd
 }
 

@@ -39,17 +39,17 @@ type PublishCopySkeletonSuite struct {
 }
 
 var (
-	importEverything      = filepath.Join("src", "test", "packages", "14-import-everything")
+	importEverything      = filepath.Join("src", "test", "packages", "15-import-everything")
 	importEverythingPath  string
-	importception         = filepath.Join("src", "test", "packages", "14-import-everything", "inception")
+	importception         = filepath.Join("src", "test", "packages", "15-import-everything", "inception")
 	importceptionPath     string
-	importRemoteResources = filepath.Join("src", "test", "packages", "14-import-everything", "remote-resources")
+	importRemoteResources = filepath.Join("src", "test", "packages", "15-import-everything", "remote-resources")
 )
 
 func (suite *PublishCopySkeletonSuite) SetupSuite() {
 	suite.Assertions = require.New(suite.T())
 
-	// This port must match the registry URL in 14-import-everything/zarf.yaml
+	// This port must match the registry URL in 15-import-everything/zarf.yaml
 	suite.Reference.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(suite.T()), suite.T(), 31888)
 	suite.PackagesDir = suite.T().TempDir()
 	// Setup the package paths after e2e has been initialized
@@ -58,7 +58,7 @@ func (suite *PublishCopySkeletonSuite) SetupSuite() {
 }
 
 func (suite *PublishCopySkeletonSuite) TearDownSuite() {
-	err := os.RemoveAll(filepath.Join("src", "test", "packages", "14-import-everything", "charts", "local"))
+	err := os.RemoveAll(filepath.Join("src", "test", "packages", "15-import-everything", "charts", "local"))
 	suite.NoError(err)
 	err = os.RemoveAll(importEverythingPath)
 	suite.NoError(err)

@@ -211,6 +211,8 @@ func NewZarfCommand() *cobra.Command {
 		setupRootFlags(rootCmd)
 	}
 
+	setupGroupedFlagUsage(rootCmd)
+
 	return rootCmd
 }
 
