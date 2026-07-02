@@ -36,6 +36,7 @@
           "type": "string"
         },
         "serverSideApply": {
+          "default": "auto",
           "description": "Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to \"auto\" when omitted.",
           "enum": [
             "true",
@@ -539,6 +540,11 @@
         "stateAccess": {
           "description": "Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).\nValid values: \"registryCredentials\", \"gitCredentials\", \"agentCerts\".",
           "items": {
+            "enum": [
+              "registryCredentials",
+              "gitCredentials",
+              "agentCerts"
+            ],
             "type": "string"
           },
           "type": "array"
@@ -685,6 +691,7 @@
           "type": "string"
         },
         "source": {
+          "default": "registry",
           "description": "The source to pull the image from. Defaults to \"registry\".",
           "enum": [
             "registry",
@@ -797,6 +804,7 @@
           "type": "string"
         },
         "serverSideApply": {
+          "default": "auto",
           "description": "Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to \"auto\" when omitted.",
           "enum": [
             "true",
@@ -866,7 +874,13 @@
           "type": "string"
         },
         "type": {
-          "description": "Type declares the kind of data being stored in the value.",
+          "default": "string",
+          "description": "Type declares the kind of data being stored in the value. Defaults to \"string\" when omitted.",
+          "enum": [
+            "yaml",
+            "json",
+            "string"
+          ],
           "type": "string"
         }
       },

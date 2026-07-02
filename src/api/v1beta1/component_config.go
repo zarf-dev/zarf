@@ -43,7 +43,7 @@ type ComponentSpec struct {
 	Service Service `json:"service,omitempty" jsonschema:"enum=registry,enum=seed-registry,enum=injector,enum=agent,enum=git-server"`
 	// Groups of sensitive .State fields this component may access in Go templates (manifests, files, actions with template: true).
 	// Valid values: "registryCredentials", "gitCredentials", "agentCerts".
-	StateAccess []StateAccessKey `json:"stateAccess,omitempty"`
+	StateAccess []StateAccessKey `json:"stateAccess,omitempty" jsonschema:"enum=registryCredentials,enum=gitCredentials,enum=agentCerts"`
 }
 
 // ComponentMetadata holds metadata about a component config.

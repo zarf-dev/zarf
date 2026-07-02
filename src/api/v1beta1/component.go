@@ -13,10 +13,10 @@ type Component struct {
 	Optional      bool `json:"optional,omitempty"`
 	ComponentSpec `json:",inline"`
 
-	// Data injections removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	// *** REMOVED FIELDS ***
+	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
 	dataInjections []ZarfDataInjection
-	// group removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
-	group string
+	group          string
 }
 
 // GetDeprecatedDataInjections returns the v1alpha1 data injections carried as a backwards-compatibility shim.
@@ -131,7 +131,7 @@ type Manifest struct {
 	// Whether to skip waiting for manifest resources to be ready before continuing.
 	SkipWait bool `json:"skipWait,omitempty"`
 	// Controls whether Server-Side Apply (SSA) or client-side apply (CSA) is used during deploy. Defaults to "auto" when omitted.
-	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
+	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
 	// EnableTemplating enables go-template processing on these manifests during deploy.
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
 }
@@ -140,8 +140,6 @@ type Manifest struct {
 type Chart struct {
 	// The name of the chart within Zarf; note that this must be unique and does not need to be the same as the name in the chart repository.
 	Name string `json:"name"`
-	// The version of the chart. This field is removed from the schema, but kept as a backwards compatibility shim so v1alpha1 packages can be converted to v1beta1.
-	version string
 	// The Helm repository where the chart is stored.
 	HelmRepository *HelmRepositorySource `json:"helmRepository,omitempty"`
 	// The Git repository where the chart is stored.
@@ -163,9 +161,11 @@ type Chart struct {
 	// Skip validation of the chart's values against its JSON schema. Defaults to false.
 	SkipSchemaValidation bool `json:"skipSchemaValidation,omitempty"`
 	// Controls whether Helm uses Server-Side Apply (SSA) or client-side apply (CSA) when deploying this chart. Defaults to "auto" when omitted.
-	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto"`
+	ServerSideApply ServerSideApplyMode `json:"serverSideApply,omitempty" jsonschema:"enum=true,enum=false,enum=auto,default=auto"`
 
-	// Chart variables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+	// *** REMOVED FIELDS ***
+	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
+	version   string
 	variables []ZarfChartVariable
 }
 
@@ -246,7 +246,7 @@ type Image struct {
 	// The image reference.
 	Name string `json:"name"`
 	// The source to pull the image from. Defaults to "registry".
-	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon"`
+	Source string `json:"source,omitempty" jsonschema:"enum=registry,enum=daemon,default=registry"`
 }
 
 // ImageArchive defines a tar archive of images to include in the package.
@@ -337,7 +337,9 @@ type ComponentAction struct {
 	Wait *ComponentActionWait `json:"wait,omitempty"`
 	// EnableTemplating enables go-template processing on the cmd field.
 	EnableTemplating bool `json:"enableTemplating,omitempty"`
-	// setVariables removed from the v1beta1 schema; kept as a v1alpha1 backwards-compatibility shim.
+
+	// *** REMOVED FIELDS ***
+	// Below you'll find a set of fields which are kept here for v1alpha1 backwards-compatibility.
 	setVariables []Variable
 }
 
@@ -364,8 +366,8 @@ const (
 type SetValue struct {
 	// Key represents which value to assign to.
 	Key string `json:"key,omitempty"`
-	// Type declares the kind of data being stored in the value.
-	Type SetValueType `json:"type,omitempty"`
+	// Type declares the kind of data being stored in the value. Defaults to "string" when omitted.
+	Type SetValueType `json:"type,omitempty" jsonschema:"enum=yaml,enum=json,enum=string,default=string"`
 }
 
 // ComponentActionWait specifies a condition to wait for before continuing.
