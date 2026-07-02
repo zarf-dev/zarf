@@ -53,6 +53,7 @@ cat file2.yml | zarf tools yq ea '.a.b' file1.yml - file3.yml
 ### Options inherited from parent commands
 
 ```
+      --cache string                    Specify the location of the Zarf cache directory (default "~/.zarf-cache")
   -C, --colors                          force print with colors
       --csv-auto-parse                  parse CSV YAML/JSON values (default true)
       --csv-separator char              CSV Separator character (default ,)
