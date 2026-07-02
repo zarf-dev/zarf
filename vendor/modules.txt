@@ -3569,6 +3569,17 @@ golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
+# golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57
+## explicit; go 1.25.0
+golang.org/x/telemetry
+golang.org/x/telemetry/counter
+golang.org/x/telemetry/internal/config
+golang.org/x/telemetry/internal/configstore
+golang.org/x/telemetry/internal/counter
+golang.org/x/telemetry/internal/crashmonitor
+golang.org/x/telemetry/internal/mmap
+golang.org/x/telemetry/internal/telemetry
+golang.org/x/telemetry/internal/upload
 # golang.org/x/term v0.44.0
 ## explicit; go 1.25.0
 golang.org/x/term
@@ -3607,13 +3618,24 @@ golang.org/x/text/width
 # golang.org/x/time v0.15.0
 ## explicit; go 1.25.0
 golang.org/x/time/rate
-# golang.org/x/tools v0.46.0
+# golang.org/x/tools v0.47.0
 ## explicit; go 1.25.0
 golang.org/x/tools/cmd/stringer
+golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/edge
 golang.org/x/tools/go/ast/inspector
+golang.org/x/tools/go/buildutil
+golang.org/x/tools/go/callgraph
+golang.org/x/tools/go/callgraph/cha
+golang.org/x/tools/go/callgraph/internal/chautil
+golang.org/x/tools/go/callgraph/vta
+golang.org/x/tools/go/callgraph/vta/internal/trie
 golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/cgo
+golang.org/x/tools/go/loader
 golang.org/x/tools/go/packages
+golang.org/x/tools/go/ssa
+golang.org/x/tools/go/ssa/ssautil
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/internal/aliases
@@ -3629,6 +3651,25 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
+# golang.org/x/vuln v1.5.0
+## explicit; go 1.25.0
+golang.org/x/vuln/cmd/govulncheck
+golang.org/x/vuln/internal
+golang.org/x/vuln/internal/buildinfo
+golang.org/x/vuln/internal/client
+golang.org/x/vuln/internal/derrors
+golang.org/x/vuln/internal/gosym
+golang.org/x/vuln/internal/goversion
+golang.org/x/vuln/internal/govulncheck
+golang.org/x/vuln/internal/openvex
+golang.org/x/vuln/internal/osv
+golang.org/x/vuln/internal/sarif
+golang.org/x/vuln/internal/scan
+golang.org/x/vuln/internal/semver
+golang.org/x/vuln/internal/traces
+golang.org/x/vuln/internal/vulncheck
+golang.org/x/vuln/internal/web
+golang.org/x/vuln/scan
 # golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
 ## explicit; go 1.18
 golang.org/x/xerrors
