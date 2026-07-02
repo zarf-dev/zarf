@@ -1,0 +1,216 @@
+{
+  "$defs": {
+    "json_url_t": {
+      "description": "Contains a URL of a JSON file.",
+      "format": "uri",
+      "pattern": "\\.json$",
+      "title": "JSON URL type",
+      "type": "string"
+    },
+    "provider_url_t": {
+      "description": "Contains a URL of a provider-metadata.json.",
+      "format": "uri",
+      "pattern": "/provider-metadata\\.json$",
+      "title": "Provider URL type",
+      "type": "string"
+    },
+    "url_t": {
+      "description": "Contains a URL.",
+      "format": "uri",
+      "title": "Generic URL type",
+      "type": "string"
+    }
+  },
+  "$id": "https://docs.oasis-open.org/csaf/csaf/v2.0/provider_json_schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Representation of metadata information of a CSAF provider as a JSON document.",
+  "properties": {
+    "canonical_url": {
+      "$ref": "#/$defs/provider_url_t",
+      "description": "Contains the URL for this document.",
+      "title": "Canonical URL"
+    },
+    "distributions": {
+      "description": "Contains a list of used distribution mechanisms.",
+      "items": {
+        "additionalProperties": false,
+        "description": "Contains the information of a used distribution mechanism.",
+        "minProperties": 1,
+        "properties": {
+          "directory_url": {
+            "$ref": "#/$defs/url_t",
+            "description": "Contains the base url for the directory distribution.",
+            "title": "Directory URL"
+          },
+          "rolie": {
+            "additionalProperties": false,
+            "description": "Contains all information for ROLIE distribution.",
+            "properties": {
+              "categories": {
+                "description": "Contains a list of URLs which contain ROLIE category documents.",
+                "items": {
+                  "$ref": "#/$defs/json_url_t",
+                  "description": "Contains a URL of a ROLIE category document.",
+                  "title": "ROLIE category document URL"
+                },
+                "minItems": 1,
+                "title": "List of ROLIE category document URLs",
+                "type": "array",
+                "uniqueItems": true
+              },
+              "feeds": {
+                "description": "Contains a list of information about ROLIE feeds.",
+                "items": {
+                  "additionalProperties": false,
+                  "description": "Contains information about the ROLIE feed.",
+                  "properties": {
+                    "summary": {
+                      "description": "Contains a summary of the feed.",
+                      "examples": [
+                        "All TLP:WHITE advisories of Example Company."
+                      ],
+                      "title": "Summary of the feed",
+                      "type": "string"
+                    },
+                    "tlp_label": {
+                      "description": "Provides the TLP label for the feed.",
+                      "enum": [
+                        "UNLABELED",
+                        "WHITE",
+                        "GREEN",
+                        "AMBER",
+                        "RED"
+                      ],
+                      "title": "TLP label",
+                      "type": "string"
+                    },
+                    "url": {
+                      "$ref": "#/$defs/json_url_t",
+                      "description": "Contains the URL of the feed.",
+                      "title": "URL of the feed"
+                    }
+                  },
+                  "required": [
+                    "tlp_label",
+                    "url"
+                  ],
+                  "title": "ROLIE feed",
+                  "type": "object"
+                },
+                "minItems": 1,
+                "title": "List of ROLIE feeds",
+                "type": "array",
+                "uniqueItems": true
+              },
+              "services": {
+                "description": "Contains a list of URLs which contain ROLIE service documents.",
+                "items": {
+                  "$ref": "#/$defs/json_url_t",
+                  "description": "Contains a URL of a ROLIE service document.",
+                  "title": "ROLIE service document URL"
+                },
+                "minItems": 1,
+                "title": "List of ROLIE service document URLs",
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "feeds"
+            ],
+            "title": "ROLIE",
+            "type": "object"
+          }
+        },
+        "title": "Distribution",
+        "type": "object"
+      },
+      "minItems": 1,
+      "title": "List of Distribution",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "last_updated": {
+      "description": "Holds the date and time when the document was last updated.",
+      "format": "date-time",
+      "title": "Last updated",
+      "type": "string"
+    },
+    "list_on_CSAF_aggregators": {
+      "default": true,
+      "description": "Decides whether this file should be linked in the list of a CSAF aggregator.",
+      "title": "List on CSAF aggregators",
+      "type": "boolean"
+    },
+    "metadata_version": {
+      "description": "Gives the version of the CSAF provider metadata specification which the document was generated for.",
+      "enum": [
+        "2.0"
+      ],
+      "title": "CSAF provider metadata version",
+      "type": "string"
+    },
+    "mirror_on_CSAF_aggregators": {
+      "default": true,
+      "description": "Decides whether the CSAF documents can be mirrored and provided by a CSAF aggregator.",
+      "title": "Mirror on CSAF aggregators",
+      "type": "boolean"
+    },
+    "public_openpgp_keys": {
+      "description": "Contains a list of OpenPGP keys used to sign CSAF documents.",
+      "items": {
+        "additionalProperties": false,
+        "description": "Contains all information about an OpenPGP key used to sign CSAF documents.",
+        "properties": {
+          "fingerprint": {
+            "description": "Contains the fingerprint of the OpenPGP key.",
+            "minLength": 40,
+            "pattern": "^[0-9a-fA-F]{40,}$",
+            "title": "Fingerprint of the key",
+            "type": "string"
+          },
+          "url": {
+            "$ref": "#/$defs/url_t",
+            "description": "Contains the URL where the key can be retrieved.",
+            "title": "URL of the key"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "PGP keys",
+        "type": "object"
+      },
+      "title": "List of public OpenPGP keys",
+      "type": "array"
+    },
+    "publisher": {
+      "$ref": "https://docs.oasis-open.org/csaf/csaf/v2.0/csaf_json_schema.json#/properties/document/properties/publisher",
+      "description": "Provides information about the publisher of the CSAF documents in this repository.",
+      "title": "Publisher"
+    },
+    "role": {
+      "default": "csaf_provider",
+      "description": "Contains the role of the issuing party according to section 7 in the CSAF standard.",
+      "enum": [
+        "csaf_publisher",
+        "csaf_provider",
+        "csaf_trusted_provider"
+      ],
+      "title": "Role of the issuing party",
+      "type": "string"
+    }
+  },
+  "required": [
+    "canonical_url",
+    "last_updated",
+    "list_on_CSAF_aggregators",
+    "mirror_on_CSAF_aggregators",
+    "metadata_version",
+    "publisher",
+    "role"
+  ],
+  "title": "CSAF provider metadata",
+  "type": "object"
+}

@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "logger",
+    srcs = [
+        "buffer.go",
+        "field.go",
+        "init_windows.go",
+        "level.go",
+        "log.go",
+    ],
+    importpath = "github.com/buildkite/agent/v3/logger",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//version",
+        "@org_golang_x_term//:term",
+    ] + select({
+        "@rules_go//go/platform:windows": [
+            "@org_golang_x_sys//windows",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+go_test(
+    name = "logger_test",
+    srcs = [
+        "buffer_test.go",
+        "log_test.go",
+    ],
+    deps = [
+        ":logger",
+        "@com_github_stretchr_testify//assert",
+    ],
+)

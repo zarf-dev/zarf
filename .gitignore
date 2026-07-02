@@ -2,7 +2,7 @@
 .direnv/
 .idea/
 .scratch/
-.tool-versions
+/.tool-versions
 .vagrant
 .vscode/
 .zarf*
@@ -17,9 +17,9 @@
 *.vbox
 *.zst
 *.zim
-build
 .docs-version-builds/
-data/
+/build
+/src/test/external/data/
 zarf
 zarf-pki
 zarf-sbom/
@@ -28,6 +28,8 @@ test-*.txt
 __debug_bin
 .netlify
 !**/testdata/**
+!vendor/**/*.dat
+!vendor/**/*.crt
 coverage.out
 dist
 CLAUDE.local.md

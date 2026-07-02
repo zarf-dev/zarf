@@ -1,0 +1,9 @@
+image:
+  file: Dockerfile.gitpod
+
+tasks:
+  - init: make build
+
+vscode:
+  extensions:
+    - golang.Go

@@ -1,0 +1,56 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "api",
+    srcs = [
+        "agents.go",
+        "annotations.go",
+        "artifacts.go",
+        "builds.go",
+        "chunks.go",
+        "client.go",
+        "doc.go",
+        "github_code_access_token.go",
+        "header_times.go",
+        "heartbeats.go",
+        "jobs.go",
+        "meta_data.go",
+        "oidc.go",
+        "pings.go",
+        "pipelines.go",
+        "retryable.go",
+        "secrets.go",
+        "steps.go",
+        "token.go",
+        "uuid.go",
+    ],
+    importpath = "github.com/buildkite/agent/v3/api",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//internal/agenthttp",
+        "//logger",
+        "@com_github_buildkite_go_pipeline//:go-pipeline",
+        "@com_github_buildkite_roko//:roko",
+        "@com_github_google_go_querystring//query",
+        "@com_github_pborman_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "api_test",
+    srcs = [
+        "api_internal_test.go",
+        "client_internal_test.go",
+        "client_private_test.go",
+        "client_test.go",
+        "oidc_test.go",
+        "secrets_test.go",
+    ],
+    embed = [":api"],
+    deps = [
+        "//logger",
+        "@com_github_google_go_cmp//cmp",
+        "@com_github_stretchr_testify//assert",
+        "@tools_gotest_v3//assert",
+    ],
+)

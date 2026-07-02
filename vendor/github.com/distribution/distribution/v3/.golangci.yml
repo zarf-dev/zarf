@@ -1,0 +1,32 @@
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+linters:
+  enable:
+    - bodyclose
+    - misspell
+    - prealloc
+    - revive
+    - staticcheck
+    - tparallel
+    - unconvert
+
+  disable:
+    - errcheck
+
+  settings:
+    revive:
+      rules:
+        # TODO(thaJeztah): temporarily disabled the "unused-parameter" check.
+        # It produces many warnings, and some of those may need to be looked at.
+        - name: unused-parameter
+          disabled: true
+    staticcheck:
+      checks:
+        - all
+        - -QF1008 # Omit embedded fields from selector expression; https://staticcheck.dev/docs/checks/#QF1008
+        - -ST1000 # Incorrect or missing package comment; https://staticcheck.dev/docs/checks/#ST1000
