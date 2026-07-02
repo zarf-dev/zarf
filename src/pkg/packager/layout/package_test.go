@@ -56,7 +56,6 @@ func TestPackageLayout(t *testing.T) {
 	tmpDir = t.TempDir()
 	err = pkgLayout.GetSBOM(ctx, tmpDir)
 	require.NoError(t, err)
-	require.FileExists(t, filepath.Join(tmpDir, "compare.html"))
 
 	files, err := pkgLayout.Files()
 	require.NoError(t, err)

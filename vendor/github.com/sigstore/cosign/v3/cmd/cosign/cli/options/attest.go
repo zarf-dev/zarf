@@ -1,0 +1,137 @@
+//
+// Copyright 2021 The Sigstore Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package options
+
+import (
+	"strings"
+
+	"github.com/spf13/cobra"
+)
+
+// AttestOptions is the top level wrapper for the attest command.
+type AttestOptions struct {
+	Key                     string
+	Cert                    string
+	CertChain               string
+	IssueCertificate        bool
+	NoUpload                bool
+	Replace                 bool
+	SkipConfirmation        bool
+	TlogUpload              bool
+	TSAClientCACert         string
+	TSAClientCert           string
+	TSAClientKey            string
+	TSAServerName           string
+	TSAServerURL            string
+	RekorEntryType          string
+	RecordCreationTimestamp bool
+	BundlePath              string
+	NewBundleFormat         bool
+	UseSigningConfig        bool
+	SigningConfigPath       string
+	TrustedRootPath         string
+
+	Rekor       RekorOptions
+	Fulcio      FulcioOptions
+	OIDC        OIDCOptions
+	SecurityKey SecurityKeyOptions
+	Predicate   PredicateLocalOptions
+	Registry    RegistryOptions
+}
+
+var _ Interface = (*AttestOptions)(nil)
+
+// AddFlags implements Interface
+func (o *AttestOptions) AddFlags(cmd *cobra.Command) {
+	o.SecurityKey.AddFlags(cmd)
+	o.Predicate.AddFlags(cmd)
+	o.Fulcio.AddFlags(cmd)
+	o.OIDC.AddFlags(cmd)
+	o.Rekor.AddFlags(cmd)
+	o.Registry.AddFlags(cmd)
+
+	cmd.Flags().StringVar(&o.Key, "key", "",
+		"path to the private key file, KMS URI or Kubernetes Secret")
+	_ = cmd.MarkFlagFilename("key", privateKeyExts...)
+
+	cmd.Flags().StringVar(&o.Cert, "certificate", "",
+		"path to the X.509 certificate in PEM format to include in the OCI Signature")
+	_ = cmd.MarkFlagFilename("certificate", certificateExts...)
+
+	cmd.Flags().StringVar(&o.CertChain, "certificate-chain", "",
+		"path to a list of CA X.509 certificates in PEM format which will be needed "+
+			"when building the certificate chain for the signing certificate. "+
+			"Must start with the parent intermediate CA certificate of the "+
+			"signing certificate and end with the root certificate. Included in the OCI Signature")
+	_ = cmd.MarkFlagFilename("certificate-chain", certificateExts...)
+
+	cmd.Flags().BoolVar(&o.NoUpload, "no-upload", false,
+		"do not upload the generated attestation, but send the attestation output to STDOUT")
+	cmd.Flags().BoolVarP(&o.Replace, "replace", "", false,
+		"")
+
+	cmd.Flags().BoolVarP(&o.SkipConfirmation, "yes", "y", false,
+		"skip confirmation prompts for non-destructive operations")
+
+	cmd.Flags().BoolVar(&o.TlogUpload, "tlog-upload", true,
+		"whether or not to upload to the tlog")
+	_ = cmd.Flags().MarkDeprecated("tlog-upload", "prefer using a --signing-config file with no transparency log services")
+
+	cmd.Flags().StringVar(&o.RekorEntryType, "rekor-entry-type", rekorEntryTypes[0],
+		"specifies the type to be used for a rekor entry upload ("+strings.Join(rekorEntryTypes, "|")+")")
+	_ = cmd.RegisterFlagCompletionFunc("rekor-entry-type", cobra.FixedCompletions(rekorEntryTypes, cobra.ShellCompDirectiveNoFileComp))
+	_ = cmd.Flags().MarkDeprecated("rekor-entry-type", "support for this flag will be removed in the future. it is strongly discouraged to rely on Rekor for attestation storage, and in future releases of Rekor, this functionality will be removed.")
+
+	cmd.Flags().StringVar(&o.TSAClientCACert, "timestamp-client-cacert", "",
+		"path to the X.509 CA certificate file in PEM format to be used for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAClientCert, "timestamp-client-cert", "",
+		"path to the X.509 certificate file in PEM format to be used for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAClientKey, "timestamp-client-key", "",
+		"path to the X.509 private key file in PEM format to be used, together with the 'timestamp-client-cert' value, for the connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAServerName, "timestamp-server-name", "",
+		"SAN name to use as the 'ServerName' tls.Config field to verify the mTLS connection to the TSA Server")
+
+	cmd.Flags().StringVar(&o.TSAServerURL, "timestamp-server-url", "",
+		"url to the Timestamp RFC3161 server, default none. Must be the path to the API to request timestamp responses, e.g. https://freetsa.org/tsr")
+	_ = cmd.RegisterFlagCompletionFunc("timestamp-server-url", cobra.NoFileCompletions)
+
+	cmd.Flags().BoolVar(&o.RecordCreationTimestamp, "record-creation-timestamp", false,
+		"set the createdAt timestamp in the attestation artifact to the time it was created; by default, cosign sets this to the zero value")
+
+	cmd.Flags().BoolVar(&o.IssueCertificate, "issue-certificate", false,
+		"issue a code signing certificate from Fulcio, even if a key is provided")
+	_ = cmd.Flags().MarkDeprecated("issue-certificate", "support for this flag will be removed in the future")
+
+	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
+		"write everything required to verify the blob to a FILE")
+	_ = cmd.MarkFlagFilename("bundle", bundleExts...)
+
+	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true, "attach a Sigstore bundle using OCI referrers API")
+
+	cmd.Flags().BoolVar(&o.UseSigningConfig, "use-signing-config", true,
+		"whether to use a TUF-provided signing config for the service URLs. Must set --new-bundle-format, which will store verification material in the new format")
+
+	cmd.Flags().StringVar(&o.SigningConfigPath, "signing-config", "",
+		"path to a signing config file. Must provide --new-bundle-format, which will store verification material in the new format")
+
+	cmd.MarkFlagsMutuallyExclusive("use-signing-config", "signing-config")
+
+	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
+		"optional path to a TrustedRoot JSON file to verify a signature after signing")
+}

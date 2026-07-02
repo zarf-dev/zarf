@@ -83,6 +83,7 @@ destroy: ## Run `zarf destroy` on the current cluster
 .PHONY: build
 build: ## Build the Zarf CLI for the machines OS and architecture
 	go mod tidy
+	go mod vendor
 	$(MAKE) $(BUILD_CLI_FOR_SYSTEM)
 
 build-cli-linux-amd: ## Build the Zarf CLI for Linux on AMD64

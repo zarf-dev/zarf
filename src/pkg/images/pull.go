@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	clayout "github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/mholt/archives"
 	"github.com/moby/moby/client"
 	"github.com/moby/moby/client/pkg/versions"
 	"github.com/zarf-dev/zarf/src/config"
@@ -357,21 +357,11 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		err = errors.Join(err, imageReader.Close())
 	}()
 
-	imageTarPath := filepath.Join(tmpDir, "image.tar")
-	tarFile, err := os.Create(imageTarPath)
-	if err != nil {
-		return fmt.Errorf("failed to create tar file: %w", err)
-	}
-	if _, err := io.Copy(tarFile, imageReader); err != nil {
-		return errors.Join(fmt.Errorf("failed to write image to tar file: %w", err), tarFile.Close())
-	}
-	if err := tarFile.Close(); err != nil {
-		return fmt.Errorf("failed to close tar file: %w", err)
-	}
-
+	// ImageSave returns an uncompressed tar, so we extract the stream straight into an OCI
+	// layout rather than materializing the full image as an intermediate file on disk.
 	dockerImageOCILayoutPath := filepath.Join(tmpDir, "docker-image-oci-layout")
-	if err := archive.Decompress(ctx, imageTarPath, dockerImageOCILayoutPath, archive.DecompressOpts{}); err != nil {
-		return fmt.Errorf("failed to extract image tar: %w", err)
+	if err := archive.DecompressStream(ctx, imageReader, dockerImageOCILayoutPath, archive.DecompressOpts{Extractor: archives.Tar{}}); err != nil {
+		return fmt.Errorf("failed to extract image from docker daemon: %w", err)
 	}
 	manifests, err := getManifestsFromOCILayout(dockerImageOCILayoutPath)
 	if err != nil {
@@ -387,10 +377,8 @@ func saveImageFromDockerDaemon(ctx context.Context, cli *client.Client, dst *oci
 		return fmt.Errorf("failed to create OCI store: %w", err)
 	}
 	l.Info("pulling image from docker daemon", "name", daemonImage.overridden.Reference)
-	if _, err := copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency); err != nil {
-		return err
-	}
-	return nil
+	_, err = copyImageFromOCILayout(ctx, dockerImageSrc, dst, manifests[0].Digest.String(), daemonImage.original, arch, concurrency)
+	return err
 }
 
 // craneSaveImageFromDockerDaemon exports a single image from the Docker daemon using Crane and copies it into dst.
