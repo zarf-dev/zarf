@@ -231,6 +231,7 @@ func PublishSkeleton(ctx context.Context, path string, ref registry.Reference, o
 		Flavor:             opts.Flavor,
 		SkipVersionCheck:   opts.SkipVersionCheck,
 		SkipRequiredValues: true,
+		Skeleton:           true,
 		RemoteOptions:      opts.RemoteOptions,
 	})
 	if err != nil {

@@ -85,34 +85,30 @@ func TestPublishFlavor(t *testing.T) {
 	reg.Registry = testutil.SetupInMemoryRegistry(testutil.TestContext(t), t, 31888)
 
 	ref := reg.String()
-	expectedIDs := []string{"combined", "via-import"}
-
 	flavorTest := filepath.Join("src", "test", "packages", "10-package-flavors")
-	_, _, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", "vanilla", "--no-color", "oci://"+ref, "--plain-http")
-	require.NoError(t, err)
 
-	stdOut, _, err := e2e.Zarf(t, "package", "inspect", "definition", "oci://"+ref+"/test-package-flavors:v0.0.0-vanilla", "--plain-http", "-a", "skeleton")
-	require.NoError(t, err)
+	// A skeleton is architecture-agnostic, so it retains every arch variant of the flavor's components.
+	assertSkeleton := func(t *testing.T, flavor string) {
+		t.Helper()
+		_, _, err := e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", flavor, "--no-color", "oci://"+ref, "--plain-http")
+		require.NoError(t, err)
 
-	var config v1alpha1.ZarfPackage
-	err = yaml.Unmarshal([]byte(stdOut), &config)
-	require.NoError(t, err)
+		stdOut, _, err := e2e.Zarf(t, "package", "inspect", "definition", "oci://"+ref+"/test-package-flavors:v0.0.0-"+flavor, "--plain-http", "-a", "skeleton")
+		require.NoError(t, err)
 
-	for i, component := range config.Components {
-		require.Equal(t, expectedIDs[i], component.Name)
+		var config v1alpha1.ZarfPackage
+		require.NoError(t, yaml.Unmarshal([]byte(stdOut), &config))
+
+		got := []string{}
+		for _, component := range config.Components {
+			got = append(got, component.Name+"/"+component.Only.Cluster.Architecture)
+		}
+		require.ElementsMatch(t, []string{
+			"combined/amd64", "combined/arm64",
+			"via-import/amd64", "via-import/arm64",
+		}, got)
 	}
 
-	flavorTest = filepath.Join("src", "test", "packages", "10-package-flavors")
-	_, _, err = e2e.Zarf(t, "package", "publish", flavorTest, "--flavor", "chocolate", "--no-color", "oci://"+ref, "--plain-http")
-	require.NoError(t, err)
-
-	stdOut, _, err = e2e.Zarf(t, "package", "inspect", "definition", "oci://"+ref+"/test-package-flavors:v0.0.0-chocolate", "--plain-http", "-a", "skeleton")
-	require.NoError(t, err)
-
-	err = yaml.Unmarshal([]byte(stdOut), &config)
-	require.NoError(t, err)
-
-	for i, component := range config.Components {
-		require.Equal(t, expectedIDs[i], component.Name)
-	}
+	assertSkeleton(t, "vanilla")
+	assertSkeleton(t, "chocolate")
 }
