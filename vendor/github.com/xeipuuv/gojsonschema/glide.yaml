@@ -1,0 +1,10 @@
+package: .
+license: Apache 2.0
+import:
+- package: github.com/go-openapi/jsonreference
+- package: github.com/go-openapi/jsonpointer
+testImport:
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
+  - require

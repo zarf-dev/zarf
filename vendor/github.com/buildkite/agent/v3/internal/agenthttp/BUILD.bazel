@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "agenthttp",
+    srcs = [
+        "auth.go",
+        "client.go",
+        "do.go",
+    ],
+    importpath = "github.com/buildkite/agent/v3/internal/agenthttp",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//logger",
+        "@org_golang_x_net//http2",
+    ],
+)

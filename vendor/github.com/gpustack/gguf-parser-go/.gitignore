@@ -1,0 +1,32 @@
+# Files
+.DS_Store
+*.lock
+*.test
+*.out
+*.swp
+*.swo
+*.db
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.log
+go.work
+go.work.*
+*.local.json
+
+# Dirs
+/.idea
+/.vscode
+/.kube
+/.terraform
+/.vagrant
+/.bundle
+/.cache
+/.docker
+/.entc
+/.sbin
+/.dist
+/log
+/certs
