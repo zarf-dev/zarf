@@ -6,7 +6,7 @@ sidebar:
 
 ## Overview
 
-Zarf supports cryptographic signing and verification of packages using [Cosign](https://github.com/sigstore/cosign). Package signing provides:
+Zarf supports cryptographic signing and verification of packages using [Cosign](https://github.com/sigstore/cosign). Two signing modes are supported: **key-based signing** using a local private key or cloud KMS, and **keyless signing** using a Sigstore OIDC identity (no private key required). Package signing provides:
 
 - **Authenticity**: Verify that a package comes from a trusted source
 - **Integrity**: Ensure the package has not been modified or corrupted
@@ -41,7 +41,7 @@ The legacy signature format (`zarf.yaml.sig`) will be deprecated in favor of the
 
 **Migration:**
 
-Re-sign packages with legacy signatures using the `zarf package sign --features="bundle-signature=true" --overwrite` command to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
+Re-sign packages with legacy signatures using `zarf package sign <package> --overwrite` to upgrade to the bundle format. The `--overwrite` flag allows replacing existing signatures.
 
 :::
 
@@ -112,6 +112,65 @@ All KMS providers require proper authentication and permissions configured on yo
 
 :::
 
+### Keyless Signing
+
+Keyless signing uses Sigstore's [Fulcio](https://docs.sigstore.dev/certificate_authority/overview/) certificate authority to issue a short-lived signing certificate bound to your OIDC identity (GitHub Actions workflow, Google account, etc.).
+
+**When to use keyless signing:**
+
+- CI/CD pipelines (GitHub Actions, GitLab CI) where managing a private key is impractical
+- Signing official release artifacts with an identity pinned to the specific workflow that ran
+- Organizations that want to eliminate private key management entirely
+
+The command is generally the same whether running interactively or in GitHub Actions — zarf detects the OIDC environment automatically:
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst --keyless --confirm
+```
+
+The `--confirm` flag skips the prompt before uploading to the Rekor transparency log. `--tlog-upload` is automatically enabled with `--keyless`. When run interactively, the command opens a browser for OIDC login. In GitHub Actions, zarf uses the ambient OIDC token — ensure the workflow job has `id-token: write` permission:
+
+```yaml
+permissions:
+  id-token: write
+  contents: read
+```
+
+**Other non-interactive environments** where OIDC auto-detection does not apply, supply a pre-acquired token with `--identity-token`. The flag accepts either a raw token value or a path to a file containing one:
+
+```bash
+# Pass the token value directly (register it as a masked secret in your CI platform)
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --keyless \
+  --identity-token "$MY_OIDC_TOKEN" \
+  --confirm
+
+# Or pass a path to a file containing the token (e.g., written by a prior step or secret manager)
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --keyless \
+  --identity-token /path/to/oidc-token \
+  --confirm
+```
+
+Ensure the token value is registered as a masked secret in your CI platform so it is redacted from log output.
+
+:::note
+
+Keyless signatures include a Rekor transparency log entry that extends verifiability past the ~10-minute Fulcio certificate validity window. There are two reasons you might use `--tsa-server-url` with `--tlog-upload=false` instead (since `--keyless` enables `--tlog-upload` by default):
+
+1. **Rekor is unavailable** in your environment and you still need long-term verifiability
+2. **Privacy**: Rekor is a public transparency log, using a TSA timestamp avoids publishing your signing event
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --keyless \
+  --tlog-upload=false \
+  --tsa-server-url https://timestamp.sigstore.dev/api/v1/timestamp \
+  --confirm
+```
+
+:::
+
 ## Signing Operations
 
 ### Sign During Package Creation
@@ -170,10 +229,38 @@ zarf package sign oci://ghcr.io/my-org/my-package:1.0.0 \
 
 ### Verify a Signed Package
 
-Verify a package's signature using the public key:
+**Key-based signing** — verify using the public key:
 
 ```bash
 zarf package verify zarf-package-example-amd64.tar.zst --key cosign.pub
+```
+
+**Keyless signing** — verify using the expected OIDC identity of the signer. Use `--certificate-identity` for an exact match or `--certificate-identity-regexp` to match a pattern (useful when the identity encodes a workflow path and ref):
+
+:::note
+
+Keyless signature verification is currently only supported via `zarf package verify`. Verification during `zarf package deploy` and other commands is not yet available. Track progress in [#4917](https://github.com/zarf-dev/zarf/issues/4917).
+
+:::
+
+```bash
+# Exact identity match (e.g., a service account email)
+zarf package verify zarf-package-example-amd64.tar.zst \
+  --certificate-identity "signer@example.com" \
+  --certificate-oidc-issuer "https://accounts.google.com"
+
+# Regexp match — pins the identity to a specific workflow and ref type
+zarf package verify zarf-package-example-amd64.tar.zst \
+  --certificate-identity-regexp "https://github.com/my-org/my-repo/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Using `--certificate-identity-regexp` prevents accepting packages signed by an unrelated pipeline in the same repository. For the official Zarf init package (signed during the release workflow):
+
+```bash
+zarf package verify zarf-init-amd64-vX.Y.Z.tar.zst \
+  --certificate-identity-regexp "https://github.com/zarf-dev/zarf/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 ```
 
 Successful verification output:
@@ -186,6 +273,37 @@ Verified OK
 ```
 
 If verification fails, the command exits with a non-zero status code and displays an error message.
+
+### Embedded TrustedRoot and Offline Verification
+
+Zarf embeds Sigstore verification material (a TrustedRoot JSON) directly in the binary. This enables `zarf package verify` to verify keyless-signed packages offline without reaching Sigstore's TUF infrastructure — no extra flags required.
+
+If you need fresher trust material (e.g., after a Sigstore key rotation), retrieve a new TrustedRoot and pass it in at verify time:
+
+```bash
+# Retrieve a fresh TrustedRoot from Sigstore
+zarf tools trusted-root create --with-default-services > trusted-root.json
+
+# Use it during verification
+zarf package verify zarf-package-example-amd64.tar.zst \
+  --trusted-root trusted-root.json \
+  --certificate-identity-regexp "https://github.com/my-org/my-repo/.github/workflows/release.yml@refs/tags/" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+```
+
+Users running private Sigstore infrastructure can supply their own TrustedRoot the same way via `--trusted-root /path/to/custom.json`.
+
+**Air-gap environments**: when a keyless package was signed with `--tlog-upload` (the default for `--keyless`), the Rekor inclusion proof is embedded in the bundle. Combined with the embedded TrustedRoot (which includes Rekor's public key), tlog verification works fully offline — no extra flags required.
+
+If instead the package was signed without tlog (using `--tsa-server-url --tlog-upload=false`), the bundle contains a TSA timestamp instead of a tlog entry. When using keyless identity flags, Zarf auto-enables tlog verification — explicitly disable it and enable timestamp verification:
+
+```bash
+zarf package verify zarf-package-example-amd64.tar.zst \
+  --certificate-identity "signer@example.com" \
+  --certificate-oidc-issuer "https://accounts.google.com" \
+  --insecure-ignore-tlog \
+  --use-signed-timestamps
+```
 
 ### Verify Checksums Only (Unsigned Packages)
 
@@ -213,7 +331,7 @@ If signature verification fails and `--verify` is specified, Zarf aborts the dep
 
 1. **Protect private keys**: Store private keys securely with restricted file system permissions
 2. **Use strong passwords**: Encrypt private keys with strong, unique passwords
-3. **Consider KMS for production**: Use cloud KMS for production signing operations
+3. **Consider KMS or keyless for production**: Use cloud KMS for centralized key management, or use keyless signing to eliminate private key management entirely
 4. **Document key locations**: Maintain clear documentation of where keys are stored and who has access
 
 ### Verification Workflow
@@ -223,6 +341,12 @@ If signature verification fails and `--verify` is specified, Zarf aborts the dep
 3. **Enforce verification**: Use `--verify` flag during deployment to make verification mandatory
 4. **Distribute public keys securely**: Establish a trusted channel for distributing public keys
 5. **Maintain key inventory**: Keep records of which keys were used to sign which packages
+
+### Keyless Signing
+
+1. **Prefer keyless in CI/CD**: Keyless signing eliminates private key management risk — use it for automated pipelines
+2. **Pin the workflow identity**: Use `--certificate-identity-regexp` to restrict verification to packages signed by a specific workflow and ref type, not just any signer in the repository
+3. **Use TSA timestamps when anonymity is required**: Rekor is a public transparency log — if publishing your signing event is a concern, use `--tsa-server-url --tlog-upload=false` to embed an RFC3161 timestamp instead
 
 ### Operational Security
 
@@ -302,12 +426,42 @@ zarf package sign zarf-package-example-amd64.tar.zst \
 - Check that the key is an asymmetric signing key (not encryption key)
 - Refer to your KMS provider's documentation for authentication setup
 
+### Keyless Signing: OIDC Browser Flow Fails in CI
+
+**Symptom**: `zarf package sign --keyless` hangs or fails trying to open a browser in a CI environment.
+
+**Solution**: In CI environments that don't expose OIDC tokens automatically, supply the token directly:
+
+```bash
+zarf package sign zarf-package-example-amd64.tar.zst \
+  --keyless \
+  --identity-token "$MY_OIDC_TOKEN" \
+  --confirm
+```
+
+For GitHub Actions specifically, ensure `id-token: write` is set in the job's `permissions` block — cosign will acquire the token automatically.
+
+### Keyless Verification: Certificate Identity Does Not Match
+
+**Symptom**: Verification fails with an identity mismatch error even though the package was signed correctly.
+
+**Solution**: The value passed to `--certificate-identity` or `--certificate-identity-regexp` must match what was encoded in the Fulcio certificate at signing time. For GitHub Actions, the identity takes the form `https://github.com/<org>/<repo>/.github/workflows/<workflow>.yml@<ref>`. Use `--certificate-identity-regexp` with a partial pattern if the exact ref is variable.
+
+### Keyless Verification: Signature No Longer Verifiable (No Tlog Entry)
+
+**Symptom**: Verification of a keyless-signed package fails after ~10 minutes with a certificate expiry error.
+
+**Cause**: The package was signed without `--tlog-upload`, so there is no Rekor inclusion proof to extend verifiability past the Fulcio certificate's short validity window.
+
+**Solution**: Re-sign the package with tlog upload enabled (the default when `--keyless` is set) or with a TSA timestamp (`--tsa-server-url`).
+
 ## Command Reference
 
 - [zarf package sign](/commands/zarf_package_sign/) - Sign a Zarf package
 - [zarf package verify](/commands/zarf_package_verify/) - Verify a package signature
 - [zarf package create](/commands/zarf_package_create/) - Create a package with optional signing
 - [zarf tools gen-key](/commands/zarf_tools_gen-key/) - Generate a signing key pair
+- [zarf tools trusted-root create](/commands/zarf_tools_trusted-root_create/) - Retrieve and manage the Sigstore TrustedRoot
 
 ## Additional Resources
 
