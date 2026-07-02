@@ -603,7 +603,6 @@ func newRegistryLogoutCommand() *cobra.Command {
 	o.originalRunFn = craneCmd.RunE
 	craneCmd.RunE = o.run
 
-	craneCmd.Args = nil
 	craneCmd.Short = lang.CmdToolsRegistryLogoutShort
 	craneCmd.Example = lang.CmdToolsRegistryLogoutExample
 
