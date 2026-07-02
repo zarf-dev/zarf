@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+name: "Nightly CVE Scan"
+
+on:
+  schedule:
+    - cron: "0 3 * * *" ## Every day at 03:00 UTC
+  workflow_dispatch: ## Allow manual triggering for testing and ad-hoc runs
+
+permissions:
+  contents: read
+
+jobs:
+  cve-scan:
+    if: ${{ github.repository == 'zarf-dev/zarf' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write ## Required for SARIF upload to GitHub Code Scanning
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+
+      - name: Setup golang
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+
+      ## ── Tier 1: govulncheck ─────────────────────────────────────────────────
+      ## Reports vulnerabilities in reachable code paths only (no noise from
+      ## unreachable transitive deps). Informational only — does not fail the job.
+
+      - name: Run govulncheck
+        run: make scan-govulncheck
+
+      - name: Upload govulncheck SARIF to Code Scanning
+        uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4.36.2
+        if: always() ## Upload even if the job fails later
+        with:
+          sarif_file: build/govulncheck.sarif
+          category: govulncheck
+
+      ## ── Tier 2: grype on the built binary ───────────────────────────────────
+      ## Surfaces indirect-dependency CVEs that consumers of the Zarf binary may
+      ## face. VEX statements in .vex/zarf.openvex.json suppress accepted findings.
+      ## Fails the workflow on any un-suppressed High or Critical finding.
+
+      - name: Build Zarf binary
+        run: make build-cli-linux-amd
+
+      ## Equivalent to `make scan-grype` (grype <binary> --config .grype.yaml -o json --fail-on high).
+      ## .grype.yaml is auto-detected when 'config' is not set; VEX documents it references are consumed.
+      - name: Run grype scan (fails on High+)
+        id: grype
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          path: ./build/zarf
+          fail-build: "true"
+          severity-cutoff: high
+          output-format: json
+          output-file: build/grype.json
+
+      - name: Check for orphaned VEX statements
+        if: always()
+        run: make vex-lint
+
+      - name: Upload scan artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: cve-scan-results
+          retention-days: 30
+          path: |
+            build/grype.json
+
+      - name: Send trigger to Slack on workflow failure
+        if: failure()
+        uses: ./.github/actions/slack
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

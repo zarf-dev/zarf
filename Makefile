@@ -237,13 +237,22 @@ test-docs-and-schema:
 	$(MAKE) docs-and-schema
 	hack/check-zarf-docs-and-schema.sh
 
-# INTERNAL: used to test for new CVEs that may have been introduced
-test-cves:
-	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype --fail-on low
-
-cve-report: ## Create a CVE report for the current project (must `brew install grype` first)
+scan-govulncheck: ## Scan source for vulnerabilities with reachable code paths using govulncheck (version pinned via go.mod tool directive)
 	@test -d ./build || mkdir ./build
-	go run main.go tools sbom scan . -o json --exclude './site' --exclude './examples' | grype -o template -t hack/grype.tmpl > build/zarf-known-cves.csv
+	go tool govulncheck -format sarif ./... > build/govulncheck.sarif
+
+scan-grype: build ## Scan the Zarf binary for CVEs using grype + VEX suppression (must `brew install grype` first); fails on High+
+	@test -d ./build || mkdir ./build
+	grype $(ZARF_BIN) --config .grype.yaml -o json > build/grype.json --fail-on high
+
+vex-lint: ## Check for orphaned VEX statements in .vex/zarf.openvex.json (requires: run scan-grype first)
+	@test -f build/grype.json || (echo "ERROR: build/grype.json not found — run 'make scan-grype' first" && exit 1)
+	hack/check-vex-orphans.sh
+
+# INTERNAL: used to test for new CVEs that may have been introduced; delegates to scan-grype
+test-cves: scan-grype
+
+cve-report: scan-grype ## Create a CVE report for the current project (must `brew install grype` first)
 
 lint-go: ## Run golang-ci-lint to lint the go code (must `brew install golangci-lint` first)
 	golangci-lint run

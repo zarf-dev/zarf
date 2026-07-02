@@ -4,6 +4,9 @@ metadata:
   description: Used to establish a new Zarf cluster
   allowNamespaceOverride: false
 
+documentation:
+  zarf.openvex.json: .vex/zarf.openvex.json
+
 components:
   - name: k3s
     import:

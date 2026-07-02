@@ -19,3 +19,18 @@ As Zarf has not yet reached v1.0.0, only the current latest minor release is sup
 ## Contacting Us
 
 To discuss security related issues, please email the maintainers at zarf-dev-private@googlegroups.com.
+
+## CVE Posture & VEX
+
+Each Zarf release includes a **VEX (Vulnerability Exploitability eXchange) document**
+that captures accepted, non-exploitable findings with documented justification.
+You can use this file to reproduce Zarf's accepted-CVE posture when scanning with
+[`grype`](https://github.com/anchore/grype):
+
+```bash
+grype zarf --vex zarf.openvex.json
+```
+
+`zarf.openvex.json` is available as a standalone asset on each
+[GitHub release](https://github.com/zarf-dev/zarf/releases) and is bundled inside the
+init package.

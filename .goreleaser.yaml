@@ -41,6 +41,7 @@ checksum:
   name_template: "checksums.txt"
   extra_files:
     - glob: ./build/zarf-init-*
+    - glob: ./.vex/zarf.openvex.json
   algorithm: sha256
 
 # generate sboms for each binary artifact
@@ -67,6 +68,7 @@ release:
   mode: append
   extra_files:
     - glob: ./build/zarf-init-*
+    - glob: ./.vex/zarf.openvex.json
   footer: |
     ## Verifying Init Packages
 
