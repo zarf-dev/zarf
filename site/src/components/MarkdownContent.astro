@@ -1,0 +1,11 @@
+---
+import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+
+const VERSION_SLUG_PATTERN = /^v\d+-\d+$/;
+const version = Astro.url.pathname.split('/').find(s => VERSION_SLUG_PATTERN.test(s)) ?? 'current';
+---
+
+<Default {...Astro.props}>
+  <span data-pagefind-filter={`version:${version}`} aria-hidden="true" style="display:none" />
+  <slot />
+</Default>
