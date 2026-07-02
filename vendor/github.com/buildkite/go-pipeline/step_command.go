@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/buildkite/go-pipeline/ordered"
-	"gopkg.in/yaml.v3"
 )
 
 var _ interface {
@@ -53,12 +52,11 @@ func (c *CommandStep) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON is used when unmarshalling an individual step directly, e.g.
 // from the Agent API Accept Job.
 func (c *CommandStep) UnmarshalJSON(b []byte) error {
-	// JSON is just a specific kind of YAML.
-	var n yaml.Node
-	if err := yaml.Unmarshal(b, &n); err != nil {
-		return err
+	src, err := ordered.DecodeJSON(b)
+	if err != nil {
+		return fmt.Errorf("decoding JSON for CommandStep: %w", err)
 	}
-	return ordered.Unmarshal(&n, &c)
+	return ordered.Unmarshal(src, c)
 }
 
 // UnmarshalOrdered unmarshals a command step from an ordered map.
@@ -112,6 +110,11 @@ func (c *CommandStep) interpolate(tf stringTransformer) error {
 	}
 	if err := interpolateSlice(tf, c.Secrets); err != nil {
 		return fmt.Errorf("interpolating secrets: %w", err)
+	}
+	if c.Cache != nil {
+		if _, err := interpolateAny(tf, c.Cache); err != nil {
+			return fmt.Errorf("interpolating cache: %w", err)
+		}
 	}
 
 	switch tf.(type) {

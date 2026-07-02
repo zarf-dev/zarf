@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/buildkite/go-pipeline/ordered"
-	"gopkg.in/yaml.v3"
 )
 
 var _ interface {
@@ -97,10 +96,9 @@ func (p *Plugins) UnmarshalOrdered(o any) error {
 
 // UnmarshalJSON is used mainly to normalise the BUILDKITE_PLUGINS env var.
 func (p *Plugins) UnmarshalJSON(b []byte) error {
-	// JSON is just a specific kind of YAML.
-	var n yaml.Node
-	if err := yaml.Unmarshal(b, &n); err != nil {
-		return err
+	src, err := ordered.DecodeJSON(b)
+	if err != nil {
+		return fmt.Errorf("decoding JSON for Plugins: %w", err)
 	}
-	return ordered.Unmarshal(&n, &p)
+	return ordered.Unmarshal(src, p)
 }

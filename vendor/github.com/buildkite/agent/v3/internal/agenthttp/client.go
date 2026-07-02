@@ -78,6 +78,13 @@ func newTransport(conf *clientConfig) *http.Transport {
 	}
 
 	if conf.AllowHTTP2 {
+		// Ensure that we send HTTP/2 PING frames to help keep streaming connections (like streaming pings) open
+		// Pings will also ensure that stale connections get properly cleaned up
+		if transport.HTTP2 == nil {
+			transport.HTTP2 = &http.HTTP2Config{}
+		}
+		transport.HTTP2.SendPingTimeout = 10 * time.Second
+		transport.HTTP2.PingTimeout = 5 * time.Second
 		// There is a bug in http2 on Linux regarding using dead connections.
 		// This is a workaround. See https://github.com/golang/go/issues/59690
 		//
@@ -86,18 +93,19 @@ func newTransport(conf *clientConfig) *http.Transport {
 		// HTTP/1.1 as a protocol, so we get slightly odd-looking code where
 		// we use `transport` later on instead of the just-returned `tr2`.
 		// tr2 is needed merely to configure the http2 option.
-		tr2, err := http2.ConfigureTransports(transport)
+		_, err := http2.ConfigureTransports(transport)
 		if err != nil {
 			// ConfigureTransports is documented to only return an error if
 			// the transport arg was already HTTP2-enabled, which it should not
 			// have been...
 			panic("http2.ConfigureTransports: " + err.Error())
 		}
-		if tr2 != nil {
-			tr2.ReadIdleTimeout = 30 * time.Second
-		}
 	} else {
 		transport.TLSNextProto = make(map[string]func(string, *tls.Conn) http.RoundTripper)
+		// Ensure TLSClientConfig is not nil, to set NextProtos.
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = new(tls.Config)
+		}
 		// The default TLSClientConfig has h2 in NextProtos, so the
 		// negotiated TLS connection will assume h2 support.
 		// see https://github.com/golang/go/issues/50571

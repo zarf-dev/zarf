@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultEndpoint  = "https://agent.buildkite.com/v3"
+	defaultEndpoint  = "https://agent-edge.buildkite.com/v3"
 	defaultUserAgent = "buildkite-agent/api"
 )
 
@@ -185,7 +185,7 @@ func (c *Client) setRequestHeaders(headers map[string]string) {
 	if c.logger.Level() <= logger.DEBUG {
 		for k, values := range c.requestHeaders {
 			for _, v := range values {
-				c.logger.Debug("Server-specified request header: %s: %s", k, v)
+				c.logger.Debugf("Server-specified request header: %s: %s", k, v)
 			}
 		}
 	}
@@ -332,7 +332,7 @@ func (c *Client) doRequest(req *http.Request, v any) (*Response, error) {
 			}
 		} else {
 			if strings.Contains(req.Header.Get("Content-Type"), "application/msgpack") {
-				return response, errors.New("Msgpack not supported")
+				return response, errors.New("msgpack not supported")
 			}
 
 			if err = json.NewDecoder(resp.Body).Decode(v); err != nil {

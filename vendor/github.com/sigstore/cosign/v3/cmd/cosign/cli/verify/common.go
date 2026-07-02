@@ -51,7 +51,7 @@ func CheckSigstoreBundleUnsupportedOptions(cmd any, verifyOfflineWithKey bool, c
 		"CertRef":              "certificate must be in bundle and may not be provided using --certificate",
 		"CertChain":            "certificate chain must be in bundle and may not be provided using --certificate-chain",
 		"CARoots":              "CA roots/intermediates must be provided using --trusted-root",
-		"CAIntermedias":        "CA roots/intermediates must be provided using --trusted-root",
+		"CAIntermediates":      "CA roots/intermediates must be provided using --trusted-root",
 		"TSACertChainPath":     "TSA certificate chain path may only be provided using --trusted-root",
 		"RFC3161TimestampPath": "RFC3161 timestamp may not be provided using --rfc3161-timestamp",
 		"SigRef":               "signature may not be provided using --signature",
@@ -190,6 +190,9 @@ func SetTrustedMaterial(ctx context.Context, trustedRootPath, certChain, caRoots
 		env.Getenv(env.VariableSigstoreTSACertificateFile) == "" {
 		co.TrustedMaterial, err = cosign.TrustedRoot()
 		if err != nil {
+			if co.NewBundleFormat {
+				return fmt.Errorf("getting trusted root from TUF for new bundle verification: %w", err)
+			}
 			ui.Warnf(ctx, "Could not fetch trusted_root.json from the TUF repository. Continuing with individual targets. Error from TUF: %v", err)
 		}
 	}
