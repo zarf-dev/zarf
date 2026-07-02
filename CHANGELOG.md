@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.81.0](https://github.com/zarf-dev/zarf/compare/v0.80.0...v0.81.0) (2026-07-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **sbom:** remove compare tool ([#5033](https://github.com/zarf-dev/zarf/issues/5033))
+* **verification:** behavior updates for verification logic ([#5011](https://github.com/zarf-dev/zarf/issues/5011))
+
+### Features
+
+* **deprecate:** zarf tools registy export ([#5031](https://github.com/zarf-dev/zarf/issues/5031)) ([926c008](https://github.com/zarf-dev/zarf/commit/926c0080c3aacdebac0853c9b343a9c5dd43cf94))
+* direct docker daemon pull ([#5001](https://github.com/zarf-dev/zarf/issues/5001)) ([97c2388](https://github.com/zarf-dev/zarf/commit/97c238802c403ab976c9ed33406797a03c108ee8))
+* group verify flags in CLI help text ([#5008](https://github.com/zarf-dev/zarf/issues/5008)) ([20c32e8](https://github.com/zarf-dev/zarf/commit/20c32e82f3c18d757e8efb0d016e5ab0dbd36d51))
+* **lint:** warn on images without a domain and archive images without .internal ([#4983](https://github.com/zarf-dev/zarf/issues/4983)) ([ed73631](https://github.com/zarf-dev/zarf/commit/ed7363194313dbeeef18cc086c031b0b13be1815))
+* reduce docker daemon pull storage footprint ([#5017](https://github.com/zarf-dev/zarf/issues/5017)) ([f5a443d](https://github.com/zarf-dev/zarf/commit/f5a443d2b6ba70b27d1ece621f0422b0dbec69f7))
+* **sbom:** remove compare tool ([#5033](https://github.com/zarf-dev/zarf/issues/5033)) ([8e4ee75](https://github.com/zarf-dev/zarf/commit/8e4ee75890b4859620c0082b1f755fa5c72b8a80))
+* **schema:** update v1beta1 types ([#4704](https://github.com/zarf-dev/zarf/issues/4704)) ([edc9eb1](https://github.com/zarf-dev/zarf/commit/edc9eb1c4ad8f1e99cbe7397a90c94a7dad25d00))
+* **verification:** behavior updates for verification logic ([#5011](https://github.com/zarf-dev/zarf/issues/5011)) ([5f3a0a9](https://github.com/zarf-dev/zarf/commit/5f3a0a970ac7102bfd3bb0f4f291de92f8aad5e6))
+
 ## [0.80.0](https://github.com/zarf-dev/zarf/compare/v0.79.0...v0.80.0) (2026-06-25)
 
 
