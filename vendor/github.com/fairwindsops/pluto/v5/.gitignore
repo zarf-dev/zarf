@@ -1,0 +1,17 @@
+vendor
+
+# Output of the go coverage tool
+*.out
+cover-report.html
+coverage.txt
+cover.html
+
+/pluto
+pkged.go
+
+node_modules
+/dist
+
+orb.yml
+venom.*.log
+docs/README.md

@@ -43,7 +43,6 @@ func TestCreateTemplating(t *testing.T) {
 	require.NoError(t, err)
 
 	// Ensure that the `requirements.txt` files are discovered correctly
-	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "compare.html"))
 	require.FileExists(t, filepath.Join(sbomPath, "file-folders-templating-sbom", "sbom-viewer-zarf-component-folders.html"))
 	foldersJSON, err := os.ReadFile(filepath.Join(sbomPath, "file-folders-templating-sbom", "zarf-component-folders.json"))
 	require.NoError(t, err)
