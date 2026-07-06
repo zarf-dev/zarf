@@ -481,8 +481,6 @@ func newClearCacheCommand() *cobra.Command {
 		RunE:    o.run,
 	}
 
-	cmd.Flags().StringVar(&config.CommonOptions.CachePath, "zarf-cache", config.ZarfDefaultCachePath, lang.CmdToolsClearCacheFlagCachePath)
-
 	return cmd
 }
 

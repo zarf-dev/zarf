@@ -24,6 +24,7 @@ zarf tools sbom config locations [flags]
 ### Options inherited from parent commands
 
 ```
+      --cache string               Specify the location of the Zarf cache directory (default "~/.zarf-cache")
   -c, --config stringArray         syft configuration file(s) to use
       --features stringToString    Provide a comma-separated list of feature names to bools to enable or disable. Ex. --features "foo=true,bar=false,baz=true" (default [])
       --insecure-skip-tls-verify   Skip checking server's certificate for validity. This flag should only be used if you have a specific reason and accept the reduced security posture.

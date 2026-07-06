@@ -26,7 +26,7 @@ type FulcioOptions struct {
 	URL                      string
 	AuthFlow                 string
 	IdentityToken            string
-	InsecureSkipFulcioVerify bool
+	InsecureSkipFulcioVerify bool // Deprecated: SCT verification is no longer performed during signing/attestation.
 }
 
 var _ Interface = (*FulcioOptions)(nil)
@@ -36,6 +36,7 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 	// TODO: change this back to api.SigstorePublicServerURL after the v1 migration is complete.
 	cmd.Flags().StringVar(&o.URL, "fulcio-url", DefaultFulcioURL,
 		"address of sigstore PKI server")
+	_ = cmd.Flags().MarkDeprecated("fulcio-url", "please use a signing config to specify a fulcio url; see `cosign signing-config --help`")
 
 	cmd.Flags().StringVar(&o.IdentityToken, "identity-token", "",
 		"identity token to use for certificate from fulcio. the token or a path to a file containing the token is accepted.")
@@ -46,4 +47,5 @@ func (o *FulcioOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.InsecureSkipFulcioVerify, "insecure-skip-verify", false,
 		"skip verifying fulcio published to the SCT (this should only be used for testing).")
+	_ = cmd.Flags().MarkDeprecated("insecure-skip-verify", "SCT verification is no longer performed during signing/attestation.")
 }

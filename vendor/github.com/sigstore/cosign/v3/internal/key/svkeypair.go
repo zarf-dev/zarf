@@ -125,13 +125,27 @@ func (k *SignerVerifierKeypair) GetPublicKeyPem() (string, error) {
 
 // SignData signs the given data with the SignerVerifier.
 func (k *SignerVerifierKeypair) SignData(ctx context.Context, data []byte) ([]byte, []byte, error) {
-	h := k.sigAlg.GetHashType().New()
-	h.Write(data)
-	digest := h.Sum(nil)
-	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx), signatureoptions.WithDigest(digest)}
+	var digest []byte
+	sOpts := []signature.SignOption{signatureoptions.WithContext(ctx)}
+
+	hashType := k.sigAlg.GetHashType()
+	if hashType != 0 {
+		h := hashType.New()
+		h.Write(data)
+		digest = h.Sum(nil)
+		sOpts = append(sOpts, signatureoptions.WithDigest(digest))
+	}
+
 	sig, err := k.sv.SignMessage(bytes.NewReader(data), sOpts...)
 	if err != nil {
 		return nil, nil, err
 	}
 	return sig, digest, nil
+}
+
+// Close closes the underlying SignerVerifier if it has a Close() method.
+func (k *SignerVerifierKeypair) Close() {
+	if closer, ok := k.sv.(interface{ Close() }); ok {
+		closer.Close()
+	}
 }

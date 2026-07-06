@@ -26,7 +26,7 @@ import (
 
 var (
 	// PackageAlwaysPull is a list of paths that will always be pulled from the remote repository.
-	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature, layout.Bundle, layout.ValuesYAML, layout.ValuesSchema}
+	PackageAlwaysPull = []string{layout.ZarfYAML, layout.Checksums, layout.Signature, layout.Bundle, layout.ValuesYAML, layout.ValuesSchema} //nolint:staticcheck // layout.Signature intentionally included for backward-compat with pre-v0.72.0 packages
 )
 
 // PullPackage pulls the package from the remote repository and saves it to the given path.

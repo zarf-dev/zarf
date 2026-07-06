@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	rsafork "github.com/go-piv/piv-go/v2/third_party/rsa"
+	"golang.org/x/crypto/cryptobyte"
 
 	_ "embed"
 )
@@ -44,6 +45,13 @@ var errMismatchingAlgorithms = errors.New("mismatching key algorithms")
 
 // errUnsupportedKeySize is returned when a key has an unsupported size
 var errUnsupportedKeySize = errors.New("unsupported key size")
+
+// errTagNotFound is returned by findTLVTag() when the given tag is not found.
+var errTagNotFound = fmt.Errorf("tag not found")
+
+// errMalformedTLV is returned by findTLVTag() when the parser encounters
+// unexpected data.
+var errMalformedTLV = fmt.Errorf("malformed TLV data")
 
 // unsupportedCurveError is used when a key has an unsupported curve
 type unsupportedCurveError struct {
@@ -763,6 +771,118 @@ func (yk *YubiKey) Certificate(slot Slot) (*x509.Certificate, error) {
 		return nil, fmt.Errorf("parsing certificate: %v", err)
 	}
 	return cert, nil
+}
+
+// FormFactor returns the physical form factor of the YubiKey.
+func (yk *YubiKey) FormFactor() (Formfactor, error) {
+	if err := ykSelectApplication(yk.tx, aidManagement[:]); err != nil {
+		return 0, fmt.Errorf("selecting management applet: %v", err)
+	}
+	defer ykSelectApplication(yk.tx, aidPIV[:])
+	// INS_READ_CONFIG = 0x1D
+	// https://github.com/Yubico/yubikey-manager/blob/9fe76be2cbf5e9a3b5a9a8d78411949a028b3745/yubikit/management.py#L512
+	cmd := apdu{instruction: 0x1D}
+	resp, err := yk.tx.Transmit(cmd)
+	if err != nil {
+		return 0, fmt.Errorf("reading device info: %v", err)
+	}
+	if len(resp) < 1 {
+		return 0, fmt.Errorf("invalid response length")
+	}
+	payload := resp[1:]
+	// TAG_FORM_FACTOR = 0x04
+	// https://github.com/Yubico/yubikey-manager/blob/9fe76be2cbf5e9a3b5a9a8d78411949a028b3745/yubikit/management.py#L211
+	formFactorData, err := findTLVTag(payload, 0x04)
+	if err != nil {
+		if err == errTagNotFound {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("parsing response: %v", err)
+	}
+	if len(formFactorData) == 0 {
+		return 0, nil
+	}
+	return Formfactor(formFactorData[0]), nil
+}
+
+// findTLVTag searches through TLV (Tag-Length-Value) encoded data for a
+// specific tag and returns its corresponding value.
+//
+// See https://luca.ntop.org/Teaching/Appunti/asn1.html section 3.1 for
+// information on tag and length encoding.
+func findTLVTag(data []byte, targetTag uint32) ([]byte, error) {
+	// Manually parse tags and lengths using cryptobyte primitives instead of
+	// cryptobyte's ReadASN1 methods because:
+	// 1. cryptobyte does not support high-tag-number format (tags > 30), which
+	//    are used in PIV.
+	// 2. cryptobyte enforces strict DER, whereas PIV may use BER (non-minimal
+	//    length encoding).
+	s := cryptobyte.String(data)
+	for !s.Empty() {
+		var tagByte byte
+		if !s.ReadUint8(&tagByte) {
+			return nil, errMalformedTLV
+		}
+		tag := uint32(tagByte)
+		// Handle multi-byte tags: if the lowest 5 bits are 11111,
+		// the tag is multi-byte.
+		if tagByte&0x1F == 0x1F {
+			lastByteFound := false
+			for range 3 {
+				var nextByte byte
+				if !s.ReadUint8(&nextByte) {
+					return nil, errMalformedTLV
+				}
+				tag = (tag << 8) | uint32(nextByte)
+				// The last byte of a multi-byte tag has the highest bit set to 0.
+				if nextByte&0x80 == 0 {
+					lastByteFound = true
+					break
+				}
+			}
+			if !lastByteFound {
+				return nil, errMalformedTLV
+			}
+		}
+		// Read the first length byte.
+		var lengthByte byte
+		if !s.ReadUint8(&lengthByte) {
+			return nil, errMalformedTLV
+		}
+		// Handle long form length.
+		var length uint32
+		if lengthByte < 0x80 {
+			// Lengths < 128 are encoded in a single byte.
+			length = uint32(lengthByte)
+		} else if lengthByte == 0x80 {
+			// Indefinite length not supported.
+			return nil, errMalformedTLV
+		} else {
+			// Lengths >= 128 have the high bit set. The lower 7 bits indicate
+			// the number of subsequent bytes that make up the length.
+			numBytes := uint32(lengthByte & 0x7F)
+			if numBytes > 3 {
+				return nil, errMalformedTLV
+			}
+			for range numBytes {
+				var b byte
+				if !s.ReadUint8(&b) {
+					return nil, errMalformedTLV
+				}
+				length = (length << 8) | uint32(b)
+			}
+		}
+		// Finally read the value.
+		var value []byte
+		if !s.ReadBytes(&value, int(length)) {
+			return nil, errMalformedTLV
+		}
+		// Return if we found the target tag, otherwise loop to the next element.
+		if tag == targetTag {
+			return value, nil
+		}
+	}
+	return nil, errTagNotFound
 }
 
 // marshalASN1Length encodes the length.

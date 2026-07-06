@@ -43,6 +43,7 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.TSACertChainPath, "timestamp-certificate-chain", "",
 		"path to PEM-encoded certificate chain file for the RFC3161 timestamp authority. Must contain the root CA certificate. "+
 			"Optionally may contain intermediate CA certificates, and may contain the leaf TSA certificate if not present in the timestamp")
+	_ = cmd.Flags().MarkDeprecated("timestamp-certificate-chain", "please use --trusted-root to provide the timestamp authority certificate chain")
 
 	cmd.Flags().BoolVar(&o.UseSignedTimestamps, "use-signed-timestamps", false,
 		"verify rfc3161 timestamps")
@@ -53,18 +54,21 @@ func (o *CommonVerifyOptions) AddFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&o.PrivateInfrastructure, "private-infrastructure", false,
 		"skip transparency log verification when verifying artifacts in a privately deployed infrastructure")
+	_ = cmd.Flags().MarkDeprecated("private-infrastructure", "please use --insecure-ignore-tlog instead")
 
 	cmd.Flags().BoolVar(&o.ExperimentalOCI11, "experimental-oci11", false,
 		"set to true to enable experimental OCI 1.1 behaviour (unrelated to bundle format)")
+	_ = cmd.Flags().MarkDeprecated("experimental-oci11", "OCI referrers will be the default behavior in future versions")
 
 	cmd.Flags().IntVar(&o.MaxWorkers, "max-workers", cosign.DefaultMaxWorkers,
 		"the amount of maximum workers for parallel executions")
 
 	cmd.Flags().StringVar(&o.TrustedRootPath, "trusted-root", "",
-		"Path to a Sigstore TrustedRoot JSON file. Requires --new-bundle-format to be set.")
+		"Path to a Sigstore TrustedRoot JSON file")
 
 	cmd.Flags().BoolVar(&o.NewBundleFormat, "new-bundle-format", true,
 		"expect the signature/attestation to be packaged in a Sigstore bundle")
+	_ = cmd.Flags().MarkDeprecated("new-bundle-format", "this will be the only supported format in future versions")
 }
 
 // VerifyOptions is the top level wrapper for the `verify` command.
@@ -99,6 +103,8 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	o.AnnotationOptions.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 	_ = cmd.MarkFlagFilename("key", publicKeyExts...)
@@ -109,6 +115,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.Attachment, "attachment", "",
 		"DEPRECATED, related image attachment to verify (sbom), default none")
 	_ = cmd.MarkFlagFilename("attachment", sbomExts...)
+	_ = cmd.Flags().MarkDeprecated("attachment", "please use OCI referrers for attachments and verify with `--experimental-oci11`")
 
 	cmd.Flags().StringVarP(&o.Output, "output", "o", "json",
 		"output format for the signing image information (json|text)")
@@ -116,6 +123,7 @@ func (o *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&o.SignatureRef, "signature", "",
 		"signature content or path or remote URL")
 	_ = cmd.MarkFlagFilename("signature", signatureExts...)
+	_ = cmd.Flags().MarkDeprecated("signature", "signatures are automatically fetched from the OCI registry during image verification")
 
 	cmd.Flags().StringVar(&o.PayloadRef, "payload", "",
 		"payload path or remote URL")
@@ -153,6 +161,8 @@ func (o *VerifyAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.Predicate.AddFlags(cmd)
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
+
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
 
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
@@ -195,11 +205,14 @@ func (o *VerifyBlobOptions) AddFlags(cmd *cobra.Command) {
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.Signature, "signature", "",
 		"signature content or path or remote URL")
+	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")
@@ -257,11 +270,14 @@ func (o *VerifyBlobAttestationOptions) AddFlags(cmd *cobra.Command) {
 	o.CommonVerifyOptions.AddFlags(cmd)
 	o.SignatureDigest.AddFlags(cmd)
 
+	_ = cmd.Flags().MarkDeprecated("rekor-url", "please use --bundle, which includes the Rekor inclusion proof")
+
 	cmd.Flags().StringVar(&o.Key, "key", "",
 		"path to the public key file, KMS URI or Kubernetes Secret")
 
 	cmd.Flags().StringVar(&o.SignaturePath, "signature", "",
 		"path to base64-encoded signature over attestation in DSSE format")
+	_ = cmd.Flags().MarkDeprecated("signature", "please use --bundle to provide a signature")
 
 	cmd.Flags().StringVar(&o.BundlePath, "bundle", "",
 		"path to bundle FILE")

@@ -68,3 +68,16 @@ func (c *Cache) UnmarshalOrdered(o any) error {
 
 	return nil
 }
+
+func (c *Cache) interpolate(tf stringTransformer) error {
+	if err := interpolateString(tf, &c.Name); err != nil {
+		return fmt.Errorf("interpolating cache name: %w", err)
+	}
+	if err := interpolateSlice(tf, c.Paths); err != nil {
+		return fmt.Errorf("interpolating cache paths: %w", err)
+	}
+	if err := interpolateString(tf, &c.Size); err != nil {
+		return fmt.Errorf("interpolating cache size: %w", err)
+	}
+	return nil
+}
