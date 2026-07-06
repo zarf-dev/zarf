@@ -12,15 +12,7 @@ import Default from '@astrojs/starlight/components/Search.astro';
 <script>
   const VERSION_SLUG_PATTERN = /^v\d+-\d+$/;
 
-  function detectPageVersion(path: string): string {
-    for (const seg of path.split('/')) {
-      if (VERSION_SLUG_PATTERN.test(seg)) return seg;
-    }
-    return 'current';
-  }
-
-  let pageVersion = detectPageVersion(window.location.pathname);
-  let activeObserver: MutationObserver | null = null;
+  const pageVersion = window.location.pathname.split('/').find(s => VERSION_SLUG_PATTERN.test(s)) ?? 'current';
 
   function activateVersionFilter(container: HTMLElement): boolean {
     const input = container.querySelector(
@@ -37,7 +29,7 @@ import Default from '@astrojs/starlight/components/Search.astro';
     let isInjecting = false;
     let filterTimer: ReturnType<typeof setTimeout> | undefined;
 
-    activeObserver = new MutationObserver(() => {
+    new MutationObserver(() => {
       if (isInjecting) return;
       clearTimeout(filterTimer);
       filterTimer = setTimeout(() => {
@@ -45,31 +37,18 @@ import Default from '@astrojs/starlight/components/Search.astro';
         activateVersionFilter(pagefindContainer);
         isInjecting = false;
       }, 50);
-    });
-
-    activeObserver.observe(pagefindContainer, { childList: true, subtree: true });
+    }).observe(pagefindContainer, { childList: true, subtree: true });
   }
 
   let retries = 0;
-  let waitTimer: ReturnType<typeof setTimeout> | undefined;
-
   function waitForPagefindUI() {
     const pagefindForm = document.querySelector('.pagefind-ui__form');
     if (pagefindForm) {
       setupFilterBehavior(pagefindForm);
     } else if (retries++ < 50) {
-      waitTimer = setTimeout(waitForPagefindUI, 100);
+      setTimeout(waitForPagefindUI, 100);
     }
   }
 
-  document.addEventListener('astro:page-load', () => {
-    pageVersion = detectPageVersion(window.location.pathname);
-    if (activeObserver) {
-      activeObserver.disconnect();
-      activeObserver = null;
-    }
-    clearTimeout(waitTimer);
-    retries = 0;
-    waitForPagefindUI();
-  });
+  window.addEventListener('DOMContentLoaded', waitForPagefindUI);
 </script>
