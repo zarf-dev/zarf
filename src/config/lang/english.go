@@ -615,6 +615,15 @@ $ zarf tools registry push image.tar reg.example.com/stefanprodan/podinfo:6.4.0
   # Login with password from stdin
   $ echo "mypassword" | zarf tools registry login --username myuser --password-stdin docker.io`
 
+	CmdToolsRegistryLogoutShort = "Log out from a registry"
+
+	CmdToolsRegistryLogoutExample = `
+  # Log out from a registry
+  $ zarf tools registry logout registry.example.com
+	`
+
+	CmdToolsRegistryLogoutPromptNoRegistryProvidedErr = "a registry address must be provided"
+
 	CmdToolsRegistryPullExample = `
 # Pull an image from an internal repo in Zarf to a local tarball
 $ zarf tools registry pull 127.0.0.1:31999/stefanprodan/podinfo:6.4.0 image.tar
