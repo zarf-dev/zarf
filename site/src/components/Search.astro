@@ -14,41 +14,27 @@ import Default from '@astrojs/starlight/components/Search.astro';
 
   const pageVersion = versionFromPath(window.location.pathname);
 
-  function activateVersionFilter(container: HTMLElement): boolean {
-    const input = container.querySelector(
-      `.pagefind-ui__filter-panel input[value="${pageVersion}"]`
-    ) as HTMLInputElement | null;
-    if (!input || input.checked) return false;
-    input.click();
-    return true;
+  // Pagefind lazy-loads its search UI and renders the version filter checkbox
+  // asynchronously, so we watch for it to appear. One click is enough: Pagefind
+  // holds the selection in its own state, which survives later searches and
+  // re-renders — so we disconnect once it's applied.
+  function scopeSearchToVersion(root: HTMLElement) {
+    const activate = () => {
+      const input = root.querySelector<HTMLInputElement>(
+        `.pagefind-ui__filter-panel input[value="${pageVersion}"]`
+      );
+      if (!input || input.checked) return false;
+      input.click();
+      return true;
+    };
+
+    if (activate()) return;
+    const observer = new MutationObserver(() => {
+      if (activate()) observer.disconnect();
+    });
+    observer.observe(root, { childList: true, subtree: true });
   }
 
-  function setupFilterBehavior(pagefindForm: Element) {
-    const pagefindContainer = (pagefindForm.closest('.pagefind-ui') ?? pagefindForm.parentElement ?? pagefindForm) as HTMLElement;
-
-    let isInjecting = false;
-    let filterTimer: ReturnType<typeof setTimeout> | undefined;
-
-    new MutationObserver(() => {
-      if (isInjecting) return;
-      clearTimeout(filterTimer);
-      filterTimer = setTimeout(() => {
-        isInjecting = true;
-        activateVersionFilter(pagefindContainer);
-        isInjecting = false;
-      }, 50);
-    }).observe(pagefindContainer, { childList: true, subtree: true });
-  }
-
-  let retries = 0;
-  function waitForPagefindUI() {
-    const pagefindForm = document.querySelector('.pagefind-ui__form');
-    if (pagefindForm) {
-      setupFilterBehavior(pagefindForm);
-    } else if (retries++ < 50) {
-      setTimeout(waitForPagefindUI, 100);
-    }
-  }
-
-  window.addEventListener('DOMContentLoaded', waitForPagefindUI);
+  const searchRoot = document.getElementById('starlight__search');
+  if (searchRoot) scopeSearchToVersion(searchRoot);
 </script>
