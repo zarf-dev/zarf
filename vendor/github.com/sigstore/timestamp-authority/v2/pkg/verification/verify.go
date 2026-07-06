@@ -17,12 +17,14 @@ package verification
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/x509"
 	"encoding/asn1"
 	"fmt"
 	"hash"
 	"io"
 	"math/big"
+	"time"
 
 	"github.com/digitorus/pkcs7"
 	"github.com/digitorus/timestamp"
@@ -50,6 +52,11 @@ type VerifyOpts struct {
 	Nonce *big.Int
 	// CommonName verifies that the TSR certificate subject's Common Name matches the expected value. Optional
 	CommonName string
+	// CurrentTime, if not zero, is used as the current time for certificate
+	// chain validation instead of time.Now. This is necessary when verifying
+	// timestamps after the TSA certificate has expired, since the timestamp
+	// was issued while the certificate was still valid.
+	CurrentTime time.Time
 }
 
 // Verify the TSR's certificate identifier matches a provided TSA certificate
@@ -81,14 +88,6 @@ func verifySubjectCommonName(cert *x509.Certificate, opts VerifyOpts) error {
 	return nil
 }
 
-// If embedded in the TSR, verify the TSR's leaf certificate matches a provided TSA certificate
-func verifyEmbeddedLeafCert(tsaCert *x509.Certificate, opts VerifyOpts) error {
-	if opts.TSACertificate != nil && !opts.TSACertificate.Equal(tsaCert) {
-		return fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
-	}
-	return nil
-}
-
 // Verify the leaf's EKU is set to critical, per RFC 3161 2.3
 func verifyLeafCertCriticalEKU(cert *x509.Certificate) error {
 	var criticalEKU bool
@@ -104,32 +103,13 @@ func verifyLeafCertCriticalEKU(cert *x509.Certificate) error {
 	return nil
 }
 
-func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
-	if len(ts.Certificates) == 0 && opts.TSACertificate == nil {
-		return fmt.Errorf("leaf certificate must be present the in TSR or as a verify option")
+func verifyLeafCert(leafCert *x509.Certificate, verifiedChains [][]*x509.Certificate, opts VerifyOpts) error {
+	if leafCert == nil {
+		// should never happen
+		return fmt.Errorf("signer certificate is required")
 	}
 
 	errMsg := "failed to verify TSA certificate"
-
-	var leafCert *x509.Certificate
-	if len(ts.Certificates) != 0 {
-		for _, c := range ts.Certificates {
-			if !c.IsCA {
-				leafCert = c
-				break
-			}
-		}
-		if leafCert == nil {
-			return fmt.Errorf("no leaf certificate found in chain")
-		}
-
-		err := verifyEmbeddedLeafCert(leafCert, opts)
-		if err != nil {
-			return fmt.Errorf("%s: %w", errMsg, err)
-		}
-	} else {
-		leafCert = opts.TSACertificate
-	}
 
 	err := verifyLeafCertCriticalEKU(leafCert)
 	if err != nil {
@@ -148,7 +128,7 @@ func verifyLeafCert(ts timestamp.Timestamp, opts VerifyOpts) error {
 
 	// verifies that the leaf certificate and any intermediate certificates
 	// have EKU set to only time stamping usage
-	err = verifyLeafAndIntermediatesTimestampingEKU(leafCert, opts)
+	err = verifyLeafAndIntermediatesTimestampingEKU(leafCert, verifiedChains)
 	if err != nil {
 		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
 	}
@@ -194,17 +174,30 @@ func verifyIntermediateExtendedKeyUsage(cert *x509.Certificate) error {
 // Leaf certificates must have exactly one EKU set to Timestamping
 // Intermediates can have no EKU (unrestricted) or multiple EKUs,
 // which need to include Timestamping or UsageAny.
-func verifyLeafAndIntermediatesTimestampingEKU(leafCert *x509.Certificate, opts VerifyOpts) error {
+func verifyLeafAndIntermediatesTimestampingEKU(leafCert *x509.Certificate, verifiedChains [][]*x509.Certificate) error {
 	err := verifyLeafExtendedKeyUsage(leafCert)
 	if err != nil {
 		return fmt.Errorf("failed to verify EKU on leaf certificate: %w", err)
 	}
 
-	for _, cert := range opts.Intermediates {
-		err := verifyIntermediateExtendedKeyUsage(cert)
-		if err != nil {
-			return fmt.Errorf("failed to verify EKU on intermediate certificate: %w", err)
+	var lastErr error
+	for _, chain := range verifiedChains {
+		chainOK := true
+		// Skip the leaf cert (index 0) and the root (last index)
+		for i := 1; i < len(chain)-1; i++ {
+			err := verifyIntermediateExtendedKeyUsage(chain[i])
+			if err != nil {
+				chainOK = false
+				lastErr = err
+				break
+			}
 		}
+		if chainOK {
+			return nil // Found at least one fully valid chain with proper EKU chaining
+		}
+	}
+	if lastErr != nil {
+		return fmt.Errorf("no verified certificate chain met EKU requirements: %w", lastErr)
 	}
 	return nil
 }
@@ -251,8 +244,24 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 		return nil, fmt.Errorf("error parsing response into Timestamp: %w", err)
 	}
 
+	switch ts.HashAlgorithm {
+	case crypto.SHA1:
+		return nil, ErrWeakHashAlg
+	case crypto.SHA256, crypto.SHA384, crypto.SHA512:
+	default:
+		return nil, ErrUnsupportedHashAlg
+	}
+
+	// Use the timestamp's own time for certificate chain validation when
+	// the caller hasn't specified one. The TSA certificate must have been
+	// valid when the timestamp was issued, not necessarily at the current time.
+	if opts.CurrentTime.IsZero() {
+		opts.CurrentTime = ts.Time
+	}
+
 	// verify the timestamp response signature using the provided certificate pool
-	if err = verifyTSRWithChain(ts, opts); err != nil {
+	signerCert, verifiedChains, err := verifyTSRWithChain(ts, opts)
+	if err != nil {
 		return nil, err
 	}
 
@@ -264,7 +273,7 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 		return nil, err
 	}
 
-	if err = verifyLeafCert(*ts, opts); err != nil {
+	if err = verifyLeafCert(signerCert, verifiedChains, opts); err != nil {
 		return nil, err
 	}
 
@@ -277,15 +286,21 @@ func VerifyTimestampResponse(tsrBytes []byte, artifact io.Reader, opts VerifyOpt
 	return ts, nil
 }
 
-func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
+// Returns the TSA signer certificate after verifying the certificate chain validity.
+func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) (*x509.Certificate, [][]*x509.Certificate, error) {
 	p7Message, err := pkcs7.Parse(ts.RawToken)
 	if err != nil {
-		return fmt.Errorf("error parsing hashed message: %w", err)
+		return nil, nil, fmt.Errorf("error parsing hashed message: %w", err)
 	}
 
 	if len(opts.Roots) == 0 {
-		return fmt.Errorf("no root certificates provided for verifying the certificate chain")
+		return nil, nil, fmt.Errorf("no root certificates provided for verifying the certificate chain")
 	}
+
+	if p7Message.Certificates == nil && opts.TSACertificate == nil {
+		return nil, nil, fmt.Errorf("leaf certificate must be present in the TSR or as a verify option")
+	}
+
 	rootCertPool := x509.NewCertPool()
 	for _, cert := range opts.Roots {
 		if cert != nil {
@@ -293,10 +308,15 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 		}
 	}
 	if rootCertPool.Equal(x509.NewCertPool()) {
-		return fmt.Errorf("no valid root certificates provided for verifying the certificate chain")
+		return nil, nil, fmt.Errorf("no valid root certificates provided for verifying the certificate chain")
 	}
 	intermediateCertPool := x509.NewCertPool()
 	for _, cert := range opts.Intermediates {
+		if cert != nil {
+			intermediateCertPool.AddCert(cert)
+		}
+	}
+	for _, cert := range p7Message.Certificates {
 		if cert != nil {
 			intermediateCertPool.AddCert(cert)
 		}
@@ -305,6 +325,8 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	x509Opts := x509.VerifyOptions{
 		Roots:         rootCertPool,
 		Intermediates: intermediateCertPool,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageTimeStamping},
+		CurrentTime:   opts.CurrentTime,
 	}
 
 	// if the PCKS7 object does not have any certificates set in the
@@ -313,16 +335,30 @@ func verifyTSRWithChain(ts *timestamp.Timestamp, opts VerifyOpts) error {
 	// leaf certificate issuer and serial number information is already part of
 	// the PKCS7 object, adding the leaf certificate to the Certificates field
 	// will allow verification to pass
-	if p7Message.Certificates == nil && opts.TSACertificate != nil {
+	if p7Message.Certificates == nil {
 		p7Message.Certificates = []*x509.Certificate{opts.TSACertificate}
 	}
 
-	err = p7Message.VerifyWithOpts(x509Opts)
+	err = p7Message.Verify()
 	if err != nil {
-		return fmt.Errorf("error while verifying with chain: %w", err)
+		return nil, nil, fmt.Errorf("error while verifying signature: %w", err)
 	}
 
-	return nil
+	signerCert := p7Message.GetOnlySigner()
+	if signerCert == nil {
+		return nil, nil, fmt.Errorf("signer certificate was not found")
+	}
+
+	if opts.TSACertificate != nil && !opts.TSACertificate.Equal(signerCert) {
+		return nil, nil, fmt.Errorf("certificate embedded in the TSR does not match the provided TSA certificate")
+	}
+
+	chains, err := signerCert.Verify(x509Opts)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error while verifying signer certificate chain: %w", err)
+	}
+
+	return signerCert, chains, nil
 }
 
 // Verify that the TSR's hashed message matches the digest of the artifact to be timestamped

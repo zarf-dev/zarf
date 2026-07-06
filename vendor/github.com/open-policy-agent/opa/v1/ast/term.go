@@ -562,6 +562,154 @@ func IsScalar(v Value) bool {
 	return false
 }
 
+// Not is both a Term and a Node
+type Not struct {
+	Body         Body      `json:"body"`
+	ExplicitBody bool      `json:"explicit_body,omitempty"`
+	Location     *Location `json:"location,omitempty"`
+}
+
+func NewNot(exprs ...*Expr) *Not {
+	return &Not{
+		Body: NewBody(exprs...),
+	}
+}
+
+func NotTerm(exprs ...*Expr) *Term {
+	return NewTerm(NewNot(exprs...))
+}
+
+func NotExpr(exprs ...*Expr) *Expr {
+	return NewExpr(&Not{
+		Body: NewBody(exprs...),
+	})
+}
+
+func Complement(expr *Expr) []*Expr {
+	if expr.Negated {
+		// Legacy negation
+		return []*Expr{expr.Complement()}
+	}
+
+	if n, ok := expr.Terms.(*Not); ok {
+		b := make([]*Expr, 0, len(n.Body))
+		for _, e := range n.Body {
+			cpy := *e
+
+			for _, w := range expr.With {
+				cpy.With = append(cpy.With, w.Copy())
+			}
+
+			b = append(b, &cpy)
+		}
+		return b
+	}
+
+	return []*Expr{NotExpr(expr)}
+}
+
+// Copy returns a deep copy of n.
+func (n *Not) Copy() *Not {
+	cpy := *n
+	cpy.Body = n.Body.Copy()
+	return &cpy
+}
+
+func (n *Not) Loc() *Location {
+	return n.Location
+}
+
+func (n *Not) SetLoc(l *Location) {
+	n.Location = l
+}
+
+func (n *Not) Equal(other Value) bool {
+	return n.Compare(other) == 0
+}
+
+func (n *Not) Compare(other Value) int {
+	switch o := other.(type) {
+	case *Not:
+		// We don't consider the ExplicitBody field, as it has no effect on expression negation
+		return n.Body.Compare(o.Body)
+	default:
+		return -1
+	}
+}
+
+func (n *Not) Find(path Ref) (Value, error) {
+	if len(path) == 0 {
+		return n, nil
+	}
+	return nil, errFindNotFound
+}
+
+func (n *Not) Hash() int {
+	return 1 + n.Body.Hash()
+}
+
+func (n *Not) IsGround() bool {
+	return n.Body.IsGround()
+}
+
+func (n *Not) String() string {
+	if !n.ExplicitBody && len(n.Body) == 1 {
+		return "not " + n.Body.String()
+	}
+
+	return "not {" + n.Body.String() + "}"
+}
+
+func (n *Not) MarshalJSON() ([]byte, error) {
+	data := map[string]any{
+		"type":          "not",
+		"body":          n.Body,
+		"explicit_body": n.ExplicitBody,
+	}
+
+	if astJSON.GetOptions().MarshalOptions.IncludeLocation.Not {
+		if n.Location != nil {
+			data["location"] = n.Location
+		}
+	}
+
+	return json.Marshal(data)
+}
+
+func (n *Not) UnmarshalJSON(bs []byte) error {
+	v := map[string]any{}
+	if err := util.UnmarshalJSON(bs, &v); err != nil {
+		return err
+	}
+
+	return unmarshalNot(n, v)
+}
+
+func unmarshalNot(n *Not, v map[string]any) error {
+	var eb bool
+	if x, ok := v["explicit_body"]; ok {
+		eb, ok = x.(bool)
+		if !ok {
+			return fmt.Errorf("ast: unable to unmarshal explicit_body field with type: %T (expected true or false)", v["explicit_body"])
+		}
+	}
+
+	b, ok := v["body"].([]any)
+	if !ok {
+		return fmt.Errorf("ast: unable to unmarshal not, invalid body field type: %T (expected list)", v["body"])
+	}
+
+	body, err := unmarshalBody(b)
+	if err != nil {
+		return fmt.Errorf("ast: unable to unmarshal not body: %w", err)
+	}
+
+	n.ExplicitBody = eb
+	n.Body = body
+
+	return nil
+}
+
 // Null represents the null value defined by JSON.
 type Null struct{}
 
@@ -1173,10 +1321,10 @@ func (ref Ref) Copy() Ref {
 	return termSliceCopy(ref)
 }
 
-// CopyNonGround returns a new ref with deep copies of the non-ground parts and shallow
-// copies of the ground parts. This is a *much* cheaper operation than Copy for operations
-// that only intend to modify (e.g. plug) the non-ground parts. The head element of the ref
-// is always shallow copied.
+// CopyNonGround returns a new ref with shallow copies of ground parts and deep
+// copies of non-ground parts. The head element is always shallow copied. This is
+// cheaper than Copy for operations that only modify non-ground parts (e.g. plugging)
+// or metadata (e.g. Location).
 func (ref Ref) CopyNonGround() Ref {
 	cpy := make(Ref, len(ref))
 	cpy[0] = ref[0]
@@ -1729,17 +1877,26 @@ type set struct {
 
 // Copy returns a deep copy of s.
 func (s *set) Copy() Set {
+	n := len(s.keys)
 	cpy := &set{
 		hash:      s.hash,
 		ground:    s.ground,
 		sortGuard: sync.Once{},
-		elems:     make(map[int]*Term, len(s.elems)),
-		keys:      make([]*Term, 0, len(s.keys)),
+		elems:     make(map[int]*Term, n),
+		keys:      make([]*Term, n),
 	}
 
-	for hash := range s.elems {
-		cpy.elems[hash] = s.elems[hash].Copy()
-		cpy.keys = append(cpy.keys, cpy.elems[hash])
+	if n > 0 {
+		// Batch-allocate all Term structs in a single contiguous block.
+		buf := make([]Term, n)
+		i := 0
+		for hash, elem := range s.elems {
+			buf[i] = *elem
+			deepCopyTermValue(&buf[i])
+			cpy.elems[hash] = &buf[i]
+			cpy.keys[i] = &buf[i]
+			i++
+		}
 	}
 
 	return cpy
@@ -2364,10 +2521,41 @@ func (obj *object) IsGround() bool {
 
 // Copy returns a deep copy of obj.
 func (obj *object) Copy() Object {
-	cpy, _ := obj.Map(func(k, v *Term) (*Term, *Term, error) {
-		return k.Copy(), v.Copy(), nil
-	})
-	cpy.(*object).hash = obj.hash
+	n := len(obj.keys)
+	cpy := &object{
+		elems:     make(map[int]*objectElem, n),
+		sortGuard: sync.Once{},
+		hash:      obj.hash,
+		ground:    obj.ground,
+	}
+
+	if n == 0 {
+		return cpy
+	}
+
+	// Batch-allocate all objectElems, keys, and values in contiguous blocks
+	// (3 allocations instead of 3N).
+	elems := make([]objectElem, n)
+	keys := make([]Term, n)
+	vals := make([]Term, n)
+	cpy.keys = make([]*objectElem, n)
+
+	for i, srcElem := range obj.keys {
+		keys[i] = *srcElem.key
+		deepCopyTermValue(&keys[i])
+		vals[i] = *srcElem.value
+		deepCopyTermValue(&vals[i])
+
+		elems[i] = objectElem{key: &keys[i], value: &vals[i]}
+		cpy.keys[i] = &elems[i]
+
+		hash := keys[i].Hash()
+		if head, ok := cpy.elems[hash]; ok {
+			elems[i].next = head
+		}
+		cpy.elems[hash] = &elems[i]
+	}
+
 	return cpy
 }
 
@@ -2931,10 +3119,45 @@ func (c Call) String() string {
 	return util.ByteSliceToString(buf)
 }
 
+// deepCopyTermValue deep copies the Value of term in-place.
+// Scalar values (Null, Boolean, Number, String, Var) are already
+// copied by struct assignment, so only container types need work.
+func deepCopyTermValue(term *Term) {
+	switch v := term.Value.(type) {
+	case Null, Boolean, Number, String, Var:
+		// Already copied by *term = *src struct assignment.
+	case Ref:
+		term.Value = v.Copy()
+	case *Array:
+		term.Value = v.Copy()
+	case Set:
+		term.Value = v.Copy()
+	case *object:
+		term.Value = v.Copy()
+	case *ArrayComprehension:
+		term.Value = v.Copy()
+	case *ObjectComprehension:
+		term.Value = v.Copy()
+	case *SetComprehension:
+		term.Value = v.Copy()
+	case *TemplateString:
+		term.Value = v.Copy()
+	case Call:
+		term.Value = v.Copy()
+	}
+}
+
 func termSliceCopy(a []*Term) []*Term {
-	cpy := make([]*Term, len(a))
-	for i := range a {
-		cpy[i] = a[i].Copy()
+	n := len(a)
+	if n == 0 {
+		return make([]*Term, 0)
+	}
+	// Batch allocate all Term structs in a single contiguous slice (2 allocs
+	// instead of N+1) using the same pattern as util.NewPtrSlice.
+	cpy := util.NewPtrSlice[Term](n)
+	for i := range n {
+		*cpy[i] = *a[i]           // copy Term struct (Value + Location)
+		deepCopyTermValue(cpy[i]) // deep copy container Values in-place
 	}
 	return cpy
 }
@@ -3019,11 +3242,32 @@ func unmarshalExpr(expr *Expr, v map[string]any) error {
 	}
 	switch ts := v["terms"].(type) {
 	case map[string]any:
-		t, err := unmarshalTerm(ts)
-		if err != nil {
-			return err
+		switch tt, _ := ts["type"].(string); tt {
+		case "not":
+			n := &Not{}
+			if err := unmarshalNot(n, ts); err != nil {
+				return err
+			}
+			expr.Terms = n
+		case "and":
+			a := &LogicalAnd{}
+			if err := unmarshalLogical("and", &a.Lhs, &a.Rhs, &a.ExplicitLhs, &a.ExplicitRhs, ts); err != nil {
+				return err
+			}
+			expr.Terms = a
+		case "or":
+			o := &LogicalOr{}
+			if err := unmarshalLogical("or", &o.Lhs, &o.Rhs, &o.ExplicitLhs, &o.ExplicitRhs, ts); err != nil {
+				return err
+			}
+			expr.Terms = o
+		default:
+			t, err := unmarshalTerm(ts)
+			if err != nil {
+				return err
+			}
+			expr.Terms = t
 		}
-		expr.Terms = t
 	case []any:
 		terms, err := unmarshalTermSlice(ts)
 		if err != nil {
