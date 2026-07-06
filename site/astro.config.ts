@@ -8,9 +8,9 @@ import { remarkLinkRewrite } from "./src/plugins/remark-link-rewrite.ts";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { VERSION_SLUG } from "./src/lib/version.ts";
 
 const docsDir = fileURLToPath(new URL("./src/content/docs/", import.meta.url));
-const VERSION_SLUG = /^v\d+-\d+$/;
 
 // Archived versions staged by build-versions.mjs; absent in plain/dev builds.
 let versions: { ref: string; slug: string }[] = [];

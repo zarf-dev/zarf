@@ -1,8 +1,8 @@
 ---
 import Default from '@astrojs/starlight/components/MarkdownContent.astro';
+import { versionFromPath } from '../lib/version.ts';
 
-const VERSION_SLUG_PATTERN = /^v\d+-\d+$/;
-const version = Astro.url.pathname.split('/').find(s => VERSION_SLUG_PATTERN.test(s)) ?? 'current';
+const version = versionFromPath(Astro.url.pathname);
 ---
 
 <Default {...Astro.props}>

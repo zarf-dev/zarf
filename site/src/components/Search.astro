@@ -10,9 +10,9 @@ import Default from '@astrojs/starlight/components/Search.astro';
 </style>
 
 <script>
-  const VERSION_SLUG_PATTERN = /^v\d+-\d+$/;
+  import { versionFromPath } from '../lib/version.ts';
 
-  const pageVersion = window.location.pathname.split('/').find(s => VERSION_SLUG_PATTERN.test(s)) ?? 'current';
+  const pageVersion = versionFromPath(window.location.pathname);
 
   function activateVersionFilter(container: HTMLElement): boolean {
     const input = container.querySelector(
