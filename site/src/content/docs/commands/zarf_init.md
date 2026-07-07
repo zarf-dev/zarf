@@ -65,9 +65,6 @@ $ zarf init --artifact-push-password={PASSWORD} --artifact-push-username={USERNA
       --agent-tls-ca string                     Path to a PEM-encoded CA certificate for the Zarf agent
       --agent-tls-cert string                   Path to a PEM-encoded TLS certificate for the Zarf agent
       --agent-tls-key string                    Path to a PEM-encoded TLS private key for the Zarf agent
-      --artifact-push-token string              [alpha] API Token for the push-user to access the artifact registry
-      --artifact-push-username string           [alpha] Username to access to the artifact registry Zarf is configured to use. User must be able to upload package artifacts.
-      --artifact-url string                     [alpha] External artifact registry url to use for this Zarf cluster
       --certificate-identity string             Required identity claim in the signing certificate (keyless verify). Example: signer@example.com or https://github.com/org/repo/.github/workflows/release.yml@refs/heads/main
       --certificate-identity-regexp string      Regex variant of --certificate-identity
       --certificate-oidc-issuer string          Required OIDC issuer claim in the signing certificate (keyless verify). Example: https://github.com/login/oauth or https://token.actions.githubusercontent.com

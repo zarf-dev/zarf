@@ -103,6 +103,10 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 		return errors.New("state.Distro empty, did not load from cluster")
 	}
 
+	if s.ArtifactServer.IsConfigured() {
+		logger.From(ctx).Warn(lang.CmdToolsGetCredsArtifactDeprecated)
+	}
+
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
