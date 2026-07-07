@@ -75,7 +75,7 @@ Requires `gcloud` authentication and appropriate IAM roles. The key must be an a
 
 ```bash
 zarf package sign zarf-package-example-amd64.tar.zst \
-  --signing-key azurekms://VAULT_NAME.vault.azure.net/keys/KEY_NAME/KEY_VERSION
+  --signing-key azurekms://VAULT_NAME.vault.azure.net/KEY_NAME/KEY_VERSION
 ```
 
 Requires Azure CLI authentication and appropriate access policies. The key must be an asymmetric signing key.
