@@ -11,8 +11,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
-	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
