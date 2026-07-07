@@ -35,8 +35,8 @@ import (
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
-	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
+	negotiate "github.com/zarf-dev/zarf/src/pkg/transport"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
 
