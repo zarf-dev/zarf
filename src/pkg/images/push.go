@@ -136,7 +136,11 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		plainHTTP := cfg.PlainHTTP
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify})
+			// Reuse the same transport the real push will use (which may be an
+			// mTLS client-certificate transport for a cluster-tunneled registry) —
+			// a generic probe transport would fail the TLS handshake for reasons
+			// unrelated to which scheme is actually correct.
+			plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify, Transport: transport})
 			if err != nil {
 				return err
 			}

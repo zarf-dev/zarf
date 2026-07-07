@@ -44,8 +44,15 @@ type ProbeOptions struct {
 	// InsecureSkipTLSVerify disables TLS certificate verification during the HTTPS
 	// probe. A certificate error is never, by itself, a reason to fall back to plain
 	// HTTP; this only affects whether the HTTPS probe accepts a self-signed/invalid
-	// certificate as a successful connection.
+	// certificate as a successful connection. Ignored if Transport is set.
 	InsecureSkipTLSVerify bool
+	// Transport, when set, is used for the probe instead of the package's default
+	// transport. Provide this when reaching the host requires something a generic
+	// transport can't do — e.g. presenting a client certificate to an mTLS-secured
+	// registry — since otherwise the TLS handshake would fail for reasons unrelated
+	// to which scheme is actually correct, and decide would (correctly, given only
+	// a generic transport) refuse to downgrade.
+	Transport http.RoundTripper
 }
 
 // Options configures a Negotiator.
@@ -190,14 +197,18 @@ func probe(ctx context.Context, scheme, host string, opts ProbeOptions) error {
 		return err
 	}
 
-	baseTransport, ok := http.DefaultTransport.(*http.Transport)
-	if !ok {
-		return errors.New("could not get default transport")
+	rt := opts.Transport
+	if rt == nil {
+		baseTransport, ok := http.DefaultTransport.(*http.Transport)
+		if !ok {
+			return errors.New("could not get default transport")
+		}
+		baseTransport = baseTransport.Clone()
+		baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // explicit, narrowly-scoped opt-in via ProbeOptions
+		rt = baseTransport
 	}
-	baseTransport = baseTransport.Clone()
-	baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // explicit, narrowly-scoped opt-in via ProbeOptions
 
-	client := &http.Client{Transport: baseTransport}
+	client := &http.Client{Transport: rt}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -215,15 +226,29 @@ func WithNegotiator(ctx context.Context, n *Negotiator) context.Context {
 	return context.WithValue(ctx, defaultCtxKey, n)
 }
 
-// From returns the Negotiator carried by ctx. If none is present — e.g. in a unit
-// test, or library code called without a context that installed one — it returns a
-// fresh, uncached Negotiator so callers always get correct, if not optimally cached,
-// behavior.
+// defaultNegotiator backs From when no Negotiator has been installed in the
+// context — notably, any SDK consumer of Zarf's packages that never runs through
+// the zarf CLI's root command (which is what installs a per-invocation Negotiator;
+// see cmd/root.go) never populates the context key at all. A shared, lazily built
+// singleton means that caller still gets real caching and singleflight dedup across
+// its own calls, rather than a fresh, empty-cache Negotiator every time. A positive
+// TTL is used, rather than the zero (never expire) TTL the CLI installs for itself,
+// because unlike a CLI invocation this singleton's lifetime is whatever its host
+// process's lifetime is — potentially long-running — so decisions should still
+// expire eventually.
+var defaultNegotiator = sync.OnceValue(func() *Negotiator {
+	return New(Options{TTL: 5 * time.Minute})
+})
+
+// From returns the Negotiator carried by ctx. If none is present — e.g. because ctx
+// was never passed through the zarf CLI's root command, or in a unit test — it
+// returns a shared default Negotiator (see defaultNegotiator) so callers still get
+// caching, just not scoped to a single command invocation.
 func From(ctx context.Context) *Negotiator {
 	if ctx != nil {
 		if n, ok := ctx.Value(defaultCtxKey).(*Negotiator); ok && n != nil {
 			return n
 		}
 	}
-	return New(Options{})
+	return defaultNegotiator()
 }

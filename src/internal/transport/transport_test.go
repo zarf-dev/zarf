@@ -240,6 +240,17 @@ func TestWithNegotiatorAndFrom(t *testing.T) {
 		require.NotNil(t, n)
 	})
 
+	t.Run("falls back to a shared singleton, not a fresh instance per call", func(t *testing.T) {
+		// This is the behavior an SDK consumer relies on: code that calls Zarf's
+		// packages directly, without going through the zarf CLI's root command
+		// (which is what installs a per-invocation Negotiator into the context),
+		// still gets real caching across its own calls instead of a fresh,
+		// empty-cache Negotiator every time.
+		first := From(context.Background())
+		second := From(context.Background())
+		require.Same(t, first, second)
+	})
+
 	t.Run("round-trips the installed negotiator", func(t *testing.T) {
 		want := New(Options{})
 		ctx := WithNegotiator(context.Background(), want)
