@@ -155,6 +155,7 @@ func TestCheckForIndex(t *testing.T) {
 			opts := PullOptions{
 				Arch:           "amd64",
 				CacheDirectory: cacheDir,
+				PlainHTTP:      true,
 			}
 			_, err = Pull(ctx, []transform.Image{refInfo}, dstDir, opts)
 			require.NoError(t, err)
@@ -243,6 +244,7 @@ func TestPull(t *testing.T) {
 				CacheDirectory:    cacheDir,
 				RegistryOverrides: tc.registryOverrides,
 				Arch:              "amd64",
+				PlainHTTP:         true,
 			}
 
 			pulled, err := Pull(ctx, images, destDir, opts)
@@ -306,6 +308,7 @@ func TestPullInvalidCache(t *testing.T) {
 	_, err = Pull(ctx, []transform.Image{ref}, destDir, PullOptions{
 		CacheDirectory: cacheDir,
 		Arch:           "amd64",
+		PlainHTTP:      true,
 	})
 	require.NoError(t, err)
 

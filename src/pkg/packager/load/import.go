@@ -35,9 +35,15 @@ import (
 // negotiateImportPlainHTTP decides the transport scheme for an `import: url:` OCI
 // reference. This URL was discovered by reading package data (the zarf.yaml being
 // processed), not named explicitly on the command line the current invocation was
-// run with, so --plain-http (remoteOptions.PlainHTTP) is not necessarily meant for
-// it — transport is negotiated per host instead.
+// run with, so --plain-http (remoteOptions.PlainHTTP) is not applied to it directly.
+// Instead, the flag gates whether transport is verified per host at all: when unset
+// (the common case), HTTPS is used with no network probe; when set, negotiation
+// confirms which hosts among this package's imports actually need plain HTTP; rather
+// than forcing it onto all of them the way the flag would if applied directly.
 func negotiateImportPlainHTTP(ctx context.Context, importURL string, remoteOptions types.RemoteOptions) (bool, error) {
+	if !remoteOptions.PlainHTTP {
+		return false, nil
+	}
 	ref, err := registry.ParseReference(strings.TrimPrefix(importURL, helpers.OCIURLPrefix))
 	if err != nil {
 		return false, fmt.Errorf("unable to parse import url %q: %w", importURL, err)

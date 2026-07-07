@@ -13,6 +13,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v3/pkg/oci/remote"
 	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
+	"github.com/zarf-dev/zarf/src/types"
 	"oras.land/oras-go/v2"
 	"oras.land/oras-go/v2/errdef"
 	"oras.land/oras-go/v2/registry"
@@ -21,7 +22,7 @@ import (
 )
 
 // GetCosignArtifacts returns signatures and attestations for the given image.
-func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, insecureSkipTLSVerify bool) ([]string, error) {
+func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, remoteOptions types.RemoteOptions) ([]string, error) {
 	l := logger.From(ctx)
 
 	var nameOpts []name.Option
@@ -35,15 +36,21 @@ func GetCosignArtifacts(ctx context.Context, image string, client *auth.Client, 
 	}
 
 	// This image reference was discovered by scanning a package's resources, not
-	// named explicitly on the command line, so transport is negotiated per host
-	// rather than relying on a global flag. Negotiated once and reused across the
-	// digest, signature, and attestation lookups below, which all live on the same
-	// registry host.
-	plainHTTP, err := negotiate.From(ctx).UsePlainHTTP(ctx, ref.Context().RegistryStr(), negotiate.ProbeOptions{InsecureSkipTLSVerify: insecureSkipTLSVerify})
-	if err != nil {
-		// If we can't reach the registry, we can't get the cosign artifacts so log the error and skip it
-		l.Debug("could not reach registry for cosign artifact lookup", "image", image, "error", err)
-		return nil, nil
+	// named explicitly on the command line, so remoteOptions.PlainHTTP is not applied
+	// to it directly. Instead, the flag gates whether transport is verified per host
+	// at all: when unset (the common case), HTTPS is used with no network probe;
+	// when set, negotiation confirms whether this specific host actually needs plain
+	// HTTP, rather than forcing it the way the flag would if applied directly.
+	// Negotiated once and reused across the digest, signature, and attestation
+	// lookups below, which all live on the same registry host.
+	var plainHTTP bool
+	if remoteOptions.PlainHTTP {
+		plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, ref.Context().RegistryStr(), negotiate.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+		if err != nil {
+			// If we can't reach the registry, we can't get the cosign artifacts so log the error and skip it
+			l.Debug("could not reach registry for cosign artifact lookup", "image", image, "error", err)
+			return nil, nil
+		}
 	}
 
 	// We get the digest reference for the image specifically so that we can short circuit the
