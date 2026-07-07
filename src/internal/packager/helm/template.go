@@ -51,10 +51,7 @@ func TemplateChart(ctx context.Context, zarfChart v1alpha1.ZarfChart, chart *cha
 	client.IncludeCRDs = true
 	// TODO: Further research this with regular/OCI charts
 	client.Verify = false
-	// The chart's own OCI-referenced dependencies (if any) were discovered by
-	// reading package data, not named explicitly on this command line, so
-	// remoteOptions.PlainHTTP is not necessarily meant for them — negotiate the
-	// transport instead of forcing the global flag. Skipped entirely (no network
+	// negotiate the transport instead of forcing the global flag. Skipped entirely (no network
 	// probe) when the chart declares no OCI dependencies.
 	client.PlainHTTP, err = negotiateLoadedChartDependenciesPlainHTTP(ctx, zarfChart.Name, chart.Metadata.Dependencies, remoteOptions)
 	if err != nil {

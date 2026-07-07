@@ -41,13 +41,10 @@ import (
 )
 
 // negotiateChartPlainHTTP decides the transport scheme for an OCI chart or chart
-// dependency host. The URL was discovered by reading package data (a zarf.yaml's
-// chart.url or a chart's own Chart.yaml dependencies), not named explicitly on this
-// command line, so remoteOptions.PlainHTTP is not applied to it directly. Instead,
-// the flag gates whether transport is verified per host at all: when unset (the
-// common case), HTTPS is used with no network probe; when set, negotiation confirms
-// whether this specific host actually needs plain HTTP, rather than forcing it the
-// way the flag would if applied directly.
+// dependency host discovered in package data (not named on the command line).
+// remoteOptions.PlainHTTP gates whether to probe at all: unset skips the network
+// call and defaults to HTTPS; set verifies this specific host rather than forcing
+// plain HTTP onto it directly.
 func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions types.RemoteOptions) (bool, error) {
 	if !remoteOptions.PlainHTTP {
 		return false, nil
@@ -63,10 +60,8 @@ func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions t
 	return plainHTTP, nil
 }
 
-// negotiateChartDependenciesPlainHTTP decides the transport scheme for a chart's own
-// OCI-referenced dependencies (Chart.yaml dependencies: with an oci:// repository),
-// loading the chart from disk to inspect them. See
-// negotiateLoadedChartDependenciesPlainHTTP for the decision logic.
+// negotiateChartDependenciesPlainHTTP loads the chart from disk and negotiates its
+// OCI dependency hosts; see negotiateLoadedChartDependenciesPlainHTTP.
 func negotiateChartDependenciesPlainHTTP(ctx context.Context, chart v1alpha1.ZarfChart, remoteOptions types.RemoteOptions) (bool, error) {
 	_, parsed, err := loadAndValidateChart(chart.LocalPath)
 	if err != nil {
@@ -75,12 +70,10 @@ func negotiateChartDependenciesPlainHTTP(ctx context.Context, chart v1alpha1.Zar
 	return negotiateLoadedChartDependenciesPlainHTTP(ctx, chart.Name, parsed.Metadata.Dependencies, remoteOptions)
 }
 
-// negotiateLoadedChartDependenciesPlainHTTP decides the transport scheme for a
-// chart's own OCI-referenced dependencies. If the chart declares no OCI
-// dependencies, no network probe is made and HTTPS (false) is returned. If a
-// chart's OCI dependencies span multiple hosts that disagree on scheme — an unusual
-// topology, since dependencies overwhelmingly share one registry — this defaults to
-// HTTPS (the safe choice) rather than guessing.
+// negotiateLoadedChartDependenciesPlainHTTP negotiates a chart's OCI-referenced
+// dependency hosts (see negotiateChartPlainHTTP). Charts with no OCI dependencies
+// return HTTPS without probing. Dependencies spanning hosts that disagree on scheme
+// default to HTTPS rather than guessing.
 func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) (bool, error) {
 	var decided bool
 	var decidedSet bool
@@ -418,10 +411,7 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 
-	// A chart's own OCI-referenced dependencies were discovered by reading package
-	// data (the chart's Chart.yaml), not named explicitly on this command line, so
-	// remoteOptions.PlainHTTP is not necessarily meant for them — negotiate the
-	// transport instead of forcing the global flag.
+	// negotiate the transport instead of forcing the global flag.
 	plainHTTP, err := negotiateChartDependenciesPlainHTTP(ctx, chart, remoteOptions)
 	if err != nil {
 		return err

@@ -48,10 +48,7 @@ type ProbeOptions struct {
 	InsecureSkipTLSVerify bool
 	// Transport, when set, is used for the probe instead of the package's default
 	// transport. Provide this when reaching the host requires something a generic
-	// transport can't do — e.g. presenting a client certificate to an mTLS-secured
-	// registry — since otherwise the TLS handshake would fail for reasons unrelated
-	// to which scheme is actually correct, and decide would (correctly, given only
-	// a generic transport) refuse to downgrade.
+	// transport can't do like  presenting a client certificate to an mTLS-secured registry
 	Transport http.RoundTripper
 }
 

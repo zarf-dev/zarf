@@ -121,9 +121,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	// Reuse the same transport the real fetch will use (which may be an mTLS
-	// client-certificate transport) — a generic probe transport would fail the TLS
-	// handshake for reasons unrelated to which scheme is actually correct.
+	// Reuse the same transport the real fetch will use (which may be an mTLS client-certificate transport)
 	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{Transport: transport})
 	if err != nil {
 		return "", err
