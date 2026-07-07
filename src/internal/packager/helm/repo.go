@@ -43,9 +43,15 @@ import (
 // negotiateChartPlainHTTP decides the transport scheme for an OCI chart or chart
 // dependency host. The URL was discovered by reading package data (a zarf.yaml's
 // chart.url or a chart's own Chart.yaml dependencies), not named explicitly on this
-// command line, so remoteOptions.PlainHTTP is not necessarily meant for it —
-// transport is negotiated per host instead.
+// command line, so remoteOptions.PlainHTTP is not applied to it directly. Instead,
+// the flag gates whether transport is verified per host at all: when unset (the
+// common case), HTTPS is used with no network probe; when set, negotiation confirms
+// whether this specific host actually needs plain HTTP, rather than forcing it the
+// way the flag would if applied directly.
 func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions types.RemoteOptions) (bool, error) {
+	if !remoteOptions.PlainHTTP {
+		return false, nil
+	}
 	ref, err := orasRegistry.ParseReference(strings.TrimPrefix(ociURL, helpers.OCIURLPrefix))
 	if err != nil {
 		return false, fmt.Errorf("unable to parse chart url %q: %w", ociURL, err)

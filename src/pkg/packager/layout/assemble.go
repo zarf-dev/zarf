@@ -147,6 +147,7 @@ func AssemblePackage(ctx context.Context, pkg v1alpha1.ZarfPackage, packagePath 
 			RegistryOverrides:     opts.RegistryOverrides,
 			CacheDirectory:        filepath.Join(opts.CachePath, ImagesDir),
 			InsecureSkipTLSVerify: opts.RemoteOptions.InsecureSkipTLSVerify,
+			PlainHTTP:             opts.RemoteOptions.PlainHTTP,
 		}
 		imageManifests, err := images.Pull(ctx, componentImages, filepath.Join(buildPath, ImagesDir), pullOpts)
 		if err != nil {

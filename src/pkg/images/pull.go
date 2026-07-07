@@ -54,6 +54,13 @@ type PullOptions struct {
 	CacheDirectory        string
 	InsecureSkipTLSVerify bool
 	ResponseHeaderTimeout time.Duration
+	// PlainHTTP is not applied directly to these (third-party) image references — it
+	// gates whether transport is negotiated per host at all. When false (the common
+	// case), HTTPS is used with no network probe, since a false/unset flag was never
+	// grounds to force plain HTTP here anyway. When true, negotiation verifies which
+	// hosts among this pull's images actually need plain HTTP, rather than forcing it
+	// onto all of them the way the flag would if applied directly.
+	PlainHTTP bool
 }
 
 type imagePullInfo struct {
@@ -160,15 +167,20 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			// This image reference was discovered by reading package data (the
 			// package's images: list), not named explicitly by the user on this
 			// command line — --plain-http was not necessarily meant for this
-			// registry, so transport is negotiated per host instead of forced.
-			plainHTTP, err := negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
-			if err != nil {
-				// It could be an image on the daemon instead of a registry.
-				l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-				imageListLock.Lock()
-				defer imageListLock.Unlock()
-				dockerFallBackImages = append(dockerFallBackImages, image)
-				return nil
+			// registry. Only verify per-host when the flag is set at all; if it's
+			// unset, HTTPS is already the correct default and there's nothing to
+			// negotiate.
+			var plainHTTP bool
+			if opts.PlainHTTP {
+				plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
+				if err != nil {
+					// It could be an image on the daemon instead of a registry.
+					l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
+					imageListLock.Lock()
+					defer imageListLock.Unlock()
+					dockerFallBackImages = append(dockerFallBackImages, image)
+					return nil
+				}
 			}
 			repo.PlainHTTP = plainHTTP
 
