@@ -21,6 +21,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/internal/dns"
+	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
 	"github.com/zarf-dev/zarf/src/pkg/pki"
@@ -135,7 +136,7 @@ func Push(ctx context.Context, imageList []transform.Image, sourceDirectory stri
 		plainHTTP := cfg.PlainHTTP
 		if dns.IsLocalhost(registryRef.Host()) && !cfg.PlainHTTP {
 			var err error
-			plainHTTP, err = ShouldUsePlainHTTP(ctx, registryRef.Host(), client)
+			plainHTTP, err = negotiate.From(ctx).UsePlainHTTP(ctx, registryRef.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify})
 			if err != nil {
 				return err
 			}

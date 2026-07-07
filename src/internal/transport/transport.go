@@ -1,0 +1,229 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2021-Present The Zarf Authors
+
+// Package transport decides whether a registry should be reached over plain HTTP or
+// HTTPS.
+//
+// Zarf's --plain-http flag is a global, process-wide setting, but many registries
+// Zarf talks to during a single command are not the registry the user meant that
+// flag for — a third-party Helm chart URL, a container image reference, or a chart's
+// own OCI dependency, all discovered by reading package data rather than named
+// directly on the command line. Forcing the global flag onto those registries is
+// wrong in both directions: it can force plain HTTP onto a registry that only speaks
+// HTTPS (breaking the fetch), or leave a registry that only speaks plain HTTP
+// unreachable because the flag wasn't set for an unrelated reason.
+//
+// This package answers the question per host instead: it probes the host directly
+// and only ever falls back to plain HTTP when the host proves it speaks plaintext
+// HTTP on that port. It never falls back on a timeout, a refused connection, a TLS
+// certificate error, or an ordinary non-2xx status code — none of those prove
+// anything about the correct scheme, and treating them as license to downgrade would
+// make Zarf a protocol-downgrade oracle.
+package transport
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net/http"
+	"sync"
+	"time"
+
+	"golang.org/x/sync/singleflight"
+)
+
+// probeTimeout bounds a single scheme-probe request. Probing does not use retries —
+// a single fast attempt keeps the common (HTTPS works) case cheap and keeps
+// transport-level errors unwrapped so decide can reliably detect a
+// tls.RecordHeaderError.
+const probeTimeout = 5 * time.Second
+
+// ProbeOptions configures a single scheme-negotiation probe.
+type ProbeOptions struct {
+	// InsecureSkipTLSVerify disables TLS certificate verification during the HTTPS
+	// probe. A certificate error is never, by itself, a reason to fall back to plain
+	// HTTP; this only affects whether the HTTPS probe accepts a self-signed/invalid
+	// certificate as a successful connection.
+	InsecureSkipTLSVerify bool
+}
+
+// Options configures a Negotiator.
+type Options struct {
+	// TTL controls how long a negotiated decision is cached before it is re-probed.
+	// Zero means decisions never expire, which is correct for a Zarf CLI invocation
+	// (a short-lived process) but not for a long-running process such as the Zarf
+	// Agent admission webhook, which should set a positive TTL.
+	TTL time.Duration
+}
+
+type cacheEntry struct {
+	plainHTTP bool
+	at        time.Time
+}
+
+// Negotiator decides, per host, whether Zarf should speak plain HTTP or HTTPS to a
+// registry reference that was discovered by reading package data rather than named
+// explicitly on the command line. Decisions are cached per host, and concurrent
+// callers negotiating the same host share a single in-flight probe.
+//
+// A Negotiator is safe for concurrent use.
+type Negotiator struct {
+	group singleflight.Group
+
+	mu    sync.RWMutex
+	cache map[string]cacheEntry
+	ttl   time.Duration
+	now   func() time.Time
+}
+
+// New creates a Negotiator.
+func New(o Options) *Negotiator {
+	return &Negotiator{
+		cache: make(map[string]cacheEntry),
+		ttl:   o.TTL,
+		now:   time.Now,
+	}
+}
+
+// UsePlainHTTP returns true if host should be reached over plain HTTP rather than
+// HTTPS, deciding by probing the host directly (see decide). A cached decision is
+// reused until it expires; see Options.TTL.
+func (n *Negotiator) UsePlainHTTP(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
+	if v, ok := n.lookup(host); ok {
+		return v, nil
+	}
+
+	v, err, _ := n.group.Do(host, func() (any, error) {
+		// Re-check under the singleflight in case a concurrent call just populated it.
+		if v, ok := n.lookup(host); ok {
+			return v, nil
+		}
+		plainHTTP, err := decide(ctx, host, opts)
+		if err != nil {
+			return false, err
+		}
+		n.mu.Lock()
+		n.cache[host] = cacheEntry{plainHTTP: plainHTTP, at: n.now()}
+		n.mu.Unlock()
+		return plainHTTP, nil
+	})
+	if err != nil {
+		return false, err
+	}
+	plainHTTP, ok := v.(bool)
+	if !ok {
+		return false, fmt.Errorf("unexpected type %T from negotiation for %q", v, host)
+	}
+	return plainHTTP, nil
+}
+
+func (n *Negotiator) lookup(host string) (bool, bool) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	entry, ok := n.cache[host]
+	if !ok {
+		return false, false
+	}
+	if n.ttl > 0 && n.now().Sub(entry.at) > n.ttl {
+		return false, false
+	}
+	return entry.plainHTTP, true
+}
+
+// Invalidate drops any cached decision for host, forcing the next UsePlainHTTP call
+// to re-probe.
+//
+// Callers should only invalidate in response to a transport-level failure that
+// plausibly means the cached scheme is now wrong — e.g. a TLS handshake failure when
+// a request was sent over HTTPS, or a connection reset/refused when a request was
+// sent over the cached plain-HTTP scheme. Do not invalidate on an ordinary HTTP
+// response (401, 403, 404, 5xx): receiving a well-formed response already proves the
+// scheme choice was correct, so the failure is unrelated (credentials, a missing
+// resource, an upstream error) and re-probing would only add latency and mask the
+// real cause.
+func (n *Negotiator) Invalidate(host string) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	delete(n.cache, host)
+}
+
+// decide performs the actual negotiation: try HTTPS first, and only fall back to
+// plain HTTP when the HTTPS attempt fails with definitive proof that the endpoint
+// speaks plaintext HTTP on that port.
+func decide(ctx context.Context, host string, opts ProbeOptions) (bool, error) {
+	httpsErr := probe(ctx, "https", host, opts)
+	if httpsErr == nil {
+		return false, nil
+	}
+
+	// net/http itself special-cases the scenario where a TLS ClientHello is sent to a
+	// server speaking plaintext HTTP on that port: crypto/tls first surfaces this as a
+	// tls.RecordHeaderError (the server's plaintext response line, "HTTP/1.1 ...", is
+	// misread as a garbled TLS record whose first 5 bytes spell "HTTP/"), and
+	// net/http's Client normalizes that into the exported http.ErrSchemeMismatch
+	// sentinel. This is definitive proof of plaintext, unlike a timeout, a refused
+	// connection, or a certificate error — none of which prove anything about which
+	// scheme is correct.
+	if !errors.Is(httpsErr, http.ErrSchemeMismatch) {
+		return false, fmt.Errorf("registry %q did not respond over HTTPS and did not present definitive proof of a plain HTTP endpoint; refusing to downgrade to plain HTTP: %w", host, httpsErr)
+	}
+
+	httpErr := probe(ctx, "http", host, opts)
+	if httpErr != nil {
+		return false, errors.Join(httpsErr, httpErr)
+	}
+	return true, nil
+}
+
+// probe sends an anonymous GET to <scheme>://<host>/v2/. Any completed HTTP response
+// counts as proof the scheme is correct, regardless of status code: a 401 or 403
+// over TLS still proves the endpoint speaks HTTPS, so there is no need to
+// authenticate merely to determine transport.
+func probe(ctx context.Context, scheme, host string, opts ProbeOptions) error {
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+
+	url := fmt.Sprintf("%s://%s/v2/", scheme, host)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	baseTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return errors.New("could not get default transport")
+	}
+	baseTransport = baseTransport.Clone()
+	baseTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: opts.InsecureSkipTLSVerify} //nolint:gosec // explicit, narrowly-scoped opt-in via ProbeOptions
+
+	client := &http.Client{Transport: baseTransport}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	return resp.Body.Close()
+}
+
+// ctxKey provides a location to store a Negotiator in a context.
+type ctxKey struct{}
+
+var defaultCtxKey = ctxKey{}
+
+// WithNegotiator returns a copy of ctx carrying n, retrievable with From.
+func WithNegotiator(ctx context.Context, n *Negotiator) context.Context {
+	return context.WithValue(ctx, defaultCtxKey, n)
+}
+
+// From returns the Negotiator carried by ctx. If none is present — e.g. in a unit
+// test, or library code called without a context that installed one — it returns a
+// fresh, uncached Negotiator so callers always get correct, if not optimally cached,
+// behavior.
+func From(ctx context.Context) *Negotiator {
+	if ctx != nil {
+		if n, ok := ctx.Value(defaultCtxKey).(*Negotiator); ok && n != nil {
+			return n
+		}
+	}
+	return New(Options{})
+}

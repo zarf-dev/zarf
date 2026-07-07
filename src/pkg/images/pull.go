@@ -37,7 +37,7 @@ import (
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	orasCache "github.com/defenseunicorns/pkg/oci/cache"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/zarf-dev/zarf/src/internal/dns"
+	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/archive"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
@@ -52,7 +52,6 @@ type PullOptions struct {
 	Arch                  string
 	RegistryOverrides     []RegistryOverride
 	CacheDirectory        string
-	PlainHTTP             bool
 	InsecureSkipTLSVerify bool
 	ResponseHeaderTimeout time.Duration
 }
@@ -65,6 +64,10 @@ type imagePullInfo struct {
 	// platforms is populated only when the image resolves to an OCI image index; one entry per
 	// leaf manifest in "arch[/variant]" form. Empty for single-platform manifests.
 	platforms []string
+	// plainHTTP is the transport scheme negotiated for this image's registry during the
+	// metadata-fetch pass; orasSave reuses it rather than re-probing the (already
+	// known-reachable) host.
+	plainHTTP bool
 }
 
 type imageWithOverride struct {
@@ -154,18 +157,20 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 			repo.Reference = ref
 			repo.Client = client
 
-			repo.PlainHTTP = opts.PlainHTTP
-			if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
-				repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-				// If the pings to localhost fail, it could be an image on the daemon
-				if err != nil {
-					l.Warn("unable to authenticate to host, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
-					imageListLock.Lock()
-					defer imageListLock.Unlock()
-					dockerFallBackImages = append(dockerFallBackImages, image)
-					return nil
-				}
+			// This image reference was discovered by reading package data (the
+			// package's images: list), not named explicitly by the user on this
+			// command line — --plain-http was not necessarily meant for this
+			// registry, so transport is negotiated per host instead of forced.
+			plainHTTP, err := negotiate.From(ctx).UsePlainHTTP(ctx, repo.Reference.Host(), negotiate.ProbeOptions{InsecureSkipTLSVerify: opts.InsecureSkipTLSVerify})
+			if err != nil {
+				// It could be an image on the daemon instead of a registry.
+				l.Warn("unable to reach registry, attempting pull from docker daemon as fallback", "image", image.overridden.Reference, "err", err)
+				imageListLock.Lock()
+				defer imageListLock.Unlock()
+				dockerFallBackImages = append(dockerFallBackImages, image)
+				return nil
 			}
+			repo.PlainHTTP = plainHTTP
 
 			fetchOpts := oras.DefaultFetchBytesOptions
 			desc, b, err := oras.FetchBytes(ectx, repo, image.overridden.Reference, fetchOpts)
@@ -216,6 +221,7 @@ func Pull(ctx context.Context, imageList []transform.Image, destinationDirectory
 				byteSize:            size,
 				manifestDesc:        desc,
 				platforms:           platforms,
+				plainHTTP:           plainHTTP,
 			})
 			pulledImages = append(pulledImages, PulledImage{Image: image.original})
 			l.Debug("pulled image", "name", image.overridden.Reference)
@@ -487,13 +493,9 @@ func orasSave(ctx context.Context, imageInfo imagePullInfo, opts PullOptions, ds
 	if err != nil {
 		return fmt.Errorf("failed to parse image reference %s: %w", imageInfo.registryOverrideRef, err)
 	}
-	repo.PlainHTTP = opts.PlainHTTP
-	if dns.IsLocalhost(repo.Reference.Host()) && !opts.PlainHTTP {
-		repo.PlainHTTP, err = ShouldUsePlainHTTP(ctx, repo.Reference.Host(), client)
-		if err != nil {
-			return fmt.Errorf("unable to connect to the registry %s: %w", repo.Reference.Host(), err)
-		}
-	}
+	// The transport scheme was already negotiated for this host during the metadata-fetch
+	// pass (the host is known-reachable at this point); reuse it rather than re-probing.
+	repo.PlainHTTP = imageInfo.plainHTTP
 	repo.Client = client
 
 	copyOpts := oras.DefaultCopyOptions

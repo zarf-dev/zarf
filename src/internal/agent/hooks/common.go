@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/defenseunicorns/pkg/helpers/v2"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/agent/operations"
+	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
-	"github.com/zarf-dev/zarf/src/pkg/images"
 	"github.com/zarf-dev/zarf/src/pkg/state"
 	admission "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,11 @@ import (
 	orasRemote "oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 )
+
+// transportNegotiator decides plain-HTTP vs. HTTPS for the internal Zarf registry as
+// seen from in-cluster. Unlike a CLI invocation, the agent is a long-running process,
+// so decisions are cached with a bounded TTL rather than for the process lifetime.
+var transportNegotiator = negotiate.New(negotiate.Options{TTL: 5 * time.Minute})
 
 const (
 	// AgentErrTransformGitURL is thrown when the agent fails to make the git url a Zarf compatible url
@@ -115,7 +121,7 @@ func getManifestConfigMediaType(ctx context.Context, zarfState *state.State, tra
 		}),
 	}
 
-	plainHTTP, err := images.ShouldUsePlainHTTP(ctx, ref.Registry, client)
+	plainHTTP, err := transportNegotiator.UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{})
 	if err != nil {
 		return "", err
 	}
