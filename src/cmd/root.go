@@ -97,8 +97,7 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
-	// One negotiator per CLI invocation: decisions never expire (TTL 0) since Zarf is
-	// a short-lived process, so nothing is lost by caching for the command's duration.
+	// One negotiator per CLI invocation; decisions never expire (TTL 0) since Zarf is a short-lived process
 	ctx = negotiate.WithNegotiator(ctx, negotiate.New(negotiate.Options{}))
 	cmd.SetContext(ctx)
 
