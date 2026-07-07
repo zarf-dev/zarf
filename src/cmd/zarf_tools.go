@@ -104,7 +104,7 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 	}
 
 	if s.ArtifactServer.IsConfigured() {
-		logger.From(ctx).Warn(lang.CmdToolsGetCredsArtifactDeprecated)
+		logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
 	}
 
 	if len(args) > 0 {
@@ -270,6 +270,9 @@ func newUpdateCredsCommand(v *viper.Viper) *cobra.Command {
 	cmd.Flags().StringVar(&o.artifactServer.Address, "artifact-url", v.GetString(VInitArtifactURL), lang.CmdInitFlagArtifactURL)
 	cmd.Flags().StringVar(&o.artifactServer.PushUsername, "artifact-push-username", v.GetString(VInitArtifactPushUser), lang.CmdInitFlagArtifactPushUser)
 	cmd.Flags().StringVar(&o.artifactServer.PushToken, "artifact-push-token", v.GetString(VInitArtifactPushToken), lang.CmdInitFlagArtifactPushToken)
+	_ = cmd.Flags().MarkDeprecated("artifact-url", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-username", lang.ArtifactServerDeprecated)
+	_ = cmd.Flags().MarkDeprecated("artifact-push-token", lang.ArtifactServerDeprecated)
 
 	// Flags for providing user-managed agent TLS certificates
 	cmd.Flags().StringVar(&o.agentTLSCAPath, "agent-tls-ca", "", "Path to a PEM-encoded CA certificate for the Zarf agent")
@@ -311,6 +314,11 @@ func (o *updateCredsOptions) run(cmd *cobra.Command, args []string) error {
 	if oldState.Distro == "" {
 		return errors.New("zarf state secret did not load properly")
 	}
+
+	if services.Has(state.ArtifactKey) && oldState.ArtifactServer.IsConfigured() {
+		l.Warn(lang.ArtifactServerDeprecated)
+	}
+
 	opts := state.MergeOptions{
 		GitServer:      o.gitServer,
 		RegistryInfo:   o.registryInfo,
