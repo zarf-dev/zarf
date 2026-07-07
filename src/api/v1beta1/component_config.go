@@ -23,8 +23,10 @@ type ComponentConfig struct {
 type ComponentSpec struct {
 	// Import a component from another Zarf component config.
 	Import ComponentImport `json:"import,omitempty"`
-	// Filter when this component is included in package creation or deployment.
+	// Filter when this component is deployed based on OS.
 	Target ComponentTarget `json:"target,omitempty"`
+	// Filter when this component is included during package creation based on architecture or flavor.
+	Selector ComponentSelector `json:"selector,omitempty"`
 	// Kubernetes manifests to be included in a generated Helm chart on package deploy.
 	Manifests []Manifest `json:"manifests,omitempty"`
 	// Helm charts to install during package deploy.
