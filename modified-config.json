@@ -1,0 +1,11 @@
+{
+  "application": {
+    "name": "sample-config",
+    "secret": "cool-place",
+    "settings": {
+      "logLevel": "info",
+      "maxConnections": 100,
+      "timeout": 30
+    }
+  }
+}

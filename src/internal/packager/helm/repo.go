@@ -30,12 +30,73 @@ import (
 	repov1 "helm.sh/helm/v4/pkg/repo/v1"
 
 	retry "github.com/avast/retry-go/v4"
+	orasRegistry "oras.land/oras-go/v2/registry"
+
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
 	"github.com/zarf-dev/zarf/src/internal/git"
+	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/transform"
 	"github.com/zarf-dev/zarf/src/pkg/utils"
 )
+
+// negotiateChartPlainHTTP decides the transport scheme for an OCI chart or chart
+// dependency host. The URL was discovered by reading package data (a zarf.yaml's
+// chart.url or a chart's own Chart.yaml dependencies), not named explicitly on this
+// command line, so remoteOptions.PlainHTTP is not necessarily meant for it —
+// transport is negotiated per host instead.
+func negotiateChartPlainHTTP(ctx context.Context, ociURL string, remoteOptions types.RemoteOptions) (bool, error) {
+	ref, err := orasRegistry.ParseReference(strings.TrimPrefix(ociURL, helpers.OCIURLPrefix))
+	if err != nil {
+		return false, fmt.Errorf("unable to parse chart url %q: %w", ociURL, err)
+	}
+	plainHTTP, err := negotiate.From(ctx).UsePlainHTTP(ctx, ref.Registry, negotiate.ProbeOptions{InsecureSkipTLSVerify: remoteOptions.InsecureSkipTLSVerify})
+	if err != nil {
+		return false, fmt.Errorf("unable to reach chart registry for %q: %w", ociURL, err)
+	}
+	return plainHTTP, nil
+}
+
+// negotiateChartDependenciesPlainHTTP decides the transport scheme for a chart's own
+// OCI-referenced dependencies (Chart.yaml dependencies: with an oci:// repository),
+// loading the chart from disk to inspect them. See
+// negotiateLoadedChartDependenciesPlainHTTP for the decision logic.
+func negotiateChartDependenciesPlainHTTP(ctx context.Context, chart v1alpha1.ZarfChart, remoteOptions types.RemoteOptions) (bool, error) {
+	_, parsed, err := loadAndValidateChart(chart.LocalPath)
+	if err != nil {
+		return false, err
+	}
+	return negotiateLoadedChartDependenciesPlainHTTP(ctx, chart.Name, parsed.Metadata.Dependencies, remoteOptions)
+}
+
+// negotiateLoadedChartDependenciesPlainHTTP decides the transport scheme for a
+// chart's own OCI-referenced dependencies. If the chart declares no OCI
+// dependencies, no network probe is made and HTTPS (false) is returned. If a
+// chart's OCI dependencies span multiple hosts that disagree on scheme — an unusual
+// topology, since dependencies overwhelmingly share one registry — this defaults to
+// HTTPS (the safe choice) rather than guessing.
+func negotiateLoadedChartDependenciesPlainHTTP(ctx context.Context, chartName string, dependencies []*chartv2.Dependency, remoteOptions types.RemoteOptions) (bool, error) {
+	var decided bool
+	var decidedSet bool
+	for _, dep := range dependencies {
+		if !registry.IsOCI(dep.Repository) {
+			continue
+		}
+		plainHTTP, err := negotiateChartPlainHTTP(ctx, dep.Repository, remoteOptions)
+		if err != nil {
+			return false, err
+		}
+		if !decidedSet {
+			decided, decidedSet = plainHTTP, true
+			continue
+		}
+		if decided != plainHTTP {
+			logger.From(ctx).Debug("chart's OCI dependencies span hosts that disagree on plain-http vs HTTPS; defaulting to HTTPS", "chart", chartName)
+			return false, nil
+		}
+	}
+	return decided, nil
+}
 
 // PackageChart creates a chart archive from a path to a chart on the host os and builds chart dependencies
 func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath string, cachePath string, remoteOptions types.RemoteOptions) error {
@@ -53,7 +114,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 				chart.URL = fmt.Sprintf("%s@%s", chart.URL, chart.Version)
 			}
 
-			err = PackageChartFromGit(ctx, chart, chartPath, valuesPath, cachePath)
+			err = PackageChartFromGit(ctx, chart, chartPath, valuesPath, cachePath, remoteOptions)
 			if err != nil {
 				return fmt.Errorf("unable to pull the chart %q from git: %w", chart.Name, err)
 			}
@@ -64,7 +125,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 			}
 		}
 	} else {
-		err := PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath)
+		err := PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to package the %q chart: %w", chart.Name, err)
 		}
@@ -73,7 +134,7 @@ func PackageChart(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valu
 }
 
 // PackageChartFromLocalFiles creates a chart archive from a path to a chart on the host os.
-func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, valuesPath string, cachePath string) error {
+func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, chartPath string, valuesPath string, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing local helm chart",
 		"name", chart.Name,
@@ -91,7 +152,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 	var saved string
 	temp := filepath.Join(chartPath, "temp")
 	if _, ok := cl.(loader.DirLoader); ok {
-		err = buildChartDependencies(ctx, chart, cachePath)
+		err = buildChartDependencies(ctx, chart, cachePath, remoteOptions)
 		if err != nil {
 			return fmt.Errorf("unable to build dependencies for the chart: %w", err)
 		}
@@ -130,7 +191,7 @@ func PackageChartFromLocalFiles(ctx context.Context, chart v1alpha1.ZarfChart, c
 }
 
 // PackageChartFromGit is a special implementation of chart archiving that supports the https://p1.dso.mil/#/products/big-bang/ model.
-func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string) error {
+func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPath, valuesPath, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
 	l.Info("processing Helm chart", "name", chart.Name)
 
@@ -147,7 +208,7 @@ func PackageChartFromGit(ctx context.Context, chart v1alpha1.ZarfChart, chartPat
 
 	// Set the directory for the chart and package it
 	chart.LocalPath = filepath.Join(gitPath, chart.GitPath)
-	return PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath)
+	return PackageChartFromLocalFiles(ctx, chart, chartPath, valuesPath, cachePath, remoteOptions)
 }
 
 // DownloadPublishedChart loads a specific chart version from a remote repo.
@@ -168,6 +229,11 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		regClient *registry.Client
 		chartURL  string
 		err       error
+		// plainHTTP is only ever negotiated (never taken from remoteOptions.PlainHTTP
+		// directly) for the OCI branch below: chart.URL was discovered by reading
+		// package data, not named explicitly on this command line, so the global
+		// --plain-http flag is not necessarily meant for it.
+		plainHTTP bool
 	)
 	repoFile, err := repov1.LoadFile(pull.Settings.RepositoryConfig)
 
@@ -184,7 +250,15 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 
 	// Handle OCI registries
 	if registry.IsOCI(chart.URL) {
-		regClient, err = registry.NewClient(registry.ClientOptEnableCache(true))
+		plainHTTP, err = negotiateChartPlainHTTP(ctx, chart.URL, remoteOptions)
+		if err != nil {
+			return err
+		}
+		clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+		if plainHTTP {
+			clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+		}
+		regClient, err = registry.NewClient(clientOpts...)
 		if err != nil {
 			return fmt.Errorf("unable to create the new registry client: %w", err)
 		}
@@ -233,7 +307,7 @@ func DownloadPublishedChart(ctx context.Context, chart v1alpha1.ZarfChart, chart
 		Verify:  downloader.VerifyNever,
 		Getters: getter.All(pull.Settings),
 		Options: []getter.Option{
-			getter.WithPlainHTTP(remoteOptions.PlainHTTP),
+			getter.WithPlainHTTP(plainHTTP),
 			getter.WithInsecureSkipVerifyTLS(remoteOptions.InsecureSkipTLSVerify),
 			getter.WithBasicAuth(username, password),
 		},
@@ -335,10 +409,24 @@ func packageValues(ctx context.Context, chart v1alpha1.ZarfChart, valuesPath str
 }
 
 // buildChartDependencies builds the helm chart dependencies
-func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string) error {
+func buildChartDependencies(ctx context.Context, chart v1alpha1.ZarfChart, cachePath string, remoteOptions types.RemoteOptions) error {
 	l := logger.From(ctx)
+
+	// A chart's own OCI-referenced dependencies were discovered by reading package
+	// data (the chart's Chart.yaml), not named explicitly on this command line, so
+	// remoteOptions.PlainHTTP is not necessarily meant for them — negotiate the
+	// transport instead of forcing the global flag.
+	plainHTTP, err := negotiateChartDependenciesPlainHTTP(ctx, chart, remoteOptions)
+	if err != nil {
+		return err
+	}
+
 	// Download and build the specified dependencies
-	regClient, err := registry.NewClient(registry.ClientOptEnableCache(true))
+	clientOpts := []registry.ClientOption{registry.ClientOptEnableCache(true)}
+	if plainHTTP {
+		clientOpts = append(clientOpts, registry.ClientOptPlainHTTP())
+	}
+	regClient, err := registry.NewClient(clientOpts...)
 	if err != nil {
 		return fmt.Errorf("unable to create a new registry client: %w", err)
 	}

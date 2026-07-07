@@ -20,6 +20,7 @@ import (
 
 	"github.com/zarf-dev/zarf/src/config"
 	"github.com/zarf-dev/zarf/src/config/lang"
+	negotiate "github.com/zarf-dev/zarf/src/internal/transport"
 	"github.com/zarf-dev/zarf/src/pkg/cluster"
 	"github.com/zarf-dev/zarf/src/pkg/feature"
 	"github.com/zarf-dev/zarf/src/pkg/logger"
@@ -96,6 +97,9 @@ func preRun(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	ctx := logger.WithContext(cmd.Context(), l)
+	// One negotiator per CLI invocation: decisions never expire (TTL 0) since Zarf is
+	// a short-lived process, so nothing is lost by caching for the command's duration.
+	ctx = negotiate.WithNegotiator(ctx, negotiate.New(negotiate.Options{}))
 	cmd.SetContext(ctx)
 
 	// Print enabled features once we have a logger available
