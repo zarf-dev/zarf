@@ -106,9 +106,6 @@ func (o *getCredsOptions) run(ctx context.Context, args []string) error {
 	if len(args) > 0 {
 		// If a component name is provided, only show that component's credentials
 		// Printing both the pterm output and slogger for now
-		if strings.EqualFold(args[0], artifactKey) {
-			logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
-		}
 		printComponentCredential(ctx, s, args[0], o.outputWriter)
 		return nil
 	}
@@ -214,6 +211,7 @@ func printComponentCredential(ctx context.Context, s *state.State, componentName
 		l.Info("Git server (read-only) password", "username", s.GitServer.PullUsername)
 		fmt.Fprintln(out, s.GitServer.PullPassword)
 	case artifactKey:
+		logger.From(ctx).Warn(lang.ArtifactServerDeprecated)
 		l.Info("artifact server token", "username", s.ArtifactServer.PushUsername)
 		fmt.Fprintln(out, s.ArtifactServer.PushToken)
 	case registryKey:
