@@ -9,8 +9,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/zarf-dev/zarf/src/api/v1alpha1"
@@ -65,19 +65,29 @@ func TestChartTemplate_DoesNotNegotiateDeclaredOCIDependencies(t *testing.T) {
 	helmChart, values, err := LoadChartData(chart, tmpdir, tmpdir, nil)
 	require.NoError(t, err)
 
-	// Nothing is listening on this port: a real probe would fail fast, but any
-	// probe at all (fast or slow) means the dead negotiation regressed.
+	// A real listener that counts connection attempts: if TemplateChart negotiates
+	// this dependency's transport scheme, it will dial this address at least once.
+	var accepts atomic.Int32
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	addr := l.Addr().String()
-	require.NoError(t, l.Close())
+	defer l.Close() //nolint:errcheck
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			accepts.Add(1)
+			conn.Close() //nolint:errcheck
+		}
+	}()
 	helmChart.Metadata.Dependencies = []*chartv2.Dependency{
-		{Name: "sub", Version: "1.0.0", Repository: "oci://" + addr + "/sub"},
+		{Name: "sub", Version: "1.0.0", Repository: "oci://" + l.Addr().String() + "/sub"},
 	}
 
-	start := time.Now()
 	_, err = TemplateChart(ctx, chart, helmChart, values, kubeVersion, vc, false, types.RemoteOptions{PlainHTTP: true})
-	elapsed := time.Since(start)
 	require.NoError(t, err)
-	require.Less(t, elapsed, 2*time.Second, "TemplateChart must not negotiate declared OCI dependencies")
+	require.Zero(t, accepts.Load(), "TemplateChart must not negotiate declared OCI dependencies")
 }
